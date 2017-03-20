@@ -142,6 +142,34 @@ drake_cc_library(
 )
 
 drake_cc_library(
+    name = "rgbd_camera",
+    srcs = ["rgbd_camera.cc"],
+    hdrs = ["rgbd_camera.h"],
+    deps = [
+        ":camera_info",
+        ":image",
+        ":vtk_util",
+        "//drake/common",
+        "//drake/math:geometric_transform",
+        "//drake/multibody:rigid_body_frame",
+        "//drake/multibody:rigid_body_tree",
+        "//drake/systems/framework:leaf_system",
+        "//drake/systems/rendering:pose_vector",
+    ],
+)
+
+drake_cc_library(
+    name = "vtk_util",
+    srcs = ["vtk_util.cc"],
+    hdrs = ["vtk_util.h"],
+    deps = [
+        "//drake/common",
+        # TODO(jwnimmer-tri) Use fine-grained dependencies.
+        "@vtk//:vtk_libraries",
+    ],
+)
+
+drake_cc_library(
     name = "accelerometer_example_diagram",
     srcs = [
         "test/accelerometer_test/accelerometer_example_diagram.cc",
@@ -253,6 +281,33 @@ drake_cc_googletest(
         ":gyroscope",
         "//drake/common:eigen_matrix_compare",
         "//drake/multibody/parsers",
+    ],
+)
+
+drake_cc_binary(
+    name = "rgbd_camera_test",
+    testonly = 1,
+    srcs = ["test/rgbd_camera_test.cc"],
+    deps = [
+        ":image",
+        ":rgbd_camera",
+        "//drake/common",
+        "//drake/common:drake_path",
+        "//drake/common:eigen_matrix_compare",
+        "//drake/multibody:rigid_body_tree",
+        "//drake/multibody:rigid_body_tree_construction",
+        "//drake/multibody/parsers",
+        "//drake/multibody/rigid_body_plant",
+        "//drake/systems/framework:diagram",
+        "//drake/systems/rendering:pose_vector",
+        "@gtest//:main",
+    ],
+)
+
+drake_cc_googletest(
+    name = "vtk_util_test",
+    deps = [
+        ":vtk_util",
     ],
 )
 

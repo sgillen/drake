@@ -240,6 +240,23 @@ github_archive(
     sha256 = "d94cdb84f346ce4d9f1f891505ed257796103f70ce56590bdd02e025c8503b16",
 )
 
+load("//tools:vtk.bzl", "vtk_repository")
+vtk_repository(
+    name = "vtk",
+    platform_urls = {
+        "Ubuntu/14.04": [
+            "file:///home/jwnimmer/Downloads/vtk-7.1.0-trusty-x86_64.tar.xz",
+            "https://s3.amazonaws.com/drake-provisioning/vtk/vtk-7.1.0-trusty-x86_64.tar.xz",
+            "sha256:9006a78022fb83aa5ab9ac7c1a2f9b9b09e94d307586bcee7ad94312451079f1",
+        ],
+        "Ubuntu/16.04": [
+            "file:///home/jwnimmer/Downloads/vtk-7.1.0-xenial-x86_64.tar.xz",
+            "https://s3.amazonaws.com/drake-provisioning/vtk/vtk-7.1.0-xenial-x86_64.tar.xz",
+            "sha256:6baa1659e9d22ffcdc7a5638ab193004d83930166356d597cdf62ae43afffb84",
+        ],
+    },
+)
+
 load("//tools:gurobi.bzl", "gurobi_repository")
 gurobi_repository(
     name = "gurobi",
