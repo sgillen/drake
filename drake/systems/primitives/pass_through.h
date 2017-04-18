@@ -57,5 +57,10 @@ class PassThrough : public SisoVectorSystem<T> {
   PassThrough<symbolic::Expression>* DoToSymbolic() const override;
 };
 
+// Declared explicit instantiations (defined in source file)
+extern template class PassThrough<double>;
+extern template class PassThrough<AutoDiffXd>;
+extern template class PassThrough<symbolic::Expression>;
+
 }  // namespace systems
 }  // namespace drake

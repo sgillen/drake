@@ -500,6 +500,9 @@ T CalcNormalAccelWithoutContactForces(const systems::Context<T>& context) const;
                               //   considers the rod to be in stiction.
 };
 
+// Declared explicit instantiations (defined in source file)
+extern template class Rod2D<double>;
+
 }  // namespace rod2d
 }  // namespace examples
 }  // namespace drake

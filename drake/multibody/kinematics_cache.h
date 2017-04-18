@@ -17,6 +17,7 @@
 #include "drake/common/drake_deprecated.h"
 #include "drake/common/eigen_types.h"
 #include "drake/multibody/joints/drake_joint.h"
+#include "drake/common/eigen_autodiff_types.h"
 
 template <typename T>
 class KinematicsCacheElement {
@@ -183,3 +184,12 @@ class KinematicsCache {
  public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 };
+
+// Declared explicit instantiations (defined in source file)
+extern template class KinematicsCacheElement<double>;
+extern template class KinematicsCacheElement<drake::AutoDiffXd>;
+extern template class KinematicsCacheElement<drake::AutoDiffUpTo73d>;
+
+extern template class KinematicsCache<double>;
+extern template class KinematicsCache<drake::AutoDiffXd>;
+extern template class KinematicsCache<drake::AutoDiffUpTo73d>;

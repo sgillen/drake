@@ -40,5 +40,8 @@ class ConstantValueSource : public LeafSystem<T> {
   const std::unique_ptr<AbstractValue> source_value_;
 };
 
+// Declared explicit instantiations (defined in source file)
+extern template class ConstantValueSource<double>;
+
 }  // namespace systems
 }  // namespace drake

@@ -68,5 +68,9 @@ class BouncingBall : public Ball<T> {
   }
 };
 
+// Declared explicit instantiations (defined in source file)
+extern template class BouncingBall<double>;
+extern template class BouncingBall<AutoDiffXd>;
+
 }  // namespace bouncing_ball
 }  // namespace drake

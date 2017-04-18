@@ -47,5 +47,10 @@ class ZeroOrderHold : public SisoVectorSystem<T> {
   const double period_sec_{};
 };
 
+// Declared explicit instantiations (defined in source file)
+extern template class ZeroOrderHold<double>;
+extern template class ZeroOrderHold<AutoDiffXd>;
+extern template class ZeroOrderHold<symbolic::Expression>;
+
 }  // namespace systems
 }  // namespace drake

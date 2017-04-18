@@ -49,5 +49,9 @@ class Ball : public systems::LeafSystem<T> {
                        systems::State<T>* state) const override;
 };
 
+// Declared explicit instantiations (defined in source file)
+extern template class Ball<double>;
+extern template class Ball<AutoDiffXd>;
+
 }  // namespace bouncing_ball
 }  // namespace drake

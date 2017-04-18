@@ -234,6 +234,9 @@ class BeadOnAWire : public systems::LeafSystem<T> {
   double g_{-9.81};
 };
 
+// Declared explicit instantiations (defined in source file)
+extern template class BeadOnAWire<double>;
+
 }  // namespace bead_on_a_wire
 }  // namespace examples
 }  // namespace drake

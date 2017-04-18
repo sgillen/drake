@@ -68,5 +68,10 @@ class Gain : public SisoVectorSystem<T> {
   const Eigen::VectorXd k_;
 };
 
+// Declared explicit instantiations (defined in source file)
+extern template class Gain<double>;
+extern template class Gain<AutoDiffXd>;
+extern template class Gain<symbolic::Expression>;
+
 }  // namespace systems
 }  // namespace drake

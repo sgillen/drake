@@ -89,5 +89,9 @@ class RungeKutta3Integrator : public IntegratorBase<T> {
   // interval.
   std::unique_ptr<ContinuousState<T>> derivs0_, derivs1_, derivs2_;
 };
+
+// Declared explicit instantiations (defined in source file)
+extern template class RungeKutta3Integrator<double>;
+
 }  // namespace systems
 }  // namespace drake
