@@ -52,6 +52,16 @@ drake_cc_library(
     ],
 )
 
+drake_cc_library(
+    name = "constraint_traits",
+    srcs = [],
+    hdrs = ["constraint_traits.h"],
+    deps = [
+        ":binding",
+        ":constraint",
+    ],
+)
+
 # Supported solvers:
 # - equality_constrained_qp_solver
 # - linear_system_solver
