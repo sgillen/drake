@@ -99,6 +99,7 @@ drake_cc_library(
     deps = [
         ":binding",
         ":constraint",
+        ":constraint_traits",
         ":decision_variable",
         ":function",
         ":gurobi_solver",
@@ -228,6 +229,7 @@ drake_cc_library(
     deps = [
         ":binding",
         ":constraint",
+        ":constraint_traits",
         ":decision_variable",
         ":function",
         "//drake/common",

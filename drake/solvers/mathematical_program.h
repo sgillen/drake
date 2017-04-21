@@ -26,6 +26,7 @@
 #include "drake/common/symbolic_variable.h"
 #include "drake/solvers/binding.h"
 #include "drake/solvers/constraint.h"
+#include "drake/solvers/constraint_traits.h"
 #include "drake/solvers/decision_variable.h"
 #include "drake/solvers/function.h"
 #include "drake/solvers/mathematical_program_solver_interface.h"
@@ -2401,6 +2402,21 @@ class MathematicalProgram {
     return decision_variables_(i);
   }
 
+  template<typename C>
+  constraint_final_binding<C>& Add(const Binding<C>& binding) {
+    // Register capabilities based on the returned container
+    RequireConstraintCapabilities<decltype(container)::value>();
+    container.push_back(binding);
+    return containre.back();
+  }
+
+  template<typename C, typename... BArgs>
+  constraint_final_binding<C>& Add(const std::shared_ptr<C>& constraint,
+                                   BArgs&&... bargs) {
+    auto binding = constraint_final_binding<C>(constraint, bargs);
+    return Add(binding);
+  }
+
  private:
   // maps the ID of a symbolic variable to the index of the variable stored in
   // the optimization program.
@@ -2434,9 +2450,6 @@ class MathematicalProgram {
   binding_list<LinearComplementarityConstraint>
       linear_complementarity_constraints_;
 
-  template<typename C>
-  binding_list<C>& get_constraints();
-
   size_t num_vars_;
   Eigen::VectorXd x_initial_guess_;
   std::vector<double> x_values_;
@@ -2459,6 +2472,9 @@ class MathematicalProgram {
       equality_constrained_qp_solver_;
   std::unique_ptr<MathematicalProgramSolverInterface> gurobi_solver_;
   std::unique_ptr<MathematicalProgramSolverInterface> mosek_solver_;
+
+  template<typename C>
+  Binding<C>& AddAndRequireCapabilities(const Binding<C>& binding);
 
   template <typename T>
   void NewVariables_impl(
@@ -2576,24 +2592,157 @@ class MathematicalProgram {
   // Precondition: ∀ f ∈ formulas, is_equal_to(f).
   Binding<LinearEqualityConstraint> AddLinearEqualityConstraint(
       const std::set<symbolic::Formula>& formulas);
+
+
 };
 
+// TODO(eric.cousineau): Consider storing member pointers with required
+// capabilities in one struct. This may be ugly maintenance-wise.
+
+// Only provide specializations for containers that have the exact specific
+// type. All other types should cause the following generic to fail at
+// compile-time.
 template<typename C>
-inline binding_list<C>& MathematicalProgram::get_constraints() {
-  // ensure that this throws an error only if it is instantiated
-  static_assert(!std::is_same<C, C>::value,
-      "This method should not invoked be generically. Ensure that you use the"
-      "specializations provided.");
+inline Binding<C>& MathematicalProgram::
+    AddAndRequireCapabilities(const Binding<C>& binding) {
+  static_assert(!deferred_true<C>::value,
+      "This generic method should not invoked. See specializations.");
 }
 
 template<>
-inline binding_list<Constraint>& MathematicalProgram::get_constraints() {
-  return generic_constraints_;
+inline Binding<Constraint>& MathematicalProgram::
+    AddAndRequireCapabilities(const Binding<Constraint>& binding) {
+  // If we get here, then this was possibly a dynamically-simplified
+  // constraint. Try to dynamically determine correct container. As last
+  // resort, add to generic constraints.
+  Constraint* constraint = binding.constraint().get();
+  if (dynamic_cast<LinearConstraint*>(constraint)) {
+    return AddAndRequireCapabilities<LinearConstraint>(binding);
+  } else if (dynamic_cast<LinearEqualityConstraint*>(constraint)) {
+    return AddAndRequireCapabilities<LinearEqualityConstraint>(binding);
+  } else if (dynamic_cast<BoundingBoxConstraint*>(constraint)) {
+    return AddAndRequireCapabilities<BoundingBoxConstraint*>(binding);
+  } else if (dynamic_cast<LorentzConeConstraint*>(constraint)) {
+    return AddAndRequireCapabilities<LorentzConeConstraint*>(binding);
+  } else if (dynamic_cast<RotatedLorentzConeConstraint*>(constraint)) {
+    return AddAndRequireCapabilities<RotatedLorentzConeConstraint*>(binding);
+  } else if (dynamic_cast<PositiveSemidefiniteConstraint*>(constraint)) {
+    return AddAndRequireCapabilities<PositiveSemidefiniteConstraint*>(binding);
+  } else if (dynamic_cast<LinearMatrixInequalityConstraint*>(constraint)) {
+    return AddAndRequireCapabilities<LinearMatrixInequalityConstraint*>
+        (binding);
+  } else {
+    required_capabilities_ |= kGenericConstraint;
+    generic_constraints_.push_back(binding);
+    return generic_constraints_.back();
+  }
+}
+
+template<>
+inline void MathematicalProgram::RequireConstraintCapabilities<Constraint>() {
+
 }
 
 template<>
 inline binding_list<LinearConstraint>& MathematicalProgram::get_constraints() {
   return linear_constraints_;
+}
+template<>
+inline void MathematicalProgram::
+    RequireConstraintCapabilities<LinearConstraint>() {
+  required_capabilities_ |= kLinearConstraint;
+}
+
+template<>
+inline binding_list<LinearEqualityConstraint>&
+MathematicalProgram::get_constraints() {
+  return linear_equality_constraints_;
+}
+template<>
+inline void MathematicalProgram::
+    RequireConstraintCapabilities<LinearEqualityConstraint>() {
+  required_capabilities_ |= kLinearEqualityConstraint;
+}
+
+template<>
+inline binding_list<BoundingBoxConstraint>&
+MathematicalProgram::get_constraints() {
+  return bbox_constraints_;
+}
+template<>
+inline void MathematicalProgram::
+    RequireConstraintCapabilities<BoundingBoxConstraint>() {
+  required_capabilities_ |= kLinearConstraint;
+}
+
+template<>
+inline binding_list<LorentzConeConstraint>&
+MathematicalProgram::get_constraints() {
+  return lorentz_cone_constraint_;
+}
+template<>
+inline void MathematicalProgram::
+    RequireConstraintCapabilities<LorentzConeConstraint>() {
+  required_capabilities_ |= kLorentzConeConstraint;
+}
+
+template<>
+inline binding_list<RotatedLorentzConeConstraint>&
+MathematicalProgram::get_constraints() {
+  return rotated_lorentz_cone_constraint_;
+}
+template<>
+inline void MathematicalProgram::
+    RequireConstraintCapabilities<RotatedLorentzConeConstraint>() {
+  required_capabilities_ |= kRotatedLorentzConeConstraint;
+}
+
+template<>
+inline binding_list<PositiveSemidefiniteConstraint>&
+MathematicalProgram::get_constraints() {
+  return positive_semidefinite_constraint_;
+}
+template<>
+inline void MathematicalProgram::
+    RequireConstraintCapabilities<PositiveSemidefiniteConstraint>() {
+  required_capabilities_ |= kPositiveSemidefiniteConstraint;
+}
+
+template<>
+inline binding_list<LinearMatrixInequalityConstraint>&
+MathematicalProgram::get_constraints() {
+  return linear_matrix_inequality_constraint_;
+}
+template<>
+inline void MathematicalProgram::
+    RequireConstraintCapabilities<LinearMatrixInequalityConstraint>() {
+  required_capabilities_ |= kPositiveSemidefiniteConstraint;
+}
+
+template<>
+inline binding_list<LinearComplementarityConstraint>&
+MathematicalProgram::get_constraints() {
+  return linear_complementarity_constraints_;
+}
+template<>
+inline void MathematicalProgram::
+    RequireConstraintCapabilities<LinearComplementarityConstraint>() {
+  required_capabilities_ |= kPositiveSemidefiniteConstraint;
+  required_capabilities_ |= kLinearComplementarityConstraint;
+
+  // Linear Complementarity Constraint cannot currently coexist with any
+  // other types of constraint or cost.
+  // (TODO(ggould-tri) relax this to non-overlapping bindings, possibly by
+  // calling multiple solvers.)
+  DRAKE_ASSERT(generic_constraints_.empty());
+  DRAKE_ASSERT(generic_costs_.empty());
+  DRAKE_ASSERT(quadratic_costs_.empty());
+  DRAKE_ASSERT(linear_costs_.empty());
+  DRAKE_ASSERT(linear_constraints_.empty());
+  DRAKE_ASSERT(linear_equality_constraints_.empty());
+  DRAKE_ASSERT(bbox_constraints_.empty());
+  DRAKE_ASSERT(lorentz_cone_constraint_.empty());
+  DRAKE_ASSERT(rotated_lorentz_cone_constraint_.empty());
 }
 
 }  // namespace solvers

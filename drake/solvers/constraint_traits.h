@@ -17,6 +17,11 @@ namespace solvers {
 
 // TODO(eric.cousineau): Consider using namespace detail
 
+// Return false that requires a type to be instantiated, for use with
+// static_assert
+template<typename T>
+using deferred_true = std::is_same<T, T>;
+
 /**
  * Constraint traits for how a given type is to be dispatched into a
  * container such as MathematicalProgram.
@@ -44,7 +49,10 @@ struct constraint_traits<PolynomialConstraint>
 // Ease of use
 
 template<typename C>
-using constraint_final_type = constraint_traits<C>::final_type;
+using constraint_final_type = typename constraint_traits<C>::final_type;
+
+template<typename C>
+using constraint_final_ptr = std::shared_ptr<constraint_final_type<C>>;
 
 template<typename C>
 using constraint_final_binding = Binding<constraint_final_type<C>>;
