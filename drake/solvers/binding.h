@@ -68,6 +68,6 @@ class Binding {
 };
 
 template<typename C>
-using binding_container = std::vector<Binding<C>>;
+using binding_list = std::vector<Binding<C>>;
 }  // namespace solvers
 }  // namespace drake

@@ -2201,14 +2201,14 @@ class MathematicalProgram {
   /**
    * Getter for all generic constraints
    */
-  const std::vector<Binding<Constraint>>& generic_constraints() const {
+  const binding_list<Constraint>& generic_constraints() const {
     return generic_constraints_;
   }  // e.g. for snopt_user_fun
 
   /**
    * Getter for linear equality constraints.
    */
-  const std::vector<Binding<LinearEqualityConstraint>>&
+  const binding_list<LinearEqualityConstraint>&
   linear_equality_constraints() const {
     return linear_equality_constraints_;
   }
@@ -2224,30 +2224,30 @@ class MathematicalProgram {
   }
 
   /** Getter for linear constraints. */
-  const std::vector<Binding<LinearConstraint>>& linear_constraints() const {
+  const binding_list<LinearConstraint>& linear_constraints() const {
     return linear_constraints_;
   }
 
   /** Getter for Lorentz cone constraint */
-  const std::vector<Binding<LorentzConeConstraint>>& lorentz_cone_constraints()
+  const binding_list<LorentzConeConstraint>& lorentz_cone_constraints()
       const {
     return lorentz_cone_constraint_;
   }
 
   /** Getter for rotated Lorentz cone constraint */
-  const std::vector<Binding<RotatedLorentzConeConstraint>>&
+  const binding_list<RotatedLorentzConeConstraint>&
   rotated_lorentz_cone_constraints() const {
     return rotated_lorentz_cone_constraint_;
   }
 
   /** Getter for positive semidefinite constraint */
-  const std::vector<Binding<PositiveSemidefiniteConstraint>>&
+  const binding_list<PositiveSemidefiniteConstraint>&
   positive_semidefinite_constraints() const {
     return positive_semidefinite_constraint_;
   }
 
   /** Getter for linear matrix inequality constraint */
-  const std::vector<Binding<LinearMatrixInequalityConstraint>>&
+  const binding_list<LinearMatrixInequalityConstraint>&
   linear_matrix_inequality_constraints() const {
     return linear_matrix_inequality_constraint_;
   }
@@ -2269,21 +2269,21 @@ class MathematicalProgram {
    * Getter returning all linear constraints (both linear equality and
    * inequality constraints).
    */
-  std::vector<Binding<LinearConstraint>> GetAllLinearConstraints() const {
-    std::vector<Binding<LinearConstraint>> conlist = linear_constraints_;
+  binding_list<LinearConstraint> GetAllLinearConstraints() const {
+    binding_list<LinearConstraint> conlist = linear_constraints_;
     conlist.insert(conlist.end(), linear_equality_constraints_.begin(),
                    linear_equality_constraints_.end());
     return conlist;
   }
 
   /** Getter for all bounding box constraints */
-  const std::vector<Binding<BoundingBoxConstraint>>& bounding_box_constraints()
+  const binding_list<BoundingBoxConstraint>& bounding_box_constraints()
       const {
     return bbox_constraints_;
   }
 
   /** Getter for all linear complementarity constraints.*/
-  const std::vector<Binding<LinearComplementarityConstraint>>&
+  const binding_list<LinearComplementarityConstraint>&
   linear_complementarity_constraints() const {
     return linear_complementarity_constraints_;
   }
@@ -2412,26 +2412,26 @@ class MathematicalProgram {
 
   VectorXDecisionVariable decision_variables_;
   std::vector<Binding<Constraint>> generic_costs_;
-  std::vector<Binding<Constraint>> generic_constraints_;
   std::vector<Binding<QuadraticConstraint>> quadratic_costs_;
   std::vector<Binding<LinearConstraint>> linear_costs_;
+  binding_list<Constraint> generic_constraints_;
   // TODO(naveenoid) : quadratic_constraints_
 
   // note: linear_constraints_ does not include linear_equality_constraints_
-  std::vector<Binding<LinearConstraint>> linear_constraints_;
-  std::vector<Binding<LinearEqualityConstraint>> linear_equality_constraints_;
-  std::vector<Binding<BoundingBoxConstraint>> bbox_constraints_;
-  std::vector<Binding<LorentzConeConstraint>> lorentz_cone_constraint_;
-  std::vector<Binding<RotatedLorentzConeConstraint>>
+  binding_list<LinearConstraint> linear_constraints_;
+  binding_list<LinearEqualityConstraint> linear_equality_constraints_;
+  binding_list<BoundingBoxConstraint> bbox_constraints_;
+  binding_list<LorentzConeConstraint> lorentz_cone_constraint_;
+  binding_list<RotatedLorentzConeConstraint>
       rotated_lorentz_cone_constraint_;
-  std::vector<Binding<PositiveSemidefiniteConstraint>>
+  binding_list<PositiveSemidefiniteConstraint>
       positive_semidefinite_constraint_;
-  std::vector<Binding<LinearMatrixInequalityConstraint>>
+  binding_list<LinearMatrixInequalityConstraint>
       linear_matrix_inequality_constraint_;
 
   // Invariant:  The bindings in this list must be non-overlapping.
   // TODO(ggould-tri) can this constraint be relaxed?
-  std::vector<Binding<LinearComplementarityConstraint>>
+  binding_list<LinearComplementarityConstraint>
       linear_complementarity_constraints_;
 
   size_t num_vars_;
