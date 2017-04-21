@@ -66,8 +66,5 @@ class Binding {
   std::shared_ptr<C> constraint_;
   VectorXDecisionVariable vars_;
 };
-
-template<typename C>
-using binding_list = std::vector<Binding<C>>;
 }  // namespace solvers
 }  // namespace drake
