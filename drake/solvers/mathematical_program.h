@@ -2434,6 +2434,9 @@ class MathematicalProgram {
   binding_list<LinearComplementarityConstraint>
       linear_complementarity_constraints_;
 
+  template<typename C>
+  binding_list<C>& get_constraints();
+
   size_t num_vars_;
   Eigen::VectorXd x_initial_guess_;
   std::vector<double> x_values_;
@@ -2574,5 +2577,24 @@ class MathematicalProgram {
   Binding<LinearEqualityConstraint> AddLinearEqualityConstraint(
       const std::set<symbolic::Formula>& formulas);
 };
+
+template<typename C>
+inline binding_list<C>& MathematicalProgram::get_constraints() {
+  // ensure that this throws an error only if it is instantiated
+  static_assert(!std::is_same<C, C>::value,
+      "This method should not invoked be generically. Ensure that you use the"
+      "specializations provided.");
+}
+
+template<>
+inline binding_list<Constraint>& MathematicalProgram::get_constraints() {
+  return generic_constraints_;
+}
+
+template<>
+inline binding_list<LinearConstraint>& MathematicalProgram::get_constraints() {
+  return linear_constraints_;
+}
+
 }  // namespace solvers
 }  // namespace drake

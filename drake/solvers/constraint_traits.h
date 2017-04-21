@@ -14,7 +14,8 @@
 
 namespace drake {
 namespace solvers {
-namespace detail {
+
+// TODO(eric.cousineau): Consider using namespace detail
 
 /**
  * Constraint traits for how a given type is to be dispatched into a
@@ -48,6 +49,5 @@ using constraint_final_type = constraint_traits<C>::final_type;
 template<typename C>
 using constraint_final_binding = Binding<constraint_final_type<C>>;
 
-};  // namespace detail
 }  // namespace solvers
 }  // namespace drake
