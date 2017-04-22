@@ -2496,44 +2496,44 @@ class MathematicalProgram {
       const std::set<symbolic::Formula>& formulas);
 
 
-  // TODO(eric.cousineau): Consider storing member pointers with required
-  // capabilities in one struct. This may be ugly maintenance-wise.
-
-  // Only provide specializations for containers that have the exact specific
-  // type. All other types should cause the following generic to fail at
-  // compile-time.
-  inline Binding<Constraint>& AddConstraint(
-      const Binding<Constraint>& binding) {
-    // If we get here, then this was possibly a dynamically-simplified
-    // constraint. Try to dynamically determine correct container. As last
-    // resort, add to generic constraints.
-    Constraint* constraint = binding.constraint().get();
-    if (dynamic_cast<LinearConstraint*>(constraint)) {
-      return AddAndRequireCapabilities(Binding<LinearConstraint>(binding));
-    } else if (dynamic_cast<LinearEqualityConstraint*>(constraint)) {
-      return AddAndRequireCapabilities(
-          Binding<LinearEqualityConstraint>(binding));
-    } else if (dynamic_cast<BoundingBoxConstraint*>(constraint)) {
-      return AddAndRequireCapabilities(
-          Binding<BoundingBoxConstraint>(binding));
-    } else if (dynamic_cast<LorentzConeConstraint*>(constraint)) {
-      return AddAndRequireCapabilities(
-          Binding<LorentzConeConstraint>(binding));
-    } else if (dynamic_cast<RotatedLorentzConeConstraint*>(constraint)) {
-      return AddAndRequireCapabilities(
-          Binding<RotatedLorentzConeConstraint>(binding));
-    } else if (dynamic_cast<PositiveSemidefiniteConstraint*>(constraint)) {
-      return AddAndRequireCapabilities(
-          Binding<PositiveSemidefiniteConstraint*>(binding));
-    } else if (dynamic_cast<LinearMatrixInequalityConstraint*>(constraint)) {
-      return AddAndRequireCapabilities(
-          Binding<LinearMatrixInequalityConstraint>(binding));
-    } else {
-      required_capabilities_ |= kGenericConstraint;
-      generic_constraints_.push_back(binding);
-      return generic_constraints_.back();
-    }
-  }
+//  // TODO(eric.cousineau): Consider storing member pointers with required
+//  // capabilities in one struct. This may be ugly maintenance-wise.
+//
+//  // Only provide specializations for containers that have the exact specific
+//  // type. All other types should cause the following generic to fail at
+//  // compile-time.
+//  inline Binding<Constraint>& AddConstraint(
+//      const Binding<Constraint>& binding) {
+//    // If we get here, then this was possibly a dynamically-simplified
+//    // constraint. Try to dynamically determine correct container. As last
+//    // resort, add to generic constraints.
+//    Constraint* constraint = binding.constraint().get();
+//    if (dynamic_cast<LinearConstraint*>(constraint)) {
+//      return AddAndRequireCapabilities(Binding<LinearConstraint>(binding));
+//    } else if (dynamic_cast<LinearEqualityConstraint*>(constraint)) {
+//      return AddAndRequireCapabilities(
+//          Binding<LinearEqualityConstraint>(binding));
+//    } else if (dynamic_cast<BoundingBoxConstraint*>(constraint)) {
+//      return AddAndRequireCapabilities(
+//          Binding<BoundingBoxConstraint>(binding));
+//    } else if (dynamic_cast<LorentzConeConstraint*>(constraint)) {
+//      return AddAndRequireCapabilities(
+//          Binding<LorentzConeConstraint>(binding));
+//    } else if (dynamic_cast<RotatedLorentzConeConstraint*>(constraint)) {
+//      return AddAndRequireCapabilities(
+//          Binding<RotatedLorentzConeConstraint>(binding));
+//    } else if (dynamic_cast<PositiveSemidefiniteConstraint*>(constraint)) {
+//      return AddAndRequireCapabilities(
+//          Binding<PositiveSemidefiniteConstraint*>(binding));
+//    } else if (dynamic_cast<LinearMatrixInequalityConstraint>(constraint)) {
+//      return AddAndRequireCapabilities(
+//          Binding<LinearMatrixInequalityConstraint>(binding));
+//    } else {
+//      required_capabilities_ |= kGenericConstraint;
+//      generic_constraints_.push_back(binding);
+//      return generic_constraints_.back();
+//    }
+//  }
 };
 
 }  // namespace solvers

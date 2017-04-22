@@ -32,6 +32,7 @@ drake_cc_library(
         "cost.h",
     ],
     deps = [
+        ":function",
         "//drake/common",
         "//drake/common:autodiff",
         "//drake/common:polynomial",
@@ -96,8 +97,6 @@ drake_cc_library(
         "no_dreal.cc",
     ],
     hdrs = [
-        "create_constraint.h",
-        "create_cost.h" +
         "dreal_solver.h",
         "equality_constrained_qp_solver.h",
         "linear_system_solver.h",
@@ -234,6 +233,8 @@ drake_cc_library(
     name = "mathematical_program_api",
     srcs = [],
     hdrs = [
+        "create_constraint.h",
+        "create_cost.h",
         "mathematical_program.h",
         "mathematical_program_solver_interface.h",
     ],
