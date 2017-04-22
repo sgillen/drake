@@ -532,15 +532,6 @@ Binding<QuadraticConstraint> MathematicalProgram::AddQuadraticCost(
                                                 map_var_to_index, this);
 }
 
-Binding<QuadraticConstraint> MathematicalProgram::AddQuadraticErrorCost(
-    const Eigen::Ref<const Eigen::MatrixXd>& Q,
-    const Eigen::Ref<const Eigen::VectorXd>& x_desired,
-    const Eigen::Ref<const VectorXDecisionVariable>& vars) {
-  auto cost = make_shared<QuadraticConstraint>(
-      2 * Q, -2 * Q * x_desired, -numeric_limits<double>::infinity(),
-      numeric_limits<double>::infinity());
-  return AddCost(cost, vars);
-}
 
 Binding<QuadraticConstraint> MathematicalProgram::AddQuadraticCost(
     const Eigen::Ref<const Eigen::MatrixXd>& Q,

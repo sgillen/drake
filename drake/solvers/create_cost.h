@@ -12,6 +12,42 @@
 namespace drake {
 namespace solvers {
 
+
+//
+// --- QuadraticCost ---
+//
+
+/**
+ * Creates a cost of the form x'*Q*x
+ */
+template<class... Args>
+std::shared_ptr<QuadraticCost> CreateQuadraticCost(Args&&... args) {
+  return std::make_shared<QuadraticCost>(std::forward<Args>(args)...);
+}
+
+/**
+ * Creates a cost term of the form | Ax - b |^2.
+ */
+std::shared_ptr<QuadraticCost> CreateL2NormCost(
+    const Eigen::Ref<const Eigen::MatrixXd>& A,
+    const Eigen::Ref<const Eigen::VectorXd>& b);
+
+/**
+ * Creates a cost term of the form (x-x_desired)'*Q*(x-x_desired).
+ */
+std::shared_ptr<QuadraticCost> CreateQuadraticErrorCost(
+    const Eigen::Ref<const Eigen::MatrixXd>& Q,
+    const Eigen::Ref<const Eigen::VectorXd>& x_desired);
+
+/**
+ * Creates a quadratic cost term
+ */
+Binding<QuadraticCost> CreateQuadraticCost(const symbolic::Expression& e);
+
+//
+// --- FunctionCost ---
+//
+
 /**
  * Convert an input of type @tparam F to a FunctionCost object.
  * @tparam F This class should have functions numInputs(), numOutputs and
@@ -59,6 +95,20 @@ struct is_cost_functor_candidate : std::integral_constant<bool,
 // changing implementation to simply check if F is callable (after removing
 // pointers, decaying, etc.)
 // @ref http://stackoverflow.com/a/5117641/7829525
+
+/**
+ * Add costs to the optimization program on decision variables as dictated
+ * by the Binding constructor.
+ * @tparam F it should define functions numInputs, numOutputs and eval. Check
+ * drake::solvers::detail::FunctionTraits for more detail.
+ */
+template <typename F>
+typename std::enable_if<
+    is_cost_functor_candidate<F>::value,
+    std::shared_ptr<Cost>>::type
+CreateCost(F&& f) {
+  return CreateFunctionCost(std::forward<F>(f));
+}
 
 } // namespace solvers
 } // namespace drake
