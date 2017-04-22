@@ -131,7 +131,8 @@ class DirectTrajectoryOptimization : public solvers::MathematicalProgram {
    */
   template <typename F>
   typename std::enable_if<
-      solvers::is_cost_functor_candidate<F>::value>::type
+      solvers::is_cost_functor_candidate<F>::value,
+      std::shared_ptr<solvers::Constraint>>::type
   AddRunningCostFunc(F&& f) {
     auto c = solvers::CreateFunctionCost(std::forward<F>(f));
     AddRunningCost(c);
@@ -266,7 +267,8 @@ class DirectTrajectoryOptimization : public solvers::MathematicalProgram {
    */
   template <typename F>
   typename std::enable_if<
-      solvers::is_cost_functor_candidate<F>::value>::type
+      solvers::is_cost_functor_candidate<F>::value,
+      std::shared_ptr<solvers::Constraint>>::type
   AddFinalCostFunc(F&& f) {
     auto c = solvers::CreateFunctionCost(std::forward<F>(f));
     AddFinalCost(c);

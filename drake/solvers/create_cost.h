@@ -3,6 +3,7 @@
 #include <memory>
 #include <type_traits>
 
+#include "drake/common/symbolic_expression.h"
 #include "drake/solvers/function.h"
 #include "drake/solvers/constraint.h"
 #include "drake/solvers/cost.h"
@@ -32,7 +33,8 @@ std::shared_ptr<Cost> CreateFunctionCost(F&& f) {
 template<typename F>
 struct is_cost_functor_candidate : std::integral_constant<bool,
     (!std::is_convertible<F, std::shared_ptr<Constraint>>::value) &&
-    (!std::is_convertible<F, Binding<Constraint>>::value)>
+    (!std::is_convertible<F, Binding<Constraint>>::value) &&
+    (!std::is_convertible<F, symbolic::Expression>::value)>
 { };
 
 // TODO(eric.cousineau): Consider specializing is_cost_functor_candidate if we
