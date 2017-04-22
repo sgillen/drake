@@ -651,9 +651,9 @@ class MathematicalProgram {
    * @param obj The added objective.
    * @param vars The decision variables on which the cost depend.
    */
-  void AddCost(const std::shared_ptr<Constraint>& obj,
+  Binding<Constraint> AddCost(const std::shared_ptr<Constraint>& obj,
                const VariableRefList& vars) {
-    AddCost(obj, ConcatenateVariableRefList(vars));
+    return AddCost(obj, ConcatenateVariableRefList(vars));
   }
 
   /**
@@ -668,11 +668,11 @@ class MathematicalProgram {
       Binding<Constraint>>::type
   AddCost(F&& f, BindingArgs&&... binding_args) {
     auto c = CreateFunctionCost(std::forward<F>(f));
-    return AddCost(f, std::forward<BindingArgs>(binding_args)...);
+    return AddCost(c, std::forward<BindingArgs>(binding_args)...);
   }
 
   /**
-   * Adds a cost to the optimization program on decision variables as dictated
+   * Add costs to the optimization program on decision variables as dictated
    * by the Binding constructor.
    * @tparam F it should define functions numInputs, numOutputs and eval. Check
    * drake::solvers::detail::FunctionTraits for more detail.
@@ -681,9 +681,10 @@ class MathematicalProgram {
   typename std::enable_if<
       is_cost_functor_candidate<F>::value,
       Binding<Constraint>>::type
-  AddCost(std::unique_ptr<F>&& f, BindingArgs&&... binding_args) {
-    auto c = CreateFunctionCost(std::forward<std::unique_ptr<F>>(f));
-    return AddCost(c, std::forward<BindingArgs>(binding_args)...);
+  AddCost(F&& f, const VariableRefList& vars, BindingArgs&&... binding_args) {
+    // Explicitly overload VariableRefList for initializer_list syntax
+    return AddCost(std::forward<F>(f), ConcatenateVariableRefList(vars),
+                   std::forward<BindingArgs>(binding_args)...);
   }
 
   /**

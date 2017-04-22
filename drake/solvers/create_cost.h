@@ -24,6 +24,22 @@ std::shared_ptr<Cost> CreateFunctionCost(F&& f) {
       std::forward<F>(f));
 }
 
+// From: drake-distro (git sha: 24452c1)
+// /drake/solvers/mathematical_program.h:739
+// libstdc++ 4.9 evaluates
+// `std::is_convertible<std::unique_ptr<Unrelated>,
+// std::shared_ptr<Constraint>>::value`
+// incorrectly as `true` so our enable_if overload is not used.
+// Provide an explicit alternative for this case.
+template<typename A, typename B>
+struct is_convertible_workaround
+  : std::is_convertible<A, B>
+{ };
+template<typename A, typename B>
+struct is_convertible_workaround<std::unique_ptr<A>, std::shared_ptr<B>>
+    : std::is_convertible<A*, B*>
+{ };
+
 /**
  * Template condition to check if F is a candidate to be used to construct a
  * FunctionCost object for generic costs.
@@ -32,20 +48,12 @@ std::shared_ptr<Cost> CreateFunctionCost(F&& f) {
  */
 template<typename F>
 struct is_cost_functor_candidate : std::integral_constant<bool,
-    (!std::is_convertible<F, std::shared_ptr<Constraint>>::value) &&
-    (!std::is_convertible<F, Binding<Constraint>>::value) &&
-    (!std::is_convertible<F, symbolic::Expression>::value)>
+    (!is_convertible_workaround<F, Constraint>::value) &&
+    (!is_convertible_workaround<F, std::shared_ptr<Constraint>>::value) &&
+    (!is_convertible_workaround<F, std::unique_ptr<Constraint>>::value) &&
+    (!is_convertible_workaround<F, Binding<Constraint>>::value) &&
+    (!is_convertible_workaround<F, symbolic::Expression>::value)>
 { };
-
-// TODO(eric.cousineau): Consider specializing is_cost_functor_candidate if we
-// run into this again:
-// From: drake-distro (git sha: 24452c1)
-// /drake/solvers/mathematical_program.h:739
-// libstdc++ 4.9 evaluates
-// `std::is_convertible<std::unique_ptr<Unrelated>,
-// std::shared_ptr<Constraint>>::value`
-// incorrectly as `true` so our enable_if overload is not used.
-// Provide an explicit alternative for this case.
 
 // TODO(eric.cousineau): For is_cost_functor_candiate, consider
 // changing implementation to simply check if F is callable (after removing
