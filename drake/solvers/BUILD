@@ -86,6 +86,8 @@ drake_cc_library(
 drake_cc_library(
     name = "mathematical_program",
     srcs = [
+        "create_constraint.cc",
+        "create_cost.cc",
         "equality_constrained_qp_solver.cc",
         "linear_system_solver.cc",
         "mathematical_program.cc",
@@ -94,6 +96,8 @@ drake_cc_library(
         "no_dreal.cc",
     ],
     hdrs = [
+        "create_constraint.h",
+        "create_cost.h" +
         "dreal_solver.h",
         "equality_constrained_qp_solver.h",
         "linear_system_solver.h",
