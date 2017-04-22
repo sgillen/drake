@@ -18,27 +18,24 @@ template<typename C>
 class CostShim : public C {
   // Inherit constructor
   using C::C;
- protected:
-  // Alias type for ease of access, for subsequent classes to inherit
-  using Shim = CostShim<C>;
 };
 
 class Cost : public CostShim<Constraint> {
  public:
   // Inherit constructor
-  using Shim::Shim;
+  using CostShim::CostShim;
 };
 
 class LinearCost : public CostShim<LinearConstraint> {
  public:
   // Inherit constructor
-  using Shim::Shim;
+  using CostShim::CostShim;
 };
 
 class QuadraticCost : public CostShim<QuadraticConstraint> {
  public:
   // Inherit constructor
-  using Shim::Shim;
+  using CostShim::CostShim;
 };
 
 /**

@@ -47,5 +47,10 @@ struct is_cost_functor_candidate : std::integral_constant<bool,
 // incorrectly as `true` so our enable_if overload is not used.
 // Provide an explicit alternative for this case.
 
+// TODO(eric.cousineau): For is_cost_functor_candiate, consider
+// changing implementation to simply check if F is callable (after removing
+// pointers, decaying, etc.)
+// @ref http://stackoverflow.com/a/5117641/7829525
+
 } // namespace solvers
 } // namespace drake
