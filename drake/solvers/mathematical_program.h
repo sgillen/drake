@@ -28,6 +28,7 @@
 #include "drake/solvers/cost.h"
 #include "drake/solvers/constraint.h"
 #include "drake/solvers/constraint_traits.h"
+#include "drake/solvers/create_cost.h"
 #include "drake/solvers/decision_variable.h"
 #include "drake/solvers/function.h"
 #include "drake/solvers/mathematical_program_solver_interface.h"
@@ -656,74 +657,33 @@ class MathematicalProgram {
   }
 
   /**
-   * Convert an input of type @tparam F to a ConstraintImpl object.
-   * @tparam F This class should have functions numInputs(), numOutputs and
-   * eval(x, y). Check drake::solvrs::detail::FunctionTraits for more details.
-   */
-  template <typename F>
-  static std::shared_ptr<Constraint> MakeCost(F&& f) {
-    return std::make_shared<
-        ConstraintImpl<typename std::remove_reference<F>::type>>(
-        std::forward<F>(f));
-  }
-
-  /**
-   * Add costs to the optimization program on a list of variables.
+   * Add costs to the optimization program on decision variables as dictated
+   * by the Binding constructor.
    * @tparam F it should define functions numInputs, numOutputs and eval. Check
    * drake::solvers::detail::FunctionTraits for more detail.
    */
-  template <typename F>
+  template <typename F, typename... BindingArgs>
   typename std::enable_if<
-      (!std::is_convertible<F, std::shared_ptr<Constraint>>::value) &&
-          (!std::is_convertible<F, Binding<Constraint>>::value),
+      is_cost_functor_candidate<F>::value,
       Binding<Constraint>>::type
-  AddCost(F&& f, const VariableRefList& vars) {
-    return AddCost(f, ConcatenateVariableRefList(vars));
+  AddCost(F&& f, BindingArgs&&... binding_args) {
+    auto c = CreateFunctionCost(std::forward<F>(f));
+    return AddCost(f, std::forward<BindingArgs>(binding_args)...);
   }
 
   /**
-   * Adds a cost to the optimization program on an Eigen::Vector containing
-   * decision variables.
-   * @tparam F it should define functions numInputs, numOutputs and eval. Check
-   * drake::solvers::detail::FunctionTraits for more details.
-   */
-  template <typename F>
-  typename std::enable_if<
-      (!std::is_convertible<F, std::shared_ptr<Constraint>>::value) &&
-          (!std::is_convertible<F, Binding<Constraint>>::value),
-      Binding<Constraint>>::type
-  AddCost(F&& f, const Eigen::Ref<const VectorXDecisionVariable>& vars) {
-    auto c = MakeCost(std::forward<F>(f));
-    return AddCost(c, vars);
-  }
-
-  // libstdc++ 4.9 evaluates
-  // `std::is_convertible<std::unique_ptr<Unrelated>,
-  // std::shared_ptr<Constraint>>::value`
-  // incorrectly as `true` so our enable_if overload is not used.
-  // Provide an explicit alternative for this case.
-  template <typename F>
-  Binding<Constraint> AddCost(std::unique_ptr<F>&& f,
-                              const VariableRefList& vars) {
-    return AddCost(f, ConcatenateVariableRefList(vars));
-  }
-
-  /**
-   * Adds a cost to the optimization program on an Eigen::Vector containing
-   * decision variables.
+   * Adds a cost to the optimization program on decision variables as dictated
+   * by the Binding constructor.
    * @tparam F it should define functions numInputs, numOutputs and eval. Check
    * drake::solvers::detail::FunctionTraits for more detail.
    */
-  template <typename F>
+  template <typename F, typename... BindingArgs>
   typename std::enable_if<
-      (!std::is_convertible<F, std::shared_ptr<Constraint>>::value) &&
-          (!std::is_convertible<F, Binding<Constraint>>::value),
+      is_cost_functor_candidate<F>::value,
       Binding<Constraint>>::type
-  AddCost(std::unique_ptr<F>&& f,
-          const Eigen::Ref<const VectorXDecisionVariable>& vars) {
-    auto c = std::make_shared<ConstraintImpl<std::unique_ptr<F>>>(
-        std::forward<std::unique_ptr<F>>(f));
-    return AddCost(c, vars);
+  AddCost(std::unique_ptr<F>&& f, BindingArgs&&... binding_args) {
+    auto c = CreateFunctionCost(std::forward<std::unique_ptr<F>>(f));
+    return AddCost(c, std::forward<BindingArgs>(binding_args)...);
   }
 
   /**
