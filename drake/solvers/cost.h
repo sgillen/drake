@@ -10,25 +10,44 @@ namespace solvers {
 // Cost be different classes. Consider using some common evaluation base.
 
 /**
+ * Stopgap definitino that permits Cost to use functoinality in Constraint.
+ * Using an internal implementation permits child costs to inherit directly
+ * from cost, thus be convertible to a cost.
+ */
+class Cost : public Constraint {
+ public:
+  Cost(const std::shared_ptr<Constraint>& impl)
+      : Constraint(impl->num_constraints(), impl->num_vars()),
+        impl_(impl)
+  { }
+ protected:
+  void DoEval(const Eigen::Ref<const Eigen::VectorXd> &x,
+      // TODO(#2274) Fix NOLINTNEXTLINE(runtime/references).
+              Eigen::VectorXd &y) const override;
+
+  void DoEval(const Eigen::Ref<const AutoDiffVecXd> &x,
+      // TODO(#2274) Fix NOLINTNEXTLINE(runtime/references).
+              AutoDiffVecXd &y) const override;
+
+  std::shared_ptr<Constraint> impl_;
+};
+
+/**
  * Stopgap class to provide functionality as constraint, but allow templates to
  * detect a difference from results from CreateConstraint and CreateCost.
  * @tparam C Constraint type to inherit from.
  */
 template<typename C>
-class CostShim : public C {
-  // Inherit constructor
-  using C::C;
-};
-
-class Cost : public CostShim<Constraint> {
+class CostShim : public Cost {
  public:
-  // Inherit constructor
-  using CostShim::CostShim;
+  template<typename... Args>
+  CostShim(Args&&... args)
+      : Cost(std::make_shared<C>(std::forward<Args>(args)...))
+  { };
 };
 
 class LinearCost : public CostShim<LinearConstraint> {
  public:
-  // Inherit constructor
   using CostShim::CostShim;
 };
 
@@ -38,6 +57,14 @@ class QuadraticCost : public CostShim<QuadraticConstraint> {
   using CostShim::CostShim;
 };
 
+class PolynomialCost : public CostShim<PolynomialConstraint> {
+ public:
+  // Inherit constructor
+  using CostShim::CostShim;
+};
+
+// TODO(eric.cousineau): This may require the core functionality be
+// implemented in a constraint, then shimmed to a Cost
 /**
  * A cost that may be specified using a callable object
  * @tparam F The function / functor's type
