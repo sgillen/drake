@@ -15,13 +15,31 @@ namespace solvers {
  * @tparam C Constraint type to inherit from.
  */
 template<typename C>
-class CostShim : public C { };
+class CostShim : public C {
+  // Inherit constructor
+  using C::C;
+ protected:
+  // Alias type for ease of access, for subsequent classes to inherit
+  using Shim = CostShim<C>;
+};
 
-class Cost : public CostShim<Constraint> { };
+class Cost : public CostShim<Constraint> {
+ public:
+  // Inherit constructor
+  using Shim::Shim;
+};
 
-class LinearCost : public CostShim<LinearConstraint> { };
+class LinearCost : public CostShim<LinearConstraint> {
+ public:
+  // Inherit constructor
+  using Shim::Shim;
+};
 
-class QuadraticCost : public CostShim<QuadraticConstraint> { };
+class QuadraticCost : public CostShim<QuadraticConstraint> {
+ public:
+  // Inherit constructor
+  using Shim::Shim;
+};
 
 /**
  * A cost that may be specified using a callable object
@@ -37,7 +55,7 @@ class FunctionCost : public Cost {
   // Construct by copying from an lvalue.
   template <typename... Args>
   FunctionCost(const F& f, Args&&... args)
-      : Constraint(detail::FunctionTraits<F>::numOutputs(f),
+      : Cost(detail::FunctionTraits<F>::numOutputs(f),
                    detail::FunctionTraits<F>::numInputs(f),
                    std::forward<Args>(args)...),
         f_(f) {}
@@ -45,7 +63,7 @@ class FunctionCost : public Cost {
   // Construct by moving from an rvalue.
   template <typename... Args>
   FunctionCost(F&& f, Args&&... args)
-      : Constraint(detail::FunctionTraits<F>::numOutputs(f),
+      : Cost(detail::FunctionTraits<F>::numOutputs(f),
                    detail::FunctionTraits<F>::numInputs(f),
                    std::forward<Args>(args)...),
         f_(std::forward<F>(f)) {}
