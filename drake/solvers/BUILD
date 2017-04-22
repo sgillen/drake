@@ -20,10 +20,17 @@ drake_cc_library(
     ],
 )
 
+# TODO(eric.cousineau): Remove CostShim that produces coupling
 drake_cc_library(
     name = "constraint",
-    srcs = ["constraint.cc"],
-    hdrs = ["constraint.h"],
+    srcs = [
+        "constraint.cc",
+        "cost.cc",
+    ],
+    hdrs = [
+        "constraint.h",
+        "cost.h",
+    ],
     deps = [
         "//drake/common",
         "//drake/common:autodiff",
