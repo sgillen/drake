@@ -63,31 +63,29 @@ class PolynomialCost : public CostShim<PolynomialConstraint> {
   using CostShim::CostShim;
 };
 
-// TODO(eric.cousineau): This may require the core functionality be
-// implemented in a constraint, then shimmed to a Cost
 /**
  * A cost that may be specified using a callable object
  * @tparam F The function / functor's type
  */
 template <typename F>
-class FunctionCost : public Cost {
+class FunctionConstraint : public Constraint {
   F const f_;
 
  public:
-  DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(FunctionCost)
+  DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(FunctionConstraint)
 
   // Construct by copying from an lvalue.
   template <typename... Args>
-  FunctionCost(const F& f, Args&&... args)
-      : Cost(detail::FunctionTraits<F>::numOutputs(f),
+  FunctionConstraint(const F& f, Args&&... args)
+      : Constraint(detail::FunctionTraits<F>::numOutputs(f),
                    detail::FunctionTraits<F>::numInputs(f),
                    std::forward<Args>(args)...),
         f_(f) {}
 
   // Construct by moving from an rvalue.
   template <typename... Args>
-  FunctionCost(F&& f, Args&&... args)
-      : Cost(detail::FunctionTraits<F>::numOutputs(f),
+  FunctionConstraint(F&& f, Args&&... args)
+      : Constraint(detail::FunctionTraits<F>::numOutputs(f),
                    detail::FunctionTraits<F>::numInputs(f),
                    std::forward<Args>(args)...),
         f_(std::forward<F>(f)) {}
@@ -111,6 +109,12 @@ class FunctionCost : public Cost {
                  detail::FunctionTraits<F>::numOutputs(f_));
     detail::FunctionTraits<F>::eval(f_, x, y);
   }
+};
+
+template<typename F>
+class FunctionCost : public CostShim<FunctionConstraint<F>> {
+ public:
+  using CostShim::CostShim;
 };
 
 };  // namespace solvers
