@@ -51,6 +51,9 @@ using symbolic::Expression;
 using symbolic::Formula;
 using symbolic::Variable;
 
+// HACK(eric.cousineau): Will remove
+using namespace drake::solvers::internal;
+
 namespace {
 
 // Solver for simple linear systems of equalities
