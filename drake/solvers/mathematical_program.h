@@ -29,6 +29,7 @@
 #include "drake/solvers/constraint.h"
 #include "drake/solvers/constraint_traits.h"
 #include "drake/solvers/create_cost.h"
+#include "drake/solvers/create_constraint.h"
 #include "drake/solvers/decision_variable.h"
 #include "drake/solvers/function.h"
 #include "drake/solvers/mathematical_program_solver_interface.h"
