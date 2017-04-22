@@ -219,11 +219,6 @@ Binding<Constraint> MathematicalProgram::AddCost(
     generic_costs_.push_back(binding);
     return generic_costs_.back();
   }
-
-Binding<Constraint> MathematicalProgram::AddCost(
-    const shared_ptr<Constraint>& obj,
-    const Eigen::Ref<const VectorXDecisionVariable>& vars) {
-  return AddCost(Binding<Constraint>(obj, vars));
 }
 
 Binding<LinearConstraint> MathematicalProgram::AddCost(
@@ -237,35 +232,6 @@ Binding<LinearConstraint> MathematicalProgram::AddCost(
   return linear_costs_.back();
 }
 
-Binding<LinearConstraint> MathematicalProgram::AddCost(
-    const shared_ptr<LinearConstraint>& obj,
-    const Eigen::Ref<const VectorXDecisionVariable>& vars) {
-  return AddCost(Binding<LinearConstraint>(obj, vars));
-}
-
-Binding<LinearConstraint> MathematicalProgram::AddLinearCost(
-    const Expression& e) {
-  auto p = ExtractVariablesFromExpression(e);
-  const VectorXDecisionVariable& var = p.first;
-  const auto& map_var_to_index = p.second;
-  Eigen::RowVectorXd c(var.size());
-  double constant_term;
-  DecomposeLinearExpression(e, map_var_to_index, c, &constant_term);
-  // The constant term is ignored now.
-  // TODO(hongkai.dai): support adding constant term to the cost.
-  return AddLinearCost(c, var);
-}
-
-Binding<LinearConstraint> MathematicalProgram::AddLinearCost(
-    const Eigen::Ref<const Eigen::VectorXd>& c,
-    const Eigen::Ref<const VectorXDecisionVariable>& vars) {
-  auto cost = make_shared<LinearConstraint>(
-      c.transpose(),
-      Vector1<double>::Constant(-numeric_limits<double>::infinity()),
-      Vector1<double>::Constant(numeric_limits<double>::infinity()));
-  return AddCost(cost, vars);
-}
-
 Binding<QuadraticConstraint> MathematicalProgram::AddCost(
     const Binding<QuadraticConstraint>& binding) {
   required_capabilities_ |= kQuadraticCost;
@@ -276,38 +242,6 @@ Binding<QuadraticConstraint> MathematicalProgram::AddCost(
   CheckIsDecisionVariable(binding.variables());
   quadratic_costs_.push_back(binding);
   return quadratic_costs_.back();
-}
-
-Binding<QuadraticConstraint> MathematicalProgram::AddCost(
-    const shared_ptr<QuadraticConstraint>& obj,
-    const Eigen::Ref<const VectorXDecisionVariable>& vars) {
-  return AddCost(Binding<QuadraticConstraint>(obj, vars));
-}
-
-Binding<QuadraticConstraint> MathematicalProgram::AddQuadraticCost(
-    const Expression& e) {
-  // First build an Eigen vector, that contains all the bound variables.
-  const symbolic::Variables& vars = e.GetVariables();
-  auto p = ExtractVariablesFromExpression(e);
-  const auto& vars_vec = p.first;
-  const auto& map_var_to_index = p.second;
-
-  // Now decomposes the expression into coefficients and monomials.
-  const symbolic::MonomialToCoefficientMap& monomial_to_coeff_map =
-      symbolic::DecomposePolynomialIntoMonomial(e, vars);
-  return AddQuadraticCostWithMonomialToCoeffMap(monomial_to_coeff_map, vars_vec,
-                                                map_var_to_index, this);
-}
-
-
-Binding<QuadraticConstraint> MathematicalProgram::AddQuadraticCost(
-    const Eigen::Ref<const Eigen::MatrixXd>& Q,
-    const Eigen::Ref<const Eigen::VectorXd>& b,
-    const Eigen::Ref<const VectorXDecisionVariable>& vars) {
-  auto cost = make_shared<QuadraticConstraint>(
-      Q, b, -numeric_limits<double>::infinity(),
-      numeric_limits<double>::infinity());
-  return AddCost(cost, vars);
 }
 
 Binding<PolynomialConstraint> MathematicalProgram::AddPolynomialCost(
@@ -867,6 +801,8 @@ Binding<BoundingBoxConstraint> MathematicalProgram::AddBoundingBoxConstraint(
 Binding<LinearComplementarityConstraint> MathematicalProgram::AddConstraint(
     const Binding<LinearComplementarityConstraint>& binding) {
   required_capabilities_ |= kLinearComplementarityConstraint;
+
+  // TODO(eric.cousineau): Consider checking bitmask rather than list sizes
 
   // Linear Complementarity Constraint cannot currently coexist with any
   // other types of constraint or cost.

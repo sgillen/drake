@@ -12,6 +12,23 @@
 namespace drake {
 namespace solvers {
 
+//
+//
+//
+
+Binding<LinearCost> CreateAddLinearCost(
+    const Expression& e) {
+  auto p = ExtractVariablesFromExpression(e);
+  const VectorXDecisionVariable& var = p.first;
+  const auto& map_var_to_index = p.second;
+  Eigen::RowVectorXd c(var.size());
+  double constant_term;
+  DecomposeLinearExpression(e, map_var_to_index, c, &constant_term);
+  // The constant term is ignored now.
+  // TODO(hongkai.dai): support adding constant term to the cost.
+  return AddLinearCost(c, var);
+}
+
 
 //
 // --- QuadraticCost ---
@@ -43,6 +60,7 @@ std::shared_ptr<QuadraticCost> CreateQuadraticErrorCost(
  * Creates a quadratic cost term
  */
 Binding<QuadraticCost> CreateQuadraticCost(const symbolic::Expression& e);
+
 
 //
 // --- FunctionCost ---
