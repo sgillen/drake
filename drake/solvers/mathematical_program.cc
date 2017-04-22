@@ -205,10 +205,20 @@ namespace {
 
 Binding<Constraint> MathematicalProgram::AddCost(
     const Binding<Constraint>& binding) {
-  required_capabilities_ |= kGenericCost;
-  generic_costs_.push_back(binding);
-  return generic_costs_.back();
-}
+  // If we get here, then this was possibly a dynamically-simplified
+  // constraint. Try to dynamically determine correct container. As last
+  // resort, add to generic constraints.
+  Constraint* cost = binding.constraint().get();
+  if (dynamic_cast<LinearConstraint*>(cost)) {
+    return AddCost(Binding<LinearConstraint>(binding));
+  } else if (dynamic_cast<QuadraticConstraint*>(cost)) {
+    return AddCost(
+        Binding<QuadraticConstraint>(binding));
+  } else {
+    required_capabilities_ |= kGenericCost;
+    generic_costs_.push_back(binding);
+    return generic_costs_.back();
+  }
 
 Binding<Constraint> MathematicalProgram::AddCost(
     const shared_ptr<Constraint>& obj,
