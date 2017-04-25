@@ -15,6 +15,7 @@ using std::make_shared;
 using std::make_unique;
 using std::shared_ptr;
 using std::unique_ptr;
+using std::vector;
 using Eigen::Matrix2d;
 using Eigen::MatrixXd;
 using Eigen::Ref;
@@ -47,6 +48,14 @@ struct related_cost<PolynomialConstraint> {
   using type = PolynomialCost;
 };
 
+// Infer vector type from initializer list
+// Otherwise, the parameter pack'd intializer_list fails to bind properly fails
+// in older versions of gcc-4.9 (does not fail on 4.9.3)
+template <typename T>
+auto make_vector(std::initializer_list<T> items) {
+  return vector<std::decay_t<T>>(items);
+}
+
 template <typename C, typename... Args>
 void VerifyRelatedCost(const Ref<const VectorXd>& x_value, Args&&... args) {
   // Ensure that a constraint constructed in a particular fashion yields
@@ -72,7 +81,7 @@ GTEST_TEST(testCost, testCostShim) {
 
   const Polynomiald x("x");
   const auto poly = (x - 1) * (x - 1);
-  const auto var_mapping = {x.GetSimpleVariable()};
+  const auto var_mapping = make_vector({x.GetSimpleVariable()});
   VerifyRelatedCost<PolynomialConstraint>(
       Vector1d(2), VectorXPoly::Constant(1, poly), var_mapping,
       Vector1d::Constant(2), Vector1d::Constant(2));
