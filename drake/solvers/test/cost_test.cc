@@ -26,6 +26,31 @@ namespace drake {
 namespace solvers {
 namespace {
 
+// Check for the failure of libstdc++ 4.9's std::is_convertible if used to
+// check From = std::unique_ptr<T>, To = std::shared_ptr<U>
+template<typename From, typename To>
+struct check_ptr_convertible {
+  typedef std::unique_ptr<From> FromPtr;
+  typedef std::shared_ptr<To> ToPtr;
+
+  static constexpr workaround_value =
+      detail::is_convertible_workaround<FromPtr, ToPtr>::value;
+  static constexpr std_value =
+        std::is_convertible<FromPtr, ToPtr>::value;
+};
+
+GTEST_TEST(testCost, testGccIsConvertibleWorkaround) {
+#if __GLIBCXX__ <= 20150626 && __GLIBCXX__ != 20150422
+  // Bug in libstdc++ 4.9.x
+  // Versions obtaind from: http://stackoverflow.com/a/37119478/7829525
+  EXPECT_TRUE(check_convertible<int, char>::std_value);
+#else
+  EXPECT_FALSE(check_convertible<int, char>::std_value);
+#endif
+}
+EXPECT_FALSE(check_convertible<int, char>::workaround_value);
+
+
 // For a given Constraint, return the equivalent Cost type
 template <typename C>
 struct related_cost {
