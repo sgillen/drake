@@ -44,9 +44,10 @@ struct related_cost<PolynomialConstraint> {
   using type = PolynomialCost;
 };
 
-// Infer vector type from initializer list
-// Otherwise, the parameter pack'd intialiazer_list fails to bind properly
-// fails in older versions of gcc-4.9 (does not fail on 4.9.3)
+// Utility to explicitly pass a vector rather than an initializer list.
+// This must be done since you cannot forward std::initializer_list's via
+// parameter packs. (GCC 4.9.3 is non-standards compliant and permits this,
+// but this is fixed in GCC 4.9.4.)
 template <typename T>
 auto make_vector(std::initializer_list<T> items) {
   return vector<std::decay_t<T>>(items);
