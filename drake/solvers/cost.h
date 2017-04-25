@@ -80,7 +80,7 @@ class PolynomialCost : public CostShim<PolynomialConstraint> {
 };
 
 /**
- * A constraint that may be specified using a callable object
+ * A constraint that may be specified using a callable object.
  * @tparam F The function / functor's type
  * @note This is presently in Cost as it is the only place used. Once Cost is
  * its own proper class, this name will be transitioned to FunctionCost.

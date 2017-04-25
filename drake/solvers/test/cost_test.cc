@@ -1,3 +1,5 @@
+#include "drake/solvers/cost.h"
+
 #include <memory>
 
 #include <gtest/gtest.h>
@@ -6,29 +8,23 @@
 #include "drake/common/test/is_dynamic_castable.h"
 #include "drake/math/autodiff.h"
 #include "drake/math/autodiff_gradient.h"
-#include "drake/solvers/cost.h"
 #include "drake/solvers/create_cost.h"
 #include "drake/solvers/decision_variable.h"
 #include "drake/solvers/test/generic_trivial_costs.h"
 
 using std::make_shared;
 using std::make_unique;
-using std::shared_ptr;
-using std::unique_ptr;
 using std::vector;
-using Eigen::Matrix2d;
-using Eigen::MatrixXd;
+
 using Eigen::Ref;
 using drake::Vector1d;
 using Eigen::Vector2d;
-using Eigen::Vector3d;
 using Eigen::VectorXd;
-using drake::solvers::test::GenericTrivialCost1;
 using drake::solvers::test::GenericTrivialCost2;
 
 namespace drake {
 namespace solvers {
-namespace test {
+namespace {
 
 // For a given Constraint, return the equivalent Cost type
 template <typename C>
@@ -126,6 +122,6 @@ GTEST_TEST(testCost, testFunctionCost) {
   VerifyFunctionCost<true>(make_unique<GenericTrivialCost2>(), x);
 }
 
-}  // namespace test
+}  // anonymous namespace
 }  // namespace solvers
 }  // namespace drake

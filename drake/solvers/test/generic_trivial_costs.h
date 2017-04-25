@@ -24,7 +24,7 @@ class GenericTrivialCost1 : public Constraint {
   DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(GenericTrivialCost1)
 
   GenericTrivialCost1()
-      : Constraint(1, 3, Vector1d(std::numeric_limits<double>::infinity()),
+      : Constraint(1, 3, -Vector1d(std::numeric_limits<double>::infinity()),
                    Vector1d(std::numeric_limits<double>::infinity())),
         private_val_(2) {}
 
@@ -58,15 +58,15 @@ class GenericTrivialCost2 {
 
   GenericTrivialCost2() = default;
 
-  static std::size_t numInputs() { return 2; }
-  static std::size_t numOutputs() { return 1; }
+  static size_t numInputs() { return 2; }
+  static size_t numOutputs() { return 1; }
 
   template <typename ScalarType>
   void eval(detail::VecIn<ScalarType> const& x,
             // TODO(#2274) Fix NOLINTNEXTLINE(runtime/references).
             detail::VecOut<ScalarType>& y) const {
-    DRAKE_ASSERT(static_cast<std::size_t>(x.rows()) == numInputs());
-    DRAKE_ASSERT(static_cast<std::size_t>(y.rows()) == numOutputs());
+    DRAKE_ASSERT(static_cast<size_t>(x.rows()) == numInputs());
+    DRAKE_ASSERT(static_cast<size_t>(y.rows()) == numOutputs());
     y(0) = x(0) * x(0) - x(1) * x(1) + 2;
   }
 };

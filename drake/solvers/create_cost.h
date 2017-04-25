@@ -64,7 +64,7 @@ struct is_cost_functor_candidate
 
 }  // namespace detail
 
-// TODO(eric.cousineau): For is_cost_functor_candiate, consider
+// TODO(eric.cousineau): For is_cost_functor_candidate, consider
 // changing implementation to simply check if F is callable (after removing
 // pointers, decaying, etc.)
 // @ref http://stackoverflow.com/a/5117641/7829525
