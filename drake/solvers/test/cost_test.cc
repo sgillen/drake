@@ -49,8 +49,8 @@ struct related_cost<PolynomialConstraint> {
 };
 
 // Infer vector type from initializer list
-// Otherwise, the parameter pack'd intializer_list fails to bind properly fails
-// in older versions of gcc-4.9 (does not fail on 4.9.3)
+// Otherwise, the parameter pack'd intialiazer_list fails to bind properly
+// fails in older versions of gcc-4.9 (does not fail on 4.9.3)
 template <typename T>
 auto make_vector(std::initializer_list<T> items) {
   return vector<std::decay_t<T>>(items);

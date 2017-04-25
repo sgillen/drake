@@ -62,8 +62,8 @@ class GenericTrivialCost2 {
   static std::size_t numOutputs() { return 1; }
 
   template <typename ScalarType>
-  // TODO(#2274) Fix NOLINTNEXTLINE(runtime/references).
   void eval(detail::VecIn<ScalarType> const& x,
+            // TODO(#2274) Fix NOLINTNEXTLINE(runtime/references).
             detail::VecOut<ScalarType>& y) const {
     DRAKE_ASSERT(static_cast<std::size_t>(x.rows()) == numInputs());
     DRAKE_ASSERT(static_cast<std::size_t>(y.rows()) == numOutputs());
