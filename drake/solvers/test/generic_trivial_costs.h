@@ -2,6 +2,7 @@
 
 #include "drake/solvers/constraint.h"
 
+#include <cstddef>
 #include <limits>
 
 #include "drake/common/drake_assert.h"
