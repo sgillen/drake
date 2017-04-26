@@ -23,12 +23,12 @@ namespace internal {
 class SymbolicError : public std::runtime_error {
  public:
   SymbolicError(const symbolic::Expression& e, const std::string& msg);
-  SymbolicError(const symbolic::Expression& e, const double lb,
-                const double ub, const std::string& msg);
+  SymbolicError(const symbolic::Expression& e, const double lb, const double ub,
+                const std::string& msg);
 
  private:
   static std::string make_string(const symbolic::Expression& e,
-                            const std::string& msg);
+                                 const std::string& msg);
   static std::string make_string(const symbolic::Expression& e, const double lb,
                                  const double ub, const std::string& msg);
 };
@@ -72,8 +72,8 @@ ExtractVariablesFromExpression(const symbolic::Expression& e);
  */
 void DecomposeQuadraticExpressionWithMonomialToCoeffMap(
     const symbolic::MonomialToCoefficientMap& monomial_to_coeff_map,
-    const std::unordered_map<symbolic::Variable::Id, int>& map_var_to_index, int
-    num_variables, Eigen::MatrixXd* Q, Eigen::VectorXd* b, double* c);
+    const std::unordered_map<symbolic::Variable::Id, int>& map_var_to_index,
+    int num_variables, Eigen::MatrixXd* Q, Eigen::VectorXd* b, double* c);
 
 /**
  * Given a vector of linear expressions v, decompose it to
@@ -113,7 +113,7 @@ void DecomposeLinearExpression(
  */
 template <typename Derived>
 typename std::enable_if<std::is_same<typename Derived::Scalar, double>::value,
-                   int>::type
+                        int>::type
 DecomposeLinearExpression(
     const symbolic::Expression& e,
     const std::unordered_map<symbolic::Variable::Id, int>& map_var_to_index,
@@ -155,6 +155,6 @@ DecomposeLinearExpression(
   return num_variable;
 }
 
-} // namespace symbolic
-} // namespace solvers
-} // namespace drake
+}  // namespace internal
+}  // namespace solvers
+}  // namespace drake

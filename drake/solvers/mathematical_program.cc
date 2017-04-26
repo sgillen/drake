@@ -343,9 +343,8 @@ Binding<PolynomialCost> MathematicalProgram::AddPolynomialCost(
     const Expression& e) {
   if (!e.is_polynomial()) {
     ostringstream oss;
-    oss << "Expression" << e
-        << " is not a polynomial. AddPolynomialCost only "
-           "support polynomial expression.\n";
+    oss << "Expression" << e << " is not a polynomial. AddPolynomialCost only "
+                                "support polynomial expression.\n";
     throw runtime_error(oss.str());
   }
   const symbolic::Variables& vars = e.GetVariables();
@@ -369,9 +368,8 @@ Binding<PolynomialCost> MathematicalProgram::AddPolynomialCost(
 Binding<Cost> MathematicalProgram::AddCost(const Expression& e) {
   if (!e.is_polynomial()) {
     ostringstream oss;
-    oss << "Expression " << e
-        << " is not a polynomial. Currently AddCost does "
-           "not support non-polynomial expression.\n";
+    oss << "Expression " << e << " is not a polynomial. Currently AddCost does "
+                                 "not support non-polynomial expression.\n";
     throw runtime_error(oss.str());
   }
   const symbolic::Variables& vars = e.GetVariables();
@@ -1077,9 +1075,8 @@ size_t MathematicalProgram::FindDecisionVariableIndex(
   auto it = decision_variable_index_.find(var.get_id());
   if (it == decision_variable_index_.end()) {
     ostringstream oss;
-    oss << var
-        << " is not a decision variable in the mathematical program, "
-           "when calling GetSolution.\n";
+    oss << var << " is not a decision variable in the mathematical program, "
+                  "when calling GetSolution.\n";
     throw runtime_error(oss.str());
   }
   return it->second;
