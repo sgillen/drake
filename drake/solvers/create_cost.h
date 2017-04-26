@@ -70,12 +70,9 @@ struct is_cost_functor_candidate
 // @ref http://stackoverflow.com/a/5117641/7829525
 
 /**
- * Add costs to the optimization program on decision variables as dictated
- * by the Binding constructor.
- *
- * @tparam F it should define functions numInputs, numOutputs and eval.
- *
- * @see detail::FunctionTraits for more detail.
+ * Creates a cost that may be specified using a callable object.
+ * @tparam F The function / functor's type.
+ * @see FunctionCost, detail::FunctionTraits
  */
 template <typename F>
 typename std::enable_if<detail::is_cost_functor_candidate<F>::value,

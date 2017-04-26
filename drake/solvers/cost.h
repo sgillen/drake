@@ -97,6 +97,7 @@ class PolynomialCost : public CostShim<PolynomialConstraint> {
 /**
  * A constraint that may be specified using a callable object.
  * @tparam F The function / functor's type.
+ * @see detail::FunctionTraits.
  * @note This is presently in Cost as it is the only place used. Once Cost is
  * its own proper class, this name will be transitioned to FunctionCost.
  */
@@ -148,6 +149,7 @@ class FunctionConstraint : public Constraint {
 /**
  * A cost that may be specified using a callable object.
  * @tparam F The function / functor's type.
+ * @see detail::FunctionTraits.
  */
 template <typename F>
 class FunctionCost : public CostShim<FunctionConstraint<F>> {
