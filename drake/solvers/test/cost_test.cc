@@ -41,7 +41,7 @@ struct check_ptr_convertible {
       detail::is_convertible_workaround<FromPtr, ToPtr>::value;
 };
 
-GTEST_TEST(testCost, testGccIsConvertibleWorkaround) {
+GTEST_TEST(testCost, testIsConvertibleWorkaround) {
   struct A {};
   struct B {};
 #if !defined(__clang__) && __GNUC__ == 4 && __GNUC_MINOR__ == 9
