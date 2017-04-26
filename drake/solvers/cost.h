@@ -55,6 +55,9 @@ class CostShim : public Cost {
       : Cost(std::make_shared<C>(std::forward<Args>(args)...)) {}
 };
 
+/**
+ * Implements a cost of the form @f Ax @f
+ */
 class LinearCost : public CostShim<LinearConstraint> {
  public:
   DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(LinearCost)
@@ -63,6 +66,9 @@ class LinearCost : public CostShim<LinearConstraint> {
   using CostShim::CostShim;
 };
 
+/**
+ * Implements a cost of the form @f .5 x'Qx + b'x @f
+ */
 class QuadraticCost : public CostShim<QuadraticConstraint> {
  public:
   DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(QuadraticCost)
@@ -71,6 +77,15 @@ class QuadraticCost : public CostShim<QuadraticConstraint> {
   using CostShim::CostShim;
 };
 
+/**
+ *  Implements a cost of the form P(x, y...) where P is a multivariate
+ *  polynomial in x, y...
+ *
+ * The Polynomial class uses a different variable naming scheme; thus the
+ * caller must provide a list of Polynomial::VarType variables that correspond
+ * to the members of the MathematicalProgram::Binding (the individual scalar
+ * elements of the given VariableList).
+ */
 class PolynomialCost : public CostShim<PolynomialConstraint> {
  public:
   DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(PolynomialCost)
@@ -81,7 +96,7 @@ class PolynomialCost : public CostShim<PolynomialConstraint> {
 
 /**
  * A constraint that may be specified using a callable object.
- * @tparam F The function / functor's type
+ * @tparam F The function / functor's type.
  * @note This is presently in Cost as it is the only place used. Once Cost is
  * its own proper class, this name will be transitioned to FunctionCost.
  */
@@ -130,6 +145,10 @@ class FunctionConstraint : public Constraint {
   const F f_;
 };
 
+/**
+ * A cost that may be specified using a callable object.
+ * @tparam F The function / functor's type.
+ */
 template <typename F>
 class FunctionCost : public CostShim<FunctionConstraint<F>> {
  public:
@@ -141,5 +160,5 @@ class FunctionCost : public CostShim<FunctionConstraint<F>> {
   using Base::Base;
 };
 
-};  // namespace solvers
+}  // namespace solvers
 }  // namespace drake
