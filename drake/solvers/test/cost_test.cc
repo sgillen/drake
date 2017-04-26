@@ -43,11 +43,12 @@ struct check_ptr_convertible {
 GTEST_TEST(testCost, testIsConvertibleWorkaround) {
   struct A {};
   struct B {};
-#if !defined(__clang__) && __GNUC__ == 4 && __GNUC_MINOR__ == 9
+#if !defined(__clang__) && __GNUC__ == 4 && __GNUC_MINOR__ == 9 && \
+    __GNUC_PATCHLEVEL__ <= 3
   // Bug in libstdc++ 4.9.x
   // Unable to easily determine libstdc++ version from macros at present:
   // https://patchwork.ozlabs.org/patch/716321/
-  cout << "Checking for libstdc++-4.9 bug since GCC 4.9.x was detected."
+  cout << "Checking for libstdc++-4.9 bug since GCC 4.9.[0-3] was detected."
        << endl;
   EXPECT_TRUE((check_ptr_convertible<A, B>::std_value));
 #else
