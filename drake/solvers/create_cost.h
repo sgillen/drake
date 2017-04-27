@@ -6,11 +6,10 @@
 
 #include "drake/common/symbolic_expression.h"
 #include "drake/solvers/binding.h"
-#include "drake/solvers/constraint.h"
 #include "drake/solvers/cost.h"
 #include "drake/solvers/function.h"
 #include "drake/common/monomial.h"
-#include "symbolic_extraction.h"
+
 
 namespace drake {
 namespace solvers {
