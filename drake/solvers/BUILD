@@ -59,8 +59,24 @@ drake_cc_library(
 )
 
 drake_cc_library(
+    name = "create_constraint",
+    srcs = ["create_constraint.cc"],
+    hdrs = ["create_constraint.h"],
+    deps = [
+        ":binding",
+        ":cost",
+        "//drake/common",
+        "//drake/common:autodiff",
+        "//drake/common:monomial",
+        "//drake/common:number_traits",
+        "//drake/common:polynomial",
+        "//drake/common:symbolic",
+    ],
+)
+
+drake_cc_library(
     name = "create_cost",
-    srcs = [],
+    srcs = ["create_cost.cc"],
     hdrs = ["create_cost.h"],
     deps = [
         ":binding",
@@ -130,6 +146,7 @@ drake_cc_library(
     ],
     deps = [
         ":binding",
+        ":create_constraint",
         ":create_cost",
         ":decision_variable",
         ":gurobi_solver",
@@ -270,6 +287,7 @@ drake_cc_library(
     ],
     deps = [
         ":binding",
+        ":create_constraint",
         ":create_cost",
         ":decision_variable",
         ":function",
