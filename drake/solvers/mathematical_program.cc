@@ -234,7 +234,7 @@ Binding<Cost> MathematicalProgram::AddCost(const Binding<Cost>& binding) {
 Binding<Cost> MathematicalProgram::AddCost(
     const shared_ptr<Cost>& obj,
     const Eigen::Ref<const VectorXDecisionVariable>& vars) {
-  return AddCost(Binding<Cost>(obj, vars));
+  return AddCost(CreateBinding(obj, vars));
 }
 
 Binding<LinearCost> MathematicalProgram::AddCost(
@@ -251,26 +251,17 @@ Binding<LinearCost> MathematicalProgram::AddCost(
 Binding<LinearCost> MathematicalProgram::AddCost(
     const shared_ptr<LinearCost>& obj,
     const Eigen::Ref<const VectorXDecisionVariable>& vars) {
-  return AddCost(Binding<LinearCost>(obj, vars));
+  return AddCost(CreateBinding(obj, vars));
 }
 
 Binding<LinearCost> MathematicalProgram::AddLinearCost(const Expression& e) {
-  auto p = ExtractVariablesFromExpression(e);
-  const VectorXDecisionVariable& var = p.first;
-  const auto& map_var_to_index = p.second;
-  Eigen::RowVectorXd c(var.size());
-  double constant_term;
-  DecomposeLinearExpression(e, map_var_to_index, c, &constant_term);
-  // The constant term is ignored now.
-  // TODO(hongkai.dai): support adding constant term to the cost.
-  return AddLinearCost(c, var);
+  return AddCost(CreateLinearCost(e));
 }
 
 Binding<LinearCost> MathematicalProgram::AddLinearCost(
     const Eigen::Ref<const Eigen::VectorXd>& c,
     const Eigen::Ref<const VectorXDecisionVariable>& vars) {
-  auto cost = make_shared<LinearCost>(c.transpose());
-  return AddCost(cost, vars);
+  return AddCost(CreateLinearCost(c), vars);
 }
 
 Binding<QuadraticCost> MathematicalProgram::AddCost(
@@ -288,55 +279,26 @@ Binding<QuadraticCost> MathematicalProgram::AddCost(
 Binding<QuadraticCost> MathematicalProgram::AddCost(
     const shared_ptr<QuadraticCost>& obj,
     const Eigen::Ref<const VectorXDecisionVariable>& vars) {
-  return AddCost(Binding<QuadraticCost>(obj, vars));
-}
-
-Binding<QuadraticCost> AddQuadraticCostWithMonomialToCoeffMap(
-    const symbolic::MonomialToCoefficientMap& monomial_to_coeff_map,
-    const VectorXDecisionVariable& vars_vec,
-    const unordered_map<Variable::Id, int>& map_var_to_index,
-    MathematicalProgram* prog) {
-  // We want to write the expression e in the form 0.5 * x' * Q * x + b' * x + c
-  // TODO(hongkai.dai): use a sparse matrix to represent Q and b.
-  Eigen::MatrixXd Q(vars_vec.size(), vars_vec.size());
-  Eigen::VectorXd b(vars_vec.size());
-  double constant_term;
-  DecomposeQuadraticExpressionWithMonomialToCoeffMap(
-      monomial_to_coeff_map, map_var_to_index, vars_vec.size(), &Q, &b,
-      &constant_term);
-  // Now add the quadratic constraint 0.5 * x' * Q * x + b' * x
-  return prog->AddQuadraticCost(Q, b, vars_vec);
+  return AddCost(CreateBinding(obj, vars));
 }
 
 Binding<QuadraticCost> MathematicalProgram::AddQuadraticCost(
     const Expression& e) {
-  // First build an Eigen vector, that contains all the bound variables.
-  const symbolic::Variables& vars = e.GetVariables();
-  auto p = ExtractVariablesFromExpression(e);
-  const auto& vars_vec = p.first;
-  const auto& map_var_to_index = p.second;
-
-  // Now decomposes the expression into coefficients and monomials.
-  const symbolic::MonomialToCoefficientMap& monomial_to_coeff_map =
-      symbolic::DecomposePolynomialIntoMonomial(e, vars);
-  return AddQuadraticCostWithMonomialToCoeffMap(monomial_to_coeff_map, vars_vec,
-                                                map_var_to_index, this);
+  return AddCost(CreateQuadraticCost(e));
 }
 
 Binding<QuadraticCost> MathematicalProgram::AddQuadraticErrorCost(
     const Eigen::Ref<const Eigen::MatrixXd>& Q,
     const Eigen::Ref<const Eigen::VectorXd>& x_desired,
     const Eigen::Ref<const VectorXDecisionVariable>& vars) {
-  auto cost = make_shared<QuadraticCost>(2 * Q, -2 * Q * x_desired);
-  return AddCost(cost, vars);
+  return AddCost(CreateQuadraticErrorCost(Q, x_desired), vars);
 }
 
 Binding<QuadraticCost> MathematicalProgram::AddQuadraticCost(
     const Eigen::Ref<const Eigen::MatrixXd>& Q,
     const Eigen::Ref<const Eigen::VectorXd>& b,
     const Eigen::Ref<const VectorXDecisionVariable>& vars) {
-  auto cost = make_shared<QuadraticCost>(Q, b);
-  return AddCost(cost, vars);
+  return AddCost(CreateQuadraticCost(Q, b), vars);
 }
 
 Binding<PolynomialCost> MathematicalProgram::AddPolynomialCost(

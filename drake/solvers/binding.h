@@ -66,5 +66,18 @@ class Binding {
   std::shared_ptr<C> constraint_;
   VectorXDecisionVariable vars_;
 };
+
+template<typename C>
+Binding<C> CreateBinding(const std::shared_ptr<C>& c,
+                         const Eigen::Ref<const VectorXDecisionVariable>& v) {
+  return Binding<C>(c, v);
+}
+
+template<typename C>
+Binding<C> CreateBinding(const std::shared_ptr<C>& c,
+                         const VariableRefList& v) {
+  return Binding<C>(c, v);
+}
+
 }  // namespace solvers
 }  // namespace drake

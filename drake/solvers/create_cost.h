@@ -9,9 +9,45 @@
 #include "drake/solvers/constraint.h"
 #include "drake/solvers/cost.h"
 #include "drake/solvers/function.h"
+#include "drake/common/monomial.h"
+#include "symbolic_extraction.h"
 
 namespace drake {
 namespace solvers {
+
+/** \addtogroup LinearCostCreators */
+/*@{*/
+
+/**
+ * Creates a linear cost term of the form c'*x.
+ */
+std::shared_ptr<LinearCost> CreateLinearCost(
+    const Eigen::Ref<const Eigen::VectorXd>& c);
+
+/**
+ * Creates a linear cost term of the form c'*x.
+ * @param e A linear symbolic expression.
+ * @pre{e is a linear expression c'*x, where each entry of x is a decision
+ * variable in the mathematical program}
+ * @return The newly created linear constraint, together with the bound
+ * variables.
+ */
+Binding<LinearCost> CreateLinearCost(const symbolic::Expression& e);
+
+/*@}*/   // \addtogroup LinearCostCreators
+
+
+/** \addtogroup QuadraticCostCreators */
+/*@{*/
+
+Binding<QuadraticCost> CreateQuadraticCost(const symbolic::Expression& e);
+
+std::shared_ptr<QuadraticCost> CreateQuadraticCost(
+    const Eigen::Ref<const Eigen::MatrixXd>& Q,
+    const Eigen::Ref<const Eigen::VectorXd>& b);
+
+/*@}*/   // \addtogroup QuadraticCostCreators
+
 
 /** \addtogroup FunctionCostCreators */
 /*@{*/
