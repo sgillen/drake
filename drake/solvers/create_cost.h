@@ -74,6 +74,27 @@ shared_ptr<QuadraticCost> CreateL2NormCost(
 /*@}*/   // \addtogroup QuadraticCostCreators
 
 
+/** \addtogroup PolynomialCostCreators */
+/*@{*/
+
+/**
+ * Creates a cost term in the polynomial form.
+ * @param e A symbolic expression in the polynomial form.
+ * @return The newly added cost and the bound variables.
+ */
+Binding<PolynomialCost> CreatePolynomialCost(const symbolic::Expression& e);
+
+/*@}*/   // \addtogroup PolynomialCostCreators
+
+
+/** \addtogroup CostCreators */
+/*@{*/
+
+Binding<Cost> CreateCost(const symbolic::Expression& e);
+
+/*@}*/   // \addtogroup CostCreators
+
+
 /** \addtogroup FunctionCostCreators */
 /*@{*/
 
