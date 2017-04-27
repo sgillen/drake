@@ -85,6 +85,12 @@ Binding<QuadraticCost> CreateQuadraticCost(const Expression& e) {
     monomial_to_coeff_map, vars_vec, map_var_to_index, this);
 }
 
+shared_ptr<QuadraticCost> CreateL2NormCost(
+    const Eigen::Ref<const Eigen::MatrixXd>& A,
+    const Eigen::Ref<const Eigen::VectorXd>& b) {
+  return CreateQuadraticCost(2 * A.transpose() * A, -2 * A.transpose() * b);
+}
+
 
 }  // namespace solvers
 }  // namespace drake

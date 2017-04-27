@@ -827,8 +827,8 @@ class MathematicalProgram {
       const Eigen::Ref<const Eigen::MatrixXd>& A,
       const Eigen::Ref<const Eigen::VectorXd>& b,
       const Eigen::Ref<const VectorXDecisionVariable>& vars) {
-    return AddQuadraticCost(2 * A.transpose() * A, -2 * A.transpose() * b,
-                            vars);
+    return AddCost(CreateL2NormCost(2 * A.transpose() * A,
+                                    -2 * A.transpose() *b), vars);
   }
 
   /**

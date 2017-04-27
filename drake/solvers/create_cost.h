@@ -40,10 +40,35 @@ Binding<LinearCost> CreateLinearCost(const symbolic::Expression& e);
 /** \addtogroup QuadraticCostCreators */
 /*@{*/
 
-Binding<QuadraticCost> CreateQuadraticCost(const symbolic::Expression& e);
-
+/**
+ * Creates a cost term of the form 0.5*x'*Q*x + b'x
+ */
 std::shared_ptr<QuadraticCost> CreateQuadraticCost(
     const Eigen::Ref<const Eigen::MatrixXd>& Q,
+    const Eigen::Ref<const Eigen::VectorXd>& b);
+
+/**
+ * Creates a cost term of the form (x-x_desired)'*Q*(x-x_desired).
+ */
+std::shared_ptr<QuadraticCost> CreateQuadraticErrorCost(
+    const Eigen::Ref<const Eigen::MatrixXd>& Q,
+    const Eigen::Ref<const Eigen::VectorXd>& x_desired);
+
+/**
+ * Creates a quadratic cost term of the form 0.5*x'*Q*x + b'*x + c.
+ * Notice that in the optimization program, the constant term `c` in the cost
+ * is ignored.
+ * @param e A quadratic symbolic expression. Throws a runtime error if the
+ * expression is not quadratic.
+ * @return The newly created cost together with the bound variables.
+ */
+Binding<QuadraticCost> CreateQuadraticCost(const symbolic::Expression& e);
+
+/**
+ * Creates a cost term of the form | Ax - b |^2.
+ */
+shared_ptr<QuadraticCost> CreateL2NormCost(
+    const Eigen::Ref<const Eigen::MatrixXd>& A,
     const Eigen::Ref<const Eigen::VectorXd>& b);
 
 /*@}*/   // \addtogroup QuadraticCostCreators

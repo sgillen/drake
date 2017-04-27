@@ -303,66 +303,11 @@ Binding<QuadraticCost> MathematicalProgram::AddQuadraticCost(
 
 Binding<PolynomialCost> MathematicalProgram::AddPolynomialCost(
     const Expression& e) {
-  if (!e.is_polynomial()) {
-    ostringstream oss;
-    oss << "Expression" << e << " is not a polynomial. AddPolynomialCost only "
-                                "support polynomial expression.\n";
-    throw runtime_error(oss.str());
-  }
-  const symbolic::Variables& vars = e.GetVariables();
-  const Polynomiald polynomial = e.ToPolynomial();
-  vector<Polynomiald::VarType> polynomial_vars(vars.size());
-  VectorXDecisionVariable var_vec(vars.size());
-  int polynomial_var_count = 0;
-  for (const auto& var : vars) {
-    polynomial_vars[polynomial_var_count] = var.get_id();
-    var_vec[polynomial_var_count] = var;
-    ++polynomial_var_count;
-  }
-  Binding<PolynomialCost> polynomial_cost(
-      make_shared<PolynomialCost>(Vector1<Polynomiald>(polynomial),
-                                  polynomial_vars),
-      var_vec);
-  AddCost(polynomial_cost);
-  return polynomial_cost;
+  return AddCost(CreatePolynomialCost(e));
 }
 
 Binding<Cost> MathematicalProgram::AddCost(const Expression& e) {
-  if (!e.is_polynomial()) {
-    ostringstream oss;
-    oss << "Expression " << e << " is not a polynomial. Currently AddCost does "
-                                 "not support non-polynomial expression.\n";
-    throw runtime_error(oss.str());
-  }
-  const symbolic::Variables& vars = e.GetVariables();
-  const symbolic::MonomialToCoefficientMap& monomial_to_coeff_map =
-      symbolic::DecomposePolynomialIntoMonomial(e, vars);
-  int total_degree = 0;
-  for (const auto& p : monomial_to_coeff_map) {
-    total_degree = std::max(total_degree, p.first.total_degree());
-  }
-
-  auto e_extracted = ExtractVariablesFromExpression(e);
-  const VectorXDecisionVariable& vars_vec = e_extracted.first;
-  const auto& map_var_to_index = e_extracted.second;
-
-  if (total_degree > 2) {
-    return AddPolynomialCost(e);
-  } else if (total_degree == 2) {
-    return AddQuadraticCostWithMonomialToCoeffMap(
-        monomial_to_coeff_map, vars_vec, map_var_to_index, this);
-  } else {
-    Eigen::VectorXd c(vars_vec.size());
-    c.setZero();
-    for (const auto& p : monomial_to_coeff_map) {
-      if (p.first.total_degree() == 1) {
-        const Variable::Id var_id = p.first.get_powers().begin()->first;
-        DRAKE_DEMAND(is_constant(p.second));
-        c(map_var_to_index.at(var_id)) += get_constant_value(p.second);
-      }
-    }
-    return AddLinearCost(c, vars_vec);
-  }
+  return AddCost(CreateCost(e));
 }
 
 Binding<Constraint> MathematicalProgram::AddConstraint(
