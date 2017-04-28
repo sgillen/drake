@@ -411,6 +411,15 @@ drake_cc_googletest(
     ],
 )
 
+drake_cc_googletest(
+    name = "symbolic_extraction_test",
+    deps = [
+        ":symbolic_extraction",
+        "//drake/common:eigen_matrix_compare",
+        "//drake/common:symbolic_test_util",
+    ],
+)
+
 # Temporarily disabled because we have no Gurobi license in CI. #5862
 # TODO(hongkai-dai): Separate this test into a test that uses Gurobi, and a
 # test that doesn't.

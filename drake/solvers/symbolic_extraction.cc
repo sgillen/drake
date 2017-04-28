@@ -64,6 +64,16 @@ SymbolicError::SymbolicError(const symbolic::Expression& e, const double lb,
                              const double ub, const std::string& msg)
     : runtime_error{make_string(e, lb, ub, msg)} {}
 
+template<typename Derived, typename Scalar,
+    typename = typename std::enable_if<Derived::ColsAtCompileTime == 1>::type>
+Scalar& AppendToVector(const Scalar& s, Eigen::MatrixBase<Derived>* px) {
+  Derived& derived = px->derived();
+  int initial_size = derived.size();
+  derived.conservativeResize(initial_size + 1);
+  derived(initial_size) = s;
+  return derived(initial_size);
+}
+
 void ExtractAndAppendVariablesFromExpression(
     const Expression& e, VectorXDecisionVariable* vars,
     unordered_map<Variable::Id, int>* map_var_to_index) {
@@ -71,8 +81,9 @@ void ExtractAndAppendVariablesFromExpression(
   for (const Variable& var : e.GetVariables()) {
     if (map_var_to_index->find(var.get_id()) == map_var_to_index->end()) {
       map_var_to_index->emplace(var.get_id(), vars->size());
-      vars->conservativeResize(vars->size() + 1, Eigen::NoChange);
-      (*vars)(vars->size() - 1) = var;
+      AppendToVector(var, vars);
+//      vars->conservativeResize(vars->size() + 1, Eigen::NoChange);
+//      (*vars)(vars->size() - 1) = var;
     }
   }
 }
