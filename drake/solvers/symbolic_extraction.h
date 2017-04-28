@@ -25,7 +25,9 @@ template<typename Derived, typename Scalar,
 void AppendToVector(const Scalar& s, Eigen::MatrixBase<Derived>* px) {
   Derived& derived = px->derived();
   int initial_size = derived.size();
-  derived.conservativeResize(initial_size + 1);
+  derived.conservativeResize(initial_size + 1, Eigen::NoChange);
+  // TODO(eric.cousineau): This causes a memory leak?
+//  derived.conservativeResize(derived.size() + 1);
   derived(initial_size) = s;
 }
 
