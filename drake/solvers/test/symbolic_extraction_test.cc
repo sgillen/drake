@@ -79,12 +79,26 @@ namespace {
 //   }
 // }
 
-GTEST_TEST(SymbolicExtraction, ExtractAndAppend) {
+GTEST_TEST(SymbolicExtraction, AppendToVector) {
   Variable x("x");
   Variable y("y");
-  Expression e = x + y;
+  //  Expression e = x + y;
   VectorXDecisionVariable vars_expected(2);
   vars_expected << x, y;
+  Variable z("z");
+  vars_expected.conservativeResize(3);
+  vars_expected(2) = z;
+}
+
+//GTEST_TEST(SymbolicExtraction, ExtractAndAppend) {
+//  Variable x("x");
+//  Variable y("y");
+////  Expression e = x + y;
+//  VectorXDecisionVariable vars_expected(2);
+//  vars_expected << x, y;
+//  Variable z("z");
+//  vars_expected.conservativeResize(3);
+//  vars_expected(2) = z;
 
   // {
   //   MapVarToIndex map_var_to_index;
@@ -96,16 +110,14 @@ GTEST_TEST(SymbolicExtraction, ExtractAndAppend) {
   // }
 
   // Test appending
-  Variable z("z");
-  vars_expected.conservativeResize(3);
-  vars_expected(2) = z;
+
   // e += x * (z - y);
 
   // internal::ExtractAndAppendVariablesFromExpression(e, &vars,
   //                                                   &map_var_to_index);
   // EXPECT_EQ(vars_expected, vars);
   // ExpectValidMapVarToIndex(vars, map_var_to_index);
-}
+//}
 
 }  // anonymous namespace
 }  // namespace solvers
