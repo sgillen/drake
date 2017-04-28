@@ -86,8 +86,10 @@ GTEST_TEST(SymbolicExtraction, AppendToVector) {
   VectorXDecisionVariable vars_expected(2);
   vars_expected << x, y;
   Variable z("z");
-  vars_expected.conservativeResize(3);
-  vars_expected(2) = z;
+//  vars_expected.conservativeResize(3);
+//  vars_expected(2) = z;
+  VectorXDecisionVariable setup(3);
+  setup << vars_expected, z;
 }
 
 //GTEST_TEST(SymbolicExtraction, ExtractAndAppend) {
