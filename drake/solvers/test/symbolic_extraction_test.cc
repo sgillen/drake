@@ -99,6 +99,16 @@ GTEST_TEST(SymbolicExtraction, AppendToVector) {
   std::cout << w.get_name() << " " << w.get_id() << std::endl;
   w = z;
   std::cout << w.get_name() << " " << w.get_id() << std::endl;
+
+  vector<Variable> vars2 = {x, y};
+  vars2.resize(3);
+  vars2.push_back(z);
+
+  VectorXd f(2);
+  f << 1, 2;
+  f.conservativeResize(3);
+  f(2) = 3;
+  internal::AppendToVector(3, &f);
 }
 
 //GTEST_TEST(SymbolicExtraction, ExtractAndAppend) {
