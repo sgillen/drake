@@ -16,6 +16,7 @@ using std_future::negation;
 
 using detail::is_all_same;
 using detail::is_all_different;
+using detail::is_all_different_with_default;
 
 // Verifies negation
 GTEST_TEST(TypeTraits, Negation) {
@@ -41,6 +42,12 @@ GTEST_TEST(TypeTraits, IsAll) {
 
   EXPECT_TRUE(( is_all_different<double,  char, double*, int>::value ));
   EXPECT_FALSE(( is_all_different<double,  char, double, int>::value ));
+
+  // Test default case
+  EXPECT_FALSE((is_all_different_with_default<
+      true_type, double,  int, double>::value));
+  EXPECT_TRUE((is_all_different_with_default<
+      true_type, double>::value));
 }
 
 }  // anonymous namespace

@@ -9,6 +9,7 @@
 
 #include "drake/common/drake_assert.h"
 #include "drake/common/drake_copyable.h"
+#include "drake/common/type_traits.h"
 #include "drake/systems/framework/basic_vector.h"
 
 namespace drake {
@@ -174,8 +175,8 @@ class Value : public AbstractValue {
   template <typename... Args,
             typename = typename std::enable_if<
                 std::is_constructible<T, Args...>::value &&
-                //!std::is_same<T, Args...>::value &&
-                //!std::is_same<T&, Args...>::value &&
+                detail::is_all_different_with_default<
+                    std::true_type, T, Args...>::value &&
                 !std::is_fundamental<T>::value>::type>
   explicit Value(Args&&... args) : value_{std::forward<Args>(args)...} {}
 
