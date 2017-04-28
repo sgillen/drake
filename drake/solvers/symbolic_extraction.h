@@ -20,6 +20,16 @@ namespace drake {
 namespace solvers {
 namespace internal {
 
+template<typename Derived, typename Scalar,
+    typename = typename std::enable_if<Derived::ColsAtCompileTime == 1>::type>
+Scalar& AppendToVector(const Scalar& s, Eigen::MatrixBase<Derived>* px) {
+  Derived& derived = px->derived();
+  int initial_size = derived.size();
+  derived.conservativeResize(initial_size + 1);
+  derived(initial_size) = s;
+  return derived(initial_size);
+}
+
 class SymbolicError : public std::runtime_error {
  public:
   SymbolicError(const symbolic::Expression& e, const std::string& msg);
