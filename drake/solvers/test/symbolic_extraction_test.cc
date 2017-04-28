@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <functional>
 #include <limits>
+#include <iostream>
 #include <map>
 #include <memory>
 #include <set>
@@ -92,7 +93,12 @@ GTEST_TEST(SymbolicExtraction, AppendToVector) {
 
 //  vars_expected.conservativeResize(3);
 //  vars_expected(2) = z;
-  internal::AppendToVector(z, &vars_expected);
+  // internal::AppendToVector(z, &vars_expected);
+
+  Variable w;
+  std::cout << w.get_name() << " " << w.get_id() << std::endl;
+  w = z;
+  std::cout << w.get_name() << " " << w.get_id() << std::endl;
 }
 
 //GTEST_TEST(SymbolicExtraction, ExtractAndAppend) {
