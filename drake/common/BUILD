@@ -28,6 +28,7 @@ drake_cc_library(
         "eigen_types.h",
         "never_destroyed.h",
         "text_logging.h",
+        "type_traits.h",
     ],
     deps = [
         "@eigen//:eigen",
@@ -288,8 +289,8 @@ drake_cc_library(
         "//conditions:default": [],
     }),
     deps = [
-        ":common",
         "@gflags//:gflags",
+        ":common",
     ],
 )
 
@@ -677,6 +678,13 @@ drake_cc_googletest(
     deps = [
         ":type_safe_index",
         ":unused",
+    ],
+)
+
+drake_cc_googletest(
+    name = "type_traits_test",
+    deps = [
+        ":common",
     ],
 )
 
