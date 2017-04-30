@@ -68,10 +68,8 @@ using MapVarToIndex = unordered_map<Variable::Id, int>;
 
 namespace drake {
 namespace solvers {
+namespace internal {
 namespace {
-
-using internal::AppendToVector;
-using internal::ExtractAndAppendVariablesFromExpression;
 
 GTEST_TEST(SymbolicExtraction, AppendToVector) {
   Variable x("x");
@@ -98,7 +96,7 @@ void ExpectValidMapVarToIndex(const VectorXDecisionVariable& vars,
  }
 }
 
-GTEST_TEST(SymbolicExtraction, ExtractAndAppend) {
+GTEST_TEST(SymbolicExtraction, ExtractVariables) {
   Variable x("x");
   Variable y("y");
   Expression e = x + y;
@@ -107,8 +105,7 @@ GTEST_TEST(SymbolicExtraction, ExtractAndAppend) {
 
   MapVarToIndex map_var_to_index;
   VectorXDecisionVariable vars;
-  std::tie(vars, map_var_to_index) =
-      internal::ExtractVariablesFromExpression(e);
+  std::tie(vars, map_var_to_index) = ExtractVariablesFromExpression(e);
   EXPECT_EQ(vars_expected, vars);
   ExpectValidMapVarToIndex(vars, map_var_to_index);
 
@@ -121,6 +118,45 @@ GTEST_TEST(SymbolicExtraction, ExtractAndAppend) {
   ExpectValidMapVarToIndex(vars, map_var_to_index);
 }
 
+GTEST_TEST(SymbolicExtraction, DecomposeQuadraticExpression) {
+  const int num_var = 3;
+  Variable x("x");
+  Variable y("y");
+  Variable z("z");
+
+  VectorXDecisionVariable vars_expected(num_var);
+  vars_expected << x, y, z;
+  MatrixXd Q_expected(num_var, num_var);
+  Q_expected <<
+             3, 2, 1,
+             4, 6, 5,
+             7, 8, 9;
+  VectorXd b_expected(num_var);
+  b_expected << 10, 11, 12;
+  double c_expected = 13;
+  Expression e = vars_expected.dot(Q_expected * vars_expected + b_expected) +
+      c_expected;
+
+  MapVarToIndex map_var_to_index;
+  VectorXDecisionVariable vars;
+  std::tie(vars, map_var_to_index) = ExtractVariablesFromExpression(e);
+  const auto monomial_to_coeff_map =
+      symbolic::DecomposePolynomialIntoMonomial(e, e.GetVariables());
+  // Unordered
+  MatrixXd Q(num_var, num_var);
+  VectorXd b(num_var);
+  double c;
+  DecomposeQuadraticExpressionWithMonomialToCoeffMap(monomial_to_coeff_map,
+                                                     map_var_to_index,
+                                                     num_var, &Q, &b, &c);
+  EXPECT_EQ(vars_expected, vars);
+  const double tol = 1e-14;
+  EXPECT_TRUE(CompareMatrices(Q_expected, Q, tol));
+  EXPECT_TRUE(CompareMatrices(b_expected, b, tol));
+  EXPECT_EQ(c_expected, c);
+}
+
 }  // anonymous namespace
+}  // namespace internal
 }  // namespace solvers
 }  // namespace drake
