@@ -20,14 +20,19 @@ namespace drake {
 namespace solvers {
 namespace internal {
 
-template<typename Derived, typename Scalar,
+template<typename Derived,
     typename = typename std::enable_if<Derived::ColsAtCompileTime == 1>::type>
-void AppendToVector(const Scalar& s, Eigen::MatrixBase<Derived>* px) {
+void AppendToVector(const typename Derived::Scalar& s,
+                    Eigen::MatrixBase<Derived>* px) {
   Derived& derived = px->derived();
   int initial_size = derived.size();
+  // TODO(eric.cousineau): Relax to single-argument conservativeResize once
+  // we resolve the following issue (at least for symbolic:: types):
+  // https://github.com/RobotLocomotion/drake/issues/5974
+  // For now, just use the workaround to force explicit copying / moving for
+  // Eigen 3.3.3.
   derived.conservativeResize(initial_size + 1, Eigen::NoChange);
-  // TODO(eric.cousineau): This causes a memory leak?
-//  derived.conservativeResize(derived.size() + 1);
+  // derived.conservativeResize(derived.size() + 1);
   derived(initial_size) = s;
 }
 
