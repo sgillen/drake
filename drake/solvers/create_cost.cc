@@ -20,13 +20,7 @@ using internal::ExtractAndAppendVariablesFromExpression;
 using internal::ExtractVariablesFromExpression;
 using internal::SymbolicError;
 
-
-shared_ptr<LinearCost> CreateLinearCost(
-    const Eigen::Ref<const Eigen::VectorXd>& c) {
-  return make_shared<LinearCost>(c.transpose());
-}
-
-Binding<LinearCost> CreateLinearCost(const Expression& e) {
+Binding<LinearCost> ParseLinearCost(const Expression& e) {
   auto p = ExtractVariablesFromExpression(e);
   const VectorXDecisionVariable& var = p.first;
   const auto& map_var_to_index = p.second;
@@ -35,25 +29,12 @@ Binding<LinearCost> CreateLinearCost(const Expression& e) {
   DecomposeLinearExpression(e, map_var_to_index, c, &constant_term);
   // The constant term is ignored now.
   // TODO(hongkai.dai): support adding constant term to the cost.
-  return CreateBinding(CreateLinearCost(c), var);
-}
-
-
-shared_ptr<QuadraticCost> CreateQuadraticCost(
-    const Eigen::Ref<const Eigen::MatrixXd>& Q,
-    const Eigen::Ref<const Eigen::VectorXd>& b) {
-  return make_shard<QuadraticCost>(Q, b);
-}
-
-shared_ptr<QuadraticCost> CreateQuadraticErrorCost(
-    const Eigen::Ref<const Eigen::MatrixXd>& Q,
-    const Eigen::Ref<const Eigen::VectorXd>& x_desired) {
-  return CreateQuadraticCost(2 * Q, -2 * Q * x_desired);
+  return CreateBinding(make_shared<LinearCost>(c), var);
 }
 
 namespace {
 
-Binding<QuadraticCost> CreateQuadraticCostWithMonomialToCoeffMap(
+Binding<QuadraticCost> ParseQuadraticCostWithMonomialToCoeffMap(
     const symbolic::MonomialToCoefficientMap& monomial_to_coeff_map,
     const VectorXDecisionVariable& vars_vec,
     const unordered_map<Variable::Id, int>& map_var_to_index) {
@@ -66,12 +47,12 @@ Binding<QuadraticCost> CreateQuadraticCostWithMonomialToCoeffMap(
       monomial_to_coeff_map, map_var_to_index, vars_vec.size(), &Q, &b,
       &constant_term);
   // Now add the quadratic constraint 0.5 * x' * Q * x + b' * x
-  return CreateBinding(CreateQuadraticCost(Q, b), vars_vec);
+  return CreateBinding(make_shared<QuadraticCost>(Q, b), vars_vec);
 }
 
 }  // anonymous namespace
 
-Binding<QuadraticCost> CreateQuadraticCost(const Expression& e) {
+Binding<QuadraticCost> ParseQuadraticCost(const Expression& e) {
   // First build an Eigen vector, that contains all the bound variables.
   const symbolic::Variables& vars = e.GetVariables();
   auto p = ExtractVariablesFromExpression(e);
@@ -81,22 +62,17 @@ Binding<QuadraticCost> CreateQuadraticCost(const Expression& e) {
   // Now decomposes the expression into coefficients and monomials.
   const symbolic::MonomialToCoefficientMap& monomial_to_coeff_map =
       symbolic::DecomposePolynomialIntoMonomial(e, vars);
-  return CreateQuadraticCostWithMonomialToCoeffMap(
+  return ParseQuadraticCostWithMonomialToCoeffMap(
     monomial_to_coeff_map, vars_vec, map_var_to_index, this);
 }
 
-shared_ptr<QuadraticCost> CreateL2NormCost(
-    const Eigen::Ref<const Eigen::MatrixXd>& A,
-    const Eigen::Ref<const Eigen::VectorXd>& b) {
-  return CreateQuadraticCost(2 * A.transpose() * A, -2 * A.transpose() * b);
-}
 
 
-Binding<PolynomialCost> AddPolynomialCost(const symbolic::Expression& e) {
+Binding<PolynomialCost> ParsePolynomialCost(const symbolic::Expression& e) {
   if (!e.is_polynomial()) {
     ostringstream oss;
-    oss << "Expression" << e << " is not a polynomial. AddPolynomialCost only "
-                                "support polynomial expression.\n";
+    oss << "Expression" << e << " is not a polynomial. ParsePolynomialCost"
+                                " only supports polynomial expression.\n";
     throw runtime_error(oss.str());
   }
   const symbolic::Variables& vars = e.GetVariables();
@@ -113,11 +89,11 @@ Binding<PolynomialCost> AddPolynomialCost(const symbolic::Expression& e) {
     Vector1<Polynomiald>(polynomial), polynomial_vars), var_vec);
 }
 
-Binding<Cost> CreateCost(const symbolic::Expression& e) {
+Binding<Cost> ParseCost(const symbolic::Expression& e) {
 if (!e.is_polynomial()) {
     ostringstream oss;
-    oss << "Expression " << e << " is not a polynomial. Currently AddCost does "
-                                 "not support non-polynomial expression.\n";
+    oss << "Expression " << e << " is not a polynomial. ParseCost does not"
+                              << " support non-polynomial expression.\n";
     throw runtime_error(oss.str());
   }
   const symbolic::Variables& vars = e.GetVariables();
@@ -133,11 +109,12 @@ if (!e.is_polynomial()) {
   const auto& map_var_to_index = e_extracted.second;
 
   if (total_degree > 2) {
-    return CreatePolynomialCost(e);
+    return ParsePolynomialCost(e);
   } else if (total_degree == 2) {
-    return CreateQuadraticCostWithMonomialToCoeffMap(
+    return ParseQuadraticCostWithMonomialToCoeffMap(
         monomial_to_coeff_map, vars_vec, map_var_to_index, this);
   } else {
+    // TODO(eric.cousineau): Dispatch to ParseLinearCost?
     Eigen::VectorXd c(vars_vec.size());
     c.setZero();
     for (const auto& p : monomial_to_coeff_map) {
@@ -147,7 +124,7 @@ if (!e.is_polynomial()) {
         c(map_var_to_index.at(var_id)) += get_constant_value(p.second);
       }
     }
-    return CreateLinearCost(c, vars_vec);
+    return CreateBinding(make_shared<LinearCost>(c), vars_vec);
   }
 }
 

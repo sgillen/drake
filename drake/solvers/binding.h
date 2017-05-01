@@ -67,17 +67,21 @@ class Binding {
   VectorXDecisionVariable vars_;
 };
 
-template<typename C>
-Binding<C> CreateBinding(const std::shared_ptr<C>& c,
-                         const Eigen::Ref<const VectorXDecisionVariable>& v) {
-  return Binding<C>(c, v);
+
+namespace internal {
+
+/*
+ * Create binding, inferring the type from the provided 
+ * @note Since this forwards arguments, this will not be usable with
+ * `std::intializer_list`.
+ */
+template <typename C, typename... Args>
+Binding<C> CreateBinding(const std::shared_ptr<C>& c, Args&&... args) {
+  return Binding<C>(c, std::forward<Args>(args)...);
 }
 
-template<typename C>
-Binding<C> CreateBinding(const std::shared_ptr<C>& c,
-                         const VariableRefList& v) {
-  return Binding<C>(c, v);
-}
+}  // namespace internal
+
 
 }  // namespace solvers
 }  // namespace drake
