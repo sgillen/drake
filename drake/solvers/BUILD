@@ -65,6 +65,7 @@ drake_cc_library(
     deps = [
         ":binding",
         ":cost",
+        ":symbolic_extraction",
         "//drake/common",
         "//drake/common:autodiff",
         "//drake/common:monomial",
@@ -81,6 +82,7 @@ drake_cc_library(
     deps = [
         ":binding",
         ":cost",
+        ":symbolic_extraction",
         "//drake/common",
         "//drake/common:autodiff",
         "//drake/common:monomial",

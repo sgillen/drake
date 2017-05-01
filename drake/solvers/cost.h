@@ -245,8 +245,8 @@ class FunctionCost : public CostShim<FunctionConstraint<F>> {
  */
 template <typename F>
 std::shared_ptr<Cost> MakeFunctionCost(F&& f) {
-  return std::make_shared<
-      FunctionCost<std::decay_t<F>::type>>(std::forward<F>(f));
+  using FC = FunctionCost<std::decay_t<F>>;
+  return std::make_shared<FC>(std::forward<F>(f));
 }
 
 }  // namespace solvers

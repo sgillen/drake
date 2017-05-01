@@ -4,6 +4,7 @@
 
 namespace drake {
 namespace solvers {
+namespace internal {
 
 using std::make_shared;
 using std::numeric_limits;
@@ -20,15 +21,7 @@ using internal::ExtractAndAppendVariablesFromExpression;
 using internal::ExtractVariablesFromExpression;
 using internal::SymbolicError;
 
-
-shared_ptr<LinearConstraint> CreateLinearConstraint(
-    const Eigen::Ref<const Eigen::MatrixXd>& A,
-    const Eigen::Ref<const Eigen::VectorXd>& lb,
-    const Eigen::Ref<const Eigen::VectorXd>& ub) {
-  return make_shared<LinearConstraint>(A, lb, ub);
-}
-
-Binding<LinearConstraint> CreateLinearConstraint(
+Binding<LinearConstraint> ParseLinearConstraint(
     const Eigen::Ref<const VectorX<Expression>>& v,
     const Eigen::Ref<const Eigen::VectorXd>& lb,
     const Eigen::Ref<const Eigen::VectorXd>& ub) {
@@ -90,15 +83,14 @@ Binding<LinearConstraint> CreateLinearConstraint(
         new_ub(i) = lb_i / x_coeff;
       }
     }
-    return CreateBoundingBoxConstraint(new_lb, new_ub, bounding_box_x);
+    return make_shared<BoundingBoxConstraint>(new_lb, new_ub, bounding_box_x);
   } else {
-    return CreateLinearConstraint(A, new_lb, new_ub, vars);
+    return make_shared<LinearConstraint>(A, new_lb, new_ub, vars);
   }
 }
 
 
-Binding<LinearConstraint> CreateLinearConstraint(
-    const set<Formula>& formulas) {
+Binding<LinearConstraint> ParseLinearConstraint(const set<Formula>& formulas) {
   const auto n = formulas.size();
 
   // Decomposes a set of formulas into a 1D-vector of expressions, `v`, and two
@@ -144,55 +136,45 @@ Binding<LinearConstraint> CreateLinearConstraint(
     ++i;
   }
   if (are_all_formulas_equal) {
-    return CreateLinearEqualityConstraint(v, lb);
+    return ParseLinearEqualityConstraint(v, lb);
   } else {
-    return CreateLinearConstraint(v, lb, ub);
+    return ParseLinearConstraint(v, lb, ub);
   }
 }
 
-Binding<LinearConstraint> CreateLinearConstraint(const Formula& f) {
+Binding<LinearConstraint> ParseLinearConstraint(const Formula& f) {
   if (is_equal_to(f)) {
     // e1 == e2
     const Expression& e1{get_lhs_expression(f)};
     const Expression& e2{get_rhs_expression(f)};
-    return CreateLinearEqualityConstraint(e1 - e2, 0.0);
+    return ParseLinearEqualityConstraint(e1 - e2, 0.0);
   } else if (is_greater_than_or_equal_to(f)) {
     // e1 >= e2  ->  e1 - e2 >= 0  ->  0 <= e1 - e2 <= ∞
     const Expression& e1{get_lhs_expression(f)};
     const Expression& e2{get_rhs_expression(f)};
-    return CreateLinearConstraint(e1 - e2, 0.0,
-                               numeric_limits<double>::infinity());
+    return ParseLinearConstraint(e1 - e2, 0.0,
+                                 numeric_limits<double>::infinity());
   } else if (is_less_than_or_equal_to(f)) {
     // e1 <= e2  ->  0 <= e2 - e1  ->  0 <= e2 - e1 <= ∞
     const Expression& e1{get_lhs_expression(f)};
     const Expression& e2{get_rhs_expression(f)};
-    return CreateLinearConstraint(e2 - e1, 0.0,
-                               numeric_limits<double>::infinity());
+    return ParseLinearConstraint(e2 - e1, 0.0,
+                                 numeric_limits<double>::infinity());
   }
   if (is_conjunction(f)) {
-    return CreateLinearConstraint(get_operands(f));
+    return ParseLinearConstraint(get_operands(f));
   }
   ostringstream oss;
-  oss << "CreateLinearConstraint is called with a formula "
+  oss << "ParseLinearConstraint is called with a formula "
       << f
       << " which is neither a relational formula using one of {==, <=, >=} "
          "operators nor a conjunction of those relational formulas.";
   throw runtime_error(oss.str());
 }
 
-std::shared_ptr<LinearEqualityConstraint> CreateLinearEqualityConstraint(
-    const Eigen::Ref<const Eigen::MatrixXd>& Aeq,
-    const Eigen::Ref<const Eigen::VectorXd>& beq) {
-  return make_shared<LinearEqualityConstraint>(Aeq, beq);
-}
-
-Binding<LinearEqualityConstraint> CreateLinearEqualityConstraint(
-  const Expression& e, double b) {
-  return AddLinearEqualityConstraint(Vector1<Expression>(e), Vector1d(b));
-}
 
 Binding<LinearEqualityConstraint>
-CreateLinearEqualityConstraint(const set<Formula>& formulas) {
+ParseLinearEqualityConstraint(const set<Formula>& formulas) {
   const auto n = formulas.size();
   // Decomposes a set of formulas, `{e₁₁ == e₁₂, ..., eₙ₁ == eₙ₂}`
   // into a 1D-vector of expressions, `v = [e₁₁ - e₁₂, ..., eₙ₁ - eₙ₂]`.
@@ -212,19 +194,19 @@ CreateLinearEqualityConstraint(const set<Formula>& formulas) {
     }
     ++i;
   }
-  return CreateLinearEqualityConstraint(v, Eigen::VectorXd::Zero(n));
+  return ParseLinearEqualityConstraint(v, Eigen::VectorXd::Zero(n));
 }
 
-Binding<LinearEqualityConstraint> CreateLinearEqualityConstraint(
+Binding<LinearEqualityConstraint> ParseLinearEqualityConstraint(
     const Formula& f) {
   if (is_equal_to(f)) {
     // e1 == e2
     const Expression& e1{get_lhs_expression(f)};
     const Expression& e2{get_rhs_expression(f)};
-    return CreateLinearEqualityConstraint(e1 - e2, 0.0);
+    return ParseLinearEqualityConstraint(e1 - e2, 0.0);
   }
   if (is_conjunction(f)) {
-    return CreateLinearEqualityConstraint(get_operands(f));
+    return ParseLinearEqualityConstraint(get_operands(f));
   }
   ostringstream oss;
   oss << "MathematicalProgram::AddLinearConstraint is called with a formula "
@@ -235,10 +217,8 @@ Binding<LinearEqualityConstraint> CreateLinearEqualityConstraint(
 }
 
 
-namespace internal {
-
 Binding<LinearEqualityConstraint>
-DoCreateLinearEqualityConstraint(
+ParseCreateLinearEqualityConstraint(
     const Eigen::Ref<const VectorX<Expression>>& v,
     const Eigen::Ref<const Eigen::VectorXd>& b) {
   DRAKE_DEMAND(v.rows() == b.rows());
@@ -255,13 +235,9 @@ DoCreateLinearEqualityConstraint(
     DecomposeLinearExpression(v(i), map_var_to_index, A.row(i), &constant_term);
     beq(i) = b(i) - constant_term;
   }
-  return CreateLinearEqualityConstraint(A, beq, vars);
+  return ParseLinearEqualityConstraint(A, beq, vars);
 }
 
 }  // namespace internal
-
-
-
-
 }  // namespace solvers
 }  // namespace drake

@@ -15,64 +15,40 @@
 
 namespace drake {
 namespace solvers {
+namespace internal {
 
-/** \addtogroup LinearConstraintCreators */
-/*@{*/
-
-std::shared_ptr<LinearConstraint> CreateLinearConstraint(
-    const Eigen::Ref<const Eigen::MatrixXd>& A,
-    const Eigen::Ref<const Eigen::VectorXd>& lb,
-    const Eigen::Ref<const Eigen::VectorXd>& ub);
-
-Binding<LinearConstraint> CreateLinearConstraint(
+Binding<LinearConstraint> ParseLinearConstraint(
     const symbolic::Expression& e, const double lb, const double ub) {
-  return CreateLinearConstraint(Vector1<Expression>(e), Vector1<double>(lb),
-                             Vector1<double>(ub));
+  return ParseConstraint(Vector1<Expression>(e), Vector1<double>(lb),
+                         Vector1<double>(ub));
 }
 
-Binding<LinearConstraint> CreateLinearConstraint(
+Binding<LinearConstraint> ParseLinearConstraint(
     const Eigen::Ref<const VectorX<symbolic::Expression>>& v,
     const Eigen::Ref<const Eigen::VectorXd>& lb,
     const Eigen::Ref<const Eigen::VectorXd>& ub);
 
-Binding<LinearConstraint> CreateLinearConstraint(
+Binding<LinearConstraint> ParseLinearConstraint(const symbolic::Formula& f);
+
+Binding<LinearConstraint> ParseLinearConstraint(
   const std::set<symbolic::Formula>& formulas);
 
-Binding<LinearConstraint> CreateLinearConstraint(const symbolic::Formula& f);
 
-/*@}*/  // \addtogroup LinearConstraintCreators
-
-
-/** \addtogroup LinearEqualityConstraintCreators */
-/*@{*/
-
-std::shared_ptr<LinearEqualityConstraint> CreateLinearEqualityConstraint(
-    const Eigen::Ref<const Eigen::MatrixXd>& Aeq,
-    const Eigen::Ref<const Eigen::VectorXd>& beq);
-
-std::shared_ptr<LinearEqualityConstraint> CreateLinearEqualityConstraint(
-    const Eigen::Ref<const Eigen::RowVectorXd>& a, double beq) {
-  return CreateLinearEqualityConstraint(a, Vector1d(beq));
+Binding<LinearEqualityConstraint> ParseLinearEqualityConstraint(
+    const symbolic::Expression& e, double b) {
+  return ParseLinearEqualityConstraint(Vector1<Expression>(e), Vector1d(b));
 }
 
-Binding<LinearEqualityConstraint> CreateLinearEqualityConstraint(
-    const symbolic::Expression& e, double b);
-
 Binding<LinearEqualityConstraint>
-CreateLinearEqualityConstraint(const std::set<symbolic::Formula>& formulas);
+ParseLinearEqualityConstraint(const std::set<symbolic::Formula>& formulas);
 
-Binding<LinearEqualityConstraint> CreateLinearEqualityConstraint(
+Binding<LinearEqualityConstraint> ParseLinearEqualityConstraint(
     const symbolic::Formula& f);
 
 
-namespace internal {
-
-Binding<LinearEqualityConstraint>
-DoCreateLinearEqualityConstraint(
+Binding<LinearEqualityConstraint> ParseLinearEqualityConstraint(
     const Eigen::Ref<const VectorX<Expression>>& v,
     const Eigen::Ref<const Eigen::VectorXd>& b);
-
-}  // namespace internal
 
 namespace detail {
 
@@ -113,7 +89,7 @@ typename std::enable_if<
     is_matrix_base_vector_of<DerivedV, symbolic::Expression>::value &&
     is_matrix_base_vector_of<DerivedB, double>::value,
     Binding<LinearEqualityConstraint>>::type
-CreateLinearEqualityConstraint(const Eigen::MatrixBase<DerivedV>& v,
+ParseLinearEqualityConstraint(const Eigen::MatrixBase<DerivedV>& v,
                             const Eigen::MatrixBase<DerivedB>& b) {
   return internal::DoCreateLinearEqualityConstraint(v, b);
 }
@@ -123,7 +99,7 @@ typename std::enable_if<
     is_matrix_base_matrix_of<DerivedV, symbolic::Expression>::value &&
     is_matrix_base_matrix_of<DerivedB, double>::value,
     Binding<LinearEqualityConstraint>>::type
-AddLinearEqualityConstraint(const Eigen::MatrixBase<DerivedV>& V,
+ParseLinearEqualityConstraint(const Eigen::MatrixBase<DerivedV>& V,
                             const Eigen::MatrixBase<DerivedB>& B,
                             bool lower_triangle = false) {
   if (lower_triangle) {
@@ -158,7 +134,7 @@ AddLinearEqualityConstraint(const Eigen::MatrixBase<DerivedV>& V,
         ++V_idx;
       }
     }
-    return CreateLinearEqualityConstraint(flat_lower_V, flat_lower_B);
+    return ParseLinearEqualityConstraint(flat_lower_V, flat_lower_B);
   } else {
     const int V_size = V_rows != Eigen::Dynamic && V_cols != Eigen::Dynamic
                            ? V_rows * V_cols
@@ -173,12 +149,10 @@ AddLinearEqualityConstraint(const Eigen::MatrixBase<DerivedV>& V,
         ++V_idx;
       }
     }
-    return CreateLinearEqualityConstraint(flat_V, flat_B);
+    return ParseLinearEqualityConstraint(flat_V, flat_B);
   }
 }
 
-
-/*@}*/  // \addtogroup LinearEqualityConstraintCreators
-
+}  // namespace internal
 }  // namespace solvers
 }  // namespace drake
