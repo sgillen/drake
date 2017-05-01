@@ -19,7 +19,7 @@ namespace internal {
 
 Binding<LinearConstraint> ParseLinearConstraint(
     const symbolic::Expression& e, const double lb, const double ub) {
-  return ParseConstraint(Vector1<Expression>(e), Vector1<double>(lb),
+  return ParseConstraint(Vector1<symbolic::Expression>(e), Vector1<double>(lb),
                          Vector1<double>(ub));
 }
 
@@ -53,41 +53,40 @@ Binding<LinearEqualityConstraint> ParseLinearEqualityConstraint(
 namespace detail {
 
 template<typename Derived, typename Scalar>
-struct is_matrix_base_of
+struct is_eigen_matrix_of
   : std::integral_constant<
         bool,
         // Is this to prevent an ArrayBase from being implicitly copied?
         std::is_base_of<Eigen::MatrixBase<Derived>, Derived>::value &&
-        std::is_same<typename DerivedV::Scalar, Scalar>::value &&
-        Derived::ColsAtCompileTime == 1
+        std::is_same<typename DerivedV::Scalar, Scalar>::value
         > {};
 
 template<typename Derived>
-struct is_vector
+struct is_eigen_vector
   : std::integral_constant<bool, Derived::ColsAtCompileTime == 1> {};
 
 template<typename Derived, typename Scalar>
-struct is_matrix_base_vector_of
+struct is_eigen_matrix_vector_of
   : std::integral_constant<
         bool, 
-        is_matrix_base_of<Derived, Scalar>::value &&
-        is_vector<Derived>::value
+        detail::is_eigen_matrix_of<Derived, Scalar>::value &&
+        detail::is_eigen_vector<Derived>::value
         > {};
 
 template<typename Derived, typename Scalar>
-struct is_matrix_base_matrix_of
+struct is_eigen_matrix_nonvector_of
   : std::integral_constant<
         bool, 
-        is_matrix_base_of<Derived, Scalar>::value &&
-        !is_vector<Derived>::value
+        detail::is_eigen_matrix_of<Derived, Scalar>::value &&
+        !detail::is_eigen_vector<Derived>::value
         > {};
 
 }  // namespace detail
 
 template <typename DerivedV, typename DerivedB>
 typename std::enable_if<
-    is_matrix_base_vector_of<DerivedV, symbolic::Expression>::value &&
-    is_matrix_base_vector_of<DerivedB, double>::value,
+    detail::is_eigen_matrix_vector_of<DerivedV, symbolic::Expression>::value &&
+    detail::is_eigen_matrix_vector_of<DerivedB, double>::value,
     Binding<LinearEqualityConstraint>>::type
 ParseLinearEqualityConstraint(const Eigen::MatrixBase<DerivedV>& v,
                             const Eigen::MatrixBase<DerivedB>& b) {
@@ -96,8 +95,9 @@ ParseLinearEqualityConstraint(const Eigen::MatrixBase<DerivedV>& v,
 
 template <typename DerivedV, typename DerivedB>
 typename std::enable_if<
-    is_matrix_base_matrix_of<DerivedV, symbolic::Expression>::value &&
-    is_matrix_base_matrix_of<DerivedB, double>::value,
+    detail::is_eigen_matrix_nonvector_of<
+        DerivedV, symbolic::Expression>::value &&
+    detail::is_eigen_matrix_nonvector_of<DerivedB, double>::value,
     Binding<LinearEqualityConstraint>>::type
 ParseLinearEqualityConstraint(const Eigen::MatrixBase<DerivedV>& V,
                             const Eigen::MatrixBase<DerivedB>& B,
