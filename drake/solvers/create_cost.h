@@ -15,7 +15,7 @@ namespace drake {
 namespace solvers {
 namespace internal {
 
-/**
+/*
  * Creates a linear cost term of the form c'*x.
  * @param e A linear symbolic expression.
  * @pre{e is a linear expression c'*x, where each entry of x is a decision
@@ -25,7 +25,7 @@ namespace internal {
  */
 Binding<LinearCost> ParseLinearCost(const symbolic::Expression& e);
 
-/**
+/*
  * Creates a quadratic cost term of the form 0.5*x'*Q*x + b'*x + c.
  * Notice that in the optimization program, the constant term `c` in the cost
  * is ignored.
@@ -35,14 +35,14 @@ Binding<LinearCost> ParseLinearCost(const symbolic::Expression& e);
  */
 Binding<QuadraticCost> ParseQuadraticCost(const symbolic::Expression& e);
 
-/**
+/*
  * Creates a cost term in the polynomial form.
  * @param e A symbolic expression in the polynomial form.
  * @return The newly added cost and the bound variables.
  */
 Binding<PolynomialCost> ParsePolynomialCost(const symbolic::Expression& e);
 
-/**
+/*
  * Creates a cost by dynamically determining the functional form of `e`,
  * @param e A symbolic expression
  * @return The newly created cost and the bound variables.

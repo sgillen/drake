@@ -17,16 +17,18 @@ namespace drake {
 namespace solvers {
 namespace internal {
 
-Binding<LinearConstraint> ParseLinearConstraint(
-    const symbolic::Expression& e, const double lb, const double ub) {
-  return ParseConstraint(Vector1<symbolic::Expression>(e), Vector1<double>(lb),
-                         Vector1<double>(ub));
-}
+// TODO(eric.cousineau): Use Eigen::Ref more pervasively
 
 Binding<LinearConstraint> ParseLinearConstraint(
     const Eigen::Ref<const VectorX<symbolic::Expression>>& v,
     const Eigen::Ref<const Eigen::VectorXd>& lb,
     const Eigen::Ref<const Eigen::VectorXd>& ub);
+
+Binding<LinearConstraint> ParseLinearConstraint(
+    const symbolic::Expression& e, const double lb, const double ub) {
+  return ParseLinearConstraint(Vector1<symbolic::Expression>(e),
+                               Vector1<double>(lb), Vector1<double>(ub));
+}
 
 Binding<LinearConstraint> ParseLinearConstraint(const symbolic::Formula& f);
 
@@ -35,8 +37,13 @@ Binding<LinearConstraint> ParseLinearConstraint(
 
 
 Binding<LinearEqualityConstraint> ParseLinearEqualityConstraint(
+    const Eigen::Ref<const VectorX<Expression>>& v,
+    const Eigen::Ref<const Eigen::VectorXd>& b);
+
+Binding<LinearEqualityConstraint> ParseLinearEqualityConstraint(
     const symbolic::Expression& e, double b) {
-  return ParseLinearEqualityConstraint(Vector1<Expression>(e), Vector1d(b));
+  return ParseLinearEqualityConstraint(Vector1<symbolic::Expression>(e),
+                                       Vector1d(b));
 }
 
 Binding<LinearEqualityConstraint>
@@ -46,10 +53,6 @@ Binding<LinearEqualityConstraint> ParseLinearEqualityConstraint(
     const symbolic::Formula& f);
 
 
-Binding<LinearEqualityConstraint> ParseLinearEqualityConstraint(
-    const Eigen::Ref<const VectorX<Expression>>& v,
-    const Eigen::Ref<const Eigen::VectorXd>& b);
-
 namespace detail {
 
 template<typename Derived, typename Scalar>
@@ -58,7 +61,7 @@ struct is_eigen_matrix_of
         bool,
         // Is this to prevent an ArrayBase from being implicitly copied?
         std::is_base_of<Eigen::MatrixBase<Derived>, Derived>::value &&
-        std::is_same<typename DerivedV::Scalar, Scalar>::value
+        std::is_same<typename Derived::Scalar, Scalar>::value
         > {};
 
 template<typename Derived>
@@ -81,12 +84,20 @@ struct is_eigen_matrix_nonvector_of
         !detail::is_eigen_vector<Derived>::value
         > {};
 
+template<typename DerivedV, typename DerivedB>
+struct is_eigen_vector_expression_pair
+  : std::integral_constant<
+        bool,
+        detail::is_eigen_matrix_nonvector_of<
+            DerivedV, symbolic::Expression>::value &&
+        detail::is_eigen_matrix_nonvector_of<DerivedB, double>::value
+        > {};
+
 }  // namespace detail
 
 template <typename DerivedV, typename DerivedB>
 typename std::enable_if<
-    detail::is_eigen_matrix_vector_of<DerivedV, symbolic::Expression>::value &&
-    detail::is_eigen_matrix_vector_of<DerivedB, double>::value,
+    detail::is_eigen_vector_expression_pair<DerivedV, DerivedB>::value,
     Binding<LinearEqualityConstraint>>::type
 ParseLinearEqualityConstraint(const Eigen::MatrixBase<DerivedV>& v,
                             const Eigen::MatrixBase<DerivedB>& b) {
@@ -95,13 +106,11 @@ ParseLinearEqualityConstraint(const Eigen::MatrixBase<DerivedV>& v,
 
 template <typename DerivedV, typename DerivedB>
 typename std::enable_if<
-    detail::is_eigen_matrix_nonvector_of<
-        DerivedV, symbolic::Expression>::value &&
-    detail::is_eigen_matrix_nonvector_of<DerivedB, double>::value,
+    detail::is_eigen_vector_expression_pair<DerivedV, DerivedB>::value,
     Binding<LinearEqualityConstraint>>::type
 ParseLinearEqualityConstraint(const Eigen::MatrixBase<DerivedV>& V,
-                            const Eigen::MatrixBase<DerivedB>& B,
-                            bool lower_triangle = false) {
+                              const Eigen::MatrixBase<DerivedB>& B,
+                              bool lower_triangle = false) {
   if (lower_triangle) {
     DRAKE_DEMAND(V.rows() == V.cols() && B.rows() == B.cols());
   }
@@ -151,6 +160,25 @@ ParseLinearEqualityConstraint(const Eigen::MatrixBase<DerivedV>& V,
     }
     return ParseLinearEqualityConstraint(flat_V, flat_B);
   }
+}
+
+
+template <typename DerivedV, typename DerivedB>
+typename std::enable_if<
+    detail::is_eigen_vector_expression_pair<DerivedV, DerivedB>::value,
+    Binding<LinearEqualityConstraint>>::type
+ParseLinearEqualityConstraint(const Eigen::MatrixBase<DerivedV>& V,
+                              const Eigen::MatrixBase<DerivedB>& B) {
+  throw std::runtime_error("Not implemented");
+}
+
+template <typename Derived>
+typename std::enable_if<
+    detail::is_eigen_matrix_vector_of<Derived, symbolic::Formula>::value,
+    Binding<Constraint>>::type
+ParseConstraint(
+    const Eigen::MatrixBase<Derived>& e) {
+  throw std::runtime_error("Not implemented");
 }
 
 }  // namespace internal
