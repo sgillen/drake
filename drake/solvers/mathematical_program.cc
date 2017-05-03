@@ -17,6 +17,7 @@
 #include "drake/common/monomial.h"
 #include "drake/common/symbolic_expression.h"
 #include "drake/math/matrix_util.h"
+#include "drake/solvers/create_constraint.h"
 #include "drake/solvers/equality_constrained_qp_solver.h"
 #include "drake/solvers/gurobi_solver.h"
 #include "drake/solvers/ipopt_solver.h"
@@ -52,6 +53,7 @@ using symbolic::Expression;
 using symbolic::Formula;
 using symbolic::Variable;
 
+using internal::CreateBinding;
 using internal::DecomposeLinearExpression;
 using internal::DecomposeQuadraticExpressionWithMonomialToCoeffMap;
 using internal::ExtractAndAppendVariablesFromExpression;
@@ -255,13 +257,13 @@ Binding<LinearCost> MathematicalProgram::AddCost(
 }
 
 Binding<LinearCost> MathematicalProgram::AddLinearCost(const Expression& e) {
-  return AddCost(CreateLinearCost(e));
+  return AddCost(internal::ParseLinearCost(e));
 }
 
 Binding<LinearCost> MathematicalProgram::AddLinearCost(
     const Eigen::Ref<const Eigen::VectorXd>& c,
     const Eigen::Ref<const VectorXDecisionVariable>& vars) {
-  return AddCost(CreateLinearCost(c), vars);
+  return AddCost(make_shared<LinearCost>(c), vars);
 }
 
 Binding<QuadraticCost> MathematicalProgram::AddCost(
@@ -284,30 +286,30 @@ Binding<QuadraticCost> MathematicalProgram::AddCost(
 
 Binding<QuadraticCost> MathematicalProgram::AddQuadraticCost(
     const Expression& e) {
-  return AddCost(CreateQuadraticCost(e));
+  return AddCost(internal::ParseQuadraticCost(e));
 }
 
 Binding<QuadraticCost> MathematicalProgram::AddQuadraticErrorCost(
     const Eigen::Ref<const Eigen::MatrixXd>& Q,
     const Eigen::Ref<const Eigen::VectorXd>& x_desired,
     const Eigen::Ref<const VectorXDecisionVariable>& vars) {
-  return AddCost(CreateQuadraticErrorCost(Q, x_desired), vars);
+  return AddCost(MakeQuadraticErrorCost(Q, x_desired), vars);
 }
 
 Binding<QuadraticCost> MathematicalProgram::AddQuadraticCost(
     const Eigen::Ref<const Eigen::MatrixXd>& Q,
     const Eigen::Ref<const Eigen::VectorXd>& b,
     const Eigen::Ref<const VectorXDecisionVariable>& vars) {
-  return AddCost(CreateQuadraticCost(Q, b), vars);
+  return AddCost(make_shared<QuadraticCost>(Q, b), vars);
 }
 
 Binding<PolynomialCost> MathematicalProgram::AddPolynomialCost(
     const Expression& e) {
-  return AddCost(CreatePolynomialCost(e));
+  return AddCost(internal::ParsePolynomialCost(e));
 }
 
 Binding<Cost> MathematicalProgram::AddCost(const Expression& e) {
-  return AddCost(CreateCost(e));
+  return AddCost(internal::ParseCost(e));
 }
 
 Binding<Constraint> MathematicalProgram::AddConstraint(
@@ -349,24 +351,24 @@ Binding<Constraint> MathematicalProgram::AddConstraint(
 
 Binding<LinearConstraint> MathematicalProgram::AddLinearConstraint(
     const Expression& e, const double lb, const double ub) {
-  return AddConstraint(CreateLinearConstraint(e, lb, ub));
+  return AddConstraint(internal::ParseLinearConstraint(e, lb, ub));
 }
 
 Binding<LinearConstraint> MathematicalProgram::AddLinearConstraint(
     const Eigen::Ref<const VectorX<Expression>>& v,
     const Eigen::Ref<const Eigen::VectorXd>& lb,
     const Eigen::Ref<const Eigen::VectorXd>& ub) {
-  return AddConstraint(CreateLinearConstraint(v, lb, ub));
+  return AddConstraint(internal::ParseLinearConstraint(v, lb, ub));
 }
 
 Binding<LinearConstraint> MathematicalProgram::AddLinearConstraint(
     const set<Formula>& formulas) {
-  return AddConstraint(CreateLinearConstraint(formulas));
+  return AddConstraint(internal::ParseLinearConstraint(formulas));
 }
 
 Binding<LinearConstraint> MathematicalProgram::AddLinearConstraint(
     const Formula& f) {
-  return AddConstraint(CreateLinearConstraint(f));
+  return AddConstraint(internal::ParseLinearConstraint(f));
 }
 
 Binding<Constraint> MathematicalProgram::AddConstraint(
@@ -402,7 +404,7 @@ Binding<LinearConstraint> MathematicalProgram::AddLinearConstraint(
     const Eigen::Ref<const Eigen::VectorXd>& ub,
     const Eigen::Ref<const VectorXDecisionVariable>& vars) {
   shared_ptr<LinearConstraint> con = make_shared<LinearConstraint>(A, lb, ub);
-  return AddConstraint(CreateLinearConstraint(A, lb, ub), vars);
+  return AddConstraint(make_shared<LinearConstraint>(A, lb, ub), vars);
 }
 
 Binding<LinearEqualityConstraint> MathematicalProgram::AddConstraint(
@@ -423,18 +425,18 @@ Binding<LinearEqualityConstraint> MathematicalProgram::AddConstraint(
 Binding<LinearEqualityConstraint>
 MathematicalProgram::AddLinearEqualityConstraint(const Expression& e,
                                                  double b) {
-  return AddConstraint(CreateLinearEqualityConstraint(e, b));
+  return AddConstraint(internal::ParseLinearEqualityConstraint(e, b));
 }
 
 Binding<LinearEqualityConstraint>
 MathematicalProgram::AddLinearEqualityConstraint(
     const set<Formula>& formulas) {
-  return AddConstraint(CreateLinearEqualityConstraint(formulas));
+  return AddConstraint(internal::ParseLinearEqualityConstraint(formulas));
 }
 
 Binding<LinearEqualityConstraint>
 MathematicalProgram::AddLinearEqualityConstraint(const Formula& f) {
-  return AddConstraint(CreateLinearEqualityConstraint(f));
+  return AddConstraint(internal::ParseLinearEqualityConstraint(f));
 }
 
 Binding<LinearEqualityConstraint>
@@ -442,7 +444,7 @@ MathematicalProgram::AddLinearEqualityConstraint(
     const Eigen::Ref<const Eigen::MatrixXd>& Aeq,
     const Eigen::Ref<const Eigen::VectorXd>& beq,
     const Eigen::Ref<const VectorXDecisionVariable>& vars) {
-  return AddConstraint(CreateLinearEqualityConstraint(Aeq, beq), vars);
+  return AddConstraint(make_shared<LinearEqualityConstraint>(Aeq, beq), vars);
 }
 
 Binding<BoundingBoxConstraint> MathematicalProgram::AddConstraint(

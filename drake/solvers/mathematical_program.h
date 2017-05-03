@@ -827,8 +827,8 @@ class MathematicalProgram {
       const Eigen::Ref<const Eigen::MatrixXd>& A,
       const Eigen::Ref<const Eigen::VectorXd>& b,
       const Eigen::Ref<const VectorXDecisionVariable>& vars) {
-    return AddCost(CreateL2NormCost(2 * A.transpose() * A,
-                                    -2 * A.transpose() *b), vars);
+    return AddCost(MakeL2NormCost(2 * A.transpose() * A,
+                                  -2 * A.transpose() *b), vars);
   }
 
   /**
@@ -1284,7 +1284,7 @@ class MathematicalProgram {
   Binding<LinearEqualityConstraint> AddLinearEqualityConstraint(
       const Eigen::Ref<const Eigen::RowVectorXd>& a, double beq,
       const VariableRefList& vars) {
-    return AddConstraint(CreateLinearEqualityConstraint(a, beq),
+    return AddConstraint(std::make_shared<LinearEqualityConstraint>(a, beq),
                          ConcatenateVariableRefList(vars));
   }
 

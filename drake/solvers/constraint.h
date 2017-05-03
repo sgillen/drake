@@ -510,7 +510,6 @@ class LinearEqualityConstraint : public LinearConstraint {
                            const Eigen::MatrixBase<DerivedB>& beq)
       : LinearConstraint(Aeq, beq, beq) {}
 
-  template <typename Derived>
   LinearEqualityConstraint(const Eigen::Ref<const Eigen::RowVectorXd>& a,
                            double beq)
       : LinearEqualityConstraint(a, Vector1d(beq)) {}
