@@ -15,43 +15,6 @@
 
 namespace drake {
 namespace solvers {
-namespace internal {
-
-// TODO(eric.cousineau): Use Eigen::Ref more pervasively
-
-Binding<Constraint> ParseLinearConstraint(
-    const Eigen::Ref<const VectorX<symbolic::Expression>>& v,
-    const Eigen::Ref<const Eigen::VectorXd>& lb,
-    const Eigen::Ref<const Eigen::VectorXd>& ub);
-
-Binding<Constraint> ParseLinearConstraint(
-    const symbolic::Expression& e, const double lb, const double ub) {
-  return ParseLinearConstraint(Vector1<symbolic::Expression>(e),
-                               Vector1<double>(lb), Vector1<double>(ub));
-}
-
-Binding<Constraint> ParseLinearConstraint(const symbolic::Formula& f);
-
-Binding<Constraint> ParseLinearConstraint(
-  const std::set<symbolic::Formula>& formulas);
-
-
-Binding<LinearEqualityConstraint> ParseLinearEqualityConstraint(
-    const Eigen::Ref<const VectorX<symbolic::Expression>>& v,
-    const Eigen::Ref<const Eigen::VectorXd>& b);
-
-Binding<LinearEqualityConstraint> ParseLinearEqualityConstraint(
-    const symbolic::Expression& e, double b) {
-  return ParseLinearEqualityConstraint(Vector1<symbolic::Expression>(e),
-                                       Vector1d(b));
-}
-
-Binding<LinearEqualityConstraint>
-ParseLinearEqualityConstraint(const std::set<symbolic::Formula>& formulas);
-
-Binding<LinearEqualityConstraint> ParseLinearEqualityConstraint(
-    const symbolic::Formula& f);
-
 
 namespace detail {
 
@@ -71,7 +34,7 @@ struct is_eigen_vector
 template<typename Derived, typename Scalar>
 struct is_eigen_matrix_vector_of
   : std::integral_constant<
-        bool, 
+        bool,
         detail::is_eigen_matrix_of<Derived, Scalar>::value &&
         detail::is_eigen_vector<Derived>::value
         > {};
@@ -79,7 +42,7 @@ struct is_eigen_matrix_vector_of
 template<typename Derived, typename Scalar>
 struct is_eigen_matrix_nonvector_of
   : std::integral_constant<
-        bool, 
+        bool,
         detail::is_eigen_matrix_of<Derived, Scalar>::value &&
         !detail::is_eigen_vector<Derived>::value
         > {};
@@ -111,6 +74,43 @@ struct is_eigen_vector_formula_pair // explicitly vector
         > {};
 
 }  // namespace detail
+
+namespace internal {
+
+// TODO(eric.cousineau): Use Eigen::Ref more pervasively
+
+Binding<LinearConstraint> ParseLinearConstraint(
+    const Eigen::Ref<const VectorX<symbolic::Expression>>& v,
+    const Eigen::Ref<const Eigen::VectorXd>& lb,
+    const Eigen::Ref<const Eigen::VectorXd>& ub);
+
+Binding<LinearConstraint> ParseLinearConstraint(
+    const symbolic::Expression& e, const double lb, const double ub) {
+  return ParseLinearConstraint(Vector1<symbolic::Expression>(e),
+                               Vector1<double>(lb), Vector1<double>(ub));
+}
+
+Binding<LinearConstraint> ParseLinearConstraint(const symbolic::Formula& f);
+
+Binding<LinearConstraint> ParseLinearConstraint(
+  const std::set<symbolic::Formula>& formulas);
+
+
+Binding<LinearEqualityConstraint> ParseLinearEqualityConstraint(
+    const Eigen::Ref<const VectorX<symbolic::Expression>>& v,
+    const Eigen::Ref<const Eigen::VectorXd>& b);
+
+Binding<LinearEqualityConstraint> ParseLinearEqualityConstraint(
+    const symbolic::Expression& e, double b) {
+  return ParseLinearEqualityConstraint(Vector1<symbolic::Expression>(e),
+                                       Vector1d(b));
+}
+
+Binding<LinearEqualityConstraint>
+ParseLinearEqualityConstraint(const std::set<symbolic::Formula>& formulas);
+
+Binding<LinearEqualityConstraint> ParseLinearEqualityConstraint(
+    const symbolic::Formula& f);
 
 //template <typename DerivedV, typename DerivedB>
 //typename std::enable_if<

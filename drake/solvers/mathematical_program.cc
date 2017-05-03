@@ -17,7 +17,6 @@
 #include "drake/common/monomial.h"
 #include "drake/common/symbolic_expression.h"
 #include "drake/math/matrix_util.h"
-#include "drake/solvers/create_constraint.h"
 #include "drake/solvers/equality_constrained_qp_solver.h"
 #include "drake/solvers/gurobi_solver.h"
 #include "drake/solvers/ipopt_solver.h"
@@ -305,7 +304,8 @@ Binding<QuadraticCost> MathematicalProgram::AddQuadraticCost(
 
 Binding<PolynomialCost> MathematicalProgram::AddPolynomialCost(
     const Expression& e) {
-  return AddCost(internal::ParsePolynomialCost(e));
+  auto binding = AddCost(internal::ParsePolynomialCost(e));
+  return BindingUpcast<PolynomialCost>(binding);
 }
 
 Binding<Cost> MathematicalProgram::AddCost(const Expression& e) {

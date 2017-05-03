@@ -25,7 +25,7 @@ using internal::ExtractAndAppendVariablesFromExpression;
 using internal::ExtractVariablesFromExpression;
 using internal::SymbolicError;
 
-Binding<Constraint> ParseLinearConstraint(
+Binding<LinearConstraint> ParseLinearConstraint(
     const Eigen::Ref<const VectorX<Expression>>& v,
     const Eigen::Ref<const Eigen::VectorXd>& lb,
     const Eigen::Ref<const Eigen::VectorXd>& ub) {
@@ -96,7 +96,7 @@ Binding<Constraint> ParseLinearConstraint(
 }
 
 
-Binding<Constraint> ParseLinearConstraint(const set<Formula>& formulas) {
+Binding<LinearConstraint> ParseLinearConstraint(const set<Formula>& formulas) {
   const auto n = formulas.size();
 
   // Decomposes a set of formulas into a 1D-vector of expressions, `v`, and two
@@ -148,7 +148,7 @@ Binding<Constraint> ParseLinearConstraint(const set<Formula>& formulas) {
   }
 }
 
-Binding<Constraint> ParseLinearConstraint(const Formula& f) {
+Binding<LinearConstraint> ParseLinearConstraint(const Formula& f) {
   if (is_equal_to(f)) {
     // e1 == e2
     const Expression& e1{get_lhs_expression(f)};

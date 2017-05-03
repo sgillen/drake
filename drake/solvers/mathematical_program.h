@@ -28,6 +28,7 @@
 #include "drake/solvers/binding.h"
 #include "drake/solvers/constraint.h"
 #include "drake/solvers/cost.h"
+#include "drake/solvers/create_constraint.h"
 #include "drake/solvers/create_cost.h"
 #include "drake/solvers/decision_variable.h"
 #include "drake/solvers/function.h"
@@ -685,7 +686,7 @@ class MathematicalProgram {
   typename std::enable_if<detail::is_cost_functor_candidate<F>::value,
                           Binding<Cost>>::type
   AddCost(F&& f, const Eigen::Ref<const VectorXDecisionVariable>& vars) {
-    auto c = CreateFunctionCost(std::forward<F>(f));
+    auto c = MakeFunctionCost(std::forward<F>(f));
     return AddCost(c, vars);
   }
 
@@ -1172,17 +1173,11 @@ class MathematicalProgram {
    */
   template <typename DerivedV, typename DerivedB>
   typename std::enable_if<
-      std::is_base_of<Eigen::MatrixBase<DerivedV>, DerivedV>::value &&
-          std::is_base_of<Eigen::MatrixBase<DerivedB>, DerivedB>::value &&
-          std::is_same<typename DerivedV::Scalar,
-                       symbolic::Expression>::value &&
-          std::is_same<typename DerivedB::Scalar, double>::value &&
-          (DerivedV::ColsAtCompileTime == 1 ||
-           DerivedB::ColsAtCompileTime == 1),
+      detail::is_eigen_vector_formula_pair<DerivedV, DerivedB>::value,
       Binding<LinearEqualityConstraint>>::type
   AddLinearEqualityConstraint(const Eigen::MatrixBase<DerivedV>& v,
                               const Eigen::MatrixBase<DerivedB>& b) {
-    return AddConstraint(CreateLinearEqualityConstraint(v, b));
+    return AddConstraint(internal::ParseLinearEqualityConstraint(v, b));
   }
 
   /**
@@ -1206,17 +1201,13 @@ class MathematicalProgram {
    */
   template <typename DerivedV, typename DerivedB>
   typename std::enable_if<
-      std::is_base_of<Eigen::MatrixBase<DerivedV>, DerivedV>::value &&
-          std::is_base_of<Eigen::MatrixBase<DerivedB>, DerivedB>::value &&
-          std::is_same<typename DerivedV::Scalar,
-                       symbolic::Expression>::value &&
-          std::is_same<typename DerivedB::Scalar, double>::value &&
-          DerivedV::ColsAtCompileTime != 1 && DerivedB::ColsAtCompileTime != 1,
+      detail::is_eigen_matrix_formula_pair<DerivedV, DerivedB>::value,
       Binding<LinearEqualityConstraint>>::type
   AddLinearEqualityConstraint(const Eigen::MatrixBase<DerivedV>& V,
                               const Eigen::MatrixBase<DerivedB>& B,
                               bool lower_triangle = false) {
-    return AddConstraint(CreateLinearEqualityConstraint(V, B, lower_triangle));
+    return AddConstraint(internal::ParseLinearEqualityConstraint(
+        V, B, lower_triangle));
   }
 
   /** AddLinearEqualityConstraint
