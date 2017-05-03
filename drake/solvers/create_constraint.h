@@ -37,7 +37,7 @@ Binding<LinearConstraint> ParseLinearConstraint(
 
 
 Binding<LinearEqualityConstraint> ParseLinearEqualityConstraint(
-    const Eigen::Ref<const VectorX<Expression>>& v,
+    const Eigen::Ref<const VectorX<symbolic::Expression>>& v,
     const Eigen::Ref<const Eigen::VectorXd>& b);
 
 Binding<LinearEqualityConstraint> ParseLinearEqualityConstraint(
@@ -85,7 +85,7 @@ struct is_eigen_matrix_nonvector_of
         > {};
 
 template<typename DerivedV, typename DerivedB>
-struct is_eigen_vector_expression_pair
+struct is_eigen_vector_formula_pair
   : std::integral_constant<
         bool,
         detail::is_eigen_matrix_nonvector_of<
@@ -95,18 +95,18 @@ struct is_eigen_vector_expression_pair
 
 }  // namespace detail
 
-template <typename DerivedV, typename DerivedB>
-typename std::enable_if<
-    detail::is_eigen_vector_expression_pair<DerivedV, DerivedB>::value,
-    Binding<LinearEqualityConstraint>>::type
-ParseLinearEqualityConstraint(const Eigen::MatrixBase<DerivedV>& v,
-                            const Eigen::MatrixBase<DerivedB>& b) {
-  return internal::DoCreateLinearEqualityConstraint(v, b);
-}
+//template <typename DerivedV, typename DerivedB>
+//typename std::enable_if<
+//    detail::is_eigen_vector_formula_pair<DerivedV, DerivedB>::value,
+//    Binding<LinearEqualityConstraint>>::type
+//ParseLinearEqualityConstraint(const Eigen::MatrixBase<DerivedV>& v,
+//                            const Eigen::MatrixBase<DerivedB>& b) {
+//  return ParseLinearEqualityConstraint(v, b);
+//}
 
 template <typename DerivedV, typename DerivedB>
 typename std::enable_if<
-    detail::is_eigen_vector_expression_pair<DerivedV, DerivedB>::value,
+    detail::is_eigen_vector_formula_pair<DerivedV, DerivedB>::value,
     Binding<LinearEqualityConstraint>>::type
 ParseLinearEqualityConstraint(const Eigen::MatrixBase<DerivedV>& V,
                               const Eigen::MatrixBase<DerivedB>& B,
@@ -165,7 +165,7 @@ ParseLinearEqualityConstraint(const Eigen::MatrixBase<DerivedV>& V,
 
 template <typename DerivedV, typename DerivedB>
 typename std::enable_if<
-    detail::is_eigen_vector_expression_pair<DerivedV, DerivedB>::value,
+    detail::is_eigen_vector_formula_pair<DerivedV, DerivedB>::value,
     Binding<LinearEqualityConstraint>>::type
 ParseLinearEqualityConstraint(const Eigen::MatrixBase<DerivedV>& V,
                               const Eigen::MatrixBase<DerivedB>& B) {
