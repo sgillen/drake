@@ -84,7 +84,7 @@ Binding<LinearConstraint> ParseLinearConstraint(
     const Eigen::Ref<const Eigen::VectorXd>& lb,
     const Eigen::Ref<const Eigen::VectorXd>& ub);
 
-Binding<LinearConstraint> ParseLinearConstraint(
+inline Binding<LinearConstraint> ParseLinearConstraint(
     const symbolic::Expression& e, const double lb, const double ub) {
   return ParseLinearConstraint(Vector1<symbolic::Expression>(e),
                                Vector1<double>(lb), Vector1<double>(ub));
@@ -96,14 +96,15 @@ Binding<LinearConstraint> ParseLinearConstraint(
   const std::set<symbolic::Formula>& formulas);
 
 
-Binding<LinearEqualityConstraint> ParseLinearEqualityConstraint(
+
+Binding<LinearEqualityConstraint> DoParseLinearEqualityConstraint(
     const Eigen::Ref<const VectorX<symbolic::Expression>>& v,
     const Eigen::Ref<const Eigen::VectorXd>& b);
 
-Binding<LinearEqualityConstraint> ParseLinearEqualityConstraint(
+inline Binding<LinearEqualityConstraint> ParseLinearEqualityConstraint(
     const symbolic::Expression& e, double b) {
-  return ParseLinearEqualityConstraint(Vector1<symbolic::Expression>(e),
-                                       Vector1d(b));
+  return DoParseLinearEqualityConstraint(Vector1<symbolic::Expression>(e),
+                                         Vector1d(b));
 }
 
 Binding<LinearEqualityConstraint>
@@ -111,19 +112,6 @@ ParseLinearEqualityConstraint(const std::set<symbolic::Formula>& formulas);
 
 Binding<LinearEqualityConstraint> ParseLinearEqualityConstraint(
     const symbolic::Formula& f);
-
-//template <typename DerivedV, typename DerivedB>
-//typename std::enable_if<
-//    detail::is_eigen_vector_formula_pair<DerivedV, DerivedB>::value,
-//    Binding<LinearEqualityConstraint>>::type
-//ParseLinearEqualityConstraint(const Eigen::MatrixBase<DerivedV>& v,
-//                            const Eigen::MatrixBase<DerivedB>& b) {
-//  return ParseLinearEqualityConstraint(v, b);
-//}
-
-Binding<LinearEqualityConstraint> DoParseLinearEqualityConstraint(
-    const Eigen::Ref<const VectorX<symbolic::Expression>>& v,
-    const Eigen::Ref<const Eigen::VectorXd>& b);
 
 /*
  * Creates linear equality constraints \f$ v = b \f$, where \p v(i) is a
