@@ -336,10 +336,6 @@ Binding<Constraint> MathematicalProgram::AddConstraint(
     return AddConstraint(BindingUpcast<RotatedLorentzConeConstraint>(binding));
   } else if (dynamic_cast<LorentzConeConstraint*>(constraint)) {
     return AddConstraint(BindingUpcast<LorentzConeConstraint>(binding));
-  } else if (dynamic_cast<BoundingBoxConstraint*>(constraint)) {
-    return AddConstraint(BindingUpcast<BoundingBoxConstraint>(binding));
-  } else if (dynamic_cast<LinearEqualityConstraint*>(constraint)) {
-    return AddConstraint(BindingUpcast<LinearEqualityConstraint>(binding));
   } else if (dynamic_cast<LinearConstraint*>(constraint)) {
     return AddConstraint(BindingUpcast<LinearConstraint>(binding));
   } else {
@@ -379,17 +375,26 @@ Binding<Constraint> MathematicalProgram::AddConstraint(
 
 Binding<LinearConstraint> MathematicalProgram::AddConstraint(
     const Binding<LinearConstraint>& binding) {
-  required_capabilities_ |= kLinearConstraint;
-  // TODO(eric.cousineau): This is a good assertion... But seems out of place,
-  // possibly redundant w.r.t. the binding infrastructure.
-  DRAKE_ASSERT(binding.constraint()->A().cols() ==
-               static_cast<int>(binding.GetNumElements()));
-  // TODO(eric.cousineau): Move this and other checks to a generic
-  // BindingCheck() (to handle checking for a unique name, or assigning a
-  // default name, etc.)
-  CheckIsDecisionVariable(binding.variables());
-  linear_constraints_.push_back(binding);
-  return linear_constraints_.back();
+  // Because the ParseLinearConstraint methods can return
+  // LinearEqualityConstraints, delegate dynamic check here
+  LinearConstraint* constraint = binding.constraint().get();
+  if (dynamic_cast<BoundingBoxConstraint*>(constraint)) {
+    return AddConstraint(BindingUpcast<BoundingBoxConstraint>(binding));
+  } else if (dynamic_cast<LinearEqualityConstraint*>(constraint)) {
+    return AddConstraint(BindingUpcast<LinearEqualityConstraint>(binding));
+  } else {
+    required_capabilities_ |= kLinearConstraint;
+    // TODO(eric.cousineau): This is a good assertion... But seems out of place,
+    // possibly redundant w.r.t. the binding infrastructure.
+    DRAKE_ASSERT(binding.constraint()->A().cols() ==
+                 static_cast<int>(binding.GetNumElements()));
+    // TODO(eric.cousineau): Move this and other checks to a generic
+    // BindingCheck() (to handle checking for a unique name, or assigning a
+    // default name, etc.)
+    CheckIsDecisionVariable(binding.variables());
+    linear_constraints_.push_back(binding);
+    return linear_constraints_.back();
+  }
 }
 
 Binding<LinearConstraint> MathematicalProgram::AddConstraint(
