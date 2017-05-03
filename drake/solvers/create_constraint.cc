@@ -1,5 +1,6 @@
 #include "drake/solvers/create_constraint.h"
 
+#include "drake/common/symbolic_formula.h"
 #include "drake/solvers/symbolic_extraction.h"
 
 namespace drake {
@@ -8,6 +9,9 @@ namespace internal {
 
 using std::make_shared;
 using std::numeric_limits;
+using std::ostringstream;
+using std::runtime_error;
+using std::set;
 using std::shared_ptr;
 using std::unordered_map;
 
@@ -21,7 +25,7 @@ using internal::ExtractAndAppendVariablesFromExpression;
 using internal::ExtractVariablesFromExpression;
 using internal::SymbolicError;
 
-Binding<LinearConstraint> ParseLinearConstraint(
+Binding<Constraint> ParseLinearConstraint(
     const Eigen::Ref<const VectorX<Expression>>& v,
     const Eigen::Ref<const Eigen::VectorXd>& lb,
     const Eigen::Ref<const Eigen::VectorXd>& ub) {
@@ -83,14 +87,16 @@ Binding<LinearConstraint> ParseLinearConstraint(
         new_ub(i) = lb_i / x_coeff;
       }
     }
-    return make_shared<BoundingBoxConstraint>(new_lb, new_ub, bounding_box_x);
+    return CreateBinding(make_shared<BoundingBoxConstraint>(new_lb, new_ub),
+                         bounding_box_x);
   } else {
-    return make_shared<LinearConstraint>(A, new_lb, new_ub, vars);
+    return CreateBinding(make_shared<LinearConstraint>(A, new_lb, new_ub),
+                         vars);
   }
 }
 
 
-Binding<LinearConstraint> ParseLinearConstraint(const set<Formula>& formulas) {
+Binding<Constraint> ParseLinearConstraint(const set<Formula>& formulas) {
   const auto n = formulas.size();
 
   // Decomposes a set of formulas into a 1D-vector of expressions, `v`, and two
@@ -142,7 +148,7 @@ Binding<LinearConstraint> ParseLinearConstraint(const set<Formula>& formulas) {
   }
 }
 
-Binding<LinearConstraint> ParseLinearConstraint(const Formula& f) {
+Binding<Constraint> ParseLinearConstraint(const Formula& f) {
   if (is_equal_to(f)) {
     // e1 == e2
     const Expression& e1{get_lhs_expression(f)};
@@ -216,9 +222,7 @@ Binding<LinearEqualityConstraint> ParseLinearEqualityConstraint(
   throw runtime_error(oss.str());
 }
 
-
-Binding<LinearEqualityConstraint>
-ParseCreateLinearEqualityConstraint(
+Binding<LinearEqualityConstraint> DoParseLinearEqualityConstraint(
     const Eigen::Ref<const VectorX<Expression>>& v,
     const Eigen::Ref<const Eigen::VectorXd>& b) {
   DRAKE_DEMAND(v.rows() == b.rows());
@@ -235,7 +239,7 @@ ParseCreateLinearEqualityConstraint(
     DecomposeLinearExpression(v(i), map_var_to_index, A.row(i), &constant_term);
     beq(i) = b(i) - constant_term;
   }
-  return ParseLinearEqualityConstraint(A, beq, vars);
+  return CreateBinding(make_shared<LinearEqualityConstraint>(A, beq), vars);
 }
 
 }  // namespace internal

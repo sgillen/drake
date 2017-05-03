@@ -4,11 +4,16 @@
 
 namespace drake {
 namespace solvers {
+namespace internal {
 
 using std::make_shared;
 using std::numeric_limits;
+using std::ostringstream;
+using std::runtime_error;
+using std::set;
 using std::shared_ptr;
 using std::unordered_map;
+using std::vector;
 
 using symbolic::Expression;
 using symbolic::Formula;
@@ -63,7 +68,7 @@ Binding<QuadraticCost> ParseQuadraticCost(const Expression& e) {
   const symbolic::MonomialToCoefficientMap& monomial_to_coeff_map =
       symbolic::DecomposePolynomialIntoMonomial(e, vars);
   return ParseQuadraticCostWithMonomialToCoeffMap(
-    monomial_to_coeff_map, vars_vec, map_var_to_index, this);
+    monomial_to_coeff_map, vars_vec, map_var_to_index);
 }
 
 
@@ -112,7 +117,7 @@ if (!e.is_polynomial()) {
     return ParsePolynomialCost(e);
   } else if (total_degree == 2) {
     return ParseQuadraticCostWithMonomialToCoeffMap(
-        monomial_to_coeff_map, vars_vec, map_var_to_index, this);
+        monomial_to_coeff_map, vars_vec, map_var_to_index);
   } else {
     // TODO(eric.cousineau): Dispatch to ParseLinearCost?
     Eigen::VectorXd c(vars_vec.size());
@@ -128,5 +133,6 @@ if (!e.is_polynomial()) {
   }
 }
 
+}  // namespace internal
 }  // namespace solvers
 }  // namespace drake

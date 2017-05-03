@@ -19,20 +19,20 @@ namespace internal {
 
 // TODO(eric.cousineau): Use Eigen::Ref more pervasively
 
-Binding<LinearConstraint> ParseLinearConstraint(
+Binding<Constraint> ParseLinearConstraint(
     const Eigen::Ref<const VectorX<symbolic::Expression>>& v,
     const Eigen::Ref<const Eigen::VectorXd>& lb,
     const Eigen::Ref<const Eigen::VectorXd>& ub);
 
-Binding<LinearConstraint> ParseLinearConstraint(
+Binding<Constraint> ParseLinearConstraint(
     const symbolic::Expression& e, const double lb, const double ub) {
   return ParseLinearConstraint(Vector1<symbolic::Expression>(e),
                                Vector1<double>(lb), Vector1<double>(ub));
 }
 
-Binding<LinearConstraint> ParseLinearConstraint(const symbolic::Formula& f);
+Binding<Constraint> ParseLinearConstraint(const symbolic::Formula& f);
 
-Binding<LinearConstraint> ParseLinearConstraint(
+Binding<Constraint> ParseLinearConstraint(
   const std::set<symbolic::Formula>& formulas);
 
 
@@ -84,13 +84,30 @@ struct is_eigen_matrix_nonvector_of
         !detail::is_eigen_vector<Derived>::value
         > {};
 
+/*
+ * Determine if two Eigen bases are matrices of Expressions and doubles,
+ * to then form an implicit formula.
+ */
 template<typename DerivedV, typename DerivedB>
-struct is_eigen_vector_formula_pair
+struct is_eigen_matrix_formula_pair // explicitly non-vector
   : std::integral_constant<
         bool,
         detail::is_eigen_matrix_nonvector_of<
             DerivedV, symbolic::Expression>::value &&
         detail::is_eigen_matrix_nonvector_of<DerivedB, double>::value
+        > {};
+
+/*
+ * Determine if two Eigen bases are vectors of Expressions and doubles,
+ * to then form an implicit formula.
+ */
+template<typename DerivedV, typename DerivedB>
+struct is_eigen_vector_formula_pair // explicitly vector
+  : std::integral_constant<
+        bool,
+        detail::is_eigen_matrix_vector_of<
+            DerivedV, symbolic::Expression>::value &&
+        detail::is_eigen_matrix_vector_of<DerivedB, double>::value
         > {};
 
 }  // namespace detail
@@ -104,9 +121,55 @@ struct is_eigen_vector_formula_pair
 //  return ParseLinearEqualityConstraint(v, b);
 //}
 
+Binding<LinearEqualityConstraint> DoParseLinearEqualityConstraint(
+    const Eigen::Ref<const VectorX<symbolic::Expression>>& v,
+    const Eigen::Ref<const Eigen::VectorXd>& b);
+
+/*
+ * Creates linear equality constraints \f$ v = b \f$, where \p v(i) is a
+ * symbolic linear expression. Throws an exception if
+ * 1. @p v(i) is a non-linear expression.
+ * 2. @p v(i) is a constant.
+ * @tparam DerivedV An Eigen Matrix type of Expression. A column vector.
+ * @tparam DerivedB An Eigen Matrix type of double. A column vector.
+ * @param v v(i) is a linear symbolic expression in the form of
+ * <tt> c0 + c1 * x1 + ... + cn * xn </tt> where ci is a constant and @xi is
+ * a variable.
+ * @param b A vector of doubles.
+ * @return The newly created linear equality constraint, together with the
+ * bound variables.
+ */
 template <typename DerivedV, typename DerivedB>
 typename std::enable_if<
     detail::is_eigen_vector_formula_pair<DerivedV, DerivedB>::value,
+    Binding<LinearEqualityConstraint>>::type
+ParseLinearEqualityConstraint(const Eigen::MatrixBase<DerivedV>& V,
+                              const Eigen::MatrixBase<DerivedB>& b) {
+  return DoParseLinearEqualityConstraint(V, b);
+}
+
+/**
+ * Adds a linear equality constraint for a matrix of linear expression @p V,
+ * such that V(i, j) = B(i, j). If V is a symmetric matrix, then the user
+ * may only want to constrain the lower triangular part of V.
+ * This function is meant to provide convenience to the user, it incurs
+ * additional copy and memory allocation. For faster speed, add each column
+ * of the matrix equality in a for loop.
+ * @tparam DerivedV An Eigen Matrix type of Expression. The number of columns
+ * at compile time should not be 1.
+ * @tparam DerivedB An Eigen Matrix type of double.
+ * @param V An Eigen Matrix of symbolic expressions. V(i, j) should be a
+ * linear expression.
+ * @param B An Eigen Matrix of doubles.
+ * @param lower_triangle If true, then only the lower triangular part of @p V
+ * is constrained, otherwise the whole matrix V is constrained. @default is
+ * false.
+ * @return The newly added linear equality constraint, together with the
+ * bound variables.
+ */
+template <typename DerivedV, typename DerivedB>
+typename std::enable_if<
+    detail::is_eigen_matrix_formula_pair<DerivedV, DerivedB>::value,
     Binding<LinearEqualityConstraint>>::type
 ParseLinearEqualityConstraint(const Eigen::MatrixBase<DerivedV>& V,
                               const Eigen::MatrixBase<DerivedB>& B,
@@ -128,7 +191,7 @@ ParseLinearEqualityConstraint(const Eigen::MatrixBase<DerivedV>& V,
                          : static_cast<int>(DerivedB::ColsAtCompileTime);
 
   if (lower_triangle) {
-    const int V_triangular_size =
+    constexpr int V_triangular_size =
         V_rows != Eigen::Dynamic ? (V_rows + 1) * V_rows / 2 : Eigen::Dynamic;
     int V_triangular_size_dynamic = V.rows() * (V.rows() + 1) / 2;
     Eigen::Matrix<symbolic::Expression, V_triangular_size, 1> flat_lower_V(
@@ -143,7 +206,7 @@ ParseLinearEqualityConstraint(const Eigen::MatrixBase<DerivedV>& V,
         ++V_idx;
       }
     }
-    return ParseLinearEqualityConstraint(flat_lower_V, flat_lower_B);
+    return DoParseLinearEqualityConstraint(flat_lower_V, flat_lower_B);
   } else {
     const int V_size = V_rows != Eigen::Dynamic && V_cols != Eigen::Dynamic
                            ? V_rows * V_cols
@@ -158,18 +221,8 @@ ParseLinearEqualityConstraint(const Eigen::MatrixBase<DerivedV>& V,
         ++V_idx;
       }
     }
-    return ParseLinearEqualityConstraint(flat_V, flat_B);
+    return DoParseLinearEqualityConstraint(flat_V, flat_B);
   }
-}
-
-
-template <typename DerivedV, typename DerivedB>
-typename std::enable_if<
-    detail::is_eigen_vector_formula_pair<DerivedV, DerivedB>::value,
-    Binding<LinearEqualityConstraint>>::type
-ParseLinearEqualityConstraint(const Eigen::MatrixBase<DerivedV>& V,
-                              const Eigen::MatrixBase<DerivedB>& B) {
-  throw std::runtime_error("Not implemented");
 }
 
 template <typename Derived>
