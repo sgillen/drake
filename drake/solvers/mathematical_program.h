@@ -661,7 +661,7 @@ class MathematicalProgram {
    */
   template <typename F>
   static std::shared_ptr<Cost> MakeCost(F&& f) {
-    return CreateFunctionCost(f);
+    return MakeFunctionCost(f);
   }
 
   /**
