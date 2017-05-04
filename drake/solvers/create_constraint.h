@@ -213,6 +213,13 @@ ParseLinearEqualityConstraint(const Eigen::MatrixBase<DerivedV>& V,
   }
 }
 
+Binding<Constraint> ParsePolynomialConstraint(
+    const VectorXPoly& polynomials,
+    const std::vector<Polynomiald::VarType>& poly_vars,
+    const Eigen::VectorXd& lb,
+    const Eigen::VectorXd& ub,
+    const Eigen::Ref<const VectorXDecisionVariable>& vars);
+
 template <typename Derived>
 typename std::enable_if<
     detail::is_eigen_matrix_vector_of<Derived, symbolic::Formula>::value,
