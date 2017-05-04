@@ -1058,50 +1058,7 @@ class MathematicalProgram {
       detail::is_eigen_array_of<Derived, symbolic::Formula>::value,
       Binding<LinearConstraint>>::type
   AddLinearConstraint(const Eigen::ArrayBase<Derived>& formulas) {
-    const auto n = formulas.rows() * formulas.cols();
-
-    // Decomposes 2D-array of formulas into 1D-vector of expression, `v`, and
-    // two 1D-vector of double `lb` and `ub`.
-    constexpr int flat_vector_size{
-        MultiplyEigenSizes<Derived::RowsAtCompileTime,
-                           Derived::ColsAtCompileTime>::value};
-    Eigen::Matrix<symbolic::Expression, flat_vector_size, 1> v{n};
-    Eigen::Matrix<double, flat_vector_size, 1> lb{n};
-    Eigen::Matrix<double, flat_vector_size, 1> ub{n};
-    int k{0};  // index variable for 1D components.
-    for (int i{0}; i < formulas.rows(); ++i) {
-      for (int j{0}; j < formulas.cols(); ++j, ++k) {
-        const symbolic::Formula& f{formulas(i, j)};
-        if (is_equal_to(f)) {
-          // f(i) := (lhs == rhs)
-          //         (lhs - rhs == 0)
-          v(k) = get_lhs_expression(f) - get_rhs_expression(f);
-          lb(k) = 0.0;
-          ub(k) = 0.0;
-        } else if (is_less_than_or_equal_to(f)) {
-          // f(i) := (lhs <= rhs)
-          //         (-∞ <= lhs - rhs <= 0)
-          v(k) = get_lhs_expression(f) - get_rhs_expression(f);
-          lb(k) = -std::numeric_limits<double>::infinity();
-          ub(k) = 0.0;
-        } else if (is_greater_than_or_equal_to(f)) {
-          // f(i) := (lhs >= rhs)
-          //         (∞ >= lhs - rhs >= 0)
-          v(k) = get_lhs_expression(f) - get_rhs_expression(f);
-          lb(k) = 0.0;
-          ub(k) = std::numeric_limits<double>::infinity();
-        } else {
-          std::ostringstream oss;
-          oss << "MathematicalProgram::AddLinearConstraint is called with an "
-                 "array of formulas which includes a formula "
-              << f
-              << " which is not a relational formula using one of {==, <=, >=} "
-                 "operators.";
-          throw std::runtime_error(oss.str());
-        }
-      }
-    }
-    return AddLinearConstraint(v, lb, ub);
+    return AddConstraint(internal::ParseLinearConstraint(formulas));
   }
 
   /**
