@@ -67,11 +67,9 @@ Binding<QuadraticCost> ParseQuadraticCost(const Expression& e) {
   // Now decomposes the expression into coefficients and monomials.
   const symbolic::MonomialToCoefficientMap& monomial_to_coeff_map =
       symbolic::DecomposePolynomialIntoMonomial(e, vars);
-  return ParseQuadraticCostWithMonomialToCoeffMap(
-    monomial_to_coeff_map, vars_vec, map_var_to_index);
+  return ParseQuadraticCostWithMonomialToCoeffMap(monomial_to_coeff_map,
+                                                  vars_vec, map_var_to_index);
 }
-
-
 
 Binding<PolynomialCost> ParsePolynomialCost(const symbolic::Expression& e) {
   if (!e.is_polynomial()) {
@@ -91,14 +89,15 @@ Binding<PolynomialCost> ParsePolynomialCost(const symbolic::Expression& e) {
     ++polynomial_var_count;
   }
   return CreateBinding(make_shared<PolynomialCost>(
-    Vector1<Polynomiald>(polynomial), polynomial_vars), var_vec);
+                           Vector1<Polynomiald>(polynomial), polynomial_vars),
+                       var_vec);
 }
 
 Binding<Cost> ParseCost(const symbolic::Expression& e) {
-if (!e.is_polynomial()) {
+  if (!e.is_polynomial()) {
     ostringstream oss;
     oss << "Expression " << e << " is not a polynomial. ParseCost does not"
-                              << " support non-polynomial expression.\n";
+        << " support non-polynomial expression.\n";
     throw runtime_error(oss.str());
   }
   const symbolic::Variables& vars = e.GetVariables();
@@ -116,8 +115,8 @@ if (!e.is_polynomial()) {
   if (total_degree > 2) {
     return ParsePolynomialCost(e);
   } else if (total_degree == 2) {
-    return ParseQuadraticCostWithMonomialToCoeffMap(
-        monomial_to_coeff_map, vars_vec, map_var_to_index);
+    return ParseQuadraticCostWithMonomialToCoeffMap(monomial_to_coeff_map,
+                                                    vars_vec, map_var_to_index);
   } else {
     // TODO(eric.cousineau): Dispatch to ParseLinearCost?
     Eigen::VectorXd c(vars_vec.size());

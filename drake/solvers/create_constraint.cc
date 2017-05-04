@@ -57,8 +57,9 @@ Binding<LinearConstraint> ParseLinearConstraint(
     if (num_vi_variables == 0 &&
         !(lb(i) <= constant_term && constant_term <= ub(i))) {
       // Unsatisfiable constraint with no variables, such as 1 <= 0 <= 2
-      throw SymbolicError(v(i), lb(i), ub(i), "unsatisfiable but called with"
-                                              " CreateLinearConstraint");
+      throw SymbolicError(v(i), lb(i), ub(i),
+                          "unsatisfiable but called with"
+                          " CreateLinearConstraint");
 
     } else {
       new_lb(i) = lb(i) - constant_term;
@@ -98,7 +99,6 @@ Binding<LinearConstraint> ParseLinearConstraint(
                          vars);
   }
 }
-
 
 Binding<LinearConstraint> ParseLinearConstraint(const set<Formula>& formulas) {
   const auto n = formulas.size();
@@ -175,16 +175,14 @@ Binding<LinearConstraint> ParseLinearConstraint(const Formula& f) {
     return ParseLinearConstraint(get_operands(f));
   }
   ostringstream oss;
-  oss << "ParseLinearConstraint is called with a formula "
-      << f
+  oss << "ParseLinearConstraint is called with a formula " << f
       << " which is neither a relational formula using one of {==, <=, >=} "
          "operators nor a conjunction of those relational formulas.";
   throw runtime_error(oss.str());
 }
 
-
-Binding<LinearEqualityConstraint>
-ParseLinearEqualityConstraint(const set<Formula>& formulas) {
+Binding<LinearEqualityConstraint> ParseLinearEqualityConstraint(
+    const set<Formula>& formulas) {
   const auto n = formulas.size();
   // Decomposes a set of formulas, `{e₁₁ == e₁₂, ..., eₙ₁ == eₙ₂}`
   // into a 1D-vector of expressions, `v = [e₁₁ - e₁₂, ..., eₙ₁ - eₙ₂]`.
@@ -248,8 +246,8 @@ Binding<LinearEqualityConstraint> DoParseLinearEqualityConstraint(
 
 shared_ptr<Constraint> MakePolynomialConstraint(
     const VectorXPoly& polynomials,
-    const vector <Polynomiald::VarType>& poly_vars,
-    const Eigen::VectorXd& lb, const Eigen::VectorXd& ub) {
+    const vector<Polynomiald::VarType>& poly_vars, const Eigen::VectorXd& lb,
+    const Eigen::VectorXd& ub) {
   // Polynomials that are actually affine (a sum of linear terms + a
   // constant) can be special-cased.  Other polynomials are treated as
   // generic for now.
@@ -274,7 +272,7 @@ shared_ptr<Constraint> MakePolynomialConstraint(
         } else if (monomial.terms.size() == 1) {
           const Polynomiald::VarType term_var = monomial.terms[0].var;
           int var_num = (find(poly_vars.begin(), poly_vars.end(), term_var) -
-              poly_vars.begin());
+                         poly_vars.begin());
           DRAKE_ASSERT(var_num < static_cast<int>(poly_vars.size()));
           linear_constraint_matrix(poly_num, var_num) = monomial.coefficient;
         } else {
@@ -283,8 +281,8 @@ shared_ptr<Constraint> MakePolynomialConstraint(
       }
     }
     if (ub == lb) {
-      return make_shared<LinearEqualityConstraint>(
-          linear_constraint_matrix, linear_constraint_ub);
+      return make_shared<LinearEqualityConstraint>(linear_constraint_matrix,
+                                                   linear_constraint_ub);
     } else {
       return make_shared<LinearConstraint>(
           linear_constraint_matrix, linear_constraint_lb, linear_constraint_ub);
@@ -305,8 +303,8 @@ Binding<LorentzConeConstraint> ParseLorentzConeConstraint(
   return CreateBinding(make_shared<LorentzConeConstraint>(A, b), vars);
 }
 
-Binding<LorentzConeConstraint> ParseLorentzConeConstraint(const Expression& linear_expr,
-                                                             const Expression& quadratic_expr) {
+Binding<LorentzConeConstraint> ParseLorentzConeConstraint(
+    const Expression& linear_expr, const Expression& quadratic_expr) {
   const auto& quadratic_p = ExtractVariablesFromExpression(quadratic_expr);
   const auto& quadratic_vars = quadratic_p.first;
   const auto& quadratic_var_to_index_map = quadratic_p.second;
@@ -372,7 +370,7 @@ Binding<LorentzConeConstraint> ParseLorentzConeConstraint(const Expression& line
       ostringstream oss;
       oss << "Expression" << quadratic_expr
           << " does not have a positive semidefinite Hessian. Cannot be called "
-              "with AddLorentzConeConstraint.\n";
+             "with AddLorentzConeConstraint.\n";
       throw runtime_error(oss.str());
     }
     Eigen::MatrixXd R1 = ldlt_Q.matrixU();
@@ -392,14 +390,14 @@ Binding<LorentzConeConstraint> ParseLorentzConeConstraint(const Expression& line
     // expr.segment(1, R1.rows()) = 1/sqrt(2) * (R * x + R⁻ᵀb)
     expr.segment(1, R1.rows()) =
         1.0 / std::sqrt(2) *
-            (R * quadratic_vars + R.transpose().fullPivHouseholderQr().solve(b));
+        (R * quadratic_vars + R.transpose().fullPivHouseholderQr().solve(b));
     constant = a - 0.5 * b.dot(ldlt_Q.solve(b));
   }
   if (constant < 0) {
     ostringstream oss;
     oss << "Expression " << quadratic_expr
         << " is not guaranteed to be non-negative, cannot call it with "
-            "AddLorentzConeConstraint.\n";
+           "AddLorentzConeConstraint.\n";
     throw runtime_error(oss.str());
   }
   expr(expr.rows() - 1) = std::sqrt(constant);

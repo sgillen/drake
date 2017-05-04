@@ -4,12 +4,11 @@
 #include <type_traits>
 #include <utility>
 
+#include "drake/common/monomial.h"
 #include "drake/common/symbolic_expression.h"
 #include "drake/solvers/binding.h"
 #include "drake/solvers/cost.h"
 #include "drake/solvers/function.h"
-#include "drake/common/monomial.h"
-
 
 namespace drake {
 namespace solvers {
@@ -51,7 +50,6 @@ Binding<Cost> ParseCost(const symbolic::Expression& e);
 
 }  // namespace internal
 
-
 // TODO(eric.cousineau): Remove this when no longer exposed externally.
 namespace detail {
 
@@ -91,10 +89,9 @@ struct is_binding_compatible
  */
 template <typename F>
 struct is_cost_functor_candidate
-    : std::integral_constant<
-          bool,
-              (!is_binding_compatible<F, Cost>::value) &&
-              (!is_convertible_workaround<F, symbolic::Expression>::value)> {};
+    : std::integral_constant<bool, (!is_binding_compatible<F, Cost>::value) &&
+                                       (!is_convertible_workaround<
+                                           F, symbolic::Expression>::value)> {};
 
 /**
  * Template condition to only catch when Constraints are inadvertently passed
@@ -108,7 +105,9 @@ template <typename F>
 struct assert_if_is_constraint {
   static constexpr bool value = is_binding_compatible<F, Constraint>::value;
   // Use deferred evaluation
-  static_assert(!value, "You cannot pass a Constraint to "
+  static_assert(
+      !value,
+      "You cannot pass a Constraint to "
       "create a FunctionCost object. Please ensure you are passing a Cost.");
 };
 

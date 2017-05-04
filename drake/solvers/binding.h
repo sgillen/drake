@@ -67,11 +67,10 @@ class Binding {
   VectorXDecisionVariable vars_;
 };
 
-
 namespace internal {
 
 /*
- * Create binding, inferring the type from the provided 
+ * Create binding, inferring the type from the provided
  * @note Since this forwards arguments, this will not be usable with
  * `std::intializer_list`.
  */
@@ -81,7 +80,6 @@ Binding<C> CreateBinding(const std::shared_ptr<C>& c, Args&&... args) {
 }
 
 }  // namespace internal
-
 
 }  // namespace solvers
 }  // namespace drake

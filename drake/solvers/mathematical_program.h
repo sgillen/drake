@@ -1161,8 +1161,8 @@ class MathematicalProgram {
   AddLinearEqualityConstraint(const Eigen::MatrixBase<DerivedV>& V,
                               const Eigen::MatrixBase<DerivedB>& B,
                               bool lower_triangle = false) {
-    return AddConstraint(internal::ParseLinearEqualityConstraint(
-        V, B, lower_triangle));
+    return AddConstraint(
+        internal::ParseLinearEqualityConstraint(V, B, lower_triangle));
   }
 
   /** AddLinearEqualityConstraint

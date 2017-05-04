@@ -434,8 +434,7 @@ MathematicalProgram::AddLinearEqualityConstraint(const Expression& e,
 }
 
 Binding<LinearEqualityConstraint>
-MathematicalProgram::AddLinearEqualityConstraint(
-    const set<Formula>& formulas) {
+MathematicalProgram::AddLinearEqualityConstraint(const set<Formula>& formulas) {
   return AddConstraint(internal::ParseLinearEqualityConstraint(formulas));
 }
 
@@ -482,8 +481,8 @@ Binding<LorentzConeConstraint> MathematicalProgram::AddLorentzConeConstraint(
 
 Binding<LorentzConeConstraint> MathematicalProgram::AddLorentzConeConstraint(
     const Expression& linear_expr, const Expression& quadratic_expr) {
-  return AddConstraint(internal::ParseLorentzConeConstraint(linear_expr,
-                                                            quadratic_expr));
+  return AddConstraint(
+      internal::ParseLorentzConeConstraint(linear_expr, quadratic_expr));
 }
 
 Binding<LorentzConeConstraint> MathematicalProgram::AddConstraint(
@@ -591,8 +590,8 @@ Binding<Constraint> MathematicalProgram::AddPolynomialConstraint(
     const vector<Polynomiald::VarType>& poly_vars, const Eigen::VectorXd& lb,
     const Eigen::VectorXd& ub,
     const Eigen::Ref<const VectorXDecisionVariable>& vars) {
-  auto constraint = internal::MakePolynomialConstraint(polynomials, poly_vars,
-                                                       lb, ub);
+  auto constraint =
+      internal::MakePolynomialConstraint(polynomials, poly_vars, lb, ub);
   return AddConstraint(constraint, vars);
 }
 

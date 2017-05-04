@@ -140,7 +140,6 @@ std::shared_ptr<QuadraticCost> MakeL2NormCost(
     const Eigen::Ref<const Eigen::MatrixXd>& A,
     const Eigen::Ref<const Eigen::VectorXd>& b);
 
-
 /**
  *  Implements a cost of the form P(x, y...) where P is a multivariate
  *  polynomial in x, y...

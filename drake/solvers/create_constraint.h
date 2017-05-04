@@ -1,85 +1,74 @@
 #pragma once
 
 #include <memory>
-#include <unordered_map>
 #include <set>
 #include <type_traits>
+#include <unordered_map>
 #include <utility>
 
+#include "drake/common/monomial.h"
 #include "drake/common/symbolic_expression.h"
 #include "drake/common/symbolic_formula.h"
 #include "drake/solvers/binding.h"
 #include "drake/solvers/cost.h"
 #include "drake/solvers/function.h"
-#include "drake/common/monomial.h"
-
 
 namespace drake {
 namespace solvers {
 
 namespace detail {
 
-template<typename Derived, typename Scalar>
+template <typename Derived, typename Scalar>
 struct is_eigen_matrix_of
-  : std::integral_constant<
-        bool,
-        std::is_base_of<Eigen::MatrixBase<Derived>, Derived>::value &&
-        std::is_same<typename Derived::Scalar, Scalar>::value
-        > {};
+    : std::integral_constant<
+          bool, std::is_base_of<Eigen::MatrixBase<Derived>, Derived>::value &&
+                    std::is_same<typename Derived::Scalar, Scalar>::value> {};
 
-template<typename Derived>
+template <typename Derived>
 struct is_eigen_vector
-  : std::integral_constant<bool, Derived::ColsAtCompileTime == 1> {};
+    : std::integral_constant<bool, Derived::ColsAtCompileTime == 1> {};
 
-template<typename Derived, typename Scalar>
+template <typename Derived, typename Scalar>
 struct is_eigen_matrix_vector_of
-  : std::integral_constant<
-        bool,
-        detail::is_eigen_matrix_of<Derived, Scalar>::value &&
-        detail::is_eigen_vector<Derived>::value
-        > {};
+    : std::integral_constant<
+          bool, detail::is_eigen_matrix_of<Derived, Scalar>::value &&
+                    detail::is_eigen_vector<Derived>::value> {};
 
-template<typename Derived, typename Scalar>
+template <typename Derived, typename Scalar>
 struct is_eigen_matrix_nonvector_of
-  : std::integral_constant<
-        bool,
-        detail::is_eigen_matrix_of<Derived, Scalar>::value &&
-        !detail::is_eigen_vector<Derived>::value
-        > {};
+    : std::integral_constant<
+          bool, detail::is_eigen_matrix_of<Derived, Scalar>::value &&
+                    !detail::is_eigen_vector<Derived>::value> {};
 
 /*
  * Determine if two Eigen bases are matrices of Expressions and doubles,
  * to then form an implicit formula.
  */
-template<typename DerivedV, typename DerivedB>
-struct is_eigen_matrix_formula_pair // explicitly non-vector
-  : std::integral_constant<
-        bool,
-        detail::is_eigen_matrix_nonvector_of<
-            DerivedV, symbolic::Expression>::value &&
-        detail::is_eigen_matrix_nonvector_of<DerivedB, double>::value
-        > {};
+template <typename DerivedV, typename DerivedB>
+struct is_eigen_matrix_formula_pair  // explicitly non-vector
+    : std::integral_constant<
+          bool,
+          detail::is_eigen_matrix_nonvector_of<DerivedV,
+                                               symbolic::Expression>::value &&
+              detail::is_eigen_matrix_nonvector_of<DerivedB, double>::value> {};
 
 /*
  * Determine if two Eigen bases are vectors of Expressions and doubles,
  * to then form an implicit formula.
  */
-template<typename DerivedV, typename DerivedB>
-struct is_eigen_vector_formula_pair // explicitly vector
-  : std::integral_constant<
-        bool,
-        detail::is_eigen_matrix_vector_of<
-            DerivedV, symbolic::Expression>::value &&
-        detail::is_eigen_matrix_vector_of<DerivedB, double>::value
-        > {};
+template <typename DerivedV, typename DerivedB>
+struct is_eigen_vector_formula_pair  // explicitly vector
+    : std::integral_constant<
+          bool,
+          detail::is_eigen_matrix_vector_of<DerivedV,
+                                            symbolic::Expression>::value &&
+              detail::is_eigen_matrix_vector_of<DerivedB, double>::value> {};
 
-template<typename Derived, typename Scalar>
+template <typename Derived, typename Scalar>
 struct is_eigen_array_of
-  : std::integral_constant<
-        bool,
-        std::is_base_of<Eigen::ArrayBase<Derived>, Derived>::value &&
-        std::is_same<typename Derived::Scalar, Scalar>::value
-        > {};
+    : std::integral_constant<
+          bool, std::is_base_of<Eigen::ArrayBase<Derived>, Derived>::value &&
+                    std::is_same<typename Derived::Scalar, Scalar>::value> {};
 
 }  // namespace detail
 
@@ -101,7 +90,7 @@ inline Binding<LinearConstraint> ParseLinearConstraint(
 Binding<LinearConstraint> ParseLinearConstraint(const symbolic::Formula& f);
 
 Binding<LinearConstraint> ParseLinearConstraint(
-  const std::set<symbolic::Formula>& formulas);
+    const std::set<symbolic::Formula>& formulas);
 
 template <typename Derived>
 typename std::enable_if<
@@ -164,8 +153,8 @@ inline Binding<LinearEqualityConstraint> ParseLinearEqualityConstraint(
                                          Vector1d(b));
 }
 
-Binding<LinearEqualityConstraint>
-ParseLinearEqualityConstraint(const std::set<symbolic::Formula>& formulas);
+Binding<LinearEqualityConstraint> ParseLinearEqualityConstraint(
+    const std::set<symbolic::Formula>& formulas);
 
 Binding<LinearEqualityConstraint> ParseLinearEqualityConstraint(
     const symbolic::Formula& f);
@@ -296,8 +285,7 @@ template <typename Derived>
 typename std::enable_if<
     detail::is_eigen_matrix_vector_of<Derived, symbolic::Formula>::value,
     Binding<Constraint>>::type
-ParseConstraint(
-    const Eigen::MatrixBase<Derived>& e) {
+ParseConstraint(const Eigen::MatrixBase<Derived>& e) {
   throw std::runtime_error("Not implemented");
 }
 
