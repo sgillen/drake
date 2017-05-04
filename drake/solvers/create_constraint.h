@@ -23,7 +23,6 @@ template<typename Derived, typename Scalar>
 struct is_eigen_matrix_of
   : std::integral_constant<
         bool,
-        // Is this to prevent an ArrayBase from being implicitly copied?
         std::is_base_of<Eigen::MatrixBase<Derived>, Derived>::value &&
         std::is_same<typename Derived::Scalar, Scalar>::value
         > {};
@@ -72,6 +71,14 @@ struct is_eigen_vector_formula_pair // explicitly vector
         detail::is_eigen_matrix_vector_of<
             DerivedV, symbolic::Expression>::value &&
         detail::is_eigen_matrix_vector_of<DerivedB, double>::value
+        > {};
+
+template<typename Derived, typename Scalar>
+struct is_eigen_array_of
+  : std::integral_constant<
+        bool,
+        std::is_base_of<Eigen::ArrayBase<Derived>, Derived>::value &&
+        std::is_same<typename Derived::Scalar, Scalar>::value
         > {};
 
 }  // namespace detail

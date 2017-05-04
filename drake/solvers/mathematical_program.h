@@ -1055,10 +1055,9 @@ class MathematicalProgram {
    */
   template <typename Derived>
   typename std::enable_if<
-      std::is_base_of<Eigen::ArrayBase<Derived>, Derived>::value &&
-          std::is_same<typename Derived::Scalar, symbolic::Formula>::value,
+      detail::is_eigen_array_of<Derived, symbolic::Formula>::value,
       Binding<LinearConstraint>>::type
-  AddLinearConstraint(const Derived& formulas) {
+  AddLinearConstraint(const Eigen::ArrayBase<Derived>& formulas) {
     const auto n = formulas.rows() * formulas.cols();
 
     // Decomposes 2D-array of formulas into 1D-vector of expression, `v`, and
