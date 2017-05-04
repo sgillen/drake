@@ -20,11 +20,12 @@ namespace solvers {
 
 namespace detail {
 
+/*
+ * Determine if a type is
+ */
 template <typename Derived, typename Scalar>
 struct is_eigen_matrix_of
-    : std::integral_constant<
-          bool, std::is_base_of<Eigen::MatrixBase<Derived>, Derived>::value &&
-                    std::is_same<typename Derived::Scalar, Scalar>::value> {};
+    : std::is_same<typename Derived::Scalar, Scalar> {};
 
 template <typename Derived>
 struct is_eigen_vector
@@ -68,9 +69,7 @@ struct is_eigen_vector_formula_pair  // explicitly vector
 
 template <typename Derived, typename Scalar>
 struct is_eigen_array_of
-    : std::integral_constant<
-          bool, std::is_base_of<Eigen::ArrayBase<Derived>, Derived>::value &&
-                    std::is_same<typename Derived::Scalar, Scalar>::value> {};
+    : std::is_same<typename Derived::Scalar, Scalar> {};
 
 }  // namespace detail
 
