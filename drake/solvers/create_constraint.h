@@ -78,24 +78,37 @@ struct is_eigen_vector_formula_pair  // explicitly vector
 
 namespace internal {
 
-// TODO(eric.cousineau): Use Eigen::Ref more pervasively
+// TODO(eric.cousineau): Use Eigen::Ref more pervasively when no temporaries
+// are allocated (or if it doesn't matter if they are)
 
 Binding<LinearConstraint> ParseLinearConstraint(
     const Eigen::Ref<const VectorX<symbolic::Expression>>& v,
     const Eigen::Ref<const Eigen::VectorXd>& lb,
     const Eigen::Ref<const Eigen::VectorXd>& ub);
 
+/*
+ * Assist MathematicalProgram::AddLinearConstraint(...).
+ */
 inline Binding<LinearConstraint> ParseLinearConstraint(
     const symbolic::Expression& e, const double lb, const double ub) {
   return ParseLinearConstraint(Vector1<symbolic::Expression>(e),
                                Vector1<double>(lb), Vector1<double>(ub));
 }
 
+/*
+ * Assist MathematicalProgram::AddLinearConstraint(...).
+ */
 Binding<LinearConstraint> ParseLinearConstraint(const symbolic::Formula& f);
 
+/*
+ * Assist MathematicalProgram::AddLinearConstraint(...).
+ */
 Binding<LinearConstraint> ParseLinearConstraint(
     const std::set<symbolic::Formula>& formulas);
 
+/*
+ * Assist MathematicalProgram::AddLinearConstraint(...).
+ */
 template <typename Derived>
 typename std::enable_if<
     detail::is_eigen_scalar_same<Derived, symbolic::Formula>::value,
@@ -147,35 +160,36 @@ ParseLinearConstraint(const Eigen::ArrayBase<Derived>& formulas) {
   return ParseLinearConstraint(v, lb, ub);
 }
 
+/*
+ * Assist functionality for ParseLinearEqualityConstraint(...).
+ */
 Binding<LinearEqualityConstraint> DoParseLinearEqualityConstraint(
     const Eigen::Ref<const VectorX<symbolic::Expression>>& v,
     const Eigen::Ref<const Eigen::VectorXd>& b);
 
+/*
+ * Assist MathematicalProgram::AddLinearEqualityConstraint(...).
+ */
 inline Binding<LinearEqualityConstraint> ParseLinearEqualityConstraint(
     const symbolic::Expression& e, double b) {
   return DoParseLinearEqualityConstraint(Vector1<symbolic::Expression>(e),
                                          Vector1d(b));
 }
 
+/*
+ * Assist MathematicalProgram::AddLinearEqualityConstraint(...).
+ */
 Binding<LinearEqualityConstraint> ParseLinearEqualityConstraint(
     const std::set<symbolic::Formula>& formulas);
 
+/*
+ * Assist MathematicalProgram::AddLinearEqualityConstraint(...).
+ */
 Binding<LinearEqualityConstraint> ParseLinearEqualityConstraint(
     const symbolic::Formula& f);
 
 /*
- * Creates linear equality constraints \f$ v = b \f$, where \p v(i) is a
- * symbolic linear expression. Throws an exception if
- * 1. @p v(i) is a non-linear expression.
- * 2. @p v(i) is a constant.
- * @tparam DerivedV An Eigen Matrix type of Expression. A column vector.
- * @tparam DerivedB An Eigen Matrix type of double. A column vector.
- * @param v v(i) is a linear symbolic expression in the form of
- * <tt> c0 + c1 * x1 + ... + cn * xn </tt> where ci is a constant and @xi is
- * a variable.
- * @param b A vector of doubles.
- * @return The newly created linear equality constraint, together with the
- * bound variables.
+ * Assist MathematicalProgram::AddLinearEqualityConstraint(...).
  */
 template <typename DerivedV, typename DerivedB>
 typename std::enable_if<
@@ -186,24 +200,8 @@ ParseLinearEqualityConstraint(const Eigen::MatrixBase<DerivedV>& V,
   return DoParseLinearEqualityConstraint(V, b);
 }
 
-/**
- * Adds a linear equality constraint for a matrix of linear expression @p V,
- * such that V(i, j) = B(i, j). If V is a symmetric matrix, then the user
- * may only want to constrain the lower triangular part of V.
- * This function is meant to provide convenience to the user, it incurs
- * additional copy and memory allocation. For faster speed, add each column
- * of the matrix equality in a for loop.
- * @tparam DerivedV An Eigen Matrix type of Expression. The number of columns
- * at compile time should not be 1.
- * @tparam DerivedB An Eigen Matrix type of double.
- * @param V An Eigen Matrix of symbolic expressions. V(i, j) should be a
- * linear expression.
- * @param B An Eigen Matrix of doubles.
- * @param lower_triangle If true, then only the lower triangular part of @p V
- * is constrained, otherwise the whole matrix V is constrained. @default is
- * false.
- * @return The newly added linear equality constraint, together with the
- * bound variables.
+/*
+ * Assist MathematicalProgram::AddLinearEqualityConstraint(...).
  */
 template <typename DerivedV, typename DerivedB>
 typename std::enable_if<
@@ -263,16 +261,25 @@ ParseLinearEqualityConstraint(const Eigen::MatrixBase<DerivedV>& V,
   }
 }
 
-// Non-symbolic, but this seems to have a separate purpose than general
-// construction
+/*
+ * Assist MathematicalProgram::AddPolynomialConstraint(...).
+ * @note Non-symbolic, but this seems to have a separate purpose than general
+ * construction.
+ */
 std::shared_ptr<Constraint> MakePolynomialConstraint(
     const VectorXPoly& polynomials,
     const std::vector<Polynomiald::VarType>& poly_vars,
     const Eigen::VectorXd& lb, const Eigen::VectorXd& ub);
 
+/*
+ * Assist MathematicalProgram::AddLorentzConeConstraint(...).
+ */
 Binding<LorentzConeConstraint> ParseLorentzConeConstraint(
     const Eigen::Ref<const VectorX<symbolic::Expression>>& v);
 
+/*
+ * Assist MathematicalProgram::AddLorentzConeConstraint(...).
+ */
 Binding<LorentzConeConstraint> ParseLorentzConeConstraint(
     const symbolic::Expression& linear_expr,
     const symbolic::Expression& quadratic_expr);
