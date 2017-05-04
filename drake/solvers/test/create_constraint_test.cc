@@ -4,6 +4,7 @@
 #include <limits>
 #include <memory>
 #include <set>
+#include <stdexcept>
 
 #include <gtest/gtest.h>
 
@@ -17,6 +18,8 @@ namespace solvers {
 namespace internal {
 namespace test {
 
+using std::numeric_limits;
+using std::runtime_error;
 using std::set;
 using std::shared_ptr;
 using std::static_pointer_cast;
@@ -24,6 +27,8 @@ using std::string;
 using std::to_string;
 
 using Eigen::Matrix;
+using Eigen::Vector2d;
+using Eigen::Vector4d;
 
 using symbolic::Expression;
 using symbolic::Formula;
@@ -38,7 +43,7 @@ namespace {
  */
 template <int Rows = Eigen::Dynamic>
 VectorDecisionVariable<Rows> CreateVectorDecisionVariable(
-    const string& name, int rows = Eigen::Dynamic) {
+    const string& name = "x", int rows = Eigen::Dynamic) {
   VectorDecisionVariable<Rows> out;
   if (Rows == Eigen::Dynamic) {
     DRAKE_DEMAND(rows > 0);
@@ -95,7 +100,7 @@ GTEST_TEST(testCreateConstraint, ParseLinearConstraintSymbolic2) {
   EXPECT_TRUE((e - 10).EqualTo(Ax - ub_in_ctr));
 }
 
-GTEST_TEST(testMathematicalProgram, AddLinearConstraintSymbolic3) {
+GTEST_TEST(testCreateConstraint, ParseLinearConstraintSymbolic3) {
   // Add linear constraints
   //     3 <=  3 - 5*x0 +      + 10*x2        - 7*y1        <= 9
   //   -10 <=                       x2                      <= 10
@@ -152,18 +157,116 @@ GTEST_TEST(testMathematicalProgram, AddLinearConstraintSymbolic3) {
   }
 }
 
-GTEST_TEST(testMathematicalProgram, AddLinearConstraintSymbolic4) {
-  // Check the linear constraint 2  <= 2 * x <= 4.
-  // Note: this is a bounding box constraint
-  auto x = CreateVectorDecisionVariable<2>("x");
-  const Expression e(2 * x(1));
-  const auto binding = ParseLinearConstraint(e, 2, 4);
+GTEST_TEST(testCreateConstraint, ParseLinearConstraintSymbolic4And5And6) {
+  // Check the separate linear constraints:
+  // 2  <= 2 * x <= 4
+  // 2  <= -2 * x <= 4
+  // 1 <= -x <= 3
+  // Note: these are bounding box constraint
+  const auto x = CreateVectorDecisionVariable<2>("x");
+
+  {
+    const Expression e(2 * x(1));
+    const auto binding = ParseLinearConstraint(e, 2, 4);
+    const auto& constraint = binding.constraint();
+
+    EXPECT_TRUE(is_dynamic_castable<BoundingBoxConstraint>(constraint));
+    EXPECT_EQ(binding.variables(), x.segment(1, 1));
+    EXPECT_TRUE(CompareMatrices(constraint->lower_bound(), Vector1d(1)));
+    EXPECT_TRUE(CompareMatrices(constraint->upper_bound(), Vector1d(2)));
+  }
+
+  {
+    const Expression e(-2 * x(1));
+    const auto binding = ParseLinearConstraint(e, 2, 4);
+    const auto& constraint = binding.constraint();
+
+    EXPECT_TRUE(is_dynamic_castable<BoundingBoxConstraint>(constraint));
+    EXPECT_EQ(binding.variables(), VectorDecisionVariable<1>(x(1)));
+    EXPECT_TRUE(CompareMatrices(constraint->lower_bound(), Vector1d(-2)));
+    EXPECT_TRUE(CompareMatrices(constraint->upper_bound(), Vector1d(-1)));
+  }
+
+  {
+    const Expression e(-x(0));
+    const auto binding = ParseLinearConstraint(e, 1, 3);
+    const auto& constraint = binding.constraint();
+
+    EXPECT_TRUE(is_dynamic_castable<BoundingBoxConstraint>(constraint));
+    EXPECT_EQ(binding.variables(), VectorDecisionVariable<1>(x(0)));
+    EXPECT_TRUE(CompareMatrices(constraint->lower_bound(), Vector1d(-3)));
+    EXPECT_TRUE(CompareMatrices(constraint->upper_bound(), Vector1d(-1)));
+  }
+}
+
+GTEST_TEST(testCreateConstraint, ParseLinearConstraintSymbolic7) {
+  // Checks the linear constraints
+  // 1 <= -2 * x0 <= 3
+  // 3 <= 4 * x0 + 2<= 5
+  // 2 <= x1 + 2 * (x2 - 0.5*x1) + 3 <= 4;
+  // 3 <= -4 * x1 + 3 <= inf
+  // Note: these are all bounding box constraints.
+  auto x = CreateVectorDecisionVariable<3>();
+
+  Vector4<Expression> e;
+  // clang-format off
+  e << -2 * x(0),
+    4 * x(0) + 2,
+    x(1) + 2 * (x(2) - 0.5 * x(1)) + 3,
+    -4 * x(1) + 3;
+  // clang-format on
+  const auto binding = ParseLinearConstraint(
+      e, Vector4d(1, 3, 2, 3),
+      Vector4d(3, 5, 4, numeric_limits<double>::infinity()));
   const auto& constraint = binding.constraint();
 
   EXPECT_TRUE(is_dynamic_castable<BoundingBoxConstraint>(constraint));
-  EXPECT_EQ(binding.variables(), x.segment(1, 1));
-  EXPECT_TRUE(CompareMatrices(constraint->lower_bound(), Vector1d(1)));
-  EXPECT_TRUE(CompareMatrices(constraint->upper_bound(), Vector1d(2)));
+  EXPECT_EQ(binding.variables(),
+            VectorDecisionVariable<4>(x(0), x(0), x(2), x(1)));
+  EXPECT_TRUE(CompareMatrices(
+      binding.constraint()->lower_bound(),
+      Vector4d(-1.5, 0.25, -0.5, -numeric_limits<double>::infinity())));
+  EXPECT_TRUE(CompareMatrices(constraint->upper_bound(),
+                              Vector4d(-0.5, 0.75, 0.5, 0)));
+}
+
+GTEST_TEST(testCreateConstraint, ParseLinearConstraintSymbolic8) {
+  // Test the failure cases for adding linear constraint.
+  const auto x = CreateVectorDecisionVariable<2>();
+
+  // Non-polynomial.
+  EXPECT_THROW(ParseLinearConstraint(sin(x(0)), 1, 2), runtime_error);
+
+  // Non-linear.
+  EXPECT_THROW(ParseLinearConstraint(x(0) * x(0), 1, 2), runtime_error);
+
+  // Trivial (and infeasible) case 1 <= 0 <= 2
+  EXPECT_THROW(ParseLinearConstraint(x(0) - x(0), 1, 2), runtime_error);
+}
+
+GTEST_TEST(testCreateConstraint, ParseLinearConstraintSymbolic9) {
+  // Test trivial constraint with no variables, such as 1 <= 2 <= 3
+  auto x = CreateVectorDecisionVariable<2>();
+
+  {
+    const auto binding = ParseLinearConstraint(Expression(2), 1, 3);
+    const auto& constraint = binding.constraint();
+    EXPECT_TRUE(is_dynamic_castable<LinearConstraint>(constraint));
+    EXPECT_EQ(constraint->A().rows(), 1);
+    EXPECT_EQ(constraint->A().cols(), 0);
+  }
+
+  {
+    Vector2<Expression> expr;
+    expr << 2, x(0);
+    const auto binding = ParseLinearConstraint(expr, Vector2d(1, 2),
+                                               Vector2d(3, 4));
+    const auto& constraint = binding.constraint();
+    EXPECT_TRUE(is_dynamic_castable<LinearConstraint>(constraint));
+    EXPECT_TRUE(CompareMatrices(constraint->A(), Vector2d(0, 1)));
+    EXPECT_TRUE(CompareMatrices(constraint->lower_bound(), Vector2d(-1, 2)));
+    EXPECT_TRUE(CompareMatrices(constraint->upper_bound(), Vector2d(1, 4)));
+  }
 }
 
 GTEST_TEST(testCreateConstraint, ParseLinearConstraintSymbolicFormulaAnd2) {
