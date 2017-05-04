@@ -5,6 +5,7 @@
 #include <unordered_set>
 #include <vector>
 
+#include "drake/common/unused.h"
 #include "drake/solvers/symbolic_extraction.h"
 
 namespace drake {
@@ -30,21 +31,9 @@ using internal::ExtractAndAppendVariablesFromExpression;
 using internal::ExtractVariablesFromExpression;
 using internal::SymbolicError;
 
-Binding<LinearCost> ParseLinearCost(const Expression& e) {
-  auto p = ExtractVariablesFromExpression(e);
-  const VectorXDecisionVariable& var = p.first;
-  const auto& map_var_to_index = p.second;
-  Eigen::RowVectorXd c(var.size());
-  double constant_term;
-  DecomposeLinearExpression(e, map_var_to_index, c, &constant_term);
-  // The constant term is ignored now.
-  // TODO(hongkai.dai): support adding constant term to the cost.
-  return CreateBinding(make_shared<LinearCost>(c), var);
-}
-
 namespace {
 
-Binding<QuadraticCost> ParseQuadraticCostWithMonomialToCoeffMap(
+Binding<QuadraticCost> DoParseQuadraticCost(
     const symbolic::MonomialToCoefficientMap& monomial_to_coeff_map,
     const VectorXDecisionVariable& vars_vec,
     const unordered_map<Variable::Id, int>& map_var_to_index) {
@@ -60,7 +49,25 @@ Binding<QuadraticCost> ParseQuadraticCostWithMonomialToCoeffMap(
   return CreateBinding(make_shared<QuadraticCost>(Q, b), vars_vec);
 }
 
+Binding<LinearCost> DoParseLinearCost(
+    const Expression &e,
+    const VectorXDecisionVariable& vars_vec,
+    const unordered_map<Variable::Id, int>& map_var_to_index) {
+  Eigen::RowVectorXd c(vars_vec.size());
+  double constant_term;
+  DecomposeLinearExpression(e, map_var_to_index, c, &constant_term);
+  // The constant term is ignored now.
+  // TODO(eric.cousineau): support adding constant term to the cost.
+  unused(constant_term);
+  return CreateBinding(make_shared<LinearCost>(c), vars_vec);
+}
+
 }  // anonymous namespace
+
+Binding<LinearCost> ParseLinearCost(const Expression& e) {
+  auto p = ExtractVariablesFromExpression(e);
+  return DoParseLinearCost(e, p.first, p.second);
+}
 
 Binding<QuadraticCost> ParseQuadraticCost(const Expression& e) {
   // First build an Eigen vector, that contains all the bound variables.
@@ -70,10 +77,10 @@ Binding<QuadraticCost> ParseQuadraticCost(const Expression& e) {
   const auto& map_var_to_index = p.second;
 
   // Now decomposes the expression into coefficients and monomials.
-  const symbolic::MonomialToCoefficientMap& monomial_to_coeff_map =
+  auto monomial_to_coeff_map =
       symbolic::DecomposePolynomialIntoMonomial(e, vars);
-  return ParseQuadraticCostWithMonomialToCoeffMap(monomial_to_coeff_map,
-                                                  vars_vec, map_var_to_index);
+  return DoParseQuadraticCost(monomial_to_coeff_map,
+                              vars_vec, map_var_to_index);
 }
 
 Binding<PolynomialCost> ParsePolynomialCost(const symbolic::Expression& e) {
@@ -120,20 +127,10 @@ Binding<Cost> ParseCost(const symbolic::Expression& e) {
   if (total_degree > 2) {
     return ParsePolynomialCost(e);
   } else if (total_degree == 2) {
-    return ParseQuadraticCostWithMonomialToCoeffMap(monomial_to_coeff_map,
-                                                    vars_vec, map_var_to_index);
+    return DoParseQuadraticCost(monomial_to_coeff_map,
+                                vars_vec, map_var_to_index);
   } else {
-    // TODO(eric.cousineau): Dispatch to ParseLinearCost?
-    Eigen::VectorXd c(vars_vec.size());
-    c.setZero();
-    for (const auto& p : monomial_to_coeff_map) {
-      if (p.first.total_degree() == 1) {
-        const Variable::Id var_id = p.first.get_powers().begin()->first;
-        DRAKE_DEMAND(is_constant(p.second));
-        c(map_var_to_index.at(var_id)) += get_constant_value(p.second);
-      }
-    }
-    return CreateBinding(make_shared<LinearCost>(c), vars_vec);
+    return DoParseLinearCost(e, vars_vec, map_var_to_index);
   }
 }
 

@@ -89,6 +89,7 @@ drake_cc_library(
         "//drake/common:number_traits",
         "//drake/common:polynomial",
         "//drake/common:symbolic",
+        "//drake/common:unused",
     ],
 )
 
