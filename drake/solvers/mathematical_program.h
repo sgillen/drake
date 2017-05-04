@@ -1007,7 +1007,7 @@ class MathematicalProgram {
    */
   template <typename Derived>
   typename std::enable_if<
-      detail::is_eigen_array_of<Derived, symbolic::Formula>::value,
+      detail::is_eigen_scalar_same<Derived, symbolic::Formula>::value,
       Binding<LinearConstraint>>::type
   AddLinearConstraint(const Eigen::ArrayBase<Derived>& formulas) {
     return AddConstraint(internal::ParseLinearConstraint(formulas));

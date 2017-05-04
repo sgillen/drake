@@ -21,55 +21,58 @@ namespace solvers {
 namespace detail {
 
 /*
- * Determine if a type is
+ * Determine if an EigenBase<> has a specific scalar type
  */
 template <typename Derived, typename Scalar>
-struct is_eigen_matrix_of
+struct is_eigen_scalar_same
     : std::is_same<typename Derived::Scalar, Scalar> {};
 
+/*
+ * Determine if an EigenBase<> type is a (column) vector
+ */
 template <typename Derived>
 struct is_eigen_vector
     : std::integral_constant<bool, Derived::ColsAtCompileTime == 1> {};
 
+/*
+ * Determine if an EigenBase<> type is a (column) vector of a given type
+ */
 template <typename Derived, typename Scalar>
-struct is_eigen_matrix_vector_of
+struct is_eigen_vector_of
     : std::integral_constant<
-          bool, detail::is_eigen_matrix_of<Derived, Scalar>::value &&
-                    detail::is_eigen_vector<Derived>::value> {};
+        bool, detail::is_eigen_scalar_same<Derived, Scalar>::value &&
+            detail::is_eigen_vector<Derived>::value> {};
 
+/*
+ * Determine if a EigenBase<> type is a matrix (non-column-vector) of
+ */
 template <typename Derived, typename Scalar>
-struct is_eigen_matrix_nonvector_of
+struct is_eigen_matrix_of
     : std::integral_constant<
-          bool, detail::is_eigen_matrix_of<Derived, Scalar>::value &&
+          bool, detail::is_eigen_scalar_same<Derived, Scalar>::value &&
                     !detail::is_eigen_vector<Derived>::value> {};
 
 /*
- * Determine if two Eigen bases are matrices of Expressions and doubles,
- * to then form an implicit formula.
+ * Determine if two EigenBase<> types are matrices (non-vectors) of
+ * Expressions and doubles, to then form an implicit formulas.
  */
 template <typename DerivedV, typename DerivedB>
 struct is_eigen_matrix_formula_pair  // explicitly non-vector
     : std::integral_constant<
           bool,
-          detail::is_eigen_matrix_nonvector_of<DerivedV,
-                                               symbolic::Expression>::value &&
-              detail::is_eigen_matrix_nonvector_of<DerivedB, double>::value> {};
+          detail::is_eigen_matrix_of<DerivedV, symbolic::Expression>::value &&
+              detail::is_eigen_matrix_of<DerivedB, double>::value> {};
 
 /*
- * Determine if two Eigen bases are vectors of Expressions and doubles,
- * to then form an implicit formula.
+ * Determine if two EigenBase<> types are vectors of Expressions and doubles
+ * that could make a formula.
  */
 template <typename DerivedV, typename DerivedB>
 struct is_eigen_vector_formula_pair  // explicitly vector
     : std::integral_constant<
           bool,
-          detail::is_eigen_matrix_vector_of<DerivedV,
-                                            symbolic::Expression>::value &&
-              detail::is_eigen_matrix_vector_of<DerivedB, double>::value> {};
-
-template <typename Derived, typename Scalar>
-struct is_eigen_array_of
-    : std::is_same<typename Derived::Scalar, Scalar> {};
+          detail::is_eigen_vector_of<DerivedV, symbolic::Expression>::value &&
+              detail::is_eigen_vector_of<DerivedB, double>::value> {};
 
 }  // namespace detail
 
@@ -95,7 +98,7 @@ Binding<LinearConstraint> ParseLinearConstraint(
 
 template <typename Derived>
 typename std::enable_if<
-    detail::is_eigen_array_of<Derived, symbolic::Formula>::value,
+    detail::is_eigen_scalar_same<Derived, symbolic::Formula>::value,
     Binding<LinearConstraint>>::type
 ParseLinearConstraint(const Eigen::ArrayBase<Derived>& formulas) {
   const auto n = formulas.rows() * formulas.cols();
@@ -284,9 +287,10 @@ Binding<LorentzConeConstraint> ParseLorentzConeConstraint(
 
 template <typename Derived>
 typename std::enable_if<
-    detail::is_eigen_matrix_vector_of<Derived, symbolic::Formula>::value,
+    detail::is_eigen_vector_of<Derived, symbolic::Formula>::value,
     Binding<Constraint>>::type
 ParseConstraint(const Eigen::MatrixBase<Derived>& e) {
+  // TODO(eric.cousineau): Implement this.
   throw std::runtime_error("Not implemented");
 }
 
