@@ -125,7 +125,7 @@ ParseLinearConstraint(const Eigen::ArrayBase<Derived>& formulas) {
   Eigen::Matrix<double, flat_vector_size, 1> lb{n};
   Eigen::Matrix<double, flat_vector_size, 1> ub{n};
   int k{0};  // index variable for 1D components.
-  for (int j{0}; j < formulas.cols(); ++j, ++k) {
+  for (int j{0}; j < formulas.cols(); ++j) {
     for (int i{0}; i < formulas.rows(); ++i) {
       const symbolic::Formula& f{formulas(i, j)};
       if (is_equal_to(f)) {
@@ -155,6 +155,7 @@ ParseLinearConstraint(const Eigen::ArrayBase<Derived>& formulas) {
                "operators.";
         throw std::runtime_error(oss.str());
       }
+      k++;
     }
   }
   return ParseLinearConstraint(v, lb, ub);
