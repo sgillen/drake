@@ -7,6 +7,7 @@
 #include <utility>
 
 #include "drake/common/symbolic_expression.h"
+#include "drake/common/symbolic_formula.h"
 #include "drake/solvers/binding.h"
 #include "drake/solvers/cost.h"
 #include "drake/solvers/function.h"
@@ -213,12 +214,27 @@ ParseLinearEqualityConstraint(const Eigen::MatrixBase<DerivedV>& V,
   }
 }
 
-Binding<Constraint> ParsePolynomialConstraint(
+// Non-symbolic, but this seems to have a separate purpose than general
+// construction
+std::shared_ptr<Constraint> MakePolynomialConstraint(
     const VectorXPoly& polynomials,
     const std::vector<Polynomiald::VarType>& poly_vars,
-    const Eigen::VectorXd& lb,
-    const Eigen::VectorXd& ub,
-    const Eigen::Ref<const VectorXDecisionVariable>& vars);
+    const Eigen::VectorXd& lb, const Eigen::VectorXd& ub);
+
+Binding<LorentzConeConstraint> ParseLorentzConeConstraint(
+    const Eigen::Ref<const VectorX<symbolic::Expression>>& v);
+
+Binding<LorentzConeConstraint> ParseLorentzConeConstraint(
+    const symbolic::Expression& linear_expr,
+    const symbolic::Expression& quadratic_expr);
+
+// // TODO(eric.cousineau): Implement this if variable creation is separated.
+// // Format would be (tuple(linear_binding, psd_binding), new_vars)
+// ParsePositiveSemidefiniteConstraint(
+//     const Eigen::Ref<MatrixX<symbolic::Expression>>& e) {
+//   // ...
+//   return std::make_tuple(linear_binding, psd_binding);
+// }
 
 template <typename Derived>
 typename std::enable_if<

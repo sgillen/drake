@@ -246,11 +246,10 @@ Binding<LinearEqualityConstraint> DoParseLinearEqualityConstraint(
   return CreateBinding(make_shared<LinearEqualityConstraint>(A, beq), vars);
 }
 
-Binding<Constraint> ParsePolynomialConstraint(
+shared_ptr<Constraint> MakePolynomialConstraint(
     const VectorXPoly& polynomials,
     const vector <Polynomiald::VarType>& poly_vars,
-    const Eigen::VectorXd& lb, const Eigen::VectorXd& ub,
-    const Eigen::Ref<const VectorXDecisionVariable>& vars) {
+    const Eigen::VectorXd& lb, const Eigen::VectorXd& ub) {
   // Polynomials that are actually affine (a sum of linear terms + a
   // constant) can be special-cased.  Other polynomials are treated as
   // generic for now.
@@ -284,19 +283,127 @@ Binding<Constraint> ParsePolynomialConstraint(
       }
     }
     if (ub == lb) {
-      auto constraint = make_shared<LinearEqualityConstraint>(
+      return make_shared<LinearEqualityConstraint>(
           linear_constraint_matrix, linear_constraint_ub);
-      return CreateBinding(constraint, vars);
     } else {
-      auto constraint = make_shared<LinearConstraint>(
+      return make_shared<LinearConstraint>(
           linear_constraint_matrix, linear_constraint_lb, linear_constraint_ub);
-      return CreateBinding(constraint, vars);
     }
   } else {
-    auto constraint =
-        make_shared<PolynomialConstraint>(polynomials, poly_vars, lb, ub);
-    return CreateBinding(constraint, vars);
+    return make_shared<PolynomialConstraint>(polynomials, poly_vars, lb, ub);
   }
+}
+
+Binding<LorentzConeConstraint> ParseLorentzConeConstraint(
+    const Eigen::Ref<const VectorX<Expression>>& v) {
+  DRAKE_DEMAND(v.rows() >= 2);
+  Eigen::MatrixXd A{};
+  Eigen::VectorXd b(v.size());
+  VectorXDecisionVariable vars{};
+  DecomposeLinearExpression(v, &A, &b, &vars);
+  DRAKE_DEMAND(vars.rows() >= 1);
+  return CreateBinding(make_shared<LorentzConeConstraint>(A, b), vars);
+}
+
+Binding<LorentzConeConstraint> ParseLorentzConeConstraint(const Expression& linear_expr,
+                                                             const Expression& quadratic_expr) {
+  const auto& quadratic_p = ExtractVariablesFromExpression(quadratic_expr);
+  const auto& quadratic_vars = quadratic_p.first;
+  const auto& quadratic_var_to_index_map = quadratic_p.second;
+  const auto& monomial_to_coeff_map = symbolic::DecomposePolynomialIntoMonomial(
+      quadratic_expr, quadratic_expr.GetVariables());
+  Eigen::MatrixXd Q(quadratic_vars.size(), quadratic_vars.size());
+  Eigen::VectorXd b(quadratic_vars.size());
+  double a;
+  DecomposeQuadraticExpressionWithMonomialToCoeffMap(
+      monomial_to_coeff_map, quadratic_var_to_index_map, quadratic_vars.size(),
+      &Q, &b, &a);
+  // The constraint that the linear expression v1 satisfying
+  // v1 >= sqrt(0.5 * x' * Q * x + b' * x + a), is equivalent to the vector
+  // [z; y] being within a Lorentz cone, where
+  // z = v1
+  // y = [1/sqrt(2) * (R * x + R⁻ᵀb); sqrt(a - 0.5 * bᵀ * Q⁻¹ * a)]
+  // R is the matrix satisfying Rᵀ * R = Q
+
+  VectorX<Expression> expr{};
+
+  double constant;  // constant is a - 0.5 * bᵀ * Q⁻¹ * a
+  // If Q is strictly positive definite, then use LLT
+  Eigen::LLT<Eigen::MatrixXd> llt_Q(Q.selfadjointView<Eigen::Upper>());
+  if (llt_Q.info() == Eigen::Success) {
+    Eigen::MatrixXd R = llt_Q.matrixU();
+    expr.resize(2 + R.rows());
+    expr(0) = linear_expr;
+    expr.segment(1, R.rows()) =
+        1.0 / std::sqrt(2) * (R * quadratic_vars + llt_Q.matrixL().solve(b));
+    constant = a - 0.5 * b.dot(llt_Q.solve(b));
+  } else {
+    // Q is not strictly positive definite.
+    // First check if Q is zero.
+    const bool is_Q_zero = (Q.array() == 0).all();
+
+    if (is_Q_zero) {
+      // Now check if the linear term b is zero. If both Q and b are zero, then
+      // add the linear constraint linear_expr >= sqrt(a); otherwise throw a
+      // runtime error.
+      const bool is_b_zero = (b.array() == 0).all();
+      if (!is_b_zero) {
+        ostringstream oss;
+        oss << "Expression " << quadratic_expr
+            << " is not quadratic, cannot call AddLorentzConeConstraint.\n";
+        throw runtime_error(oss.str());
+      } else {
+        if (a < 0) {
+          ostringstream oss;
+          oss << "Expression " << quadratic_expr
+              << " is negative, cannot call AddLorentzConeConstraint.\n";
+          throw runtime_error(oss.str());
+        }
+        Vector2<Expression> expr_constant_quadratic(linear_expr, std::sqrt(a));
+        return ParseLorentzConeConstraint(expr_constant_quadratic);
+      }
+    }
+    // Q is not strictly positive, nor is it zero. Use LDLT to decompose Q
+    // into R * Rᵀ.
+    // Question: is there a better way to compute R * x and R⁻ᵀb? The following
+    // code is really ugly.
+    Eigen::LDLT<Eigen::MatrixXd> ldlt_Q(Q.selfadjointView<Eigen::Upper>());
+    if (ldlt_Q.info() != Eigen::Success || !ldlt_Q.isPositive()) {
+      ostringstream oss;
+      oss << "Expression" << quadratic_expr
+          << " does not have a positive semidefinite Hessian. Cannot be called "
+              "with AddLorentzConeConstraint.\n";
+      throw runtime_error(oss.str());
+    }
+    Eigen::MatrixXd R1 = ldlt_Q.matrixU();
+    for (int i = 0; i < R1.rows(); ++i) {
+      for (int j = 0; j < i; ++j) {
+        R1(i, j) = 0;
+      }
+      const double d_sqrt = std::sqrt(ldlt_Q.vectorD()(i));
+      for (int j = i; j < R1.cols(); ++j) {
+        R1(i, j) *= d_sqrt;
+      }
+    }
+    Eigen::MatrixXd R = R1 * ldlt_Q.transpositionsP();
+
+    expr.resize(2 + R1.rows());
+    expr(0) = linear_expr;
+    // expr.segment(1, R1.rows()) = 1/sqrt(2) * (R * x + R⁻ᵀb)
+    expr.segment(1, R1.rows()) =
+        1.0 / std::sqrt(2) *
+            (R * quadratic_vars + R.transpose().fullPivHouseholderQr().solve(b));
+    constant = a - 0.5 * b.dot(ldlt_Q.solve(b));
+  }
+  if (constant < 0) {
+    ostringstream oss;
+    oss << "Expression " << quadratic_expr
+        << " is not guaranteed to be non-negative, cannot call it with "
+            "AddLorentzConeConstraint.\n";
+    throw runtime_error(oss.str());
+  }
+  expr(expr.rows() - 1) = std::sqrt(constant);
+  return ParseLorentzConeConstraint(expr);
 }
 
 }  // namespace internal
