@@ -417,6 +417,7 @@ drake_cc_googletest(
     ],
 )
 
+# TODO(eric.cousineau): Remove dependence on create_cost
 drake_cc_googletest(
     name = "cost_test",
     deps = [
@@ -435,6 +436,28 @@ drake_cc_googletest(
         ":symbolic_extraction",
         "//drake/common:eigen_matrix_compare",
         "//drake/common:symbolic_test_util",
+    ],
+)
+
+drake_cc_googletest(
+    name = "create_constraint_test",
+    deps = [
+        ":constraint",
+        ":create_constraint",
+        "//drake/common:eigen_matrix_compare",
+        "//drake/common:is_dynamic_castable",
+        "//drake/math:gradient",
+    ],
+)
+
+drake_cc_googletest(
+    name = "create_cost_test",
+    deps = [
+        ":cost",
+        ":create_cost",
+        "//drake/common:eigen_matrix_compare",
+        "//drake/common:is_dynamic_castable",
+        "//drake/math:gradient",
     ],
 )
 
