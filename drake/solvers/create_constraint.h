@@ -148,7 +148,7 @@ ParseLinearConstraint(const Eigen::ArrayBase<Derived>& formulas) {
         ub(k) = std::numeric_limits<double>::infinity();
       } else {
         std::ostringstream oss;
-        oss << "MathematicalProgram::AddLinearConstraint is called with an "
+        oss << "ParseLinearConstraint is called with an "
                "array of formulas which includes a formula "
             << f
             << " which is not a relational formula using one of {==, <=, >=} "

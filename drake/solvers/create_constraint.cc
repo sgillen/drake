@@ -56,7 +56,7 @@ Binding<LinearConstraint> ParseLinearConstraint(
       // Unsatisfiable constraint with no variables, such as 1 <= 0 <= 2
       throw SymbolicError(v(i), lb(i), ub(i),
                           "unsatisfiable but called with"
-                          " CreateLinearConstraint");
+                          " ParseLinearConstraint");
 
     } else {
       new_lb(i) = lb(i) - constant_term;
@@ -133,7 +133,7 @@ Binding<LinearConstraint> ParseLinearConstraint(const set<Formula>& formulas) {
       are_all_formulas_equal = false;
     } else {
       ostringstream oss;
-      oss << "CreateLinearConstraint(const set<Formula>& "
+      oss << "ParseLinearConstraint(const set<Formula>& "
           << "formulas) is called while its argument 'formulas' includes "
           << "a formula " << f
           << " which is not a relational formula using one of {==, <=, >=} "
@@ -192,7 +192,7 @@ Binding<LinearEqualityConstraint> ParseLinearEqualityConstraint(
       v(i) = get_lhs_expression(f) - get_rhs_expression(f);
     } else {
       ostringstream oss;
-      oss << "MathematicalProgram::AddLinearEqualityConstraint(const "
+      oss << "ParseLinearEqualityConstraint(const "
           << "set<Formula>& formulas) is called while its argument 'formulas' "
           << "includes a non-equality formula " << f << ".";
       throw runtime_error(oss.str());
@@ -214,7 +214,7 @@ Binding<LinearEqualityConstraint> ParseLinearEqualityConstraint(
     return ParseLinearEqualityConstraint(get_operands(f));
   }
   ostringstream oss;
-  oss << "MathematicalProgram::AddLinearConstraint is called with a formula "
+  oss << "ParseLinearConstraint is called with a formula "
       << f
       << " which is neither an equality formula nor a conjunction of equality "
          "formulas.";
@@ -345,13 +345,13 @@ Binding<LorentzConeConstraint> ParseLorentzConeConstraint(
       if (!is_b_zero) {
         ostringstream oss;
         oss << "Expression " << quadratic_expr
-            << " is not quadratic, cannot call AddLorentzConeConstraint.\n";
+            << " is not quadratic, cannot call ParseLorentzConeConstraint.\n";
         throw runtime_error(oss.str());
       } else {
         if (a < 0) {
           ostringstream oss;
           oss << "Expression " << quadratic_expr
-              << " is negative, cannot call AddLorentzConeConstraint.\n";
+              << " is negative, cannot call ParseLorentzConeConstraint.\n";
           throw runtime_error(oss.str());
         }
         Vector2<Expression> expr_constant_quadratic(linear_expr, std::sqrt(a));
@@ -367,7 +367,7 @@ Binding<LorentzConeConstraint> ParseLorentzConeConstraint(
       ostringstream oss;
       oss << "Expression" << quadratic_expr
           << " does not have a positive semidefinite Hessian. Cannot be called "
-             "with AddLorentzConeConstraint.\n";
+             "with ParseLorentzConeConstraint.\n";
       throw runtime_error(oss.str());
     }
     Eigen::MatrixXd R1 = ldlt_Q.matrixU();
@@ -394,7 +394,7 @@ Binding<LorentzConeConstraint> ParseLorentzConeConstraint(
     ostringstream oss;
     oss << "Expression " << quadratic_expr
         << " is not guaranteed to be non-negative, cannot call it with "
-           "AddLorentzConeConstraint.\n";
+           "ParseLorentzConeConstraint.\n";
     throw runtime_error(oss.str());
   }
   expr(expr.rows() - 1) = std::sqrt(constant);

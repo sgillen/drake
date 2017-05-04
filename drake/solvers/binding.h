@@ -71,7 +71,8 @@ class Binding {
 namespace internal {
 
 /*
- * Create binding, inferring the type from the provided
+ * Create binding, inferring the type from the provided pointer.
+ * @tparam C Cost or Constraint type to be bound.
  * @note Since this forwards arguments, this will not be usable with
  * `std::intializer_list`.
  */
