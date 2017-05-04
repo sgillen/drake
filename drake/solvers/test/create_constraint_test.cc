@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <limits>
+#include <memory>
 #include <set>
 
 #include <gtest/gtest.h>
@@ -14,6 +15,8 @@ namespace internal {
 namespace test {
 
 using std::set;
+using std::shared_ptr;
+using std::static_pointer_cast;
 using std::string;
 using std::to_string;
 
@@ -30,9 +33,10 @@ template <int Rows = Eigen::Dynamic>
 VectorDecisionVariable<Rows> CreateVectorDecisionVariable(
     const string& name, int rows = Eigen::Dynamic) {
   VectorDecisionVariable<Rows> out;
-  if (rows != Eigen::Dynamic)
+  if (Rows == Eigen::Dynamic) {
+    DRAKE_DEMAND(rows > 0);
     out.resize(rows);
-  DRAKE_DEMAND(out.rows() > 0);
+  }
   for (int i = 0; i < out.rows(); ++i) {
     out(i) = Variable(name + "(" + to_string(i) + ")");
   }
@@ -40,6 +44,49 @@ VectorDecisionVariable<Rows> CreateVectorDecisionVariable(
 }
 
 }  // anonymous namespace
+
+GTEST_TEST(testCreateConstraint, ParseLinearConstraintSymbolic1) {
+  // Add linear constraint: -10 <= 3 - 5*x0 + 10*x2 - 7*y1 <= 10
+  auto x = CreateVectorDecisionVariable<3>("x");
+  auto y = CreateVectorDecisionVariable<3>("y");
+  const Expression e{3 - 5 * x(0) + 10 * x(2) - 7 * y(1)};
+  const double lb{-10};
+  const double ub{+10};
+  const auto binding = ParseLinearConstraint(e, lb, ub);
+
+  // Check if the binding includes the correct linear constraint.
+  const VectorXDecisionVariable& var_vec{binding.variables()};
+  const auto constraint_ptr = binding.constraint();
+  EXPECT_EQ(constraint_ptr->num_constraints(), 1u);
+  const Expression Ax{(constraint_ptr->A() * var_vec)(0, 0)};
+  const Expression lb_in_ctr{constraint_ptr->lower_bound()[0]};
+  const Expression ub_in_ctr{constraint_ptr->upper_bound()[0]};
+  EXPECT_TRUE((e - lb).EqualTo(Ax - lb_in_ctr));
+  EXPECT_TRUE((e - ub).EqualTo(Ax - ub_in_ctr));
+}
+
+GTEST_TEST(testCreateConstraint, ParseLinearConstraintSymbolic2) {
+  // Add linear constraint: -10 <= x0 <= 10
+  // Note that this constraint is a bounding-box constraint which is a sub-class
+  // of linear-constraint.
+  auto x = CreateVectorDecisionVariable<3>("x");
+  const Expression e{x(0)};
+  const auto binding = ParseLinearConstraint(e, -10, 10);
+
+  // Check that the constraint in the binding is of BoundingBoxConstraint.
+  ASSERT_TRUE(is_dynamic_castable<BoundingBoxConstraint>(binding.constraint()));
+  const shared_ptr<BoundingBoxConstraint> constraint_ptr{
+      static_pointer_cast<BoundingBoxConstraint>(binding.constraint())};
+  EXPECT_EQ(constraint_ptr->num_constraints(), 1u);
+
+  // Check if the binding includes the correct linear constraint.
+  const VectorXDecisionVariable& var_vec{binding.variables()};
+  const Expression Ax{(constraint_ptr->A() * var_vec)(0, 0)};
+  const Expression lb_in_ctr{constraint_ptr->lower_bound()[0]};
+  const Expression ub_in_ctr{constraint_ptr->upper_bound()[0]};
+  EXPECT_TRUE((e - -10).EqualTo(Ax - lb_in_ctr));
+  EXPECT_TRUE((e - 10).EqualTo(Ax - ub_in_ctr));
+}
 
 GTEST_TEST(testCreateConstraint, ParseLinearConstraintSymbolicFormulaAnd2) {
   // Add linear constraints f1 && f2 && f3 where
