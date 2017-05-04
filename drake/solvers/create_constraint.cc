@@ -1,8 +1,5 @@
 #include "drake/solvers/create_constraint.h"
 
-#include <algorithm>
-
-#include "drake/common/symbolic_formula.h"
 #include "drake/solvers/symbolic_extraction.h"
 
 namespace drake {

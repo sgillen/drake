@@ -1,10 +1,12 @@
 #pragma once
 
+#include <limits>
 #include <memory>
 #include <set>
 #include <type_traits>
 #include <unordered_map>
 #include <utility>
+#include <vector>
 
 #include "drake/common/monomial.h"
 #include "drake/common/symbolic_expression.h"
