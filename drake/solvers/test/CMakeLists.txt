@@ -19,6 +19,12 @@ target_link_libraries(constraint_test drakeOptimization drakeCommon)
 drake_add_cc_test(cost_test)
 target_link_libraries(cost_test drakeOptimization drakeCommon)
 
+drake_add_cc_test(create_constraint_test)
+target_link_libraries(constraint_test drakeOptimization drakeCommon)
+
+drake_add_cc_test(create_cost_test)
+target_link_libraries(create_cost_test drakeOptimization drakeCommon)
+
 set(drakeOptimizationTestSources
         add_solver_util.cc
         optimization_examples.cc
