@@ -7,7 +7,10 @@
 
 #include <gtest/gtest.h>
 
+#include "drake/common/drake_assert.h"
+#include "drake/common/eigen_matrix_compare.h"
 #include "drake/common/test/is_dynamic_castable.h"
+#include "drake/common/test/symbolic_test_util.h"
 
 namespace drake {
 namespace solvers {
@@ -20,9 +23,13 @@ using std::static_pointer_cast;
 using std::string;
 using std::to_string;
 
+using Eigen::Matrix;
+
 using symbolic::Expression;
 using symbolic::Formula;
 using symbolic::Variable;
+
+using symbolic::test::ExprEqual;
 
 namespace {
 
@@ -86,6 +93,77 @@ GTEST_TEST(testCreateConstraint, ParseLinearConstraintSymbolic2) {
   const Expression ub_in_ctr{constraint_ptr->upper_bound()[0]};
   EXPECT_TRUE((e - -10).EqualTo(Ax - lb_in_ctr));
   EXPECT_TRUE((e - 10).EqualTo(Ax - ub_in_ctr));
+}
+
+GTEST_TEST(testMathematicalProgram, AddLinearConstraintSymbolic3) {
+  // Add linear constraints
+  //     3 <=  3 - 5*x0 +      + 10*x2        - 7*y1        <= 9
+  //   -10 <=                       x2                      <= 10
+  //    -7 <= -5 + 2*x0 + 3*x2         + 3*y0 - 2*y1 + 6*y2 <= 12
+  //     2 <=                     2*x2                      <= 3
+  //     1 <=                                 -   y1        <= 3
+  //
+  // Note: the second, fourth and fifth rows are actually a bounding-box
+  // constraints but we still process the five symbolic-constraints into a
+  // single linear-constraint whose coefficient matrix is the following.
+  //
+  //         [-5 0 10 0 -7 0]
+  //         [ 0 0  1 0  0 0]
+  //         [ 2 3  0 3 -2 6]
+  //         [ 0 0  2 0  0 0]
+  //         [ 0 0  0 0 -1 0]
+  
+  auto x = CreateVectorDecisionVariable<3>("x");
+  auto y = CreateVectorDecisionVariable<3>("y");
+  Matrix<Expression, 5, 1> M_e;
+  Matrix<double, 5, 1> M_lb;
+  Matrix<double, 5, 1> M_ub;
+
+  // clang-format off
+  M_e  <<  3 - 5 * x(0) + 10 * x(2) - 7 * y(1),
+      +x(2),
+      -5 + 2 * x(0) + 3 * x(2) + 3 * y(0) - 2 * y(1) + 6 * y(2),
+      2 * x(2),
+      -y(1);
+  M_lb <<  3,
+      -10,
+      -7,
+       2,
+      1;
+  M_ub << -7,
+      10,
+      12,
+      3,
+      3;
+  // clang-format on
+
+  // Check if the binding includes the correct linear constraint.
+  const auto binding = ParseLinearConstraint(M_e, M_lb, M_ub);
+  const VectorXDecisionVariable& var_vec{binding.variables()};
+  const auto constraint_ptr = binding.constraint();
+  EXPECT_EQ(constraint_ptr->num_constraints(), 5u);
+  const auto Ax = constraint_ptr->A() * var_vec;
+  const auto lb_in_ctr = constraint_ptr->lower_bound();
+  const auto ub_in_ctr = constraint_ptr->upper_bound();
+
+  for (int i = 0; i < M_e.size(); ++i) {
+    EXPECT_PRED2(ExprEqual, M_e(i) - M_lb(i), Ax(i) - lb_in_ctr(i));
+    EXPECT_PRED2(ExprEqual, M_e(i) - M_ub(i), Ax(i) - ub_in_ctr(i));
+  }
+}
+
+GTEST_TEST(testMathematicalProgram, AddLinearConstraintSymbolic4) {
+  // Check the linear constraint 2  <= 2 * x <= 4.
+  // Note: this is a bounding box constraint
+  auto x = CreateVectorDecisionVariable<2>("x");
+  const Expression e(2 * x(1));
+  const auto binding = ParseLinearConstraint(e, 2, 4);
+  const auto& constraint = binding.constraint();
+
+  EXPECT_TRUE(is_dynamic_castable<BoundingBoxConstraint>(constraint));
+  EXPECT_EQ(binding.variables(), x.segment(1, 1));
+  EXPECT_TRUE(CompareMatrices(constraint->lower_bound(), Vector1d(1)));
+  EXPECT_TRUE(CompareMatrices(constraint->upper_bound(), Vector1d(2)));
 }
 
 GTEST_TEST(testCreateConstraint, ParseLinearConstraintSymbolicFormulaAnd2) {

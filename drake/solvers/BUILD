@@ -450,6 +450,7 @@ drake_cc_googletest(
         ":create_constraint",
         "//drake/common:eigen_matrix_compare",
         "//drake/common:is_dynamic_castable",
+        "//drake/common:symbolic_test_util",
         "//drake/math:gradient",
     ],
 )
