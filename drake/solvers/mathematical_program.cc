@@ -210,7 +210,7 @@ VectorXDecisionVariable MathematicalProgram::NewBinaryVariables(
 namespace {
 
 template <typename To, typename From>
-Binding<To> BindingUpcast(const Binding<From>& binding) {
+Binding<To> BindingDynamicCast(const Binding<From>& binding) {
   auto constraint = std::dynamic_pointer_cast<To>(binding.constraint());
   DRAKE_DEMAND(constraint != nullptr);
   return Binding<To>(constraint, binding.variables());
@@ -222,9 +222,9 @@ Binding<Cost> MathematicalProgram::AddCost(const Binding<Cost>& binding) {
   // See AddCost(const Binding<Constraint>&) for explanation
   Cost* cost = binding.constraint().get();
   if (dynamic_cast<QuadraticCost*>(cost)) {
-    return AddCost(BindingUpcast<QuadraticCost>(binding));
+    return AddCost(BindingDynamicCast<QuadraticCost>(binding));
   } else if (dynamic_cast<LinearCost*>(cost)) {
-    return AddCost(BindingUpcast<LinearCost>(binding));
+    return AddCost(BindingDynamicCast<LinearCost>(binding));
   } else {
     required_capabilities_ |= kGenericCost;
     generic_costs_.push_back(binding);
@@ -305,7 +305,7 @@ Binding<QuadraticCost> MathematicalProgram::AddQuadraticCost(
 Binding<PolynomialCost> MathematicalProgram::AddPolynomialCost(
     const Expression& e) {
   auto binding = AddCost(internal::ParsePolynomialCost(e));
-  return BindingUpcast<PolynomialCost>(binding);
+  return BindingDynamicCast<PolynomialCost>(binding);
 }
 
 Binding<Cost> MathematicalProgram::AddCost(const Expression& e) {
@@ -328,16 +328,17 @@ Binding<Constraint> MathematicalProgram::AddConstraint(
   // incorrect) container.
   if (dynamic_cast<LinearMatrixInequalityConstraint*>(constraint)) {
     return AddConstraint(
-        BindingUpcast<LinearMatrixInequalityConstraint>(binding));
+        BindingDynamicCast<LinearMatrixInequalityConstraint>(binding));
   } else if (dynamic_cast<PositiveSemidefiniteConstraint*>(constraint)) {
     return AddConstraint(
-        BindingUpcast<PositiveSemidefiniteConstraint>(binding));
+        BindingDynamicCast<PositiveSemidefiniteConstraint>(binding));
   } else if (dynamic_cast<RotatedLorentzConeConstraint*>(constraint)) {
-    return AddConstraint(BindingUpcast<RotatedLorentzConeConstraint>(binding));
+    return AddConstraint(BindingDynamicCast<RotatedLorentzConeConstraint>(
+        binding));
   } else if (dynamic_cast<LorentzConeConstraint*>(constraint)) {
-    return AddConstraint(BindingUpcast<LorentzConeConstraint>(binding));
+    return AddConstraint(BindingDynamicCast<LorentzConeConstraint>(binding));
   } else if (dynamic_cast<LinearConstraint*>(constraint)) {
-    return AddConstraint(BindingUpcast<LinearConstraint>(binding));
+    return AddConstraint(BindingDynamicCast<LinearConstraint>(binding));
   } else {
     required_capabilities_ |= kGenericConstraint;
     generic_constraints_.push_back(binding);
@@ -379,9 +380,9 @@ Binding<LinearConstraint> MathematicalProgram::AddConstraint(
   // LinearEqualityConstraints, delegate dynamic check here
   LinearConstraint* constraint = binding.constraint().get();
   if (dynamic_cast<BoundingBoxConstraint*>(constraint)) {
-    return AddConstraint(BindingUpcast<BoundingBoxConstraint>(binding));
+    return AddConstraint(BindingDynamicCast<BoundingBoxConstraint>(binding));
   } else if (dynamic_cast<LinearEqualityConstraint*>(constraint)) {
-    return AddConstraint(BindingUpcast<LinearEqualityConstraint>(binding));
+    return AddConstraint(BindingDynamicCast<LinearEqualityConstraint>(binding));
   } else {
     required_capabilities_ |= kLinearConstraint;
     // TODO(eric.cousineau): This is a good assertion... But seems out of place,
