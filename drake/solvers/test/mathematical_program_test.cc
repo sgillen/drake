@@ -1040,6 +1040,10 @@ void CheckParsedSymbolicLorentzConeConstraint(
                                     monomial_to_coeff_map, tol));
 }
 
+// TODO(eric.cousineau): Determine if these tests should be simplified
+// expanded, or eliminated.
+// Right now, they are effectively no-op on checking parsing, and are more or
+// less idempotent equality checks.
 void CheckParsedSymbolicLorentzConeConstraint(
     MathematicalProgram* prog,
     const Eigen::Ref<const Eigen::Matrix<Expression, Eigen::Dynamic, 1>>& e) {
