@@ -53,11 +53,11 @@ struct is_eigen_matrix_of
                     !detail::is_eigen_vector<Derived>::value> {};
 
 /*
- * Determine if two EigenBase<> types are matrices (non-vectors) of
+ * Determine if two EigenBase<> types are matrices (non-column-vectors) of
  * Expressions and doubles, to then form an implicit formulas.
  */
 template <typename DerivedV, typename DerivedB>
-struct is_eigen_matrix_formula_pair  // explicitly non-vector
+struct is_eigen_matrix_expression_double_pair  // explicitly non-vector
     : std::integral_constant<
           bool,
           detail::is_eigen_matrix_of<DerivedV, symbolic::Expression>::value &&
@@ -68,7 +68,7 @@ struct is_eigen_matrix_formula_pair  // explicitly non-vector
  * that could make a formula.
  */
 template <typename DerivedV, typename DerivedB>
-struct is_eigen_vector_formula_pair  // explicitly vector
+struct is_eigen_vector_expression_double_pair  // explicitly vector
     : std::integral_constant<
           bool,
           detail::is_eigen_vector_of<DerivedV, symbolic::Expression>::value &&
@@ -125,8 +125,8 @@ ParseLinearConstraint(const Eigen::ArrayBase<Derived>& formulas) {
   Eigen::Matrix<double, flat_vector_size, 1> lb{n};
   Eigen::Matrix<double, flat_vector_size, 1> ub{n};
   int k{0};  // index variable for 1D components.
-  for (int i{0}; i < formulas.rows(); ++i) {
-    for (int j{0}; j < formulas.cols(); ++j, ++k) {
+  for (int j{0}; j < formulas.cols(); ++j, ++k) {
+    for (int i{0}; i < formulas.rows(); ++i) {
       const symbolic::Formula& f{formulas(i, j)};
       if (is_equal_to(f)) {
         // f(i) := (lhs == rhs)
@@ -193,7 +193,7 @@ Binding<LinearEqualityConstraint> ParseLinearEqualityConstraint(
  */
 template <typename DerivedV, typename DerivedB>
 typename std::enable_if<
-    detail::is_eigen_vector_formula_pair<DerivedV, DerivedB>::value,
+    detail::is_eigen_vector_expression_double_pair<DerivedV, DerivedB>::value,
     Binding<LinearEqualityConstraint>>::type
 ParseLinearEqualityConstraint(const Eigen::MatrixBase<DerivedV>& V,
                               const Eigen::MatrixBase<DerivedB>& b) {
@@ -205,7 +205,7 @@ ParseLinearEqualityConstraint(const Eigen::MatrixBase<DerivedV>& V,
  */
 template <typename DerivedV, typename DerivedB>
 typename std::enable_if<
-    detail::is_eigen_matrix_formula_pair<DerivedV, DerivedB>::value,
+    detail::is_eigen_matrix_expression_double_pair<DerivedV, DerivedB>::value,
     Binding<LinearEqualityConstraint>>::type
 ParseLinearEqualityConstraint(const Eigen::MatrixBase<DerivedV>& V,
                               const Eigen::MatrixBase<DerivedB>& B,

@@ -1063,7 +1063,7 @@ class MathematicalProgram {
    */
   template <typename DerivedV, typename DerivedB>
   typename std::enable_if<
-      detail::is_eigen_vector_formula_pair<DerivedV, DerivedB>::value,
+      detail::is_eigen_vector_expression_double_pair<DerivedV, DerivedB>::value,
       Binding<LinearEqualityConstraint>>::type
   AddLinearEqualityConstraint(const Eigen::MatrixBase<DerivedV>& v,
                               const Eigen::MatrixBase<DerivedB>& b) {
@@ -1091,7 +1091,7 @@ class MathematicalProgram {
    */
   template <typename DerivedV, typename DerivedB>
   typename std::enable_if<
-      detail::is_eigen_matrix_formula_pair<DerivedV, DerivedB>::value,
+      detail::is_eigen_matrix_expression_double_pair<DerivedV, DerivedB>::value,
       Binding<LinearEqualityConstraint>>::type
   AddLinearEqualityConstraint(const Eigen::MatrixBase<DerivedV>& V,
                               const Eigen::MatrixBase<DerivedB>& B,

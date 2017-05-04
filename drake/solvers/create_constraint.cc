@@ -106,9 +106,9 @@ Binding<LinearConstraint> ParseLinearConstraint(const set<Formula>& formulas) {
   Eigen::VectorXd lb{n};
   Eigen::VectorXd ub{n};
   int i{0};  // index variable used in the loop
-  // After the following loop, we call `AddLinearEqualityConstraint`
+  // After the following loop, we call `ParseLinearEqualityConstraint`
   // if `are_all_formulas_equal` is still true. Otherwise, we call
-  // `AddLinearConstraint`.  on the value of this Boolean flag.
+  // `ParseLinearConstraint`.  on the value of this Boolean flag.
   bool are_all_formulas_equal{true};
   for (const Formula& f : formulas) {
     if (is_equal_to(f)) {
