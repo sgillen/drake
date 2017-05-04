@@ -97,33 +97,65 @@ class LinearCost : public CostShim<LinearConstraint> {
 };
 
 /**
- * Implements a cost of the form @f .5 x'Qx + b'x @f
+ * Implements a cost of the form @f .5 x'Qx + b'x + c @f
  */
-class QuadraticCost : public CostShim<QuadraticConstraint> {
+class QuadraticCost : public Cost {
  public:
   DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(QuadraticCost)
 
   template <typename DerivedQ, typename Derivedb>
   QuadraticCost(const Eigen::MatrixBase<DerivedQ>& Q,
-                const Eigen::MatrixBase<Derivedb>& f)
-      : CostShim(Q, f, -std::numeric_limits<double>::infinity(),
-                 std::numeric_limits<double>::infinity()) {}
+                const Eigen::MatrixBase<Derivedb>& b,
+                double c = 0.)
+      : Cost(Q.rows()), Q_(Q), b_(b), c_(c) {
+    DRAKE_ASSERT(Q_.rows() == Q_.cols());
+    DRAKE_ASSERT(Q_.cols() == b_.rows());
+  }
 
-  const Eigen::MatrixXd& Q() const { return constraint()->Q(); }
+  ~QuadraticCost() override {}
 
-  const Eigen::VectorXd& b() const { return constraint()->b(); }
+  const Eigen::MatrixXd& Q() const { return Q_; }
+
+  const Eigen::VectorXd& b() const { return b_; }
+
+  double c() const { return c_; }
 
   /**
    * Updates the quadratic and linear term of the constraint. The new
    * matrices need to have the same dimension as before.
-   * @param new_Q New quadratic term.
-   * @param new_b New linear term.
+   * @param new_Q new quadratic term
+   * @param new_b new linear term
+   * @param new_c new constant term
    */
   template <typename DerivedQ, typename DerivedB>
   void UpdateQuadraticAndLinearTerms(const Eigen::MatrixBase<DerivedQ>& new_Q,
-                                     const Eigen::MatrixBase<DerivedB>& new_b) {
-    constraint()->UpdateQuadraticAndLinearTerms(new_Q, new_b);
+                                     const Eigen::MatrixBase<DerivedB>&new_b,
+                                     double new_c = 0.) {
+    if (new_Q.rows() != new_Q.cols() || new_Q.rows() != new_b.rows() ||
+        new_b.cols() != 1) {
+      throw std::runtime_error("New constraints have invalid dimensions");
+    }
+
+    if (new_b.rows() != b_.rows()) {
+      throw std::runtime_error("Can't change the number of decision variables");
+    }
+
+    Q_ = new_Q;
+    b_ = new_b;
+    c_ = new_c;
   }
+
+ protected:
+  void DoEval(const Eigen::Ref<const Eigen::VectorXd>& x,
+              Eigen::VectorXd& y) const override;
+
+  void DoEval(const Eigen::Ref<const AutoDiffVecXd>& x,
+              AutoDiffVecXd& y) const override;
+
+ private:
+  Eigen::MatrixXd Q_;
+  Eigen::VectorXd b_;
+  double c_{};
 };
 
 /**
