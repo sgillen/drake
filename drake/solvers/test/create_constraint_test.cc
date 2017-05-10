@@ -498,10 +498,7 @@ GTEST_TEST(testCreateConstraint,
 
 
 GTEST_TEST(testCreateConstraint, ParseLinearConstraintSymbolicFormula1) {
-  
   auto x = prog.NewContinuousVariables<3>();
-
-  int num_bounding_box_constraint = 0;
 
   // x(0) <= 3
   vector<Formula> f;
@@ -513,11 +510,7 @@ GTEST_TEST(testCreateConstraint, ParseLinearConstraintSymbolicFormula1) {
   f.push_back(3 * x(0) + x(1) <= 6 + x(0) + x(1));
   for (const auto& fi : f) {
     auto binding = ParseLinearConstraint(fi);
-    EXPECT_EQ(++num_bounding_box_constraint,
-              prog.bounding_box_constraints().size());
-    EXPECT_EQ(prog.linear_constraints().size(), 0);
-    EXPECT_EQ(prog.linear_equality_constraints().size(), 0);
-    auto binding = prog.bounding_box_constraints().back();
+    EXPECT_TRUE(is_dynamic_castable<BoundingBoxConstraint>(binding.constraint()));
     EXPECT_EQ(binding.variables(), VectorDecisionVariable<1>(x(0)));
     EXPECT_TRUE(
         CompareMatrices(binding.constraint()->upper_bound(), Vector1d(3)));
@@ -541,12 +534,8 @@ GTEST_TEST(testCreateConstraint, ParseLinearConstraintSymbolicFormula2) {
   f.push_back(3 + 3 * x(0) >= x(0) + 7);
   f.push_back(x(0) + 7 + 2 * x(1) <= 3 * x(0) + 3 + 2 * x(1));
   for (const auto& fi : f) {
-    ParseLinearConstraint(fi);
-    EXPECT_EQ(++num_bounding_box_constraint,
-              prog.bounding_box_constraints().size());
-    EXPECT_EQ(prog.linear_constraints().size(), 0);
-    EXPECT_EQ(prog.linear_equality_constraints().size(), 0);
-    auto binding = prog.bounding_box_constraints().back();
+    auto binding = ParseLinearConstraint(fi);
+    EXPECT_TRUE(is_dynamic_castable<BoundingBoxConstraint>(binding.constraint()));
     EXPECT_EQ(binding.variables(), VectorDecisionVariable<1>(x(0)));
     EXPECT_TRUE(
         CompareMatrices(binding.constraint()->lower_bound(), Vector1d(2)));
@@ -560,18 +549,12 @@ GTEST_TEST(testCreateConstraint, ParseLinearConstraintSymbolicFormula3) {
   
   auto x = prog.NewContinuousVariables<3>();
 
-  int num_linear_equality_constraint = 0;
-
   vector<Formula> f;
   f.push_back(x(0) + x(2) == 1);
   f.push_back(x(0) + 2 * x(2) == 1 + x(2));
   for (const auto& fi : f) {
-    ParseLinearConstraint(fi);
-    EXPECT_EQ(++num_linear_equality_constraint,
-              prog.linear_equality_constraints().size());
-    EXPECT_EQ(prog.linear_constraints().size(), 0);
-    EXPECT_EQ(prog.bounding_box_constraints().size(), 0);
-    auto binding = prog.linear_equality_constraints().back();
+    auto binding = ParseLinearConstraint(fi);
+    EXPECT_TRUE(is_dynamic_castable<LinearEqualityConstraint>(binding.constraint()));
     EXPECT_TRUE(
         CompareMatrices(binding.constraint()->lower_bound(), Vector1d(1)));
 
@@ -601,11 +584,8 @@ GTEST_TEST(testCreateConstraint, ParseLinearConstraintSymbolicFormula4) {
   f.push_back(-x(0) - 3 * x(2) >= -1 - x(2));
   f.push_back(1 >= 2 * (x(0) + x(2)) - x(0));
   for (const auto& fi : f) {
-    ParseLinearConstraint(fi);
-    EXPECT_EQ(++num_linear_constraint, prog.linear_constraints().size());
-    EXPECT_EQ(prog.linear_equality_constraints().size(), 0);
-    EXPECT_EQ(prog.bounding_box_constraints().size(), 0);
-    auto binding = prog.linear_constraints().back();
+    auto binding = ParseLinearConstraint(fi);
+    EXPECT_TRUE(is_dynamic_castable<LinearConstraint>(binding.constraint()));
     EXPECT_TRUE(CompareMatrices(binding.constraint()->upper_bound(),
                                 Vector1d(numeric_limits<double>::infinity())));
     EXPECT_TRUE(
@@ -628,7 +608,7 @@ GTEST_TEST(testCreateConstraint,
   // It includes relational formulas with strict inequalities (> and <). It will
   // throw std::runtime_error.
   
-  auto x = prog.NewContinuousVariables(2, "x");
+  auto x = CreateVectorDecisionVariable("x", 2);
   const Expression e11{x(0) + 2 * x(1)};
   const Expression e12{3};
   const Formula f1{e11 > e12};
@@ -650,9 +630,8 @@ GTEST_TEST(testCreateConstraint, ParseSymbolicLinearEqualityConstraint5) {
   auto x = CreateVectorDecisionVariable<3>("x");
   // f = (3x₀ + 2x₁ + 3 == 5).
   const Formula f{3 * x(0) + 2 * x(1) + 3 == 5};
-  const Binding<LinearEqualityConstraint> binding{
-      ParseLinearEqualityConstraint(f)};
-  EXPECT_EQ(prog.linear_equality_constraints().size(), 1u);
+  const Binding<LinearEqualityConstraint> binding = 
+      ParseLinearEqualityConstraint(f);
 
   const Expression expr_in_added_constraint{
       (binding.constraint()->A() * binding.variables() -
@@ -689,7 +668,6 @@ GTEST_TEST(testCreateConstraint, ParseSymbolicLinearEqualityConstraint6) {
   const Formula f{A * x == b};
   const Binding<LinearEqualityConstraint> binding{
       ParseLinearEqualityConstraint(f)};
-  EXPECT_EQ(prog.linear_equality_constraints().size(), 1u);
 
   // Checks if AddLinearEqualityConstraint added the constraint correctly.
   const Eigen::Matrix<Expression, 3, 1> exprs_in_added_constraint{
@@ -743,9 +721,7 @@ namespace {
 template <typename Derived>
 typename enable_if<is_same<typename Derived::Scalar, Expression>::value>::type
 CheckAddedSymbolicPositiveSemidefiniteConstraint(
-    MathematicalProgram* prog, const Eigen::MatrixBase<Derived>& V) {
-  int num_psd_cnstr = prog->positive_semidefinite_constraints().size();
-  int num_lin_eq_cnstr = prog->linear_equality_constraints().size();
+    const Eigen::MatrixBase<Derived>& V) {
   auto binding = ParsePositiveSemidefiniteConstraint(V);
   // Check if number of linear equality constraints and positive semidefinite
   // constraints are both incremented by 1.
@@ -831,7 +807,7 @@ void CheckAddedLinearEqualityConstraintCommon(
 
 template <typename DerivedV, typename DerivedB>
 void CheckAddedNonSymmetricSymbolicLinearEqualityConstraint(
-    MathematicalProgram* prog, const Eigen::MatrixBase<DerivedV>& v,
+    const Eigen::MatrixBase<DerivedV>& v,
     const Eigen::MatrixBase<DerivedB>& b) {
   const int num_linear_eq_cnstr = prog->linear_equality_constraints().size();
   auto binding = ParseLinearEqualityConstraint(v, b);
@@ -858,7 +834,7 @@ void CheckAddedNonSymmetricSymbolicLinearEqualityConstraint(
 
 template <typename DerivedV, typename DerivedB>
 void CheckAddedSymmetricSymbolicLinearEqualityConstraint(
-    MathematicalProgram* prog, const Eigen::MatrixBase<DerivedV>& v,
+    const Eigen::MatrixBase<DerivedV>& v,
     const Eigen::MatrixBase<DerivedB>& b) {
   const int num_linear_eq_cnstr = prog->linear_equality_constraints().size();
   auto binding = ParseLinearEqualityConstraint(v, b, true);
@@ -875,7 +851,7 @@ void CheckAddedSymmetricSymbolicLinearEqualityConstraint(
 }
 
 void CheckAddedNonSymmetricSymbolicLinearEqualityConstraint(
-    MathematicalProgram* prog, const Expression& e, double b) {
+    const Expression& e, double b) {
   CheckAddedNonSymmetricSymbolicLinearEqualityConstraint(
       prog, Vector1<Expression>(e), Vector1d(b));
 }
@@ -1044,7 +1020,7 @@ bool AreTwoPolynomialsNear(const symbolic::MonomialToCoefficientMap& poly1,
 }
 
 void CheckParsedSymbolicLorentzConeConstraint(
-    MathematicalProgram* prog, const Expression& linear_expr,
+    const Expression& linear_expr,
     const Expression& quadratic_expr) {
   const auto& binding1 =
       ParseLorentzConeConstraint(linear_expr, quadratic_expr);
@@ -1092,7 +1068,7 @@ void CheckParsedSymbolicLorentzConeConstraint(
 }
 
 void CheckParsedSymbolicRotatedLorentzConeConstraint(
-    MathematicalProgram* prog, const Eigen::Ref<const VectorX<Expression>>& e) {
+    const Eigen::Ref<const VectorX<Expression>>& e) {
   const auto& binding1 = ParseRotatedLorentzConeConstraint(e);
   const auto& binding2 = prog->rotated_lorentz_cone_constraints().back();
 
