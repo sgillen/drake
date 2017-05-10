@@ -809,6 +809,16 @@ class MathematicalProgram {
   }
 
   /**
+   * Adds a cost term of the form 0.5*x'*Q*x + b'x + c
+   * Applied to subset of the variables.
+   */
+  Binding<QuadraticCost> AddQuadraticCost(
+      const Eigen::Ref<const Eigen::MatrixXd>& Q,
+      const Eigen::Ref<const Eigen::VectorXd>& b,
+      double c,
+      const Eigen::Ref<const VectorXDecisionVariable>& vars);
+
+  /**
    * Adds a cost term of the form 0.5*x'*Q*x + b'x
    * Applied to subset of the variables.
    */
