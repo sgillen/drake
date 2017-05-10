@@ -87,35 +87,35 @@ class LinearCost : public Cost {
 
   LinearCost(const Eigen::Ref<const Eigen::VectorXd>& a,
              double b = 0.)
-      : Cost(a.cols()), A_(a), c_(b) {}
+      : Cost(a.rows()), a_(a), b_(b) {}
 
   ~LinearCost() override {}
 
   Eigen::SparseMatrix<double> GetSparseMatrix() const {
     // TODO(eric.cousineau): Consider storing or caching sparse matrix, such
     // that we can return a const lvalue reference.
-    return A_.sparseView();
+    return a_.sparseView();
   }
 
-  const Eigen::VectorXd& A() const { return A_; }
+  const Eigen::VectorXd& a() const { return a_; }
 
-  double c() const { return c_; }
+  double b() const { return b_; }
 
   /**
    * Updates the linear term, upper and lower bounds in the linear constraint.
-   * The updated constraint is @f A_new x + c_new @f
+   * The updated constraint is @f a_new' x + b_new @f
    * Note that the number of variables (number of cols) cannot change.
-   * @param new_A New linear term.
-   * @param new_c New constant term.
+   * @param new_a New linear term.
+   * @param new_b New constant term.
    */
-  void UpdateConstraint(const Eigen::Ref<const Eigen::RowVectorXd>& new_A,
-                        double new_c = 0.) {
-    if (new_A.cols() != A_.cols()) {
+  void UpdateConstraint(const Eigen::Ref<const Eigen::RowVectorXd>& new_a,
+                        double new_b = 0.) {
+    if (new_a.cols() != a_.cols()) {
       throw std::runtime_error("Can't change the number of decision variables");
     }
 
-    A_ = new_A;
-    c_ = new_c;
+    a_ = new_a;
+    b_ = new_b;
   }
 
  protected:
@@ -126,8 +126,8 @@ class LinearCost : public Cost {
               AutoDiffVecXd& y) const override;
 
  private:
-  Eigen::VectorXd A_;
-  double c_;
+  Eigen::VectorXd a_;
+  double b_;
 };
 
 /**

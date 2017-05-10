@@ -57,7 +57,8 @@ Binding<LinearCost> DoParseLinearCost(
   Eigen::RowVectorXd c(vars_vec.size());
   double constant_term;
   DecomposeLinearExpression(e, map_var_to_index, c, &constant_term);
-  return CreateBinding(make_shared<LinearCost>(c, constant_term), vars_vec);
+  return CreateBinding(make_shared<LinearCost>(c.transpose(), constant_term),
+                       vars_vec);
 }
 
 }  // anonymous namespace

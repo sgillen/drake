@@ -279,7 +279,7 @@ int AddCosts(GRBmodel* model, const MathematicalProgram& prog,
   // Add linear cost in prog.linear_costs() to the aggregated cost.
   for (const auto& binding : prog.linear_costs()) {
     const auto& constraint = binding.constraint();
-    Eigen::RowVectorXd c = constraint->A();
+    Eigen::VectorXd c = constraint->a();
 
     for (int i = 0; i < static_cast<int>(binding.GetNumElements()); ++i) {
       b_nonzero_coefs.push_back(Eigen::Triplet<double>(

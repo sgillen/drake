@@ -715,9 +715,9 @@ class MathematicalProgram {
   Binding<LinearCost> AddCost(const Binding<LinearCost>& binding);
 
   /**
-   * Adds a linear cost term of the form c'*x.
+   * Adds a linear cost term of the form a'*x + b.
    * @param e A linear symbolic expression.
-   * @pre{e is a linear expression c'*x, where each entry of x is a decision
+   * @pre{e is a linear expression a'*x + b, where each entry of x is a decision
    * variable in the mathematical program}
    * @return The newly added linear constraint, together with the bound
    * variables.
@@ -725,23 +725,37 @@ class MathematicalProgram {
   Binding<LinearCost> AddLinearCost(const symbolic::Expression& e);
 
   /**
-   * Adds a linear cost term of the form c'*x.
+   * Adds a linear cost term of the form a'*x + b.
    * Applied to a subset of the variables and pushes onto
    * the linear cost data structure.
    */
-  Binding<LinearCost> AddLinearCost(const Eigen::Ref<const Eigen::VectorXd>& c,
+  Binding<LinearCost> AddLinearCost(const Eigen::Ref<const Eigen::VectorXd>& a,
+                                    double b,
                                     const VariableRefList& vars) {
-    return AddLinearCost(c, ConcatenateVariableRefList((vars)));
+    return AddLinearCost(a, b, ConcatenateVariableRefList((vars)));
   }
 
   /**
-   * Adds a linear cost term of the form c'*x.
+   * Adds a linear cost term of the form a'*x + b.
    * Applied to a subset of the variables and pushes onto
    * the linear cost data structure.
    */
   Binding<LinearCost> AddLinearCost(
-      const Eigen::Ref<const Eigen::VectorXd>& c,
+      const Eigen::Ref<const Eigen::VectorXd>& a,
+      double b,
       const Eigen::Ref<const VectorXDecisionVariable>& vars);
+
+  /**
+   * Adds a linear cost term of the form a'*x.
+   * Applied to a subset of the variables and pushes onto
+   * the linear cost data structure.
+   */
+  template <typename VarType>
+  Binding<LinearCost> AddLinearCost(const Eigen::Ref<const Eigen::VectorXd>& a,
+                                    const VarType& vars) {
+    const double b = 0.;
+    return AddLinearCost(a, b, vars);
+  }
 
   /**
    * Adds a cost term of the form 0.5*x'*Q*x + b'x.

@@ -24,14 +24,12 @@ void CostShimBase::DoEval(const Eigen::Ref<const AutoDiffVecXd>& x,
 void LinearCost::DoEval(const Eigen::Ref<const Eigen::VectorXd> &x,
                         Eigen::VectorXd &y) const {
   y.resize(1);
-  y = A_ * x;
-  y(0) += c_;
+  y(0) = a_.dot(x) + b_;
 }
 void LinearCost::DoEval(const Eigen::Ref<const AutoDiffVecXd> &x,
                         AutoDiffVecXd &y) const {
   y.resize(1);
-  y = A_.cast<AutoDiffXd>() * x;
-  y(0) += c_;
+  y(0) = a_.cast<AutoDiffXd>().dot(x) + b_;
 }
 
 void QuadraticCost::DoEval(const Eigen::Ref<const Eigen::VectorXd> &x,

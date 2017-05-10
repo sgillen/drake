@@ -477,7 +477,7 @@ MSKrescodee AddCosts(const MathematicalProgram& prog, MSKtask_t* task) {
     }
   }
   for (const auto& binding : prog.linear_costs()) {
-    const auto& c = binding.constraint()->A();
+    const auto& c = binding.constraint()->a();
     for (int i = 0; i < static_cast<int>(binding.GetNumElements()); ++i) {
       if (std::abs(c(i)) > Eigen::NumTraits<double>::epsilon()) {
         linear_term_triplets.push_back(Eigen::Triplet<double>(

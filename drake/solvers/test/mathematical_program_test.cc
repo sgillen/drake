@@ -498,7 +498,7 @@ void CheckAddedSymbolicLinearCostUserFun(const MathematicalProgram& prog,
   EXPECT_EQ(binding.constraint()->num_constraints(), 1);
   auto cnstr = prog.linear_costs().back().constraint();
   auto vars = prog.linear_costs().back().variables();
-  const Expression cx{(cnstr->A() * vars)(0)};
+  const Expression cx{cnstr->a().dot(vars)};
   double constant_term{0};
   if (is_addition(e)) {
     constant_term = get_constant_in_addition(e);
