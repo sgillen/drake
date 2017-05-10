@@ -12,7 +12,7 @@
 
 namespace drake {
 namespace solvers {
-namespace internal {
+//namespace internal {
 
 /*
  * Assist MathematicalProgram::AddLinearCost(...).
@@ -34,7 +34,7 @@ Binding<PolynomialCost> ParsePolynomialCost(const symbolic::Expression& e);
  */
 Binding<Cost> ParseCost(const symbolic::Expression& e);
 
-}  // namespace internal
+//}  // namespace internal
 
 // TODO(eric.cousineau): Remove this when functor cost is no longer exposed
 // externally, and must be explicitly called.
