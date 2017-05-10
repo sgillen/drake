@@ -192,7 +192,7 @@ class MathematicalProgram {
  public:
   DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(MathematicalProgram)
 
-  enum class VarType { CONTINUOUS, INTEGER, BINARY };
+  using VarType = solvers::VarType;
 
   MathematicalProgram();
   virtual ~MathematicalProgram() {}

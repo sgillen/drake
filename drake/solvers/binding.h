@@ -81,6 +81,17 @@ Binding<C> CreateBinding(const std::shared_ptr<C>& c, Args&&... args) {
   return Binding<C>(c, std::forward<Args>(args)...);
 }
 
+/*
+ * A bundle of bindings that are created.
+ */
+template <typename C, typename CExtra = C>
+struct BindingBundle {
+  Binding<C> binding;
+  std::vector<Binding<CExtra>> extra_bindings {};
+  VectorXDecisionVariable new_vars {};
+  VarType new_vars_type {VarType::CONTINUOUS};
+};
+
 }  // namespace internal
 
 }  // namespace solvers
