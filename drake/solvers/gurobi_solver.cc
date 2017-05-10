@@ -34,6 +34,18 @@ __attribute__((unused)) bool HasCorrectNumberOfVariables(
   return (num_vars == num_vars_expected);
 }
 
+// Sum the constant values that are not accepted by the solver.
+double ComputeConstantCost(const MathematicalProgram& prog) {
+  double sum = 0.;
+  for (const auto& binding : prog.linear_costs()) {
+    sum += binding.constraint()->b();
+  }
+  for (const auto& binding : prog.quadratic_costs()) {
+    sum += binding.constraint()->c();
+  }
+  return sum;
+}
+
 /**
  * Adds a constraint of one of the following forms :
  * lb ≤ A*x ≤ ub
@@ -640,7 +652,8 @@ SolutionResult GurobiSolver::Solve(MathematicalProgram& prog) const {
       // Obtain optimal cost
       double optimal_cost = std::numeric_limits<double>::quiet_NaN();
       GRBgetdblattr(model, GRB_DBL_ATTR_OBJVAL, &optimal_cost);
-      prog.SetOptimalCost(optimal_cost);
+      const double constant_cost = ComputeConstantCost(prog);
+      prog.SetOptimalCost(optimal_cost + constant_cost);
     }
   }
 

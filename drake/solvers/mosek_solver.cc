@@ -13,6 +13,19 @@
 namespace drake {
 namespace solvers {
 namespace {
+
+// Sum the constant values that are not accepted by the solver.
+double ComputeConstantCost(const MathematicalProgram& prog) {
+  double sum = 0.;
+  for (const auto& binding : prog.linear_costs()) {
+    sum += binding.constraint()->b();
+  }
+  for (const auto& binding : prog.quadratic_costs()) {
+    sum += binding.constraint()->c();
+  }
+  return sum;
+}
+
 // Add LinearConstraints and LinearEqualityConstraints to the Mosek task.
 template <typename C>
 MSKrescodee AddLinearConstraintsFromBindings(
@@ -687,7 +700,8 @@ SolutionResult MosekSolver::Solve(MathematicalProgram& prog) const {
           rescode = MSK_getprimalobj(task, solution_type, &optimal_cost);
           DRAKE_ASSERT(rescode == MSK_RES_OK);
           if (rescode == MSK_RES_OK) {
-            prog.SetOptimalCost(optimal_cost);
+            const double constant_cost = ComputeConstantCost(prog);
+            prog.SetOptimalCost(optimal_cost + constant_cost);
           }
           break;
         }
