@@ -30,5 +30,8 @@ using VariableRefList = std::list<Eigen::Ref<const VectorXDecisionVariable>>;
  */
 VectorXDecisionVariable ConcatenateVariableRefList(
     const VariableRefList& var_list);
+
+enum class VarType { CONTINUOUS, INTEGER, BINARY };
+
 }  // end namespace solvers
 }  // end namespace drake
