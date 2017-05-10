@@ -7,21 +7,29 @@
 
 namespace drake {
 namespace solvers {
-
-template <typename C>
-bool operator==(const Binding<C>& a, const Binding<C>& b) {
-  return a.constraint() == b.constraint() && a.variables() == b.variables();
-}
-
 namespace test {
 
 using std::make_shared;
 using std::vector;
+using std::equal_to;
 
 using internal::BindingBundle;
 using internal::CreateBinding;
 using symbolic::Variable;
 using symbolic::test::VarEqual;
+
+template <typename C>
+void ExpectEq(const Binding<C>& lhs, const Binding<C>& rhs) {
+  EXPECT_EQ(lhs.constraint(), rhs.constraint());
+  EXPECT_EQ(lhs.variables(), rhs.variables());
+}
+template <typename C>
+void ExpectEq(const vector<C>& lhs, const vector<C>& rhs) {
+  EXPECT_EQ(lhs.size(), rhs.size());
+  for (size_t i = 0; i < lhs.size(); ++i) {
+    ExpectEq(lhs[i], rhs[i]);
+  }
+}
 
 GTEST_TEST(TestBinding, constructBinding) {
   symbolic::Variable x1("x1");
@@ -63,8 +71,8 @@ GTEST_TEST(TestBinding, constructBindingBundle) {
         binding,
         {extra, extra}
     };
-    EXPECT_EQ(binding, binding_bundle.binding);
-    EXPECT_EQ(extra_bindings, binding_bundle.extra_bindings);
+    ExpectEq(binding, binding_bundle.binding);
+    ExpectEq(extra_bindings, binding_bundle.extra_bindings);
     EXPECT_EQ(0, binding_bundle.new_vars.size());
     EXPECT_EQ(VarType::CONTINUOUS, binding_bundle.new_vars_type);
   }
@@ -77,8 +85,8 @@ GTEST_TEST(TestBinding, constructBindingBundle) {
         binding,
         extra_bindings
     };
-    EXPECT_EQ(binding, binding_bundle.binding);
-    EXPECT_EQ(extra_bindings, binding_bundle.extra_bindings);
+    ExpectEq(binding, binding_bundle.binding);
+    ExpectEq(extra_bindings, binding_bundle.extra_bindings);
     EXPECT_EQ(0, binding_bundle.new_vars.size());
     EXPECT_EQ(VarType::CONTINUOUS, binding_bundle.new_vars_type);
   }
@@ -90,8 +98,8 @@ GTEST_TEST(TestBinding, constructBindingBundle) {
         extra_bindings,
         x
     };
-    EXPECT_EQ(binding, binding_bundle.binding);
-    EXPECT_EQ(extra_bindings, binding_bundle.extra_bindings);
+    ExpectEq(binding, binding_bundle.binding);
+    ExpectEq(extra_bindings, binding_bundle.extra_bindings);
     EXPECT_EQ(x, binding_bundle.new_vars);
     EXPECT_EQ(VarType::CONTINUOUS, binding_bundle.new_vars_type);
   }
@@ -103,8 +111,8 @@ GTEST_TEST(TestBinding, constructBindingBundle) {
         x,
         VarType::BINARY
     };
-    EXPECT_EQ(binding, binding_bundle.binding);
-    EXPECT_EQ(extra_bindings, binding_bundle.extra_bindings);
+    ExpectEq(binding, binding_bundle.binding);
+    ExpectEq(extra_bindings, binding_bundle.extra_bindings);
     EXPECT_EQ(x, binding_bundle.new_vars);
     EXPECT_EQ(VarType::BINARY, binding_bundle.new_vars_type);
   }
