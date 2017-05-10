@@ -224,7 +224,8 @@ PYBIND11_PLUGIN(_pydrake_mathematicalprogram) {
   py::class_<QuadraticCost, Cost,
              std::shared_ptr<QuadraticCost>>(m, "QuadraticCost")
     .def("Q", &QuadraticCost::Q)
-    .def("b", &QuadraticCost::b);
+    .def("b", &QuadraticCost::b)
+    .def("c", &QuadraticCost::c);
 
   RegisterBinding<LinearCost>(m, "LinearCost");
   RegisterBinding<QuadraticCost>(m, "QuadraticCost");
