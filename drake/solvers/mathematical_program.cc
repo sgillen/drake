@@ -675,5 +675,20 @@ SolutionResult MathematicalProgram::Solve() {
   }
 }
 
+namespace internal {
+
+double ComputeConstantCost(const MathematicalProgram& prog) {
+  double sum = 0.;
+  for (const auto& binding : prog.linear_costs()) {
+    sum += binding.constraint()->b();
+  }
+  for (const auto& binding : prog.quadratic_costs()) {
+    sum += binding.constraint()->c();
+  }
+  return sum;
+}
+
+}  // namespace internal
+
 }  // namespace solvers
 }  // namespace drake

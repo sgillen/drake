@@ -19,6 +19,9 @@
 namespace drake {
 namespace solvers {
 namespace {
+
+using internal::ComputeConstantCost;
+
 // Checks if the number of variables in the Gurobi model is as expected. This
 // operation can be EXPENSIVE, since it requires calling GRBupdatemodel
 // (Gurobi typically adopts lazy update, where it does not update the model
@@ -32,18 +35,6 @@ __attribute__((unused)) bool HasCorrectNumberOfVariables(
   error = GRBgetintattr(model, "NumVars", &num_vars);
   if (error) return false;
   return (num_vars == num_vars_expected);
-}
-
-// Sum the constant values that are not accepted by the solver.
-double ComputeConstantCost(const MathematicalProgram& prog) {
-  double sum = 0.;
-  for (const auto& binding : prog.linear_costs()) {
-    sum += binding.constraint()->b();
-  }
-  for (const auto& binding : prog.quadratic_costs()) {
-    sum += binding.constraint()->c();
-  }
-  return sum;
 }
 
 /**

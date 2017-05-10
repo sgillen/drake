@@ -2270,5 +2270,13 @@ class MathematicalProgram {
   Binding<LinearEqualityConstraint> AddLinearEqualityConstraint(
       const std::set<symbolic::Formula>& formulas);
 };
+
+namespace internal {
+
+// Sum the constant values that are not accepted by the solver.
+double ComputeConstantCost(const MathematicalProgram& prog);
+
+}
+
 }  // namespace solvers
 }  // namespace drake

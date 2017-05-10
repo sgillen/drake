@@ -14,17 +14,7 @@ namespace drake {
 namespace solvers {
 namespace {
 
-// Sum the constant values that are not accepted by the solver.
-double ComputeConstantCost(const MathematicalProgram& prog) {
-  double sum = 0.;
-  for (const auto& binding : prog.linear_costs()) {
-    sum += binding.constraint()->b();
-  }
-  for (const auto& binding : prog.quadratic_costs()) {
-    sum += binding.constraint()->c();
-  }
-  return sum;
-}
+using internal::ComputeConstantCost;
 
 // Add LinearConstraints and LinearEqualityConstraints to the Mosek task.
 template <typename C>
