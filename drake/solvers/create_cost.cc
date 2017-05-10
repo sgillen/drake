@@ -57,10 +57,7 @@ Binding<LinearCost> DoParseLinearCost(
   Eigen::RowVectorXd c(vars_vec.size());
   double constant_term;
   DecomposeLinearExpression(e, map_var_to_index, c, &constant_term);
-  // The constant term is ignored now.
-  // TODO(eric.cousineau): support adding constant term to the cost.
-  unused(constant_term);
-  return CreateBinding(make_shared<LinearCost>(c), vars_vec);
+  return CreateBinding(make_shared<LinearCost>(c, constant_term), vars_vec);
 }
 
 }  // anonymous namespace

@@ -77,23 +77,57 @@ class CostShim : public CostShimBase {
   const std::shared_ptr<C> constraint_;
 };
 
+
 /**
- * Implements a cost of the form @f Ax @f
+ * Implements a cost of the form @f a'x + b @f
  */
-class LinearCost : public CostShim<LinearConstraint> {
+class LinearCost : public Cost {
  public:
   DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(LinearCost)
 
-  explicit LinearCost(const Eigen::Ref<const Eigen::VectorXd>& c)
-      : CostShim(c.transpose(), Vector1<double>::Constant(
-                                    -std::numeric_limits<double>::infinity()),
-                 Vector1<double>::Constant(
-                     std::numeric_limits<double>::infinity())) {}
+  LinearCost(const Eigen::Ref<const Eigen::VectorXd>& a,
+             double b = 0.)
+      : Cost(a.cols()), A_(a), c_(b) {}
+
+  ~LinearCost() override {}
 
   Eigen::SparseMatrix<double> GetSparseMatrix() const {
-    return constraint()->GetSparseMatrix();
+    // TODO(eric.cousineau): Consider storing or caching sparse matrix, such
+    // that we can return a const lvalue reference.
+    return A_.sparseView();
   }
-  const Eigen::MatrixXd& A() const { return constraint()->A(); }
+
+  const Eigen::VectorXd& A() const { return A_; }
+
+  double c() const { return c_; }
+
+  /**
+   * Updates the linear term, upper and lower bounds in the linear constraint.
+   * The updated constraint is @f A_new x + c_new @f
+   * Note that the number of variables (number of cols) cannot change.
+   * @param new_A New linear term.
+   * @param new_c New constant term.
+   */
+  void UpdateConstraint(const Eigen::Ref<const Eigen::RowVectorXd>& new_A,
+                        double new_c = 0.) {
+    if (new_A.cols() != A_.cols()) {
+      throw std::runtime_error("Can't change the number of decision variables");
+    }
+
+    A_ = new_A;
+    c_ = new_c;
+  }
+
+ protected:
+  void DoEval(const Eigen::Ref<const Eigen::VectorXd>& x,
+              Eigen::VectorXd& y) const override;
+
+  void DoEval(const Eigen::Ref<const AutoDiffVecXd>& x,
+              AutoDiffVecXd& y) const override;
+
+ private:
+  Eigen::VectorXd A_;
+  double c_;
 };
 
 /**
