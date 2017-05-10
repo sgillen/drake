@@ -1828,7 +1828,6 @@ GTEST_TEST(testMathematicalProgram, AddQuadraticCost) {
 
 void CheckAddedSymbolicQuadraticCostUserFun(const MathematicalProgram& prog,
                                             const Expression& e,
-                                            double constant,
                                             const Binding<Cost>& binding,
                                             int num_quadratic_cost) {
   EXPECT_EQ(num_quadratic_cost, prog.quadratic_costs().size());
@@ -1839,18 +1838,19 @@ void CheckAddedSymbolicQuadraticCostUserFun(const MathematicalProgram& prog,
   // Check the added cost is 0.5 * x' * Q * x + b' * x
   const auto& x_bound = binding.variables();
   const Expression e_added =
-      0.5 * x_bound.dot(cnstr->Q() * x_bound) + cnstr->b().dot(x_bound);
-  EXPECT_PRED2(ExprEqual, e_added.Expand() + constant, e.Expand());
+      0.5 * x_bound.dot(cnstr->Q() * x_bound) + cnstr->b().dot(x_bound) +
+          cnstr->c();
+  EXPECT_PRED2(ExprEqual, e_added.Expand(), e.Expand());
 }
 
 void CheckAddedSymbolicQuadraticCost(MathematicalProgram* prog,
-                                     const Expression& e, double constant) {
+                                     const Expression& e) {
   int num_quadratic_cost = prog->quadratic_costs().size();
   auto binding1 = prog->AddQuadraticCost(e);
-  CheckAddedSymbolicQuadraticCostUserFun(*prog, e, constant, binding1,
+  CheckAddedSymbolicQuadraticCostUserFun(*prog, e, binding1,
                                          ++num_quadratic_cost);
   auto binding2 = prog->AddCost(e);
-  CheckAddedSymbolicQuadraticCostUserFun(*prog, e, constant, binding2,
+  CheckAddedSymbolicQuadraticCostUserFun(*prog, e, binding2,
                                          ++num_quadratic_cost);
 }
 
@@ -1860,32 +1860,32 @@ GTEST_TEST(testMathematicalProgram, AddSymbolicQuadraticCost) {
 
   // Identity diagonal term.
   Expression e1 = x.transpose() * x;
-  CheckAddedSymbolicQuadraticCost(&prog, e1, 0);
+  CheckAddedSymbolicQuadraticCost(&prog, e1);
 
   // Identity diagonal term.
   Expression e2 = x.transpose() * x + 1;
-  CheckAddedSymbolicQuadraticCost(&prog, e2, 1);
+  CheckAddedSymbolicQuadraticCost(&prog, e2);
 
   // Identity diagonal term.
   Expression e3 = x(0) * x(0) + x(1) * x(1) + 2;
-  CheckAddedSymbolicQuadraticCost(&prog, e3, 2);
+  CheckAddedSymbolicQuadraticCost(&prog, e3);
 
   // Non-identity diagonal term.
   Expression e4 = x(0) * x(0) + 2 * x(1) * x(1) + 3 * x(2) * x(2) + 3;
-  CheckAddedSymbolicQuadraticCost(&prog, e4, 3);
+  CheckAddedSymbolicQuadraticCost(&prog, e4);
 
   // Cross terms.
   Expression e5 = x(0) * x(0) + 2 * x(1) * x(1) + 4 * x(0) * x(1) + 2;
-  CheckAddedSymbolicQuadraticCost(&prog, e5, 2);
+  CheckAddedSymbolicQuadraticCost(&prog, e5);
 
   // Linear terms.
   Expression e6 = x(0) * x(0) + 2 * x(1) * x(1) + 4 * x(0);
-  CheckAddedSymbolicQuadraticCost(&prog, e6, 0);
+  CheckAddedSymbolicQuadraticCost(&prog, e6);
 
   // Cross terms and linear terms.
   Expression e7 = (x(0) + 2 * x(1) + 3) * (x(0) + x(1) + 4) + 3 * x(0) * x(0) +
                   6 * pow(x(1) + 1, 2);
-  CheckAddedSymbolicQuadraticCost(&prog, e7, 18);
+  CheckAddedSymbolicQuadraticCost(&prog, e7);
 
   // Cubic polynomial case.
   Expression e8 = pow(x(0), 3) + 1;
@@ -1919,9 +1919,7 @@ GTEST_TEST(testMathematicalProgram, TestL2NormCost) {
 
     EXPECT_TRUE(CompareMatrices(y1, y2));
     EXPECT_TRUE(CompareMatrices(
-        y2, (A * x0 - b).transpose() * (A * x0 - b) - b.transpose() * b));
-    // Note: Currently have to subtract out the constant term (b'*b) due to
-    // issue #3500.
+        y2, (A * x0 - b).transpose() * (A * x0 - b)));
 
     x0 += Eigen::Vector2d::Constant(2);
   }
