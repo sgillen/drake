@@ -572,69 +572,74 @@ class MosekLicenseLock::Impl {
  public:
   DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(Impl)
 
-  Impl() {
-    license().Acquire();
-  }
+  Impl()
+    : license_(License::acquire_if_needed()) {}
 
   ~Impl() {
-    license().Release();
+    license_.reset();
+    License::release_if_able();
   }
 
   MSKenv_t mosek_env() const {
-    return license().mosek_env_;
+    return license_->mosek_env_;
   }
 
  private:
   struct License {
     MSKenv_t mosek_env_{nullptr};
-    int ref_count_{0};
-    std::mutex mutex_;
 
-    void Acquire() {
-      std::lock_guard<std::mutex> lock(mutex_);
-      if (ref_count_ == 0) {
-        // According to
-        // http://docs.mosek.com/8.0/cxxfusion/solving-parallel.html sharing
-        // an env between threads is safe, but since we allocate on the
-        // first call to Solve() we need to at least be safe about
-        // allocating the environment initially.
-        DRAKE_ASSERT(!mosek_env_);
-        // Create the Mosek environment.
-        MSKrescodee rescode = MSK_makeenv(&mosek_env_, nullptr);
-        if (rescode != MSK_RES_OK) {
-          throw std::runtime_error("Could not acquire MOSEK license.");
-        }
+    License() {
+      // According to
+      // http://docs.mosek.com/8.0/cxxfusion/solving-parallel.html sharing
+      // an env between threads is safe, but since we allocate on the
+      // first call to Solve() we need to at least be safe about
+      // allocating the environment initially.
+      MSKrescodee rescode = MSK_makeenv(&mosek_env_, nullptr);
+      if (rescode != MSK_RES_OK) {
+        throw std::runtime_error("Could not acquire MOSEK license.");
       }
-      // TODO(eric.cousineau): Consider logging when stacked MOSEK locks are
-      // acquired / released? (when ref_count > 1?)
+    }
+
+    ~License() {
       DRAKE_ASSERT(mosek_env_);
-      ref_count_++;
+      MSK_deleteenv(&mosek_env_);
     }
 
-    void Release() {
-      std::lock_guard<std::mutex> lock(mutex_);
-      DRAKE_DEMAND(ref_count_ > 0);
-      ref_count_--;
-      if (ref_count_ == 0) {
-        if (mosek_env_ != nullptr) {
-          MSK_deleteenv(&mosek_env_);
-          mosek_env_ = nullptr;
-        }
+    static std::mutex& mutex() {
+      // Ensure that the mutex is not destructed while a
+      // MoskeLicenseLock is being constructed / destructed.
+      static never_destroyed<std::mutex> singleton;
+      return singleton.access();
+    }
+
+    static shared_ptr<License>& instance() {
+      static shared_ptr<License> singleton;
+      return singleton;
+    }
+
+    static shared_ptr<License>& acquire_if_needed() {
+      // Acquire license if needed
+      // Otherwise, return existing singleton
+      std::lock_guard<std::mutex> lock(mutex());
+      auto& singleton = instance();
+      if (!singleton) {
+        return singleton.reset(new License());
       }
     }
 
-    static License& instance() {
-      // Make a singleton instance of License. Ensure that this is never
-      // destroyed to ensure that the mutex is not destructed while a
-      // MoskeLicenseLock is destructed.
-      static never_destroyed<License> singleton;
-      return singleton.access();
+    static void release_if_able() {
+      std::lock_guard<std::mutex> lock(mutex());
+      auto& singleton = instance();
+      // This should never be called on an empty license
+      DRAKE_DEMAND(singleton);
+      if (singleton.use_count() == 1) {
+        // No references to singleton. Release license.
+        license.reset();
+      }
     }
   };
 
-  License& license() const {
-    return License::instance();
-  }
+  shared_ptr<License> license_;
 };
 
 // Upon construction, acquire a license lock, which will automatically
