@@ -4,15 +4,19 @@
 #include <cmath>
 #include <limits>
 #include <list>
+#include <mutex>
 #include <vector>
 
 #include <Eigen/Core>
 #include <Eigen/SparseCore>
 #include <mosek.h>
 
+#include "drake/common/never_destroyed.h"
+
 namespace drake {
 namespace solvers {
 namespace {
+
 // Add LinearConstraints and LinearEqualityConstraints to the Mosek task.
 template <typename C>
 MSKrescodee AddLinearConstraintsFromBindings(
@@ -560,20 +564,96 @@ MSKrescodee SpecifyVariableType(const MathematicalProgram& prog,
 }
 }  // anonymous namespace
 
-MosekSolver::~MosekSolver() {
-  if (mosek_env_ != nullptr) {
-    MSKenv_t env = static_cast<MSKenv_t>(mosek_env_);
-    mosek_env_ = nullptr;
-    MSK_deleteenv(&env);
-  }
-}
+/*
+ * Implementation for acquiring a MOSEK license. This uses reference counting
+ * to do scoped RAII for MOSEK license / environment sessions.
+ */
+class MosekLicenseLock::Impl {
+ public:
+  DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(Impl)
 
+  Impl() {
+    license().Acquire();
+  }
+
+  ~Impl() {
+    license().Release();
+  }
+
+  MSKenv_t mosek_env() const {
+    return license().mosek_env_;
+  }
+
+ private:
+  struct License {
+    MSKenv_t mosek_env_{nullptr};
+    int ref_count_{0};
+    std::mutex mutex_;
+
+    void Acquire() {
+      std::lock_guard<std::mutex> lock(mutex_);
+      if (ref_count_ == 0) {
+        // According to
+        // http://docs.mosek.com/8.0/cxxfusion/solving-parallel.html sharing
+        // an env between threads is safe, but since we allocate on the
+        // first call to Solve() we need to at least be safe about
+        // allocating the environment initially.
+        DRAKE_ASSERT(!mosek_env_);
+        // Create the Mosek environment.
+        MSKrescodee rescode = MSK_makeenv(&mosek_env_, nullptr);
+        if (rescode != MSK_RES_OK) {
+          throw std::runtime_error("Could not acquire MOSEK license.");
+        }
+      }
+      // TODO(eric.cousineau): Consider logging when stacked MOSEK locks are
+      // acquired / released? (when ref_count > 1?)
+      DRAKE_ASSERT(mosek_env_);
+      ref_count_++;
+    }
+
+    void Release() {
+      std::lock_guard<std::mutex> lock(mutex_);
+      DRAKE_DEMAND(ref_count_ > 0);
+      ref_count_--;
+      if (ref_count_ == 0) {
+        if (mosek_env_ != nullptr) {
+          MSK_deleteenv(&mosek_env_);
+          mosek_env_ = nullptr;
+        }
+      }
+    }
+
+    static License& instance() {
+      // Make a singleton instance of License. Ensure that this is never
+      // destroyed to ensure that the mutex is not destructed while a
+      // MoskeLicenseLock is destructed.
+      static never_destroyed<License> singleton;
+      return singleton.access();
+    }
+  };
+
+  License& license() const {
+    return License::instance();
+  }
+};
+
+// Upon construction, acquire a license lock, which will automatically
+// be destroyed by the default destructor.
+MosekLicenseLock::MosekLicenseLock()
+    : impl_(new Impl()) { }
+
+// Explicitly define default destructor, so that the implicit destructor
+// for unique_ptr<> will have access to the full definition of Impl.
+MosekLicenseLock::~MosekLicenseLock() {}
+
+MosekLicenseLock::Impl* MosekLicenseLock::impl() const {
+  return impl_.get();
+}
 
 bool MosekSolver::available() const { return true; }
 
 SolutionResult MosekSolver::Solve(MathematicalProgram& prog) const {
   const int num_vars = prog.num_vars();
-  MSKenv_t env = nullptr;
   MSKtask_t task = nullptr;
   MSKrescodee rescode;
 
@@ -587,29 +667,14 @@ SolutionResult MosekSolver::Solve(MathematicalProgram& prog) const {
   // in MathematicalProgram prog, but added to Mosek solver.
   std::vector<bool> is_new_variable(num_vars, false);
 
-  // According to
-  // http://docs.mosek.com/8.0/cxxfusion/solving-parallel.html sharing
-  // an env between threads is safe, but since we allocate on the
-  // first call to Solve() we need to at least be safe about
-  // allocating the environment initially.
-  {
-    std::lock_guard<std::mutex> lock(env_mutex_);
-    if (mosek_env_ == nullptr) {
-      // Create the Mosek environment.
-      rescode = MSK_makeenv(&env, nullptr);
-      if (rescode == MSK_RES_OK) {
-        mosek_env_ = env;
-      }
-    } else {
-      env = static_cast<MSKenv_t>(mosek_env_);
-      rescode = MSK_RES_OK;
-    }
+  if (!license_lock_) {
+    license_lock_.reset(new MosekLicenseLock());
   }
+  MSKenv_t env = license_lock_->impl()->mosek_env();
 
-  if (rescode == MSK_RES_OK) {
-    // Create the optimization task.
-    rescode = MSK_maketask(env, 0, num_vars, &task);
-  }
+  // Create the optimization task.
+  rescode = MSK_maketask(env, 0, num_vars, &task);
+
   if (rescode == MSK_RES_OK) {
     rescode = MSK_appendvars(task, num_vars);
   }
