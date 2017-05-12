@@ -23,25 +23,11 @@ class MosekLicenseLock {
   DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(MosekLicenseLock)
 
   MosekLicenseLock();
-  ~MosekLicenseLock();
 
-  void* get_env() const;
-
- private:
-  struct License {
-    // This is a void* to avoid needing to refer to types from the Mosek
-    // API if we're building without Mosek.  Note that both of these are
-    // mutable to allow latching the allocation of mosek_env_ during the
-    // first call so Solve() (which avoids grabbing a Mosek license
-    // before we know that we actually want one).
-    mutable void* mosek_env_{nullptr};
-    mutable int ref_count_{0};
-    mutable std::mutex env_mutex_;
-
-    void Acquire();
-    void Release();
-  };
-  static License license_;
+  class Impl;
+  Impl* impl() const;
+private:
+  std::unique_ptr<Impl> impl_;
 };
 
 class MosekSolver : public MathematicalProgramSolverInterface {
@@ -59,7 +45,7 @@ class MosekSolver : public MathematicalProgramSolverInterface {
   SolutionResult Solve(MathematicalProgram& prog) const override;
 
  private:
-  std::unique_ptr<MosekLicenseLock> license_;
+  std::unique_ptr<MosekLicenseLock> license_lock_;
 };
 
 }  // namespace solvers

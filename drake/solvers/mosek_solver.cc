@@ -563,58 +563,73 @@ MSKrescodee SpecifyVariableType(const MathematicalProgram& prog,
 MosekSolver::~MosekSolver() {
 }
 
+class MosekLicenseLock::Impl {
+ public:
+  DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(Impl)
 
-MosekLicenseLock::License MosekLicenseLock license_;
-
-MosekLicenseLock::MosekLicenseLock() {
-  license_.Acquire();
-}
-
-MosekLicenseLock::~MosekLicenseLock() {
-  license_.Release();
-}
-
-MosekLicenseLock::License::Acquire() {
-  if (ref_count_ == 0) {
-    // According to
-    // http://docs.mosek.com/8.0/cxxfusion/solving-parallel.html sharing
-    // an env between threads is safe, but since we allocate on the
-    // first call to Solve() we need to at least be safe about
-    // allocating the environment initially.
-    DRAKE_DEMAND(!mosek_env_);
-    std::lock_guard<std::mutex> lock(env_mutex_);
-    if (mosek_env_ == nullptr) {
-      // Create the Mosek environment.
-      rescode = MSK_makeenv(&env, nullptr);
-      if (rescode == MSK_RES_OK) {
-        mosek_env_ = env;
-      }
-      else {
-        throw std::runtime_error("Could not acquire MOSEK license.");
-      }
-    } else {
-      env = static_cast<MSKenv_t>(mosek_env_);
-      rescode = MSK_RES_OK;
-    }
-  } else {
-    std::cerr << "Incrementing MOSEK license count" << std::endl;
+  Impl() {
+    license_.Acquire();
   }
-  ref_count_++;
-}
 
-MosekLicenseLock::License::Release() {
-  DRAKE_DEMAND(ref_count_ > 0);
-  ref_count_--;
-  if (ref_count_ == 0) {
-    if (mosek_env_ != nullptr) {
-      MSKenv_t env = static_cast<MSKenv_t>(mosek_env_);
-      mosek_env_ = nullptr;
-      MSK_deleteenv(&env);
-    }
-  } else {
-    std::cerr << "Decrementing MOSEK license count" << std::endl;
+  ~Impl() {
+    license_.Release();
   }
-}
+
+  void* get_env() const {
+    return license_.mosek_env_;
+  }
+
+ private:
+  struct License {
+    MSKenv_t* mosek_env_{nullptr};
+    int ref_count_{0};
+    std::mutex env_mutex_;
+
+    void Acquire() {
+      if (ref_count_ == 0) {
+        // According to
+        // http://docs.mosek.com/8.0/cxxfusion/solving-parallel.html sharing
+        // an env between threads is safe, but since we allocate on the
+        // first call to Solve() we need to at least be safe about
+        // allocating the environment initially.
+        DRAKE_ASSERT(!mosek_env_);
+        std::scoped_lock<std::mutex> lock(env_mutex_);
+        // Create the Mosek environment.
+        rescode = MSK_makeenv(&mosek_env_, nullptr);
+        if (rescode != MSK_RES_OK) {
+          throw std::runtime_error("Could not acquire MOSEK license.");
+        }
+      } else {
+        std::cerr << "Incrementing MOSEK license count" << std::endl;
+      }
+      DRAKE_ASSERT(mosek_env_);
+      ref_count_++;
+    }
+
+    void Release() {
+      DRAKE_DEMAND(ref_count_ > 0);
+      ref_count_--;
+      if (ref_count_ == 0) {
+        if (mosek_env_ != nullptr) {
+          MSKenv_t env = static_cast<MSKenv_t>(mosek_env_);
+          mosek_env_ = nullptr;
+          MSK_deleteenv(&env);
+        }
+      } else {
+        std::cerr << "Decrementing MOSEK license count" << std::endl;
+      }
+    }
+  };
+  static License license_;
+};
+
+MosekLicenseLock::Impl::License MosekLicenseLock::Impl::license_;
+
+// Upon construction, acquire a license lock, which will automatically
+// be destroyed by the default destructor.
+MosekLicenseLock::MosekLicenseLock()
+    : impl_(new Impl()) { }
+
 
 
 bool MosekSolver::available() const { return true; }
@@ -635,10 +650,10 @@ SolutionResult MosekSolver::Solve(MathematicalProgram& prog) const {
   // in MathematicalProgram prog, but added to Mosek solver.
   std::vector<bool> is_new_variable(num_vars, false);
 
-  if (!license_) {
-    license_.reset(new MosekLicenseLock());
+  if (!license_lock_) {
+    license_lock_.reset(new MosekLicenseLock());
   }
-  env = static_cast<MSKenv_t*>(license_->get_env());
+  env = license_lock_->get_env();
 
   if (rescode == MSK_RES_OK) {
     // Create the optimization task.
