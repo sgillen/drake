@@ -11,6 +11,11 @@ namespace drake {
 namespace solvers {
 namespace test {
 
+// Lock the MOSEK license for the entire duration of this test.
+// TODO(eric.cousineau): Is there any easy way to access gtest's
+// AddGlobalTestEnvironment? Or use a different main()?
+MosekLicenseLock lock;
+
 TEST_P(LinearProgramTest, TestLP) {
   MosekSolver solver;
   prob()->RunProblem(&solver);

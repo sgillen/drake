@@ -1,6 +1,6 @@
 #pragma once
 
-#include <mutex>
+#include <memory>
 #include <string>
 
 #include <Eigen/Core>
@@ -23,10 +23,11 @@ class MosekLicenseLock {
   DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(MosekLicenseLock)
 
   MosekLicenseLock();
+  ~MosekLicenseLock();
 
   class Impl;
   Impl* impl() const;
-private:
+ private:
   std::unique_ptr<Impl> impl_;
 };
 
@@ -45,7 +46,10 @@ class MosekSolver : public MathematicalProgramSolverInterface {
   SolutionResult Solve(MathematicalProgram& prog) const override;
 
  private:
-  std::unique_ptr<MosekLicenseLock> license_lock_;
+  // Note that this is mutable to allow latching the allocation of mosek_env_
+  // during the first call of Solve() (which avoids grabbing a Mosek license
+  // before we know that we actually want one).
+  mutable std::unique_ptr<MosekLicenseLock> license_lock_;
 };
 
 }  // namespace solvers

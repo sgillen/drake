@@ -4,6 +4,7 @@
 #include <cmath>
 #include <limits>
 #include <list>
+#include <mutex>
 #include <vector>
 
 #include <Eigen/Core>
@@ -575,13 +576,13 @@ class MosekLicenseLock::Impl {
     license_.Release();
   }
 
-  void* get_env() const {
+  MSKenv_t get_env() const {
     return license_.mosek_env_;
   }
 
  private:
   struct License {
-    MSKenv_t* mosek_env_{nullptr};
+    MSKenv_t mosek_env_{nullptr};
     int ref_count_{0};
     std::mutex env_mutex_;
 
@@ -593,15 +594,15 @@ class MosekLicenseLock::Impl {
         // first call to Solve() we need to at least be safe about
         // allocating the environment initially.
         DRAKE_ASSERT(!mosek_env_);
-        std::scoped_lock<std::mutex> lock(env_mutex_);
+        std::lock_guard<std::mutex> lock(env_mutex_);
         // Create the Mosek environment.
-        rescode = MSK_makeenv(&mosek_env_, nullptr);
+        MSKrescodee rescode = MSK_makeenv(&mosek_env_, nullptr);
         if (rescode != MSK_RES_OK) {
           throw std::runtime_error("Could not acquire MOSEK license.");
         }
-      } else {
-        std::cerr << "Incrementing MOSEK license count" << std::endl;
       }
+      // TODO(eric.cousineau): Consider logging when stacked MOSEK locks are
+      // acquired / released? (when ref_count > 1?)
       DRAKE_ASSERT(mosek_env_);
       ref_count_++;
     }
@@ -615,8 +616,6 @@ class MosekLicenseLock::Impl {
           mosek_env_ = nullptr;
           MSK_deleteenv(&env);
         }
-      } else {
-        std::cerr << "Decrementing MOSEK license count" << std::endl;
       }
     }
   };
@@ -630,13 +629,19 @@ MosekLicenseLock::Impl::License MosekLicenseLock::Impl::license_;
 MosekLicenseLock::MosekLicenseLock()
     : impl_(new Impl()) { }
 
+// Explicitly define default destructor, so that the implicit destructor
+// for unique_ptr<> will have access to the full definition of Impl.
+MosekLicenseLock::~MosekLicenseLock() {}
+
+MosekLicenseLock::Impl* MosekLicenseLock::impl() const {
+  return impl_.get();
+}
 
 
 bool MosekSolver::available() const { return true; }
 
 SolutionResult MosekSolver::Solve(MathematicalProgram& prog) const {
   const int num_vars = prog.num_vars();
-  MSKenv_t env = nullptr;
   MSKtask_t task = nullptr;
   MSKrescodee rescode;
 
@@ -653,12 +658,11 @@ SolutionResult MosekSolver::Solve(MathematicalProgram& prog) const {
   if (!license_lock_) {
     license_lock_.reset(new MosekLicenseLock());
   }
-  env = license_lock_->get_env();
+  MSKenv_t env = license_lock_->impl()->get_env();
 
-  if (rescode == MSK_RES_OK) {
-    // Create the optimization task.
-    rescode = MSK_maketask(env, 0, num_vars, &task);
-  }
+  // Create the optimization task.
+  rescode = MSK_maketask(env, 0, num_vars, &task);
+
   if (rescode == MSK_RES_OK) {
     rescode = MSK_appendvars(task, num_vars);
   }
