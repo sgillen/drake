@@ -76,7 +76,7 @@ struct is_eigen_vector_expression_double_pair
 
 }  // namespace detail
 
-namespace internal {
+//namespace internal {
 
 // TODO(eric.cousineau): Use Eigen::Ref more pervasively when no temporaries
 // are allocated (or if it doesn't matter if they are).
@@ -263,16 +263,6 @@ ParseLinearEqualityConstraint(const Eigen::MatrixBase<DerivedV>& V,
 }
 
 /*
- * Assist MathematicalProgram::AddPolynomialConstraint(...).
- * @note Non-symbolic, but this seems to have a separate purpose than general
- * construction.
- */
-std::shared_ptr<Constraint> MakePolynomialConstraint(
-    const VectorXPoly& polynomials,
-    const std::vector<Polynomiald::VarType>& poly_vars,
-    const Eigen::VectorXd& lb, const Eigen::VectorXd& ub);
-
-/*
  * Assist MathematicalProgram::AddLorentzConeConstraint(...).
  */
 Binding<LorentzConeConstraint> ParseLorentzConeConstraint(
@@ -302,6 +292,6 @@ ParseConstraint(const Eigen::MatrixBase<Derived>& e) {
   throw std::runtime_error("Not implemented");
 }
 
-}  // namespace internal
+//}  // namespace internal
 }  // namespace solvers
 }  // namespace drake

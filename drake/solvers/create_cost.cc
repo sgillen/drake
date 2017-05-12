@@ -10,7 +10,7 @@
 
 namespace drake {
 namespace solvers {
-namespace internal {
+//namespace internal {
 
 using std::make_shared;
 using std::numeric_limits;
@@ -25,6 +25,7 @@ using symbolic::Expression;
 using symbolic::Formula;
 using symbolic::Variable;
 
+using internal::CreateBinding;
 using internal::DecomposeLinearExpression;
 using internal::DecomposeQuadraticExpressionWithMonomialToCoeffMap;
 using internal::ExtractAndAppendVariablesFromExpression;
@@ -46,7 +47,7 @@ Binding<QuadraticCost> DoParseQuadraticCost(
       monomial_to_coeff_map, map_var_to_index, vars_vec.size(), &Q, &b,
       &constant_term);
   // Now add the quadratic constraint 0.5 * x' * Q * x + b' * x
-  return CreateBinding(make_shared<QuadraticCost>(Q, b), vars_vec);
+  return CreateBinding(MakeQuadraticCost(Q, b), vars_vec);
 }
 
 Binding<LinearCost> DoParseLinearCost(
@@ -59,7 +60,7 @@ Binding<LinearCost> DoParseLinearCost(
   // The constant term is ignored now.
   // TODO(eric.cousineau): support adding constant term to the cost.
   unused(constant_term);
-  return CreateBinding(make_shared<LinearCost>(c), vars_vec);
+  return CreateBinding(MakeLinearCost(c), vars_vec);
 }
 
 }  // anonymous namespace
@@ -134,6 +135,6 @@ Binding<Cost> ParseCost(const symbolic::Expression& e) {
   }
 }
 
-}  // namespace internal
+//}  // namespace internal
 }  // namespace solvers
 }  // namespace drake

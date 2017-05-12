@@ -882,7 +882,8 @@ class MathematicalProgram {
       const Eigen::Ref<const Eigen::VectorXd>& lb,
       const Eigen::Ref<const Eigen::VectorXd>& ub,
       const VariableRefList& vars) {
-    return AddLinearConstraint(A, lb, ub, ConcatenateVariableRefList(vars));
+    return AddConstraint(MakeLinearConstraint(A, lb, ub),
+                         ConcatenateVariableRefList(vars));
   }
 
   /**

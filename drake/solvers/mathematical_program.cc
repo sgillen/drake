@@ -380,7 +380,7 @@ Binding<LinearConstraint> MathematicalProgram::AddLinearConstraint(
     const Eigen::Ref<const Eigen::VectorXd>& lb,
     const Eigen::Ref<const Eigen::VectorXd>& ub,
     const Eigen::Ref<const VectorXDecisionVariable>& vars) {
-  return AddConstraint(make_shared<LinearConstraint>(A, lb, ub), vars);
+  return AddConstraint(MakeLinearConstraint>(A, lb, ub), vars);
 }
 
 Binding<LinearEqualityConstraint> MathematicalProgram::AddConstraint(
