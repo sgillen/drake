@@ -14,6 +14,7 @@
 namespace drake {
 namespace solvers {
 namespace {
+
 // Add LinearConstraints and LinearEqualityConstraints to the Mosek task.
 template <typename C>
 MSKrescodee AddLinearConstraintsFromBindings(
@@ -561,9 +562,12 @@ MSKrescodee SpecifyVariableType(const MathematicalProgram& prog,
 }
 }  // anonymous namespace
 
-MosekSolver::~MosekSolver() {
-}
-
+/*
+ * Implementation for acquiring a MOSEK license. This uses reference counting
+ * to determine a scope in which MOSEK licenses should be obtained.
+ * If a lock is declared in a main() function, then a lock on the MOSEK license
+ * will be obtaind for the entire duration of the program.
+ */
 class MosekLicenseLock::Impl {
  public:
   DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(Impl)
@@ -637,6 +641,9 @@ MosekLicenseLock::Impl* MosekLicenseLock::impl() const {
   return impl_.get();
 }
 
+
+MosekSolver::~MosekSolver() {
+}
 
 bool MosekSolver::available() const { return true; }
 
