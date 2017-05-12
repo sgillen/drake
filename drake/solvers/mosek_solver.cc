@@ -13,6 +13,8 @@
 
 #include "drake/common/never_destroyed.h"
 
+using std::shared_ptr;
+
 namespace drake {
 namespace solvers {
 namespace {
@@ -573,11 +575,11 @@ class MosekLicenseLock::Impl {
   DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(Impl)
 
   Impl()
-    : license_(License::acquire_if_needed()) {}
+    : license_(manager_.access().AcquireIfNeeded()) {}
 
   ~Impl() {
     license_.reset();
-    License::release_if_able();
+    manager_.access().ReleaseIfAble();
   }
 
   MSKenv_t mosek_env() const {
@@ -589,11 +591,6 @@ class MosekLicenseLock::Impl {
     MSKenv_t mosek_env_{nullptr};
 
     License() {
-      // According to
-      // http://docs.mosek.com/8.0/cxxfusion/solving-parallel.html sharing
-      // an env between threads is safe, but since we allocate on the
-      // first call to Solve() we need to at least be safe about
-      // allocating the environment initially.
       MSKrescodee rescode = MSK_makeenv(&mosek_env_, nullptr);
       if (rescode != MSK_RES_OK) {
         throw std::runtime_error("Could not acquire MOSEK license.");
@@ -604,43 +601,49 @@ class MosekLicenseLock::Impl {
       DRAKE_ASSERT(mosek_env_);
       MSK_deleteenv(&mosek_env_);
     }
-
-    static std::mutex& mutex() {
-      // Ensure that the mutex is not destructed while a
-      // MoskeLicenseLock is being constructed / destructed.
-      static never_destroyed<std::mutex> singleton;
-      return singleton.access();
-    }
-
-    static shared_ptr<License>& instance() {
-      static shared_ptr<License> singleton;
-      return singleton;
-    }
-
-    static shared_ptr<License>& acquire_if_needed() {
-      // Acquire license if needed
-      // Otherwise, return existing singleton
-      std::lock_guard<std::mutex> lock(mutex());
-      auto& singleton = instance();
-      if (!singleton) {
-        return singleton.reset(new License());
-      }
-    }
-
-    static void release_if_able() {
-      std::lock_guard<std::mutex> lock(mutex());
-      auto& singleton = instance();
-      // This should never be called on an empty license
-      DRAKE_DEMAND(singleton);
-      if (singleton.use_count() == 1) {
-        // No references to singleton. Release license.
-        license.reset();
-      }
-    }
   };
+
+  class Manager {
+   public:
+    shared_ptr<License> AcquireIfNeeded() {
+      // According to
+      // http://docs.mosek.com/8.0/cxxfusion/solving-parallel.html sharing
+      // an env between threads is safe, but since we allocate on the
+      // first call to Solve() we need to at least be safe about
+      // allocating the environment initially.
+      std::lock_guard<std::mutex> lock(mutex_);
+      if (!license_) {
+        license_.reset(new License());
+      }
+      return license_;
+    }
+
+    void ReleaseIfAble() {
+      std::lock_guard<std::mutex> lock(mutex_);
+      // This should never be called on an empty license
+      DRAKE_DEMAND(license_ != nullptr);
+      if (license_.use_count() == 1) {
+        // No references to singleton. Release license.
+        license_.reset();
+      }
+    }
+
+   private:
+    std::mutex mutex_;
+    shared_ptr<License> license_;
+  };
+
+  // Ensure that the mutex is not destructed while a
+  // MoskeLicenseLock is being constructed / destructed.
+  // This also prevents ~License() from being called by ~shared_ptr<License>().
+  // (This behavior can be changed if needed.)
+  static never_destroyed<Manager> manager_;
 
   shared_ptr<License> license_;
 };
+
+never_destroyed<MosekLicenseLock::Impl::Manager>
+    MosekLicenseLock::Impl::manager_;
 
 // Upon construction, acquire a license lock, which will automatically
 // be destroyed by the default destructor.
