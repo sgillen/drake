@@ -11,11 +11,6 @@ namespace drake {
 namespace solvers {
 namespace test {
 
-// Lock the MOSEK license for the entire duration of this test.
-// TODO(eric.cousineau): Is there any easy way to access gtest's
-// AddGlobalTestEnvironment? Or use a different main()?
-MosekLicenseLock lock;
-
 TEST_P(LinearProgramTest, TestLP) {
   MosekSolver solver;
   prob()->RunProblem(&solver);
@@ -44,6 +39,15 @@ GTEST_TEST(QPtest, TestUnitBallExample) {
     TestQPonUnitBallExample(solver);
   }
 }
+
 }  // namespace test
 }  // namespace solvers
 }  // namespace drake
+
+int main(int argc, char** argv) {
+  // Lock the MOSEK license for the entire duration of this test.
+  drake::solvers::MosekLicenseLock lock;
+  ::testing::InitGoogleTest(&argc, argv);
+  std::cout << "Hello world" << std::endl;
+  return RUN_ALL_TESTS();
+}
