@@ -30,12 +30,18 @@ set(drakeSensors_TARGET_LINK_LIBRARIES
 if(VTK_FOUND)
   list(APPEND drakeSensors_SRC_FILES rgbd_camera.cc vtk_util.cc)
   list(APPEND drakeSensors_HEADERS rgbd_camera.h vtk_util.h)
+  list(APPEND drakeSensors_TARGET_LINK_LIBRARIES drakeRendering vtkIO vtkRendering)
+endif()
+
+if(lcm_FOUND)
+  list(APPEND drakeSensors_SRC_FILES image_to_lcm_message.cc)
+  list(APPEND drakeSensors_HEADERS image_to_lcm_message.h)
+  list(APPEND drakeSensors_TARGET_LINK_LIBRARIES robotlocomotion-lcmtypes-cpp)
 endif()
 
 if(lcm_FOUND AND Bullet_FOUND)
   list(APPEND drakeSensors_SRC_FILES depth_sensor_to_lcm_point_cloud_message.cc)
   list(APPEND drakeSensors_HEADERS depth_sensor_to_lcm_point_cloud_message.h)
-  list(APPEND drakeSensors_TARGET_LINK_LIBRARIES robotlocomotion-lcmtypes-cpp)
   add_executable(depth_sensor_to_lcm_point_cloud_message_demo
       depth_sensor_to_lcm_point_cloud_message_demo.cc)
   target_link_libraries(depth_sensor_to_lcm_point_cloud_message_demo
@@ -50,12 +56,16 @@ target_link_libraries(drakeSensors
     ${drakeSensors_TARGET_LINK_LIBRARIES})
 
 if(VTK_FOUND)
-  target_link_libraries(drakeSensors drakeRendering vtkIO vtkRendering)
   target_include_directories(drakeSensors PUBLIC ${VTK_INCLUDE_DIRS})
 endif()
 
-if(LCM_FOUND)
-  target_link_libraries(drakeSensors robotlocomotion-lcmtypes-cpp)
+if(lcm_FOUND AND VTK_FOUND)
+  add_executable(image_to_lcm_message_demo image_to_lcm_message_demo.cc)
+  target_link_libraries(image_to_lcm_message_demo
+    drakeSensors
+    drakeSystemAnalysis
+    drakeMultibodyParsers
+    gflags)
 endif()
 
 drake_install_libraries(drakeSensors)
