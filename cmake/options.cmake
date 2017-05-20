@@ -383,5 +383,13 @@ macro(drake_setup_options)
   drake_dependent_external(QT_PROPERTY_BROWSER
     "WITH_DIRECTOR")
 
+  drake_optional_external(VICON ON
+    DEPENDS "HAVE_LCM"
+    "Experimental stuff")
+
+  drake_optional_external(KINECT ON
+    DEPENDS "HAVE_LCM"
+    "Experimental stuff")
+
   # END indirectly optional external projects
 endmacro()
