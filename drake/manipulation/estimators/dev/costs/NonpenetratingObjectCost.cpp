@@ -37,11 +37,11 @@ NonpenetratingObjectCost::NonpenetratingObjectCost(std::shared_ptr<RigidBodyTree
         std::shared_ptr<RigidBodyTreed> robot_object_, std::vector<int> robot_object_correspondences_, std::shared_ptr<lcm::LCM> lcm_, YAML::Node config) :
     lcm(lcm_),
     robot(robot_),
-    robot_kinematics_cache(robot->bodies),
+    robot_kinematics_cache(robot->CreateKinematicsCache()),
     nq(robot->get_num_positions()),
     robot_correspondences(robot_correspondences_),
     robot_object(robot_object_),
-    robot_object_kinematics_cache(robot_object->bodies),
+    robot_object_kinematics_cache(robot_object->CreateKinematicsCache()),
     nq_object(robot_object->get_num_positions()),
     robot_object_correspondences(robot_object_correspondences_)
 {
@@ -49,10 +49,10 @@ NonpenetratingObjectCost::NonpenetratingObjectCost(std::shared_ptr<RigidBodyTree
   std::cout << "Important #2: " << robot_object_correspondences.size() << "\n";
 
   std::cout << "\n";
-  for (int i=0; i<robot_correspondences.size(); i++)
+  for (int i=0; i< (int)robot_correspondences.size(); i++)
     std::cout << robot_correspondences[i] << " ";
   std::cout << "\n";
-  for (int i=0; i<robot_object_correspondences.size(); i++)
+  for (int i=0; i<(int)robot_object_correspondences.size(); i++)
     std::cout << robot_object_correspondences[i] << " ";
   std::cout << "\n";std::cout << "\n";
 
@@ -119,7 +119,7 @@ NonpenetratingObjectCost::NonpenetratingObjectCost(std::shared_ptr<RigidBodyTree
     Eigen::VectorXd distances;
     Eigen::Matrix3Xd normals;
     std::vector<int> body_ids;
-    robot_object->collisionRaycast(robot_object_kinematics_cache,
+    robot_object->collisionDetectFromPoints(robot_object_kinematics_cache,
                           source_pts,
                           dest_pts,
                           distances, normals,
@@ -201,13 +201,13 @@ bool NonpenetratingObjectCost::constructCost(ManipulationTracker * tracker, cons
 
   // First, convert x_old into corresponding q values for robot and robot_object
   VectorXd q_old(robot->get_num_positions());
-  for (int i=0; i<robot_correspondences.size(); i++)
+  for (int i=0; i<(int)robot_correspondences.size(); i++)
     q_old(i) = x_old(robot_correspondences[i]);
   robot_kinematics_cache.initialize(q_old);
   robot->doKinematics(robot_kinematics_cache);
 
   VectorXd q_object_old(robot_object->get_num_positions());
-  for (int i=0; i<robot_object_correspondences.size(); i++)
+  for (int i=0; i<(int)robot_object_correspondences.size(); i++)
     q_object_old(i) = x_old(robot_object_correspondences[i]);
   robot_object_kinematics_cache.initialize(q_object_old);
   robot_object->doKinematics(robot_object_kinematics_cache);
@@ -231,7 +231,7 @@ bool NonpenetratingObjectCost::constructCost(ManipulationTracker * tracker, cons
 
     // for every unique body points have returned onto...
     std::vector<int> num_points_on_body(robot->bodies.size(), 0);
-    for (int i=0; i < body_idx.size(); i++)
+    for (int i=0; i < (int)body_idx.size(); i++)
       num_points_on_body[body_idx[i]] += 1;
 
     // for every body...

@@ -219,7 +219,7 @@ bool GelsightCost::constructCost(ManipulationTracker * tracker, const Eigen::Mat
           Matrix3Xd z_norms(3, num_points_on_body[i]); // normals corresponding to these points
           int k = 0;
           for (int j=0; j < (int)body_idx.size(); j++){
-            assert(k < body_idx.size());
+            assert(k < (int)body_idx.size());
             if (body_idx[j] == i){
               assert(j < contact_points.cols());
               if (contact_points(0, j) == 0.0){

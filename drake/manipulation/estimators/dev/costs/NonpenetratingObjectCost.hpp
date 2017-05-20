@@ -51,8 +51,8 @@ private:
                                                       // "sticking" behavior when pulling gelsight away from an
                                                       // object.
 
-  int object_index = 0;
-  int object_state_index = 0;
+//  int object_index = 0;
+//  int object_state_index = 0;
 
   std::shared_ptr<RigidBodyTreed> robot;
   KinematicsCache<double> robot_kinematics_cache;

@@ -25,7 +25,9 @@ std::shared_ptr<RigidBodyTreed> setupRobotFromConfig(YAML::Node config, Eigen::V
     robots_string = "robots";
 
   auto manip = config[robots_string].begin();
-  std::shared_ptr<RigidBodyTreed> robot(new RigidBodyTreed(base_path + manip->second["urdf"].as<string>()));
+  auto file_path = base_path + manip->second["urdf"].as<string>();
+  std::shared_ptr<RigidBodyTreed> robot(new RigidBodyTreed());
+  drake::parsers::urdf::AddModelInstanceFromUrdfFile(file_path, robot.get());
   x0_robot.resize(robot->get_num_positions());
   if (manip->second["q0"] && manip->second["q0"].Type() == YAML::NodeType::Map){
     for (int i=old_num_positions; i < robot->get_num_positions(); i++){
@@ -74,7 +76,7 @@ std::shared_ptr<RigidBodyTreed> setupRobotFromConfig(YAML::Node config, Eigen::V
 }
 
 static bool vector_contains_str(std::vector<std::string> vec, std::string str) {
-  for (int i=0; i<vec.size(); i++) {
+  for (size_t i=0; i<vec.size(); i++) {
     if (str == vec[i])
       return true;
   }

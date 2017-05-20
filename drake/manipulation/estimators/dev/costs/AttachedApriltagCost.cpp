@@ -53,7 +53,7 @@ AttachedApriltagCost::AttachedApriltagCost(std::shared_ptr<const RigidBodyTreed>
       numtags++;
 
       // first try to find the robot name
-      std:string linkname = (*iter)["body"].as<string>();
+      std::string linkname = (*iter)["body"].as<string>();
       auto search = robot->FindBody(linkname, robot_name);
       if (search == nullptr){
         printf("Couldn't find link name %s on robot %s", linkname.c_str(), robot_name.c_str());
