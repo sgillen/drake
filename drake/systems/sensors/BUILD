@@ -284,6 +284,17 @@ drake_cc_googletest(
     ],
 )
 
+filegroup(
+    name = "test_models",
+    testonly = 1,
+    srcs = glob([
+        "test/**/*.obj",
+        "test/**/*.sdf",
+        "test/**/*.urdf",
+        "test/**/*.xml",
+    ]),
+)
+
 drake_cc_binary(
     name = "rgbd_camera_test",
     testonly = 1,
@@ -301,6 +312,9 @@ drake_cc_binary(
         "//drake/systems/framework:diagram",
         "//drake/systems/rendering:pose_vector",
         "@gtest//:main",
+    ],
+    data = [
+        ":test_models",
     ],
 )
 
