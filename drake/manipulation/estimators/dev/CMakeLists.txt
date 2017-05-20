@@ -1,6 +1,17 @@
 find_package(OpenCV REQUIRED)
 include_directories(${OpenCV_DIRS})
 
+include(../../../../cmake/externals.cmake)
+
+drake_add_external(vicon PUBLIC CMAKE PYTHON
+  DEPENDS lcm
+  SOURCE_SUBDIR externals/vicon
+  )
+drake_add_external(kinect PUBLIC CMAKE PYTHON
+  DEPENDS lcm
+  SOURCE_SUBDIR externals/kinect
+  )
+
 set(drakeManipulationTracker_SRC_FILES
     ManipulationTracker.cpp
     costs/AttachedApriltagCost.cpp

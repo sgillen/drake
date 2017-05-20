@@ -110,3 +110,9 @@
 [submodule "externals/protobuf"]
 	path = externals/protobuf
 	url = https://github.com/google/protobuf.git
+[submodule "drake/manipulation/estimators/dev/externals/vicon"]
+	path = drake/manipulation/estimators/dev/externals/vicon
+	url = https://github.com/openhumanoids/vicon.git
+[submodule "drake/manipulation/estimators/dev/externals/kinect"]
+	path = drake/manipulation/estimators/dev/externals/kinect
+	url = https://github.com/openhumanoids/kinect.git
