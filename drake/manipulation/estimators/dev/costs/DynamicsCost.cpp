@@ -42,7 +42,7 @@ bool DynamicsCost::constructPredictionMatrices(ManipulationTracker * tracker, co
 {
   double now = getUnixTime();
 
-  VectorXd q_old = x_old.block(0, 0, robot_->number_of_positions(), 1);
+  VectorXd q_old = x_old.block(0, 0, robot_->get_num_positions(), 1);
 
   // predict x to be within joint limits
   x = x_old;
@@ -70,11 +70,11 @@ bool DynamicsCost::constructPredictionMatrices(ManipulationTracker * tracker, co
     else
       these_vars = dynamics_vars_defaults_;
 
-    if (robot_->bodies[i]->getJoint().isFloating())
-      for (int k = 0; k < robot_->bodies[k]->getJoint().getNumPositions(); k++)
+    if (robot_->bodies[i]->getJoint().is_floating())
+      for (int k = 0; k < robot_->bodies[k]->getJoint().get_num_positions(); k++)
         P(k + robot_->bodies[k]->get_position_start_index(), k + robot_->bodies[k]->get_position_start_index()) += these_vars.floating_base_var;
     else
-      for (int k = 0; k < robot_->bodies[k]->getJoint().getNumPositions(); k++)
+      for (int k = 0; k < robot_->bodies[k]->getJoint().get_num_positions(); k++)
         P(k + robot_->bodies[k]->get_position_start_index(), k + robot_->bodies[k]->get_position_start_index()) += these_vars.other_var;
   }
 

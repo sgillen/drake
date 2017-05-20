@@ -120,7 +120,7 @@ bool GelsightCost::constructCost(ManipulationTracker * tracker, const Eigen::Mat
     return false;
   }
   else {
-    VectorXd q_old = x_old.block(0, 0, robot->number_of_positions(), 1);
+    VectorXd q_old = x_old.block(0, 0, robot->get_num_positions(), 1);
     robot_kinematics_cache.initialize(q_old);
     robot->doKinematics(robot_kinematics_cache);
 

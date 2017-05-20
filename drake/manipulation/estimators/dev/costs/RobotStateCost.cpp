@@ -12,7 +12,7 @@ using namespace Eigen;
 RobotStateCost::RobotStateCost(std::shared_ptr<const RigidBodyTreed> robot_, std::shared_ptr<lcm::LCM> lcm_, YAML::Node config) :
     lcm(lcm_),
     robot(robot_),
-    nq(robot->number_of_positions())
+    nq(robot->get_num_positions())
 {
   if (config["state_channelname"])
     state_channelname = config["state_channelname"].as<string>();
