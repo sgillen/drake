@@ -9,7 +9,8 @@ drake_cc_library(
         glob("costs/*.hpp"),
     ],
     deps = [
-
+        # HACK: Since VTK has the necessary GLUT libraries.
+        "@vtk//:vtk_libraries",
     ],
 )
 
