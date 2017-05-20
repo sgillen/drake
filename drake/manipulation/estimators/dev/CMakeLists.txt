@@ -1,28 +1,77 @@
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+find_package(OpenCV REQUIRED)
+include_directories(${OpenCV_DIRS})
 
-include_directories( ./ )
+set(drakeManipulationTracker_SRC_FILES
+    ManipulationTracker.cpp
+    costs/DynamicsCost.cpp
+    costs/AttachedApriltagCost.cpp
+    costs/GelsightCost.cpp
+    costs/OptotrakMarkerCost.cpp
+    costs/RobotStateCost.cpp
+    costs/JointStateCost.cpp
+    costs/NonpenetratingObjectCost.cpp
+    costs/KinectFrameCost.cpp
+    )
 
-add_subdirectory(costs)
+set(drakeManipulationTracker_HEADERS
+    common/sdf_2d_functions.hpp
+    common/common.hpp
+    ManipulationTracker.hpp
+    costs/DynamicsCost.hpp
+    costs/NonpenetratingObjectCost.hpp
+    costs/KinectFrameCost.hpp
+    costs/OptotrakMarkerCost.hpp
+    costs/JointStateCost.hpp
+    costs/GelsightCost.hpp
+    costs/ManipulationTrackerCost.hpp
+    costs/RobotStateCost.hpp
+    costs/AttachedApriltagCost.hpp
+    )
 
-add_library(ManipulationTracker SHARED ManipulationTracker.cpp)
-pods_use_pkg_config_packages(ManipulationTracker drake-convex-hull eigen3)
-target_link_libraries(ManipulationTracker drakeRBM yaml-cpp bot2-core bot2-frames bot2-param-client)
-pods_install_libraries(ManipulationTracker)
-pods_install_headers(ManipulationTracker.hpp DESTINATION perception_manipulation_tracker)
+set(drakeManipulationTracker_EXTERNAL_LIBRARIES
+    lcm
+    lcmtypes_drc_lcmtypes
+    bot2-core
+    bot2-lcmgl-client
+    bot2-frames
+    bot2-param-client
+    # kinect-utils
+    ${OpenCV_LIBS}
+    )
+
+set(drakeManipulationTracker_LIBRARIES
+    ${drakeManipulationTracker_EXTERNAL_LIBRARIES}
+    drake-convex-hull
+    drakeCommon
+    drakeJoints
+    drakeRBM
+    drakeRigidBodyPlant
+    drakeSystemFramework
+    drakeUtil
+    drakeXMLUtil)  # How to replace this?
+
+add_library_with_exports(LIB_NAME drakeManipulationTracker SOURCE_FILES
+    ${drakeManipulationTracker_SRC_FILES})
+
+target_link_libraries(drakeManipulationTracker
+    ${drakeManipulationTracker_LIBRARIES})
+
+drake_install_libraries(drakeManipulationTracker)
+drake_install_headers(${drakeManipulationTracker_HEADERS})
+drake_install_pkg_config_file(drake-sensors
+    TARGET drakeManipulationTracker
+    LIBS -ldrakeManipulationTracker)
 
 add_executable(runManipulationTracker runManipulationTracker.cpp)
-target_link_libraries(runManipulationTracker ManipulationTracker RobotStateCost GelsightCost JointStateCost KinectFrameCost AttachedApriltagCost DynamicsCost OptotrakMarkerCost NonpenetratingObjectCost yaml-cpp)
-pods_install_executables(runManipulationTracker)
+target_link_libraries(runManipulationTracker drakeManipulationTracker)
+drake_add_test(
+    NAME runManipulationTracker COMMAND runManipulationTracker --simulation_sec 0.01)
 
-add_executable(runErrorCalculator runErrorCalculator.cpp)
-pods_use_pkg_config_packages(runErrorCalculator lcmtypes_drc_lcmtypes lcm bot2-core bot2-lcmgl-client bot2-frames bot2-param-client kinect-utils opencv drake-convex-hull eigen3)
-target_link_libraries(runErrorCalculator drakeRBM drakeJoints drakeUtil drakeXMLUtil drakeCommon yaml-cpp)
-pods_install_executables(runErrorCalculator)
+add_executable(runErrorEstimator runErrorEstimator.cpp)
+target_link_libraries(runErrorEstimator runErrorEstimator)
+drake_add_test(
+    NAME runErrorEstimator COMMAND runErrorEstimator --simulation_sec 0.01)
 
-add_library(GelsightOpenGLSim SHARED GelsightOpenGLSim.cpp)
-target_link_libraries(GelsightOpenGLSim ManipulationTracker stdc++ pthread GL GLU glut GLEW)
-pods_use_pkg_config_packages(GelsightOpenGLSim drake-shapes eigen3)
-pods_install_libraries(GelsightOpenGLSim)
-pods_install_headers(GelsightOpenGLSim.hpp DESTINATION perception_manipulation_tracker)
-
-add_subdirectory(test)
+if(BUILD_TESTING)
+  add_subdirectory(test)
+endif()
