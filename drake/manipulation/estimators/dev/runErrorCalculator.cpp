@@ -7,7 +7,7 @@
 #include "lcmtypes/bot_core/robot_state_t.hpp"
 #include "lcmtypes/bot_core/rigid_transform_t.hpp"
 #include "common/common.hpp"
-#include "drake/systems/plants/RigidBodyTree.h"
+#include "drake/multibody/rigid_body_tree.h"
 #include "costs/ManipulationTrackerCost.hpp"
 #include "yaml-cpp/yaml.h"
 #include <lcm/lcm-cpp.hpp>
@@ -20,8 +20,8 @@
 using namespace std;
 using namespace Eigen;
 
-RigidBodyTree * robot_1;
-RigidBodyTree * robot_2;
+RigidBodyTreed * robot_1;
+RigidBodyTreed * robot_2;
 
 
 class Handler
@@ -149,7 +149,7 @@ int main(int argc, char** argv) {
     relative_transform.matrix().block<3, 3>(0,0) = Quaterniond(relative_transform_quat[0], relative_transform_quat[1],relative_transform_quat[2], relative_transform_quat[3]).toRotationMatrix();
   }
 
-  robot_1 = new RigidBodyTree(drc_path + config["robot_1"]["urdf"].as<string>(), DrakeJoint::QUATERNION);
+  robot_1 = new RigidBodyTreed(drc_path + config["robot_1"]["urdf"].as<string>(), DrakeJoint::QUATERNION);
   string link_1_name = config["robot_1"]["link"].as<string>();
   int link_ind_1 = robot_1->FindBodyIndex(link_1_name);
   Vector3d offset_1;
@@ -161,7 +161,7 @@ int main(int argc, char** argv) {
     offset_1[2] = offset[2];
   }
 
-  robot_2 = new RigidBodyTree(drc_path + config["robot_2"]["urdf"].as<string>(), DrakeJoint::QUATERNION);
+  robot_2 = new RigidBodyTreed(drc_path + config["robot_2"]["urdf"].as<string>(), DrakeJoint::QUATERNION);
   string link_2_name = config["robot_2"]["link"].as<string>();
   int link_ind_2 = robot_2->FindBodyIndex(link_2_name);
   Vector3d offset_2;

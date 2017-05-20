@@ -9,7 +9,7 @@
 using namespace std;
 using namespace Eigen;
 
-JointStateCost::JointStateCost(std::shared_ptr<const RigidBodyTree> robot_, std::shared_ptr<lcm::LCM> lcm_, YAML::Node config) :
+JointStateCost::JointStateCost(std::shared_ptr<const RigidBodyTreed> robot_, std::shared_ptr<lcm::LCM> lcm_, YAML::Node config) :
     robot(robot_),
     lcm(lcm_),
     nq(robot->number_of_positions())

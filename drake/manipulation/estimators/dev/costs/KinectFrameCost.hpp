@@ -4,7 +4,7 @@
 #include <stdexcept>
 #include <iostream>
 #include "ManipulationTrackerCost.hpp"
-#include "drake/systems/plants/RigidBodyTree.h"
+#include "drake/multibody/rigid_body_tree.h"
 #include <lcm/lcm-cpp.hpp>
 #include <memory>
 #include <mutex>
@@ -24,7 +24,7 @@
 
 class KinectFrameCost : public ManipulationTrackerCost {
 public:
-  KinectFrameCost(std::shared_ptr<RigidBodyTree> robot_, std::shared_ptr<lcm::LCM> lcm_, YAML::Node config);
+  KinectFrameCost(std::shared_ptr<RigidBodyTreed> robot_, std::shared_ptr<lcm::LCM> lcm_, YAML::Node config);
   ~KinectFrameCost() {};
   bool constructCost(ManipulationTracker * tracker, const Eigen::Matrix<double, Eigen::Dynamic, 1> x_old, Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>& Q, Eigen::Matrix<double, Eigen::Dynamic, 1>& f, double& K);
 
@@ -79,7 +79,7 @@ private:
   bool world_frame = true;
 
   std::shared_ptr<lcm::LCM> lcm;
-  std::shared_ptr<RigidBodyTree> robot;
+  std::shared_ptr<RigidBodyTreed> robot;
   KinematicsCache<double> robot_kinematics_cache;
   int nq;
 

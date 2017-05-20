@@ -5,7 +5,7 @@
 #include <cmath>
 #include <cfloat>
 #include "drake/util/drakeGeometryUtil.h"
-#include <drake/systems/plants/parser_urdf.h>
+#include <drake/multibody/parsers/urdf_parser.h>
 
 #include "common/common.hpp"
 
@@ -13,7 +13,7 @@ using namespace std;
 using namespace Eigen;
 using namespace drake::math;
 
-std::shared_ptr<RigidBodyTree> setupRobotFromConfig(YAML::Node config, Eigen::VectorXd& x0_robot, std::string base_path, bool verbose, bool less_collision){
+std::shared_ptr<RigidBodyTreed> setupRobotFromConfig(YAML::Node config, Eigen::VectorXd& x0_robot, std::string base_path, bool verbose, bool less_collision){
   // generate robot from yaml file by adding each robot in sequence
   // first robot -- need to initialize the RBT
   int old_num_positions = 0;
@@ -25,7 +25,7 @@ std::shared_ptr<RigidBodyTree> setupRobotFromConfig(YAML::Node config, Eigen::Ve
     robots_string = "robots";
 
   auto manip = config[robots_string].begin();
-  std::shared_ptr<RigidBodyTree> robot(new RigidBodyTree(base_path + manip->second["urdf"].as<string>()));
+  std::shared_ptr<RigidBodyTreed> robot(new RigidBodyTreed(base_path + manip->second["urdf"].as<string>()));
   x0_robot.resize(robot->number_of_positions());
   if (manip->second["q0"] && manip->second["q0"].Type() == YAML::NodeType::Map){
     for (int i=old_num_positions; i < robot->number_of_positions(); i++){
@@ -81,7 +81,7 @@ static bool vector_contains_str(std::vector<std::string> vec, std::string str) {
   return false;
 }
 
-std::shared_ptr<RigidBodyTree> setupRobotFromConfigSubset(YAML::Node config, Eigen::VectorXd& x0_robot_subset, std::string base_path,
+std::shared_ptr<RigidBodyTreed> setupRobotFromConfigSubset(YAML::Node config, Eigen::VectorXd& x0_robot_subset, std::string base_path,
     bool verbose, bool less_collision, bool exclusionary, std::vector<std::string> exceptions, std::vector<int> &index_correspondences){
   // generate robot from yaml file by adding each robot in sequence
   // if some robots are to be excluded, their yaml file names will appear in exceptions
@@ -97,8 +97,8 @@ std::shared_ptr<RigidBodyTree> setupRobotFromConfigSubset(YAML::Node config, Eig
 
   auto manip = config[robots_string].begin();
   
-  std::shared_ptr<RigidBodyTree> robot(new RigidBodyTree());
-  std::shared_ptr<RigidBodyTree> robot_subset(new RigidBodyTree());
+  std::shared_ptr<RigidBodyTreed> robot(new RigidBodyTreed());
+  std::shared_ptr<RigidBodyTreed> robot_subset(new RigidBodyTreed());
 
   x0_robot_subset.resize(robot_subset->number_of_positions());
 
@@ -155,7 +155,7 @@ std::shared_ptr<RigidBodyTree> setupRobotFromConfigSubset(YAML::Node config, Eig
   return robot_subset;
 }
 
-ManipulationTracker::ManipulationTracker(std::shared_ptr<const RigidBodyTree> robot, Eigen::Matrix<double, Eigen::Dynamic, 1> x0_robot, std::shared_ptr<lcm::LCM> lcm, YAML::Node config, bool verbose) :
+ManipulationTracker::ManipulationTracker(std::shared_ptr<const RigidBodyTreed> robot, Eigen::Matrix<double, Eigen::Dynamic, 1> x0_robot, std::shared_ptr<lcm::LCM> lcm, YAML::Node config, bool verbose) :
     robot_(robot),
     lcm_(lcm),
     verbose_(verbose),
