@@ -3,7 +3,7 @@
 
 #include <Eigen/Dense>
 
-static double getUnixTime(void)
+inline double getUnixTime(void)
 {
     struct timespec tv;
 

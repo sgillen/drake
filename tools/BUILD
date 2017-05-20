@@ -274,6 +274,13 @@ config_setting(
     values = {"define": "NO_NLOPT=ON"},
 )
 
+# Experimental setup for VTK.
+# See //tools/vtk.bzl for environment variables that must be configured.
+config_setting(
+    name = "with_vtk",
+    values = {"define": "WITH_VTK=ON"},
+)
+
 config_setting(
     name = "linux",
     values = {"cpu": "k8"},
