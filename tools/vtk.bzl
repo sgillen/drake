@@ -56,8 +56,8 @@ filegroup(
 cc_library(
     name = "vtk_libraries",
     hdrs = glob(["include/**/*"]),
-    includes = ["include/vtk-7.1"],
-    srcs = glob(["lib/*.so"]),
+    includes = glob(["include/*"], exclude_directories=0),
+    srcs = glob(["lib/**/*.so"]),
     linkopts=["-Wl,-rpath {}"],
 )
     """.format(rpath)
