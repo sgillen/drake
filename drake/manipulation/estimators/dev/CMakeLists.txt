@@ -47,7 +47,7 @@ set(drakeManipulationTracker_LIBRARIES
     drakeRBM
     drakeRigidBodyPlant
     drakeSystemFramework
-    drakeUtil
+    # drakeUtil
     drakeXMLUtil)  # How to replace this?
 
 add_library_with_exports(LIB_NAME drakeManipulationTracker SOURCE_FILES
@@ -67,10 +67,10 @@ target_link_libraries(runManipulationTracker drakeManipulationTracker)
 drake_add_test(
     NAME runManipulationTracker COMMAND runManipulationTracker --simulation_sec 0.01)
 
-add_executable(runErrorEstimator runErrorEstimator.cpp)
-target_link_libraries(runErrorEstimator runErrorEstimator)
+add_executable(runErrorCalculator runErrorCalculator.cpp)
+target_link_libraries(runErrorCalculator drakeManipulationTracker)
 drake_add_test(
-    NAME runErrorEstimator COMMAND runErrorEstimator --simulation_sec 0.01)
+    NAME runErrorCalculator COMMAND runErrorCalculator --simulation_sec 0.01)
 
 if(BUILD_TESTING)
   add_subdirectory(test)
