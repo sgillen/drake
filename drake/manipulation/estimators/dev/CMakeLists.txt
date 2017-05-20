@@ -31,6 +31,7 @@ set(drakeManipulationTracker_HEADERS
 set(drakeManipulationTracker_EXTERNAL_LIBRARIES
     lcm
     lcmtypes_drc_lcmtypes
+    lcmtypes_bot2-core-cpp
     bot2-core
     bot2-lcmgl-client
     bot2-frames
@@ -49,6 +50,8 @@ set(drakeManipulationTracker_LIBRARIES
     drakeSystemFramework
     # drakeUtil
     drakeXMLUtil)  # How to replace this?
+
+include_directories(.)
 
 add_library_with_exports(LIB_NAME drakeManipulationTracker SOURCE_FILES
     ${drakeManipulationTracker_SRC_FILES})
