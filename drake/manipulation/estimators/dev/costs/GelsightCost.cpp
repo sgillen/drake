@@ -33,10 +33,10 @@ void eigen2cv( const Eigen::Matrix<_Tp, _rows, _cols, _options, _maxRows, _maxCo
 }
 
 GelsightCost::GelsightCost(std::shared_ptr<RigidBodyTreed> robot_, std::shared_ptr<lcm::LCM> lcm_, YAML::Node config) :
-    robot(robot_),
-    robot_kinematics_cache(robot->bodies),
     lcm(lcm_),
-    nq(robot->number_of_positions())
+    robot(robot_),
+    robot_kinematics_cache(robot->CreateKinematicsCache()),
+    nq(robot->get_num_positions())
 {
   if (config["downsample_amount"])
     downsample_amount = config["downsample_amount"].as<double>();
@@ -144,8 +144,8 @@ bool GelsightCost::constructCost(ManipulationTracker * tracker, const Eigen::Mat
     int num_contact_points = 0;
     int num_noncontact_points = 0;
 
-    for (size_t v=0; v<num_pixel_rows; v++) {
-      for (size_t u=0; u<num_pixel_cols; u++) {
+    for (int v=0; v<num_pixel_rows; v++) {
+      for (int u=0; u<num_pixel_cols; u++) {
         int full_v = min((int)floor(((double)v)*downsample_amount) + rand()%(int)downsample_amount, input_num_pixel_rows-1);
         int full_u = min((int)floor(((double)u)*downsample_amount) + rand()%(int)downsample_amount, input_num_pixel_cols-1);
 
@@ -205,11 +205,11 @@ bool GelsightCost::constructCost(ManipulationTracker * tracker, const Eigen::Mat
 
       // for every unique body points have returned onto...
       std::vector<int> num_points_on_body(robot->bodies.size(), 0);
-      for (int i=0; i < body_idx.size(); i++)
+      for (size_t i=0; i < body_idx.size(); i++)
         num_points_on_body[body_idx[i]] += 1;
 
       // for every body...
-      for (int i=0; i < robot->bodies.size(); i++){
+      for (int i=0; i < (int)robot->bodies.size(); i++){
         if (num_points_on_body[i] > 0){
 
           // collect results from raycast that correspond to this body out in the world
@@ -218,7 +218,7 @@ bool GelsightCost::constructCost(ManipulationTracker * tracker, const Eigen::Mat
           Matrix3Xd body_z_prime(3, num_points_on_body[i]); // projected points in body frame
           Matrix3Xd z_norms(3, num_points_on_body[i]); // normals corresponding to these points
           int k = 0;
-          for (int j=0; j < body_idx.size(); j++){
+          for (int j=0; j < (int)body_idx.size(); j++){
             assert(k < body_idx.size());
             if (body_idx[j] == i){
               assert(j < contact_points.cols());
@@ -263,8 +263,8 @@ bool GelsightCost::constructCost(ManipulationTracker * tracker, const Eigen::Mat
 
             if (j % 1 == 0){
               // visualize point correspondences and normals
-              double dist_normalized = fmin(max_considered_corresp_distance, (z.col(j) - z_prime.col(j)).norm()) / max_considered_corresp_distance;
-              //bot_lcmgl_color3f(lcmgl_corresp_, dist_normalized*dist_normalized, 0, (1.0-dist_normalized)*(1.0-dist_normalized));
+//              double dist_normalized = fmin(max_considered_corresp_distance, (z.col(j) - z_prime.col(j)).norm()) / max_considered_corresp_distance;
+//              //bot_lcmgl_color3f(lcmgl_corresp_, dist_normalized*dist_normalized, 0, (1.0-dist_normalized)*(1.0-dist_normalized));
               bot_lcmgl_vertex3f(lcmgl_corresp_, z(0, j), z(1, j), z(2, j));
               bot_lcmgl_vertex3f(lcmgl_corresp_, z_prime(0, j), z_prime(1, j), z_prime(2, j));
               
@@ -296,11 +296,11 @@ bool GelsightCost::constructCost(ManipulationTracker * tracker, const Eigen::Mat
 
       // for every unique body points have returned onto...
       std::vector<int> num_points_on_body(robot->bodies.size(), 0);
-      for (int i=0; i < body_idx.size(); i++)
+      for (int i=0; i < (int)body_idx.size(); i++)
         num_points_on_body[body_idx[i]] += 1;
 
       // for every body...
-      for (int i=0; i < robot->bodies.size(); i++){
+      for (int i=0; i < (int)robot->bodies.size(); i++){
         if (num_points_on_body[i] > 0){
 
           // collect results from raycast that correspond to this body out in the world
@@ -311,8 +311,8 @@ bool GelsightCost::constructCost(ManipulationTracker * tracker, const Eigen::Mat
           Matrix3Xd z_norms(3, num_points_on_body[i]); // normals corresponding to these points
           int k = 0;
 
-          for (int j=0; j < body_idx.size(); j++){
-            assert(k < body_idx.size());
+          for (int j=0; j < (int)body_idx.size(); j++){
+            assert(k < (int)body_idx.size());
             if (body_idx[j] == i){
               assert(j < noncontact_points.cols());
               if (noncontact_points(0, j) == 0.0){
@@ -359,8 +359,8 @@ bool GelsightCost::constructCost(ManipulationTracker * tracker, const Eigen::Mat
 
             if (j % 1 == 0){
               // visualize point correspondences and normals
-              double dist_normalized = fmin(max_considered_corresp_distance, (z.col(j) - z_prime.col(j)).norm()) / max_considered_corresp_distance;
-            //  bot_lcmgl_color3f(lcmgl_corresp_, 1.0, 0.0, (1.0-dist_normalized)*(1.0-dist_normalized));
+//              double dist_normalized = fmin(max_considered_corresp_distance, (z.col(j) - z_prime.col(j)).norm()) / max_considered_corresp_distance;
+//            //  bot_lcmgl_color3f(lcmgl_corresp_, 1.0, 0.0, (1.0-dist_normalized)*(1.0-dist_normalized));
               bot_lcmgl_vertex3f(lcmgl_corresp_, z(0, j), z(1, j), z(2, j));
               //Vector3d norm_endpt = z_prime.block<3,1>(0,j) + z_norms.block<3,1>(0,j)*0.01;
               //bot_lcmgl_vertex3f(lcmgl_corresp_, norm_endpt(0), norm_endpt(1), norm_endpt(2));

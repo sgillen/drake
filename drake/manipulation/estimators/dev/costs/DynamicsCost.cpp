@@ -10,9 +10,9 @@ using namespace std;
 using namespace Eigen;
 
 DynamicsCost::DynamicsCost(std::shared_ptr<const RigidBodyTreed> robot, std::shared_ptr<lcm::LCM> lcm, YAML::Node config) :
-    robot_(robot),
     lcm_(lcm),
-    nq_(robot->number_of_positions())
+    robot_(robot),
+    nq_(robot->get_num_positions())
 {
   if (config["dynamics_floating_base_var"])
     dynamics_vars_defaults_.floating_base_var = config["dynamics_floating_base_var"].as<double>();
@@ -61,7 +61,7 @@ bool DynamicsCost::constructPredictionMatrices(ManipulationTracker * tracker, co
                 DYNAMICS HINTS
     *********************************************/
 
-  for (int i=1; i<robot_->bodies.size(); i++){
+  for (size_t i=1; i<robot_->bodies.size(); i++){
     // todo: some caching? maybe? this is pretty inefficient
     auto it = dynamics_vars_per_robot_.find(robot_->bodies[i]->get_model_name());
     DynamicsVars these_vars;
@@ -71,11 +71,11 @@ bool DynamicsCost::constructPredictionMatrices(ManipulationTracker * tracker, co
       these_vars = dynamics_vars_defaults_;
 
     if (robot_->bodies[i]->getJoint().isFloating())
-      for (int i = 0; i < robot_->bodies[i]->getJoint().getNumPositions(); i++)
-        P(i + robot_->bodies[i]->get_position_start_index(), i + robot_->bodies[i]->get_position_start_index()) += these_vars.floating_base_var;
+      for (int k = 0; k < robot_->bodies[k]->getJoint().getNumPositions(); k++)
+        P(k + robot_->bodies[k]->get_position_start_index(), k + robot_->bodies[k]->get_position_start_index()) += these_vars.floating_base_var;
     else
-      for (int i = 0; i < robot_->bodies[i]->getJoint().getNumPositions(); i++)
-        P(i + robot_->bodies[i]->get_position_start_index(), i + robot_->bodies[i]->get_position_start_index()) += these_vars.other_var;
+      for (int k = 0; k < robot_->bodies[k]->getJoint().getNumPositions(); k++)
+        P(k + robot_->bodies[k]->get_position_start_index(), k + robot_->bodies[k]->get_position_start_index()) += these_vars.other_var;
   }
 
   if (verbose_)

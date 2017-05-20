@@ -3,29 +3,29 @@ include_directories(${OpenCV_DIRS})
 
 set(drakeManipulationTracker_SRC_FILES
     ManipulationTracker.cpp
-    costs/DynamicsCost.cpp
     costs/AttachedApriltagCost.cpp
+    costs/DynamicsCost.cpp
     costs/GelsightCost.cpp
-    costs/OptotrakMarkerCost.cpp
-    costs/RobotStateCost.cpp
     costs/JointStateCost.cpp
+#    costs/KinectFrameCost.cpp
     costs/NonpenetratingObjectCost.cpp
-    costs/KinectFrameCost.cpp
+#    costs/OptotrakMarkerCost.cpp
+    costs/RobotStateCost.cpp
     )
 
 set(drakeManipulationTracker_HEADERS
     common/sdf_2d_functions.hpp
     common/common.hpp
     ManipulationTracker.hpp
-    costs/DynamicsCost.hpp
-    costs/NonpenetratingObjectCost.hpp
-    costs/KinectFrameCost.hpp
-    costs/OptotrakMarkerCost.hpp
-    costs/JointStateCost.hpp
-    costs/GelsightCost.hpp
-    costs/ManipulationTrackerCost.hpp
-    costs/RobotStateCost.hpp
     costs/AttachedApriltagCost.hpp
+    costs/DynamicsCost.hpp
+    costs/GelsightCost.hpp
+    costs/JointStateCost.hpp
+#    costs/KinectFrameCost.hpp
+    costs/ManipulationTrackerCost.hpp
+    costs/NonpenetratingObjectCost.hpp
+#    costs/OptotrakMarkerCost.hpp
+    costs/RobotStateCost.hpp
     )
 
 set(drakeManipulationTracker_EXTERNAL_LIBRARIES

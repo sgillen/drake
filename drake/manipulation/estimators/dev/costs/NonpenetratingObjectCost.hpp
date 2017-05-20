@@ -12,10 +12,10 @@
 
 #include "lcmtypes/bot_core/rigid_transform_t.hpp"
 #include "lcmtypes/bot_core/raw_t.hpp"
-#include "lcmtypes/kinect/frame_msg_t.hpp"
-#include "lcmtypes/vicon/body_t.hpp"
+//#include "lcmtypes/kinect/frame_msg_t.hpp"
+//#include "lcmtypes/vicon/body_t.hpp"
 #include "lcmtypes/bot_core/image_t.hpp"
-#include <kinect/kinect-utils.h>
+//#include <kinect/kinect-utils.h>
 #include <mutex>
 #include <bot_lcmgl_client/lcmgl.h>
 #include <bot_frames/bot_frames.h>

@@ -12,9 +12,9 @@ using namespace Eigen;
 using namespace drake::math;
 
 AttachedApriltagCost::AttachedApriltagCost(std::shared_ptr<const RigidBodyTreed> robot_, std::shared_ptr<lcm::LCM> lcm_, YAML::Node config) :
-    robot(robot_),
-    robot_kinematics_cache(robot->bodies),
     lcm(lcm_),
+    robot(robot_),
+    robot_kinematics_cache(robot_->CreateKinematicsCache()),
     nq(robot->number_of_positions())
 {
   if (config["attached_manipuland"]){
@@ -152,7 +152,7 @@ bool AttachedApriltagCost::constructCost(ManipulationTracker * tracker, const Ei
     long long utime = 0;
     Eigen::Isometry3d robot2world;
     this->get_trans_with_utime("robot_base", "local", utime, robot2world);
-    long long utime2 = 0;
+//    long long utime2 = 0;
     camera_offset_mutex.lock();
     kinect2world =  robot2world * kinect2robot.inverse();
     camera_offset_mutex.unlock();
