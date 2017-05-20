@@ -605,7 +605,7 @@ endfunction()
 # Options controlling external dependencies
 option(AUTO_UPDATE_EXTERNALS
   "Update external projects to their tag revision on compile"
-  ON)
+  OFF)
 
 option(WITH_ALL_PUBLIC_EXTERNALS
   "Enable all externals available to public academic users"
