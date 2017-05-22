@@ -34,48 +34,31 @@ void eigen2cv( const Eigen::Matrix<_Tp, _rows, _cols, _options, _maxRows, _maxCo
 }
 
 namespace {
+
 /// @brief Two points that define (x_min, y_min, z_min) and (x_max, y_max, z_max) for a simple bounding box.
 typedef Matrix<double, 3, 2> SimpleBoundingBox;
 
 constexpr double inf = std::numeric_limits<double>::infinity();
 
-template <typename Derived>
-vector<double> to_vector(const MatrixBase<Derived>& X) {
-    vector<double> out(X.size());
-    for (int i = 0; i < X.size(); ++i) {
-        out(i) = X(i);
-    }
-    return out;
-}
-
-void AssertSimpleBoundingBox(const Matrix3Xd& bbox) {
-    DRAKE_ASSERT(bbox.cols() == 8);
-    // There should be only two unique values of x, y, and z.
-    set<double> x_set{to_vector(bbox.row(0))};
-    set<double> y_set{to_vector(bbox.row(1))};
-    set<double> y_set{to_vector(bbox.row(2))};
-    DRAKE_ASSERT(x_set.size() == 2 && y_set.size() == 2 && z_set.size() == 2);
-}
-
 SimpleBoundingBox GetSimpleBoundingBox(const RigidBodyTreed& robot, const RigidBody<double>& body) {
     SimpleBoundingBox bbox;
-    auto bbox_min{bbox.col(0).array()};
-    auto bbox_max{bbox.col(1).array()};
+    // Get mutable views into the simple bounding box.
+    auto bbox_min = bbox.col(0).array();
+    auto bbox_max = bbox.col(1).array();
     bbox_min.setConstant(inf);
     bbox_max.setConstant(-inf);
     Matrix3Xd bbox_cur(3, 8);
-    auto bbox_cur_array{bbox_cur.array()};
+    // Establish mutable views for the current bounding box.
+    auto bbox_cur_array = bbox_cur.array();
     const auto& ids = body.get_collision_element_ids();
     DRAKE_DEMAND(ids.size() != 0);
     for (const auto& collision_element_id : body.get_collision_element_ids()) {
         const auto* element = robot.FindCollisionElement(collision_element_id);
-        // Assume bounding box is aligned with the major axes. Do not adjust points.
         element->getGeometry().getBoundingBoxPoints(bbox_cur);
-        AssertSimpleBoundingBox(bbox_cur);
-        bbox_min = bbox_cur.cwiseMin(bbox_cur_array.rowwise().coeffMin());
-        bbox_max = bbox_cur.cwiseMax(bbox_cur_array.rowwise().coeffMax());
+        bbox_min = bbox_min.cwiseMin(bbox_cur_array.rowwise().minCoeff());
+        bbox_max = bbox_max.cwiseMax(bbox_cur_array.rowwise().maxCoeff());
     }
-    return bbox_min;
+    return bbox;
 }
 
 template <int Rows, int Cols = 1>
@@ -90,7 +73,7 @@ Eigen::Matrix<double, Rows, Cols> UniformRandMatrix(std::default_random_engine& 
 
 Vector3d UniformRandPointInSimpleBoundingBox(const SimpleBoundingBox& box, std::default_random_engine& rand_generator) {
     Vector3d width = box.col(1) - box.col(0);
-    return box.col(0) + (UniformRandMatrix<3>(rand_generator).array() * width.array());
+    return box.col(0) + (UniformRandMatrix<3>(rand_generator).array() * width.array()).matrix();
 }
 
 }  // anonymous namespace
@@ -177,9 +160,6 @@ NonpenetratingObjectCost::NonpenetratingObjectCost(std::shared_ptr<RigidBodyTree
     dest_pts = robot_object->transformPoints(robot_object_kinematics_cache, dest_pts, robot_object_id, 0);
 
     Eigen::VectorXd distances;
-    // (Cache, const Matrix3Xd& source_pts,
-    //  const Matrix3Xd& dest_pts,
-    //  VectorXd& distances, Matrix3Xd& normals, vector<int>& body_ids, bool ?)
     robot_object->collisionRaycast(robot_object_kinematics_cache,
                           source_pts,
                           dest_pts,
@@ -364,7 +344,7 @@ bool NonpenetratingObjectCost::constructCost(ManipulationTracker * tracker, cons
 
           if (verbose_lcmgl && j % 1 == 0){
             // visualize point correspondences and normals
-            double dist_normalized = fmin(0.05, (z.col(j) - z_prime.col(j)).norm()) / 0.05;
+//            double dist_normalized = fmin(0.05, (z.col(j) - z_prime.col(j)).norm()) / 0.05;
           //  bot_lcmgl_color3f(lcmgl_nonpen_corresp_, 1.0, 0.0, (1.0-dist_normalized)*(1.0-dist_normalized));
             bot_lcmgl_vertex3f(lcmgl_nonpen_corresp_, z(0, j), z(1, j), z(2, j));
             //Vector3d norm_endpt = z_prime.block<3,1>(0,j) + z_norms.block<3,1>(0,j)*0.01;

@@ -109,9 +109,9 @@ std::shared_ptr<RigidBodyTreed> setupRobotFromConfigSubset(YAML::Node config, Ei
 
   // each new robot can b
   while (manip != config[robots_string].end()) {
-    drake::parsers::urdf::AddModelInstanceFromUrdfFile(base_path + manip->second["urdf"].as<string>(), DrakeJoint::ROLLPITCHYAW, robot.get());
+    drake::parsers::urdf::AddModelInstanceFromUrdfFile(base_path + manip->second["urdf"].as<string>(), drake::multibody::joints::kRollPitchYaw, robot.get());
     if (vector_contains_str(exceptions, manip->first.as<std::string>()) != exclusionary) { // check (CONTAINED) XOR (EXCLUSIONARY)
-      drake::parsers::urdf::AddModelInstanceFromUrdfFile(base_path + manip->second["urdf"].as<string>(), DrakeJoint::ROLLPITCHYAW, robot_subset.get());
+      drake::parsers::urdf::AddModelInstanceFromUrdfFile(base_path + manip->second["urdf"].as<string>(), drake::multibody::joints::kRollPitchYaw, robot_subset.get());
 
       x0_robot_subset.conservativeResize(robot_subset->get_num_positions());
 
@@ -159,9 +159,9 @@ std::shared_ptr<RigidBodyTreed> setupRobotFromConfigSubset(YAML::Node config, Ei
 
 ManipulationTracker::ManipulationTracker(std::shared_ptr<const RigidBodyTreed> robot, Eigen::Matrix<double, Eigen::Dynamic, 1> x0_robot, std::shared_ptr<lcm::LCM> lcm, YAML::Node config, bool verbose) :
     robot_(robot),
+    robot_kinematics_cache_(robot_->CreateKinematicsCache()),
     lcm_(lcm),
-    verbose_(verbose),
-    robot_kinematics_cache_(robot_->CreateKinematicsCache())
+    verbose_(verbose)
 {
   if (robot_->get_num_positions() + robot_->get_num_velocities() != x0_robot.rows()){
     printf("Expected initial condition with %d rows, got %ld rows.\n", robot_->get_num_positions() + robot_->get_num_velocities(), x0_robot.rows());
@@ -335,7 +335,7 @@ void ManipulationTracker::update(){
     }
   }
 
-  for (int i=1; i<robot_->bodies.size(); i++){
+  for (int i=1; i<(int)robot_->bodies.size(); i++){
     // todo: some caching? maybe? this is pretty inefficient
     auto it = dynamics_vars_per_robot_.find(robot_->bodies[i]->get_model_name());
     DynamicsVars these_vars;
@@ -488,7 +488,7 @@ void ManipulationTracker::update(){
     force_align.setIdentity();
     // find the floating base of the desired robot
     int floating_base_body = -1;
-    for (int i=0; i<robot_->bodies.size(); i++){
+    for (int i=0; i<(int)robot_->bodies.size(); i++){
       if (robot_->bodies[i]->get_model_name() == force_align_robot_ && robot_->bodies[i]->getJoint().is_floating()){
         floating_base_body = i;
         break;
@@ -515,7 +515,7 @@ void ManipulationTracker::update(){
     */
     force_align =  to_dest_frame * force_align.inverse();
     // and update all floating bases in our robot with that
-    for (int i=1; i<robot_->bodies.size(); i++){
+    for (int i=1; i<(int)robot_->bodies.size(); i++){
       if (robot_->bodies[i]->getJoint().is_floating()){
         x_.block<3, 1>(robot_->bodies[i]->get_position_start_index() + 0, 0) = 
           force_align*x_.block<3, 1>(robot_->bodies[i]->get_position_start_index() + 0, 0);
@@ -541,7 +541,7 @@ void ManipulationTracker::publish(){
   if (do_post_transform_){
     // find the floating base of the desired robot
     int floating_base_body = -1;
-    for (int i=0; i<robot_->bodies.size(); i++){
+    for (int i=0; i<(int)robot_->bodies.size(); i++){
       if (robot_->bodies[i]->get_model_name() == post_transform_robot_ && robot_->bodies[i]->getJoint().is_floating()){
         floating_base_body = i;
         break;
@@ -571,7 +571,7 @@ void ManipulationTracker::publish(){
   // Publish what we've been requested to publish
   for (auto it=publish_infos_.begin(); it != publish_infos_.end(); it++){
     // find this robot in the robot names
-    for (int roboti=1; roboti < robot_names_.size(); roboti++){
+    for (int roboti=1; roboti < (int)robot_names_.size(); roboti++){
       if (robot_names_[roboti] == it->robot_name){
 
         // publish state?
@@ -582,7 +582,7 @@ void ManipulationTracker::publish(){
 
           manipulation_state.num_joints = 0;
           bool found_floating = false;
-          for (int i=0; i<robot_->bodies.size(); i++){
+          for (int i=0; i<(int)robot_->bodies.size(); i++){
             if (robot_->bodies[i]->get_model_name() == robot_name){
               if (robot_->bodies[i]->getJoint().is_floating()){
                 Vector3d xyz = post_transform*x_.block<3, 1>(robot_->bodies[i]->get_position_start_index() + 0, 0);
@@ -623,7 +623,7 @@ void ManipulationTracker::publish(){
           floating_base_transform.utime = getUnixTime();
 
           bool found_floating = false;
-          for (int i=0; i<robot_->bodies.size(); i++){
+          for (int i=0; i<(int)robot_->bodies.size(); i++){
             if (robot_->bodies[i]->get_model_name() == robot_names_[roboti]){
               if (robot_->bodies[i]->getJoint().is_floating()){
                 Vector3d xyz = post_transform*x_.block<3, 1>(robot_->bodies[i]->get_position_start_index() + 0, 0);
@@ -653,10 +653,10 @@ void ManipulationTracker::publish(){
     }
   }
 
-  // Publish the object state
-  //cout << "robot robot name vector: " << robot->robot_name.size() << endl;
-  for (int roboti=1; roboti < robot_names_.size(); roboti++){
+//  // Publish the object state
+//  //cout << "robot robot name vector: " << robot->robot_name.size() << endl;
+//  for (int roboti=1; roboti < robot_names_.size(); roboti++){
     
 
-  }
+//  }
 }

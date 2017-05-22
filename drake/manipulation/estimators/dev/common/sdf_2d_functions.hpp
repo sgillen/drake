@@ -10,7 +10,7 @@ static inline float square(float x) { return x * x; }
 //     to the nearest 0-pixel of the input image
 // v: will return populated with the index of the closest 0-pixel from the input image
 //     for every pixel in the input image
-void df_1d(const Eigen::VectorXd& f, Eigen::VectorXd& d, Eigen::VectorXi& mapping) {
+inline void df_1d(const Eigen::VectorXd& f, Eigen::VectorXd& d, Eigen::VectorXi& mapping) {
   int n = f.rows();
   int *v = new int[n];
   d.resize(n);
@@ -51,7 +51,7 @@ void df_1d(const Eigen::VectorXd& f, Eigen::VectorXd& d, Eigen::VectorXi& mappin
 //     to the nearest 0-pixel of the input image
 // v: will return populated with the index of the closest 0-pixel from the input image
 //     for every pixel in the input image
-void df_2d(const Eigen::MatrixXd& f, Eigen::MatrixXd& d, Eigen::MatrixXi& mapping_row, Eigen::MatrixXi& mapping_col) {
+inline void df_2d(const Eigen::MatrixXd& f, Eigen::MatrixXd& d, Eigen::MatrixXi& mapping_row, Eigen::MatrixXi& mapping_col) {
   int width = f.cols();
   int height = f.rows();
 
