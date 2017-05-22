@@ -33,6 +33,69 @@ void eigen2cv( const Eigen::Matrix<_Tp, _rows, _cols, _options, _maxRows, _maxCo
     }
 }
 
+namespace {
+/// @brief Two points that define (x_min, y_min, z_min) and (x_max, y_max, z_max) for a simple bounding box.
+typedef Matrix<double, 3, 2> SimpleBoundingBox;
+
+constexpr double inf = std::numeric_limits<double>::infinity();
+
+template <typename Derived>
+vector<double> to_vector(const MatrixBase<Derived>& X) {
+    vector<double> out(X.size());
+    for (int i = 0; i < X.size(); ++i) {
+        out(i) = X(i);
+    }
+    return out;
+}
+
+void AssertSimpleBoundingBox(const Matrix3Xd& bbox) {
+    DRAKE_ASSERT(bbox.cols() == 8);
+    // There should be only two unique values of x, y, and z.
+    set<double> x_set{to_vector(bbox.row(0))};
+    set<double> y_set{to_vector(bbox.row(1))};
+    set<double> y_set{to_vector(bbox.row(2))};
+    DRAKE_ASSERT(x_set.size() == 2 && y_set.size() == 2 && z_set.size() == 2);
+}
+
+SimpleBoundingBox GetSimpleBoundingBox(const RigidBodyTreed& robot, const RigidBody<double>& body) {
+    SimpleBoundingBox bbox;
+    auto bbox_min{bbox.col(0).array()};
+    auto bbox_max{bbox.col(1).array()};
+    bbox_min.setConstant(inf);
+    bbox_max.setConstant(-inf);
+    Matrix3Xd bbox_cur(3, 8);
+    auto bbox_cur_array{bbox_cur.array()};
+    const auto& ids = body.get_collision_element_ids();
+    DRAKE_DEMAND(ids.size() != 0);
+    for (const auto& collision_element_id : body.get_collision_element_ids()) {
+        const auto* element = robot.FindCollisionElement(collision_element_id);
+        // Assume bounding box is aligned with the major axes. Do not adjust points.
+        element->getGeometry().getBoundingBoxPoints(bbox_cur);
+        AssertSimpleBoundingBox(bbox_cur);
+        bbox_min = bbox_cur.cwiseMin(bbox_cur_array.rowwise().coeffMin());
+        bbox_max = bbox_cur.cwiseMax(bbox_cur_array.rowwise().coeffMax());
+    }
+    return bbox_min;
+}
+
+template <int Rows, int Cols = 1>
+Eigen::Matrix<double, Rows, Cols> UniformRandMatrix(std::default_random_engine& rand_generator) {
+    uniform_real_distribution<> uniform(0, 1);
+    Eigen::Matrix<double, Rows, Cols> out;
+    for (int i = 0; i < out.size(); ++i) {
+        out(i) = uniform(rand_generator);
+    }
+    return out;
+}
+
+Vector3d UniformRandPointInSimpleBoundingBox(const SimpleBoundingBox& box, std::default_random_engine& rand_generator) {
+    Vector3d width = box.col(1) - box.col(0);
+    return box.col(0) + (UniformRandMatrix<3>(rand_generator).array() * width.array());
+}
+
+}  // anonymous namespace
+
+
 NonpenetratingObjectCost::NonpenetratingObjectCost(std::shared_ptr<RigidBodyTreed> robot_, std::vector<int> robot_correspondences_,
         std::shared_ptr<RigidBodyTreed> robot_object_, std::vector<int> robot_object_correspondences_, std::shared_ptr<lcm::LCM> lcm_, YAML::Node config) :
     lcm(lcm_),
@@ -95,21 +158,18 @@ NonpenetratingObjectCost::NonpenetratingObjectCost(std::shared_ptr<RigidBodyTree
     // Use raycasting on robot_object to get a smattering of points on object surface
   surface_pts.resize(3, num_surface_pts);
 
+  default_random_engine generator;
+
   int num_good_surface_pts = 0;
   while(num_good_surface_pts < num_surface_pts){
     int attempt_num_pts = num_surface_pts - num_good_surface_pts;
     Matrix3Xd source_pts(3, attempt_num_pts);
     Matrix3Xd dest_pts(3, attempt_num_pts);
-    double width = 0.1;
+    const auto& body = robot_object->get_body(robot_object_id);
+    const auto bbox = GetSimpleBoundingBox(*robot_object, body);
     for (int i=0; i<attempt_num_pts; i++) {
-      source_pts.block<3,1>(0,i) = 
-                     width * Vector3d((2.0*((double)rand())/RAND_MAX) - 1.0, 
-                              (2.0*((double)rand())/RAND_MAX) - 1.0, 
-                              (2.0*((double)rand())/RAND_MAX) - 1.0);
-      dest_pts.block<3,1>(0,i) = 
-                     width * Vector3d((2.0*((double)rand())/RAND_MAX) - 1.0, 
-                              (2.0*((double)rand())/RAND_MAX) - 1.0, 
-                              (2.0*((double)rand())/RAND_MAX) - 1.0);
+      source_pts.block<3,1>(0,i) = UniformRandPointInSimpleBoundingBox(bbox, generator);
+      dest_pts.block<3,1>(0,i) = UniformRandPointInSimpleBoundingBox(bbox, generator);
     }
 
     // get them into object frame
@@ -117,16 +177,13 @@ NonpenetratingObjectCost::NonpenetratingObjectCost(std::shared_ptr<RigidBodyTree
     dest_pts = robot_object->transformPoints(robot_object_kinematics_cache, dest_pts, robot_object_id, 0);
 
     Eigen::VectorXd distances;
-    Eigen::Matrix3Xd normals;
-    std::vector<int> body_ids;
     // (Cache, const Matrix3Xd& source_pts,
     //  const Matrix3Xd& dest_pts,
     //  VectorXd& distances, Matrix3Xd& normals, vector<int>& body_ids, bool ?)
-    robot_object->collisionDetectFromPoints(robot_object_kinematics_cache,
+    robot_object->collisionRaycast(robot_object_kinematics_cache,
                           source_pts,
                           dest_pts,
-                          distances, normals,
-                          body_ids,
+                          distances,
                           false);
 
     for (int i=0; i < attempt_num_pts; i++){
@@ -238,7 +295,7 @@ bool NonpenetratingObjectCost::constructCost(ManipulationTracker * tracker, cons
       num_points_on_body[body_idx[i]] += 1;
 
     // for every body...
-    for (int i=0; i < robot->bodies.size(); i++){
+    for (int i=0; i < (int)robot->bodies.size(); i++){
       if (num_points_on_body[i] > 0){
 
         // collect results from raycast that correspond to this body out in the world
@@ -249,8 +306,8 @@ bool NonpenetratingObjectCost::constructCost(ManipulationTracker * tracker, cons
         Matrix3Xd z_norms(3, num_points_on_body[i]); // normals corresponding to these points
         int k = 0;
 
-        for (int j=0; j < body_idx.size(); j++){
-          assert(k < body_idx.size());
+        for (int j=0; j < (int)body_idx.size(); j++){
+          assert(k < (int)body_idx.size());
           if (body_idx[j] == i){
             assert(j < global_surface_pts.cols());
             if (global_surface_pts(0, j) == 0.0){
