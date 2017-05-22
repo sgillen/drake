@@ -42,7 +42,7 @@ std::shared_ptr<RigidBodyTreed> setupRobotFromConfig(YAML::Node config, Eigen::V
   manip++;
   // each new robot can be added via addRobotFromURDF
   while (manip != config[robots_string].end()){
-    drake::parsers::urdf::AddModelInstanceFromURDF(base_path + manip->second["urdf"].as<string>(), DrakeJoint::ROLLPITCHYAW, robot.get());
+    drake::parsers::urdf::AddModelInstanceFromUrdfFile(base_path + manip->second["urdf"].as<string>(), drake::multibody::joints::kRollPitchYaw, robot.get());
     x0_robot.conservativeResize(robot->get_num_positions());
     if (manip->second["q0"] && manip->second["q0"].Type() == YAML::NodeType::Map){
       for (int i=old_num_positions; i < robot->get_num_positions(); i++){
@@ -109,9 +109,9 @@ std::shared_ptr<RigidBodyTreed> setupRobotFromConfigSubset(YAML::Node config, Ei
 
   // each new robot can b
   while (manip != config[robots_string].end()) {
-    drake::parsers::urdf::AddModelInstanceFromURDF(base_path + manip->second["urdf"].as<string>(), DrakeJoint::ROLLPITCHYAW, robot.get());
+    drake::parsers::urdf::AddModelInstanceFromUrdfFile(base_path + manip->second["urdf"].as<string>(), DrakeJoint::ROLLPITCHYAW, robot.get());
     if (vector_contains_str(exceptions, manip->first.as<std::string>()) != exclusionary) { // check (CONTAINED) XOR (EXCLUSIONARY)
-      drake::parsers::urdf::AddModelInstanceFromURDF(base_path + manip->second["urdf"].as<string>(), DrakeJoint::ROLLPITCHYAW, robot_subset.get());
+      drake::parsers::urdf::AddModelInstanceFromUrdfFile(base_path + manip->second["urdf"].as<string>(), DrakeJoint::ROLLPITCHYAW, robot_subset.get());
 
       x0_robot_subset.conservativeResize(robot_subset->get_num_positions());
 
@@ -161,7 +161,7 @@ ManipulationTracker::ManipulationTracker(std::shared_ptr<const RigidBodyTreed> r
     robot_(robot),
     lcm_(lcm),
     verbose_(verbose),
-    robot_kinematics_cache_(robot->bodies)
+    robot_kinematics_cache_(robot_->CreateKinematicsCache())
 {
   if (robot_->get_num_positions() + robot_->get_num_velocities() != x0_robot.rows()){
     printf("Expected initial condition with %d rows, got %ld rows.\n", robot_->get_num_positions() + robot_->get_num_velocities(), x0_robot.rows());

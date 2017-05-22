@@ -13,7 +13,7 @@
 #include <bot_frames/bot_frames.h>
 #include <bot_param/param_client.h>
 #include "lcmtypes/bot_core/robot_state_t.hpp"
-// #include "lcmtypes/vicon/body_t.hpp"
+#include "lcmtypes/vicon/body_t.hpp"
 
 // forward def
 class ManipulationTrackerCost;
@@ -27,7 +27,7 @@ public:
   typedef std::pair<std::shared_ptr<ManipulationTrackerCost>, std::vector<int>> CostAndView;
 
   ManipulationTracker(std::shared_ptr<const RigidBodyTreed> robot, Eigen::Matrix<double, Eigen::Dynamic, 1> x0_robot, std::shared_ptr<lcm::LCM> lcm, YAML::Node config, bool verbose = false);
-  ~ManipulationTracker() {};
+  ~ManipulationTracker() {}
 
   void initBotConfig(const char* filename);
   int get_trans_with_utime(std::string from_frame, std::string to_frame,
@@ -37,7 +37,7 @@ public:
   void addCost(std::shared_ptr<ManipulationTrackerCost> new_cost);
 
   void update();
-  std::shared_ptr<const RigidBodyTreed> getRobot() { return robot_; };
+  std::shared_ptr<const RigidBodyTreed> getRobot() { return robot_; }
   Eigen::Matrix<double, Eigen::Dynamic, 1> getMean() { return x_; }
   Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> getCovariance() { return covar_; }
 

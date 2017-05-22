@@ -119,6 +119,9 @@ NonpenetratingObjectCost::NonpenetratingObjectCost(std::shared_ptr<RigidBodyTree
     Eigen::VectorXd distances;
     Eigen::Matrix3Xd normals;
     std::vector<int> body_ids;
+    // (Cache, const Matrix3Xd& source_pts,
+    //  const Matrix3Xd& dest_pts,
+    //  VectorXd& distances, Matrix3Xd& normals, vector<int>& body_ids, bool ?)
     robot_object->collisionDetectFromPoints(robot_object_kinematics_cache,
                           source_pts,
                           dest_pts,
