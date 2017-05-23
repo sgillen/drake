@@ -34,10 +34,16 @@ set(drakeManipulationTracker_EXTERNAL_LIBRARIES
     lcmtypes_bot2-core-cpp
     # bot2-core
     bot2-lcmgl-client
+    # <HACK>
+    # -- Cannot set the library name?
     # bot2-frames
-    bot2-param-client
+    ${CMAKE_INSTALL_RPATH}/libbot2-frames.so
+    # bot2-param-client
+    ${CMAKE_INSTALL_RPATH}/libbot2-param-client.so
+    # </HACK>
     # kinect-utils
     ${OpenCV_LIBS}
+    yaml-cpp
     )
 
 set(drakeManipulationTracker_LIBRARIES
@@ -47,6 +53,7 @@ set(drakeManipulationTracker_LIBRARIES
     drakeJoints
     drakeRBM
     drakeRigidBodyPlant
+    drakeMultibodyParsers
     drakeSystemFramework
     # drakeUtil
     # drakeXMLUtil
