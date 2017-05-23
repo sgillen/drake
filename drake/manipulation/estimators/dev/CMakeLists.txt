@@ -30,11 +30,11 @@ set(drakeManipulationTracker_HEADERS
 
 set(drakeManipulationTracker_EXTERNAL_LIBRARIES
     lcm
-    lcmtypes_drc_lcmtypes
+    # lcmtypes_drc_lcmtypes
     lcmtypes_bot2-core-cpp
-    bot2-core
+    # bot2-core
     bot2-lcmgl-client
-    bot2-frames
+    # bot2-frames
     bot2-param-client
     # kinect-utils
     ${OpenCV_LIBS}
@@ -42,14 +42,15 @@ set(drakeManipulationTracker_EXTERNAL_LIBRARIES
 
 set(drakeManipulationTracker_LIBRARIES
     ${drakeManipulationTracker_EXTERNAL_LIBRARIES}
-    drake-convex-hull
+    # drake-convex-hull
     drakeCommon
     drakeJoints
     drakeRBM
     drakeRigidBodyPlant
     drakeSystemFramework
     # drakeUtil
-    drakeXMLUtil)  # How to replace this?
+    # drakeXMLUtil
+    )  # How to replace this?
 
 include_directories(.)
 
