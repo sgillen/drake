@@ -245,8 +245,14 @@ class Model {
    @param use_margins A flag indicating whether or not to use the version of
    this model with collision margins.
 
-   @param[out] distance The distance to the first collision, or -1 if no
+   @param[out] distances Distance to the first collision per ray, or -1 if no
    collision occurs.
+
+   @param[out] normals The normal at the surface of the first collision per ray,
+   or a vector of zeros if no collision occurs.
+
+   @param[out] collision_body The body at which the first collision occurred for
+   a ray, or -1 if no collision occurs.
 
    @return Whether this method successfully ran. **/
   virtual bool collisionRaycast(
@@ -256,7 +262,7 @@ class Model {
       // TODO(#2274) Fix NOLINTNEXTLINE(runtime/references).
       Eigen::VectorXd& distances,
       // TODO(#2274) Fix NOLINTNEXTLINE(runtime/references).
-      Eigen::Matrix3Xd& normals) = 0;
+      Eigen::Matrix3Xd& normals, std::vector<ElementId>& collision_body) = 0;
 
   /** Modifies a collision element's local transform to be relative to a joint's
    frame rather than a link's frame. This is necessary because Drake requires
