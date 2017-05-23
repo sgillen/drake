@@ -68,6 +68,7 @@ set(drakeManipulationTracker_LIBRARIES
     # drake-convex-hull
     drakeCommon
     drakeJoints
+    drakeLCMTypes
     drakeRBM
     drakeRigidBodyPlant
     drakeMultibodyParsers
