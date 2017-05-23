@@ -1,4 +1,19 @@
-find_package(OpenCV REQUIRED)
+# HACK: Must use custom installation of OpenCV.
+# Drake superbuild somehow does not permit the same paths as a normal CMake project,
+# so we must forcefully change its mind.
+# Consider setting via command-line: -DOpenCV_DIR=/path/to/opencv
+unset(OpenCV_DIR CACHE)
+unset(OpenCV_INCLUDE_DIRS CACHE)
+unset(OpenCV_LIBRARIES CACHE)
+unset(OpenCV_LIBS CACHE)
+unset(OpenCV_INSTALL_PATH CACHE)
+unset(OpenCV_CONFIG_PATH CACHE)
+
+find_package(OpenCV REQUIRED
+    NO_CMAKE_PATH
+    NO_CMAKE_ENVIRONMENT_PATH
+    HINTS $ENV{OPENCV_CUSTOM_DIR})
+
 include_directories(${OpenCV_DIRS})
 
 set(drakeManipulationTracker_SRC_FILES
@@ -42,9 +57,11 @@ set(drakeManipulationTracker_EXTERNAL_LIBRARIES
     ${CMAKE_INSTALL_RPATH}/libbot2-param-client.so
     # </HACK>
     # kinect-utils
-    ${OpenCV_LIBS}
+    ${OpenCV_LIBS} opencv_highgui
     yaml-cpp
     )
+
+message("OpenCV: ${OpenCV_DIR} ${OpenCV_INCLUDE_DIRS} ${OpenCV_LIBS}")
 
 set(drakeManipulationTracker_LIBRARIES
     ${drakeManipulationTracker_EXTERNAL_LIBRARIES}
