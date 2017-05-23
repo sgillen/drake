@@ -22,9 +22,9 @@ set(drakeManipulationTracker_SRC_FILES
     costs/DynamicsCost.cpp
     costs/GelsightCost.cpp
     costs/JointStateCost.cpp
-#    costs/KinectFrameCost.cpp
+    costs/KinectFrameCost.cpp
     costs/NonpenetratingObjectCost.cpp
-#    costs/OptotrakMarkerCost.cpp
+    costs/OptotrakMarkerCost.cpp
     costs/RobotStateCost.cpp
     )
 
@@ -36,10 +36,10 @@ set(drakeManipulationTracker_HEADERS
     costs/DynamicsCost.hpp
     costs/GelsightCost.hpp
     costs/JointStateCost.hpp
-#    costs/KinectFrameCost.hpp
+    costs/KinectFrameCost.hpp
     costs/ManipulationTrackerCost.hpp
     costs/NonpenetratingObjectCost.hpp
-#    costs/OptotrakMarkerCost.hpp
+    costs/OptotrakMarkerCost.hpp
     costs/RobotStateCost.hpp
     )
 
@@ -74,6 +74,8 @@ set(drakeManipulationTracker_LIBRARIES
     # drakeUtil
     # drakeXMLUtil
     )  # How to replace this?
+# For drakeLCMTypes
+include_directories(${CMAKE_BINARY_DIR})
 
 include_directories(.)
 

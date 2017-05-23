@@ -20,9 +20,9 @@ Matrix3d calcS(double x, double y, double z){
 }
 
 OptotrakMarkerCost::OptotrakMarkerCost(std::shared_ptr<const RigidBodyTreed> robot_, std::shared_ptr<lcm::LCM> lcm_, YAML::Node config) :
-    robot(robot_),
-    robot_kinematics_cache(robot->bodies),
     lcm(lcm_),
+    robot(robot_),
+    robot_kinematics_cache(robot->CreateKinematicsCache()),
     nq(robot->get_num_positions())
 {
   if (config["attached_manipuland"]){
@@ -67,7 +67,7 @@ OptotrakMarkerCost::OptotrakMarkerCost(std::shared_ptr<const RigidBodyTreed> rob
       attachment.marker_ids = (*iter)["ids"].as<vector<int>>();
 
       // shift from 1-index to 0-index
-      for (int i=0; i < attachment.marker_ids.size(); i++) attachment.marker_ids[i] -= 1;
+      for (int i=0; i < (int)attachment.marker_ids.size(); i++) attachment.marker_ids[i] -= 1;
 
       // pull normal if one is supplied and we can act on it
       if (attachment.marker_ids.size() >= 3 && (*iter)["normal"]){

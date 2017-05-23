@@ -11,7 +11,7 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
-#include "drake/systems/plants/joints/RevoluteJoint.h"
+#include "drake/multibody/joints/revolute_joint.h"
 
 using namespace std;
 using namespace Eigen;
@@ -35,9 +35,9 @@ void eigen2cv( const Eigen::Matrix<_Tp, _rows, _cols, _options, _maxRows, _maxCo
 }
 
 KinectFrameCost::KinectFrameCost(std::shared_ptr<RigidBodyTreed> robot_, std::shared_ptr<lcm::LCM> lcm_, YAML::Node config) :
-    robot(robot_),
-    robot_kinematics_cache(robot->bodies),
     lcm(lcm_),
+    robot(robot_),
+    robot_kinematics_cache(robot->CreateKinematicsCache()),
     nq(robot->get_num_positions())
 {
   if (config["icp_var"])
@@ -98,7 +98,7 @@ KinectFrameCost::KinectFrameCost(std::shared_ptr<RigidBodyTreed> robot_, std::sh
   // if we're using a kinect... (to be refactored)
   // This is in full agreement with Kintinuous: (calibrationAsus.yml)
   // NB: if changing this, it should be kept in sync
-  kcal = kinect_calib_new();
+  kcal = new KinectCalibration(); // kinect_calib_new();
   kcal->intrinsics_depth.fx = 528.01442863461716;//was 576.09757860;
   kcal->intrinsics_depth.cx = 320.0;
   kcal->intrinsics_depth.cy = 267.0;
@@ -230,8 +230,8 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
       if (full_cloud.cols() != input_num_pixel_cols*input_num_pixel_rows){
         printf("KinectFramecost: WARNING: SOMEHOW FULL CLOUD HAS WRONG NUMBER OF ENTRIES.\n");
       }
-      for (size_t v=0; v<num_pixel_rows; v++) {
-        for (size_t u=0; u<num_pixel_cols; u++) {
+      for (int v=0; v<num_pixel_rows; v++) {
+        for (int u=0; u<num_pixel_cols; u++) {
           int full_v = min((int)floor(((double)v)*downsample_amount) + rand()%(int)downsample_amount, input_num_pixel_rows-1);
           int full_u = min((int)floor(((double)u)*downsample_amount) + rand()%(int)downsample_amount, input_num_pixel_cols-1);
 
@@ -299,11 +299,11 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
       // for every unique body points have returned onto...
       std::vector<int> num_points_on_body(robot->bodies.size(), 0);
 
-      for (int i=0; i < body_idx.size(); i++)
+      for (int i=0; i < (int)body_idx.size(); i++)
         num_points_on_body[body_idx[i]] += 1;
 
       // for every body...
-      for (int i=0; i < robot->bodies.size(); i++){
+      for (int i=0; i < (int)robot->bodies.size(); i++){
         if (num_points_on_body[i] > 0){
           // collect results from raycast that correspond to this sensor
           Matrix3Xd z(3, num_points_on_body[i]); // points, in world frame, near this body
@@ -311,8 +311,8 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
           Matrix3Xd body_z_prime(3, num_points_on_body[i]); // projected points in body frame
           Matrix3Xd z_norms(3, num_points_on_body[i]); // normals corresponding to these points
           int k = 0;
-          for (int j=0; j < body_idx.size(); j++){
-            assert(k < body_idx.size());
+          for (int j=0; j < (int)body_idx.size(); j++){
+            assert(k < (int)body_idx.size());
             if (body_idx[j] == i){
               assert(j < points.cols());
               if (points(0, j) == 0.0){
@@ -323,7 +323,7 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
                 bool too_close_to_joint = false;
                 if (joint){
                   // axis in body frame:
-                  const Vector3d n = joint->getRotationAxis();
+                  const Vector3d n = joint->rotation_axis();
                   auto p = body_x.block<3, 1>(0, j);
 
                   // distance to that axis:
@@ -477,8 +477,8 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
       MatrixXi mapping_col;
 
       df_2d(observation_sdf_input, observation_sdf, mapping_row, mapping_col);
-      for (size_t i=0; i<num_pixel_rows; i++) {
-        for (size_t j=0; j<num_pixel_cols; j++) {
+      for (int i=0; i<num_pixel_rows; i++) {
+        for (int j=0; j<num_pixel_cols; j++) {
           observation_sdf(i, j) = sqrtf(observation_sdf(i, j));
         }
       }
@@ -507,13 +507,13 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
       double constant = 1.0f / kcal->intrinsics_rgb.fx ;
       // for every unique body points have returned onto...
       std::vector<int> num_points_on_body(robot->bodies.size(), 0);
-      for (int bdy_i=0; bdy_i < body_idx.size(); bdy_i++){
+      for (int bdy_i=0; bdy_i < (int)body_idx.size(); bdy_i++){
         if (body_idx[bdy_i] >= 0)
           num_points_on_body[body_idx[bdy_i]] += 1;
       }
 
       // for every body...
-      for (int bdy_i=0; bdy_i < robot->bodies.size(); bdy_i++){
+      for (int bdy_i=0; bdy_i < (int)robot->bodies.size(); bdy_i++){
         // assemble correction vectors and points for this body
         if (num_points_on_body[bdy_i] > 0){
           int k = 0;
@@ -627,7 +627,7 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
             if (endpt(0) > pointcloud_bounds.xMin && endpt(0) < pointcloud_bounds.xMax && 
                 endpt(1) > pointcloud_bounds.yMin && endpt(1) < pointcloud_bounds.yMax && 
                 endpt(2) > pointcloud_bounds.zMin && endpt(2) < pointcloud_bounds.zMax &&
-                (1 || observation_sdf(i) > 0.0 && observation_sdf(i) < INF)) {
+                (1 || (observation_sdf(i) > 0.0 && observation_sdf(i) < INF))) {
               bot_lcmgl_vertex3f(lcmgl_measurement_model_, endpt(0), endpt(1), endpt(2));
             }
           }
@@ -756,23 +756,24 @@ void KinectFrameCost::handleKinectFrameMsg(const lcm::ReceiveBuffer* rbuf,
 
   // 1.2.1 De-compress if necessary:
   if(msg->depth.compression != msg->depth.COMPRESSION_NONE) {
-    // ugh random C code
-    uint8_t * uncompress_buffer = (uint8_t*) malloc(msg->depth.uncompressed_size);
-    unsigned long dlen = msg->depth.uncompressed_size;
-    int status = uncompress(uncompress_buffer, &dlen, 
-        msg->depth.depth_data.data(), msg->depth.depth_data_nbytes);
-    if(status != Z_OK) {
-      printf("Problem in uncompression.\n");
-      free(uncompress_buffer);
-      latest_cloud_mutex.unlock();
-      return;
-    }
-    for (int i=0; i<msg->depth.uncompressed_size/2; i++)
-      depth_data.push_back( ((uint16_t)uncompress_buffer[2*i])+ (((uint16_t)uncompress_buffer[2*i+1])<<8) );
-    free(uncompress_buffer);
+    throw std::runtime_error("Decompression disabled");
+//    // ugh random C code
+//    uint8_t * uncompress_buffer = (uint8_t*) malloc(msg->depth.uncompressed_size);
+//    unsigned long dlen = msg->depth.uncompressed_size;
+//    int status = uncompress(uncompress_buffer, &dlen,
+//        msg->depth.depth_data.data(), msg->depth.depth_data_nbytes);
+//    if(status != Z_OK) {
+//      printf("Problem in uncompression.\n");
+//      free(uncompress_buffer);
+//      latest_cloud_mutex.unlock();
+//      return;
+//    }
+//    for (int i=0; i<msg->depth.uncompressed_size/2; i++)
+//      depth_data.push_back( ((uint16_t)uncompress_buffer[2*i])+ (((uint16_t)uncompress_buffer[2*i+1])<<8) );
+//    free(uncompress_buffer);
 
   }else{
-    for (int i=0; i<msg->depth.depth_data.size()/2; i++)
+    for (int i=0; i<(int)msg->depth.depth_data.size()/2; i++)
       depth_data.push_back(  ((uint16_t)msg->depth.depth_data[2*i])+ (((uint16_t)msg->depth.depth_data[2*i+1])<<8) );
   }
 
