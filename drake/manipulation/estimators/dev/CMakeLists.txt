@@ -57,11 +57,9 @@ set(drakeManipulationTracker_EXTERNAL_LIBRARIES
     ${CMAKE_INSTALL_RPATH}/libbot2-param-client.so
     # </HACK>
     # kinect-utils
-    ${OpenCV_LIBS} opencv_highgui
+    ${OpenCV_LIBS}
     yaml-cpp
     )
-
-message("OpenCV: ${OpenCV_DIR} ${OpenCV_INCLUDE_DIRS} ${OpenCV_LIBS}")
 
 set(drakeManipulationTracker_LIBRARIES
     ${drakeManipulationTracker_EXTERNAL_LIBRARIES}
