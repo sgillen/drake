@@ -296,7 +296,7 @@ bool OptotrakMarkerCost::constructCost(ManipulationTracker * tracker, const Eige
 
           // following http://arxiv.org/pdf/1311.6010.pdf
           // dR = S(Dtheta)*R
-          /*
+          / *
           Vector3d derr_drpy;
           derr_drpy << -attachment->last_normal.transpose()* calcS(1, 0, 0)*current_transform.matrix().block<3, 3>(0, 0).transpose() * attachment->normal,
                        -attachment->last_normal.transpose()* calcS(0, 1, 0)*current_transform.matrix().block<3, 3>(0, 0).transpose() * attachment->normal,
