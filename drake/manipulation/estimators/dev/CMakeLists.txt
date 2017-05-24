@@ -96,10 +96,12 @@ target_link_libraries(runManipulationTracker drakeManipulationTracker)
 drake_add_test(
     NAME runManipulationTracker COMMAND runManipulationTracker --simulation_sec 0.01)
 
-add_executable(runErrorCalculator runErrorCalculator.cpp)
-target_link_libraries(runErrorCalculator drakeManipulationTracker)
-drake_add_test(
-    NAME runErrorCalculator COMMAND runErrorCalculator --simulation_sec 0.01)
+if(FALSE)
+    add_executable(runErrorCalculator runErrorCalculator.cpp)
+    target_link_libraries(runErrorCalculator drakeManipulationTracker)
+    drake_add_test(
+        NAME runErrorCalculator COMMAND runErrorCalculator --simulation_sec 0.01)
+endif()
 
 if(BUILD_TESTING)
   add_subdirectory(test)
