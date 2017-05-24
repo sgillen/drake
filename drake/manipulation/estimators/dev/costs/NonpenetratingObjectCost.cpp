@@ -12,6 +12,8 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include "drake/multibody/joints/revolute_joint.h"
 
+// TODO(eric.cousineau): Consider replacing with hingeloss gradient (linear cost).
+
 using namespace std;
 using namespace Eigen;
 using namespace cv;
