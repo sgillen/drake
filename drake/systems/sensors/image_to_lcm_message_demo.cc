@@ -32,8 +32,8 @@ int main(int argc, char* argv[]) {
   ::drake::lcm::DrakeLcm real_lcm;
 
   auto tree = std::make_unique<RigidBodyTree<double>>();
-  std::string filename(
-      "/home/kunimatsu/work/parse/models/bottle/model-1_4.sdf");
+  std::string filename("/home/eacousineau/proj/tri/proj/dart_impl/_data/"
+                       "kuniBottle/model-1_4.sdf");
 
   drake::parsers::sdf::AddModelInstancesFromSdfFileToWorld(
       filename, kQuaternion, tree.get());
