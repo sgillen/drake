@@ -14,7 +14,7 @@ if(lcm_FOUND)
   drake_install_pkg_config_file(drake-quadrotor-common
       TARGET drakeQuadrotorCommon
       LIBS -ldrakeQuadrotorCommon
-      REQUIRES drake-lcm-system
+      REQUIRES drake-lcm-system2
       drake-linear-controller
       drake-lcmtypes-cpp
       drake-rbm)

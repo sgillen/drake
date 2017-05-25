@@ -13,7 +13,7 @@ if(lcm_FOUND)
     TARGET drakeSchunkWsg
     LIBS -ldrakeSchunkWsg
     REQUIRES
-      drake-lcm-system
+      drake-lcm-system2
       drake-lcmtypes-cpp
       drake-multibody-parsers)
 endif()

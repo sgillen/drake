@@ -26,7 +26,7 @@ if(lcm_FOUND)
       TARGET monolithicPickAndPlaceCommon
       LIBS -lmonolithicPickAndPlaceCommon
       REQUIRES pick-and-place-common drake-common drake-ik drake-kuka-iiwa-arm-common
-      drake-lcm-system2 drake-lcmtypes-cpp drake-lcm-utils drake-rbm
+      drake-lcm-system2 drake-lcmtypes-cpp drake-lcm-util drake-rbm
       robotlocomotion-lcmtypes-cpp)
 
   add_executable(monolithic_pick_and_place_demo

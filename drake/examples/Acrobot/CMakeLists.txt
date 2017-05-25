@@ -31,7 +31,7 @@ if(lcm_FOUND)
   drake_install_pkg_config_file(drake-acrobot-lcm
           TARGET drakeAcrobotLcm
           LIBS -drakeAcrobotLcm
-          REQUIRES drake-lcm-system drake-lcmtypes-cpp)
+          REQUIRES drake-lcm-system2 drake-lcmtypes-cpp)
 
   add_executable(acrobot_lcm_msg_generator acrobot_lcm_msg_generator.cpp)
   target_link_libraries(acrobot_lcm_msg_generator

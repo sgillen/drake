@@ -12,7 +12,7 @@ if(lcm_FOUND)
   drake_install_pkg_config_file(drake-sim-diagram-builder
       TARGET drakeSimDiagramBuilder
       LIBS -ldrakeSimDiagramBuilder
-      REQUIRES drake-lcm-system drake-lcmtypes-cpp drake-rbm eigen3)
+      REQUIRES drake-lcm-system2 drake-lcmtypes-cpp drake-rbm eigen3)
 
   # Defines a shared library for use by KUKA iiwa demos based on System 2.0.
   add_library_with_exports(LIB_NAME drakeKukaIiwaArmCommon SOURCE_FILES
@@ -30,7 +30,7 @@ if(lcm_FOUND)
   drake_install_pkg_config_file(drake-kuka-iiwa-arm-common
       TARGET drakeKukaIiwaArmCommon
       LIBS -ldrakeKukaIiwaArmCommon
-      REQUIRES drake-lcm-system drake-lcmtypes-cpp drake-rbm eigen3)
+      REQUIRES drake-lcm-system2 drake-lcmtypes-cpp drake-rbm eigen3)
 
   add_executable(kuka_plan_runner kuka_plan_runner.cc)
   target_link_libraries(kuka_plan_runner
@@ -96,7 +96,7 @@ if(lcm_FOUND)
   drake_install_pkg_config_file(oracular-state-estimator
       TARGET oracularStateEstimator
       LIBS -loracularStateEstimator
-      REQUIRES drake-lcm-system drake-lcm-util drake-lcmtypes-cpp drake-rbm drake-robot-state-lcm-translator eigen3)
+      REQUIRES drake-lcm-system2 drake-lcm-util drake-lcmtypes-cpp drake-rbm drake-robot-state-lcm-translator eigen3)
 
 endif()
 

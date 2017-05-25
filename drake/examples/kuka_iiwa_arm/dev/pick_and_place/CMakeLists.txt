@@ -24,7 +24,7 @@ if(lcm_FOUND)
       TARGET pickAndPlaceCommon
       LIBS -lpickAndPlaceCommon
       REQUIRES drake-common drake-ik drake-kuka-iiwa-arm-common
-      drake-lcm-system drake-lcmtypes-cpp drake-lcm-utils drake-rbm
+      drake-lcm-system2 drake-lcmtypes-cpp drake-lcm-util drake-rbm
       robotlocomotion-lcmtypes-cpp)
 
 
