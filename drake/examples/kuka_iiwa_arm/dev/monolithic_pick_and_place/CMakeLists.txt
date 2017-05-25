@@ -7,13 +7,18 @@ if(lcm_FOUND)
       drakeCommon
       drakeIK
       drakeKukaIiwaArmCommon
+      drakeKukaIiwaWorld
+      monolithicPickAndPlaceActionPrimitives
       drakeManipulationPlanner
       drakeLcmSystem
       drakeLCMTypes
       drakeLCMUtil
-      drakeRBM
+      drakeRigidBodyPlant
+      drakeSystemFramework
       drakeMultibodyParsers
       drakeTrajectories
+      drakeSchunkWsg
+      pickAndPlaceCommon
       robotlocomotion-lcmtypes-cpp)
   drake_install_libraries(monolithicPickAndPlaceCommon)
   drake_install_headers(
@@ -25,9 +30,19 @@ if(lcm_FOUND)
   drake_install_pkg_config_file(monolithic-pick-and-place-common
       TARGET monolithicPickAndPlaceCommon
       LIBS -lmonolithicPickAndPlaceCommon
-      REQUIRES pick-and-place-common drake-common drake-ik drake-kuka-iiwa-arm-common
-      drake-lcm-system2 drake-lcmtypes-cpp drake-lcm-util drake-rbm
-      robotlocomotion-lcmtypes-cpp)
+      REQUIRES
+        pick-and-place-common
+        drake-schunk-wsg
+        monolithic-pick-and-place-action-primitives
+        # and some other stuff
+        drake-common
+        drake-ik
+        drake-kuka-iiwa-arm-common
+        drake-lcm-system2
+        drake-lcmtypes-cpp
+        drake-lcm-util
+        drake-rbm
+        robotlocomotion-lcmtypes-cpp)
 
   add_executable(monolithic_pick_and_place_demo
     monolithic_pick_and_place_demo.cc)
@@ -41,4 +56,6 @@ if(lcm_FOUND)
     # pickAndPlaceCommon
     # robotlocomotion-lcmtypes-cpp
     )
+
+  add_subdirectory(action_primitives)
 endif()
