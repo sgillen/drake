@@ -25,7 +25,7 @@ if(lcm_FOUND)
   add_library_with_exports(LIB_NAME drakeRenderingLcm SOURCE_FILES
       drake_visualizer_client.cc
       pose_bundle_to_draw_message.cc
-      lcmt_pose_stamped_pose_vector_translator.cc)
+      pose_stamped_t_pose_vector_translator.cc)
   drake_install_libraries(drakeRenderingLcm)
   target_link_libraries(drakeRenderingLcm
       drakeLcmSystem
@@ -36,13 +36,14 @@ if(lcm_FOUND)
   drake_install_headers(
       drake_visualizer_client.h
       pose_bundle_to_draw_message.h
-      lcmt_pose_stamped_pose_vector_translator.h)
+      pose_stamped_t_pose_vector_translator.h)
   drake_install_pkg_config_file(drake-rendering-lcm
       TARGET drakeRenderingLcm
       LIBS -ldrakeRenderingLcm
       REQUIRES
           drake_lcmtypes
           drake-shapes
+	  robotlocomotion-lcmtypes-cpp
   )
 endif()
 

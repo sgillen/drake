@@ -34,10 +34,6 @@ class ImageToLcmMessage : public systems::LeafSystem<double> {
   /// Returns a descriptor of the input port containing a label image.
   const InputPortDescriptor<double>& label_image_input_port() const;
 
-  // Returns a descriptor of the input port containing a camera optical frame
-  // in the world frame.
-  // const InputPortDescriptor<double>& pose_input_port() const;
-
   /// Returns a descriptor of the abstract valued output port that contains a
   /// `Value<bot_core::images_t>`.
   const OutputPortDescriptor<double>& images_t_msg_output_port() const;
@@ -50,7 +46,6 @@ class ImageToLcmMessage : public systems::LeafSystem<double> {
   int color_image_input_port_index_{};
   int depth_image_input_port_index_{};
   int label_image_input_port_index_{};
-  // int pose_input_port_index_{};
   int images_t_msg_output_port_index_{};
 };
 

@@ -62,9 +62,6 @@ ImageToLcmMessage::ImageToLcmMessage() {
       DeclareAbstractInputPort(
           systems::Value<ImageLabel16I>()).get_index();
 
-  // pose_input_port_index_ =
-  //     DeclareVectorInputPort(PoseVector<double>()).get_index();
-
   images_t_msg_output_port_index_ =
       DeclareAbstractOutputPort(systems::Value<bot_core::images_t>())
           .get_index();
@@ -85,11 +82,6 @@ ImageToLcmMessage::label_image_input_port() const {
   return this->get_input_port(label_image_input_port_index_);
 }
 
-// const InputPortDescriptor<double>&
-// ImageToLcmMessage::pose_input_port() const {
-//   return this->get_input_port(pose_input_port_index_);
-// }
-
 const OutputPortDescriptor<double>&
 ImageToLcmMessage::images_t_msg_output_port() const {
   return System<double>::get_output_port(images_t_msg_output_port_index_);
@@ -107,10 +99,6 @@ void ImageToLcmMessage::DoCalcOutput(
 
   const ImageLabel16I& label_image = this->EvalAbstractInput(
       context, label_image_input_port_index_)->GetValue<ImageLabel16I>();
-
-  // const PoseVector<double>* X_WC =
-  //     this->template EvalVectorInput<PoseVector>(context,
-  //         pose_input_port_index_);
 
   bot_core::image_t color_image_msg;
   PackImageToLcmMessage(color_image, &color_image_msg);
@@ -131,8 +119,8 @@ void ImageToLcmMessage::DoCalcOutput(
   msg.image_types.clear();
   // To be comatible with Director except label image.
   msg.image_types.push_back(bot_core::images_t::LEFT);
-  msg.image_types.push_back(6);  // bot_core::images_t::DEPTH_MM_ZIPPED);
-  msg.image_types.push_back(3);  // bot_core::images_t::MASK_ZIPPED);
+  msg.image_types.push_back(bot_core::images_t::DEPTH_MM_ZIPPED);  // 6
+  msg.image_types.push_back(bot_core::images_t::MASK_ZIPPED);  // 3
 
   msg.images.clear();
   msg.images.push_back(color_image_msg);
@@ -145,4 +133,5 @@ void ImageToLcmMessage::DoCalcOutput(
 }  // namespace drake
 
 const int16_t bot_core::images_t::LEFT;
-const int16_t bot_core::images_t::DEPTH_MM;
+const int16_t bot_core::images_t::DEPTH_MM_ZIPPED;
+const int16_t bot_core::images_t::MASK_ZIPPED;

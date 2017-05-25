@@ -13,7 +13,7 @@
 #include "drake/systems/framework/diagram_builder.h"
 #include "drake/systems/lcm/lcm_publisher_system.h"
 #include "drake/systems/sensors/rgbd_camera.h"
-#include "drake/systems/rendering/rigid_transform_pose_vector_translator.h"
+#include "drake/systems/rendering/pose_stamped_t_pose_vector_translator.h"
 #include <gflags/gflags.h>
 
 DEFINE_double(duration, 0.1, "Total duration of the simulation in secondes.");
@@ -62,7 +62,7 @@ int main(int argc, char* argv[]) {
   lcm_publisher->set_name("publisher");
   lcm_publisher->set_publish_period(0.01);
 
-  rendering::RigidTransformPoseVectorTranslator translator;
+  rendering::LcmtPoseStampedPoseVectorTranslator translator;
   auto pose_lcm_publisher = builder.template AddSystem<
     lcm::LcmPublisherSystem>("DRAKE_RGBD_CAMERA_POSE",
                              translator, &real_lcm);

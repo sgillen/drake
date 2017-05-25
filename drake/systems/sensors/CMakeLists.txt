@@ -36,7 +36,8 @@ endif()
 if(lcm_FOUND)
   list(APPEND drakeSensors_SRC_FILES image_to_lcm_message.cc)
   list(APPEND drakeSensors_HEADERS image_to_lcm_message.h)
-  list(APPEND drakeSensors_TARGET_LINK_LIBRARIES robotlocomotion-lcmtypes-cpp z)
+  list(APPEND drakeSensors_TARGET_LINK_LIBRARIES
+       drakeRenderingLcm robotlocomotion-lcmtypes-cpp z)
 endif()
 
 if(lcm_FOUND AND Bullet_FOUND)

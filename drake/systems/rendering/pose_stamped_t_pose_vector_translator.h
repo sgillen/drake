@@ -9,12 +9,12 @@ namespace drake {
 namespace systems {
 namespace rendering {
 
-class LcmtPoseStampedPoseVectorTranslator :
+class PoseStampedTPoseVectorTranslator :
       public lcm::LcmAndVectorBaseTranslator {
  public:
-  DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(LcmtPoseStampedPoseVectorTranslator)
+  DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(PoseStampedTPoseVectorTranslator)
 
-  LcmtPoseStampedPoseVectorTranslator();
+  PoseStampedTPoseVectorTranslator();
 
   void Deserialize(const void* lcm_message_bytes, int lcm_message_length,
                    VectorBase<double>* vector_base) const  override;
