@@ -105,7 +105,7 @@ genrule(
         "env",
         "cdexec=$(location @drake//tools/third_party/kythe/tools/cdexec:cdexec)",
         "top_builddir=$(@D)",
-        "tools/ipopt_build_with_autotools.sh",
+        "$(location @drake//tools:ipopt_build_with_autotools.sh)",
         " 2>&1 > ipopt_build_with_autotools.log",
         ")",
         "|| (cat ipopt_build_with_autotools.log && false)",
