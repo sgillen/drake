@@ -14,6 +14,7 @@ load("@bazel_tools//tools/build_defs/pkg:pkg.bzl", "pkg_tar")
 # any new external dependencies to :external_licenses.
 _LIBDRAKE_COMPONENTS = [
     "//drake/multibody/parsers",
+    "//drake/solvers",
     "//drake/systems/framework",
     "//drake/systems/primitives",
     "//drake/lcm",

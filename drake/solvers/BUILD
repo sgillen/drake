@@ -166,6 +166,13 @@ drake_cc_library(
 )
 
 drake_cc_library(
+    name = "solvers",
+    deps = [
+        ":mathematical_program",
+    ],
+)
+
+drake_cc_library(
     name = "system_identification",
     srcs = ["system_identification.cc"],
     hdrs = ["system_identification.h"],
