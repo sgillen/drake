@@ -1,24 +1,32 @@
 # https://github.com/bazelbuild/bazel/issues/1550
+load("//tools/third_party/kythe/tools/build_rules/config:pkg_config.bzl", "pkg_config_package")
+load("//tools:bitbucket.bzl", "bitbucket_archive")
+load("//tools:github.bzl", "github_archive")
+load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
+load("//tools:python.bzl", "python_repository")
+load("//tools:numpy.bzl", "numpy_repository")
+
+# Necessary for buildifier.
+load("@io_bazel_rules_go//go:def.bzl", "go_repositories", "new_go_repository")
+
+load("//tools:gurobi.bzl", "gurobi_repository")
+
+load("//tools:mosek.bzl", "mosek_repository")
+load("//tools:soft_failure.bzl", "soft_failure_binary_repository")
+load("//tools:gfortran.bzl", "gfortran_repository")
+load("//tools:pypi.bzl", "pypi_archive")
 
 def deps(workspace_dir):
-    load = native.load
-    (pkg_config_package,) = load("//tools/third_party/kythe/tools/build_rules/config:pkg_config.bzl", "pkg_config_package")
-    (bitbucket_archive,) = load("//tools:bitbucket.bzl", "bitbucket_archive")
-    (github_archive,) = load("//tools:github.bzl", "github_archive")
-    (git_repository,) = load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
-
     pkg_config_package(
         name = "glib",
         modname = "glib-2.0",
     )
 
-    (python_repository,) = load("//tools:python.bzl", "python_repository")
     python_repository(
         name = "python",
         version = "2.7",
     )
 
-    (numpy_repository,) = load("//tools:numpy.bzl", "numpy_repository")
     numpy_repository(
         name = "numpy",
         python_version = "2.7",
@@ -199,9 +207,6 @@ def deps(workspace_dir):
     )
 
     # Necessary for buildifier.
-    (go_repositories, new_go_repository,) = load("@io_bazel_rules_go//go:def.bzl", "go_repositories", "new_go_repository")
-
-    # Necessary for buildifier.
     go_repositories()
 
     # Necessary for buildifier.
@@ -226,23 +231,19 @@ def deps(workspace_dir):
         sha256 = "d94cdb84f346ce4d9f1f891505ed257796103f70ce56590bdd02e025c8503b16",
     )
 
-    (gurobi_repository,) = load("//tools:gurobi.bzl", "gurobi_repository")
     gurobi_repository(
         name = "gurobi",
     )
 
-    (mosek_repository,) = load("//tools:mosek.bzl", "mosek_repository")
     mosek_repository(
         name = "mosek",
     )
 
-    (soft_failure_binary_repository,) = load("//tools:soft_failure.bzl", "soft_failure_binary_repository")
     soft_failure_binary_repository(
         name = "drake_visualizer",
         local_path = workspace_dir + "/build/install/bin/drake-visualizer",
     )
 
-    (gfortran_repository,) = load("//tools:gfortran.bzl", "gfortran_repository")
     gfortran_repository(
         name = "gfortran",
     )
@@ -254,7 +255,6 @@ def deps(workspace_dir):
     )
 
     # Python Libraries
-    (pypi_archive,) = load("//tools:pypi.bzl", "pypi_archive")
     pypi_archive(
         name = "six_archive",
         package = "six",
