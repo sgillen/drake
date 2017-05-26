@@ -18,6 +18,7 @@
 #include "drake/systems/sensors/rgbd_camera.h"
 #include "drake/systems/sensors/image_to_lcm_message.h"
 #include "drake/systems/lcm/lcm_publisher_system.h"
+#include "drake/systems/rendering/pose_stamped_t_pose_vector_translator.h"
 
 namespace drake {
 
@@ -31,6 +32,7 @@ using Eigen::Matrix3d;
 using systems::sensors::RgbdCamera;
 using systems::sensors::ImageToLcmMessage;
 using systems::lcm::LcmPublisherSystem;
+using systems::rendering::PoseStampedTPoseVectorTranslator;
 using std::make_unique;
 
 namespace examples {
@@ -169,6 +171,8 @@ struct IiwaWsgPlantGeneratorsEstimatorsAndVisualizer<T>::Impl {
   RgbdCamera* rgbd_camera_;
   ImageToLcmMessage* image_to_lcm_message_;
   LcmPublisherSystem* lcm_publisher_;
+  PoseStampedTPoseVectorTranslator pose_translator_;
+  LcmPublisherSystem* pose_lcm_publisher_;
 
   void CreateAndConnectCamera(
       DiagramBuilder<double>* pbuilder,
@@ -178,6 +182,8 @@ struct IiwaWsgPlantGeneratorsEstimatorsAndVisualizer<T>::Impl {
     // Adapted from: .../image_to_lcm_message_demo.cc
 
     const double pi = M_PI;
+
+    // Camera.
     /*
      * Obtained from director:
      * >>> c = view.camera()
@@ -192,22 +198,15 @@ struct IiwaWsgPlantGeneratorsEstimatorsAndVisualizer<T>::Impl {
     rgbd_camera_ = pbuilder->AddSystem(CreateUnique(rgbd_camera_instance));
     rgbd_camera_->set_name("rgbd_camera");
 
-    image_to_lcm_message_ =
-        pbuilder->template AddSystem<ImageToLcmMessage>();
-    image_to_lcm_message_->set_name("converter");
-
-    lcm_publisher_ = pbuilder->template AddSystem(
-        LcmPublisherSystem::Make<bot_core::images_t>(
-            "DRAKE_RGB_IMAGE", plcm));
-    lcm_publisher_->set_name("publisher");
-    lcm_publisher_->set_publish_period(0.01);
-
-    using namespace std;
-
     // Connect directly to ground truth state.
     pbuilder->Connect(
         pplant->get_output_port_plant_state(),
         rgbd_camera_->state_input_port());
+
+    // Image to LCM.
+    image_to_lcm_message_ =
+        pbuilder->template AddSystem<ImageToLcmMessage>();
+    image_to_lcm_message_->set_name("converter");
 
     pbuilder->Connect(
         rgbd_camera_->color_image_output_port(),
@@ -221,9 +220,27 @@ struct IiwaWsgPlantGeneratorsEstimatorsAndVisualizer<T>::Impl {
         rgbd_camera_->label_image_output_port(),
         image_to_lcm_message_->label_image_input_port());
 
+    // Camera image publisher.
+    lcm_publisher_ = pbuilder->template AddSystem(
+        LcmPublisherSystem::Make<bot_core::images_t>(
+            "DRAKE_RGB_IMAGE", plcm));
+    lcm_publisher_->set_name("publisher");
+    lcm_publisher_->set_publish_period(0.01);
+
     pbuilder->Connect(
         image_to_lcm_message_->images_t_msg_output_port(),
         lcm_publisher_->get_input_port(0));
+
+    // Camera pose publisher (to visualize)
+    pose_lcm_publisher_ = pbuilder->template AddSystem<
+      LcmPublisherSystem>("DRAKE_RGBD_CAMERA_POSE",
+                          pose_translator_, plcm);
+    pose_lcm_publisher_->set_name("pose_lcm_publisher");
+    pose_lcm_publisher_->set_publish_period(0.01);
+
+    pbuilder->Connect(
+        rgbd_camera_->camera_base_pose_output_port(),
+        pose_lcm_publisher_->get_input_port(0));
   }
 };
 
@@ -296,7 +313,6 @@ IiwaWsgPlantGeneratorsEstimatorsAndVisualizer<T>::
       builder.ExportOutput(wsg_status_sender_->get_output_port(0));
 
   // Sets up a RGBD camera.
-  using namespace std;
   impl_.reset(new Impl());
   impl_->CreateAndConnectCamera(&builder, lcm, plant_);
 
