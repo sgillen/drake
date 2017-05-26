@@ -1,3 +1,7 @@
+
+# Loaded by WORKSPACE
+load("@io_bazel_rules_go//go:def.bzl", "go_repositories", "new_go_repository")
+
 # https://github.com/bazelbuild/bazel/issues/1550
 load("//tools/third_party/kythe/tools/build_rules/config:pkg_config.bzl", "pkg_config_package")
 load("//tools:bitbucket.bzl", "bitbucket_archive")
@@ -7,7 +11,6 @@ load("//tools:python.bzl", "python_repository")
 load("//tools:numpy.bzl", "numpy_repository")
 
 # Necessary for buildifier.
-load("@io_bazel_rules_go//go:def.bzl", "go_repositories", "new_go_repository")
 
 load("//tools:gurobi.bzl", "gurobi_repository")
 
@@ -16,7 +19,7 @@ load("//tools:soft_failure.bzl", "soft_failure_binary_repository")
 load("//tools:gfortran.bzl", "gfortran_repository")
 load("//tools:pypi.bzl", "pypi_archive")
 
-def deps(workspace_dir):
+def drake_deps(install_dir=""):
     pkg_config_package(
         name = "glib",
         modname = "glib-2.0",
@@ -199,14 +202,6 @@ def deps(workspace_dir):
     )
 
     # Necessary for buildifier.
-    github_archive(
-        name = "io_bazel_rules_go",
-        repository = "bazelbuild/rules_go",
-        commit = "0.4.4",
-        sha256 = "afec53d875013de6cebe0e51943345c587b41263fdff36df5ff651fbf03c1c08",
-    )
-
-    # Necessary for buildifier.
     go_repositories()
 
     # Necessary for buildifier.
@@ -241,7 +236,7 @@ def deps(workspace_dir):
 
     soft_failure_binary_repository(
         name = "drake_visualizer",
-        local_path = workspace_dir + "/build/install/bin/drake-visualizer",
+        local_path = install_dir + "/bin/drake-visualizer",
     )
 
     gfortran_repository(

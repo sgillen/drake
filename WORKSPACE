@@ -16,7 +16,18 @@
 
 workspace(name = "drake")
 
-load(":deps.bzl", "deps")
-deps(
-    workspace_dir = __workspace_dir__,
+# -- START Required Load-Level Transitive Dependencies
+load("//tools:github.bzl", "github_archive")
+github_archive(
+    name = "io_bazel_rules_go",
+    repository = "bazelbuild/rules_go",
+    commit = "0.4.4",
+    sha256 = "afec53d875013de6cebe0e51943345c587b41263fdff36df5ff651fbf03c1c08",
+)
+# -- END Required Load-Level Transitive Dependencies
+
+# -- Transferrable dependencies
+load(":deps.bzl", "drake_deps")
+drake_deps(
+    install_dir = __workspace_dir__ + "/build/install",
 )
