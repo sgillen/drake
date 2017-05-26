@@ -1,3 +1,4 @@
+
 # Loaded by WORKSPACE
 load("@io_bazel_rules_go//go:def.bzl", "go_repositories", "new_go_repository")
 
@@ -9,7 +10,10 @@ load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 load("//tools:python.bzl", "python_repository")
 load("//tools:numpy.bzl", "numpy_repository")
 
+# Necessary for buildifier.
+
 load("//tools:gurobi.bzl", "gurobi_repository")
+
 load("//tools:mosek.bzl", "mosek_repository")
 load("//tools:soft_failure.bzl", "soft_failure_binary_repository")
 load("//tools:gfortran.bzl", "gfortran_repository")

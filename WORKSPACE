@@ -27,7 +27,7 @@ github_archive(
 # -- END Required Load-Level Transitive Dependencies
 
 # -- Transferrable dependencies
-load(":deps.bzl", "drake_deps")
+load("//tools/drake_deps.bzl", "drake_deps")
 drake_deps(
     install_dir = __workspace_dir__ + "/build/install",
 )
