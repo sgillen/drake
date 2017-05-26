@@ -19,6 +19,7 @@ if(lcm_FOUND)
       drakeTrajectories
       drakeSchunkWsg
       pickAndPlaceCommon
+      drakeSensors
       robotlocomotion-lcmtypes-cpp)
   drake_install_libraries(monolithicPickAndPlaceCommon)
   drake_install_headers(

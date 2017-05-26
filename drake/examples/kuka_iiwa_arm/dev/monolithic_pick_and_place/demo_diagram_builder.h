@@ -219,6 +219,7 @@ IiwaWsgPlantGeneratorsEstimatorsAndVisualizer
       Eigen::Vector3d box_position = Vector3<double>(1 + -0.43, -0.65,
                                                      kTableTopZInWorld + 0.1),
       Eigen::Vector3d box_orientation = Vector3<double>(0, 0, 1));
+  ~IiwaWsgPlantGeneratorsEstimatorsAndVisualizer();
   const systems::InputPortDescriptor<T>& get_input_port_iiwa_plan() const {
     return this->get_input_port(input_port_iiwa_plan_);
   }
@@ -256,6 +257,9 @@ IiwaWsgPlantGeneratorsEstimatorsAndVisualizer
   RobotPlanInterpolator* iiwa_trajectory_generator_{nullptr};
   manipulation::schunk_wsg::SchunkWsgTrajectoryGenerator*
   wsg_trajectory_generator_{nullptr};
+
+  class Impl;
+  std::unique_ptr<Impl> impl_;
 
   int input_port_iiwa_plan_{-1};
   int input_port_wsg_plan_{-1};

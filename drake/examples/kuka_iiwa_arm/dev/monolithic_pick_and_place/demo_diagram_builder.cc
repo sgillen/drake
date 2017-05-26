@@ -11,11 +11,27 @@
 #include "drake/systems/framework/diagram.h"
 #include "drake/systems/framework/diagram_builder.h"
 
+
+#include "bot_core/images_t.hpp"
+
+#include "drake/common/drake_assert.h"
+#include "drake/systems/sensors/rgbd_camera.h"
+#include "drake/systems/sensors/image_to_lcm_message.h"
+#include "drake/systems/lcm/lcm_publisher_system.h"
+
 namespace drake {
+
 using systems::DrakeVisualizer;
 using systems::DiagramBuilder;
 using lcm::DrakeLcm;
 using systems::RigidBodyPlant;
+
+using Eigen::Vector3d;
+using Eigen::Matrix3d;
+using systems::sensors::RgbdCamera;
+using systems::sensors::ImageToLcmMessage;
+using systems::lcm::LcmPublisherSystem;
+using std::make_unique;
 
 namespace examples {
 using manipulation::schunk_wsg::SchunkWsgTrajectoryGenerator;
@@ -78,6 +94,129 @@ StateMachineAndPrimitives<T>::StateMachineAndPrimitives(
   builder.BuildInto(this);
 }
 template class StateMachineAndPrimitives<double>;
+
+/**
+ * @brief CameraRotationMatrix Compute rotation matrix for a camera.
+ * This uses the same parameters as vtkCamera /
+ * vtkPerspectiveTransform::SetupCamera().
+ * Provide `B`, which yields `R_WC`, where C is the camera (x-forward, u-left,
+ * z-up), and W is the world.
+ *
+ * If position and focal_point are coincident, then the orientation will return
+ * identity. If
+ *
+ * @param position Position of the camera.
+ * @param focal_point Point of interest.
+ * @param up Upwards vector.
+ * @return Rotation matrix aimed at the focal point.
+ */
+Eigen::Matrix3d CameraRotationMatrix(const Vector3d& position,
+                                     const Vector3d& focal_point,
+                                     const Vector3d& up = Vector3d(0, 0, 1)) {
+  const double eps = std::numeric_limits<double>::epsilon();
+  Matrix3d R_WC = Matrix3d::Identity();
+  // Obtain views into R_WC.
+  auto xhat = R_WC.col(0);
+  auto yhat = R_WC.col(1);
+  auto zhat = R_WC.col(2);
+  // Compute desired x-axis.
+  Vector3d x = (focal_point - position);
+  double x_magnitude = x.norm();
+  if (x_magnitude < eps) {
+    // Singular, position and focal_point are coincident. Return identity.
+    return R_WC;
+  }
+  xhat = x / x_magnitude;
+  Vector3d z = xhat.cross(up);
+  double z_magnitude = z.norm();
+  if (z_magnitude < eps) {
+    // Singular. Point x up, z back, and y to the left (implicitly).
+    // TODO(eric.cousineau): Do something more intelligent when "up" is not z=1.
+    DRAKE_ASSERT((up - Vector3d(0, 0, 1)).norm() < eps);
+    zhat = Vector3d(-1, 0, 0);
+    yhat = Vector3d(0, 1, 0);
+    return R_WC;
+  }
+  zhat = z / z_magnitude;
+  yhat = zhat.cross(xhat);
+  return R_WC;
+}
+
+/**
+ * @brief CameraEulerAngle Compute Euler angles for camera orientation. See
+ * CameraRotationMatrix(...) for physical information.
+ * @param position Position of the camera.
+ * @param focal_point Point of interest.
+ * @param up Upwards vector.
+ * @return Euler angles (ordering per rotmat2rpy) aimed at the focal point.
+ */
+Vector3d CameraEulerAngle(const Vector3d& position, const Vector3d& focal_point,
+                          const Vector3d& up = Vector3d(0, 0, 1)) {
+  auto R_WC = CameraRotationMatrix(position, focal_point, up);
+  return drake::math::rotmat2rpy(R_WC);
+}
+
+/**
+ * Convenience to infer type.
+ */
+template <typename T>
+std::unique_ptr<T> CreateUnique(T* obj) {
+  return std::unique_ptr<T>(obj);
+}
+
+template <typename T>
+struct IiwaWsgPlantGeneratorsEstimatorsAndVisualizer<T>::Impl {
+  RgbdCamera* rgbd_camera_;
+  ImageToLcmMessage* image_to_lcm_message_;
+  LcmPublisherSystem* lcm_publisher_;
+
+  void CreateAndConnectCamera(DiagramBuilder<double>* builder,
+                              DrakeLcm* lcm,
+                              const RigidBodyPlant<double>* plant) {
+
+    // Adapted from: .../image_to_lcm_message_demo.cc
+
+    const double pi = M_PI;
+    /*
+     * Obtained from director:
+     * >>> c = view.camera()
+     * >>> print(c.GetFocalPoint())
+     * >>> print(c.GetPosition())
+    */
+    const Vector3d position(0.05, -0.5, 0.7);
+    const Vector3d focal_point(3.75, 4.75, 3.25);
+    auto rgbd_camera_instance = new RgbdCamera(
+        "rgbd_camera", plant->get_rigid_body_tree(),
+        position, CameraEulerAngle(position, focal_point), pi / 4, false);
+    rgbd_camera_ = builder->AddSystem(CreateUnique(rgbd_camera_instance));
+
+    lcm_publisher_ = builder->template AddSystem(
+        LcmPublisherSystem::Make<bot_core::images_t>(
+            "DRAKE_RGB_IMAGE", lcm));
+    lcm_publisher_->set_name("publisher");
+    lcm_publisher_->set_publish_period(0.01);
+
+    builder->Connect(
+        plant->get_output_port(0),
+        rgbd_camera_->state_input_port());
+
+    builder->Connect(
+        rgbd_camera_->color_image_output_port(),
+        image_to_lcm_message_->color_image_input_port());
+
+    builder->Connect(
+        rgbd_camera_->depth_image_output_port(),
+        image_to_lcm_message_->depth_image_input_port());
+
+    builder->Connect(
+        rgbd_camera_->label_image_output_port(),
+        image_to_lcm_message_->label_image_input_port());
+
+    builder->Connect(
+        image_to_lcm_message_->images_t_msg_output_port(),
+        lcm_publisher_->get_input_port(0));
+  }
+};
 
 template <typename T>
 IiwaWsgPlantGeneratorsEstimatorsAndVisualizer<T>::
@@ -147,8 +286,18 @@ IiwaWsgPlantGeneratorsEstimatorsAndVisualizer<T>::
   output_port_wsg_status_ =
       builder.ExportOutput(wsg_status_sender_->get_output_port(0));
 
+  // Sets up a RGBD camera.
+  impl_.reset(new Impl());
+  impl_->CreateAndConnectCamera(&builder, lcm, &(plant_->get_plant()));
+
   builder.BuildInto(this);
 }
+
+// Define destructor since we need information for deleter in implementation
+// pattern.
+template<typename T>
+IiwaWsgPlantGeneratorsEstimatorsAndVisualizer<T>::~IiwaWsgPlantGeneratorsEstimatorsAndVisualizer()
+{}
 
 template <typename T>
 void IiwaWsgPlantGeneratorsEstimatorsAndVisualizer<T>::InitializeIiwaPlan(
