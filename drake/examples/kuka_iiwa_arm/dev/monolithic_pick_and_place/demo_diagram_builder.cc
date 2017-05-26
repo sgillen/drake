@@ -170,9 +170,10 @@ struct IiwaWsgPlantGeneratorsEstimatorsAndVisualizer<T>::Impl {
   ImageToLcmMessage* image_to_lcm_message_;
   LcmPublisherSystem* lcm_publisher_;
 
-  void CreateAndConnectCamera(DiagramBuilder<double>* builder,
-                              DrakeLcm* lcm,
-                              const RigidBodyPlant<double>* plant) {
+  void CreateAndConnectCamera(
+      DiagramBuilder<double>* pbuilder,
+      DrakeLcm* plcm,
+      const IiwaAndWsgPlantWithStateEstimator<double>* pplant) {
 
     // Adapted from: .../image_to_lcm_message_demo.cc
 
@@ -186,33 +187,41 @@ struct IiwaWsgPlantGeneratorsEstimatorsAndVisualizer<T>::Impl {
     const Vector3d position(0.05, -0.5, 0.7);
     const Vector3d focal_point(3.75, 4.75, 3.25);
     auto rgbd_camera_instance = new RgbdCamera(
-        "rgbd_camera", plant->get_rigid_body_tree(),
-        position, CameraEulerAngle(position, focal_point), pi / 4, false);
-    rgbd_camera_ = builder->AddSystem(CreateUnique(rgbd_camera_instance));
+        "rgbd_camera", pplant->get_plant().get_rigid_body_tree(),
+        position, CameraEulerAngle(position, focal_point), pi / 4, true);
+    rgbd_camera_ = pbuilder->AddSystem(CreateUnique(rgbd_camera_instance));
+    rgbd_camera_->set_name("rgbd_camera");
 
-    lcm_publisher_ = builder->template AddSystem(
+    image_to_lcm_message_ =
+        pbuilder->template AddSystem<ImageToLcmMessage>();
+    image_to_lcm_message_->set_name("converter");
+
+    lcm_publisher_ = pbuilder->template AddSystem(
         LcmPublisherSystem::Make<bot_core::images_t>(
-            "DRAKE_RGB_IMAGE", lcm));
+            "DRAKE_RGB_IMAGE", plcm));
     lcm_publisher_->set_name("publisher");
     lcm_publisher_->set_publish_period(0.01);
 
-    builder->Connect(
-        plant->get_output_port(0),
+    using namespace std;
+
+    // Connect directly to ground truth state.
+    pbuilder->Connect(
+        pplant->get_output_port_plant_state(),
         rgbd_camera_->state_input_port());
 
-    builder->Connect(
+    pbuilder->Connect(
         rgbd_camera_->color_image_output_port(),
         image_to_lcm_message_->color_image_input_port());
 
-    builder->Connect(
+    pbuilder->Connect(
         rgbd_camera_->depth_image_output_port(),
         image_to_lcm_message_->depth_image_input_port());
 
-    builder->Connect(
+    pbuilder->Connect(
         rgbd_camera_->label_image_output_port(),
         image_to_lcm_message_->label_image_input_port());
 
-    builder->Connect(
+    pbuilder->Connect(
         image_to_lcm_message_->images_t_msg_output_port(),
         lcm_publisher_->get_input_port(0));
   }
@@ -287,8 +296,9 @@ IiwaWsgPlantGeneratorsEstimatorsAndVisualizer<T>::
       builder.ExportOutput(wsg_status_sender_->get_output_port(0));
 
   // Sets up a RGBD camera.
+  using namespace std;
   impl_.reset(new Impl());
-  impl_->CreateAndConnectCamera(&builder, lcm, &(plant_->get_plant()));
+  impl_->CreateAndConnectCamera(&builder, lcm, plant_);
 
   builder.BuildInto(this);
 }
