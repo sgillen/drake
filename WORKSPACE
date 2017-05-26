@@ -25,19 +25,9 @@ drake_workspace_dir = "."
 # For more information, see #5621.
 drake_cmake_install_dir = drake_workspace_dir + "/build/install"
 
-# Rule prerequisites.
-local_repository(
-    name = "kythe",
-    path = drake_workspace_dir + "/tools/third_party/kythe",
-)
-load("@drake//tools:github.bzl", "github_archive")
-# Required for buildifier.
-github_archive(
-    name = "io_bazel_rules_go",
-    repository = "bazelbuild/rules_go",
-    commit = "0.4.4",
-    sha256 = "afec53d875013de6cebe0e51943345c587b41263fdff36df5ff651fbf03c1c08",
-)
+# Load external rules that are immediately used to define other externals.
+load("@drake//tools:externals_rules.bzl", "drake_external_rule_repositories")
+drake_external_rule_repositories(drake_workspace_dir)
 
 # Load external repostories.
 load("@drake//tools:externals.bzl", "drake_external_repositories")
