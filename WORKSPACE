@@ -10,7 +10,26 @@ workspace(name = "drake")
 # on drake and need its dependencies for convenience.
 # @note See @drake//tools:externals.bzl for more info.
 
+# Change this to the path of drake relative to the active WORKSPACE.
+# TODO(eric.cousineau): See if there is a way to get:
+#   Label("@drake//:install").workspace_root to NOT always return "external/drake"
+drake_workspace_dir = "."
+
+# # Enable this if `drake` is being consumed as an external local repository.
+# local_repository(
+#     name = "drake",
+#     path = drake_workspace_dir,
+# )
+
+# Change this to the path of the CMake build/ directory to consume drake-visualizer.
+# For more information, see #5621.
+drake_cmake_install_dir = drake_workspace_dir + "/build/install"
+
 # Rule prerequisites.
+local_repository(
+    name = "kythe",
+    path = drake_workspace_dir + "/tools/third_party/kythe",
+)
 load("@drake//tools:github.bzl", "github_archive")
 # Required for buildifier.
 github_archive(
@@ -23,6 +42,6 @@ github_archive(
 # Load external repostories.
 load("@drake//tools:externals.bzl", "drake_external_repositories")
 drake_external_repositories(
-    cmake_install_dir = __workspace_dir__ + "/build/install",
+    cmake_install_dir = drake_cmake_install_dir,
 )
 # -- END drake externals
