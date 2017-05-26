@@ -1,25 +1,59 @@
+# -*- python -*-
 
-# Loaded by WORKSPACE
+# This structure permits consuming drake as an external project in Bazel.
+# This uses the workaround from the following Bazel GitHub issue:
+# @ref https://github.com/bazelbuild/bazel/issues/2757#issuecomment-290448615
+
+# Must use "load()" external to macros
+# @ref https://github.com/bazelbuild/bazel/issues/1550
+
+# This package must be loaded by WORKSPACE.
 load("@io_bazel_rules_go//go:def.bzl", "go_repositories", "new_go_repository")
 
-# https://github.com/bazelbuild/bazel/issues/1550
+# Generic repository types.
 load("//tools/third_party/kythe/tools/build_rules/config:pkg_config.bzl", "pkg_config_package")
 load("//tools:bitbucket.bzl", "bitbucket_archive")
 load("//tools:github.bzl", "github_archive")
 load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
-load("//tools:python.bzl", "python_repository")
-load("//tools:numpy.bzl", "numpy_repository")
-
-# Necessary for buildifier.
-
-load("//tools:gurobi.bzl", "gurobi_repository")
-
-load("//tools:mosek.bzl", "mosek_repository")
 load("//tools:soft_failure.bzl", "soft_failure_binary_repository")
-load("//tools:gfortran.bzl", "gfortran_repository")
 load("//tools:pypi.bzl", "pypi_archive")
 
-def drake_deps(install_dir=""):
+# Specific repository types.
+load("//tools:python.bzl", "python_repository")
+load("//tools:numpy.bzl", "numpy_repository")
+load("//tools:gurobi.bzl", "gurobi_repository")
+load("//tools:mosek.bzl", "mosek_repository")
+load("//tools:gfortran.bzl", "gfortran_repository")
+
+# To temporarily use a local copy of a github_archive, within this file add a
+# local_repository_archive argument to its github_archive macro call, e.g.:
+#
+# github_archive(
+#     name = "foobar",
+#     local_repository_override = "/path/to/local/foo/bar",
+#     repository = "foo/bar",
+#     commit = "0123456789abcdef0123456789abcdef01234567",
+#     sha256 = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+# )
+
+def drake_external_repositories(cmake_install_dir=""):
+    """A macro to be called in the WORKSPACE that adds all externals that are
+    required by drake.
+
+    This enables `drake` to be consumed as an external in Bazel, via mechanisms
+    such as 
+
+    The optional cmake_install_dir= is a workaround for #5621. This may point
+    to the CMake "build/install" directory which will contain `drake-visualizer`
+    under "$(cmake_install_dir)/bin/drake-visualizer".
+    """
+
+    # TODO(eric.cousineau): Add a list of packages to not define (e.g., if they are already incorporated).
+    # When this is added, add instructions on "bind" ("native.bind"), if a user
+    # would like to alias their external (or their own version of the library).
+    # TODO(eric.cousineau): Ensure "bind" works for aliasing externals still as
+    # an external, e.g., 'bind("@glib_local", "@glib")'.
+
     pkg_config_package(
         name = "glib",
         modname = "glib-2.0",
@@ -236,7 +270,7 @@ def drake_deps(install_dir=""):
 
     soft_failure_binary_repository(
         name = "drake_visualizer",
-        local_path = install_dir + "/bin/drake-visualizer",
+        local_path = cmake_install_dir + "/bin/drake-visualizer",
     )
 
     gfortran_repository(
