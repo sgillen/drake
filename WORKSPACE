@@ -18,6 +18,7 @@ workspace(name = "drake")
 
 # -- START Required Load-Level Transitive Dependencies
 load("//tools:github.bzl", "github_archive")
+# Required for buildifier.
 github_archive(
     name = "io_bazel_rules_go",
     repository = "bazelbuild/rules_go",
@@ -27,7 +28,7 @@ github_archive(
 # -- END Required Load-Level Transitive Dependencies
 
 # -- Transferrable dependencies
-load("//tools/drake_deps.bzl", "drake_deps")
+load("//tools:drake_deps.bzl", "drake_deps")
 drake_deps(
     install_dir = __workspace_dir__ + "/build/install",
 )
