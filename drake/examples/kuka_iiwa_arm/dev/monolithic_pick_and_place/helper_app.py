@@ -32,6 +32,7 @@ def convert_pose_to_botcore_position(msg):
     pos_in = lcmbotcore.position_3d_t()
     pos_in.translation = msg.pose.position
     pos_in.rotation = msg.pose.orientation
+    return pos_in
 
 # Main Routine
 global helperApp
