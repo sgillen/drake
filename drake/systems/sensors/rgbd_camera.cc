@@ -581,13 +581,20 @@ void RgbdCamera::Impl::UpdateModelPoses(
 void RgbdCamera::Impl::UpdateRenderWindow() const {
   for (auto& window : MakeVtkInstanceArray<vtkRenderWindow>(
            color_depth_render_window_, label_render_window_)) {
+    ScopedWithTimer<> scoped1("Window"); unused(scoped1);
     window->Render();
   }
 
   for (auto& filter : MakeVtkInstanceArray<vtkWindowToImageFilter>(
            color_filter_, depth_filter_, label_filter_)) {
-    filter->Modified();
-    filter->Update();
+    {
+      ScopedWithTimer<> scoped1("Filter Modified"); unused(scoped1);
+      filter->Modified();
+    }
+    {
+      ScopedWithTimer<> scoped1("Filter Update"); unused(scoped1);
+      filter->Update();
+    }
   }
 }
 
@@ -619,9 +626,15 @@ void RgbdCamera::Impl::DoCalcOutput(
   Eigen::Quaterniond quat = Eigen::Quaterniond(X_WB.linear());
   camera_base_pose->set_rotation(quat);
 
-  UpdateModelPoses(cache, (X_WB * X_BC_).inverse());
+  {
+    ScopedWithTimer<> scope_timer_2("UpdateModelPoses"); unused(scope_timer_2);
+    UpdateModelPoses(cache, (X_WB * X_BC_).inverse());
+  }
 
-  UpdateRenderWindow();
+  {
+    ScopedWithTimer<> scope_timer_2("UpdateRenderWindow"); unused(scope_timer_2);
+    UpdateRenderWindow();
+  }
 
   // Outputs the image data.
   sensors::ImageBgra8U& image =
