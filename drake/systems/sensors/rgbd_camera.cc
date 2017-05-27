@@ -33,6 +33,11 @@
 #include "drake/systems/sensors/image.h"
 #include "drake/systems/sensors/vtk_util.h"
 
+// HACK
+#include "drake/common/scoped_timer.h"
+using timing::Timer;
+using timing::ScopedWithTimer;
+
 // TODO(kunimatsu-tri) Refactor RenderingWorld out from RgbdCamera,
 // so that other vtk dependent sensor simulators can share the RenderingWorld
 // without duplicating it.
@@ -589,6 +594,9 @@ void RgbdCamera::Impl::UpdateRenderWindow() const {
 void RgbdCamera::Impl::DoCalcOutput(
     const BasicVector<double>& input_vector,
     systems::SystemOutput<double>* output) const {
+  ScopedWithTimer<> scope_timer1("DoCalcOutput 1: ");
+  unused(scope_timer1);
+
   const Eigen::VectorXd q = input_vector.CopyToVector().head(
       tree_.get_num_positions());
   KinematicsCache<double> cache = tree_.doKinematics(q);
@@ -630,7 +638,13 @@ void RgbdCamera::Impl::DoCalcOutput(
 
   const int height = color_camera_info_.height();
   const int width = color_camera_info_.width();
+  std::unique_ptr<ScopedWithTimer<>> scope_timer2;
+  auto timer_maker = []() { return new ScopedWithTimer<>("Pix iter"); };
   for (int v = 0; v < height; ++v) {
+    if (v % 100 == 0) {
+      scope_timer2.reset(timer_maker());
+    }
+
     for (int u = 0; u < width; ++u) {
       const int height_reversed = height - v - 1;  // Makes image upside down.
 
