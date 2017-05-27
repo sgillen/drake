@@ -190,11 +190,17 @@ struct IiwaWsgPlantGeneratorsEstimatorsAndVisualizer<T>::Impl {
      * >>> print(c.GetFocalPoint())
      * >>> print(c.GetPosition())
     */
-    const Vector3d position(0.05, -0.5, 0.7);
-    const Vector3d focal_point(3.75, 4.75, 3.25);
+//    const Vector3d position(0.05, -0.5, 0.7);
+//    const Vector3d focal_point(3.75, 4.75, 3.25);
+//    const auto orientation = CameraEulerAngle(position, focal_point);
+    const double y_offset = -0.5;
+    const double planar_distance = 2;
+    const double height = 2;
+    const Vector3d position(planar_distance, planar_distance + y_offset, height);
+    const Vector3d orientation(0, 20, -135); // degrees
     auto rgbd_camera_instance = new RgbdCamera(
         "rgbd_camera", pplant->get_plant().get_rigid_body_tree(),
-        position, CameraEulerAngle(position, focal_point), pi / 4, true);
+        position, orientation * pi / 180, pi / 4, true);
     rgbd_camera_ = pbuilder->AddSystem(CreateUnique(rgbd_camera_instance));
     rgbd_camera_->set_name("rgbd_camera");
 

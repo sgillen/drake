@@ -13,6 +13,11 @@ from director import framevisualization
 # Copying from: spartan:517bffd:apps/iiwa/iiwaManipApp.py
 lcm_pose_t = lcmrobotlocomotion.pose_stamped_t
 
+print("""
+# Helpers
+> tf = transformUtils.frameFromPositionAndRPY([1, 0.5, 2], [0, 30, -135]); vis.updateFrame(tf, 'camera to world', scale=0.5, visible=True)
+""")
+
 class HelperApp(object):
     def __init__(self):
         lcmUtils.addSubscriber('DRAKE_RGBD_CAMERA_POSE', lcm_pose_t, self.onCameraPoseMessage)
