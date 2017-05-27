@@ -36,16 +36,16 @@ load("//tools:gfortran.bzl", "gfortran_repository")
 #     sha256 = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
 # )
 
-def drake_external_repositories(cmake_install_dir=""):
+def drake_external_repositories(cmake_install_path=""):
     """A macro to be called in the WORKSPACE that adds all externals that are
     required by drake.
 
     This enables `drake` to be consumed as an external in Bazel, via mechanisms
     such as 
 
-    The optional cmake_install_dir= is a workaround for #5621. This may point
+    The optional cmake_install_path= is a workaround for #5621. This may point
     to the CMake "build/install" directory which will contain `drake-visualizer`
-    under "$(cmake_install_dir)/bin/drake-visualizer".
+    under "$(cmake_install_path)/bin/drake-visualizer".
     """
 
     # TODO(eric.cousineau): Add a list of packages to not define (e.g., if they are already incorporated).
@@ -270,7 +270,7 @@ def drake_external_repositories(cmake_install_dir=""):
 
     soft_failure_binary_repository(
         name = "drake_visualizer",
-        local_path = cmake_install_dir + "/bin/drake-visualizer",
+        local_path = cmake_install_path + "/bin/drake-visualizer",
     )
 
     gfortran_repository(
