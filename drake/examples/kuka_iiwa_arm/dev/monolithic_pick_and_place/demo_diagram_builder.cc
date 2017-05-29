@@ -20,6 +20,10 @@
 #include "drake/systems/lcm/lcm_publisher_system.h"
 #include "drake/systems/rendering/pose_stamped_t_pose_vector_translator.h"
 
+#include "drake/systems/sensors/depth_sensor.h"
+#include "drake/systems/sensors/depth_sensor_to_lcm_point_cloud_message.h"
+#include "bot_core/pointcloud_t.hpp"
+
 namespace drake {
 
 using systems::DrakeVisualizer;
@@ -34,6 +38,10 @@ using systems::sensors::ImageToLcmMessage;
 using systems::lcm::LcmPublisherSystem;
 using systems::rendering::PoseStampedTPoseVectorTranslator;
 using std::make_unique;
+
+using systems::sensors::DepthSensor;
+using systems::sensors::DepthSensorSpecification;
+using systems::sensors::DepthSensorToLcmPointCloudMessage;
 
 namespace examples {
 using manipulation::schunk_wsg::SchunkWsgTrajectoryGenerator;
@@ -108,6 +116,7 @@ std::unique_ptr<T> CreateUnique(T* obj) {
 template <typename T>
 struct IiwaWsgPlantGeneratorsEstimatorsAndVisualizer<T>::Impl {
   RgbdCamera* rgbd_camera_;
+  DepthSensor* depth_sensor_;
   ImageToLcmMessage* image_to_lcm_message_;
   LcmPublisherSystem* lcm_publisher_;
   PoseStampedTPoseVectorTranslator pose_translator_;
@@ -121,6 +130,8 @@ struct IiwaWsgPlantGeneratorsEstimatorsAndVisualizer<T>::Impl {
     // Adapted from: .../image_to_lcm_message_demo.cc
 
     const double pi = M_PI;
+
+    const auto& rigid_body_tree = pplant->get_plant().get_rigid_body_tree();
 
     // Camera.
     /*
@@ -138,7 +149,7 @@ struct IiwaWsgPlantGeneratorsEstimatorsAndVisualizer<T>::Impl {
     const Vector3d position(planar_distance, planar_distance + y_offset, height);
     const Vector3d orientation(0, 20, -135); // degrees
     auto rgbd_camera_instance = new RgbdCamera(
-        "rgbd_camera", pplant->get_plant().get_rigid_body_tree(),
+        "rgbd_camera", rigid_body_tree,
         position, orientation * pi / 180, pi / 4, true);
     rgbd_camera_ = pbuilder->AddSystem(CreateUnique(rgbd_camera_instance));
     rgbd_camera_->set_name("rgbd_camera");
@@ -186,6 +197,44 @@ struct IiwaWsgPlantGeneratorsEstimatorsAndVisualizer<T>::Impl {
     pbuilder->Connect(
         rgbd_camera_->camera_base_pose_output_port(),
         pose_lcm_publisher_->get_input_port(0));
+
+    // Try out an equivalent depth sensor (or rather, just send out raycasts).
+    DepthSensorSpecification specification;
+//    DepthSensorSpecification::set_octant_1_spec(&specification);
+    auto* spec = &specification;
+    spec->set_min_yaw(-pi / 4);
+    spec->set_max_yaw(pi / 4);
+    spec->set_min_pitch(-pi / 4);
+    spec->set_max_pitch(pi / 4);
+    spec->set_num_yaw_values(240);
+    spec->set_num_pitch_values(320);
+    spec->set_min_range(0);
+    spec->set_max_range(100);
+
+    auto world_body = const_cast<RigidBody<double>*>(&rigid_body_tree.world());
+    RigidBodyFrame<double> frame("depth_sensor", world_body,
+                                 position, orientation * pi / 180);
+    auto depth_sensor_instance = new DepthSensor(
+        "depth_sensor", rigid_body_tree, frame, specification);
+    depth_sensor_ = pbuilder->AddSystem(CreateUnique(depth_sensor_instance));
+    depth_sensor_->set_name("depth_sensor");
+
+    // Connect directly to ground truth state.
+    pbuilder->Connect(
+        pplant->get_output_port_plant_state(),
+        depth_sensor_->get_rigid_body_tree_state_input_port());
+
+    // Point Cloud to LCM.
+    // From: depth_sensor_to_lcm_point_cloud_message_demo
+    auto depth_to_lcm_message_ =
+        pbuilder->template AddSystem<DepthSensorToLcmPointCloudMessage>(specification);
+    const std::string kSensorName = "DEPTH";
+    auto lcm_publisher_depth_ = pbuilder->template AddSystem(
+        LcmPublisherSystem::Make<bot_core::pointcloud_t>(
+            "DRAKE_POINTCLOUD_" + kSensorName, plcm));
+    pbuilder->Connect(
+        depth_to_lcm_message_->pointcloud_message_output_port(),
+        lcm_publisher_depth_->get_input_port(0));
   }
 };
 
