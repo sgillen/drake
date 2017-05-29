@@ -98,67 +98,6 @@ StateMachineAndPrimitives<T>::StateMachineAndPrimitives(
 template class StateMachineAndPrimitives<double>;
 
 /**
- * @brief CameraRotationMatrix Compute rotation matrix for a camera.
- * This uses the same parameters as vtkCamera /
- * vtkPerspectiveTransform::SetupCamera().
- * Provide `B`, which yields `R_WC`, where C is the camera (x-forward, u-left,
- * z-up), and W is the world.
- *
- * If position and focal_point are coincident, then the orientation will return
- * identity. If
- *
- * @param position Position of the camera.
- * @param focal_point Point of interest.
- * @param up Upwards vector.
- * @return Rotation matrix aimed at the focal point.
- */
-Eigen::Matrix3d CameraRotationMatrix(const Vector3d& position,
-                                     const Vector3d& focal_point,
-                                     const Vector3d& up = Vector3d(0, 0, 1)) {
-  const double eps = std::numeric_limits<double>::epsilon();
-  Matrix3d R_WC = Matrix3d::Identity();
-  // Obtain views into R_WC.
-  auto xhat = R_WC.col(0);
-  auto yhat = R_WC.col(1);
-  auto zhat = R_WC.col(2);
-  // Compute desired x-axis.
-  Vector3d x = (focal_point - position);
-  double x_magnitude = x.norm();
-  if (x_magnitude < eps) {
-    // Singular, position and focal_point are coincident. Return identity.
-    return R_WC;
-  }
-  xhat = x / x_magnitude;
-  Vector3d z = xhat.cross(up);
-  double z_magnitude = z.norm();
-  if (z_magnitude < eps) {
-    // Singular. Point x up, z back, and y to the left (implicitly).
-    // TODO(eric.cousineau): Do something more intelligent when "up" is not z=1.
-    DRAKE_ASSERT((up - Vector3d(0, 0, 1)).norm() < eps);
-    zhat = Vector3d(-1, 0, 0);
-    yhat = Vector3d(0, 1, 0);
-    return R_WC;
-  }
-  zhat = z / z_magnitude;
-  yhat = zhat.cross(xhat);
-  return R_WC;
-}
-
-/**
- * @brief CameraEulerAngle Compute Euler angles for camera orientation. See
- * CameraRotationMatrix(...) for physical information.
- * @param position Position of the camera.
- * @param focal_point Point of interest.
- * @param up Upwards vector.
- * @return Euler angles (ordering per rotmat2rpy) aimed at the focal point.
- */
-Vector3d CameraEulerAngle(const Vector3d& position, const Vector3d& focal_point,
-                          const Vector3d& up = Vector3d(0, 0, 1)) {
-  auto R_WC = CameraRotationMatrix(position, focal_point, up);
-  return drake::math::rotmat2rpy(R_WC);
-}
-
-/**
  * Convenience to infer type.
  */
 template <typename T>
