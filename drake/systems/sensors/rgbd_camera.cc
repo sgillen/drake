@@ -33,11 +33,6 @@
 #include "drake/systems/sensors/image.h"
 #include "drake/systems/sensors/vtk_util.h"
 
-// HACK
-#include "drake/common/scoped_timer.h"
-using timing::Timer;
-using timing::ScopedWithTimer;
-
 // TODO(kunimatsu-tri) Refactor RenderingWorld out from RgbdCamera,
 // so that other vtk dependent sensor simulators can share the RenderingWorld
 // without duplicating it.
@@ -97,14 +92,6 @@ MakeVtkInstanceArray(const vtkNew<T>& element1,
       vtkSmartPointer<T>(element1.GetPointer()),
       vtkSmartPointer<T>(element2.GetPointer())}};
 }
-
-template <typename T>
-const std::array<vtkSmartPointer<T>, 1>
-MakeVtkInstanceArray(const vtkNew<T>& element1) {
-  return  std::array<vtkSmartPointer<T>, 2>{{
-      vtkSmartPointer<T>(element1.GetPointer())}};
-}
-
 
 // Defines a color based on its three primary additive colors: red, green, and
 // blue. Each of these primary additive colors are in the range of [0, 255].
@@ -312,8 +299,6 @@ class RgbdCamera::Impl {
   vtkNew<vtkWindowToImageFilter> label_filter_;
 };
 
-template <typename T>
-using init_list = std::initializer_list<std::reference_wrapper<T>>;
 
 RgbdCamera::Impl::Impl(const RigidBodyTree<double>& tree,
                        const RigidBodyFrame<double>& frame,
@@ -340,7 +325,8 @@ RgbdCamera::Impl::Impl(const RigidBodyTree<double>& tree,
           Eigen::Isometry3d(math::rpy2rotmat(orientation))),
       kCameraFixed(fix_camera), color_palette_(tree.bodies.size()) {
   if (!show_window) {
-    for (auto& window : MakeVtkInstanceArray(color_depth_render_window_)) { // label_render_window_)
+    for (auto& window : MakeVtkInstanceArray(color_depth_render_window_,
+                                             label_render_window_)) {
       window->SetOffScreenRendering(1);
     }
   }
@@ -355,32 +341,31 @@ RgbdCamera::Impl::Impl(const RigidBodyTree<double>& tree,
   camera->SetClippingRange(kClippingPlaneNear, kClippingPlaneFar);
 
   const auto sky_color = color_palette_.get_normalized_sky_color();
-  const auto renderers = MakeVtkInstanceArray(color_depth_renderer_); // label_renderer_};
+  const auto renderers = MakeVtkInstanceArray<vtkRenderer>(
+      color_depth_renderer_, label_renderer_);
   for (auto& renderer : renderers) {
     renderer->SetActiveCamera(camera.GetPointer());
     renderer->SetBackground(sky_color.r, sky_color.g, sky_color.b);
-    break;
   }
 
   const auto windows = MakeVtkInstanceArray<vtkRenderWindow>(
-      color_depth_render_window_); // , label_render_window_);
+      color_depth_render_window_, label_render_window_);
   for (size_t i = 0; i < windows.size(); ++i) {
     windows[i]->SetSize(color_camera_info_.width(),
                         color_camera_info_.height());
     windows[i]->AddRenderer(renderers[i].GetPointer());
-    break;
   }
-//  label_render_window_->SetMultiSamples(0);
+  label_render_window_->SetMultiSamples(0);
 
-//  color_filter_->SetInput(color_depth_render_window_.GetPointer());
-//  color_filter_->SetInputBufferTypeToRGBA();
+  color_filter_->SetInput(color_depth_render_window_.GetPointer());
+  color_filter_->SetInputBufferTypeToRGBA();
   depth_filter_->SetInput(color_depth_render_window_.GetPointer());
   depth_filter_->SetInputBufferTypeToZBuffer();
-//  label_filter_->SetInput(label_render_window_.GetPointer());
-//  label_filter_->SetInputBufferTypeToRGB();
+  label_filter_->SetInput(label_render_window_.GetPointer());
+  label_filter_->SetInputBufferTypeToRGB();
 
   for (auto& filter : MakeVtkInstanceArray<vtkWindowToImageFilter>(
-           depth_filter_)) { //color_filter_, , label_filter_)) {
+           color_filter_, depth_filter_, label_filter_)) {
     filter->SetMagnification(1);
     filter->ReadFrontBufferOff();
     filter->Update();
@@ -591,29 +576,19 @@ void RgbdCamera::Impl::UpdateModelPoses(
 void RgbdCamera::Impl::UpdateRenderWindow() const {
   for (auto& window : MakeVtkInstanceArray<vtkRenderWindow>(
            color_depth_render_window_, label_render_window_)) {
-    ScopedWithTimer<> scoped1("Window"); unused(scoped1);
     window->Render();
   }
 
   for (auto& filter : MakeVtkInstanceArray<vtkWindowToImageFilter>(
            color_filter_, depth_filter_, label_filter_)) {
-    {
-      ScopedWithTimer<> scoped1("Filter Modified"); unused(scoped1);
-      filter->Modified();
-    }
-    {
-      ScopedWithTimer<> scoped1("Filter Update"); unused(scoped1);
-      filter->Update();
-    }
+    filter->Modified();
+    filter->Update();
   }
 }
 
 void RgbdCamera::Impl::DoCalcOutput(
     const BasicVector<double>& input_vector,
     systems::SystemOutput<double>* output) const {
-  ScopedWithTimer<> scope_timer1("DoCalcOutput 1: ");
-  unused(scope_timer1);
-
   const Eigen::VectorXd q = input_vector.CopyToVector().head(
       tree_.get_num_positions());
   KinematicsCache<double> cache = tree_.doKinematics(q);
@@ -636,15 +611,9 @@ void RgbdCamera::Impl::DoCalcOutput(
   Eigen::Quaterniond quat = Eigen::Quaterniond(X_WB.linear());
   camera_base_pose->set_rotation(quat);
 
-  {
-    ScopedWithTimer<> scope_timer_2("UpdateModelPoses"); unused(scope_timer_2);
-    UpdateModelPoses(cache, (X_WB * X_BC_).inverse());
-  }
+  UpdateModelPoses(cache, (X_WB * X_BC_).inverse());
 
-  {
-    ScopedWithTimer<> scope_timer_2("UpdateRenderWindow"); unused(scope_timer_2);
-    UpdateRenderWindow();
-  }
+  UpdateRenderWindow();
 
   // Outputs the image data.
   sensors::ImageBgra8U& image =
@@ -655,19 +624,13 @@ void RgbdCamera::Impl::DoCalcOutput(
       output->GetMutableData(kPortDepthImage)->GetMutableValue<
         sensors::ImageDepth32F>();
 
-//  sensors::ImageLabel16I& label_image =
-//      output->GetMutableData(kPortLabelImage)->GetMutableValue<
-//        sensors::ImageLabel16I>();
+  sensors::ImageLabel16I& label_image =
+      output->GetMutableData(kPortLabelImage)->GetMutableValue<
+        sensors::ImageLabel16I>();
 
   const int height = color_camera_info_.height();
   const int width = color_camera_info_.width();
-  std::unique_ptr<ScopedWithTimer<>> scope_timer2;
-  auto timer_maker = []() { return new ScopedWithTimer<>("Pix iter"); };
   for (int v = 0; v < height; ++v) {
-    if (v % 100 == 0) {
-      scope_timer2.reset(timer_maker());
-    }
-
     for (int u = 0; u < width; ++u) {
       const int height_reversed = height - v - 1;  // Makes image upside down.
 
@@ -688,14 +651,14 @@ void RgbdCamera::Impl::DoCalcOutput(
       depth_image.at(u, height_reversed)[0] =
           CheckRangeAndConvertToMeters(z_buffer_value);
 
-//      // Updates the label image.
-//      void* label_ptr = label_filter_->GetOutput()->GetScalarPointer(u, v, 0);
-//      Color color{*(static_cast<uint8_t*>(label_ptr) + 0),  // R
-//                  *(static_cast<uint8_t*>(label_ptr) + 1),  // G
-//                  *(static_cast<uint8_t*>(label_ptr) + 2)};  // B
+      // Updates the label image.
+      void* label_ptr = label_filter_->GetOutput()->GetScalarPointer(u, v, 0);
+      Color color{*(static_cast<uint8_t*>(label_ptr) + 0),  // R
+                  *(static_cast<uint8_t*>(label_ptr) + 1),  // G
+                  *(static_cast<uint8_t*>(label_ptr) + 2)};  // B
 
-//      label_image.at(u, height_reversed)[0] =
-//          static_cast<int16_t>(color_palette_.LookUpId(color));
+      label_image.at(u, height_reversed)[0] =
+          static_cast<int16_t>(color_palette_.LookUpId(color));
     }
   }
 }
