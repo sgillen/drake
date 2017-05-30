@@ -244,8 +244,14 @@ struct IiwaWsgPlantGeneratorsEstimatorsAndVisualizer<T>::Impl {
           LcmPublisherSystem::Make<bot_core::pointcloud_t>(
               "DRAKE_POINTCLOUD_" + kSensorName, plcm));
       pbuilder->Connect(
+        depth_sensor_->get_sensor_state_output_port(),
+        depth_to_lcm_message_->depth_readings_input_port());
+      pbuilder->Connect(
           depth_to_lcm_message_->pointcloud_message_output_port(),
           lcm_publisher_depth_->get_input_port(0));
+      pbuilder->Connect(
+          depth_sensor_->get_pose_output_port(),
+          depth_to_lcm_message_->pose_input_port());
 
       // Camera pose publisher (to visualize)
       depth_sensor_pose_lcm_pub_ = pbuilder->template AddSystem<
