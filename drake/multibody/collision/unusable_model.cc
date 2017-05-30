@@ -56,7 +56,7 @@ bool UnusableModel::collisionRaycast(const Eigen::Matrix3Xd&,
                                      bool,
                                      Eigen::VectorXd&,
                                      Eigen::Matrix3Xd&,
-                                     std::vector<ElementId>&) {
+                                     std::vector<const Element*>&) {
   DRAKE_ABORT_MSG(
       "Compile Drake with a collision library backend for collision support!");
   return false;

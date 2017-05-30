@@ -763,7 +763,7 @@ bool BulletModel::collisionRaycast(const Matrix3Xd& origins,
                                    const Matrix3Xd& ray_endpoints,
                                    bool use_margins, VectorXd& distances,
                                    Matrix3Xd& normals,
-                                   std::vector<ElementId>& collision_body) {
+                                   std::vector<const Element*>& collision_body) {
   distances.resize(ray_endpoints.cols());
   normals.resize(3, ray_endpoints.cols());
   collision_body.resize(origins.cols());
@@ -834,13 +834,13 @@ bool BulletModel::collisionRaycast(const Matrix3Xd& origins,
 
       auto element = static_cast<Element*>(
         ray_callback.m_collisionObject->getUserPointer());
-      collision_body[i] = element->getId();
+      collision_body[i] = element;
     } else {
       distances(i) = -1.;
       normals(0, i) = 0.;
       normals(1, i) = 0.;
       normals(2, i) = 0.;
-      collision_body[i] = -1;
+      collision_body[i] = nullptr;
     }
   }
 

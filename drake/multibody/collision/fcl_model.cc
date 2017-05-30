@@ -57,7 +57,7 @@ bool FCLModel::collisionRaycast(const Eigen::Matrix3Xd& origins,
                                 const Eigen::Matrix3Xd& ray_endpoints,
                                 bool use_margins, Eigen::VectorXd& distances,
                                 Eigen::Matrix3Xd& normals,
-                                std::vector<ElementId>& collision_body) {
+                                std::vector<const Element*>& collision_body) {
   drake::unused(origins, ray_endpoints, use_margins, distances, normals,
                 collision_body);
   DRAKE_ABORT_MSG("Not implemented.");

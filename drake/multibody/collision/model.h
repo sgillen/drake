@@ -262,7 +262,9 @@ class Model {
       // TODO(#2274) Fix NOLINTNEXTLINE(runtime/references).
       Eigen::VectorXd& distances,
       // TODO(#2274) Fix NOLINTNEXTLINE(runtime/references).
-      Eigen::Matrix3Xd& normals, std::vector<ElementId>& collision_body) = 0;
+      Eigen::Matrix3Xd& normals,
+      // TODO(#2274) Fix NOLINTNEXTLINE(runtime/references).
+      std::vector<const Element*>& collision_body) = 0;
 
   /** Modifies a collision element's local transform to be relative to a joint's
    frame rather than a link's frame. This is necessary because Drake requires

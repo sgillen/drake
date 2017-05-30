@@ -33,7 +33,7 @@ class FCLModel : public Model {
                         const Eigen::Matrix3Xd& ray_endpoints, bool use_margins,
                         Eigen::VectorXd& distances,
                         Eigen::Matrix3Xd& normals,
-                        std::vector<ElementId>& collision_body) override;
+                        std::vector<const Element*>& collision_body) override;
   bool ComputeMaximumDepthCollisionPoints(
       bool use_margins, std::vector<PointPair>& points) override;
   std::vector<PointPair> potentialCollisionPoints(bool use_margins) override;

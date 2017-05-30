@@ -856,18 +856,18 @@ bool RigidBodyTree<T>::collisionRaycast(
     bool use_margins) {
   updateDynamicCollisionElements(cache);
 
-  std::vector<DrakeCollision::ElementId> collision_body;
+  int num_points = origins.cols();
+  std::vector<const DrakeCollision::Element*> collision_body;
   bool ret = collision_model_->collisionRaycast(origins, ray_endpoints,
                      use_margins, distances, normals, collision_body);
 
-  body_idx.resize(collision_body.size());
-  for (size_t i = 0; i < collision_body.size(); i++){
+  body_idx.resize(num_points);
+  for (int i = 0; i < num_points; i++){
     if (distances[i] < 0.0){
       body_idx[i] = -1;
     } else {
-      const DrakeCollision::Element* element =
-             dynamic_cast<const DrakeCollision::Element*>(
-              collision_model_->FindElement(collision_body[i]));
+      auto element = collision_body[i];
+      DRAKE_ASSERT(element != nullptr);
       body_idx[i] = element->get_body()->get_body_index();
     }
   }
