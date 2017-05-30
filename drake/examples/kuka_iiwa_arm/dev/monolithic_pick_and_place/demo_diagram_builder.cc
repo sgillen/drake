@@ -217,8 +217,8 @@ struct IiwaWsgPlantGeneratorsEstimatorsAndVisualizer<T>::Impl {
       spec->set_max_yaw(pi / 4);
       spec->set_min_pitch(-pi / 4);
       spec->set_max_pitch(pi / 4);
-      spec->set_num_yaw_values(240);
-      spec->set_num_pitch_values(320);
+      spec->set_num_yaw_values(480);
+      spec->set_num_pitch_values(640);
       spec->set_min_range(0);
       spec->set_max_range(100);
 
