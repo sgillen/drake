@@ -20,18 +20,18 @@ print("""
 
 class HelperApp(object):
     def __init__(self):
-        lcmUtils.addSubscriber('DRAKE_RGBD_CAMERA_POSE', lcm_pose_t, self.onCameraPoseMessage)
-        self.setCameraFrame()
+        lcmUtils.addSubscriber('DRAKE_RGBD_CAMERA_POSE', lcm_pose_t, self.onCameraPoseMessage, callbackNeedsChannel=True)
+        lcmUtils.addSubscriber('DRAKE_DEPTH_SENSOR_POSE', lcm_pose_t, self.onCameraPoseMessage, callbackNeedsChannel=True)
 
-    def setCameraFrame(self, cameraToWorld=None):
+    def setCameraFrame(self, channel, cameraToWorld=None):
         cameraToWorld = cameraToWorld or vtk.vtkTransform()
-        vis.updateFrame(cameraToWorld, 'camera to world', scale=0.5, visible=True)
+        vis.updateFrame(cameraToWorld, channel, scale=0.5, visible=True)
 
-    def onCameraPoseMessage(self, cameraToWorldMsg):
+    def onCameraPoseMessage(self, cameraToWorldMsg, channel):
         # Fake out position_t
         poseBotCore = convert_pose_to_botcore_position(cameraToWorldMsg)
         cameraToWorld = lcmframe.frameFromPositionMessage(poseBotCore)
-        self.setCameraFrame(cameraToWorld)
+        self.setCameraFrame(channel, cameraToWorld)
 
 def convert_pose_to_botcore_position(msg):
     pos_in = lcmbotcore.position_3d_t()
