@@ -764,16 +764,18 @@ bool BulletModel::collisionRaycast(const Matrix3Xd& origins,
                                    bool use_margins, VectorXd& distances,
                                    Matrix3Xd& normals,
                                    std::vector<const Element*>& collision_body) {
-  distances.resize(ray_endpoints.cols());
-  normals.resize(3, ray_endpoints.cols());
-  collision_body.resize(origins.cols());
+  const int num_points = ray_endpoints.cols();
+  // Note that if origins.cols() == 1, then it will use a single origin for all
+  // raycasts. Hence, we shall use ray_endpoints to determine the size.
+  DRAKE_ASSERT(origins.cols() == 1 || origins.cols() == num_points);
+  distances.resize(num_points);
+  normals.resize(3, num_points);
+  collision_body.resize(num_points);
 
   BulletCollisionWorldWrapper& bt_world = getBulletWorld(use_margins);
 
   for (int i = 0; i < ray_endpoints.cols(); i++) {
-    int origin_col = (origins.cols() > 1 ? i : 0);  // if a single origin is
-                                                    // passed in, then use it
-                                                    // for all raycasts
+    const int origin_col = (origins.cols() > 1 ? i : 0);
     btVector3 ray_from_world(origins(0, origin_col), origins(1, origin_col),
                              origins(2, origin_col));
     btVector3 ray_to_world(ray_endpoints(0, i), ray_endpoints(1, i),
