@@ -115,19 +115,13 @@ std::unique_ptr<T> CreateUnique(T* obj) {
 
 template <typename T>
 struct IiwaWsgPlantGeneratorsEstimatorsAndVisualizer<T>::Impl {
-  RgbdCamera* rgbd_camera_;
-  DepthSensor* depth_sensor_;
-  ImageToLcmMessage* image_to_lcm_message_;
-  LcmPublisherSystem* lcm_publisher_;
-  PoseStampedTPoseVectorTranslator pose_translator_;
-  LcmPublisherSystem* pose_lcm_publisher_;
-
   void CreateAndConnectCamera(
       DiagramBuilder<double>* pbuilder,
       DrakeLcm* plcm,
       const IiwaAndWsgPlantWithStateEstimator<double>* pplant) {
 
-    // Adapted from: .../image_to_lcm_message_demo.cc
+    bool use_rgbd_camera = false;
+    bool use_depth_sensor = true;
 
     const double pi = M_PI;
 
@@ -148,93 +142,119 @@ struct IiwaWsgPlantGeneratorsEstimatorsAndVisualizer<T>::Impl {
     const double height = 2;
     const Vector3d position(planar_distance, planar_distance + y_offset, height);
     const Vector3d orientation(0, 20, -135); // degrees
-    auto rgbd_camera_instance = new RgbdCamera(
-        "rgbd_camera", rigid_body_tree,
-        position, orientation * pi / 180, pi / 4, true);
-    rgbd_camera_ = pbuilder->AddSystem(CreateUnique(rgbd_camera_instance));
-    rgbd_camera_->set_name("rgbd_camera");
 
-    // Connect directly to ground truth state.
-    pbuilder->Connect(
-        pplant->get_output_port_plant_state(),
-        rgbd_camera_->state_input_port());
+    if (use_rgbd_camera) {
+      // Adapted from: .../image_to_lcm_message_demo.cc
+      RgbdCamera* rgbd_camera_{};
+      ImageToLcmMessage* image_to_lcm_message_{};
+      LcmPublisherSystem* lcm_publisher_{};
+      PoseStampedTPoseVectorTranslator pose_translator_;
+      LcmPublisherSystem* pose_lcm_publisher_{};
 
-    // Image to LCM.
-    image_to_lcm_message_ =
-        pbuilder->template AddSystem<ImageToLcmMessage>();
-    image_to_lcm_message_->set_name("converter");
+      auto rgbd_camera_instance = new RgbdCamera(
+          "rgbd_camera", rigid_body_tree,
+          position, orientation * pi / 180, pi / 4, true);
+      rgbd_camera_ = pbuilder->AddSystem(CreateUnique(rgbd_camera_instance));
+      rgbd_camera_->set_name("rgbd_camera");
 
-    pbuilder->Connect(
-        rgbd_camera_->color_image_output_port(),
-        image_to_lcm_message_->color_image_input_port());
+      // Connect directly to ground truth state.
+      pbuilder->Connect(
+          pplant->get_output_port_plant_state(),
+          rgbd_camera_->state_input_port());
 
-    pbuilder->Connect(
-        rgbd_camera_->depth_image_output_port(),
-        image_to_lcm_message_->depth_image_input_port());
+      // Image to LCM.
+      image_to_lcm_message_ =
+          pbuilder->template AddSystem<ImageToLcmMessage>();
+      image_to_lcm_message_->set_name("converter");
 
-    pbuilder->Connect(
-        rgbd_camera_->label_image_output_port(),
-        image_to_lcm_message_->label_image_input_port());
+      pbuilder->Connect(
+          rgbd_camera_->color_image_output_port(),
+          image_to_lcm_message_->color_image_input_port());
 
-    // Camera image publisher.
-    lcm_publisher_ = pbuilder->template AddSystem(
-        LcmPublisherSystem::Make<bot_core::images_t>(
-            "DRAKE_RGB_IMAGE", plcm));
-    lcm_publisher_->set_name("publisher");
-    lcm_publisher_->set_publish_period(0.01);
+      pbuilder->Connect(
+          rgbd_camera_->depth_image_output_port(),
+          image_to_lcm_message_->depth_image_input_port());
 
-    pbuilder->Connect(
-        image_to_lcm_message_->images_t_msg_output_port(),
-        lcm_publisher_->get_input_port(0));
+      pbuilder->Connect(
+          rgbd_camera_->label_image_output_port(),
+          image_to_lcm_message_->label_image_input_port());
 
-    // Camera pose publisher (to visualize)
-    pose_lcm_publisher_ = pbuilder->template AddSystem<
-      LcmPublisherSystem>("DRAKE_RGBD_CAMERA_POSE",
-                          pose_translator_, plcm);
-    pose_lcm_publisher_->set_name("pose_lcm_publisher");
-    pose_lcm_publisher_->set_publish_period(0.01);
+      // Camera image publisher.
+      lcm_publisher_ = pbuilder->template AddSystem(
+          LcmPublisherSystem::Make<bot_core::images_t>(
+              "DRAKE_RGB_IMAGE", plcm));
+      lcm_publisher_->set_name("publisher");
+      lcm_publisher_->set_publish_period(0.01);
 
-    pbuilder->Connect(
-        rgbd_camera_->camera_base_pose_output_port(),
-        pose_lcm_publisher_->get_input_port(0));
+      pbuilder->Connect(
+          image_to_lcm_message_->images_t_msg_output_port(),
+          lcm_publisher_->get_input_port(0));
 
-    // Try out an equivalent depth sensor (or rather, just send out raycasts).
-    DepthSensorSpecification specification;
-//    DepthSensorSpecification::set_octant_1_spec(&specification);
-    auto* spec = &specification;
-    spec->set_min_yaw(-pi / 4);
-    spec->set_max_yaw(pi / 4);
-    spec->set_min_pitch(-pi / 4);
-    spec->set_max_pitch(pi / 4);
-    spec->set_num_yaw_values(240);
-    spec->set_num_pitch_values(320);
-    spec->set_min_range(0);
-    spec->set_max_range(100);
+      // Camera pose publisher (to visualize)
+      pose_lcm_publisher_ = pbuilder->template AddSystem<
+        LcmPublisherSystem>("DRAKE_RGBD_CAMERA_POSE",
+                            pose_translator_, plcm);
+      pose_lcm_publisher_->set_name("pose_lcm_publisher");
+      pose_lcm_publisher_->set_publish_period(0.01);
 
-    auto world_body = const_cast<RigidBody<double>*>(&rigid_body_tree.world());
-    RigidBodyFrame<double> frame("depth_sensor", world_body,
-                                 position, orientation * pi / 180);
-    auto depth_sensor_instance = new DepthSensor(
-        "depth_sensor", rigid_body_tree, frame, specification);
-    depth_sensor_ = pbuilder->AddSystem(CreateUnique(depth_sensor_instance));
-    depth_sensor_->set_name("depth_sensor");
+      pbuilder->Connect(
+          rgbd_camera_->camera_base_pose_output_port(),
+          pose_lcm_publisher_->get_input_port(0));
+    }
 
-    // Connect directly to ground truth state.
-    pbuilder->Connect(
-        pplant->get_output_port_plant_state(),
-        depth_sensor_->get_rigid_body_tree_state_input_port());
+    if (use_depth_sensor) {
+      DepthSensor* depth_sensor_{};
+      PoseStampedTPoseVectorTranslator pose_translator_;
 
-    // Point Cloud to LCM.
-    // From: depth_sensor_to_lcm_point_cloud_message_demo
-    auto depth_to_lcm_message_ =
-        pbuilder->template AddSystem<DepthSensorToLcmPointCloudMessage>(specification);
-    const std::string kSensorName = "DEPTH";
-    auto lcm_publisher_depth_ = pbuilder->template AddSystem(
-        LcmPublisherSystem::Make<bot_core::pointcloud_t>(
-            "DRAKE_POINTCLOUD_" + kSensorName, plcm));
-    pbuilder->Connect(
-        depth_to_lcm_message_->pointcloud_message_output_port(),
-        lcm_publisher_depth_->get_input_port(0));
+      // Try out an equivalent depth sensor (or rather, just send out raycasts).
+      DepthSensorSpecification specification;
+  //    DepthSensorSpecification::set_octant_1_spec(&specification);
+      auto* spec = &specification;
+      spec->set_min_yaw(-pi / 4);
+      spec->set_max_yaw(pi / 4);
+      spec->set_min_pitch(-pi / 4);
+      spec->set_max_pitch(pi / 4);
+      spec->set_num_yaw_values(240);
+      spec->set_num_pitch_values(320);
+      spec->set_min_range(0);
+      spec->set_max_range(100);
+
+      auto world_body = const_cast<RigidBody<double>*>(&rigid_body_tree.world());
+      RigidBodyFrame<double> frame("depth_sensor", world_body,
+                                   position, orientation * pi / 180);
+      auto depth_sensor_instance = new DepthSensor(
+          "depth_sensor", rigid_body_tree, frame, specification);
+      depth_sensor_ = pbuilder->AddSystem(CreateUnique(depth_sensor_instance));
+      depth_sensor_->set_name("depth_sensor");
+
+      // Connect directly to ground truth state.
+      pbuilder->Connect(
+          pplant->get_output_port_plant_state(),
+          depth_sensor_->get_rigid_body_tree_state_input_port());
+
+      // Point Cloud to LCM.
+      // From: depth_sensor_to_lcm_point_cloud_message_demo
+      auto depth_to_lcm_message_ =
+          pbuilder->template AddSystem<DepthSensorToLcmPointCloudMessage>(specification);
+      const std::string kSensorName = "DEPTH";
+      auto lcm_publisher_depth_ = pbuilder->template AddSystem(
+          LcmPublisherSystem::Make<bot_core::pointcloud_t>(
+              "DRAKE_POINTCLOUD_" + kSensorName, plcm));
+      pbuilder->Connect(
+          depth_to_lcm_message_->pointcloud_message_output_port(),
+          lcm_publisher_depth_->get_input_port(0));
+
+      // Camera pose publisher (to visualize)
+      auto pose_lcm_publisher_ = pbuilder->template AddSystem<
+        LcmPublisherSystem>("DRAKE_DEPTH_SENSOR_POSE",
+                            pose_translator_, plcm);
+      pose_lcm_publisher_->set_name("pose_lcm_publisher");
+      pose_lcm_publisher_->set_publish_period(0.01);
+
+      pbuilder->Connect(
+          depth_sensor_->get_pose_output_port(),
+          pose_lcm_publisher_->get_input_port(0));
+    }
   }
 };
 
