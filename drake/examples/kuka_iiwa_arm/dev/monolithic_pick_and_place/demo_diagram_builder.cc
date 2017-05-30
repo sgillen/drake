@@ -26,6 +26,7 @@
 
 namespace drake {
 
+using std::make_shared;
 using systems::DrakeVisualizer;
 using systems::DiagramBuilder;
 using lcm::DrakeLcm;
@@ -129,14 +130,16 @@ struct IiwaWsgPlantGeneratorsEstimatorsAndVisualizer<T>::Impl {
   void CreateAndConnectCamera(
       DiagramBuilder<double>* pbuilder,
       DrakeLcm* plcm,
-      const IiwaAndWsgPlantWithStateEstimator<double>* pplant) {
+      IiwaAndWsgPlantWithStateEstimator<double>* pplant) {
 
     bool use_rgbd_camera = false;
     bool use_depth_sensor = true;
 
     const double pi = M_PI;
 
-    const auto& rigid_body_tree = pplant->get_plant().get_rigid_body_tree();
+    // HACK
+    auto& rigid_body_tree = const_cast<RigidBodyTree<double>&>(
+        pplant->get_plant().get_rigid_body_tree());
 
     // Camera.
     /*
@@ -222,11 +225,12 @@ struct IiwaWsgPlantGeneratorsEstimatorsAndVisualizer<T>::Impl {
       spec->set_min_range(0);
       spec->set_max_range(100);
 
-      auto world_body = const_cast<RigidBody<double>*>(&rigid_body_tree.world());
-      RigidBodyFrame<double> frame("depth_sensor", world_body,
-                                   position, orientation * pi / 180);
+      auto world_body = &rigid_body_tree.world();
+      auto frame = make_shared<RigidBodyFrame<double>>(
+          "depth_sensor", world_body, position, orientation * pi / 180);
+      rigid_body_tree.addFrame(frame);
       auto depth_sensor_instance = new DepthSensor(
-          "depth_sensor", rigid_body_tree, frame, specification);
+          "depth_sensor", rigid_body_tree, *frame, specification);
       depth_sensor_ = pbuilder->AddSystem(CreateUnique(depth_sensor_instance));
       depth_sensor_->set_name("depth_sensor");
 
