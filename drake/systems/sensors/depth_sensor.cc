@@ -136,12 +136,17 @@ void DepthSensor::DoCalcOutput(const systems::Context<double>& context,
   KinematicsCache<double> kinematics_cache = tree_.doKinematics(q);
 
   const int frame_index = frame_.get_frame_index();
+  // Store the isometry from frame (sensor) to the body, just in case the user
+  // supplies a custom frame whose index does not fully represent the supplied
+  // frame.
+  const auto X_BS = frame_.get_transform_to_body();
+  const int world_frame_index = 0;
 
   // Computes the origin of the rays in the world frame.
   Vector3d origin = tree_.transformPoints(
       kinematics_cache,
-      Vector3d::Zero() /* The origin of the rays in the sensor's frame. */,
-      frame_index, 0 /* to_body_or_frame_ind */);
+      X_BS * Vector3d::Zero() /* The origin of the rays in the sensor's frame. */,
+      frame_index, world_frame_index);
 
   // Computes the ends of the casted rays in the world frame. This needs to be
   // done each time this method is called since the sensor may have moved in the
@@ -151,8 +156,8 @@ void DepthSensor::DoCalcOutput(const systems::Context<double>& context,
   // holds this sensor. Only re-compute the ends of the casted rays in the world
   // frame if this configuration has changed.
   Matrix3Xd raycast_endpoints_world =
-      tree_.transformPoints(kinematics_cache, raycast_endpoints_, frame_index,
-                            0 /* to_body_or_frame_ind */);
+      tree_.transformPoints(kinematics_cache, X_BS * raycast_endpoints_,
+                            frame_index, world_frame_index);
 
   VectorX<double> distances(get_num_depth_readings());
 
