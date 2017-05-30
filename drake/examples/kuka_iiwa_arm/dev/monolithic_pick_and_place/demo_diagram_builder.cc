@@ -115,6 +115,17 @@ std::unique_ptr<T> CreateUnique(T* obj) {
 
 template <typename T>
 struct IiwaWsgPlantGeneratorsEstimatorsAndVisualizer<T>::Impl {
+  // Generic serializer shared between two sensor types.
+  PoseStampedTPoseVectorTranslator pose_translator_;
+
+  RgbdCamera* rgbd_camera_{};
+  ImageToLcmMessage* image_to_lcm_message_{};
+  LcmPublisherSystem* image_lcm_pub_{};
+  LcmPublisherSystem* rgbd_camera_pose_lcm_pub_{};
+
+  DepthSensor* depth_sensor_{};
+  LcmPublisherSystem* depth_sensor_pose_lcm_pub_{};
+
   void CreateAndConnectCamera(
       DiagramBuilder<double>* pbuilder,
       DrakeLcm* plcm,
@@ -145,11 +156,6 @@ struct IiwaWsgPlantGeneratorsEstimatorsAndVisualizer<T>::Impl {
 
     if (use_rgbd_camera) {
       // Adapted from: .../image_to_lcm_message_demo.cc
-      RgbdCamera* rgbd_camera_{};
-      ImageToLcmMessage* image_to_lcm_message_{};
-      LcmPublisherSystem* lcm_publisher_{};
-      PoseStampedTPoseVectorTranslator pose_translator_;
-      LcmPublisherSystem* pose_lcm_publisher_{};
 
       auto rgbd_camera_instance = new RgbdCamera(
           "rgbd_camera", rigid_body_tree,
@@ -180,32 +186,29 @@ struct IiwaWsgPlantGeneratorsEstimatorsAndVisualizer<T>::Impl {
           image_to_lcm_message_->label_image_input_port());
 
       // Camera image publisher.
-      lcm_publisher_ = pbuilder->template AddSystem(
+      image_lcm_pub_ = pbuilder->template AddSystem(
           LcmPublisherSystem::Make<bot_core::images_t>(
               "DRAKE_RGB_IMAGE", plcm));
-      lcm_publisher_->set_name("publisher");
-      lcm_publisher_->set_publish_period(0.01);
+      image_lcm_pub_->set_name("publisher");
+      image_lcm_pub_->set_publish_period(0.01);
 
       pbuilder->Connect(
           image_to_lcm_message_->images_t_msg_output_port(),
-          lcm_publisher_->get_input_port(0));
+          image_lcm_pub_->get_input_port(0));
 
       // Camera pose publisher (to visualize)
-      pose_lcm_publisher_ = pbuilder->template AddSystem<
+      rgbd_camera_pose_lcm_pub_ = pbuilder->template AddSystem<
         LcmPublisherSystem>("DRAKE_RGBD_CAMERA_POSE",
                             pose_translator_, plcm);
-      pose_lcm_publisher_->set_name("pose_lcm_publisher");
-      pose_lcm_publisher_->set_publish_period(0.01);
+      rgbd_camera_pose_lcm_pub_->set_name("pose_lcm_publisher");
+      rgbd_camera_pose_lcm_pub_->set_publish_period(0.01);
 
       pbuilder->Connect(
           rgbd_camera_->camera_base_pose_output_port(),
-          pose_lcm_publisher_->get_input_port(0));
+          rgbd_camera_pose_lcm_pub_->get_input_port(0));
     }
 
     if (use_depth_sensor) {
-      DepthSensor* depth_sensor_{};
-      PoseStampedTPoseVectorTranslator pose_translator_;
-
       // Try out an equivalent depth sensor (or rather, just send out raycasts).
       DepthSensorSpecification specification;
   //    DepthSensorSpecification::set_octant_1_spec(&specification);
@@ -245,15 +248,15 @@ struct IiwaWsgPlantGeneratorsEstimatorsAndVisualizer<T>::Impl {
           lcm_publisher_depth_->get_input_port(0));
 
       // Camera pose publisher (to visualize)
-      auto pose_lcm_publisher_ = pbuilder->template AddSystem<
+      depth_sensor_pose_lcm_pub_ = pbuilder->template AddSystem<
         LcmPublisherSystem>("DRAKE_DEPTH_SENSOR_POSE",
                             pose_translator_, plcm);
-      pose_lcm_publisher_->set_name("pose_lcm_publisher");
-      pose_lcm_publisher_->set_publish_period(0.01);
+      depth_sensor_pose_lcm_pub_->set_name("pose_lcm_publisher");
+      depth_sensor_pose_lcm_pub_->set_publish_period(0.01);
 
       pbuilder->Connect(
           depth_sensor_->get_pose_output_port(),
-          pose_lcm_publisher_->get_input_port(0));
+          depth_sensor_pose_lcm_pub_->get_input_port(0));
     }
   }
 };
