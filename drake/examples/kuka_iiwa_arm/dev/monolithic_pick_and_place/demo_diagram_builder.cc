@@ -24,6 +24,8 @@
 #include "drake/systems/sensors/depth_sensor_to_lcm_point_cloud_message.h"
 #include "bot_core/pointcloud_t.hpp"
 
+#include "drake/common/scoped_timer.h"
+
 namespace drake {
 
 using std::make_shared;
@@ -48,8 +50,42 @@ namespace examples {
 using manipulation::schunk_wsg::SchunkWsgTrajectoryGenerator;
 using manipulation::schunk_wsg::SchunkWsgStatusSender;
 
+using std::unique_ptr;
+
 namespace kuka_iiwa_arm {
 namespace monolithic_pick_and_place {
+
+class WallClockPublisher : public systems::LeafSystem<double> {
+ public:
+  WallClockPublisher(double period_sec) {
+    timer_.reset(new timing::Timer());
+    prev_time_.reset(new double(0.));
+    this->DeclarePeriodicDiscreteUpdate(period_sec, 0.);
+  }
+
+  typedef double T;
+  typedef systems::Context<T> Context;
+  typedef systems::DiscreteValues<T> DiscreteValues;
+  typedef systems::SystemOutput<T> SystemOutput;
+ protected:
+  void DoCalcOutput(const Context&, SystemOutput*) const override {}
+  void DoCalcDiscreteVariableUpdates(
+      const Context& context, DiscreteValues* discrete_state) const override {
+    unused(discrete_state);
+    if (timer_->is_active()) {
+      double elapsed = timer_->stop();
+      double sim_elapsed = context.get_time() - *prev_time_;
+      std::cout << "Elapsed time: " << elapsed << std::endl;
+      std::cout << "  - Sim: " << sim_elapsed << std::endl;
+    }
+    timer_->start();
+    *prev_time_ = context.get_time();
+  }
+ private:
+  // HACK
+  unique_ptr<double> prev_time_;
+  unique_ptr<timing::Timer> timer_;
+};
 
 template <typename T>
 StateMachineAndPrimitives<T>::StateMachineAndPrimitives(
@@ -156,6 +192,8 @@ struct IiwaWsgPlantGeneratorsEstimatorsAndVisualizer<T>::Impl {
     const double height = 2;
     const Vector3d position(planar_distance, planar_distance + y_offset, height);
     const Vector3d orientation(0, 20, -135); // degrees
+
+    pbuilder->template AddSystem<WallClockPublisher>(0.001);
 
     if (use_rgbd_camera) {
       // Adapted from: .../image_to_lcm_message_demo.cc
