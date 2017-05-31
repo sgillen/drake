@@ -71,7 +71,7 @@ std::unique_ptr<systems::RigidBodyPlant<T>> BuildCombinedPlant(
   tree_builder->StoreModel("iiwa", kIiwaUrdf);
   tree_builder->StoreModel("table",
                            "/examples/kuka_iiwa_arm/models/table/"
-                           "extra_heavy_duty_table_surface_only_collision.sdf");
+                           "extra_heavy_duty_table.sdf");
   tree_builder->StoreModel(
       "box_small",
       "/examples/kuka_iiwa_arm/models/objects/block_for_pick_and_place.urdf");

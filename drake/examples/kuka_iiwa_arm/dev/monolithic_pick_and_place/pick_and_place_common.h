@@ -9,7 +9,7 @@ namespace monolithic_pick_and_place {
 // pick and place demo.
 const char kIiwaUrdf[] =
     "/manipulation/models/iiwa_description/urdf/"
-    "iiwa14_polytope_collision.urdf";
+    "iiwa14_mesh_collision.urdf";
 const char kIiwaEndEffectorName[] = "iiwa_link_ee";
 
 }  // namespace monolithic_pick_and_place
