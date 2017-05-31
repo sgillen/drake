@@ -40,8 +40,6 @@ void PoseStampedTPoseVectorTranslator::Serialize(
   pose_msg.header.utime = static_cast<int64_t>(time * 1000000);
   pose_msg.header.frame_name = "SHOULD_BE_REPLACED_WITH_RIGHT_ONE";
 
-  std::cout << "serializing" << std::endl;
-
   auto pose_vector = dynamic_cast<const PoseVector<double>*>(&vector_base);
   const auto t = pose_vector->get_translation();
   pose_msg.pose.position.x = t.x();
