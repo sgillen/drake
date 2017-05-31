@@ -1,8 +1,8 @@
 if(lcm_FOUND)
-  add_library_with_exports(LIB_NAME monolithicPickAndPlaceCommon SOURCE_FILES
+  add_library_with_exports(LIB_NAME monolithicPickAndPlaceDevCommon SOURCE_FILES
       demo_diagram_builder.cc
       state_machine_system.cc)
-  target_link_libraries(monolithicPickAndPlaceCommon
+  target_link_libraries(monolithicPickAndPlaceDevCommon
       drakeCommon
       drakeIK
       drakeKukaIiwaArmCommon
@@ -17,20 +17,20 @@ if(lcm_FOUND)
       drakeMultibodyParsers
       drakeTrajectories
       drakeSchunkWsg
-      pickAndPlaceCommon
+      pickAndPlaceDevCommon
       drakeSensors
       robotlocomotion-lcmtypes-cpp)
-  drake_install_libraries(monolithicPickAndPlaceCommon)
+  drake_install_libraries(monolithicPickAndPlaceDevCommon)
   drake_install_headers(
         demo_diagram_builder.h
         pick_and_place_common.h
         state_machine_system.h)
 
-  drake_install_pkg_config_file(monolithic-pick-and-place-common
-      TARGET monolithicPickAndPlaceCommon
-      LIBS -lmonolithicPickAndPlaceCommon
+  drake_install_pkg_config_file(monolithic-pick-and-place-dev-common
+      TARGET monolithicPickAndPlaceDevCommon
+      LIBS -lmonolithicPickAndPlaceDevCommon
       REQUIRES
-        pick-and-place-common
+        pick-and-place-dev-common
         drake-schunk-wsg
         monolithic-pick-and-place-action-primitives
         # and some other stuff
@@ -46,14 +46,8 @@ if(lcm_FOUND)
   add_executable(monolithic_pick_and_place_demo
     monolithic_pick_and_place_demo.cc)
   target_link_libraries(monolithic_pick_and_place_demo
-    monolithicPickAndPlaceCommon
-    # drakeKukaIiwaArmCommon
-    # drakeManipulationPlanner
-    # drakeLCMTypes
-    # drakeLCMUtil
-    # drakeRigidBodyPlant
-    # pickAndPlaceCommon
-    # robotlocomotion-lcmtypes-cpp
+    monolithicPickAndPlaceDevCommon
+    # TODO(eric.cousineau): IWYU
     )
 
   add_subdirectory(action_primitives)
