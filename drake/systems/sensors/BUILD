@@ -19,6 +19,7 @@ drake_cc_library(
         ":accelerometer",
         ":camera_info",
         ":depth_sensor",
+        ":rgbd_camera",
         ":rotary_encoders",
     ],
 )
@@ -111,20 +112,6 @@ drake_cc_library(
     ],
 )
 
-drake_cc_binary(
-    name = "depth_sensor_to_lcm_point_cloud_message_demo",
-    srcs = [
-        "depth_sensor_to_lcm_point_cloud_message_demo.cc",
-    ],
-    deps = [
-        ":depth_sensor_to_lcm_point_cloud_message",
-        "//drake/common:text_logging_gflags",
-        "//drake/lcm",
-        "//drake/systems/analysis",
-        "//drake/systems/lcm",
-    ],
-)
-
 drake_cc_library(
     name = "gyroscope",
     srcs = [
@@ -142,6 +129,19 @@ drake_cc_library(
 )
 
 drake_cc_library(
+    name = "vtk_util",
+    srcs = ["vtk_util.cc"],
+    hdrs = ["vtk_util.h"],
+    deps = [
+        "//drake/common",
+        "@eigen",
+        "@vtk//:vtkCommonCore",
+        "@vtk//:vtkCommonTransforms",
+        "@vtk//:vtkFiltersSources",
+    ],
+)
+
+drake_cc_library(
     name = "rgbd_camera",
     srcs = ["rgbd_camera.cc"],
     hdrs = ["rgbd_camera.h"],
@@ -149,23 +149,21 @@ drake_cc_library(
         ":camera_info",
         ":image",
         ":vtk_util",
-        "//drake/common",
         "//drake/math:geometric_transform",
         "//drake/multibody:rigid_body_frame",
         "//drake/multibody:rigid_body_tree",
-        "//drake/systems/framework:leaf_system",
+        "//drake/systems/framework",
         "//drake/systems/rendering:pose_vector",
-    ],
-)
-
-drake_cc_library(
-    name = "vtk_util",
-    srcs = ["vtk_util.cc"],
-    hdrs = ["vtk_util.h"],
-    deps = [
-        "//drake/common",
-        # TODO(jwnimmer-tri) Use fine-grained dependencies.
-        "@vtk//:vtk_libraries",
+        "@eigen",
+        "@vtk//:vtkCommonCore",
+        "@vtk//:vtkCommonDataModel",
+        "@vtk//:vtkCommonTransforms",
+        "@vtk//:vtkFiltersGeneral",
+        "@vtk//:vtkFiltersSources",
+        "@vtk//:vtkIOGeometry",
+        "@vtk//:vtkIOImage",
+        "@vtk//:vtkRenderingCore",
+        "@vtk//:vtkRenderingOpenGL2",
     ],
 )
 
@@ -284,45 +282,34 @@ drake_cc_googletest(
     ],
 )
 
-filegroup(
-    name = "test_models",
-    testonly = 1,
-    srcs = glob([
-        "test/**/*.obj",
-        "test/**/*.sdf",
-        "test/**/*.urdf",
-        "test/**/*.xml",
-    ]),
-)
-
-drake_cc_binary(
+# TODO(jamiesnape): Remove the manual tag when Xvfb is available on CI.
+drake_cc_googletest(
     name = "rgbd_camera_test",
-    testonly = 1,
-    srcs = ["test/rgbd_camera_test.cc"],
+    data = [
+        "test/models/box.sdf",
+        "test/models/cylinder.sdf",
+        "test/models/mesh_box.sdf",
+        "test/models/meshes/box.obj",
+        "test/models/meshes/box.png",
+        "test/models/multiple_visuals.sdf",
+        "test/models/nothing.sdf",
+        "test/models/sphere.sdf",
+        "test/models/three_boxes.sdf",
+    ],
+    tags = ["manual"],
     deps = [
-        ":image",
         ":rgbd_camera",
-        "//drake/common",
         "//drake/common:drake_path",
         "//drake/common:eigen_matrix_compare",
-        "//drake/multibody:rigid_body_tree",
         "//drake/multibody:rigid_body_tree_construction",
         "//drake/multibody/parsers",
         "//drake/multibody/rigid_body_plant",
-        "//drake/systems/framework:diagram",
-        "//drake/systems/rendering:pose_vector",
-        "@gtest//:main",
-    ],
-    data = [
-        ":test_models",
     ],
 )
 
 drake_cc_googletest(
     name = "vtk_util_test",
-    deps = [
-        ":vtk_util",
-    ],
+    deps = [":vtk_util"],
 )
 
 cpplint()

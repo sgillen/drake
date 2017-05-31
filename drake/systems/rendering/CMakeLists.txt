@@ -34,6 +34,7 @@ if(lcm_FOUND)
       drakeShapes
       drakeSystemFramework
       robotlocomotion-lcmtypes-cpp)
+
   drake_install_headers(
       drake_visualizer_client.h
       pose_bundle_to_draw_message.h
@@ -42,9 +43,10 @@ if(lcm_FOUND)
       TARGET drakeRenderingLcm
       LIBS -ldrakeRenderingLcm
       REQUIRES
+          drakeLcmSystem
           drake_lcmtypes
           drake-shapes
-	        robotlocomotion-lcmtypes
+          robotlocomotion-lcmtypes-cpp
   )
 endif()
 
