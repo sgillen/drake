@@ -280,10 +280,12 @@ IiwaWsgPlantGeneratorsEstimatorsAndVisualizer<T>::
 
   DiagramBuilder<T> builder;
   ModelInstanceInfo<double> iiwa_instance, wsg_instance, box_instance;
+  const bool use_slow_meshes = true;
 
   std::unique_ptr<systems::RigidBodyPlant<double>> model_ptr =
       BuildCombinedPlant<double>(&iiwa_instance, &wsg_instance, &box_instance,
-                                 chosen_box, box_position, box_orientation);
+                                 chosen_box, box_position, box_orientation,
+                                 use_slow_meshes);
   plant_ = builder.template AddSystem<IiwaAndWsgPlantWithStateEstimator<T>>(
       std::move(model_ptr), iiwa_instance, wsg_instance, box_instance);
   plant_->set_name("plant");
