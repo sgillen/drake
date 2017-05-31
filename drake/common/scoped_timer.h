@@ -13,10 +13,13 @@ using Clock = std::chrono::steady_clock;
 using Duration = std::chrono::duration<double>;
 using TimePoint = std::chrono::time_point<Clock, Duration>;
 
-
 inline void sleep(double seconds) {
   int ms = std::round(seconds * 1000);
   std::this_thread::sleep_for(std::chrono::milliseconds(ms));
+}
+
+inline double wall_time() {
+  return Duration(Clock::now().time_since_epoch()).count();
 }
 
 class Timer {
