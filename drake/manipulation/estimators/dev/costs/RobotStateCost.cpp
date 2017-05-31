@@ -38,7 +38,7 @@ RobotStateCost::RobotStateCost(std::shared_ptr<const RigidBodyTreed> robot_, std
 /***********************************************
             KNOWN POSITION HINTS
 *********************************************/
-bool RobotStateCost::constructCost(ManipulationTracker * tracker, const Eigen::Matrix<double, Eigen::Dynamic, 1> x_old, Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>& Q, Eigen::Matrix<double, Eigen::Dynamic, 1>& f, double& K)
+bool RobotStateCost::constructCost(ManipulationTracker * tracker, const Eigen::VectorXd x_old, Eigen::MatrixXd& Q, Eigen::VectorXd& f, double& K)
 {
   double now = getUnixTime();
   if (now - lastReceivedTime > timeout_time){

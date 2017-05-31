@@ -111,7 +111,7 @@ GelsightCost::GelsightCost(std::shared_ptr<RigidBodyTreed> robot_, std::shared_p
 /***********************************************
             KNOWN POSITION HINTS
 *********************************************/
-bool GelsightCost::constructCost(ManipulationTracker * tracker, const Eigen::Matrix<double, Eigen::Dynamic, 1> x_old, Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>& Q, Eigen::Matrix<double, Eigen::Dynamic, 1>& f, double& K)
+bool GelsightCost::constructCost(ManipulationTracker * tracker, const Eigen::VectorXd x_old, Eigen::MatrixXd& Q, Eigen::VectorXd& f, double& K)
 {
   double now = getUnixTime();
   if (now - lastReceivedTime > timeout_time || now - startTime < 1.0){ // slight delay helps when restarting tracker during contact...
@@ -384,7 +384,7 @@ bool GelsightCost::constructCost(ManipulationTracker * tracker, const Eigen::Mat
   }
 }
 
-void GelsightCost::updateGelsightImage(const Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> new_gelsight_image){
+void GelsightCost::updateGelsightImage(const Eigen::MatrixXd new_gelsight_image){
   gelsight_frame_mutex.lock();
   latest_gelsight_image = new_gelsight_image;
   input_num_pixel_cols = latest_gelsight_image.cols();

@@ -38,7 +38,7 @@ DynamicsCost::DynamicsCost(std::shared_ptr<const RigidBodyTreed> robot, std::sha
 /***********************************************
             KNOWN POSITION HINTS
 *********************************************/
-bool DynamicsCost::constructPredictionMatrices(ManipulationTracker * tracker, const Eigen::Matrix<double, Eigen::Dynamic, 1> x_old, Eigen::Matrix<double, Eigen::Dynamic, 1>& x, Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>& P)
+bool DynamicsCost::constructPredictionMatrices(ManipulationTracker * tracker, const Eigen::VectorXd x_old, Eigen::VectorXd& x, Eigen::MatrixXd& P)
 {
   double now = getUnixTime();
 

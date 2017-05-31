@@ -157,7 +157,7 @@ std::shared_ptr<RigidBodyTreed> setupRobotFromConfigSubset(YAML::Node config, Ei
   return robot_subset;
 }
 
-ManipulationTracker::ManipulationTracker(std::shared_ptr<const RigidBodyTreed> robot, Eigen::Matrix<double, Eigen::Dynamic, 1> x0_robot, std::shared_ptr<lcm::LCM> lcm, YAML::Node config, bool verbose) :
+ManipulationTracker::ManipulationTracker(std::shared_ptr<const RigidBodyTreed> robot, Eigen::VectorXd x0_robot, std::shared_ptr<lcm::LCM> lcm, YAML::Node config, bool verbose) :
     robot_(robot),
     robot_kinematics_cache_(robot_->CreateKinematicsCache()),
     lcm_(lcm),

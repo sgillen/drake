@@ -22,11 +22,11 @@ class GelsightCost : public ManipulationTrackerCost {
 public:
   GelsightCost(std::shared_ptr<RigidBodyTreed> robot_, std::shared_ptr<lcm::LCM> lcm_, YAML::Node config);
   ~GelsightCost() {};
-  bool constructCost(ManipulationTracker * tracker, const Eigen::Matrix<double, Eigen::Dynamic, 1> x_old, Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>& Q, Eigen::Matrix<double, Eigen::Dynamic, 1>& f, double& K);
+  bool constructCost(ManipulationTracker * tracker, const Eigen::VectorXd x_old, Eigen::MatrixXd& Q, Eigen::VectorXd& f, double& K);
 
   int get_trans_with_utime(std::string from_frame, std::string to_frame,
                                long long utime, Eigen::Isometry3d & mat);
-  void updateGelsightImage(const Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> new_gelsight_image);
+  void updateGelsightImage(const Eigen::MatrixXd new_gelsight_image);
   void handleGelsightFrameMsg(const lcm::ReceiveBuffer* rbuf,
                            const std::string& chan,
                            const bot_core::image_t* msg);
@@ -72,7 +72,7 @@ private:
   bot_lcmgl_t* lcmgl_corresp_ = NULL;
 
   std::mutex gelsight_frame_mutex;
-  Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> latest_gelsight_image;
+  Eigen::MatrixXd latest_gelsight_image;
 
   double lastReceivedTime;
   double startTime;

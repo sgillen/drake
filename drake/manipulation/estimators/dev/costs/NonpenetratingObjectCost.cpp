@@ -225,7 +225,7 @@ int NonpenetratingObjectCost::get_trans_with_utime(std::string from_frame, std::
 /***********************************************
             KNOWN POSITION HINTS
 *********************************************/
-bool NonpenetratingObjectCost::constructCost(ManipulationTracker * tracker, const Eigen::Matrix<double, Eigen::Dynamic, 1> x_old, Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>& Q, Eigen::Matrix<double, Eigen::Dynamic, 1>& f, double& K)
+bool NonpenetratingObjectCost::constructCost(ManipulationTracker * tracker, const Eigen::VectorXd x_old, Eigen::MatrixXd& Q, Eigen::VectorXd& f, double& K)
 {
   double now = getUnixTime();
 

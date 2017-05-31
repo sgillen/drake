@@ -26,7 +26,7 @@ class ManipulationTracker {
 public:
   typedef std::pair<std::shared_ptr<ManipulationTrackerCost>, std::vector<int>> CostAndView;
 
-  ManipulationTracker(std::shared_ptr<const RigidBodyTreed> robot, Eigen::Matrix<double, Eigen::Dynamic, 1> x0_robot, std::shared_ptr<lcm::LCM> lcm, YAML::Node config, bool verbose = false);
+  ManipulationTracker(std::shared_ptr<const RigidBodyTreed> robot, Eigen::VectorXd x0_robot, std::shared_ptr<lcm::LCM> lcm, YAML::Node config, bool verbose = false);
   ~ManipulationTracker() {}
 
   void initBotConfig(const char* filename);
@@ -38,8 +38,8 @@ public:
 
   void update();
   std::shared_ptr<const RigidBodyTreed> getRobot() { return robot_; }
-  Eigen::Matrix<double, Eigen::Dynamic, 1> getMean() { return x_; }
-  Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> getCovariance() { return covar_; }
+  Eigen::VectorXd getMean() { return x_; }
+  Eigen::MatrixXd getCovariance() { return covar_; }
 
   // helper to publish out to lcm
   void publish();
@@ -65,8 +65,8 @@ private:
   BotParam* botparam_ = NULL;
   BotFrames* botframes_ = NULL;
 
-  Eigen::Matrix<double, Eigen::Dynamic, 1> x_;
-  Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> covar_;
+  Eigen::VectorXd x_;
+  Eigen::MatrixXd covar_;
 
   std::shared_ptr<lcm::LCM> lcm_;
 

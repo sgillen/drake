@@ -17,7 +17,7 @@ public:
   JointStateCost(std::shared_ptr<const RigidBodyTreed> robot_, std::shared_ptr<lcm::LCM> lcm_, YAML::Node config);
   ~JointStateCost() {};
 
-  bool constructCost(ManipulationTracker * tracker, const Eigen::Matrix<double, Eigen::Dynamic, 1> x_old, Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>& Q, Eigen::Matrix<double, Eigen::Dynamic, 1>& f, double& K);
+  bool constructCost(ManipulationTracker * tracker, const Eigen::VectorXd x_old, Eigen::MatrixXd& Q, Eigen::VectorXd& f, double& K);
 
   void handleJointStateMsg(const lcm::ReceiveBuffer* rbuf,
                            const std::string& chan,
@@ -34,7 +34,7 @@ private:
   std::shared_ptr<const RigidBodyTreed> robot;
   int nq;
 
-  Eigen::Matrix<double, Eigen::Dynamic, 1> x_robot_measured;
+  Eigen::VectorXd x_robot_measured;
   std::vector<bool> x_robot_measured_known;
   std::mutex x_robot_measured_mutex;
 
