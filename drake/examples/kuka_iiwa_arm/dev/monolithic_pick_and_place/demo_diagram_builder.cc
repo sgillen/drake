@@ -117,7 +117,7 @@ std::unique_ptr<T> CreateUnique(T* obj) {
 template <typename T>
 struct IiwaWsgPlantGeneratorsEstimatorsAndVisualizer<T>::Impl {
   // Generic serializer shared between two sensor types.
-  PoseStampedTPoseVectorTranslator pose_translator_;
+  PoseStampedTPoseVectorTranslator pose_translator_{"camera"};
 
   RgbdCamera* rgbd_camera_{};
   ImageToLcmMessage* image_to_lcm_message_{};

@@ -1,8 +1,7 @@
 if(lcm_FOUND)
   add_library_with_exports(LIB_NAME monolithicPickAndPlaceCommon SOURCE_FILES
       demo_diagram_builder.cc
-      state_machine_system.cc
-      synchronous_world_state.cc)
+      state_machine_system.cc)
   target_link_libraries(monolithicPickAndPlaceCommon
       drakeCommon
       drakeIK
@@ -25,8 +24,7 @@ if(lcm_FOUND)
   drake_install_headers(
         demo_diagram_builder.h
         pick_and_place_common.h
-        state_machine_system.h
-        synchronous_world_state.h)
+        state_machine_system.h)
 
   drake_install_pkg_config_file(monolithic-pick-and-place-common
       TARGET monolithicPickAndPlaceCommon
