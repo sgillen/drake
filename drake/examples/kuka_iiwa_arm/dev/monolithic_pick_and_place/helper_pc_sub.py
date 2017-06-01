@@ -6,6 +6,7 @@ import time
 import robotlocomotion as lcmrobotlocomotion
 import bot_core as lcmbotcore
 import numpy as np
+from threading import Thread, Lock
 
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
@@ -14,16 +15,13 @@ import lcm
 
 lcm_pointcloud_t = lcmbotcore.pointcloud_t
 
-def plot_points(ax, points):
-    print len(points[:, 0])
-    ax.scatter(xs=points[:, 0], ys=points[:, 1], zs=points[:, 2])
-    plt.draw()
-    plt.pause(2)
+class Plotter:
+    def __init__(self):
+        self.lock = Lock()
+        self.finished = False
+        self.action_queue = None
 
-class HelperSub(object):
-    def  __init__(self):
-        self.lcm = lcm.LCM()
-        self.sub = self.lcm.subscribe('DRAKE_RGBD_POINT_CLOUD', self.callback)
+    def init(self):
         self.fig = plt.figure()
         self.ax = plt.subplot(111, projection='3d')
         plt.ion()
@@ -33,13 +31,41 @@ class HelperSub(object):
         self.ax.set_zlabel("z")
 
     def run(self):
-        try:
-            rate = Rate(0.01)
-            while True:
-                self.lcm.handle()
-                rate.sleep()
-        except KeyboardInterrupt:
-            pass
+        print "Running"
+        while not self.finished:
+            with self.lock:
+                if self.action_queue is not None:
+                    self.action_queue()
+                    self.action_queue = None
+            plt.pause(0.05)
+
+    def plot_points(self, points):
+        # Consider copying points if needed
+        def action():
+            self.ax.scatter(xs=points[:, 0], ys=points[:, 1], zs=points[:, 2])
+        with self.lock:
+            self.action_queue = action
+
+class HelperSub(object):
+    def  __init__(self, plotter):
+        self.lcm = lcm.LCM()
+        self.sub = self.lcm.subscribe('DRAKE_RGBD_POINT_CLOUD', self.callback)
+        self.plotter = plotter
+        self.finished = False
+        self.thread = Thread(target=self.run)
+
+    def run(self):
+        rate = Rate(0.01)
+        while not self.finished:
+            self.lcm.handle()
+            rate.sleep()
+
+    def start(self):
+        self.thread.start()
+
+    def join(self):
+        self.finished = True
+        self.thread.join()
 
     def callback(self, channel, data):
         msg = lcm_pointcloud_t.decode(data)
@@ -51,7 +77,7 @@ class HelperSub(object):
         print "non-nan: {}".format(np.count_nonzero(is_finite))
         center = np.mean(points[is_finite], axis=0)
         print center
-        plot_points(self.ax, points[is_finite])
+        self.plotter.plot_points(points[is_finite])
 
 class Rate:
     # Is there something akin to ros.Rate?
@@ -69,5 +95,12 @@ class Rate:
         return time.time() - self.start
 
 if __name__ == "__main__":
-    client = HelperSub()
-    client.run()
+    plotter = Plotter()
+    plotter.init()
+    client = HelperSub(plotter)
+    try:
+        client.start()
+        plotter.run()    
+    except KeyboardInterrupt:
+        pass
+    client.join()
