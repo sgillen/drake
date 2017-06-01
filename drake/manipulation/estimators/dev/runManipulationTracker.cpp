@@ -57,7 +57,7 @@ int main(int argc, char** argv) {
       } else if (cost_type == "JointStateCost") { 
         std::shared_ptr<JointStateCost> cost(new JointStateCost(robot, lcm, *iter));
         estimator.addCost(dynamic_pointer_cast<ManipulationTrackerCost, JointStateCost>(cost));
-      } else if (cost_type == "GelsightCost") { 
+      } /*else if (cost_type == "GelsightCost") {
         // demands a modifiable copy of the robot
         std::shared_ptr<GelsightCost> cost(new GelsightCost(setupRobotFromConfig(config, x0_robot, string(drc_path), true, true), lcm, *iter));
         estimator.addCost(dynamic_pointer_cast<ManipulationTrackerCost, GelsightCost>(cost));
@@ -66,7 +66,7 @@ int main(int argc, char** argv) {
         estimator.addCost(dynamic_pointer_cast<ManipulationTrackerCost, AttachedApriltagCost>(cost));
       } else if (cost_type == "OptotrakMarkerCost") { 
         std::shared_ptr<OptotrakMarkerCost> cost(new OptotrakMarkerCost(robot, lcm, *iter));
-        estimator.addCost(dynamic_pointer_cast<ManipulationTrackerCost, OptotrakMarkerCost>(cost));
+        estimator.addCost(dynamic_pointer_cast<ManipulationTrackerCost, OptotrakMarkerCost>(cost));*/
       } else if (cost_type == "NonpenetratingObjectCost") {
         // demands a modifiable copy of the robot to do collision calls
         // also requires a list of all other robots in the scene, minus those excluded in "penetrable"

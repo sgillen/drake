@@ -3,6 +3,8 @@
 
 #include <Eigen/Dense>
 
+#include "drake/lcm/drake_lcm_interface.h"
+
 inline double getUnixTime(void)
 {
     struct timespec tv;
@@ -23,5 +25,7 @@ inline bool is_nan(const Eigen::MatrixBase<Derived>& x)
 {
    return ((x.array() == x.array())).all();
 }
+
+using DrakeLcm = drake::lcm::DrakeLcmInterface;
 
 #endif
