@@ -42,6 +42,11 @@
 VTK_AUTOINIT_DECLARE(vtkRenderingOpenGL2)
 #endif
 
+// HACK
+#include "drake/common/scoped_timer.h"
+using timing::Timer;
+using timing::ScopedWithTimer;
+
 // TODO(kunimatsu-tri) Refactor RenderingWorld out from RgbdCamera,
 // so that other vtk dependent sensor simulators can share the RenderingWorld
 // without duplicating it.
@@ -592,19 +597,29 @@ void RgbdCamera::Impl::UpdateModelPoses(
 void RgbdCamera::Impl::UpdateRenderWindow() const {
   for (auto& window : MakeVtkInstanceArray<vtkRenderWindow>(
            color_depth_render_window_, label_render_window_)) {
+    ScopedWithTimer<> scoped1("Window"); unused(scoped1);
     window->Render();
   }
 
   for (auto& filter : MakeVtkInstanceArray<vtkWindowToImageFilter>(
            color_filter_, depth_filter_, label_filter_)) {
-    filter->Modified();
-    filter->Update();
+    {
+      ScopedWithTimer<> scoped1("Filter Modified"); unused(scoped1);
+      filter->Modified();
+    }
+    {
+      ScopedWithTimer<> scoped1("Filter Update"); unused(scoped1);
+      filter->Update();
+    }
   }
 }
 
 void RgbdCamera::Impl::DoCalcOutput(
     const BasicVector<double>& input_vector,
     systems::SystemOutput<double>* output) const {
+  ScopedWithTimer<> scope_timer1("DoCalcOutput 1: ");
+  unused(scope_timer1);
+
   const Eigen::VectorXd q = input_vector.CopyToVector().head(
       tree_.get_num_positions());
   KinematicsCache<double> cache = tree_.doKinematics(q);
@@ -627,9 +642,15 @@ void RgbdCamera::Impl::DoCalcOutput(
   Eigen::Quaterniond quat = Eigen::Quaterniond(X_WB.linear());
   camera_base_pose->set_rotation(quat);
 
-  UpdateModelPoses(cache, (X_WB * X_BC_).inverse());
+  {
+    ScopedWithTimer<> scope_timer_2("UpdateModelPoses"); unused(scope_timer_2);
+    UpdateModelPoses(cache, (X_WB * X_BC_).inverse());
+  }
 
-  UpdateRenderWindow();
+  {
+    ScopedWithTimer<> scope_timer_2("UpdateRenderWindow"); unused(scope_timer_2);
+    UpdateRenderWindow();
+  }
 
   // Outputs the image data.
   sensors::ImageBgra8U& image =
@@ -646,7 +667,13 @@ void RgbdCamera::Impl::DoCalcOutput(
 
   const int height = color_camera_info_.height();
   const int width = color_camera_info_.width();
+  std::unique_ptr<ScopedWithTimer<>> scope_timer2;
+  auto timer_maker = []() { return new ScopedWithTimer<>("Pix iter"); };
   for (int v = 0; v < height; ++v) {
+    if (v % 100 == 0) {
+      scope_timer2.reset(timer_maker());
+    }
+
     for (int u = 0; u < width; ++u) {
       const int height_reversed = height - v - 1;  // Makes image upside down.
 

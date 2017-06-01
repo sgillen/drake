@@ -17,29 +17,31 @@ find_package(OpenCV REQUIRED
 include_directories(${OpenCV_DIRS})
 
 set(drakeManipulationTracker_SRC_FILES
+    manipulation_tracker_sys.cc
     ManipulationTracker.cpp
-    costs/AttachedApriltagCost.cpp
+#    costs/AttachedApriltagCost.cpp
     costs/DynamicsCost.cpp
-    costs/GelsightCost.cpp
+#    costs/GelsightCost.cpp
     costs/JointStateCost.cpp
     costs/KinectFrameCost.cpp
     costs/NonpenetratingObjectCost.cpp
-    costs/OptotrakMarkerCost.cpp
+#    costs/OptotrakMarkerCost.cpp
     costs/RobotStateCost.cpp
     )
 
 set(drakeManipulationTracker_HEADERS
+    manipulation_tracker_sys.h
     common/sdf_2d_functions.hpp
     common/common.hpp
     ManipulationTracker.hpp
-    costs/AttachedApriltagCost.hpp
+#    costs/AttachedApriltagCost.hpp
     costs/DynamicsCost.hpp
-    costs/GelsightCost.hpp
+#    costs/GelsightCost.hpp
     costs/JointStateCost.hpp
     costs/KinectFrameCost.hpp
     costs/ManipulationTrackerCost.hpp
     costs/NonpenetratingObjectCost.hpp
-    costs/OptotrakMarkerCost.hpp
+#    costs/OptotrakMarkerCost.hpp
     costs/RobotStateCost.hpp
     )
 
