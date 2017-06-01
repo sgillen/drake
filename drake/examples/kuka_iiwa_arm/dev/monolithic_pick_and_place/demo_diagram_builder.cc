@@ -23,6 +23,9 @@
 #include "drake/systems/sensors/depth_sensor.h"
 #include "drake/systems/sensors/depth_sensor_to_lcm_point_cloud_message.h"
 #include "bot_core/pointcloud_t.hpp"
+#include "drake/systems/rendering/pose_vector.h"
+#include "drake/systems/sensors/depth_sensor_output.h"
+#include "drake/systems/lcm/lcm_and_vector_base_translator.h"
 
 #include "drake/common/scoped_timer.h"
 
@@ -55,7 +58,21 @@ using std::unique_ptr;
 namespace kuka_iiwa_arm {
 namespace monolithic_pick_and_place {
 
-class WallClockPublisher : public systems::LeafSystem<double> {
+template <typename T_>
+class LeafSystemMixin : public systems::LeafSystem<T_> {
+ public:
+  typedef T_ T;
+  typedef systems::Context<T> Context;
+  typedef systems::DiscreteValues<T> DiscreteValues;
+  typedef systems::SystemOutput<T> SystemOutput;
+  using Inport = systems::InputPortDescriptor<T>;
+  using Outport = systems::OutputPortDescriptor<T>;
+  // Blech.
+  template <typename U>
+  using Value = systems::Value<U>;
+};
+
+class WallClockPublisher : public LeafSystemMixin<double> {
  public:
   WallClockPublisher(double period_sec) {
     timer_.reset(new timing::Timer());
@@ -64,9 +81,7 @@ class WallClockPublisher : public systems::LeafSystem<double> {
   }
 
   typedef double T;
-  typedef systems::Context<T> Context;
-  typedef systems::DiscreteValues<T> DiscreteValues;
-  typedef systems::SystemOutput<T> SystemOutput;
+
  protected:
   void DoCalcOutput(const Context&, SystemOutput*) const override {}
   void DoCalcDiscreteVariableUpdates(
@@ -85,6 +100,108 @@ class WallClockPublisher : public systems::LeafSystem<double> {
   // HACK
   unique_ptr<double> prev_time_;
   unique_ptr<timing::Timer> timer_;
+};
+
+using systems::rendering::PoseVector;
+using systems::sensors::DepthSensorOutput;
+using systems::sensors::ImageDepth32F;
+using systems::sensors::CameraInfo;
+
+// HACK: Cribbed from rgbd_camera.cc
+const int kImageWidth = 640;  // In pixels
+const int kImageHeight = 480;  // In pixels
+
+// // Sigh...
+//template <typename T>
+//auto MakeValue(T&& value) {
+//  return systems::Value<T>(std::forward<T>(value));
+//}
+
+// HACK: Actually outputs DepthSensorOutput, with very non-descriptive sensor
+// information.
+// TODO(eric.cousineau): Decouple point-cloud definition from DepthSensorOutput,
+// or decouple / use composition for LCM point cloud translation from this.
+class DepthImageToPointCloud : public LeafSystemMixin<double> {
+  // Model after: DpethSensorToLcmPointCloudMessage
+ public:
+  DepthImageToPointCloud(const CameraInfo& camera_info)
+      : camera_info_(camera_info) {
+    ImageDepth32F depth_image(kImageWidth, kImageHeight);
+    depth_image_input_port_index_ = DeclareAbstractInputPort(
+        Value<ImageDepth32F>(depth_image)).get_index();
+    // TODO(eric.cousineau): Determine proper way to pass a basic point cloud.
+    Eigen::Matrix3Xd point_cloud(3, depth_image.size());
+    output_port_index_ =
+        DeclareAbstractOutputPort(Value<Eigen::Matrix3Xd>(point_cloud)).get_index();
+  }
+
+ protected:
+  void DoCalcOutput(const Context& context, SystemOutput* output) const override {
+    const auto& depth_image =
+        EvalAbstractInput(context, depth_image_input_port_index_)
+        ->GetValue<ImageDepth32F>();
+    auto& point_cloud = output->GetMutableData(output_port_index_)
+                        ->GetMutableValue<Eigen::Matrix3Xd>();
+    RgbdCamera::ConvertDepthImageToPointCloud(depth_image, camera_info_, &point_cloud);
+  }
+
+ private:
+  DepthSensorSpecification spec_;
+  const CameraInfo& camera_info_;
+  int depth_image_input_port_index_{};
+  int output_port_index_{};
+};
+
+
+// TODO(eric.cousineau): Replace with LCM Translator when PR lands
+class PointCloudToLcmPointCloud : public LeafSystemMixin<double> {
+ public:
+  typedef Eigen::Matrix3Xd Data;
+  typedef bot_core::pointcloud_t Message;
+
+  PointCloudToLcmPointCloud() {
+    input_port_index_ =
+        DeclareAbstractInputPort(Value<Data>()).get_index();
+    pose_input_port_index_ =
+        DeclareVectorInputPort(PoseVector<double>()).get_index();
+    output_port_index_ =
+        DeclareAbstractOutputPort(Value<Message>()).get_index();
+  }
+
+  const Inport& get_inport() const {
+    return get_input_port(input_port_index_);
+  }
+  const Inport& get_pose_inport() const {
+    return get_input_port(pose_input_port_index_);
+  }
+  const Outport& get_outport() const {
+    return get_output_port(output_port_index_);
+  }
+ protected:
+  void DoCalcOutput(
+      const Context& context, SystemOutput* output) const {
+    const Data& point_cloud = EvalAbstractInput(context, input_port_index_)
+                              ->GetValue<Data>();
+    Message& message = output->GetMutableData(output_port_index_)
+                        ->GetMutableValue<Message>();
+    auto pose_WS = EvalVectorInput<PoseVector>(context,
+                                               pose_input_port_index_);
+    auto X_WS = pose_WS->get_isometry();
+    // Stolen from DepthSensorToLcmPointCloudMessage
+    message.frame_id = std::string(RigidBodyTreeConstants::kWorldName);
+    message.n_points = point_cloud.cols();
+    message.points.clear();
+    for (int i = 0; i < point_cloud.cols(); ++i) {
+      const auto& point_S = point_cloud.col(i);
+      Eigen::Vector3f point_W = (X_WS * point_S).cast<float>();
+      message.points.push_back({point_W(0), point_W(1), point_W(2)});
+    }
+    message.n_channels = 0;
+  }
+ private:
+  int input_port_index_{};
+  int pose_input_port_index_{};
+  int output_port_index_{};
 };
 
 template <typename T>
@@ -247,6 +364,28 @@ struct IiwaWsgPlantGeneratorsEstimatorsAndVisualizer<T>::Impl {
       pbuilder->Connect(
           rgbd_camera_->camera_base_pose_output_port(),
           rgbd_camera_pose_lcm_pub_->get_input_port(0));
+
+      // Publish depth image.
+      auto depth_to_pc = pbuilder->template AddSystem<DepthImageToPointCloud>(
+            rgbd_camera_->depth_camera_info());
+      pbuilder->Connect(
+            rgbd_camera_->depth_image_output_port(),
+            depth_to_pc->get_input_port(0));
+      typedef PointCloudToLcmPointCloud Converter;
+      auto pc_to_lcm = pbuilder->template AddSystem<Converter>();
+      pbuilder->Connect(
+            depth_to_pc->get_output_port(0),
+            pc_to_lcm->get_inport());
+      pbuilder->Connect(
+            rgbd_camera_->camera_base_pose_output_port(),
+            pc_to_lcm->get_pose_inport());
+      // Add LCM publisher
+      auto depth_lcm_pub = pbuilder->template AddSystem<LcmPublisherSystem>(
+          LcmPublisherSystem::Make<Converter::Message>("DRAKE_RGBD_POINT_CLOUD",
+                                                       plcm));
+      pbuilder->Connect(
+            pc_to_lcm->get_outport(),
+            depth_lcm_pub->get_input_port(0));
     }
 
     if (use_depth_sensor) {

@@ -535,7 +535,7 @@ class DepthImageToPointCloudConversionTest : public ::testing::Test {
     for (int v = 0; v < depth_image_.height(); ++v) {
       for (int u = 0; u < depth_image_.width(); ++u) {
         const int i = v * depth_image_.width() + u;
-        Eigen::Vector3f actual(Eigen::Map<Eigen::Vector3f>(
+        Eigen::Vector3d actual(Eigen::Map<Eigen::Vector3d>(
             actual_point_cloud_.col(i).data(), actual_point_cloud_.rows()));
 
         EXPECT_EQ(actual(0), RgbdCamera::InvalidDepth::kTooFar);
@@ -554,7 +554,7 @@ class DepthImageToPointCloudConversionTest : public ::testing::Test {
 
   const CameraInfo camera_info_;
   ImageDepth32F depth_image_;
-  Eigen::Matrix3Xf actual_point_cloud_;
+  Eigen::Matrix3Xd actual_point_cloud_;
 };
 
 // Verifies computed point cloud when pixel values in depth image are valid.
@@ -571,7 +571,7 @@ TEST_F(DepthImageToPointCloudConversionTest, ValidValueTest) {
   for (int v = 0; v < depth_image_.height(); ++v) {
     for (int u = 0; u < depth_image_.width(); ++u) {
       const int i = v * depth_image_.width() + u;
-      Eigen::Vector3f actual(Eigen::Map<Eigen::Vector3f>(
+      Eigen::Vector3d actual(Eigen::Map<Eigen::Vector3d>(
           actual_point_cloud_.col(i).data(), actual_point_cloud_.rows()));
 
       EXPECT_NEAR(actual(0), kDepthValue * (u - kWidth * 0.5) / kFocal,
@@ -594,7 +594,7 @@ TEST_F(DepthImageToPointCloudConversionTest, NanValueTest) {
   for (int v = 0; v < depth_image_.height(); ++v) {
     for (int u = 0; u < depth_image_.width(); ++u) {
       const int i = v * depth_image_.width() + u;
-      Eigen::Vector3f actual(Eigen::Map<Eigen::Vector3f>(
+      Eigen::Vector3d actual(Eigen::Map<Eigen::Vector3d>(
           actual_point_cloud_.col(i).data(), actual_point_cloud_.rows()));
 
       EXPECT_TRUE(std::isnan(actual(0)));

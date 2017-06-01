@@ -77,7 +77,7 @@ class RgbdCamera : public LeafSystem<double> {
   /// @param[out] point_cloud The pointer of output point cloud.
   static void ConvertDepthImageToPointCloud(const ImageDepth32F& depth_image,
                                             const CameraInfo& camera_info,
-                                            Eigen::Matrix3Xf* point_cloud);
+                                            Eigen::Matrix3Xd* point_cloud);
 
   /// Set of constants used to represent invalid depth values.
   /// Note that if a depth is not measurable, NaN will be set.

@@ -225,7 +225,7 @@ struct ModuleInitVtkRenderingOpenGL2 {
 
 void RgbdCamera::ConvertDepthImageToPointCloud(const ImageDepth32F& depth_image,
                                                const CameraInfo& camera_info,
-                                               Eigen::Matrix3Xf* point_cloud) {
+                                               Eigen::Matrix3Xd* point_cloud) {
   if (depth_image.size() != point_cloud->cols()) {
     point_cloud->resize(3, depth_image.size());
   }
@@ -237,7 +237,7 @@ void RgbdCamera::ConvertDepthImageToPointCloud(const ImageDepth32F& depth_image,
   const float fx_inv = 1.f / camera_info.focal_x();
   const float fy_inv = 1.f / camera_info.focal_y();
 
-  Eigen::Matrix3Xf& pc = *point_cloud;
+  Eigen::Matrix3Xd& pc = *point_cloud;
   for (int v = 0; v < height; ++v) {
     for (int u = 0; u < width; ++u) {
       float z = depth_image.at(u, v)[0];
