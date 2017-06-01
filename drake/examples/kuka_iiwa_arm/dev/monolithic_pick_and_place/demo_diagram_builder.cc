@@ -168,8 +168,8 @@ struct IiwaWsgPlantGeneratorsEstimatorsAndVisualizer<T>::Impl {
       DrakeLcm* plcm,
       IiwaAndWsgPlantWithStateEstimator<double>* pplant) {
 
-    bool use_rgbd_camera = false;
-    bool use_depth_sensor = true;
+    bool use_rgbd_camera = true;
+    bool use_depth_sensor = false;
 
     const double pi = M_PI;
 
@@ -258,8 +258,8 @@ struct IiwaWsgPlantGeneratorsEstimatorsAndVisualizer<T>::Impl {
       spec->set_max_yaw(pi / 4);
       spec->set_min_pitch(-pi / 4);
       spec->set_max_pitch(pi / 4);
-      spec->set_num_yaw_values(120);
-      spec->set_num_pitch_values(160);
+      spec->set_num_yaw_values(60);
+      spec->set_num_pitch_values(80);
       spec->set_min_range(0);
       spec->set_max_range(5);
 
@@ -318,7 +318,7 @@ IiwaWsgPlantGeneratorsEstimatorsAndVisualizer<T>::
 
   DiagramBuilder<T> builder;
   ModelInstanceInfo<double> iiwa_instance, wsg_instance, box_instance;
-  const bool use_slow_meshes = true;
+  const bool use_slow_meshes = false;
 
   std::unique_ptr<systems::RigidBodyPlant<double>> model_ptr =
       BuildCombinedPlant<double>(&iiwa_instance, &wsg_instance, &box_instance,
