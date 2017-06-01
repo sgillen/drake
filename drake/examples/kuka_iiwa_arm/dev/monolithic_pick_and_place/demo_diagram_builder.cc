@@ -198,7 +198,7 @@ class PointCloudToLcmPointCloud : public LeafSystemMixin<double> {
     auto X_WS = pose_WS->get_isometry();
     // Stolen from DepthSensorToLcmPointCloudMessage
     message.frame_id = std::string(RigidBodyTreeConstants::kWorldName);
-    message.n_points = n_points / 5;
+    message.n_points = n_points;
     message.points.clear();
     for (int i = 0; i < n_points; ++i) {
       const auto& point_S = point_cloud.col(i);
