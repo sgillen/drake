@@ -7,14 +7,30 @@ import robotlocomotion as lcmrobotlocomotion
 import bot_core as lcmbotcore
 import numpy as np
 
+from mpl_toolkits.mplot3d import Axes3D
+import matplotlib.pyplot as plt
+
 import lcm
 
 lcm_pointcloud_t = lcmbotcore.pointcloud_t
+
+def plot_points(ax, points):
+    print len(points[:, 0])
+    ax.scatter(xs=points[:, 0], ys=points[:, 1], zs=points[:, 2])
+    plt.draw()
+    plt.pause(2)
 
 class HelperSub(object):
     def  __init__(self):
         self.lcm = lcm.LCM()
         self.sub = self.lcm.subscribe('DRAKE_RGBD_POINT_CLOUD', self.callback)
+        self.fig = plt.figure()
+        self.ax = plt.subplot(111, projection='3d')
+        plt.ion()
+        plt.show(block=False)
+        self.ax.set_xlabel("x")
+        self.ax.set_ylabel("y")
+        self.ax.set_zlabel("z")
 
     def run(self):
         try:
@@ -35,6 +51,7 @@ class HelperSub(object):
         print "non-nan: {}".format(np.count_nonzero(is_finite))
         center = np.mean(points[is_finite], axis=0)
         print center
+        plot_points(self.ax, points[is_finite])
 
 class Rate:
     # Is there something akin to ros.Rate?
