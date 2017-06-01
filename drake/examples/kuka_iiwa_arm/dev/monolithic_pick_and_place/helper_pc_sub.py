@@ -20,6 +20,7 @@ class Plotter:
         self.lock = Lock()
         self.finished = False
         self.action_queue = None
+        self.has_first = False
 
     def init(self):
         self.fig = plt.figure()
@@ -42,29 +43,39 @@ class Plotter:
     def plot_points(self, points):
         # Consider copying points if needed
         def action():
-            self.ax.scatter(xs=points[:, 0], ys=points[:, 1], zs=points[:, 2])
+            if self.has_first:
+                return
+            else:
+                self.ax.scatter(xs=points[:, 0], ys=points[:, 1], zs=points[:, 2])
+                plt.axis('equal')
+                self.has_first = True
         with self.lock:
             self.action_queue = action
 
 class HelperSub(object):
     def  __init__(self, plotter):
         self.lcm = lcm.LCM()
-        self.sub = self.lcm.subscribe('DRAKE_RGBD_POINT_CLOUD', self.callback)
+        self.sub = self.lcm.subscribe('DRAKE_POINTCLOUD_RGBD', self.callback)
         self.plotter = plotter
         self.finished = False
         self.thread = Thread(target=self.run)
+        self.thread.daemon = True
 
     def run(self):
-        rate = Rate(0.01)
-        while not self.finished:
-            self.lcm.handle()
-            rate.sleep()
+        try:
+            rate = Rate(0.01)
+            while not self.finished:
+                self.lcm.handle()
+                rate.sleep()
+        except KeyboardInterrupt:
+            pass
 
     def start(self):
         self.thread.start()
 
     def join(self):
         self.finished = True
+        print "Joining"
         self.thread.join()
 
     def callback(self, channel, data):

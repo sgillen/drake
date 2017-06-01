@@ -143,6 +143,13 @@ class DepthImageToPointCloud : public LeafSystemMixin<double> {
     auto& point_cloud = output->GetMutableData(output_port_index_)
                         ->GetMutableValue<Eigen::Matrix3Xd>();
     RgbdCamera::ConvertDepthImageToPointCloud(depth_image, camera_info_, &point_cloud);
+    Eigen::Matrix3d R_BD;
+    R_BD <<
+        0, 0, 1,
+        -1, 0, 0,
+        0, -1, 0;
+    // Project from `D` to `B`
+    point_cloud = (R_BD * point_cloud).eval();
     drake::log()->info("Convert image");
   }
 
@@ -386,7 +393,7 @@ struct IiwaWsgPlantGeneratorsEstimatorsAndVisualizer<T>::Impl {
             pc_to_lcm->get_pose_inport());
       // Add LCM publisher
       auto depth_lcm_pub = pbuilder->template AddSystem<LcmPublisherSystem>(
-          LcmPublisherSystem::Make<Converter::Message>("DRAKE_RGBD_POINT_CLOUD",
+          LcmPublisherSystem::Make<Converter::Message>("DRAKE_POINTCLOUD_RGBD",
                                                        plcm));
       depth_lcm_pub->set_name("depth_point_cloud_lcm_publisher");
       depth_lcm_pub->set_publish_period(0.001);
