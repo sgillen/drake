@@ -143,6 +143,7 @@ class DepthImageToPointCloud : public LeafSystemMixin<double> {
     auto& point_cloud = output->GetMutableData(output_port_index_)
                         ->GetMutableValue<Eigen::Matrix3Xd>();
     RgbdCamera::ConvertDepthImageToPointCloud(depth_image, camera_info_, &point_cloud);
+    std::cout << "Convert imgae" << std::endl;
   }
 
  private:
@@ -186,12 +187,13 @@ class PointCloudToLcmPointCloud : public LeafSystemMixin<double> {
                         ->GetMutableValue<Message>();
     auto pose_WS = EvalVectorInput<PoseVector>(context,
                                                pose_input_port_index_);
+    int n_points = 10; // point_cloud.cols();
     auto X_WS = pose_WS->get_isometry();
     // Stolen from DepthSensorToLcmPointCloudMessage
     message.frame_id = std::string(RigidBodyTreeConstants::kWorldName);
-    message.n_points = point_cloud.cols();
+    message.n_points = n_points;
     message.points.clear();
-    for (int i = 0; i < point_cloud.cols(); ++i) {
+    for (int i = 0; i < n_points; ++i) {
       const auto& point_S = point_cloud.col(i);
       Eigen::Vector3f point_W = (X_WS * point_S).cast<float>();
       message.points.push_back({point_W(0), point_W(1), point_W(2)});
@@ -311,6 +313,7 @@ struct IiwaWsgPlantGeneratorsEstimatorsAndVisualizer<T>::Impl {
     const Vector3d orientation(0, 20, -135); // degrees
 
     pbuilder->template AddSystem<WallClockPublisher>(0.001);
+    drake::log()->set_level(spdlog::level::trace);
 
     if (use_rgbd_camera) {
       // Adapted from: .../image_to_lcm_message_demo.cc
@@ -343,6 +346,7 @@ struct IiwaWsgPlantGeneratorsEstimatorsAndVisualizer<T>::Impl {
           rgbd_camera_->label_image_output_port(),
           image_to_lcm_message_->label_image_input_port());
 
+      if (false) {
       // Camera image publisher.
       image_lcm_pub_ = pbuilder->template AddSystem(
           LcmPublisherSystem::Make<bot_core::images_t>(
@@ -364,6 +368,7 @@ struct IiwaWsgPlantGeneratorsEstimatorsAndVisualizer<T>::Impl {
       pbuilder->Connect(
           rgbd_camera_->camera_base_pose_output_port(),
           rgbd_camera_pose_lcm_pub_->get_input_port(0));
+      }
 
       // Publish depth image.
       auto depth_to_pc = pbuilder->template AddSystem<DepthImageToPointCloud>(
@@ -383,6 +388,8 @@ struct IiwaWsgPlantGeneratorsEstimatorsAndVisualizer<T>::Impl {
       auto depth_lcm_pub = pbuilder->template AddSystem<LcmPublisherSystem>(
           LcmPublisherSystem::Make<Converter::Message>("DRAKE_RGBD_POINT_CLOUD",
                                                        plcm));
+      depth_lcm_pub->set_name("depth_point_cloud_lcm_publisher");
+      depth_lcm_pub->set_publish_period(0.001);
       pbuilder->Connect(
             pc_to_lcm->get_outport(),
             depth_lcm_pub->get_input_port(0));

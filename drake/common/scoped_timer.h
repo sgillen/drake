@@ -6,6 +6,8 @@
 #include <limits>
 #include <thread>
 
+#include "drake/common/unused.h"
+
 namespace timing {
 
 // From: drake-distro:49e44b7:drake/common/test/measure_execution.h
@@ -82,7 +84,8 @@ class ScopedTimerMessage : public ScopedTimer {
                      const std::string& message = "Elapsed time (s)")
     : ScopedTimer(timer,
                   [=](double t) {
-                    std::cout << message << ": " << t << std::endl;
+    drake::unused(message, t);
+//                    std::cout << message << ": " << t << std::endl;
                   }) {}
 };
 
