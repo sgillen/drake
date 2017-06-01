@@ -62,7 +62,7 @@ int main(int argc, char* argv[]) {
   lcm_publisher->set_name("publisher");
   lcm_publisher->set_publish_period(0.01);
 
-  rendering::PoseStampedTPoseVectorTranslator translator;
+  rendering::PoseStampedTPoseVectorTranslator translator("test_frame");
   auto pose_lcm_publisher = builder.template AddSystem<
     lcm::LcmPublisherSystem>("DRAKE_RGBD_CAMERA_POSE",
                              translator, &real_lcm);
