@@ -34,11 +34,15 @@ void eigen2cv( const Eigen::Matrix<_Tp, _rows, _cols, _options, _maxRows, _maxCo
     }
 }
 
-KinectFrameCost::KinectFrameCost(std::shared_ptr<RigidBodyTreed> robot_, std::shared_ptr<lcm::LCM> lcm_, YAML::Node config) :
+KinectFrameCost::KinectFrameCost(std::shared_ptr<RigidBodyTreed> robot_,
+                                 std::shared_ptr<lcm::LCM> lcm_,
+                                 YAML::Node config,
+                                 shared_ptr<CameraInfo>& camera_info) :
     lcm(lcm_),
     robot(robot_),
     robot_kinematics_cache(robot->CreateKinematicsCache()),
-    nq(robot->get_num_positions())
+    nq(robot->get_num_positions()),
+    camera_info_(camera_info)
 {
   if (config["icp_var"])
     icp_var = config["icp_var"].as<double>();
@@ -90,30 +94,29 @@ KinectFrameCost::KinectFrameCost(std::shared_ptr<RigidBodyTreed> robot_, std::sh
     filename = config["filename"].as<string>().c_str();
   this->initBotConfig(filename);
 
-
   lcmgl_lidar_= bot_lcmgl_init(lcm->getUnderlyingLCM(), "trimmed_lidar");
   lcmgl_icp_= bot_lcmgl_init(lcm->getUnderlyingLCM(), "icp_p2pl");
   lcmgl_measurement_model_ = bot_lcmgl_init(lcm->getUnderlyingLCM(), "meas_model");
 
-  // if we're using a kinect... (to be refactored)
-  // This is in full agreement with Kintinuous: (calibrationAsus.yml)
-  // NB: if changing this, it should be kept in sync
-  kcal = new KinectCalibration(); // kinect_calib_new();
-  kcal->intrinsics_depth.fx = 528.01442863461716;//was 576.09757860;
-  kcal->intrinsics_depth.cx = 320.0;
-  kcal->intrinsics_depth.cy = 267.0;
-  kcal->intrinsics_rgb.fx = 528.01442863461716;//576.09757860; ... 528 seems to be better, emperically, march 2015
-  kcal->intrinsics_rgb.cx = 320.0;
-  kcal->intrinsics_rgb.cy = 267.0;
-  kcal->intrinsics_rgb.k1 = 0; // none given so far
-  kcal->intrinsics_rgb.k2 = 0; // none given so far
-  kcal->shift_offset = 1090.0;
-  kcal->projector_depth_baseline = 0.075;
-  //double rotation[9];
-  double rotation[]={0.999999, -0.000796, 0.001256, 0.000739, 0.998970, 0.045368, -0.001291, -0.045367, 0.998970};
-  double depth_to_rgb_translation[] ={ -0.015756, -0.000923, 0.002316};
-  memcpy(kcal->depth_to_rgb_rot, rotation, 9*sizeof(double));
-  memcpy(kcal->depth_to_rgb_translation, depth_to_rgb_translation  , 3*sizeof(double));
+//  // if we're using a kinect... (to be refactored)
+//  // This is in full agreement with Kintinuous: (calibrationAsus.yml)
+//  // NB: if changing this, it should be kept in sync
+//  kcal = new KinectCalibration(); // kinect_calib_new();
+//  kcal->intrinsics_depth.fx = 528.01442863461716;//was 576.09757860;
+//  kcal->intrinsics_depth.cx = 320.0;
+//  kcal->intrinsics_depth.cy = 267.0;
+//  kcal->intrinsics_rgb.fx = 528.01442863461716;//576.09757860; ... 528 seems to be better, emperically, march 2015
+//  kcal->intrinsics_rgb.cx = 320.0;
+//  kcal->intrinsics_rgb.cy = 267.0;
+//  kcal->intrinsics_rgb.k1 = 0; // none given so far
+//  kcal->intrinsics_rgb.k2 = 0; // none given so far
+//  kcal->shift_offset = 1090.0;
+//  kcal->projector_depth_baseline = 0.075;
+//  //double rotation[9];
+//  double rotation[]={0.999999, -0.000796, 0.001256, 0.000739, 0.998970, 0.045368, -0.001291, -0.045367, 0.998970};
+//  double depth_to_rgb_translation[] ={ -0.015756, -0.000923, 0.002316};
+//  memcpy(kcal->depth_to_rgb_rot, rotation, 9*sizeof(double));
+//  memcpy(kcal->depth_to_rgb_translation, depth_to_rgb_translation  , 3*sizeof(double));
 
   num_pixel_cols = (int) floor( ((double)input_num_pixel_cols) / downsample_amount);
   num_pixel_rows = (int) floor( ((double)input_num_pixel_rows) / downsample_amount);
@@ -129,7 +132,14 @@ KinectFrameCost::KinectFrameCost(std::shared_ptr<RigidBodyTreed> robot_, std::sh
     camera_offset_sub->setQueueCapacity(1);
   }
 
-  auto kinect_frame_sub = lcm->subscribe("KINECT_FRAME", &KinectFrameCost::handleKinectFrameMsg, this);
+  // While it is redundant to supply the depth cloud and a depth image, it removes the need for this class to need
+  // much, if any, camera information.
+  // TODO(eric.cousineau): Determine whether to both transmitting the point cloud separately,
+  // to permit for pure point-cloud approaches.
+  auto kinect_image_sub = lcm->subscribe("DRAKE_IMAGE_RGBD", &KinectFrameCost::handleDepthImageMsg, this);
+  kinect_image_sub->setQueueCapacity(1);
+
+  auto kinect_frame_sub = lcm->subscribe("DRAKE_POINTCLOUD_RGBD", &KinectFrameCost::handlePointCloudMsg, this);
   kinect_frame_sub->setQueueCapacity(1);
 
   auto save_pc_sub = lcm->subscribe("IRB140_ESTIMATOR_SAVE_POINTCLOUD", &KinectFrameCost::handleSavePointcloudMsg, this);
@@ -223,7 +233,7 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
     // do randomized downsampling, populating data stores to be used by the ICP
     Matrix3Xd points(3, full_cloud.cols()); int i=0;
     Eigen::MatrixXd depth_image; depth_image.resize(num_pixel_rows, num_pixel_cols);
-    double constant = 1.0f / kcal->intrinsics_rgb.fx ;
+    double constant = 1.0f / camera_info_->focal_x();
     if (verbose_lcmgl)
       bot_lcmgl_begin(lcmgl_lidar_, LCMGL_POINTS);
     if (full_cloud.cols() > 0){
@@ -260,8 +270,8 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
 
           // populate raycast endpoints using our random sample
           raycast_endpoints.col(num_pixel_cols*v + u) = Vector3d(
-            (((double) full_u)- kcal->intrinsics_depth.cx)*1.0*constant,
-            (((double) full_v)- kcal->intrinsics_depth.cy)*1.0*constant, 
+            (((double) full_u)- camera_info_->center_x())*1.0*constant,
+            (((double) full_v)- camera_info_->center_y())*1.0*constant,
             1.0); // simulate the depth sensor;
           raycast_endpoints.col(num_pixel_cols*v + u) *= max_scan_dist/(raycast_endpoints.col(num_pixel_cols*v + u).norm());
         }
@@ -718,16 +728,11 @@ void KinectFrameCost::handleSavePointcloudMsg(const lcm::ReceiveBuffer* rbuf,
   ofile.close();
 }
 
-void KinectFrameCost::handleKinectFrameMsg(const lcm::ReceiveBuffer* rbuf,
-                           const std::string& chan,
-                           const kinect::frame_msg_t* msg){
+void KinectFrameCost::handleDepthImageMsg(const lcm::ReceiveBuffer* rbuf,
+                                          const string& chan,
+                                          const bot_core::image_t* msg) {
   if (verbose)
-    printf("Received kinect frame on channel %s\n", chan.c_str());
-
-  // only dealing with depth. Copied from ddKinectLCM... shouldn't 
-  // this be in the Kinect driver or something?
-
-  latest_cloud_mutex.lock();
+    printf("Received dpeth image on channel %s\n", chan.c_str());
 
   // grab the color image to colorize lidar
   bool success = false;
@@ -752,7 +757,19 @@ void KinectFrameCost::handleKinectFrameMsg(const lcm::ReceiveBuffer* rbuf,
    }
   }
 
-  std::vector<uint16_t> depth_data;
+  std::vect
+}
+
+void KinectFrameCost::handlePointCloudMsg(const lcm::ReceiveBuffer* rbuf,
+                           const std::string& chan,
+                           const bot_core::pointcloud_t* msg){
+
+  latest_cloud_mutex.lock();
+  // TODO(eric.cousineau): Consider whether to preserver multi-threading, given
+  // that all of this is presently running in the same thread.
+
+  latest_cloud_mutex.lock();
+  vector<uint16_t> depth_data;
 
   // 1.2.1 De-compress if necessary:
   if(msg->depth.compression != msg->depth.COMPRESSION_NONE) {

@@ -15,16 +15,28 @@
 #include "lcmtypes/kinect/frame_msg_t.hpp"
 #include "lcmtypes/bot_core/rigid_transform_t.hpp"
 #include "lcmtypes/bot_core/image_t.hpp"
-#include <kinect/kinect-utils.h>
+//#include <kinect/kinect-utils.h>
 #include <mutex>
 #include <bot_lcmgl_client/lcmgl.h>
 #include <bot_frames/bot_frames.h>
 #include <bot_param/param_client.h>
+#include <lcmtypes/bot_core/pointcloud_t.hpp>
+#include <lcmtypes/bot_core/image_t.hpp>
 
+#include "drake/systems/sensors/camera_info.h"
 
+/**
+ * Handling Kinect cost (point cloud and depth image)
+ * HACK: This is going to be disassociated from a Kinect to simplify processing.
+ */
 class KinectFrameCost : public ManipulationTrackerCost {
 public:
-  KinectFrameCost(std::shared_ptr<RigidBodyTreed> robot_, std::shared_ptr<lcm::LCM> lcm_, YAML::Node config);
+  typedef drake::systems::sensors::CameraInfo CameraInfo;
+
+  KinectFrameCost(std::shared_ptr<RigidBodyTreed> robot_,
+                  std::shared_ptr<lcm::LCM> lcm_,
+                  YAML::Node config,
+                  std::shared_ptr<CameraInfo> camera_info);
   ~KinectFrameCost() {};
   bool constructCost(ManipulationTracker * tracker, const Eigen::VectorXd x_old, Eigen::MatrixXd& Q, Eigen::VectorXd& f, double& K);
 
@@ -34,9 +46,12 @@ public:
   void handleSavePointcloudMsg(const lcm::ReceiveBuffer* rbuf,
                            const std::string& chan,
                            const bot_core::raw_t* msg);
-  void handleKinectFrameMsg(const lcm::ReceiveBuffer* rbuf,
+  void handlePointCloudMsg(const lcm::ReceiveBuffer* rbuf,
                            const std::string& chan,
-                           const kinect::frame_msg_t* msg);
+                           const bot_core::pointcloud_t* msg);
+  void handleDepthImageMsg(const lcm::ReceiveBuffer* rbuf,
+                           const std::string& chan,
+                           const bot_core::image_t* msg);
   void handleCameraOffsetMsg(const lcm::ReceiveBuffer* rbuf,
                            const std::string& chan,
                            const bot_core::rigid_transform_t* msg);
@@ -98,11 +113,12 @@ private:
   bool have_hardcoded_kinect2world_ = false;
   Eigen::Isometry3d hardcoded_kinect2world_;
 
-  KinectCalibration* kcal;
-  Eigen::Matrix<double, 3, Eigen::Dynamic> latest_cloud;
+//  KinectCalibration* kcal;
+  Eigen::Matrix3Xd latest_cloud;
   Eigen::MatrixXd latest_depth_image;
-  Eigen::Matrix<double, 3, Eigen::Dynamic> latest_color_image;
-  Eigen::Matrix<double, 3, Eigen::Dynamic> raycast_endpoints;
+  Eigen::Matrix3Xd latest_color_image;
+  Eigen::Matrix3Xd raycast_endpoints;
+  std::shared_ptr<CameraInfo> camera_info_;
 
   double lastReceivedTime;
   double last_got_kinect_frame;

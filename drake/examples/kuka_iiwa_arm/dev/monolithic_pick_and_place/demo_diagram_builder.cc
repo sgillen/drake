@@ -347,7 +347,7 @@ struct IiwaWsgPlantGeneratorsEstimatorsAndVisualizer<T>::Impl {
       // Camera image publisher.
       image_lcm_pub_ = pbuilder->template AddSystem(
           LcmPublisherSystem::Make<bot_core::images_t>(
-              "DRAKE_RGB_IMAGE", plcm));
+              "DRAKE_IMAGE_RGBD", plcm));
       image_lcm_pub_->set_name("publisher");
       image_lcm_pub_->set_publish_period(0.01);
 
