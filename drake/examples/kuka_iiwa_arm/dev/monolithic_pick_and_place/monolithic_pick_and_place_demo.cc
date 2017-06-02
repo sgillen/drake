@@ -25,10 +25,10 @@
 
 DEFINE_double(simulation_sec, std::numeric_limits<double>::infinity(),
 "Number of seconds to simulate.");
-DEFINE_uint64(target, 1, "ID of the target to pick.");
+DEFINE_uint64(target, 0, "ID of the target to pick.");
 DEFINE_double(orientation, 2 * M_PI, "Yaw angle of the box.");
-DEFINE_int32(start_position, 0, "Position index to start from");
-DEFINE_int32(end_position, 0, "Position index to start from");
+DEFINE_uint32(start_position, 1, "Position index to start from");
+DEFINE_uint32(end_position, 2, "Position index to end at");
 
 using robotlocomotion::robot_plan_t;
 
@@ -160,12 +160,10 @@ int DoMain(void) {
   // TODO(sam.creasey) select only one of these
   std::vector<Isometry3<double>> place_locations;
   Isometry3<double> place_location;
-#if 0
   place_location.translation() = post_locations[0] + post_height_offset;
   place_location.linear() = Matrix3<double>(
       AngleAxis<double>(M_PI / 2., Vector3<double>::UnitZ()));
   place_locations.push_back(place_location);
-#endif
 
   place_location.translation() = post_locations[1] + post_height_offset;
   place_location.linear().setIdentity();
@@ -190,9 +188,6 @@ int DoMain(void) {
       AngleAxis<double>(-M_PI / 2., Vector3<double>::UnitZ()));
   place_locations.push_back(place_location);
 
-  drake::log()->info("1: Place location 0 {}",
-                     place_locations[0].translation().transpose());
-
   Target target = GetTarget();
   Eigen::Vector3d box_origin(0, 0, kTableTopZInWorld);
   box_origin += place_locations[FLAGS_start_position].translation();
@@ -202,10 +197,6 @@ int DoMain(void) {
   for (size_t i = 0; i < place_locations.size(); i++) {
     place_locations[i].translation() += half_target_height;
   }
-
-  drake::log()->info("Box origin {}", box_origin.transpose());
-  drake::log()->info("2: Place location 0 {}",
-                     place_locations[0].translation().transpose());
 
   lcm::DrakeLcm lcm;
   systems::DiagramBuilder<double> builder;
@@ -255,8 +246,14 @@ int DoMain(void) {
   Isometry3<double> iiwa_base = Isometry3<double>::Identity();
   iiwa_base.translation() = robot_base;
 
-  drake::log()->info("3: Place location 0 {}",
-                     place_locations[0].translation().transpose());
+  if (FLAGS_end_position > 0) {
+    if (FLAGS_end_position >= place_locations.size()) {
+      throw std::runtime_error("Invalid end position specified.");
+    }
+    std::vector<Isometry3<double>> new_place_locations;
+    new_place_locations.push_back(place_locations[FLAGS_end_position]);
+    place_locations.swap(new_place_locations);
+  }
 
   auto state_machine =
       builder.template AddSystem<PickAndPlaceStateMachineSystem>(
