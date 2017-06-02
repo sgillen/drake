@@ -370,7 +370,7 @@ void AttachedApriltagCost::handleTagDetectionMsg(const lcm::ReceiveBuffer* rbuf,
 
 void AttachedApriltagCost::handleCameraOffsetMsg(const lcm::ReceiveBuffer* rbuf,
                            const std::string& chan,
-                           const vicon::body_t* msg){
+                           const bot_core::rigid_transform_t* msg){
   camera_offset_mutex.lock();
   Vector3d trans(msg->trans[0], msg->trans[1], msg->trans[2]);
   Quaterniond rot(msg->quat[0], msg->quat[1], msg->quat[2], msg->quat[3]);

@@ -13,7 +13,7 @@
 #include "lcmtypes/bot_core/rigid_transform_t.hpp"
 #include "lcmtypes/bot_core/raw_t.hpp"
 //#include "lcmtypes/kinect/frame_msg_t.hpp"
-//#include "lcmtypes/vicon/body_t.hpp"
+//#include "lcmtypes/bot_core/rigid_transform_t.hpp"
 #include "lcmtypes/bot_core/image_t.hpp"
 //#include <kinect/kinect-utils.h>
 #include <mutex>
