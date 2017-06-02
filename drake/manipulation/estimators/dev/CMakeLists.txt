@@ -19,6 +19,7 @@ include_directories(${OpenCV_DIRS})
 set(drakeManipulationTracker_SRC_FILES
     manipulation_tracker_sys.cc
     ManipulationTracker.cpp
+    ManipulationTrackerLoader.cpp
 #    costs/AttachedApriltagCost.cpp
     costs/DynamicsCost.cpp
 #    costs/GelsightCost.cpp
@@ -34,6 +35,7 @@ set(drakeManipulationTracker_HEADERS
     common/sdf_2d_functions.hpp
     common/common.hpp
     ManipulationTracker.hpp
+    ManipulationTrackerLoader.hpp
 #    costs/AttachedApriltagCost.hpp
     costs/DynamicsCost.hpp
 #    costs/GelsightCost.hpp
