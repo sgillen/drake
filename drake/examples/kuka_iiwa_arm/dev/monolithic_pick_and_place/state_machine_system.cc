@@ -7,8 +7,6 @@
 #include "robotlocomotion/robot_plan_t.hpp"
 
 #include "drake/common/drake_path.h"
-#include "drake/examples/kuka_iiwa_arm/dev/pick_and_place/pick_and_place_state_machine.h"
-#include "drake/examples/kuka_iiwa_arm/pick_and_place/world_state.h"
 
 using bot_core::robot_state_t;
 
@@ -81,9 +79,6 @@ PickAndPlaceStateMachineSystem::PickAndPlaceStateMachineSystem(
       systems::Value<lcmt_schunk_wsg_command>(
           MakeDefaultWsgCommand())).get_index();
   this->DeclarePeriodicUnrestrictedUpdate(update_interval, 0);
-
-  // TODO(sam.creasey) Add verification of final object position and
-  // termination.
 }
 
 std::unique_ptr<systems::AbstractValues>
@@ -158,6 +153,21 @@ void PickAndPlaceStateMachineSystem::DoCalcUnrestrictedUpdate(
       });
   internal_state.state_machine.Update(
       internal_state.world_state, iiwa_callback, wsg_callback, planner_.get());
+}
+
+pick_and_place::PickAndPlaceState PickAndPlaceStateMachineSystem::state(
+    const systems::Context<double>& context) const {
+  const InternalState& internal_state =
+      context.get_abstract_state<InternalState>(0);
+  return internal_state.state_machine.state();
+}
+
+  // @return the state of the pick and place world.
+const pick_and_place::WorldState& PickAndPlaceStateMachineSystem::world_state(
+    const systems::Context<double>& context) const {
+  const InternalState& internal_state =
+      context.get_abstract_state<InternalState>(0);
+  return internal_state.world_state;
 }
 
 }  // namespace monolithic_pick_and_place

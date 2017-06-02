@@ -66,6 +66,8 @@ class PickAndPlaceStateMachine {
               manipulation::planner::ConstraintRelaxingIk* planner);
 
 
+  PickAndPlaceState state() const { return state_; }
+
  private:
   std::vector<Isometry3<double>> place_locations_;
   int next_place_location_;
