@@ -15,7 +15,7 @@
 #include "lcmtypes/kinect/frame_msg_t.hpp"
 #include "lcmtypes/bot_core/rigid_transform_t.hpp"
 #include "lcmtypes/bot_core/image_t.hpp"
-//#include <kinect/kinect-utils.h>
+#include <kinect/kinect-utils.h>
 #include <mutex>
 #include <bot_lcmgl_client/lcmgl.h>
 #include <bot_frames/bot_frames.h>
@@ -33,10 +33,7 @@ class KinectFrameCost : public ManipulationTrackerCost {
 public:
   typedef drake::systems::sensors::CameraInfo CameraInfo;
 
-  KinectFrameCost(std::shared_ptr<RigidBodyTreed> robot_,
-                  std::shared_ptr<lcm::LCM> lcm_,
-                  YAML::Node config,
-                  std::shared_ptr<CameraInfo> camera_info);
+  KinectFrameCost(std::shared_ptr<RigidBodyTreed> robot_, std::shared_ptr<lcm::LCM> lcm_, YAML::Node config);
   ~KinectFrameCost() {};
   bool constructCost(ManipulationTracker * tracker, const Eigen::VectorXd x_old, Eigen::MatrixXd& Q, Eigen::VectorXd& f, double& K);
 
@@ -46,12 +43,9 @@ public:
   void handleSavePointcloudMsg(const lcm::ReceiveBuffer* rbuf,
                            const std::string& chan,
                            const bot_core::raw_t* msg);
-  void handlePointCloudMsg(const lcm::ReceiveBuffer* rbuf,
+  void handleKinectFrameMsg(const lcm::ReceiveBuffer* rbuf,
                            const std::string& chan,
-                           const bot_core::pointcloud_t* msg);
-  void handleDepthImageMsg(const lcm::ReceiveBuffer* rbuf,
-                           const std::string& chan,
-                           const bot_core::image_t* msg);
+                           const kinect::frame_msg_t* msg);
   void handleCameraOffsetMsg(const lcm::ReceiveBuffer* rbuf,
                            const std::string& chan,
                            const bot_core::rigid_transform_t* msg);
@@ -113,8 +107,8 @@ private:
   bool have_hardcoded_kinect2world_ = false;
   Eigen::Isometry3d hardcoded_kinect2world_;
 
-//  KinectCalibration* kcal;
   Eigen::Matrix3Xd latest_cloud;
+  KinectCalibration* kcal;
   Eigen::MatrixXd latest_depth_image;
   Eigen::Matrix3Xd latest_color_image;
   Eigen::Matrix3Xd raycast_endpoints;
