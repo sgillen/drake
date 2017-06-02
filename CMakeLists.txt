@@ -268,9 +268,9 @@ drake_add_external(robotlocomotion_lcmtypes PUBLIC CMAKE PYTHON
 # <EXPERIMENTAL>
 # For //drake/manipulation/dev:manipulation_tracking
 # See oh-distro/software/externals/cmake/externals.cmake
-drake_add_external(vicon PUBLIC CMAKE PYTHON
-  LOCAL # HACK
-  DEPENDS lcm)
+# drake_add_external(vicon PUBLIC CMAKE PYTHON
+#   LOCAL # HACK
+#   DEPENDS lcm)
 
 drake_add_external(kinect PUBLIC CMAKE PYTHON
   LOCAL # HACK
@@ -333,7 +333,7 @@ drake_add_external(drake LOCAL PUBLIC CMAKE ALWAYS MATLAB PYTHON VTK
     -DWITH_XFOIL:BOOL=${WITH_XFOIL}
     -DWITH_YALMIP:BOOL=${WITH_YALMIP}
     -DWITH_YAML_CPP:BOOL=${WITH_YAML_CPP}
-    -DWITH_VICON:BOOL=${WITH_VICON} # Experimental
+    # -DWITH_VICON:BOOL=${WITH_VICON} # Experimental
     -DWITH_KINECT:BOOL=${WITH_KINECT} # Experimental
     -DUSE_CLANG_TIDY:BOOL=${USE_CLANG_TIDY}
     -DUSE_INCLUDE_WHAT_YOU_USE:BOOL=${USE_INCLUDE_WHAT_YOU_USE}
@@ -372,7 +372,7 @@ drake_add_external(drake LOCAL PUBLIC CMAKE ALWAYS MATLAB PYTHON VTK
     spotless
     textbook
     tinyobjloader
-    vicon  # experimental
+    # vicon  # experimental
     vtk
     xfoil
     yalmip
