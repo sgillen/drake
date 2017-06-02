@@ -304,23 +304,13 @@ struct IiwaWsgPlantGeneratorsEstimatorsAndVisualizer<T>::Impl {
         pplant->get_plant().get_rigid_body_tree());
 
     // Camera.
-    /*
-     * Obtained from director:
-     * >>> c = view.camera()
-     * >>> print(c.GetFocalPoint())
-     * >>> print(c.GetPosition())
-    */
-//    const Vector3d position(0.05, -0.5, 0.7);
-//    const Vector3d focal_point(3.75, 4.75, 3.25);
-//    const auto orientation = CameraEulerAngle(position, focal_point);
-    const double y_offset = -0.5;
-    const double planar_distance = 2;
-    const double height = 2;
-    const Vector3d position(planar_distance, planar_distance + y_offset, height);
+    const double x = 2;
+    const double y = x - 0.5;
+    const double z = 2;
+    const Vector3d position(x, y, z);
     const Vector3d orientation(0, 20, -135); // degrees
 
     pbuilder->template AddSystem<WallClockPublisher>(0.001);
-//    drake::log()->set_level(spdlog::level::trace);
 
     if (use_rgbd_camera) {
       // Adapted from: .../image_to_lcm_message_demo.cc
@@ -434,10 +424,9 @@ struct IiwaWsgPlantGeneratorsEstimatorsAndVisualizer<T>::Impl {
       // From: depth_sensor_to_lcm_point_cloud_message_demo
       auto depth_to_lcm_message_ =
           pbuilder->template AddSystem<DepthSensorToLcmPointCloudMessage>(specification);
-      const std::string kSensorName = "DEPTH";
       auto lcm_publisher_depth_ = pbuilder->template AddSystem(
           LcmPublisherSystem::Make<bot_core::pointcloud_t>(
-              "DRAKE_POINTCLOUD_" + kSensorName, plcm));
+              "DRAKE_POINTCLOUD_DEPTH", plcm));
       pbuilder->Connect(
         depth_sensor_->get_sensor_state_output_port(),
         depth_to_lcm_message_->depth_readings_input_port());
