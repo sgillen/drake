@@ -82,12 +82,6 @@ PickAndPlaceStateMachineSystem::PickAndPlaceStateMachineSystem(
           MakeDefaultWsgCommand())).get_index();
   this->DeclarePeriodicUnrestrictedUpdate(update_interval, 0);
 
-  const double half_box_height = 0.1;
-  for (size_t i = 0; i < place_locations_.size(); i++) {
-    place_locations_[i].translation() +=
-        Vector3<double>(0, 0, half_box_height);
-  }
-
   // TODO(sam.creasey) Add verification of final object position and
   // termination.
 }

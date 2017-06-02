@@ -1,5 +1,6 @@
 #include <memory>
 #include <string>
+#include <vector>
 
 #include <gflags/gflags.h>
 
@@ -24,7 +25,7 @@
 
 DEFINE_double(simulation_sec, std::numeric_limits<double>::infinity(),
 "Number of seconds to simulate.");
-DEFINE_uint64(box_choice, 1, "ID of the box to pick.");
+DEFINE_uint64(target, 1, "ID of the target to pick.");
 DEFINE_double(orientation, 2 * M_PI, "Yaw angle of the box.");
 DEFINE_int32(start_position, 0, "Position index to start from");
 DEFINE_int32(end_position, 0, "Position index to start from");
@@ -60,9 +61,30 @@ const double kTableTopZInWorld = 0.736 + 0.057 / 2;
 const Eigen::Vector3d kRobotBase(0, 0, kTableTopZInWorld);
 const Eigen::Vector3d kTableBase(0.243716, 0.625087, 0.);
 
+struct Target {
+  std::string model_name;
+  Eigen::Vector3d dimensions;
+};
+
+Target GetTarget() {
+  Target targets[] = {
+    {"block_for_pick_and_place.urdf", Eigen::Vector3d(0.06, 0.06, 0.2)},
+    {"black_box.urdf", Eigen::Vector3d(0.055, 0.165, 0.18)},
+    {"simple_cuboid.urdf", Eigen::Vector3d(0.06, 0.06, 0.06)}
+  };
+
+  const int num_targets = 3;
+  if (FLAGS_target >= num_targets) {
+    throw std::runtime_error("Invalid target ID");
+  }
+  return targets[FLAGS_target];
+
+}
+
 std::unique_ptr<systems::RigidBodyPlant<double>> BuildCombinedPlant(
     const std::vector<Eigen::Vector3d>& post_positions,
     const Eigen::Vector3d& table_position,
+    const std::string& target_model,
     const Eigen::Vector3d& box_position,
     const Eigen::Vector3d& box_orientation,
     ModelInstanceInfo<double>* iiwa_instance,
@@ -77,16 +99,7 @@ std::unique_ptr<systems::RigidBodyPlant<double>> BuildCombinedPlant(
                            "/examples/kuka_iiwa_arm/models/table/"
                            "extra_heavy_duty_table_surface_only_collision.sdf");
   tree_builder->StoreModel(
-      "box_small",
-      "/examples/kuka_iiwa_arm/models/objects/block_for_pick_and_place.urdf");
-
-  tree_builder->StoreModel("box_medium",
-                           "/examples/kuka_iiwa_arm/models/objects/"
-                           "block_for_pick_and_place_mid_size.urdf");
-
-  tree_builder->StoreModel("box_large",
-                           "/examples/kuka_iiwa_arm/models/objects/"
-                           "block_for_pick_and_place_large_size.urdf");
+      "target", "/examples/kuka_iiwa_arm/models/objects/" + target_model);
   tree_builder->StoreModel("yellow_post",
                            "/examples/kuka_iiwa_arm/models/objects/"
                            "yellow_post.urdf");
@@ -111,22 +124,9 @@ std::unique_ptr<systems::RigidBodyPlant<double>> BuildCombinedPlant(
   int box_id = 0;
   int iiwa_id = tree_builder->AddFixedModelInstance("iiwa", kRobotBase);
   *iiwa_instance = tree_builder->get_model_info_for_instance(iiwa_id);
-  switch (FLAGS_box_choice) {
-    case 1:
-      box_id = tree_builder->AddFloatingModelInstance("box_small", box_position,
-                                                      box_orientation);
-      break;
-    case 2:
-      box_id = tree_builder->AddFloatingModelInstance(
-          "box_medium", box_position, box_orientation);
-      break;
-    case 3:
-      box_id = tree_builder->AddFloatingModelInstance("box_large", box_position,
-                                                      box_orientation);
-      break;
-    default: DRAKE_ABORT_MSG("Chosen box should be between 0 and 4.");
-      break;
-  }
+
+  box_id = tree_builder->AddFloatingModelInstance("target", box_position,
+                                                  box_orientation);
   *box_instance = tree_builder->get_model_info_for_instance(box_id);
 
   int wsg_id = tree_builder->AddModelInstanceToFrame(
@@ -193,8 +193,15 @@ int DoMain(void) {
   drake::log()->info("1: Place location 0 {}",
                      place_locations[0].translation().transpose());
 
-  Eigen::Vector3d box_origin(0, 0, kTableTopZInWorld + 0.1);
+  Target target = GetTarget();
+  Eigen::Vector3d box_origin(0, 0, kTableTopZInWorld);
   box_origin += place_locations[FLAGS_start_position].translation();
+  Eigen::Vector3d half_target_height(0, 0, target.dimensions(2) * 0.5);
+  box_origin += half_target_height;
+
+  for (size_t i = 0; i < place_locations.size(); i++) {
+    place_locations[i].translation() += half_target_height;
+  }
 
   drake::log()->info("Box origin {}", box_origin.transpose());
   drake::log()->info("2: Place location 0 {}",
@@ -205,7 +212,7 @@ int DoMain(void) {
   ModelInstanceInfo<double> iiwa_instance, wsg_instance, box_instance;
 
   std::unique_ptr<systems::RigidBodyPlant<double>> model_ptr =
-      BuildCombinedPlant(post_locations, table_position,
+      BuildCombinedPlant(post_locations, table_position, target.model_name,
                          box_origin, Vector3<double>(0, 0, FLAGS_orientation),
                          &iiwa_instance, &wsg_instance, &box_instance);
 
