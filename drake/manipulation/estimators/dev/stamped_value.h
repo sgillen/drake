@@ -74,5 +74,17 @@ using VectorStampedX = VectorX<StampedValue<T>>;
 
 using VectorStampedXd = VectorStampedX<double>;
 
+// Simple helpers
+// TODO(eric.cousineau): Use enable_if to constrain overloads.
+template <typename T = double, typename XprType>
+auto extract_values(XprType&& xpr) {
+  return xpr.template cast<T>();
+}
+
+template <typename T = double, typename XprType>
+auto extract_stamps(XprType&& xpr) {
+  return xpr.template cast<Stamp<T>>().template cast<T>();
+}
+
 }  // manipulation
 }  // drake

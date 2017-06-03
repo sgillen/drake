@@ -40,6 +40,8 @@ static VectorX<Integral> CardinalIndices(Integral size) {
 /**
  * Simple mechanism to handle (ragged) slices of a vector.
  */
+// TODO(eric.cousineau): Consider storing an immutable reference to the parent
+// vector, for assured validity?
 template <typename T>
 class VectorPortion {
  public:
@@ -65,7 +67,9 @@ class VectorPortion {
   template <typename Derived>
   static VectorPortion Make(const Eigen::MatrixBase<Derived>& values) {
     DRAKE_ASSERT(values.cols() == 1);
-    return std::move(Make(values.size()).set_values(values));
+    auto out{Make(values.size())};
+    out.values() = values;
+    return std::move(out);
   }
 
   /**
@@ -92,7 +96,9 @@ class VectorPortion {
       indices_init, portions[i]->indices();
       values_init, portions[i]->values();
     }
-    return VectorPortion(indices).set_values(values);
+    VectorPortion out(indices);
+    out.values() = values;
+    return out;
   }
 
   int size() const { return indices_.size(); }
@@ -102,20 +108,6 @@ class VectorPortion {
   const Vector& values() const { return values_; }
   // Only offer a reference, such that the shape cannot be changed.
   Eigen::Ref<Vector> values() { return values_; }
-
-  /**
-   * Set all values of subvector.
-   */
-  // TODO(eric.cousineau): Add ability to set using unordered map to guide
-  // indexing.
-  // TODO(eric.cousineau): Consider storing an immutable reference to the parent
-  // vector, for assured validity?
-  template <typename Derived>
-  VectorPortion& set_values(const Eigen::MatrixBase<Derived>& value) {
-    DRAKE_ASSERT(IsSameDim(indices_, value));
-    values_ = value;
-    return *this;
-  }
 
   bool is_valid_subset_of(const VectorPortion& other) const {
     return max_index() <= other.max_index();

@@ -19,15 +19,6 @@ bool all_nan(const Eigen::MatrixBase<Derived>& X) {
   return (X.array() != X.array()).all();
 }
 
-template <typename T = double, typename XprType>
-auto extract_values(XprType&& xpr) {
-  return xpr.template cast<T>();
-}
-template <typename T = double, typename XprType>
-auto extract_stamps(XprType&& xpr) {
-  return xpr.template cast<S>().template cast<T>();
-}
-
 using Eigen::VectorXd;
 using Eigen::VectorXi;
 using std::endl;
