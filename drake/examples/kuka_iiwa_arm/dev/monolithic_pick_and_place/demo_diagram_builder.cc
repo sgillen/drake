@@ -29,6 +29,8 @@
 
 #include "drake/common/scoped_timer.h"
 
+#include "drake/manipulation/estimators/dev/articulated_state_estimator.h"
+
 namespace drake {
 
 using std::make_shared;
@@ -49,6 +51,8 @@ using systems::sensors::DepthSensor;
 using systems::sensors::DepthSensorSpecification;
 using systems::sensors::DepthSensorToLcmPointCloudMessage;
 
+using manipulation::LeafSystemMixin;
+
 namespace examples {
 using manipulation::schunk_wsg::SchunkWsgTrajectoryGenerator;
 using manipulation::schunk_wsg::SchunkWsgStatusSender;
@@ -57,20 +61,6 @@ using std::unique_ptr;
 
 namespace kuka_iiwa_arm {
 namespace monolithic_pick_and_place {
-
-template <typename T_>
-class LeafSystemMixin : public systems::LeafSystem<T_> {
- public:
-  typedef T_ T;
-  typedef systems::Context<T> Context;
-  typedef systems::DiscreteValues<T> DiscreteValues;
-  typedef systems::SystemOutput<T> SystemOutput;
-  using Inport = systems::InputPortDescriptor<T>;
-  using Outport = systems::OutputPortDescriptor<T>;
-  // Blech.
-  template <typename U>
-  using Value = systems::Value<U>;
-};
 
 class WallClockPublisher : public LeafSystemMixin<double> {
  public:

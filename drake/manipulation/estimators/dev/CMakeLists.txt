@@ -17,7 +17,7 @@ find_package(OpenCV REQUIRED
 include_directories(${OpenCV_DIRS})
 
 set(drakeManipulationTracker_SRC_FILES
-    manipulation_tracker_sys.cc
+    articulated_state_estimator.cc
     ManipulationTracker.cpp
     ManipulationTrackerLoader.cpp
 #    costs/AttachedApriltagCost.cpp
@@ -31,7 +31,8 @@ set(drakeManipulationTracker_SRC_FILES
     )
 
 set(drakeManipulationTracker_HEADERS
-    manipulation_tracker_sys.h
+    articulated_state_estimator.h
+    tree_state_portion.h
     common/sdf_2d_functions.hpp
     common/common.hpp
     ManipulationTracker.hpp

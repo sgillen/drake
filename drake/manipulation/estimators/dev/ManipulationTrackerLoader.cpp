@@ -39,16 +39,6 @@ ManipulationTrackerLoader::ManipulationTrackerLoader(const YAML::Node& config,
         auto cost = infer_shared(new JointStateCost(robot, lcm, *iter));
         estimator.addCost(cost);
         joint_state_costs_.push_back(cost);
-      /*} else if (cost_type == "GelsightCost") {
-        // demands a modifiable copy of the robot
-        std::shared_ptr<GelsightCost> cost(new GelsightCost(setupRobotFromConfig(config, x0_robot, string(drc_path), true, true), lcm, *iter));
-        estimator.addCost(dynamic_pointer_cast<ManipulationTrackerCost, GelsightCost>(cost));
-      } else if (cost_type == "AttachedApriltagCost") {
-        std::shared_ptr<AttachedApriltagCost> cost(new AttachedApriltagCost(robot, lcm, *iter));
-        estimator.addCost(dynamic_pointer_cast<ManipulationTrackerCost, AttachedApriltagCost>(cost));
-      } else if (cost_type == "OptotrakMarkerCost") {
-        std::shared_ptr<OptotrakMarkerCost> cost(new OptotrakMarkerCost(robot, lcm, *iter));
-        estimator.addCost(dynamic_pointer_cast<ManipulationTrackerCost, OptotrakMarkerCost>(cost));*/
       } else if (cost_type == "NonpenetratingObjectCost") {
         // demands a modifiable copy of the robot to do collision calls
         // also requires a list of all other robots in the scene, minus those excluded in "penetrable"
