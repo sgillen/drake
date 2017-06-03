@@ -16,16 +16,18 @@ namespace manipulation {
 template <typename T = double>
 class Stamp {
  public:
-  explicit Stamp(const T& value)
+  Stamp() {}
+  Stamp(const T& value)
     : value_(value) {}
   Stamp& operator=(const T& value) {
     value_ = value;
   }
   T& value() { return value_; }
   const T& value() const { return value_; }
+  operator T() const { return value_; }
 
   static Stamp invalid_value() {
-    return Stamp(std::numeric_limits<double>::quiet_NaN());
+    return Stamp(std::numeric_limits<T>::quiet_NaN());
   }
   bool is_valid() const {
     return !std::isnan(value_);
@@ -38,28 +40,25 @@ class Stamp {
  * A stamped value, where the stamp could be a floating-point timestamp, or
  * could use some other type.
  */
-template <typename T, typename S = double>
+template <typename T, typename S = Stamp<double>>
 class StampedValue {
  public:
-  using StampType = Stamp<S>;
-
-  StampedValue()
-      : stamp_(StampType::invalid_value()) {}
-  StampedValue(const StampType& stamp, const T& value)
-      : stamp_(stamp), value_(value) {}
-  const StampType& stamp() const { return stamp_; }
+  StampedValue(const T& value = T{},
+               const S& stamp = S::invalid_value())
+      : value_(value), stamp_(stamp) {}
+  const S& stamp() const { return stamp_; }
   const T& value() const { return value_; }
   bool has_data() const { return stamp_.is_valid(); }
-  T& mutable_value(const StampType& new_stamp) {
+  T& mutable_value(const S& new_stamp) {
     stamp_ = new_stamp;
     return value_;
   }
-  // Implicit cast, for use inside of an Eigen matrix
-  operator S() const { return stamp_; }
-  operator T() const { return value_; }
+  // Explicit cast, for use inside of an Eigen matrix
+  explicit operator T() const { return value_; }
+  explicit operator S() const { return stamp_; }
  private:
-  S stamp_{};
   T value_{};
+  S stamp_{};
 };
 
 /**

@@ -60,12 +60,12 @@ class VectorPortion {
   }
 
   static VectorPortion Make(int size) {
-    return VectorPortion(CardinalIndices(size));
+    return std::move(VectorPortion(CardinalIndices(size)));
   }
   template <typename Derived>
   static VectorPortion Make(const Eigen::MatrixBase<Derived>& values) {
     DRAKE_ASSERT(values.cols() == 1);
-    return Make(values.size()).set_values(values);
+    return std::move(Make(values.size()).set_values(values));
   }
 
   /**
@@ -100,6 +100,8 @@ class VectorPortion {
   int max_index() const { return max_index_; }
   const Indices& indices() const { return indices_; }
   const Vector& values() const { return values_; }
+  // Only offer a reference, such that the shape cannot be changed.
+  Eigen::Ref<Vector> values() { return values_; }
 
   /**
    * Set all values of subvector.
@@ -111,7 +113,7 @@ class VectorPortion {
   template <typename Derived>
   VectorPortion& set_values(const Eigen::MatrixBase<Derived>& value) {
     DRAKE_ASSERT(IsSameDim(indices_, value));
-    indices_ = value;
+    values_ = value;
     return *this;
   }
 
@@ -197,12 +199,14 @@ class KinematicStatePortion {
 
   // Get lazy.
   template <typename Arg>
-  KinematicStatePortion Make(Arg&& arg) {
-    return KinematicStatePortion(Portion::Make(arg), Portion::Make(arg));
+  static KinematicStatePortion Make(Arg&& arg) {
+    return std::move(
+          KinematicStatePortion(Portion::Make(arg), Portion::Make(arg)));
   }
   template <typename PosArg, typename VelArg>
-  KinematicStatePortion Make(PosArg&& pos, VelArg&& vel) {
-    return KinematicStatePortion(Portion::Make(pos), Portion::Make(vel));
+  static KinematicStatePortion Make(PosArg&& pos, VelArg&& vel) {
+    return std::move(
+          KinematicStatePortion(Portion::Make(pos), Portion::Make(vel)));
   }
 
   Portion& positions() { return positions_; }
@@ -211,9 +215,19 @@ class KinematicStatePortion {
   Portion& velocities() { return velocities_; }
   const Portion& velocities() const { return velocities_; }
 
+  void ReadFromSuperset(const KinematicStatePortion& super) {
+    positions_.ReadFromSuperset(super.positions());
+    velocities_.ReadFromSuperset(super.velocities());
+  }
+
+  void ReadFromSubset(const KinematicStatePortion& sub) {
+    positions_.ReadFromSubset(sub.positions());
+    velocities_.ReadFromSubset(sub.velocities());
+  }
+
  private:
   KinematicStatePortion(Portion&& positions, Portion&& velocities)
-      : positions_(positions), velocities_(velocities) {}
+      : positions_(std::move(positions)), velocities_(std::move(velocities)) {}
   Portion positions_;
   Portion velocities_;
 };
