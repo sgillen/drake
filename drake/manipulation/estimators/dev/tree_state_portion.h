@@ -1,5 +1,6 @@
 #include <Eigen/Dense>
 
+#include "drake/common/drake_assert.h"
 #include "drake/common/drake_copyable.h"
 #include "drake/common/eigen_types.h"
 
@@ -147,6 +148,10 @@ class VectorPortion {
 };
 
 
+// Portion of vector that records timestamps.
+template <typename T>
+using VectorStampedPortion = VectorPortion<StampedValue<T>>;
+
 /**
  * Store a portion of the kinematic state of a tree (world).
  *
@@ -213,11 +218,8 @@ class KinematicStatePortion {
   Portion velocities_;
 };
 
-// Portion of vector that records timestamps.
 template <typename T>
-using VectorStampedPortion = VectorPortion<StampedValue<T>>;
-
-using VectorStampedPortiond = VectorStampedPortion<double>;
+using KinematicStateStampedPortion = KinematicStatePortion<StampedValue<T>>;
 
 }  // manipulation
 }  // drake

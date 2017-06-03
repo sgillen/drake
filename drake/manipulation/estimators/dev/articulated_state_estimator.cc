@@ -6,6 +6,8 @@
 
 #include "drake/manipulation/estimators/dev/ManipulationTrackerLoader.hpp"
 
+#include "drake/manipulation/estimators/dev/tree_state_portion.h"
+
 using namespace std;
 
 namespace drake {
@@ -25,6 +27,8 @@ typedef systems::sensors::ImageDepth32F DepthImage;
 
 class ArticulatedStateEstimator::Impl {
  public:
+  using StatePortion = KinematicStatePortion<T>;
+
   Impl(ArticulatedStateEstimator* system,
        const string& config_file) {
     lcm_.reset(new ::lcm::LCM());
@@ -38,9 +42,9 @@ class ArticulatedStateEstimator::Impl {
     inport_depth_image_
         = &system->DeclareAbstractInputPort(Value<DepthImage>());
     inport_world_state_
-        = &system->DeclareAbstractInputPort(Value<TreeStatePortion>());
+        = &system->DeclareAbstractInputPort(Value<StatePortion>());
     outport_world_state_
-        = &system->DeclareAbstractOutputPort(Value<TreeStatePortion>());
+        = &system->DeclareAbstractOutputPort(Value<StatePortion>());
   }
 
   void DoCalcOutput(const Context& context, SystemOutput* output) const {
