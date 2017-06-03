@@ -33,6 +33,7 @@ set(drakeManipulationTracker_SRC_FILES
 set(drakeManipulationTracker_HEADERS
     articulated_state_estimator.h
     tree_state_portion.h
+    stamped_value.h
     common/sdf_2d_functions.hpp
     common/common.hpp
     ManipulationTracker.hpp

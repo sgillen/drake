@@ -23,39 +23,6 @@ using Eigen::VectorXd;
 typedef Eigen::Matrix3Xd PointCloud;
 typedef systems::sensors::ImageDepth32F DepthImage;
 
-template <typename S>
-struct stamp_traits {
-  static S invalid_value();
-  static bool is_valid(const S& stamp);
-};
-
-template<>
-struct stamp_traits<double> {
-  static double invalid_value() {
-    return std::numeric_limits<double>::quiet_NaN();
-  }
-  static bool is_valid(double stamp) { return !std::isnan(stamp); }
-};
-
-template <typename T, typename S = double>
-class StampedCache {
- public:
-  StampedCache()
-      : stamp_(stamp_traits<S>::invalid_value()) {}
-  StampedCache(const S& stamp, const T& value)
-      : stamp_(stamp), value_(value) {}
-  const S& stamp() const { return stamp_; }
-  const T& value() const { return value_; }
-  bool has_data() const { return stamp_traits<S>::is_valid(stamp_); }
-  T& mutable_value(const S& new_stamp) {
-    stamp_ = new_stamp;
-    return value_;
-  }
- private:
-  S stamp_{};
-  T value_{};
-};
-
 class ArticulatedStateEstimator::Impl {
  public:
   Impl(ArticulatedStateEstimator* system,
@@ -87,11 +54,11 @@ class ArticulatedStateEstimator::Impl {
   shared_ptr<::lcm::LCM> lcm_; // HACK, to satisfy API
   shared_ptr<ManipulationTrackerLoader> loader_;
   // Latest
-  StampedCache<PointCloud> point_cloud_;
+  StampedValue<PointCloud> point_cloud_;
   const Inport* inport_point_cloud_{};
-  StampedCache<DepthImage> depth_image_;
+  StampedValue<DepthImage> depth_image_;
   const Inport* inport_depth_image_{};
-  StampedCache<VectorXd> world_state_;
+  StampedValue<VectorXd> world_state_;
   const Inport* inport_world_state_{};
 };
 
