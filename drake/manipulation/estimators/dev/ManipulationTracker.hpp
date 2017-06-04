@@ -38,7 +38,7 @@ public:
 
   void update();
   std::shared_ptr<const RigidBodyTreed> getRobot() { return robot_; }
-  Eigen::VectorXd getMean() { return x_; }
+  Eigen::VectorXd getMean() const { return x_; }
   Eigen::MatrixXd getCovariance() { return covar_; }
 
   // helper to publish out to lcm

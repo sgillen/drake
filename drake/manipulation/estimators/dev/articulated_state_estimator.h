@@ -42,6 +42,7 @@ class ArticulatedStateEstimator : public LeafSystemMixin<double> {
   const Inport& inport_point_cloud() const;
   const Inport& inport_depth_image() const;
   const Inport& inport_world_state() const;
+  const Outport& outport_estimated_world_state() const;
 
  private:
   class Impl;
