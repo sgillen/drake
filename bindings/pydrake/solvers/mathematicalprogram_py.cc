@@ -26,6 +26,7 @@ using solvers::LinearEqualityConstraint;
 using solvers::MathematicalProgram;
 using solvers::MathematicalProgramSolverInterface;
 using solvers::MatrixXDecisionVariable;
+using solvers::PositiveSemidefiniteConstraint;
 using solvers::QuadraticCost;
 using solvers::SolutionResult;
 using solvers::SolverId;
@@ -156,6 +157,20 @@ PYBIND11_MODULE(_mathematicalprogram_py, m) {
          py::arg("rows"),
          py::arg("cols"),
          py::arg("name") = "b")
+    .def("NewSymmetricContinuousVariables", (MatrixXDecisionVariable
+         (MathematicalProgram::*)(
+          int,
+          const std::string&))
+         &MathematicalProgram::NewSymmetricContinuousVariables,
+         py::arg("rows"),
+         py::arg("name") = "Symmetric")
+    .def("NewSymmetricContinuousVariables", (MatrixXDecisionVariable
+         (MathematicalProgram::*)(
+          int,
+          const std::vector<std::string>&))
+         &MathematicalProgram::NewSymmetricContinuousVariables,
+         py::arg("rows"),
+         py::arg("names"))
     .def("AddLinearConstraint",
          static_cast<Binding<LinearConstraint>
          (MathematicalProgram::*)(
@@ -164,10 +179,15 @@ PYBIND11_MODULE(_mathematicalprogram_py, m) {
              double)
          >(&MathematicalProgram::AddLinearConstraint))
     .def("AddLinearConstraint",
-         static_cast<Binding<LinearConstraint>
-         (MathematicalProgram::*)(
-             const Formula&)
-         >(&MathematicalProgram::AddLinearConstraint))
+         (Binding<LinearConstraint>
+          (MathematicalProgram::*)(
+          const Formula&))
+          &MathematicalProgram::AddLinearConstraint)
+    .def("AddPositiveSemidefiniteConstraint",
+         (Binding<PositiveSemidefiniteConstraint>
+          (MathematicalProgram::*)(
+          const Eigen::Ref<const MatrixXDecisionVariable>&))
+         &MathematicalProgram::AddPositiveSemidefiniteConstraint)
     .def("AddLinearCost",
          static_cast<Binding<LinearCost>
          (MathematicalProgram::*)(
@@ -250,11 +270,17 @@ PYBIND11_MODULE(_mathematicalprogram_py, m) {
              std::shared_ptr<BoundingBoxConstraint>>(
     m, "BoundingBoxConstraint");
 
+  py::class_<PositiveSemidefiniteConstraint, Constraint,
+             std::shared_ptr<PositiveSemidefiniteConstraint>>(
+    m, "PositiveSemidefiniteConstraint");
+
   RegisterBinding<LinearConstraint>(&m, &prog_cls, "LinearConstraint");
   RegisterBinding<LinearEqualityConstraint>(&m, &prog_cls,
                                             "LinearEqualityConstraint");
   RegisterBinding<BoundingBoxConstraint>(&m, &prog_cls,
                                          "BoundingBoxConstraint");
+  RegisterBinding<PositiveSemidefiniteConstraint>(&m, &prog_cls,
+    "PositiveSemidefiniteConstraint");
 
   // Mirror procedure for costs
   py::class_<Cost, std::shared_ptr<Cost>> cost(
