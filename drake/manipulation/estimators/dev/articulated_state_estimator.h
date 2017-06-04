@@ -39,15 +39,28 @@ class ArticulatedStateEstimator : public LeafSystemMixin<double> {
  public:
   ArticulatedStateEstimator(const std::string& config_file);
 
+  void DoCalcDiscreteVariableUpdates(const Context& context,
+                                     DiscreteValues* updates) const override;
+  void DoCalcOutput(
+      const Context& context, SystemOutput* output) const override;
+
   const Inport& inport_point_cloud() const;
   const Inport& inport_depth_image() const;
-  const Inport& inport_world_state() const;
-  const Outport& outport_estimated_world_state() const;
+  const Inport& inport_tree_q_measurement() const;
+  const Outport& outport_estimated_tree_state() const;
 
- private:
+private:
   class Impl;
   std::shared_ptr<Impl> impl_;
   friend class Impl;
+
+  const Inport* inport_point_cloud_{};
+  const Inport* inport_depth_image_{};
+  const Inport* inport_tree_q_measurement_{};
+
+  int state_tree_state_estimate{};
+  int param_q0_index_{};
+  const Outport* outport_tree_state_estimate{};
 };
 
 }  // namespace manipulation

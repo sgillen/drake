@@ -19,9 +19,7 @@ public:
 
   bool constructCost(ManipulationTracker * tracker, const Eigen::VectorXd x_old, Eigen::MatrixXd& Q, Eigen::VectorXd& f, double& K);
 
-  void handleJointStateMsg(const lcm::ReceiveBuffer* rbuf,
-                           const std::string& chan,
-                           const bot_core::joint_state_t* msg);
+  void readTreeState(const Eigen::VectorXd& q);
 private:
   std::string state_channelname = "";
   double joint_reported_var = INFINITY;
@@ -34,8 +32,8 @@ private:
   std::shared_ptr<const RigidBodyTreed> robot;
   int nq;
 
-  Eigen::VectorXd x_robot_measured;
-  std::vector<bool> x_robot_measured_known;
+  Eigen::VectorXd q_robot_measured;
+  std::vector<bool> q_robot_measured_known;
   std::mutex x_robot_measured_mutex;
 
   double lastReceivedTime;

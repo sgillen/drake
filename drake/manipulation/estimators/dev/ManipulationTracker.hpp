@@ -32,6 +32,10 @@ public:
   void initBotConfig(const char* filename);
   int get_trans_with_utime(std::string from_frame, std::string to_frame,
                                long long utime, Eigen::Isometry3d & mat);
+
+  bool has_performed_first_update() const { return has_performed_first_update_; }
+  void set_q0(const Eigen::VectorXd& q0); // , const Eigen::VectorXd& v0);
+  Eigen::Ref<const Eigen::VectorXd> get_q0() const;
   
   // register a cost function with the solver
   void addCost(std::shared_ptr<ManipulationTrackerCost> new_cost);
@@ -85,6 +89,9 @@ private:
   std::vector<CostAndView> registeredCostInfo_;
 
   bool verbose_;
+
+  // whether update() has been called yet (to set IC)
+  bool has_performed_first_update_{false};
 };
 
 #endif

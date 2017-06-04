@@ -27,114 +27,131 @@ typedef systems::sensors::ImageDepth32F DepthImage;
 
 class ArticulatedStateEstimator::Impl {
  public:
-  using StatePortion = KinematicStatePortion<T>;
-
-  Impl(ArticulatedStateEstimator* system,
-       const string& config_file)
-      : system_(system) {
+  Impl(const string& config_file) {
     lcm_.reset(new ::lcm::LCM());
     string drc_path = "";
     auto config = YAML::LoadFile(config_file);
     loader_.reset(new ManipulationTrackerLoader(config, drc_path, lcm_));
-
-    const int num_positions = world_robot().get_num_positions();
-
-    param_initial_condition_index_ = system->DeclareNumericParameter(
-          systems::BasicVector<double>(num_positions));
-
-    // Define ports
-    inport_point_cloud_
-        = &system->DeclareAbstractInputPort(Value<PointCloud>());
-    // TODO(eric.cousineau): Make depth image optional?
-    inport_depth_image_
-        = &system->DeclareAbstractInputPort(Value<DepthImage>());
-    // TODO(eric.cousineau): Incorporate something akin to
-    // KinematicStatePortion.
-    inport_world_state_ =
-        &system->DeclareInputPort(systems::kVectorValued, num_positions);
-    outport_estimated_world_state_ =
-        &system->DeclareOutputPort(systems::kVectorValued, num_positions);
-
-    state_estimated_world_state_index_ = 0;
-    system->DeclareDiscreteState(num_positions);
   }
 
-  void DoCalcDiscreteVariableUpdates(const Context& context,
-                                     DiscreteValues* updates) const {
-    // TODO(eric.cousineau): Dunno, ensure this is only executed once.
-    const auto in_world_state = system->EvalVectorInput(context,
-                                                        input_world_state_);
+  void ImplDiscreteUpdate(const VectorXd& q0,
+                          const VectorXd& tree_q_measurement,
+                          const PointCloud& point_cloud,
+                          const DepthImage& depth_image,
+                          VectorXd* estimated_tree_state) const {
+    ManipulationTracker& estimator = *loader_->estimator_;
+
+    // TODO(eric.cousineau): Is there a better place for this?
+    if (!estimator.has_performed_first_update()) {
+      estimator.set_q0(q0);
+    }
 
     // Update individual costs.
     for (auto& cost : loader_->joint_state_costs_) {
-      cost->handleJointStateMsg(in_world_state);
+      // TODO(eric.cousineau): Replace this with only a partial update of the
+      // state.
+      cost->readTreeState(tree_q_measurement);
     }
     for (auto& cost : loader_->kinect_frame_costs_) {
-      cost->handleKinectFrameMsg(...);
-      cost->handleDepthImageMsg(...);
+      cost->readDepthImageAndPointCloud(depth_image, point_cloud);
     }
-    for (auto& cost : loader_->nonpentrating_costs_) {
-      cost->handleSceneState(...);
-    }
-    estimator().update();
-    estimator().publish();
 
-    updates->get_mutable_vector()->get_mutable_value() = estimator().getMean();
-  }
-
-  void DoCalcOutput(const Context& context, SystemOutput* output) const {
-    const auto estimated_world_state =
-        context.get_discrete_state(state_estimated_world_state_index_)
-        ->CopyToVector();
-    output->GetMutableVectorData(outport_estimated_world_state_->get_index())
-        ->get_mutable_value() = estimated_world_state;
+    // DynamicsCost and NonpenetratingCost presently only rely on priors.
+    estimator.update();
+    estimator.publish();
+    *estimated_tree_state = estimator.getMean();
   }
 
  private:
-  // Consider relaxing this???
-  friend class ArticulatedStateEstimator;
-
   shared_ptr<::lcm::LCM> lcm_; // HACK, to satisfy API
   shared_ptr<ManipulationTrackerLoader> loader_;
-  ManipulationTracker& estimator() const { return *loader_->estimator_; }
-  const RigidBodyTreed& world_robot() { return *estimator().getRobot(); }
-  // Latest
-  PointCloud point_cloud_;
-  const Inport* inport_point_cloud_{};
-  DepthImage depth_image_;
-  const Inport* inport_depth_image_{};
-  VectorXd world_state_;
-  const Inport* inport_world_state_{};
 
-  ArticulatedStateEstimator* system_{};
-
-  int state_estimated_world_state_index_{};
-  int param_initial_condition_index_{};
-  const Outport* outport_estimated_world_state_{};
+  friend class ArticulatedStateEstimator;
 };
+
 
 ArticulatedStateEstimator::ArticulatedStateEstimator(
     const string& config_file) {
-  impl_.reset(new Impl(this, config_file));
+  impl_.reset(new Impl(config_file));
+
+  auto& estimator = *impl_->loader_->estimator_;
+  auto& scene_tree = *estimator.getRobot();
+  const int num_positions = scene_tree.get_num_positions();
+
+  // TODO(eric.cousineau): Just place this in the constructor?
+  param_q0_index_ = DeclareNumericParameter(
+        systems::BasicVector<double>(estimator.get_q0()));
+
+  // Define ports
+  inport_point_cloud_
+      = &DeclareAbstractInputPort(Value<PointCloud>());
+  // TODO(eric.cousineau): Make depth image optional?
+  inport_depth_image_
+      = &DeclareAbstractInputPort(Value<DepthImage>());
+  // TODO(eric.cousineau): Incorporate something akin to
+  // KinematicStatePortion.
+  inport_tree_q_measurement_ =
+      &DeclareInputPort(systems::kVectorValued, num_positions);
+  outport_tree_state_estimate_ =
+      &DeclareOutputPort(systems::kVectorValued, num_positions);
+
+  state_tree_state_estimate = 0;
+  DeclareDiscreteState(num_positions);
+}
+
+void ArticulatedStateEstimator::DoCalcDiscreteVariableUpdates(
+    const Context& context, DiscreteValues* updates) const {
+  // TODO(eric.cousineau): Make "loader" an abstract state?
+  // TODO(eric.cousineau): Dunno, ensure this is only executed once.
+
+  // TODO(eric.cousineau): Only get a partial update of the state.
+  // Use some projection matrix, or just use indexing?
+  const auto tree_q_measurement =
+      EvalVectorInput(context, inport_tree_q_measurement_->get_index())
+             ->get_value();
+  auto&& point_cloud =
+      EvalAbstractInput(context, inport_point_cloud_->get_index())
+             ->GetValue<PointCloud>();
+  auto&& depth_image =
+      EvalAbstractInput(context, inport_depth_image_->get_index())
+             ->GetValue<DepthImage>();
+
+  VectorXd q0 =
+      GetNumericParameter(context, param_q0_index_)
+             .get_value();
+
+  VectorXd estimated_tree_state;
+  impl_->ImplDiscreteUpdate(q0, tree_q_measurement,
+                            point_cloud, depth_image, &estimated_tree_state);
+  updates->get_mutable_vector()->get_mutable_value() = estimated_tree_state;
+}
+
+void ArticulatedStateEstimator::DoCalcOutput(
+    const Context& context, SystemOutput* output) const {
+  const auto estimated_world_state =
+      context.get_discrete_state(state_tree_state_estimate)
+      ->CopyToVector();
+  output->GetMutableVectorData(outport_tree_state_estimate_->get_index())
+      ->get_mutable_value() = estimated_world_state;
 }
 
 const ArticulatedStateEstimator::Inport& ArticulatedStateEstimator::inport_point_cloud() const {
-  return *impl_->inport_point_cloud_;
+  return *inport_point_cloud_;
 }
 
 const ArticulatedStateEstimator::Inport& ArticulatedStateEstimator::inport_depth_image() const
 {
-  return *impl_->inport_depth_image_;
+  return *inport_depth_image_;
 }
 
-const ArticulatedStateEstimator::Inport& ArticulatedStateEstimator::inport_world_state() const
+const ArticulatedStateEstimator::Inport& ArticulatedStateEstimator::inport_tree_q_measurement() const
 {
-  return *impl_->inport_world_state_;
+  return *inport_tree_q_measurement_;
 }
 
-const ArticulatedStateEstimator::Outport& ArticulatedStateEstimator::outport_estimated_world_state() const
+const ArticulatedStateEstimator::Outport& ArticulatedStateEstimator::outport_tree_state_estimate() const
 {
-  return *impl_->outport_estimated_world_state_;
+  return *outport_tree_state_estimate_;
 }
 
 }  // namespace manipulation

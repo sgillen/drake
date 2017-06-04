@@ -42,6 +42,17 @@ static VectorX<Integral> CardinalIndices(Integral size) {
  */
 // TODO(eric.cousineau): Consider storing an immutable reference to the parent
 // vector, for assured validity?
+// TODO(eric.cousineau): If storing a reference to the parent, could use
+// symbolic variables in order to sync up with the parent type. Perhaps something
+// like: IndexedVectorPortion (no knowledge of parent), and then
+// SemanticVectorPortion / SymbolicVectorPortion (knowledge of parent... possibly
+// knowledge of children?
+// Would need:
+//   VectorXV = VectorX<symbolic::Variable>
+//   VectorXV full_variables;
+//   VectorXV vp = map_strings_to_variables(VectorXV v, vector<string> names);
+// Could also just store values within - symbolic::ValuePair<double, Varaible>
+// And follow suite with StampedValue<> stuff.
 template <typename T>
 class VectorPortion {
  public:

@@ -279,6 +279,22 @@ int ManipulationTracker::get_trans_with_utime(std::string from_frame, std::strin
   return status;
 }
 
+Eigen::Ref<const VectorXd> ManipulationTracker::get_q0() const
+{
+  const int nq = robot_->get_num_positions();
+  return x_.head(nq);
+}
+
+void ManipulationTracker::set_q0(const VectorXd& q0)
+{
+  DRAKE_ASSERT(!has_performed_first_update_);
+  const int nq = robot_->get_num_positions();
+  const int nv = robot_->get_num_velocities();
+  DRAKE_ASSERT(q0.rows() == nq);
+  x_.head(nq) = q0;
+  x_.tail(nv).setZero();
+}
+
 void ManipulationTracker::addCost(std::shared_ptr<ManipulationTrackerCost> new_cost){
   // spawn any necessary new decision variables
   int new_decision_vars = new_cost->getNumExtraVars();
@@ -526,6 +542,10 @@ void ManipulationTracker::update(){
         x_.block<3,1>(robot_->bodies[i]->get_position_start_index() + 3, 0) = quat2rpy(Vector4d(quat1.w(), quat1.x(), quat1.y(), quat1.z()));
       }
     }
+  }
+
+  if (!has_performed_first_update_) {
+    has_performed_first_update_ = true;
   }
 
   if (verbose_)

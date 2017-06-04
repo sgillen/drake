@@ -34,11 +34,15 @@ void eigen2cv( const Eigen::Matrix<_Tp, _rows, _cols, _options, _maxRows, _maxCo
     }
 }
 
-KinectFrameCost::KinectFrameCost(std::shared_ptr<RigidBodyTreed> robot_, std::shared_ptr<lcm::LCM> lcm_, YAML::Node config) :
-    lcm(lcm_),
+KinectFrameCost::KinectFrameCost(std::shared_ptr<RigidBodyTreed> robot_,
+                                 std::shared_ptr<lcm::LCM> lcm_,
+                                 YAML::Node config,
+                                 const CameraInfo* camera_info)
+  : lcm(lcm_),
     robot(robot_),
     robot_kinematics_cache(robot->CreateKinematicsCache()),
-    nq(robot->get_num_positions())
+    nq(robot->get_num_positions()),
+    camera_info_(camera_info)
 {
   if (config["icp_var"])
     icp_var = config["icp_var"].as<double>();
@@ -95,26 +99,6 @@ KinectFrameCost::KinectFrameCost(std::shared_ptr<RigidBodyTreed> robot_, std::sh
   lcmgl_icp_= bot_lcmgl_init(lcm->getUnderlyingLCM(), "icp_p2pl");
   lcmgl_measurement_model_ = bot_lcmgl_init(lcm->getUnderlyingLCM(), "meas_model");
 
-  // if we're using a kinect... (to be refactored)
-  // This is in full agreement with Kintinuous: (calibrationAsus.yml)
-  // NB: if changing this, it should be kept in sync
-  kcal = new KinectCalibration(); // kinect_calib_new();
-  kcal->intrinsics_depth.fx = 528.01442863461716;//was 576.09757860;
-  kcal->intrinsics_depth.cx = 320.0;
-  kcal->intrinsics_depth.cy = 267.0;
-  kcal->intrinsics_rgb.fx = 528.01442863461716;//576.09757860; ... 528 seems to be better, emperically, march 2015
-  kcal->intrinsics_rgb.cx = 320.0;
-  kcal->intrinsics_rgb.cy = 267.0;
-  kcal->intrinsics_rgb.k1 = 0; // none given so far
-  kcal->intrinsics_rgb.k2 = 0; // none given so far
-  kcal->shift_offset = 1090.0;
-  kcal->projector_depth_baseline = 0.075;
-  //double rotation[9];
-  double rotation[]={0.999999, -0.000796, 0.001256, 0.000739, 0.998970, 0.045368, -0.001291, -0.045367, 0.998970};
-  double depth_to_rgb_translation[] ={ -0.015756, -0.000923, 0.002316};
-  memcpy(kcal->depth_to_rgb_rot, rotation, 9*sizeof(double));
-  memcpy(kcal->depth_to_rgb_translation, depth_to_rgb_translation  , 3*sizeof(double));
-
   num_pixel_cols = (int) floor( ((double)input_num_pixel_cols) / downsample_amount);
   num_pixel_rows = (int) floor( ((double)input_num_pixel_rows) / downsample_amount);
 
@@ -128,9 +112,6 @@ KinectFrameCost::KinectFrameCost(std::shared_ptr<RigidBodyTreed> robot_, std::sh
     auto camera_offset_sub = lcm->subscribe("GT_CAMERA_OFFSET", &KinectFrameCost::handleCameraOffsetMsg, this);
     camera_offset_sub->setQueueCapacity(1);
   }
-
-  auto kinect_frame_sub = lcm->subscribe("KINECT_FRAME", &KinectFrameCost::handleKinectFrameMsg, this);
-  kinect_frame_sub->setQueueCapacity(1);
 
   auto save_pc_sub = lcm->subscribe("IRB140_ESTIMATOR_SAVE_POINTCLOUD", &KinectFrameCost::handleSavePointcloudMsg, this);
   save_pc_sub->setQueueCapacity(1);
@@ -223,7 +204,7 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
     // do randomized downsampling, populating data stores to be used by the ICP
     Matrix3Xd points(3, full_cloud.cols()); int i=0;
     Eigen::MatrixXd depth_image; depth_image.resize(num_pixel_rows, num_pixel_cols);
-    double constant = 1.0f / kcal->intrinsics_rgb.fx ;
+    double constant = 1.0f / camera_info_->focal_x() ;
     if (verbose_lcmgl)
       bot_lcmgl_begin(lcmgl_lidar_, LCMGL_POINTS);
     if (full_cloud.cols() > 0){
@@ -260,8 +241,8 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
 
           // populate raycast endpoints using our random sample
           raycast_endpoints.col(num_pixel_cols*v + u) = Vector3d(
-            (((double) full_u)- kcal->intrinsics_depth.cx)*1.0*constant,
-            (((double) full_v)- kcal->intrinsics_depth.cy)*1.0*constant, 
+            (((double) full_u)- camera_info_->center_x())*1.0*constant,
+            (((double) full_v)- camera_info_->center_y())*1.0*constant,
             1.0); // simulate the depth sensor;
           raycast_endpoints.col(num_pixel_cols*v + u) *= max_scan_dist/(raycast_endpoints.col(num_pixel_cols*v + u).norm());
         }
@@ -458,8 +439,8 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
     //      int thisind = i*num_pixel_cols+j;
     //      if (j % 20 == 0 && distances(thisind) > 0.){
     //        Vector3d endpt = kinect2world*(raycast_endpoints.col(thisind)*distances(thisind)/max_scan_dist.);
-    //        Vector3d endpt2 = kinect2world*Vector3d( (((double) j)- kcal->intrinsics_depth.cx)*depth_image(i, j) / kcal->intrinsics_rgb.fx,
-    //                        (((double) i)- kcal->intrinsics_depth.cy)*depth_image(i, j) / kcal->intrinsics_rgb.fx,
+    //        Vector3d endpt2 = kinect2world*Vector3d( (((double) j)- camera_info_->center_x())*depth_image(i, j) / camera_info_->focal_x(),
+    //                        (((double) i)- camera_info_->center_y())*depth_image(i, j) / camera_info_->focal_x(),
     //                        depth_image(i, j));
     //
     //        bot_lcmgl_begin(lcmgl_measurement_model_, LCMGL_LINES);
@@ -504,7 +485,7 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
       // projection in two directions: perpendicular to raycast, and
       // then along it.
 
-      double constant = 1.0f / kcal->intrinsics_rgb.fx ;
+      double constant = 1.0f / camera_info_->focal_x();
       // for every unique body points have returned onto...
       std::vector<int> num_points_on_body(robot->bodies.size(), 0);
       for (int bdy_i=0; bdy_i < (int)body_idx.size(); bdy_i++){
@@ -718,97 +699,26 @@ void KinectFrameCost::handleSavePointcloudMsg(const lcm::ReceiveBuffer* rbuf,
   ofile.close();
 }
 
-void KinectFrameCost::handleKinectFrameMsg(const lcm::ReceiveBuffer* rbuf,
-                           const std::string& chan,
-                           const kinect::frame_msg_t* msg){
-  if (verbose)
-    printf("Received kinect frame on channel %s\n", chan.c_str());
-
-  // only dealing with depth. Copied from ddKinectLCM... shouldn't 
-  // this be in the Kinect driver or something?
-
-  latest_cloud_mutex.lock();
-
-  // grab the color image to colorize lidar
-  bool success = false;
-  cv::Mat decodedImage;
-  if (msg->image.image_data_format == kinect::image_msg_t::VIDEO_RGB_JPEG){
-   decodedImage = cv::imdecode(msg->image.image_data, 0);
-   success = (decodedImage.rows > 0);
-  } else {
-   printf("Got a Kinect color image in a format I don't understand: %d\n", msg->image.image_data_format);
-  }
-  if (success){
-   if (latest_color_image.cols() != (msg->image.height * msg->image.width)){
-     latest_color_image.resize(3, msg->image.height * msg->image.width);
-   }
-   for(long int v=0; v<msg->image.height; v++) { // t2b self->height 480
-     for(long int u=0; u<msg->image.width; u++ ) {  //l2r self->width 640
-      long int ind = v*msg->image.width + u;
-      latest_color_image(0, ind) = ((float) decodedImage.at<Vec3b>(v, u).val[0]) / 255.0;
-      latest_color_image(1, ind) = ((float) decodedImage.at<Vec3b>(v, u).val[1]) / 255.0;
-      latest_color_image(2, ind) = ((float) decodedImage.at<Vec3b>(v, u).val[2]) / 255.0;
-     }
-   }
-  }
-
-  // TODO(eric.cousineau): Consider whether to preserver multi-threading, given
-  // that all of this is presently running in the same thread.
-  std::vector<uint16_t> depth_data;
-
-  // 1.2.1 De-compress if necessary:
-  if(msg->depth.compression != msg->depth.COMPRESSION_NONE) {
-    throw std::runtime_error("Decompression disabled");
-//    // ugh random C code
-//    uint8_t * uncompress_buffer = (uint8_t*) malloc(msg->depth.uncompressed_size);
-//    unsigned long dlen = msg->depth.uncompressed_size;
-//    int status = uncompress(uncompress_buffer, &dlen,
-//        msg->depth.depth_data.data(), msg->depth.depth_data_nbytes);
-//    if(status != Z_OK) {
-//      printf("Problem in uncompression.\n");
-//      free(uncompress_buffer);
-//      latest_cloud_mutex.unlock();
-//      return;
-//    }
-//    for (int i=0; i<msg->depth.uncompressed_size/2; i++)
-//      depth_data.push_back( ((uint16_t)uncompress_buffer[2*i])+ (((uint16_t)uncompress_buffer[2*i+1])<<8) );
-//    free(uncompress_buffer);
-
-  }else{
-    for (int i=0; i<(int)msg->depth.depth_data.size()/2; i++)
-      depth_data.push_back(  ((uint16_t)msg->depth.depth_data[2*i])+ (((uint16_t)msg->depth.depth_data[2*i+1])<<8) );
-  }
-
-  if(msg->depth.depth_data_format == msg->depth.DEPTH_MM  ){ 
-    /////////////////////////////////////////////////////////////////////
-    // Openni Data
-    // 1.2.2 unpack raw byte data into float values in mm
-
-    // NB: no depth return is given 0 range - and becomes 0,0,0 here
-    if (latest_depth_image.cols() != input_num_pixel_cols || latest_depth_image.rows() != input_num_pixel_rows)
-      latest_depth_image.resize(input_num_pixel_rows, input_num_pixel_cols);
-    if (latest_cloud.cols() != input_num_pixel_cols*input_num_pixel_rows)
-      latest_cloud.resize(3, input_num_pixel_cols*input_num_pixel_rows);
-
-    latest_depth_image.setZero();
-    for(long int v=0; v<input_num_pixel_rows; v++) { // t2b self->height 480
-      for(long int u=0; u<input_num_pixel_cols; u++ ) {  //l2r self->width 640
-        // not dealing with color yet
-
-        double constant = 1.0f / kcal->intrinsics_rgb.fx ;
-        double disparity_d = depth_data[v*msg->depth.width+u]  / 1000.; // convert to m
-
-        long int ind = v*input_num_pixel_cols + u;
-        latest_cloud(0, ind) = (((double) u)- kcal->intrinsics_depth.cx)*disparity_d*constant; //x right+
-        latest_cloud(1, ind) = (((double) v)- kcal->intrinsics_depth.cy)*disparity_d*constant; //y down+
-        latest_cloud(2, ind) = disparity_d;  //z forward+
-        latest_depth_image(v, u) = disparity_d;
-      }
+namespace {
+void ToMatrixXd(const KinectFrameCost::DepthImage& image, MatrixXd* pmatrix) {
+  auto& X = *pmatrix;
+  X.resize(image.width(), image.height());
+  for (int u = 0; u < X.rows(); u++) {
+    for (int v = 0; v < X.cols(); v++) {
+      X(u, v) = *image.at(u, v);
     }
-  } else {
-    printf("Can't unpack different Kinect data format yet.\n");
   }
-  latest_cloud_mutex.unlock();
+}
+}  // namespace
 
+void KinectFrameCost::readDepthImageAndPointCloud(
+    const DepthImage& depth_image, const PointCloud& point_cloud) {
+  ToMatrixXd(depth_image, &latest_depth_image);
+  latest_cloud = point_cloud;
+
+  // HACK: Fake out color image for now.
+  latest_color_image.resize(3, depth_image.size());
+  latest_color_image.setZero();
+  // TODO: Consider coupling these two pieces of data?
   lastReceivedTime = getUnixTime();
 }

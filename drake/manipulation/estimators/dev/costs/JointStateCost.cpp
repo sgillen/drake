@@ -26,17 +26,17 @@ JointStateCost::JointStateCost(std::shared_ptr<const RigidBodyTreed> robot_, std
     for (auto iter=config["listen_joints"].begin(); iter!=config["listen_joints"].end(); iter++)
       listen_joints.push_back((*iter).as<string>());
 
-  if (state_channelname.size() > 0){
-    state_sub = lcm->subscribe(state_channelname, &JointStateCost::handleJointStateMsg, this);
-    state_sub->setQueueCapacity(1);
-  } else {
-    printf("JointStateCost was not handed a state_channelname, so I'm not doing anything!\n");
-  }
+//  if (state_channelname.size() > 0){
+//    state_sub = lcm->subscribe(state_channelname, &JointStateCost::handleJointStateMsg, this);
+//    state_sub->setQueueCapacity(1);
+//  } else {
+//    printf("JointStateCost was not handed a state_channelname, so I'm not doing anything!\n");
+//  }
 
   lastReceivedTime = getUnixTime() - timeout_time*2.;
   
-  x_robot_measured.resize(nq);
-  x_robot_measured_known.resize(nq);
+  q_robot_measured.resize(nq);
+  q_robot_measured_known.resize(nq);
 }
 
 /***********************************************
@@ -57,8 +57,8 @@ bool JointStateCost::constructCost(ManipulationTracker * tracker, const Eigen::V
 
     // copy over last known info
     x_robot_measured_mutex.lock();
-    VectorXd q_measured = x_robot_measured.block(0,0,nq,1);
-    std::vector<bool> x_robot_measured_known_copy = x_robot_measured_known;
+    VectorXd q_measured = q_robot_measured.block(0,0,nq,1);
+    std::vector<bool> x_robot_measured_known_copy = q_robot_measured_known;
     x_robot_measured_mutex.unlock();
 
     // min (x - x')^2
@@ -77,12 +77,7 @@ bool JointStateCost::constructCost(ManipulationTracker * tracker, const Eigen::V
   }
 }
 
-void JointStateCost::handleJointStateMsg(const lcm::ReceiveBuffer* rbuf,
-                           const std::string& chan,
-                           const bot_core::joint_state_t* msg){
-  //printf("Received hand state on channel  %s\n", chan.c_str());
-  x_robot_measured_mutex.lock();
-
+void JointStateCost::readTreeState(const Eigen::VectorXd& q) {
   map<string, int> map = robot->computePositionNameToIndexMap();
   for (int i=0; i < msg->num_joints; i++){
     auto id = map.end();
@@ -93,10 +88,12 @@ void JointStateCost::handleJointStateMsg(const lcm::ReceiveBuffer* rbuf,
     }
 
     if (id != map.end()){
-      x_robot_measured(id->second) = msg->joint_position[i];
-      x_robot_measured_known[id->second] = true;
+      q_robot_measured(id->second) = msg->joint_position[i];
+      q_robot_measured_known[id->second] = true;
     }
   }
+
+  q_robot_measured =
 
   x_robot_measured_mutex.unlock();
 }

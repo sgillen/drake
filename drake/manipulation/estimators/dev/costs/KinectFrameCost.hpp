@@ -25,6 +25,8 @@
 
 #include "drake/systems/sensors/camera_info.h"
 
+#include "drake/systems/sensors/image.h"
+
 /**
  * Handling Kinect cost (point cloud and depth image)
  * HACK: This is going to be disassociated from a Kinect to simplify processing.
@@ -32,8 +34,13 @@
 class KinectFrameCost : public ManipulationTrackerCost {
 public:
   typedef drake::systems::sensors::CameraInfo CameraInfo;
+  typedef Eigen::Matrix3Xd PointCloud;
+  typedef drake::systems::sensors::ImageDepth32F DepthImage;
 
-  KinectFrameCost(std::shared_ptr<RigidBodyTreed> robot_, std::shared_ptr<lcm::LCM> lcm_, YAML::Node config);
+  KinectFrameCost(std::shared_ptr<RigidBodyTreed> robot_,
+                  std::shared_ptr<lcm::LCM> lcm_,
+                  YAML::Node config,
+                  const CameraInfo* camera_info);
   ~KinectFrameCost() {};
   bool constructCost(ManipulationTracker * tracker, const Eigen::VectorXd x_old, Eigen::MatrixXd& Q, Eigen::VectorXd& f, double& K);
 
@@ -43,9 +50,9 @@ public:
   void handleSavePointcloudMsg(const lcm::ReceiveBuffer* rbuf,
                            const std::string& chan,
                            const bot_core::raw_t* msg);
-  void handleKinectFrameMsg(const lcm::ReceiveBuffer* rbuf,
-                           const std::string& chan,
-                           const kinect::frame_msg_t* msg);
+  void readDepthImageAndPointCloud(const DepthImage& depth_image,
+                                   const PointCloud& point_cloud);
+
   void handleCameraOffsetMsg(const lcm::ReceiveBuffer* rbuf,
                            const std::string& chan,
                            const bot_core::rigid_transform_t* msg);
@@ -100,7 +107,6 @@ private:
 
   BoundingBox pointcloud_bounds;
 
-
   std::mutex latest_cloud_mutex;
   std::mutex camera_offset_mutex;
   Eigen::Isometry3d kinect2world_;
@@ -108,11 +114,11 @@ private:
   Eigen::Isometry3d hardcoded_kinect2world_;
 
   Eigen::Matrix3Xd latest_cloud;
-  KinectCalibration* kcal;
+//  KinectCalibration* kcal;
   Eigen::MatrixXd latest_depth_image;
   Eigen::Matrix3Xd latest_color_image;
   Eigen::Matrix3Xd raycast_endpoints;
-  std::shared_ptr<CameraInfo> camera_info_;
+  const CameraInfo* camera_info_;
 
   double lastReceivedTime;
   double last_got_kinect_frame;
