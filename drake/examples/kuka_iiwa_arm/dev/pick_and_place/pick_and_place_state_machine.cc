@@ -1,27 +1,8 @@
-/**
- * @file This file implements a state machine that drives the kuka iiwa arm to
- * pick up a block from one table to place it on another repeatedly.
- */
-
-#include <iostream>
-#include <list>
-#include <memory>
-
-#include <lcm/lcm-cpp.hpp>
-#include "bot_core/robot_state_t.hpp"
+#include "drake/examples/kuka_iiwa_arm/dev/pick_and_place/pick_and_place_state_machine.h"
 
 #include "drake/common/drake_assert.h"
-#include "drake/common/drake_copyable.h"
-#include "drake/common/drake_path.h"
+#include "drake/common/text_logging.h"
 #include "drake/common/trajectories/piecewise_quaternion.h"
-#include "drake/examples/kuka_iiwa_arm/dev/pick_and_place/pick_and_place_common.h"
-#include "drake/examples/kuka_iiwa_arm/pick_and_place/action.h"
-#include "drake/examples/kuka_iiwa_arm/pick_and_place/world_state.h"
-#include "drake/examples/kuka_iiwa_arm/iiwa_common.h"
-#include "drake/lcmt_iiwa_status.hpp"
-#include "drake/lcmt_schunk_wsg_command.hpp"
-#include "drake/lcmt_schunk_wsg_status.hpp"
-#include "drake/util/lcmUtil.h"
 
 namespace drake {
 namespace examples {
@@ -29,403 +10,380 @@ namespace kuka_iiwa_arm {
 namespace pick_and_place {
 namespace {
 
-class WorldStateSubscriber {
- public:
-  DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(WorldStateSubscriber)
-
-  WorldStateSubscriber(lcm::LCM* lcm, WorldState* state)
-      : lcm_(lcm),
-        state_(state) {
-    DRAKE_DEMAND(state);
-
-    lcm_subscriptions_.push_back(
-        lcm_->subscribe("IIWA_STATE_EST",
-                        &WorldStateSubscriber::HandleIiwaStatus, this));
-    lcm_subscriptions_.push_back(
-        lcm_->subscribe("SCHUNK_WSG_STATUS",
-                        &WorldStateSubscriber::HandleWsgStatus, this));
-    lcm_subscriptions_.push_back(
-        lcm_->subscribe("OBJECT_STATE_EST",
-                        &WorldStateSubscriber::HandleObjectStatus, this));
-  }
-
-  ~WorldStateSubscriber() {
-    for (lcm::Subscription* sub : lcm_subscriptions_) {
-      int status = lcm_->unsubscribe(sub);
-      DRAKE_DEMAND(status == 0);
-    }
-    lcm_subscriptions_.clear();
-  }
-
- private:
-  // Handles iiwa states from the LCM message.
-  void HandleIiwaStatus(const lcm::ReceiveBuffer*, const std::string&,
-                        const bot_core::robot_state_t* iiwa_msg) {
-    DRAKE_DEMAND(iiwa_msg != nullptr);
-    state_->HandleIiwaStatus(*iiwa_msg);
-  }
-
-  // Handles WSG states from the LCM message.
-  void HandleWsgStatus(const lcm::ReceiveBuffer*, const std::string&,
-                       const lcmt_schunk_wsg_status* wsg_msg) {
-    DRAKE_DEMAND(wsg_msg != nullptr);
-    state_->HandleWsgStatus(*wsg_msg);
-  }
-
-  // Handles object states from the LCM message.
-  void HandleObjectStatus(const lcm::ReceiveBuffer*,
-                          const std::string&,
-                          const bot_core::robot_state_t* obj_msg) {
-    DRAKE_DEMAND(obj_msg != nullptr);
-    state_->HandleObjectStatus(*obj_msg);
-  }
-
-  // LCM subscription management.
-  lcm::LCM* lcm_;
-  WorldState* state_;
-  std::list<lcm::Subscription*> lcm_subscriptions_;
-};
-
-
 using manipulation::planner::ConstraintRelaxingIk;
 
-// Makes a state machine that drives the iiwa to pick up a block from one table
-// and place it on the other table.
-void RunPickAndPlaceDemo() {
-  lcm::LCM lcm;
+// TODO(sam.creasey) check the anonymous helper functions for style compliance, etc.
 
-  const std::string iiwa_path = GetDrakePath() +
-      "/manipulation/models/iiwa_description/urdf/"
-      "iiwa14_primitive_collision.urdf";
-  const std::string iiwa_end_effector_name = "iiwa_link_ee";
+// Position the gripper 30cm above the object before grasp.
+const double kPreGraspHeightOffset = 0.3;
 
-  // Makes a WorldState, and sets up LCM subscriptions.
-  WorldState env_state(iiwa_path, iiwa_end_effector_name);
-  const RigidBodyTree<double>& iiwa = env_state.get_iiwa();
-  WorldStateSubscriber env_state_subscriber(&lcm, &env_state);
+// Computes the desired end effector pose in the world frame given the object
+// pose in the world frame.
+Isometry3<double> ComputeGraspPose(const Isometry3<double>& X_WObj) {
+  // Sets desired end effector location to be 12cm behind the object,
+  // with the same orientation relative to the object frame. This number
+  // dependents on the length of the finger and how the gripper is attached.
+  const double kEndEffectorToMidFingerDepth = 0.12;
+  Isometry3<double> X_ObjEndEffector_desired;
+  X_ObjEndEffector_desired.translation() =
+      Vector3<double>(-kEndEffectorToMidFingerDepth, 0, 0);
+  X_ObjEndEffector_desired.linear().setIdentity();
+  return X_WObj * X_ObjEndEffector_desired;
+}
 
-  // Spins until at least one message is received from every LCM channel.
-  while (lcm.handleTimeout(10) == 0 || env_state.get_iiwa_time() == -1 ||
-         env_state.get_obj_time() == -1 || env_state.get_wsg_time() == -1) {
+// Generates a sequence (@p num_via_points + 1) of key frames s.t. the end
+// effector moves in a straight line between @pX_WEndEffector0 and
+// @p X_WEndEffector1. Orientation is interpolated with slerp. Intermediate
+// waypoints' tolerance can be adjusted separately.
+bool PlanStraightLineMotion(const VectorX<double>& q_current,
+                            const int num_via_points, double duration,
+                            const Isometry3<double>& X_WEndEffector0,
+                            const Isometry3<double>& X_WEndEffector1,
+                            const Vector3<double>& via_points_pos_tolerance,
+                            const double via_points_rot_tolerance,
+                            ConstraintRelaxingIk* planner, IKResults* ik_res,
+                            std::vector<double>* times) {
+  DRAKE_DEMAND(duration > 0 && num_via_points >= 0);
+  // Makes a slerp trajectory from start to end.
+  const eigen_aligned_std_vector<Quaternion<double>> quats = {
+      Quaternion<double>(X_WEndEffector0.linear()),
+      Quaternion<double>(X_WEndEffector1.linear())};
+
+  const std::vector<MatrixX<double>> pos = {X_WEndEffector0.translation(),
+                                            X_WEndEffector1.translation()};
+  drake::log()->info("Planning straight line from {} {} to {} {}",
+                     pos[0].transpose(), quats[0].vec(),
+                     pos[1].transpose(), quats[1].vec());
+
+  PiecewiseQuaternionSlerp<double> rot_traj({0, duration}, quats);
+  PiecewisePolynomial<double> pos_traj =
+      PiecewisePolynomial<double>::FirstOrderHold({0, duration}, pos);
+
+  std::vector<
+    ConstraintRelaxingIk::IkCartesianWaypoint> waypoints(num_via_points + 1);
+  const double dt = duration / (num_via_points + 1);
+  double time = 0;
+  times->clear();
+  times->push_back(time);
+  for (int i = 0; i <= num_via_points; ++i) {
+    time += dt;
+    times->push_back(time);
+    waypoints[i].pose.translation() = pos_traj.value(time);
+    waypoints[i].pose.linear() = Matrix3<double>(rot_traj.orientation(time));
+    if (i != num_via_points) {
+      waypoints[i].pos_tol = via_points_pos_tolerance;
+      waypoints[i].rot_tol = via_points_rot_tolerance;
+    }
+    waypoints[i].constrain_orientation = true;
   }
+  DRAKE_DEMAND(times->size() == waypoints.size() + 1);
+  return planner->PlanSequentialTrajectory(waypoints, q_current, ik_res);
+}
 
-  // Makes a planner.
-  const Isometry3<double> iiwa_base = env_state.get_iiwa_base();
-  std::shared_ptr<RigidBodyFrame<double>> iiwa_base_frame =
-      std::make_shared<RigidBodyFrame<double>>("world", nullptr, iiwa_base);
-  ConstraintRelaxingIk planner(iiwa_path, iiwa_end_effector_name, iiwa_base);
+}  // namespace
+
+
+PickAndPlaceStateMachine::PickAndPlaceStateMachine(
+    const std::vector<Isometry3<double>>& place_locations, bool loop)
+    : place_locations_(place_locations),
+      next_place_location_(0),
+      loop_(loop),
+      state_(OPEN_GRIPPER),
+      // Position and rotation tolerances.
+      // These should be adjusted to a tight bound until IK stops reliably giving
+      // results.
+      tight_pos_tol_(0.005, 0.005, 0.005),
+      tight_rot_tol_(0.05),
+      loose_pos_tol_(0.05, 0.05, 0.05),
+      loose_rot_tol_(0.5) {
+  DRAKE_DEMAND(!place_locations.empty());
+  drake::log()->info("Place location 0 {}",
+                   place_locations_[0].translation().transpose());
+}
+
+PickAndPlaceStateMachine::~PickAndPlaceStateMachine() {}
+
+void PickAndPlaceStateMachine::Update(
+    const WorldState& env_state,
+    const IiwaPublishCallback& iiwa_callback,
+    const WsgPublishCallback& wsg_callback,
+    manipulation::planner::ConstraintRelaxingIk* planner) {
   IKResults ik_res;
   std::vector<double> times;
+  robotlocomotion::robot_plan_t stopped_plan{};
+  stopped_plan.num_states = 0;
 
-  // Makes action handles.
-  WsgAction wsg_act;
-  IiwaMove iiwa_move;
+  const RigidBodyTree<double>& iiwa = planner->get_robot();
 
-  // Desired end effector pose in the world frame for pick and place.
-  Isometry3<double> X_WEndEffector0, X_WEndEffector1;
+  switch (state_) {
+      // Opens the gripper.
+      case OPEN_GRIPPER: {
+        if (!wsg_act_.ActionStarted()) {
+          lcmt_schunk_wsg_command msg;
+          wsg_act_.OpenGripper(env_state, &msg);
+          wsg_callback(&msg);
 
-  // Desired object end pose relative to the base of the iiwa arm.
-  Isometry3<double> X_IiwaObj_desired;
+          drake::log()->info("OPEN_GRIPPER at {}",
+                             env_state.get_iiwa_time());
+        }
 
-  // Desired object end pose in the world frame.
-  Isometry3<double> X_WObj_desired;
+        if (wsg_act_.ActionFinished(env_state)) {
+          state_ = APPROACH_PICK_PREGRASP;
+          wsg_act_.Reset();
+        }
+        break;
+      }
 
-  // Set initial state
-  PickAndPlaceState state = OPEN_GRIPPER;
+    case APPROACH_PICK_PREGRASP: {
+      // Approaches kPreGraspHeightOffset above the center of the object.
+      if (!iiwa_move_.ActionStarted()) {
+        // Computes the desired end effector pose in the world frame to be
+        // kPreGraspHeightOffset above the object.
+        X_Wend_effector_0_ = env_state.get_iiwa_end_effector_pose();
+        X_Wend_effector_1_ = ComputeGraspPose(env_state.get_object_pose());
+        X_Wend_effector_1_.translation()[2] += kPreGraspHeightOffset;
 
-  // Position the gripper 30cm above the object before grasp.
-  const double kPreGraspHeightOffset = 0.3;
+        // 2 seconds, no via points.
+        bool res = PlanStraightLineMotion(
+            env_state.get_iiwa_q(), 0, 2, X_Wend_effector_0_, X_Wend_effector_1_,
+            loose_pos_tol_, loose_rot_tol_, planner, &ik_res, &times);
+        DRAKE_DEMAND(res);
 
-  // Position and rotation tolerances.
-  // These should be adjusted to a tight bound until IK stops reliably giving
-  // results.
-  const Vector3<double> kTightPosTol(0.005, 0.005, 0.005);
-  const double kTightRotTol = 0.05;
+        robotlocomotion::robot_plan_t plan;
+        iiwa_move_.MoveJoints(env_state, iiwa, times, ik_res.q_sol, &plan);
+        iiwa_callback(&plan);
 
-  const Vector3<double> kLoosePosTol(0.05, 0.05, 0.05);
-  const double kLooseRotTol = 0.5;
+        drake::log()->info("APPROACH_PICK_PREGRASP at {}",
+                           env_state.get_iiwa_time());
+      }
 
-  // lcm handle loop
-  while (true) {
-    // Handles all messages.
-    while (lcm.handleTimeout(10) == 0) {
+      if (iiwa_move_.ActionFinished(env_state)) {
+        state_ = APPROACH_PICK;
+        iiwa_move_.Reset();
+     }
+      break;
     }
 
-    switch (state) {
-      // Opens the gripper.
-      case OPEN_GRIPPER:
-        if (!wsg_act.ActionStarted()) {
-          lcmt_schunk_wsg_command msg;
-          wsg_act.OpenGripper(env_state, &msg);
-          lcm.publish("SCHUNK_WSG_COMMAND", &msg);
-
-          std::cout << "OPEN_GRIPPER: " << env_state.get_iiwa_time()
-                    << std::endl;
-        }
-
-        if (wsg_act.ActionFinished(env_state)) {
-          state = APPROACH_PICK_PREGRASP;
-          wsg_act.Reset();
-        }
-        break;
-
-      // Approaches kPreGraspHeightOffset above the center of the object.
-      case APPROACH_PICK_PREGRASP:
-        if (!iiwa_move.ActionStarted()) {
-          // Computes the desired end effector pose in the world frame to be
-          // kPreGraspHeightOffset above the object.
-          X_WEndEffector0 = env_state.get_iiwa_end_effector_pose();
-          X_WEndEffector1 = ComputeGraspPose(env_state.get_object_pose());
-          X_WEndEffector1.translation()[2] += kPreGraspHeightOffset;
-
-          // 2 seconds, no via points.
-          bool res = PlanStraightLineMotion(
-              env_state.get_iiwa_q(), 0, 2, X_WEndEffector0, X_WEndEffector1,
-              kLoosePosTol, kLooseRotTol, &planner, &ik_res, &times);
-          DRAKE_DEMAND(res);
-
-          robotlocomotion::robot_plan_t plan;
-          iiwa_move.MoveJoints(env_state, iiwa, times, ik_res.q_sol, &plan);
-          lcm.publish("COMMITTED_ROBOT_PLAN", &plan);
-
-          std::cout << "APPROACH_PICK_PREGRASP: " << env_state.get_iiwa_time()
-                    << std::endl;
-        }
-
-        if (iiwa_move.ActionFinished(env_state)) {
-          state = APPROACH_PICK;
-          iiwa_move.Reset();
-        }
-        break;
-
+    case APPROACH_PICK: {
       // Moves gripper straight down.
-      case APPROACH_PICK:
-        if (!iiwa_move.ActionStarted()) {
-          X_WEndEffector0 = X_WEndEffector1;
-          X_WEndEffector1 = ComputeGraspPose(env_state.get_object_pose());
+      if (!iiwa_move_.ActionStarted()) {
+        X_Wend_effector_0_ = X_Wend_effector_1_;
+        X_Wend_effector_1_ = ComputeGraspPose(env_state.get_object_pose());
 
-          // 1 second, 3 via points. More via points to ensure the end effector
-          // moves in more or less a straight line.
-          bool res = PlanStraightLineMotion(
-              env_state.get_iiwa_q(), 3, 1, X_WEndEffector0, X_WEndEffector1,
-              kTightPosTol, kTightRotTol, &planner, &ik_res, &times);
-          DRAKE_DEMAND(res);
+        // 1 second, 3 via points. More via points to ensure the end effector
+        // moves in more or less a straight line.
+        bool res = PlanStraightLineMotion(
+            env_state.get_iiwa_q(), 3, 1, X_Wend_effector_0_, X_Wend_effector_1_,
+            tight_pos_tol_, tight_rot_tol_, planner, &ik_res, &times);
+        DRAKE_DEMAND(res);
 
-          robotlocomotion::robot_plan_t plan;
-          iiwa_move.MoveJoints(env_state, iiwa, times, ik_res.q_sol, &plan);
-          lcm.publish("COMMITTED_ROBOT_PLAN", &plan);
+        robotlocomotion::robot_plan_t plan;
+        iiwa_move_.MoveJoints(env_state, iiwa, times, ik_res.q_sol, &plan);
+        iiwa_callback(&plan);
 
-          std::cout << "APPROACH_PICK: " << env_state.get_iiwa_time()
-                    << std::endl;
-        }
+        drake::log()->info("APPROACH_PICK at {}",
+                           env_state.get_iiwa_time());
+      }
 
-        if (iiwa_move.ActionFinished(env_state)) {
-          state = GRASP;
-          iiwa_move.Reset();
-        }
-        break;
+      if (iiwa_move_.ActionFinished(env_state)) {
+        state_ = GRASP;
+        iiwa_callback(&stopped_plan);
+        iiwa_move_.Reset();
+      }
+      break;
+    }
 
+    case GRASP: {
       // Grasps the object.
-      case GRASP:
-        if (!wsg_act.ActionStarted()) {
-          lcmt_schunk_wsg_command msg;
-          wsg_act.CloseGripper(env_state, &msg);
-          lcm.publish("SCHUNK_WSG_COMMAND", &msg);
+      if (!wsg_act_.ActionStarted()) {
+        lcmt_schunk_wsg_command msg;
+        wsg_act_.CloseGripper(env_state, &msg);
+        wsg_callback(&msg);
 
-          std::cout << "GRASP: " << env_state.get_iiwa_time() << std::endl;
-        }
+        drake::log()->info("GRASP at {}", env_state.get_iiwa_time());
+      }
 
-        if (wsg_act.ActionFinished(env_state)) {
-          state = LIFT_FROM_PICK;
-          wsg_act.Reset();
-        }
-        break;
+      if (wsg_act_.ActionFinished(env_state)) {
+        state_ = LIFT_FROM_PICK;
+        wsg_act_.Reset();
+      }
+      break;
+    }
 
+    case LIFT_FROM_PICK: {
       // Lifts the object straight up.
-      case LIFT_FROM_PICK:
-        if (!iiwa_move.ActionStarted()) {
-          X_WEndEffector0 = X_WEndEffector1;
-          X_WEndEffector1.translation()[2] += kPreGraspHeightOffset;
+      if (!iiwa_move_.ActionStarted()) {
+        X_Wend_effector_0_ = X_Wend_effector_1_;
+        X_Wend_effector_1_.translation()[2] += kPreGraspHeightOffset;
 
-          // 1 seconds, 3 via points.
-          bool res = PlanStraightLineMotion(
-              env_state.get_iiwa_q(), 3, 1, X_WEndEffector0, X_WEndEffector1,
-              kTightPosTol, kTightRotTol, &planner, &ik_res, &times);
-          DRAKE_DEMAND(res);
+        // 1 seconds, 3 via points.
+        bool res = PlanStraightLineMotion(
+            env_state.get_iiwa_q(), 3, 1, X_Wend_effector_0_, X_Wend_effector_1_,
+            tight_pos_tol_, tight_rot_tol_, planner, &ik_res, &times);
+        DRAKE_DEMAND(res);
 
-          robotlocomotion::robot_plan_t plan;
-          iiwa_move.MoveJoints(env_state, iiwa, times, ik_res.q_sol, &plan);
-          lcm.publish("COMMITTED_ROBOT_PLAN", &plan);
+        robotlocomotion::robot_plan_t plan;
+        iiwa_move_.MoveJoints(env_state, iiwa, times, ik_res.q_sol, &plan);
+        iiwa_callback(&plan);
 
-          std::cout << "LIFT_FROM_PICK: " << env_state.get_iiwa_time()
-                    << std::endl;
-        }
+        drake::log()->info("LIFT_FROM_PICK at {}", env_state.get_iiwa_time());
+      }
 
-        if (iiwa_move.ActionFinished(env_state)) {
-          state = APPROACH_PLACE_PREGRASP;
-          iiwa_move.Reset();
-        }
-        break;
+      if (iiwa_move_.ActionFinished(env_state)) {
+        state_ = APPROACH_PLACE_PREGRASP;
+        iiwa_move_.Reset();
+      }
+      break;
+    }
 
+    case APPROACH_PLACE_PREGRASP: {
       // Uses 2 seconds to move to right about the target place location.
-      case APPROACH_PLACE_PREGRASP:
-        if (!iiwa_move.ActionStarted()) {
-          int table = get_table(env_state.get_object_pose(), iiwa_base);
+      if (!iiwa_move_.ActionStarted()) {
+        X_IIWAobj_desired_ = place_locations_[next_place_location_];
+        const Isometry3<double>& iiwa_base = env_state.get_iiwa_base();
+        X_Wobj_desired_ = iiwa_base * X_IIWAobj_desired_;
 
-          // Sets desired place location based on where we picked up the object.
-          // Table 0 is in front of iiwa base, and table 1 is to the left.
-          if (table == 0) {
-            // Table 0 -> table 1.
-            X_IiwaObj_desired.translation() = kPlacePosition1;
-            X_IiwaObj_desired.linear() = Matrix3<double>(
-                AngleAxis<double>(M_PI / 2., Vector3<double>::UnitZ()));
-          } else {
-            // Table 1 -> table 0.
-            X_IiwaObj_desired.translation() = kPlacePosition0;
-            X_IiwaObj_desired.linear().setIdentity();
-          }
-          X_WObj_desired = iiwa_base * X_IiwaObj_desired;
+        drake::log()->info("X_IIWAobj_desired {} X_Wobj_desired {}",
+                           X_IIWAobj_desired_.translation().transpose(),
+                           X_Wobj_desired_.translation().transpose());
 
-          // Recomputes gripper's pose relative the object since the object
-          // probably moved during transfer.
-          const Isometry3<double> X_ObjEndEffector =
-              env_state.get_object_pose().inverse() *
-              env_state.get_iiwa_end_effector_pose();
+        // Recomputes gripper's pose relative the object since the object
+        // probably moved during transfer.
+        const Isometry3<double> X_Obj_end_effector =
+            env_state.get_object_pose().inverse() *
+            env_state.get_iiwa_end_effector_pose();
 
-          X_WEndEffector0 = X_WEndEffector1;
-          X_WEndEffector1 = X_WObj_desired * X_ObjEndEffector;
-          X_WEndEffector1.translation()[2] += kPreGraspHeightOffset;
+        drake::log()->info("object pose {} inverse {}",
+                           env_state.get_object_pose().translation().transpose(),
+                           env_state.get_object_pose().inverse().translation().transpose());
 
-          // 2 seconds, 2 via points. This doesn't have to be a move straight
-          // primitive. I did it this way because I have seen the IK gives a
-          // wild motion that causes the gripper to lose the object.
-          bool res = PlanStraightLineMotion(
-              env_state.get_iiwa_q(), 2, 2, X_WEndEffector0, X_WEndEffector1,
-              kLoosePosTol, kLooseRotTol, &planner, &ik_res, &times);
-          DRAKE_DEMAND(res);
 
-          robotlocomotion::robot_plan_t plan;
-          iiwa_move.MoveJoints(env_state, iiwa, times, ik_res.q_sol, &plan);
-          lcm.publish("COMMITTED_ROBOT_PLAN", &plan);
+        X_Wend_effector_0_ = X_Wend_effector_1_;
+        X_Wend_effector_1_ = X_Wobj_desired_ * X_Obj_end_effector;
+        drake::log()->info("target {}",
+                           X_Wend_effector_1_.translation().transpose());
+        X_Wend_effector_1_.translation()[2] += kPreGraspHeightOffset;
 
-          std::cout << "APPROACH_PLACE_PREGRASP: " << env_state.get_iiwa_time()
-                    << std::endl;
-        }
+        // 2 seconds, 2 via points. This doesn't have to be a move straight
+        // primitive. I did it this way because I have seen the IK gives a
+        // wild motion that causes the gripper to lose the object.
+        bool res = PlanStraightLineMotion(
+            env_state.get_iiwa_q(), 2, 2, X_Wend_effector_0_, X_Wend_effector_1_,
+            loose_pos_tol_, loose_rot_tol_, planner, &ik_res, &times);
+        DRAKE_DEMAND(res);
 
-        if (iiwa_move.ActionFinished(env_state)) {
-          state = APPROACH_PLACE;
-          iiwa_move.Reset();
-        }
-        break;
+        robotlocomotion::robot_plan_t plan;
+        iiwa_move_.MoveJoints(env_state, iiwa, times, ik_res.q_sol, &plan);
+        iiwa_callback(&plan);
 
+        drake::log()->info("APPROACH_PLACE_PREGRASP at {}",
+                           env_state.get_iiwa_time());
+      }
+
+      if (iiwa_move_.ActionFinished(env_state)) {
+        state_ = APPROACH_PLACE;
+        iiwa_move_.Reset();
+      }
+      break;
+    }
+
+    case APPROACH_PLACE: {
       // Moves straight down.
-      case APPROACH_PLACE:
-        if (!iiwa_move.ActionStarted()) {
-          // Recomputes gripper's pose relative the object since the object
-          // probably moved during transfer.
-          const Isometry3<double> X_ObjEndEffector =
-              env_state.get_object_pose().inverse() *
-              env_state.get_iiwa_end_effector_pose();
+      if (!iiwa_move_.ActionStarted()) {
+        // Recomputes gripper's pose relative the object since the object
+        // probably moved during transfer.
+        const Isometry3<double> X_Obj_end_effector =
+            env_state.get_object_pose().inverse() *
+            env_state.get_iiwa_end_effector_pose();
 
-          // Computes the desired end effector pose in the world frame.
-          X_WEndEffector0 = X_WEndEffector1;
-          X_WEndEffector1 = X_WObj_desired * X_ObjEndEffector;
-          // TODO(siyuan): This hack is to prevent the robot from forcefully
-          // pushing the object into the table. Shouldn't be necessary once
-          // we have guarded moves supported by the controller side.
-          X_WEndEffector1.translation()[2] += 0.02;
+        // Computes the desired end effector pose in the world frame.
+        X_Wend_effector_0_ = X_Wend_effector_1_;
+        X_Wend_effector_1_ = X_Wobj_desired_ * X_Obj_end_effector;
+        // TODO(siyuan): This hack is to prevent the robot from forcefully
+        // pushing the object into the table. Shouldn't be necessary once
+        // we have guarded moves supported by the controller side.
+        X_Wend_effector_1_.translation()[2] += 0.02;
 
-          // 1 seconds, 3 via points.
-          bool res = PlanStraightLineMotion(
-              env_state.get_iiwa_q(), 3, 1, X_WEndEffector0, X_WEndEffector1,
-              kTightPosTol, kTightRotTol, &planner, &ik_res, &times);
-          DRAKE_DEMAND(res);
+        // 1 seconds, 3 via points.
+        bool res = PlanStraightLineMotion(
+            env_state.get_iiwa_q(), 3, 1, X_Wend_effector_0_, X_Wend_effector_1_,
+            tight_pos_tol_, tight_rot_tol_, planner, &ik_res, &times);
+        DRAKE_DEMAND(res);
 
-          robotlocomotion::robot_plan_t plan;
-          iiwa_move.MoveJoints(env_state, iiwa, times, ik_res.q_sol, &plan);
-          lcm.publish("COMMITTED_ROBOT_PLAN", &plan);
+        robotlocomotion::robot_plan_t plan;
+        iiwa_move_.MoveJoints(env_state, iiwa, times, ik_res.q_sol, &plan);
+        iiwa_callback(&plan);
 
-          std::cout << "APPROACH_PLACE: " << env_state.get_iiwa_time()
-                    << std::endl;
-        }
+        drake::log()->info("APPROACH_PLACE at {}", env_state.get_iiwa_time());
+      }
 
-        if (iiwa_move.ActionFinished(env_state)) {
-          state = PLACE;
-          iiwa_move.Reset();
-        }
-        break;
+      if (iiwa_move_.ActionFinished(env_state)) {
+        state_ = PLACE;
+        iiwa_callback(&stopped_plan);
+        iiwa_move_.Reset();
+      }
+      break;
+    }
 
+    case PLACE: {
       // Releases the object.
-      case PLACE:
-        if (!wsg_act.ActionStarted()) {
-          lcmt_schunk_wsg_command msg;
-          wsg_act.OpenGripper(env_state, &msg);
-          lcm.publish("SCHUNK_WSG_COMMAND", &msg);
+      if (!wsg_act_.ActionStarted()) {
+        lcmt_schunk_wsg_command msg;
+        wsg_act_.OpenGripper(env_state, &msg);
+        wsg_callback(&msg);
 
-          std::cout << "PLACE: " << env_state.get_iiwa_time() << std::endl;
-        }
+        drake::log()->info("PLACE at {}", env_state.get_iiwa_time());
+      }
 
-        if (wsg_act.ActionFinished(env_state)) {
-          state = LIFT_FROM_PLACE;
-          wsg_act.Reset();
-        }
-        break;
+      if (wsg_act_.ActionFinished(env_state)) {
+        state_ = LIFT_FROM_PLACE;
+        wsg_act_.Reset();
+      }
+      break;
+    }
 
+    case LIFT_FROM_PLACE: {
       // Moves straight up.
-      case LIFT_FROM_PLACE:
-        if (!iiwa_move.ActionStarted()) {
-          X_WEndEffector0 = X_WEndEffector1;
-          X_WEndEffector1.translation()[2] += kPreGraspHeightOffset;
+      if (!iiwa_move_.ActionStarted()) {
+        X_Wend_effector_0_ = X_Wend_effector_1_;
+        X_Wend_effector_1_.translation()[2] += kPreGraspHeightOffset;
 
-          // 1 seconds, 3 via points.
-          bool res = PlanStraightLineMotion(
-              env_state.get_iiwa_q(), 3, 1, X_WEndEffector0, X_WEndEffector1,
-              kTightPosTol, kTightRotTol, &planner, &ik_res, &times);
-          DRAKE_DEMAND(res);
+        // 1 seconds, 3 via points.
+        bool res = PlanStraightLineMotion(
+            env_state.get_iiwa_q(), 3, 1, X_Wend_effector_0_, X_Wend_effector_1_,
+            tight_pos_tol_, tight_rot_tol_, planner, &ik_res, &times);
+        DRAKE_DEMAND(res);
 
-          robotlocomotion::robot_plan_t plan;
-          iiwa_move.MoveJoints(env_state, iiwa, times, ik_res.q_sol, &plan);
-          lcm.publish("COMMITTED_ROBOT_PLAN", &plan);
+        robotlocomotion::robot_plan_t plan;
+        iiwa_move_.MoveJoints(env_state, iiwa, times, ik_res.q_sol, &plan);
+        iiwa_callback(&plan);
 
-          std::cout << "LIFT_FROM_PLACE: " << env_state.get_iiwa_time()
-                    << std::endl;
+        drake::log()->info("LIFT_FROM_PLACE at {}", env_state.get_iiwa_time());
+      }
+
+      if (iiwa_move_.ActionFinished(env_state)) {
+        next_place_location_++;
+        if (next_place_location_ == static_cast<int>(place_locations_.size()) &&
+            !loop_) {
+          state_ = DONE;
+          iiwa_callback(&stopped_plan);
+          drake::log()->info("DONE at {}", env_state.get_iiwa_time());
+        } else {
+          next_place_location_ %= place_locations_.size();
+          state_ = OPEN_GRIPPER;
         }
+        iiwa_move_.Reset();
+      }
+      break;
+    }
 
-        if (iiwa_move.ActionFinished(env_state)) {
-          state = OPEN_GRIPPER;
-          iiwa_move.Reset();
-        }
-        break;
-
-      case DONE:
-        if (!iiwa_move.ActionStarted()) {
-          const std::vector<double> time = {0, 2};
-          std::vector<VectorX<double>> q(2, env_state.get_iiwa_q());
-          q[1].setZero();
-
-          robotlocomotion::robot_plan_t plan;
-          iiwa_move.MoveJoints(env_state, iiwa, times, q, &plan);
-          lcm.publish("COMMITTED_ROBOT_PLAN", &plan);
-
-          std::cout << "DONE: " << env_state.get_iiwa_time() << std::endl;
-        }
-
-        if (iiwa_move.ActionFinished(env_state)) {
-          state = OPEN_GRIPPER;
-          iiwa_move.Reset();
-        }
-        break;
+    case DONE: {
+      break;
     }
   }
 }
 
-}  // namespace
 }  // namespace pick_and_place
 }  // namespace kuka_iiwa_arm
 }  // namespace examples
 }  // namespace drake
-
-int main() {
-  drake::examples::kuka_iiwa_arm::pick_and_place::RunPickAndPlaceDemo();
-  return 0;
-}
