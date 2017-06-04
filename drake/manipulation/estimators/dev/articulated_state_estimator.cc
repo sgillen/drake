@@ -83,19 +83,19 @@ ArticulatedStateEstimator::ArticulatedStateEstimator(
         systems::BasicVector<double>(estimator.get_q0()));
 
   // Define ports
-  inport_point_cloud_
-      = &DeclareAbstractInputPort(Value<PointCloud>());
+  inport_point_cloud_index_ =
+      DeclareAbstractInputPort(Value<PointCloud>()).get_index();
   // TODO(eric.cousineau): Make depth image optional?
-  inport_depth_image_
-      = &DeclareAbstractInputPort(Value<DepthImage>());
+  inport_depth_image_index_ =
+      DeclareAbstractInputPort(Value<DepthImage>()).get_index();
   // TODO(eric.cousineau): Incorporate something akin to
   // KinematicStatePortion.
-  inport_tree_q_measurement_ =
-      &DeclareInputPort(systems::kVectorValued, num_positions);
-  outport_tree_state_estimate_ =
-      &DeclareOutputPort(systems::kVectorValued, num_positions);
+  inport_tree_q_measurement_index_ =
+      DeclareInputPort(systems::kVectorValued, num_positions).get_index();
+  outport_tree_state_estimate_index_ =
+      DeclareOutputPort(systems::kVectorValued, num_positions).get_index();
 
-  state_tree_state_estimate = 0;
+  state_tree_state_estimate_index_ = 0;
   DeclareDiscreteState(num_positions);
 }
 
@@ -107,13 +107,13 @@ void ArticulatedStateEstimator::DoCalcDiscreteVariableUpdates(
   // TODO(eric.cousineau): Only get a partial update of the state.
   // Use some projection matrix, or just use indexing?
   const auto tree_q_measurement =
-      EvalVectorInput(context, inport_tree_q_measurement_->get_index())
+      EvalVectorInput(context, inport_tree_q_measurement_index_)
              ->get_value();
   auto&& point_cloud =
-      EvalAbstractInput(context, inport_point_cloud_->get_index())
+      EvalAbstractInput(context, inport_point_cloud_index_)
              ->GetValue<PointCloud>();
   auto&& depth_image =
-      EvalAbstractInput(context, inport_depth_image_->get_index())
+      EvalAbstractInput(context, inport_depth_image_index_)
              ->GetValue<DepthImage>();
 
   VectorXd q0 =
@@ -129,29 +129,29 @@ void ArticulatedStateEstimator::DoCalcDiscreteVariableUpdates(
 void ArticulatedStateEstimator::DoCalcOutput(
     const Context& context, SystemOutput* output) const {
   const auto estimated_world_state =
-      context.get_discrete_state(state_tree_state_estimate)
+      context.get_discrete_state(state_tree_state_estimate_index_)
       ->CopyToVector();
-  output->GetMutableVectorData(outport_tree_state_estimate_->get_index())
+  output->GetMutableVectorData(outport_tree_state_estimate_index_)
       ->get_mutable_value() = estimated_world_state;
 }
 
 const ArticulatedStateEstimator::Inport& ArticulatedStateEstimator::inport_point_cloud() const {
-  return *inport_point_cloud_;
+  return get_input_port(inport_point_cloud_index_);
 }
 
 const ArticulatedStateEstimator::Inport& ArticulatedStateEstimator::inport_depth_image() const
 {
-  return *inport_depth_image_;
+  return get_input_port(inport_depth_image_index_);
 }
 
 const ArticulatedStateEstimator::Inport& ArticulatedStateEstimator::inport_tree_q_measurement() const
 {
-  return *inport_tree_q_measurement_;
+  return get_input_port(inport_tree_q_measurement_index_);
 }
 
 const ArticulatedStateEstimator::Outport& ArticulatedStateEstimator::outport_tree_state_estimate() const
 {
-  return *outport_tree_state_estimate_;
+  return get_output_port(outport_tree_state_estimate_index_);
 }
 
 }  // namespace manipulation
