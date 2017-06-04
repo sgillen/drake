@@ -78,22 +78,9 @@ bool JointStateCost::constructCost(ManipulationTracker * tracker, const Eigen::V
 }
 
 void JointStateCost::readTreeState(const Eigen::VectorXd& q) {
-  map<string, int> map = robot->computePositionNameToIndexMap();
-  for (int i=0; i < msg->num_joints; i++){
-    auto id = map.end();
-    // only use this one if either we have no listen joints set
-    // or if this is one of them
-    if (listen_joints.size() == 0 || find(listen_joints.begin(), listen_joints.end(), msg->joint_name[i])!=listen_joints.end()){
-      id = map.find(msg->joint_name[i]);
-    }
-
-    if (id != map.end()){
-      q_robot_measured(id->second) = msg->joint_position[i];
-      q_robot_measured_known[id->second] = true;
-    }
+  // TODO(eric.cousineau): Add index slicing back in.
+  q_robot_measured = q;
+  for (int i = 0; i < (int)q_robot_measured_known.size(); ++i) {
+    q_robot_measured_known[i] = true;
   }
-
-  q_robot_measured =
-
-  x_robot_measured_mutex.unlock();
 }

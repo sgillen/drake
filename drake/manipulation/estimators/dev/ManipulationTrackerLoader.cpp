@@ -10,7 +10,8 @@ shared_ptr<T> infer_shared(T* value) {
 
 ManipulationTrackerLoader::ManipulationTrackerLoader(const YAML::Node& config,
                                      const std::string& drc_path,
-                                     std::shared_ptr<lcm::LCM> lcm)
+                                     std::shared_ptr<lcm::LCM> lcm,
+                                     const CameraInfo* camera_info)
 {
   VectorXd x0_robot;
   std::shared_ptr<const RigidBodyTreed> robot = setupRobotFromConfig(config, x0_robot, string(drc_path), true, false);
@@ -28,7 +29,8 @@ ManipulationTrackerLoader::ManipulationTrackerLoader(const YAML::Node& config,
         robot_state_costs_.push_back(cost);
       } else if (cost_type == "KinectFrameCost") {
         // demands a modifiable copy of the robot to do collision calls
-        auto cost = infer_shared(new KinectFrameCost(setupRobotFromConfig(config, x0_robot, string(drc_path), true, false), lcm, *iter));
+        auto robot_copy = setupRobotFromConfig(config, x0_robot, string(drc_path), true, false);
+        auto cost = infer_shared(new KinectFrameCost(robot_copy, lcm, *iter, camera_info));
         estimator.addCost(cost);
         kinect_frame_costs_.push_back(cost);
       } else if (cost_type == "DynamicsCost") {

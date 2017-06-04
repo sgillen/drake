@@ -37,7 +37,9 @@ class LeafSystemMixin : public systems::LeafSystem<T_> {
 
 class ArticulatedStateEstimator : public LeafSystemMixin<double> {
  public:
-  ArticulatedStateEstimator(const std::string& config_file);
+  typedef systems::sensors::CameraInfo CameraInfo;
+  ArticulatedStateEstimator(const std::string& config_file,
+                            const CameraInfo* camera_info);
 
   void DoCalcDiscreteVariableUpdates(const Context& context,
                                      DiscreteValues* updates) const override;

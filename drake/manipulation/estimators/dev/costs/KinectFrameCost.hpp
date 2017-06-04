@@ -27,13 +27,14 @@
 
 #include "drake/systems/sensors/image.h"
 
+using drake::systems::sensors::CameraInfo;
+
 /**
  * Handling Kinect cost (point cloud and depth image)
  * HACK: This is going to be disassociated from a Kinect to simplify processing.
  */
 class KinectFrameCost : public ManipulationTrackerCost {
 public:
-  typedef drake::systems::sensors::CameraInfo CameraInfo;
   typedef Eigen::Matrix3Xd PointCloud;
   typedef drake::systems::sensors::ImageDepth32F DepthImage;
 

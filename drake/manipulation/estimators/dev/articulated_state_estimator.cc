@@ -29,12 +29,13 @@ typedef systems::sensors::ImageDepth32F DepthImage;
 
 class ArticulatedStateEstimator::Impl {
  public:
-  Impl(const string& config_file) {
+  Impl(const string& config_file, const CameraInfo* camera_info) {
     lcm_.reset(new ::lcm::LCM());
     // TODO(eric.cousineau): Use FindResource within the ManipulationTracker code.
     string drc_path = drake::GetDrakePath();
     auto config = YAML::LoadFile(config_file);
-    loader_.reset(new ManipulationTrackerLoader(config, drc_path, lcm_));
+    loader_.reset(new ManipulationTrackerLoader(config, drc_path, lcm_,
+                                                camera_info));
   }
 
   void ImplDiscreteUpdate(const VectorXd& q0,
@@ -73,9 +74,9 @@ class ArticulatedStateEstimator::Impl {
 };
 
 
-ArticulatedStateEstimator::ArticulatedStateEstimator(
-    const string& config_file) {
-  impl_.reset(new Impl(config_file));
+ArticulatedStateEstimator::ArticulatedStateEstimator(const string& config_file,
+                                                     const CameraInfo* camera_info) {
+  impl_.reset(new Impl(config_file, camera_info));
 
   auto& estimator = *impl_->loader_->estimator_;
   auto& scene_tree = *estimator.getRobot();

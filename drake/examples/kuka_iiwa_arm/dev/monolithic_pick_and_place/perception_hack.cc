@@ -339,7 +339,8 @@ struct PerceptionHack::Impl {
         string base_path = "drake/manipulation/estimators/dev/config/";
         string config_file =
             drake::FindResource(base_path + "iiwa_test.yaml").get_absolute_path_or_throw();
-        pbuilder->template AddSystem<ArticulatedStateEstimator>(config_file);
+        pbuilder->template AddSystem<ArticulatedStateEstimator>(config_file,
+                                                                &rgbd_camera_->depth_camera_info());
       }
     }
 

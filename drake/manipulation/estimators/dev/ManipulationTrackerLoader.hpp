@@ -24,8 +24,7 @@ class ManipulationTrackerLoader {
   CostList<NonpenetratingObjectCost> nonpentrating_costs_;
   std::shared_ptr<ManipulationTracker> estimator_;
 
-  ManipulationTrackerLoader(
-      const YAML::Node& config,
+  ManipulationTrackerLoader(const YAML::Node& config,
       const std::string& drc_path,
-      std::shared_ptr<lcm::LCM> lcm);
+      std::shared_ptr<lcm::LCM> lcm, const CameraInfo* camera_info);
 };
