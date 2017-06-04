@@ -1,7 +1,26 @@
 if(lcm_FOUND)
+  add_library_with_exports(LIB_NAME pickAndPlaceStateMachine SOURCE_FILES
+      pick_and_place_state_machine.cc)
+  target_link_libraries(pickAndPlaceStateMachine
+      drakeCommon
+      drakeIK
+      drakeKukaIiwaArmCommon
+      drakeKukaIiwaWorld
+      drakeManipulationPlanner
+      drakeLcmSystem
+      drakeLCMTypes
+      drakeLCMUtil
+      drakeRigidBodyPlant
+      drakeSystemFramework
+      drakeMultibodyParsers
+      drakeTrajectories
+      drakeSchunkWsg
+      drakeSensors
+      pickAndPlaceCommon
+      robotlocomotion-lcmtypes-cpp)
+
   add_executable(pick_and_place_demo
     pick_and_place_demo.cc
-    pick_and_place_state_machine.cc
     )
   target_link_libraries(pick_and_place_demo
     drakeKukaIiwaArmCommon
@@ -10,5 +29,6 @@ if(lcm_FOUND)
     drakeLCMUtil
     drakeRigidBodyPlant
     pickAndPlaceCommon
+    pickAndPlaceStateMachine
     robotlocomotion-lcmtypes-cpp)
 endif()
