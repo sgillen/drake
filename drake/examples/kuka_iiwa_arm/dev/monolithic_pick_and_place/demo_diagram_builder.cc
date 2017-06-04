@@ -30,9 +30,11 @@
 #include "drake/common/scoped_timer.h"
 
 #include "drake/manipulation/estimators/dev/articulated_state_estimator.h"
+#include "drake/common/find_resource.h"
 
 namespace drake {
 
+using std::string;
 using std::make_shared;
 using systems::DrakeVisualizer;
 using systems::DiagramBuilder;
@@ -56,6 +58,8 @@ using manipulation::LeafSystemMixin;
 namespace examples {
 using manipulation::schunk_wsg::SchunkWsgTrajectoryGenerator;
 using manipulation::schunk_wsg::SchunkWsgStatusSender;
+
+using manipulation::ArticulatedStateEstimator;
 
 using std::unique_ptr;
 
@@ -114,8 +118,10 @@ const int kImageHeight = 480;  // In pixels
 class DepthImageToPointCloud : public LeafSystemMixin<double> {
   // Model after: DpethSensorToLcmPointCloudMessage
  public:
-  DepthImageToPointCloud(const CameraInfo& camera_info)
-      : camera_info_(camera_info) {
+  DepthImageToPointCloud(const CameraInfo& camera_info,
+                         bool use_depth_frame = true)
+      : camera_info_(camera_info),
+        ues_depth_frame_(use_depth_frame) {
     ImageDepth32F depth_image(kImageWidth, kImageHeight);
     depth_image_input_port_index_ = DeclareAbstractInputPort(
         Value<ImageDepth32F>(depth_image)).get_index();
@@ -132,20 +138,26 @@ class DepthImageToPointCloud : public LeafSystemMixin<double> {
         ->GetValue<ImageDepth32F>();
     auto& point_cloud = output->GetMutableData(output_port_index_)
                         ->GetMutableValue<Eigen::Matrix3Xd>();
-    RgbdCamera::ConvertDepthImageToPointCloud(depth_image, camera_info_, &point_cloud);
-    Eigen::Matrix3d R_BD;
-    R_BD <<
-        0, 0, 1,
-        -1, 0, 0,
-        0, -1, 0;
-    // Project from `D` to `B`
-    point_cloud = (R_BD * point_cloud).eval();
+    RgbdCamera::ConvertDepthImageToPointCloud(depth_image, camera_info_,
+                                              &point_cloud);
+    if (ues_depth_frame_) {
+      // TODO(eric.cousineau): Change system to use Depth sensor pose output
+      // port, once the PR lands for this, to get the proper frame externally.
+      Eigen::Matrix3d R_BD;
+      R_BD <<
+          0, 0, 1,
+          -1, 0, 0,
+          0, -1, 0;
+      // Project from `D` to `B`
+      point_cloud = (R_BD * point_cloud).eval();
+    }
     drake::log()->info("Convert image");
   }
 
  private:
   DepthSensorSpecification spec_;
   const CameraInfo& camera_info_;
+  bool ues_depth_frame_{};
   int depth_image_input_port_index_{};
   int output_port_index_{};
 };
@@ -303,6 +315,8 @@ struct IiwaWsgPlantGeneratorsEstimatorsAndVisualizer<T>::Impl {
     pbuilder->template AddSystem<WallClockPublisher>(0.001);
 
     if (use_rgbd_camera) {
+      bool use_estimator = true;
+
       // Adapted from: .../image_to_lcm_message_demo.cc
 
       auto rgbd_camera_instance = new RgbdCamera(
@@ -380,6 +394,13 @@ struct IiwaWsgPlantGeneratorsEstimatorsAndVisualizer<T>::Impl {
       pbuilder->Connect(
             pc_to_lcm->get_outport(),
             depth_lcm_pub->get_input_port(0));
+
+      if (use_estimator) {
+        string base_path = "drake/manipulation/estimators/dev/config/";
+        string config_file =
+            drake::FindResource(base_path + "iiwa_test.yaml").get_absolute_path_or_throw();
+        pbuilder->template AddSystem<ArticulatedStateEstimator>(config_file);
+      }
     }
 
     if (use_depth_sensor) {

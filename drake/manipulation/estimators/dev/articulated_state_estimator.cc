@@ -4,6 +4,8 @@
 #include <yaml-cpp/yaml.h>
 #include <lcm/lcm-cpp.hpp>
 
+#include "drake/common/drake_path.h"
+
 #include "drake/manipulation/estimators/dev/ManipulationTrackerLoader.hpp"
 
 #include "drake/manipulation/estimators/dev/tree_state_portion.h"
@@ -29,7 +31,8 @@ class ArticulatedStateEstimator::Impl {
  public:
   Impl(const string& config_file) {
     lcm_.reset(new ::lcm::LCM());
-    string drc_path = "";
+    // TODO(eric.cousineau): Use FindResource within the ManipulationTracker code.
+    string drc_path = drake::GetDrakePath();
     auto config = YAML::LoadFile(config_file);
     loader_.reset(new ManipulationTrackerLoader(config, drc_path, lcm_));
   }

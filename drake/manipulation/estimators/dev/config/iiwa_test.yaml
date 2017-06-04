@@ -1,0 +1,111 @@
+# From:
+# manipulation_tracking:d54a3c5:config/estimator_config_irb140_gelsight.yaml (master)
+
+robots:
+  iiwa:
+    urdf:
+      fast: "drake/manipulation/models/iiwa_description/urdf/iiwa14_polytope_collision.urdf"
+      slow: "drake/manipulation/models/iiwa_description/urdf/iiwa14_mesh_collision.urdf"
+  table:
+    urdf:
+      fast: "drake/examples/kuka_iiwa_arm/models/table/extra_heavy_duty_table_surface_only_collision.sdf"
+      slow: ""
+  hole_box:
+    urdf: "/software/perception/manipulation_tracking/urdf/hole_box.urdf"
+    q0:
+      base_x: 0.60
+      base_y: 0.10
+      base_z: 5.73
+      base_roll: 0.0
+  desk:
+    urdf: "/software/perception/manipulation_tracking/urdf/desk.urdf"
+    q0:
+      base_x: 0.61
+      base_y: 0.2
+      base_z: 0.64
+  camera:
+    urdf: "/software/perception/manipulation_tracking/urdf/camera.urdf"
+    q0:
+      base_x: 0.95
+      base_y: -0.54
+      base_z: 1.24
+      base_roll: -2.12
+      base_pitch: -0.018
+      base_yaw: 0.469
+
+force_align:
+  # force alignment of these frames in the estimator every iteration
+  source_robot: "iiwa"
+  dest_frame: "robot_base"
+
+publish_all: true
+
+dynamics:
+  dynamics_floating_base_var: 0.0001 # m per frame
+  dynamics_other_var: 0.0001 # rad per frame
+  verbose: True
+  # and robot-specific additional gains:
+  robot_specific_vars:
+    - robot: "iiwa"
+      dynamics_floating_base_var: 0.00000001 # m per frame
+      dynamics_other_var: 0.01 # rad per frame
+    - robot: "camera"
+      dynamics_floating_base_var: 0.000000001
+      dynamics_other_var: 0.000000001
+    #- robot: "tiny_screwdriver"
+    #  dynamics_floating_base_var: 0.0001
+    #  dynamics_other_var: 0.0001
+    - robot: "bolt"
+      dynamics_floating_base_var: 0.000001
+      dynamics_other_var: 0.000001
+
+costs:
+  #- type: "NonpenetratingObjectCost"
+  #  nonpenetration_var: 0.01 # m
+  #  min_considered_penetration_distance: 0.001
+  #  verbose: False
+  #  verbose_lcmgl: False
+  #  num_surface_pts: 200
+  #  nonpenetrating_robot: "bolt"
+  #  penetrable_robots: []
+ # - type: "NonpenetratingObjectCost"
+ #   nonpenetration_var: 0.01 # m
+ #   min_considered_penetration_distance: 0.001
+ #   verbose: False
+ #   verbose_lcmgl: False
+ #   num_surface_pts: 200
+ #   nonpenetrating_robot: "hole_box"
+ #   penetrable_robots: ["bolt"]
+  - type: "NonpenetratingObjectCost"
+    nonpenetration_var: 0.001 # m
+    min_considered_penetration_distance: 0.001
+    verbose: True
+    verbose_lcmgl: True
+    num_surface_pts: 200
+    nonpenetrating_robot: "bolt"
+    penetrable_robots: ["hole_box"]
+
+  - type: "KinectFrameCost"
+    icp_var: 0.005 # m
+    free_space_var: 0.5
+    max_considered_icp_distance: 0.04
+    min_considered_joint_distance: 0.00
+    verbose: True
+    verbose_lcmgl: True
+    downsample_amount: 5.0
+    #camera_body: "camera"
+    world_frame: True
+    bounds:
+      xMin: 0.43
+      xMax: 0.67
+      yMin: 0.03
+      yMax: 0.17
+      zMin: 0.7
+      zMax: 1.0
+
+  - type: "RobotStateCost"
+    joint_known_fb_var: 0.0000001 # m
+    joint_known_encoder_var: 0.000001 # radian
+    transcribe_floating_base_vars: False
+    verbose: False
+    # state_channelname: "EST_ROBOT_STATE"
