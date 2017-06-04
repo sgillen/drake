@@ -24,10 +24,14 @@
 #include "drake/systems/framework/diagram_builder.h"
 #include "drake/systems/primitives/constant_vector_source.h"
 
+#include "drake/examples/kuka_iiwa_arm/dev/monolithic_pick_and_place/perception_hack.h"
+
 DEFINE_uint64(target, 0, "ID of the target to pick.");
 DEFINE_double(orientation, 2 * M_PI, "Yaw angle of the box.");
 DEFINE_uint32(start_position, 1, "Position index to start from");
 DEFINE_uint32(end_position, 2, "Position index to end at");
+DEFINE_bool(use_perception, true, "Use perception hack");
+DEFINE_bool(use_slow_meshes, false, "Use slow meshes for collision");
 
 using robotlocomotion::robot_plan_t;
 
@@ -45,6 +49,10 @@ namespace {
 const char kIiwaUrdf[] =
     "/manipulation/models/iiwa_description/urdf/"
     "iiwa14_polytope_collision.urdf";
+const char kIiwaUrdfMesh[] =
+    "/manipulation/models/iiwa_description/urdf/"
+    "iiwa14_mesh_collision.urdf";
+
 const char kIiwaEndEffectorName[] = "iiwa_link_ee";
 
 // The `z` coordinate of the top of the table in the world frame.
@@ -77,7 +85,6 @@ Target GetTarget() {
     throw std::runtime_error("Invalid target ID");
   }
   return targets[FLAGS_target];
-
 }
 
 std::unique_ptr<systems::RigidBodyPlant<double>> BuildCombinedPlant(
@@ -88,15 +95,18 @@ std::unique_ptr<systems::RigidBodyPlant<double>> BuildCombinedPlant(
     const Eigen::Vector3d& box_orientation,
     ModelInstanceInfo<double>* iiwa_instance,
     ModelInstanceInfo<double>* wsg_instance,
-    ModelInstanceInfo<double>* box_instance) {
+    ModelInstanceInfo<double>* box_instance,
+    bool use_slow_meshes = false) {
   auto tree_builder = std::make_unique<WorldSimTreeBuilder<double>>();
 
   // Adds models to the simulation builder. Instances of these models can be
   // subsequently added to the world.
-  tree_builder->StoreModel("iiwa", kIiwaUrdf);
-  tree_builder->StoreModel("table",
-                           "/examples/kuka_iiwa_arm/models/table/"
-                           "extra_heavy_duty_table_surface_only_collision.sdf");
+  tree_builder->StoreModel("iiwa", use_slow_meshes ? kIiwaUrdfMesh : kIiwaUrdf);
+  const char kTable[] = "/examples/kuka_iiwa_arm/models/table/"
+                        "extra_heavy_duty_table_surface_only_collision.sdf";
+  const char kTableMesh[] =  "/examples/kuka_iiwa_arm/models/table/"
+                             "extra_heavy_duty_table.sdf";
+  tree_builder->StoreModel("table", use_slow_meshes ? kTableMesh : kTable);
   tree_builder->StoreModel(
       "target", "/examples/kuka_iiwa_arm/models/objects/" + target_model);
   tree_builder->StoreModel("yellow_post",
@@ -269,6 +279,11 @@ int DoMain(void) {
                   wsg_trajectory_generator->get_command_input_port());
   builder.Connect(state_machine->get_output_port_iiwa_plan(),
                   iiwa_trajectory_generator->get_plan_input_port());
+
+  PerceptionHack perception;
+  if (FLAGS_use_perception) {
+    perception.Inject(&builder, &lcm, plant);
+  }
 
   auto sys = builder.Build();
   Simulator<double> simulator(*sys);

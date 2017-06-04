@@ -30,6 +30,8 @@
 #include "drake/manipulation/estimators/dev/articulated_state_estimator.h"
 #include "drake/common/find_resource.h"
 
+#include "drake/examples/kuka_iiwa_arm/iiwa_world/iiwa_wsg_diagram_factory.h"
+
 namespace drake {
 
 
@@ -217,7 +219,7 @@ std::unique_ptr<T> CreateUnique(T* obj) {
   return std::unique_ptr<T>(obj);
 }
 
-struct PerceptionHack {
+struct PerceptionHack::Impl {
   // Generic serializer shared between two sensor types.
   PoseStampedTPoseVectorTranslator pose_translator_{"camera"};
 
@@ -230,9 +232,9 @@ struct PerceptionHack {
   LcmPublisherSystem* depth_sensor_pose_lcm_pub_{};
 
   void CreateAndConnectCamera(
-      DiagramBuilder<double>* pbuilder,
+      DiagramBuilder* pbuilder,
       DrakeLcm* plcm,
-      IiwaAndWsgPlantWithStateEstimator<double>* pplant) {
+      TreePlant* pplant) {
 
     bool use_rgbd_camera = true;
     bool use_depth_sensor = false;
@@ -399,6 +401,15 @@ struct PerceptionHack {
     }
   }
 };
+
+
+void PerceptionHack::Inject(DiagramBuilder* pbuilder, DrakeLcm* plcm,
+                            TreePlant* pplant) {
+  impl_.reset(new Impl());
+  impl_->CreateAndConnectCamera(pbuilder, plcm, pplant);
+}
+
+PerceptionHack::~PerceptionHack() {}
 
 /*
   const bool use_slow_meshes = false;
