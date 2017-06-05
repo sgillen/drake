@@ -13,6 +13,8 @@
 #include <vtkCamera.h>
 #include <vtkCubeSource.h>
 #include <vtkCylinderSource.h>
+#include <vtkImageCast.h>
+#include <vtkImageFlip.h>
 #include <vtkNew.h>
 #include <vtkOBJReader.h>
 #include <vtkPNGReader.h>
@@ -318,6 +320,14 @@ class RgbdCamera::Impl : private ModuleInitVtkRenderingOpenGL2 {
   vtkNew<vtkWindowToImageFilter> color_filter_;
   vtkNew<vtkWindowToImageFilter> depth_filter_;
   vtkNew<vtkWindowToImageFilter> label_filter_;
+
+  vtkNew<vtkImageFlip> color_flipper_;
+  vtkNew<vtkImageFlip> depth_flipper_;
+  vtkNew<vtkImageFlip> label_flipper_;
+
+  vtkNew<vtkImageCast> color_cast_;
+  vtkNew<vtkImageCast> depth_cast_;
+  vtkNew<vtkImageCast> label_cast_;
 };
 
 
@@ -390,6 +400,27 @@ RgbdCamera::Impl::Impl(const RigidBodyTree<double>& tree,
     filter->SetMagnification(1);
     filter->ReadFrontBufferOff();
     filter->Update();
+  }
+
+  color_flipper_->SetInputConnection(color_filter_->GetOutputPort());
+  depth_flipper_->SetInputConnection(depth_filter_->GetOutputPort());
+  label_flipper_->SetInputConnection(label_filter_->GetOutputPort());
+  for (auto& flipper : MakeVtkInstanceArray<vtkImageFlip>(
+           color_flipper_, depth_flipper_, label_flipper_)) {
+    flipper->SetFilteredAxis(1);  // Flips y axis.
+    flipper->Update();
+  }
+
+  color_cast_->SetOutputScalarTypeToUnsignedChar();
+  color_cast_->SetInputConnection(color_flipper_->GetOutputPort());
+  depth_cast_->SetOutputScalarTypeToFloat();
+  depth_cast_->SetInputConnection(depth_flipper_->GetOutputPort());
+  label_cast_->SetOutputScalarTypeToUnsignedChar();
+  label_cast_->SetInputConnection(label_flipper_->GetOutputPort());
+
+  for (auto& cast : MakeVtkInstanceArray<vtkImageCast>(
+           color_cast_, depth_cast_, label_cast_)) {
+    cast->Update();
   }
 }
 
@@ -612,6 +643,18 @@ void RgbdCamera::Impl::UpdateRenderWindow() const {
       filter->Update();
     }
   }
+
+  // for (auto& flipper : MakeVtkInstanceArray<vtkImageFlip>(
+  //          color_flipper_, depth_flipper_, label_flipper_)) {
+  //   flipper->Modified();
+  //   flipper->Update();
+  // }
+
+  // for (auto& cast : MakeVtkInstanceArray<vtkImageCast>(
+  //          color_cast_, depth_cast_, label_cast_)) {
+  //   cast->Modified();
+  //   cast->Update();
+  // }
 }
 
 void RgbdCamera::Impl::DoCalcOutput(
@@ -653,9 +696,9 @@ void RgbdCamera::Impl::DoCalcOutput(
   }
 
   // Outputs the image data.
-  sensors::ImageBgra8U& image =
+  sensors::ImageRgba8U& color_image =
       output->GetMutableData(kPortColorImage)->GetMutableValue<
-        sensors::ImageBgra8U>();
+        sensors::ImageRgba8U>();
 
   sensors::ImageDepth32F& depth_image =
       output->GetMutableData(kPortDepthImage)->GetMutableValue<
@@ -664,6 +707,20 @@ void RgbdCamera::Impl::DoCalcOutput(
   sensors::ImageLabel16I& label_image =
       output->GetMutableData(kPortLabelImage)->GetMutableValue<
         sensors::ImageLabel16I>();
+
+  void* color_ptr = color_filter_->GetOutput()->GetScalarPointer(0, 0, 0);
+  const int num_pixels = kImageWidth * kImageHeight;
+  memcpy(color_image.at(0, 0), color_ptr,
+         num_pixels * color_image.kNumChannels * 1);
+
+  float* depth_ptr = static_cast<float*>(
+      depth_filter_->GetOutput()->GetScalarPointer(0, 0, 0));
+  // memcpy(depth_image.at(0, 0), depth_ptr,
+  //        num_pixels * depth_image.kNumChannels * 4);
+
+  void* label_ptr = label_filter_->GetOutput()->GetScalarPointer(0, 0, 0);
+  ImageRgb8U label(kImageWidth, kImageHeight);
+  memcpy(label.at(0, 0), label_ptr, num_pixels * 3 * 1);
 
   const int height = color_camera_info_.height();
   const int width = color_camera_info_.width();
@@ -675,32 +732,16 @@ void RgbdCamera::Impl::DoCalcOutput(
     }
 
     for (int u = 0; u < width; ++u) {
-      const int height_reversed = height - v - 1;  // Makes image upside down.
-
-      // We cast `void*` to `uint8_t*` for RGBA, and to `float*` for ZBuffer,
-      // respectively. This is because these are the types for pixels internally
-      // used in `vtkWindowToImageFiler` class. For more detail, refer to:
-      // http://www.vtk.org/doc/release/5.8/html/a02326.html.
-      // Converts RGBA to BGRA.
-      void* color_ptr = color_filter_->GetOutput()->GetScalarPointer(u, v, 0);
-      image.at(u, height_reversed)[0] = *(static_cast<uint8_t*>(color_ptr) + 2);
-      image.at(u, height_reversed)[1] = *(static_cast<uint8_t*>(color_ptr) + 1);
-      image.at(u, height_reversed)[2] = *(static_cast<uint8_t*>(color_ptr) + 0);
-      image.at(u, height_reversed)[3] = *(static_cast<uint8_t*>(color_ptr) + 3);
-
-      // Updates the depth image.
-      const float z_buffer_value = *static_cast<float*>(
-          depth_filter_->GetOutput()->GetScalarPointer(u, v, 0));
-      depth_image.at(u, height_reversed)[0] =
-          CheckRangeAndConvertToMeters(z_buffer_value);
+      depth_image.at(u, v)[0] =
+          CheckRangeAndConvertToMeters(*(depth_ptr + v * width + u));
+      //     CheckRangeAndConvertToMeters(depth_image.at(v, v)[0]);
 
       // Updates the label image.
-      void* label_ptr = label_filter_->GetOutput()->GetScalarPointer(u, v, 0);
-      Color color{*(static_cast<uint8_t*>(label_ptr) + 0),  // R
-                  *(static_cast<uint8_t*>(label_ptr) + 1),  // G
-                  *(static_cast<uint8_t*>(label_ptr) + 2)};  // B
+      Color color{label.at(u, v)[0],  // R
+                  label.at(u, v)[1],  // G
+                  label.at(u, v)[2]};  // B
 
-      label_image.at(u, height_reversed)[0] =
+      label_image.at(u, v)[0] =
           static_cast<int16_t>(color_palette_.LookUpId(color));
     }
   }
@@ -755,8 +796,8 @@ void RgbdCamera::Init(const std::string& name) {
       impl_->tree().get_num_positions() + impl_->tree().get_num_velocities();
   this->DeclareInputPort(systems::kVectorValued, kVecNum);
 
-  ImageBgra8U color_image(kImageWidth, kImageHeight);
-  this->DeclareAbstractOutputPort(systems::Value<sensors::ImageBgra8U>(
+  ImageRgba8U color_image(kImageWidth, kImageHeight);
+  this->DeclareAbstractOutputPort(systems::Value<sensors::ImageRgba8U>(
       color_image));
 
   ImageDepth32F depth_image(kImageWidth, kImageHeight);
