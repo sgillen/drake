@@ -32,6 +32,8 @@
 
 #include "drake/examples/kuka_iiwa_arm/iiwa_world/iiwa_wsg_diagram_factory.h"
 
+#include "drake/manipulation/estimators/dev/tree_state_portion.h"
+
 namespace drake {
 
 
@@ -212,6 +214,30 @@ class PointCloudToLcmPointCloud : public LeafSystemMixin<double> {
   int output_port_index_{};
 };
 
+using manipulation::VectorPortion;
+using manipulation::VectorSlice;
+using Eigen::VectorXd;
+
+class VectorSliceTranslator : public LeafSystemMixin<double> {
+ public:
+  typedef VectorSlice<double> Slice;
+
+  VectorSliceTranslator(const Slice& input_slice)
+    : input_slice_(input_slice) {
+    DeclareInputPort(systems::kVectorValued, input_slice_.super_size());
+    DeclareOutputPort(systems::kVectorValued, input_slice_.size());
+  }
+
+  void DoCalcOutput(
+      const Context& context, SystemOutput* output) const override {
+    VectorXd input = EvalVectorInput(context, 0)->CopyToVector();
+    auto&& subset = output->GetMutableVectorData(0)->get_mutable_value();
+    input_slice_.ReadFromSuperset(input, &subset);
+  }
+ private:
+  Slice input_slice_;
+};
+
 /**
  * Convenience to infer type.
  */
@@ -345,9 +371,10 @@ struct PerceptionHack::Impl {
         auto plant_position_names = GetHierarchicalPositionNameList(
                                       pplant->get_plant().get_rigid_body_tree(),
                                       plant_id_map);
+        auto estimator_position_names = GetHierarchicalPositionNameList(
+            estimator->get_tree(), estimator->get_plant_id_map());
 
-        // TODO: Create selection subsystem to select states, rather than have
-        // the estimator do this.
+        // Generate stitching system to get the select number of positions.
 
         pbuilder->Connect(depth_to_pc->get_output_port(0),
                           estimator->inport_point_cloud());

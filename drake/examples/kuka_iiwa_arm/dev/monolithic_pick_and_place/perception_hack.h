@@ -5,11 +5,14 @@
 #include "drake/lcm/drake_lcm.h"
 #include "drake/systems/framework/diagram.h"
 #include "drake/examples/kuka_iiwa_arm/iiwa_world/iiwa_wsg_diagram_factory.h"
+#include "drake/manipulation/estimators/dev/articulated_state_estimator.h"
 
 namespace drake {
 namespace examples {
 namespace kuka_iiwa_arm {
 namespace monolithic_pick_and_place {
+
+using manipulation::ReverseIdMap;
 
 class PerceptionHack {
  public:

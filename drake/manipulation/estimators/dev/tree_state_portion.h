@@ -1,8 +1,11 @@
 #include <Eigen/Dense>
+#include <type_traits>
 
 #include "drake/common/drake_assert.h"
 #include "drake/common/drake_copyable.h"
 #include "drake/common/eigen_types.h"
+
+#include "drake/systems/framework/vector_base.h"
 
 #include "drake/manipulation/estimators/dev/stamped_value.h"
 
@@ -37,6 +40,73 @@ static VectorX<Integral> CardinalIndices(Integral size) {
   Classname(Classname&&) = default;             \
   void operator=(Classname&&) = delete;
 
+template <typename T>
+class VectorSlice {
+ public:
+  typedef VectorX<T> Vector;
+  typedef VectorX<int> Indices;
+
+  DRAKE_DEFAULT_COPY_AND_MOVE_AND_ASSIGN(VectorSlice);
+
+  explicit VectorSlice(const Indices& indices, int super_size = -1)
+        : indices_(indices) {
+    // TODO(eric.cousineau): Check for uniqueness
+    min_index_ = indices.minCoeff();
+    DRAKE_ASSERT(min_index_ >= 0);
+    max_index_ = indices.maxCoeff();
+    if (super_size == -1) {
+      super_size_ = max_index_;
+    } else {
+      super_size_ = super_size;
+      DRAKE_ASSERT(max_index_ <= super_size_);
+    }
+  }
+
+  int size() const { return indices_.size(); }
+  int super_size() const { return super_size_; }
+  int min_index() const { return min_index_; }
+  int max_index() const { return max_index_; }
+  const Indices& indices() const { return indices_; }
+
+  template <typename Container>
+  bool is_valid_subset_of(const Container& other) const {
+    return super_size() == other.size();
+  }
+
+  void ReadFromSuperset(const Vector& super, Vector *pvalues) const {
+    DRAKE_ASSERT(is_valid_subset_of(super));
+    Vector& values = *pvalues;
+    for (int i = 0; i < this->size(); ++i) {
+      int index = this->indices_[i];
+      values[i] = super[index];
+    }
+    return *this;
+  }
+
+  template <typename U>
+  using is_immutable_ref = std::integral_constant<bool,
+      std::is_const<U>::value && std::is_lvalue_reference<U>::value>;
+
+  template <typename U>
+  using is_mutable_vector = std::integral_constant<bool,
+      !is_immutable_ref<U>::value &&
+      !std::is_base_of<VectorSlice, U>::value>;
+
+  void WriteToSuperset(const Vector& values, Eigen::Ref<Vector> super) {
+    DRAKE_ASSERT(is_valid_subset_of(super));
+    for (int i = 0; i < this->size(); ++i) {
+      int index = this->indices_[i];
+      super[index] = values[i];
+    }
+  }
+
+ protected:
+  int super_size_;
+  int max_index_;
+  int min_index_;
+  const Indices indices_;
+};
+
 /**
  * Simple mechanism to handle (ragged) slices of a vector.
  */
@@ -53,24 +123,21 @@ static VectorX<Integral> CardinalIndices(Integral size) {
 //   VectorXV vp = map_strings_to_variables(VectorXV v, vector<string> names);
 // Could also just store values within - symbolic::ValuePair<double, Varaible>
 // And follow suite with StampedValue<> stuff.
+// TODO(eric.cousineau): Consider storing the size of the superset? This would
+// prevent some minor misidentifications.
 template <typename T>
-class VectorPortion {
+class VectorPortion : public VectorSlice<T> {
  public:
   // Helpers
   typedef VectorX<T> Vector;
-  typedef VectorX<int> Indices;
+  typedef VectorSlice<T> Base;
+  typedef typename Base::Indices Indices;
 
-  DRAKE_MOVE_ONLY_NO_COPY_NO_ASSIGN(VectorPortion);
+//  DRAKE_MOVE_ONLY_NO_COPY_NO_ASSIGN(VectorPortion);
+  DRAKE_DEFAULT_COPY_AND_MOVE_AND_ASSIGN(VectorPortion);  // Permit use as abstract value
 
-  explicit VectorPortion(const Indices& indices)
-        : indices_(indices) {
-    // TODO(eric.cousineau): Check for uniqueness
-    min_index_ = indices.minCoeff();
-    DRAKE_ASSERT(min_index_ >= 0);
-    max_index_ = indices.maxCoeff();
-    values_.resize(size());
-    values_.setZero();
-  }
+  VectorPortion(const Indices& sub_indices, int super_size = -1)
+      : Base(sub_indices, super_size), values_(this->size()) {}
 
   static VectorPortion Make(int size) {
     return std::move(VectorPortion(CardinalIndices(size)));
@@ -112,29 +179,15 @@ class VectorPortion {
     return out;
   }
 
-  int size() const { return indices_.size(); }
-  int min_index() const { return min_index_; }
-  int max_index() const { return max_index_; }
-  const Indices& indices() const { return indices_; }
   const Vector& values() const { return values_; }
   // Only offer a reference, such that the shape cannot be changed.
   Eigen::Ref<Vector> values() { return values_; }
 
-  bool is_valid_subset_of(const VectorPortion& other) const {
-    return max_index() <= other.max_index();
+  void ReadFromSuperset(const VectorPortion& super) {
+    this->ReadFromSuperset(super.values(), values());
   }
 
-  VectorPortion& ReadFromSuperset(const VectorPortion& super) {
-    DRAKE_ASSERT(is_valid_subset_of(super));
-    const auto& super_values = super.values();
-    for (int i = 0; i < size(); ++i) {
-      int index = indices_[i];
-      values_[i] = super_values[index];
-    }
-    return *this;
-  }
-
-  VectorPortion& ReadFromSubset(const VectorPortion& sub) {
+  void ReadFromSubset(const VectorPortion& sub) {
     DRAKE_ASSERT(sub.is_valid_subset_of(*this));
     const auto& sub_indices = sub.indices();
     const auto& sub_values = sub.values();
@@ -145,13 +198,34 @@ class VectorPortion {
     return *this;
   }
 
- private:
-  int max_index_;
-  int min_index_;
-  const Indices indices_;
+ protected:
   Vector values_;
 };
 
+// There is Subvector<T> in the systems framework.
+// However, this only handles contiguous slices.
+
+//template <typename T>
+//class SubVectorBase : public systems::VectorBase<T> {
+// public:
+//  typedef VectorPortion<T> Portion;
+//  typedef typename Portion::Indices Indices;
+//  SubVectorBase(const Indices &indices)
+//      : portion_(indices) {}
+//  int size() const override {
+//    return portion_.size();
+//  }
+//  const T& GetAtIndex(int index) const override {
+//    return portion_.values()(index);
+//  }
+//  T& GetAtIndex(int index) override {
+//    return portion_.values()(index);
+//  }
+//  const Portion& portion() const { return portion_; }
+//  Portion& portion() { return portion_; }
+// private:
+//  Portion portion_;
+//};
 
 // Portion of vector that records timestamps.
 template <typename T>
@@ -185,58 +259,58 @@ using VectorStampedPortion = VectorPortion<StampedValue<T>>;
  * with ease. (For state estimation, if coordinates come from other sources at
  * different rates.)
  */
-template <typename T>
-class KinematicStatePortion {
- public:
-  typedef VectorX<T> Vector;
-  typedef VectorX<int> Indices;
-  typedef VectorPortion<T> Portion;
+//template <typename T>
+//class KinematicStatePortion {
+// public:
+//  typedef VectorX<T> Vector;
+//  typedef VectorX<int> Indices;
+//  typedef VectorPortion<T> Portion;
 
-  DRAKE_MOVE_ONLY_NO_COPY_NO_ASSIGN(KinematicStatePortion);
+//  DRAKE_MOVE_ONLY_NO_COPY_NO_ASSIGN(KinematicStatePortion);
 
-  KinematicStatePortion(const Indices& joint_indices)
-      : positions_(joint_indices), velocities_(joint_indices) {}
-  KinematicStatePortion(const Indices& position_indices,
-                        const Indices& velocity_indices)
-      : positions_(position_indices), velocities_(velocity_indices) {}
+//  KinematicStatePortion(const Indices& joint_indices)
+//      : positions_(joint_indices), velocities_(joint_indices) {}
+//  KinematicStatePortion(const Indices& position_indices,
+//                        const Indices& velocity_indices)
+//      : positions_(position_indices), velocities_(velocity_indices) {}
 
-  // Get lazy.
-  template <typename Arg>
-  static KinematicStatePortion Make(Arg&& arg) {
-    return std::move(
-          KinematicStatePortion(Portion::Make(arg), Portion::Make(arg)));
-  }
-  template <typename PosArg, typename VelArg>
-  static KinematicStatePortion Make(PosArg&& pos, VelArg&& vel) {
-    return std::move(
-          KinematicStatePortion(Portion::Make(pos), Portion::Make(vel)));
-  }
+//  // Get lazy.
+//  template <typename Arg>
+//  static KinematicStatePortion Make(Arg&& arg) {
+//    return std::move(
+//          KinematicStatePortion(Portion::Make(arg), Portion::Make(arg)));
+//  }
+//  template <typename PosArg, typename VelArg>
+//  static KinematicStatePortion Make(PosArg&& pos, VelArg&& vel) {
+//    return std::move(
+//          KinematicStatePortion(Portion::Make(pos), Portion::Make(vel)));
+//  }
 
-  Portion& positions() { return positions_; }
-  const Portion& positions() const { return positions_; }
+//  Portion& positions() { return positions_; }
+//  const Portion& positions() const { return positions_; }
 
-  Portion& velocities() { return velocities_; }
-  const Portion& velocities() const { return velocities_; }
+//  Portion& velocities() { return velocities_; }
+//  const Portion& velocities() const { return velocities_; }
 
-  void ReadFromSuperset(const KinematicStatePortion& super) {
-    positions_.ReadFromSuperset(super.positions());
-    velocities_.ReadFromSuperset(super.velocities());
-  }
+//  void ReadFromSuperset(const KinematicStatePortion& super) {
+//    positions_.ReadFromSuperset(super.positions());
+//    velocities_.ReadFromSuperset(super.velocities());
+//  }
 
-  void ReadFromSubset(const KinematicStatePortion& sub) {
-    positions_.ReadFromSubset(sub.positions());
-    velocities_.ReadFromSubset(sub.velocities());
-  }
+//  void ReadFromSubset(const KinematicStatePortion& sub) {
+//    positions_.ReadFromSubset(sub.positions());
+//    velocities_.ReadFromSubset(sub.velocities());
+//  }
 
- private:
-  KinematicStatePortion(Portion&& positions, Portion&& velocities)
-      : positions_(std::move(positions)), velocities_(std::move(velocities)) {}
-  Portion positions_;
-  Portion velocities_;
-};
+// private:
+//  KinematicStatePortion(Portion&& positions, Portion&& velocities)
+//      : positions_(std::move(positions)), velocities_(std::move(velocities)) {}
+//  Portion positions_;
+//  Portion velocities_;
+//};
 
-template <typename T>
-using KinematicStateStampedPortion = KinematicStatePortion<StampedValue<T>>;
+//template <typename T>
+//using KinematicStateStampedPortion = KinematicStatePortion<StampedValue<T>>;
 
 }  // manipulation
 }  // drake

@@ -120,7 +120,7 @@ std::unique_ptr<systems::RigidBodyPlant<double>> BuildCombinedPlant(
       "wsg",
       "/manipulation/models/wsg_50_description/sdf/schunk_wsg_50_ball_contact.sdf");
 
-  ReverseIdMap name_map(*pinstance_name_map);
+  ReverseIdMap& name_map = *pinstance_name_map;
   // The main table which the arm sits on.
   int id;
   id = tree_builder->AddFixedModelInstance("table",
@@ -167,8 +167,9 @@ std::unique_ptr<systems::RigidBodyPlant<double>> BuildCombinedPlant(
 
 template <typename Key, typename Value>
 void print(std::ostream& os, const std::map<Key, Value> &map) {
+  std::cout << "Instance name map: " << std::endl;
   for (const auto& pair : map) {
-    os << pair.first << ": " << pair.second << endl;
+    os << pair.first << ": " << pair.second << std::endl;
   }
 }
 

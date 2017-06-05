@@ -224,10 +224,10 @@ const ArticulatedStateEstimator::Outport& ArticulatedStateEstimator::outport_tre
 
 const RigidBodyTreed& ArticulatedStateEstimator::get_tree() const
 {
-  return impl_->loader_->estimator_->getRobot();
+  return *impl_->loader_->estimator_->getRobot();
 }
 
-const ReverseIdMap&ArticulatedStateEstimator::get_plant_id_map() const
+const ReverseIdMap& ArticulatedStateEstimator::get_plant_id_map() const
 {
   return impl_->loader_->estimator_->getPlantIdMap();
 }

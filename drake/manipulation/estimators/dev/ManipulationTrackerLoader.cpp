@@ -15,10 +15,10 @@ ManipulationTrackerLoader::ManipulationTrackerLoader(const YAML::Node& config,
 {
   VectorXd x0_robot;
   PlantIdMap plant_id_map;
-  std::shared_ptr<const RigidBodyTreed> robot = setupRobotFromConfig(config, x0_robot, string(drc_path), true, false, plant_id_map);
+  std::shared_ptr<const RigidBodyTreed> robot = setupRobotFromConfig(config, x0_robot, string(drc_path), plant_id_map, true, false);
 
   // initialize tracker itself
-  estimator_.reset(new ManipulationTracker(robot, x0_robot, lcm, config, true, plant_id_map));
+  estimator_.reset(new ManipulationTracker(robot, x0_robot, lcm, config, plant_id_map, true));
   ManipulationTracker& estimator = *estimator_;
 
   // and register all of the costs that we know how to handle
@@ -31,7 +31,7 @@ ManipulationTrackerLoader::ManipulationTrackerLoader(const YAML::Node& config,
         robot_state_costs_.push_back(cost);
       } else if (cost_type == "KinectFrameCost") {
         // demands a modifiable copy of the robot to do collision calls
-        auto robot_copy = setupRobotFromConfig(config, x0_robot, string(drc_path), true, false);
+        std::shared_ptr<RigidBodyTreed> robot_copy(std::move(robot->Clone()));
         auto cost = infer_shared(new KinectFrameCost(robot_copy, lcm, *iter, camera_info));
         estimator.addCost(cost);
         kinect_frame_costs_.push_back(cost);

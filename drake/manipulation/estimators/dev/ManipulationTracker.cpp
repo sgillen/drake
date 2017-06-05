@@ -59,6 +59,8 @@ int addModelInstanceFromFile(const string& file_path, RigidBodyTreed* robot) {
     return drake::parsers::sdf::AddModelInstancesFromSdfFile(
         file_path, floating_base_type,
         frame, robot).begin()->second;
+  } else {
+    throw std::runtime_error("Unrecognized extension: " + extension);
   }
 }
 
