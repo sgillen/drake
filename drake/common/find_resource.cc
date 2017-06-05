@@ -31,7 +31,7 @@ Result::get_absolute_path_or_throw() const {
   // Otherwise, throw the error message.
   const auto& optional_error = get_error_message();
   DRAKE_ASSERT(optional_error != nullopt);
-  throw std::runtime_error(*optional_error);
+  throw std::runtime_error(*optional_error + ": " + resource_path_);
 }
 
 optional<string>

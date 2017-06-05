@@ -1,32 +1,11 @@
 # From:
 # manipulation_tracking:d54a3c5:config/estimator_config_irb140_gelsight.yaml (master)
 
-urdf_config: fast
-# Mimick WorldSimTreeBuilder for now
-models:
-# TODO: Use model instance with WSG attached
-  camera:
-  urdf:
-    all: "drake/examples/kuka_iiwa_arm/models/objects/xtion.urdf"
-  iiwa:
-  urdf:
-    fast: "drake/manipulation/models/iiwa_description/urdf/iiwa14_polytope_collision.urdf"
-    slow: "drake/manipulation/models/iiwa_description/urdf/iiwa14_mesh_collision.urdf"
-  table:
-  urdf:
-    fast: "drake/examples/kuka_iiwa_arm/models/table/extra_heavy_duty_table_surface_only_collision.sdf"
-    slow: "drake/examples/kuka_iiwa_arm/models/table/extra_heavy_duty_table.sdf"
-  target:
-  urdf:
-    all: "drake/examples/kuka_iiwa_arm/models/objects/block_for_pick_and_place.urdf"
-  yellow_post:
-  urdf:
-    all: "drake/examples/kuka_iiwa_arm/models/objects/yellow_post.urdf"
+# Root is drake::GetDrakePath()
 
-# Pose IC stored as {xyz: [], rpy: []}, where angles are radians
 robots:
   camera:
-    urdf: "drake/examples/kuka_iiwa_arm/models/objects/xtion.urdf"
+    urdf: "/examples/kuka_iiwa_arm/models/objects/xtion.urdf"
     q0: 
       base_x: 0
       base_y: 2
@@ -35,59 +14,59 @@ robots:
       base_pitch: 0.349065850399
       base_yaw: -1.57079632679
   iiwa:
-    urdf_less_collision: "drake/manipulation/models/iiwa_description/urdf/iiwa14_polytope_collision.urdf"
-    urdf: "drake/manipulation/models/iiwa_description/urdf/iiwa14_mesh_collision.urdf"
+    urdf_less_collision: "/manipulation/models/iiwa_description/urdf/iiwa14_polytope_collision.urdf"
+    urdf: "/manipulation/models/iiwa_description/urdf/iiwa14_mesh_collision.urdf"
     q0: 
       base_x: 0
       base_y: 0
       base_z: 0.7645
   table:
-    urdf_less_collision: "drake/examples/kuka_iiwa_arm/models/table/extra_heavy_duty_table_surface_only_collision.sdf"
-    urdf: "drake/examples/kuka_iiwa_arm/models/table/extra_heavy_duty_table.sdf"
+    urdf_less_collision: "/examples/kuka_iiwa_arm/models/table/extra_heavy_duty_table_surface_only_collision.sdf"
+    urdf: "/examples/kuka_iiwa_arm/models/table/extra_heavy_duty_table.sdf"
     q0: 
       base_x: 0.243716
       base_y: 0.625087
       base_z: 0.
   table_final: # Pos. C
-    urdf_less_collision: "drake/examples/kuka_iiwa_arm/models/table/extra_heavy_duty_table_surface_only_collision.sdf"
-    urdf: "drake/examples/kuka_iiwa_arm/models/table/extra_heavy_duty_table.sdf"
+    urdf_less_collision: "/examples/kuka_iiwa_arm/models/table/extra_heavy_duty_table_surface_only_collision.sdf"
+    urdf: "/examples/kuka_iiwa_arm/models/table/extra_heavy_duty_table.sdf"
     q0:
       base_x: 1.143716
       base_y: 0.265087
       base_z: -0.07
   target:
-    urdf: "drake/examples/kuka_iiwa_arm/models/objects/block_for_pick_and_place.urdf"
+    urdf: "/examples/kuka_iiwa_arm/models/objects/block_for_pick_and_place.urdf"
     q0:
       base_x: 0.8
       base_y: 0.36
       base_z: 1.1345
 # Posts (except for Pos. C)
   post_a:
-    urdf: "post"
+    urdf: "/examples/kuka_iiwa_arm/models/objects/yellow_post.urdf"
     q0: 
       base_x: 0.00
       base_y: 1.00
       base_z: 0
   post_b:
-    urdf: "post"
+    urdf: "/examples/kuka_iiwa_arm/models/objects/yellow_post.urdf"
     q0: 
       base_x: 0.80
       base_y: 0.36
       base_z: 0
   post_d:
-    urdf: "post"
+    urdf: "/examples/kuka_iiwa_arm/models/objects/yellow_post.urdf"
     q0: 
       base_x: 0.30
       base_y: -0.9
       base_z: 0
   post_e:
-    urdf: "post"
+    urdf: "/examples/kuka_iiwa_arm/models/objects/yellow_post.urdf"
     q0: 
       base_x: -0.1
       base_y: -1.0
       base_z: 0
   post_f:
-    urdf: "post"
+    urdf: "/examples/kuka_iiwa_arm/models/objects/yellow_post.urdf"
     q0: 
       base_x: -0.47
       base_y: -0.8

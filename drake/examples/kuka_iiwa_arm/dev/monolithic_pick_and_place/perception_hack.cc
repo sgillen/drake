@@ -252,7 +252,7 @@ struct PerceptionHack::Impl {
     pbuilder->template AddSystem<WallClockPublisher>(0.001);
 
     if (use_rgbd_camera) {
-      bool use_estimator = false;
+      bool use_estimator = true;
 
       // Adapted from: .../image_to_lcm_message_demo.cc
 
@@ -333,11 +333,21 @@ struct PerceptionHack::Impl {
             depth_lcm_pub->get_input_port(0));
 
       if (use_estimator) {
-        string base_path = "drake/manipulation/estimators/dev/config/";
+        drake::log()->set_level(spdlog::level::trace);
+        string base_path = "drake/examples/kuka_iiwa_arm/dev/monolithic_pick_and_place/";
         string config_file =
-            drake::FindResource(base_path + "iiwa_test.yaml").get_absolute_path_or_throw();
-        pbuilder->template AddSystem<ArticulatedStateEstimator>(config_file,
+            drake::FindResource(base_path + "dart_config/iiwa_test.yaml").get_absolute_path_or_throw();
+        auto estimator = pbuilder->template AddSystem<ArticulatedStateEstimator>(config_file,
                                                                 &rgbd_camera_->depth_camera_info());
+
+        pbuilder->Connect(depth_to_pc->get_output_port(0),
+                          estimator->inport_point_cloud());
+        pbuilder->Connect(rgbd_camera_->depth_image_output_port(),
+                          estimator->inport_depth_image());
+        pbuilder->Connect(pplant->get_output_port_plant_state(),
+                          estimator->inport_tree_q_measurement());
+//        pbuilder->Connect(estimator->outport_tree_state_estimate(),
+//                          ???);
       }
     }
 

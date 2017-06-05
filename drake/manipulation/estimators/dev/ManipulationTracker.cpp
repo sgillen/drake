@@ -2,10 +2,15 @@
 #include <assert.h> 
 #include <fstream>
 #include "ManipulationTracker.hpp"
+
 #include <cmath>
 #include <cfloat>
+
+#include "spruce.hh"
+
 #include "drake/util/drakeGeometryUtil.h"
 #include <drake/multibody/parsers/urdf_parser.h>
+#include <drake/multibody/parsers/sdf_parser.h>
 
 #include "common/common.hpp"
 
@@ -13,21 +18,59 @@ using namespace std;
 using namespace Eigen;
 using namespace drake::math;
 
+/*
+ * Return the appropriate YAML node for a path.
+ * If "urdf_less_collision" exists and "less_collision" is true, use this path.
+ * Otherwise, use default.
+ */
+std::string getUrdfPathFromConfig(const YAML::Node& parent, bool less_collision) {
+  if (less_collision && parent["urdf_less_collision"]) {
+    return parent["urdf_less_collision"].as<string>();
+  } else {
+    return parent["urdf"].as<string>();
+  }
+}
+
+// Taken from: WorldSimTreeBuilder<T>::AddModelInstanceToFrame(...)
+void addModelInstanceFromFile(const string& file_path, RigidBodyTreed* robot) {
+  // TODO(eric.cousineau): Expose this sort of functionality in drake::parsers.
+  spruce::path p(file_path);
+
+  // Converts the file extension to be lower case.
+  auto extension = p.extension();
+  std::transform(extension.begin(), extension.end(), extension.begin(),
+                 ::tolower);
+
+  const auto floating_base_type = drake::multibody::joints::kRollPitchYaw;
+  // TODO(eric.cousineau): Register this frame??
+  shared_ptr<RigidBodyFrame<double>> frame{nullptr};
+
+  drake::log()->info("Loading model: {}", file_path);
+
+  DRAKE_DEMAND(extension == ".urdf" || extension == ".sdf");
+  if (extension == ".urdf") {
+    drake::parsers::urdf::AddModelInstanceFromUrdfFile(
+        file_path, floating_base_type,
+        frame, robot);
+
+  } else if (extension == ".sdf") {
+    drake::parsers::sdf::AddModelInstancesFromSdfFile(
+        file_path, floating_base_type,
+        frame, robot);
+  }
+}
+
 std::shared_ptr<RigidBodyTreed> setupRobotFromConfig(YAML::Node config, Eigen::VectorXd& x0_robot, std::string base_path, bool verbose, bool less_collision){
   // generate robot from yaml file by adding each robot in sequence
   // first robot -- need to initialize the RBT
   int old_num_positions = 0;
   
-  string robots_string;
-  if (less_collision)
-    robots_string = "robots_less_collision";
-  else
-    robots_string = "robots";
+  string robots_string = "robots";
 
   auto manip = config[robots_string].begin();
-  auto file_path = base_path + manip->second["urdf"].as<string>();
+  auto file_path = base_path + getUrdfPathFromConfig(manip->second, less_collision);
   std::shared_ptr<RigidBodyTreed> robot(new RigidBodyTreed());
-  drake::parsers::urdf::AddModelInstanceFromUrdfFile(file_path, robot.get());
+  addModelInstanceFromFile(file_path, robot.get());
   x0_robot.resize(robot->get_num_positions());
   if (manip->second["q0"] && manip->second["q0"].Type() == YAML::NodeType::Map){
     for (int i=old_num_positions; i < robot->get_num_positions(); i++){
@@ -42,7 +85,7 @@ std::shared_ptr<RigidBodyTreed> setupRobotFromConfig(YAML::Node config, Eigen::V
   manip++;
   // each new robot can be added via addRobotFromURDF
   while (manip != config[robots_string].end()){
-    drake::parsers::urdf::AddModelInstanceFromUrdfFile(base_path + manip->second["urdf"].as<string>(), drake::multibody::joints::kRollPitchYaw, robot.get());
+    addModelInstanceFromFile(base_path + getUrdfPathFromConfig(manip->second, less_collision), robot.get());
     x0_robot.conservativeResize(robot->get_num_positions());
     if (manip->second["q0"] && manip->second["q0"].Type() == YAML::NodeType::Map){
       for (int i=old_num_positions; i < robot->get_num_positions(); i++){
@@ -91,11 +134,7 @@ std::shared_ptr<RigidBodyTreed> setupRobotFromConfigSubset(YAML::Node config, Ei
   int old_num_positions = 0;
   int old_num_positions_subset = 0;
   
-  string robots_string;
-  if (less_collision)
-    robots_string = "robots_less_collision";
-  else
-    robots_string = "robots";
+  string robots_string = "robots";
 
   auto manip = config[robots_string].begin();
   
@@ -109,9 +148,9 @@ std::shared_ptr<RigidBodyTreed> setupRobotFromConfigSubset(YAML::Node config, Ei
 
   // each new robot can b
   while (manip != config[robots_string].end()) {
-    drake::parsers::urdf::AddModelInstanceFromUrdfFile(base_path + manip->second["urdf"].as<string>(), drake::multibody::joints::kRollPitchYaw, robot.get());
+    addModelInstanceFromFile(base_path + getUrdfPathFromConfig(manip->second, less_collision), robot.get());
     if (vector_contains_str(exceptions, manip->first.as<std::string>()) != exclusionary) { // check (CONTAINED) XOR (EXCLUSIONARY)
-      drake::parsers::urdf::AddModelInstanceFromUrdfFile(base_path + manip->second["urdf"].as<string>(), drake::multibody::joints::kRollPitchYaw, robot_subset.get());
+      addModelInstanceFromFile(base_path + getUrdfPathFromConfig(manip->second, less_collision), robot_subset.get());
 
       x0_robot_subset.conservativeResize(robot_subset->get_num_positions());
 

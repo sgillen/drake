@@ -76,6 +76,7 @@ int WorldSimTreeBuilder<T>::AddModelInstanceToFrame(
   DRAKE_DEMAND(!built_);
   unused(xyz, rpy);  // TODO(jwnimmer-tri) This seems bad.
 
+  // TODO(eric.cousineau): Expose this sort of functionality in drake::parsers.
   spruce::path p(model_map_[model_name]);
 
   // Converts the file extension to be lower case.
