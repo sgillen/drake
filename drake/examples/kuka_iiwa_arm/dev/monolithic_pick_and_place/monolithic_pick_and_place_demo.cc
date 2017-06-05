@@ -30,7 +30,7 @@ DEFINE_uint64(target, 0, "ID of the target to pick.");
 DEFINE_double(orientation, 2 * M_PI, "Yaw angle of the box.");
 DEFINE_uint32(start_position, 1, "Position index to start from");
 DEFINE_uint32(end_position, 2, "Position index to end at");
-DEFINE_bool(use_perception, true, "Use perception hack");
+DEFINE_bool(use_perception, true, "Use perception for tracking.");
 DEFINE_bool(use_slow_meshes, false, "Use slow meshes for collision");
 
 using robotlocomotion::robot_plan_t;

@@ -246,16 +246,13 @@ struct PerceptionHack::Impl {
         pplant->get_plant().get_rigid_body_tree());
 
     // Camera.
-    const double x = 2;
-    const double y = x - 0.5;
-    const double z = 2;
-    const Vector3d position(x, y, z);
-    const Vector3d orientation(0, 20, -135); // degrees
+    const Vector3d position(0, 2, 2);
+    const Vector3d orientation(0, 20, -90); // degrees
 
     pbuilder->template AddSystem<WallClockPublisher>(0.001);
 
     if (use_rgbd_camera) {
-      bool use_estimator = true;
+      bool use_estimator = false;
 
       // Adapted from: .../image_to_lcm_message_demo.cc
 
