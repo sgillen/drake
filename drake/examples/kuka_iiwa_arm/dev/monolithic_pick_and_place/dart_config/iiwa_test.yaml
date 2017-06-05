@@ -1,37 +1,60 @@
 # From:
 # manipulation_tracking:d54a3c5:config/estimator_config_irb140_gelsight.yaml (master)
 
+urdf_config: fast
+# Mimick WorldSimTreeBuilder for now
+models:
+# TODO: Use model instance with WSG attached
+- name: "camera"
+  urdf:
+    all: "drake/examples/kuka_iiwa_arm/models/objects/xtion.urdf"
+- name: "iiwa"
+  urdf:
+    fast: "drake/manipulation/models/iiwa_description/urdf/iiwa14_polytope_collision.urdf"
+    slow: "drake/manipulation/models/iiwa_description/urdf/iiwa14_mesh_collision.urdf"
+- name: "table"
+  urdf:
+    fast: "drake/examples/kuka_iiwa_arm/models/table/extra_heavy_duty_table_surface_only_collision.sdf"
+    slow: "drake/examples/kuka_iiwa_arm/models/table/extra_heavy_duty_table.sdf"
+- name: "target"
+  urdf:
+    all: "drake/examples/kuka_iiwa_arm/models/objects/block_for_pick_and_place.urdf"
+- name: "yellow_post"
+  urdf:
+    all: "drake/examples/kuka_iiwa_arm/models/objects/yellow_post.urdf"
+
+# Pose IC stored as {xyz: [], rpy: []}, where angles are radians
 robots:
-  iiwa:
-    urdf:
-      fast: "drake/manipulation/models/iiwa_description/urdf/iiwa14_polytope_collision.urdf"
-      slow: "drake/manipulation/models/iiwa_description/urdf/iiwa14_mesh_collision.urdf"
-  table:
-    urdf:
-      fast: "drake/examples/kuka_iiwa_arm/models/table/extra_heavy_duty_table_surface_only_collision.sdf"
-      slow: ""
-  hole_box:
-    urdf: "/software/perception/manipulation_tracking/urdf/hole_box.urdf"
-    q0:
-      base_x: 0.60
-      base_y: 0.10
-      base_z: 5.73
-      base_roll: 0.0
-  desk:
-    urdf: "/software/perception/manipulation_tracking/urdf/desk.urdf"
-    q0:
-      base_x: 0.61
-      base_y: 0.2
-      base_z: 0.64
-  camera:
-    urdf: "/software/perception/manipulation_tracking/urdf/camera.urdf"
-    q0:
-      base_x: 0.95
-      base_y: -0.54
-      base_z: 1.24
-      base_roll: -2.12
-      base_pitch: -0.018
-      base_yaw: 0.469
+- name: "camera"
+  model: "camera"
+  pose0: {xyz: [0, 2, 2], rpy: [0.0, 0.349065850399, -1.57079632679]}
+- name: "iiwa"
+  model: "iiwa"
+  pose0: {xyz: [0, 0, 0.7645]}
+- name: "table"
+  model: "table"
+  pose0: {xyz: [0.243716, 0.625087, 0.]}
+- name: "table_target" # Pos. C
+  model: "table"
+  pose0: {xyz: [1.143716,  0.265087, -0.07]}
+- name: "target"
+  model: "target"
+# Posts (except for Pos. C)
+- name: "post_a"
+  model: "post"
+  pose0: {xyz: [0.00, 1.00, 0]}
+- name: "post_b"
+  model: "post"
+  pose0: {xyz: [0.80, 0.36, 0]}
+- name: "post_d"
+  model: "post"
+  pose0: {xyz: [0.30, -0.9, 0]}
+- name: "post_e"
+  model: "post"
+  pose0: {xyz: [-0.1, -1.0, 0]}
+- name: "post_f"
+  model: "post"
+  pose0: {xyz: [-0.47, -0.8, 0]}
 
 force_align:
   # force alignment of these frames in the estimator every iteration
@@ -52,38 +75,19 @@ dynamics:
     - robot: "camera"
       dynamics_floating_base_var: 0.000000001
       dynamics_other_var: 0.000000001
-    #- robot: "tiny_screwdriver"
-    #  dynamics_floating_base_var: 0.0001
-    #  dynamics_other_var: 0.0001
-    - robot: "bolt"
+    - robot: "target"
       dynamics_floating_base_var: 0.000001
       dynamics_other_var: 0.000001
 
 costs:
-  #- type: "NonpenetratingObjectCost"
-  #  nonpenetration_var: 0.01 # m
-  #  min_considered_penetration_distance: 0.001
-  #  verbose: False
-  #  verbose_lcmgl: False
-  #  num_surface_pts: 200
-  #  nonpenetrating_robot: "bolt"
-  #  penetrable_robots: []
- # - type: "NonpenetratingObjectCost"
- #   nonpenetration_var: 0.01 # m
- #   min_considered_penetration_distance: 0.001
- #   verbose: False
- #   verbose_lcmgl: False
- #   num_surface_pts: 200
- #   nonpenetrating_robot: "hole_box"
- #   penetrable_robots: ["bolt"]
   - type: "NonpenetratingObjectCost"
     nonpenetration_var: 0.001 # m
     min_considered_penetration_distance: 0.001
     verbose: True
     verbose_lcmgl: True
     num_surface_pts: 200
-    nonpenetrating_robot: "bolt"
-    penetrable_robots: ["hole_box"]
+    nonpenetrating_robot: "target"
+    penetrable_robots: ["table"]
 
   - type: "KinectFrameCost"
     icp_var: 0.005 # m
