@@ -9,41 +9,41 @@ load(
 )
 
 package(
-    default_visibility = ["//drake/examples/kuka_iiwa_arm/dev:__subpackages__"],
+    default_visibility = ["//drake/examples/kuka_iiwa_arm:__subpackages__"],
 )
 
 drake_cc_library(
-    name = "kuka_pick_and_place",
+    name = "pick_and_place_state_machine",
     srcs = [
-        "pick_and_place_common.cc",
+	"pick_and_place_state_machine.cc",
     ],
     hdrs = [
-        "pick_and_place_common.h",
+	"pick_and_place_state_machine.h",
     ],
     deps = [
+        "//drake/common",
+        "//drake/common/trajectories:piecewise_polynomial",
         "//drake/common/trajectories:piecewise_quaternion",
-        "//drake/examples/kuka_iiwa_arm:iiwa_common",
         "//drake/examples/kuka_iiwa_arm/pick_and_place",
         "//drake/lcmtypes:schunk",
         "//drake/manipulation/planner:constraint_relaxing_ik",
         "//drake/multibody:rigid_body_tree",
         "//drake/multibody/parsers",
-        "//drake/util:lcm_util",
+        "@bot_core_lcmtypes",
+        "@robotlocomotion_lcmtypes",
     ],
 )
 
 drake_cc_binary(
-    name = "pick_and_place_state_machine",
+    name = "pick_and_place_demo",
     srcs = [
-        "pick_and_place_state_machine.cc",
+        "pick_and_place_demo.cc",
     ],
     deps = [
-        ":kuka_pick_and_place",
-        "//drake/common/trajectories:piecewise_polynomial",
-        "//drake/common/trajectories:piecewise_quaternion",
+        ":pick_and_place_state_machine",
+        "//drake/examples/kuka_iiwa_arm/pick_and_place",
         "//drake/examples/kuka_iiwa_arm:iiwa_common",
         "//drake/examples/kuka_iiwa_arm:iiwa_lcm",
-        "//drake/manipulation/planner:constraint_relaxing_ik",
         "//drake/util:lcm_util",
     ],
 )

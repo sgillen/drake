@@ -108,6 +108,8 @@ class DepthSensor : public systems::LeafSystem<double> {
   /// its lifespan must exceed that of this class' instance.
   ///
   /// @param[in] frame The frame to which this depth sensor is attached.
+  /// @note This frame MUST be registered in the RigidBodyTree via
+  /// addFrame(...).
   ///
   /// @param[in] specification The specifications of this sensor.
   ///

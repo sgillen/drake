@@ -1,0 +1,131 @@
+# From:
+# manipulation_tracking:d54a3c5:config/estimator_config_irb140_gelsight.yaml (master)
+
+# Root is drake::GetDrakePath()
+
+robots:
+  camera:
+    urdf: "/examples/kuka_iiwa_arm/models/objects/xtion.urdf"
+    q0: 
+      base_x: 0
+      base_y: 2
+      base_z: 2
+      base_roll: 0.0
+      base_pitch: 0.349065850399
+      base_yaw: -1.57079632679
+  iiwa:
+    urdf_less_collision: "/manipulation/models/iiwa_description/urdf/iiwa14_polytope_collision.urdf"
+    urdf: "/manipulation/models/iiwa_description/urdf/iiwa14_mesh_collision.urdf"
+    q0: 
+      base_x: 0
+      base_y: 0
+      base_z: 0.7645
+  table:
+    urdf_less_collision: "/examples/kuka_iiwa_arm/models/table/extra_heavy_duty_table_surface_only_collision.sdf"
+    urdf: "/examples/kuka_iiwa_arm/models/table/extra_heavy_duty_table.sdf"
+    q0: 
+      base_x: 0.243716
+      base_y: 0.625087
+      base_z: 0.
+  table_final: # Pos. C
+    urdf_less_collision: "/examples/kuka_iiwa_arm/models/table/extra_heavy_duty_table_surface_only_collision.sdf"
+    urdf: "/examples/kuka_iiwa_arm/models/table/extra_heavy_duty_table.sdf"
+    q0:
+      base_x: 1.143716
+      base_y: 0.265087
+      base_z: -0.07
+  target:
+    urdf: "/examples/kuka_iiwa_arm/models/objects/block_for_pick_and_place.urdf"
+    q0:
+      base_x: 0.8
+      base_y: 0.36
+      base_z: 1.1345
+# Posts (except for Pos. C)
+  post_a:
+    urdf: "/examples/kuka_iiwa_arm/models/objects/yellow_post.urdf"
+    q0: 
+      base_x: 0.00
+      base_y: 1.00
+      base_z: 0
+  post_b:
+    urdf: "/examples/kuka_iiwa_arm/models/objects/yellow_post.urdf"
+    q0: 
+      base_x: 0.80
+      base_y: 0.36
+      base_z: 0
+  post_d:
+    urdf: "/examples/kuka_iiwa_arm/models/objects/yellow_post.urdf"
+    q0: 
+      base_x: 0.30
+      base_y: -0.9
+      base_z: 0
+  post_e:
+    urdf: "/examples/kuka_iiwa_arm/models/objects/yellow_post.urdf"
+    q0: 
+      base_x: -0.1
+      base_y: -1.0
+      base_z: 0
+  post_f:
+    urdf: "/examples/kuka_iiwa_arm/models/objects/yellow_post.urdf"
+    q0: 
+      base_x: -0.47
+      base_y: -0.8
+      base_z: 0
+
+force_align:
+  # force alignment of these frames in the estimator every iteration
+  source_robot: "iiwa"
+  dest_frame: "robot_base"
+
+publish_all: true
+
+dynamics:
+  dynamics_floating_base_var: 0.0001 # m per frame
+  dynamics_other_var: 0.0001 # rad per frame
+  verbose: True
+  # and robot-specific additional gains:
+  robot_specific_vars:
+    - robot: "iiwa"
+      dynamics_floating_base_var: 0.00000001 # m per frame
+      dynamics_other_var: 0.01 # rad per frame
+    - robot: "camera"
+      dynamics_floating_base_var: 0.000000001
+      dynamics_other_var: 0.000000001
+    - robot: "target"
+      dynamics_floating_base_var: 0.000001
+      dynamics_other_var: 0.000001
+
+costs:
+  - type: "NonpenetratingObjectCost"
+    nonpenetration_var: 0.001 # m
+    min_considered_penetration_distance: 0.001
+    verbose: True
+    verbose_lcmgl: True
+    num_surface_pts: 200
+    nonpenetrating_robot: "target"
+    penetrable_robots: ["table"]
+
+  - type: "KinectFrameCost"
+    icp_var: 0.005 # m
+    free_space_var: 0.5
+    max_considered_icp_distance: 0.04
+    min_considered_joint_distance: 0.00
+    verbose: True
+    verbose_lcmgl: True
+    downsample_amount: 5.0
+    #camera_body: "camera"
+    world_frame: True
+    bounds:
+      xMin: 0.43
+      xMax: 0.67
+      yMin: 0.03
+      yMax: 0.17
+      zMin: 0.7
+      zMax: 1.0
+
+  - type: "RobotStateCost"
+    joint_known_fb_var: 0.0000001 # m
+    joint_known_encoder_var: 0.000001 # radian
+    transcribe_floating_base_vars: False
+    verbose: False
+    # state_channelname: "EST_ROBOT_STATE"

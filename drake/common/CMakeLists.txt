@@ -69,6 +69,7 @@ set(installed_headers
   number_traits.h
   polynomial.h
   scoped_singleton.h
+  scoped_timer.h # HACK
   sorted_vectors_have_intersection.h
   symbolic_environment.h
   symbolic_expression.h

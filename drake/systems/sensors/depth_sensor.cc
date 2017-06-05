@@ -133,13 +133,24 @@ void DepthSensor::DoCalcOutput(const systems::Context<double>& context,
   auto q = u.head(tree_.get_num_positions());
   KinematicsCache<double> kinematics_cache = tree_.doKinematics(q);
 
+  // If this frame has a non-trivial transformation from frame to the body,
+  // ensure that it has been registered in the rigid body tree. Otherwise,
+  // X_BS (sensor to body) will be lost.
   const int frame_index = frame_.get_frame_index();
+  const auto X_BS = frame_.get_transform_to_body();
+  if (!X_BS.isApprox(Eigen::Isometry3d::Identity())) {
+    // TODO(eric.cousineau): Change this to the appropriate unregistered frame
+    // index.
+    const int kUnregisteredFrame = 0;
+    DRAKE_ASSERT(frame_index != kUnregisteredFrame);
+  }
+  const int world_frame_index = 0;
 
   // Computes the origin of the rays in the world frame.
   Vector3d origin = tree_.transformPoints(
       kinematics_cache,
       Vector3d::Zero() /* The origin of the rays in the sensor's frame. */,
-      frame_index, 0 /* to_body_or_frame_ind */);
+      frame_index, world_frame_index);
 
   // Computes the ends of the casted rays in the world frame. This needs to be
   // done each time this method is called since the sensor may have moved in the
@@ -149,8 +160,8 @@ void DepthSensor::DoCalcOutput(const systems::Context<double>& context,
   // holds this sensor. Only re-compute the ends of the casted rays in the world
   // frame if this configuration has changed.
   Matrix3Xd raycast_endpoints_world =
-      tree_.transformPoints(kinematics_cache, raycast_endpoints_, frame_index,
-                            0 /* to_body_or_frame_ind */);
+      tree_.transformPoints(kinematics_cache, raycast_endpoints_,
+                            frame_index, world_frame_index);
 
   VectorX<double> distances(get_num_depth_readings());
 
