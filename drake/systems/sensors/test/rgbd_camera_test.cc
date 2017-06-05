@@ -204,10 +204,8 @@ class ImageTest : public ::testing::Test {
   static int CalcHorizon(double z, int image_height) {
     const double elevation_per_pixel = kFovY / image_height;
     const double kTerrainSize = 50.;
-    const double v = image_height / 2 +
+    return image_height / 2 +
         std::atan(z / kTerrainSize) / elevation_per_pixel;
-
-    return image_height - v;
   }
 
   void VerifyPoseUpdate(ImageHorizonVerifier verifier) {
@@ -262,9 +260,9 @@ class ImageTest : public ::testing::Test {
     ASSERT_EQ(label_image.at(470, 205)[0], 2);
     ASSERT_EQ(label_image.at(170, 205)[0], 3);
     // Terrain
-    ASSERT_EQ(label_image.at(0, 0)[0], RgbdCamera::Label::kFlatTerrain);
+    ASSERT_EQ(label_image.at(0, 479)[0], RgbdCamera::Label::kFlatTerrain);
     // Sky
-    ASSERT_EQ(label_image.at(0, 479)[0], RgbdCamera::Label::kNoBody);
+    ASSERT_EQ(label_image.at(0, 0)[0], RgbdCamera::Label::kNoBody);
   }
 
   static void VerifyCameraPose(const Eigen::Isometry3d& pose_actual) {
@@ -400,7 +398,7 @@ class ImageTest : public ::testing::Test {
         for (int ch = 0; ch < color_image.kNumChannels; ++ch) {
           color[ch] = color_image.at(0, v)[ch];
         }
-        actual_horizon = v - 1;
+        actual_horizon = v;
       }
     }
 
