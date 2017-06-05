@@ -1,3 +1,8 @@
+/**
+ * @file This file implements a state machine that drives the kuka iiwa arm to
+ * pick up a block from one table to place it on another repeatedly.
+ */
+
 #include "drake/examples/kuka_iiwa_arm/dev/pick_and_place/pick_and_place_state_machine.h"
 
 #include "drake/common/drake_assert.h"
