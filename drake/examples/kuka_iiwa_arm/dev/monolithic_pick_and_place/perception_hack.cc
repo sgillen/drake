@@ -252,7 +252,7 @@ struct PerceptionHack::Impl {
     pbuilder->template AddSystem<WallClockPublisher>(0.001);
 
     if (use_rgbd_camera) {
-      bool use_estimator = false;
+      bool use_estimator = true;
 
       // Adapted from: .../image_to_lcm_message_demo.cc
 

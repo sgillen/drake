@@ -10,6 +10,9 @@
 
 #include "drake/manipulation/estimators/dev/tree_state_portion.h"
 
+#include "drake/common/scoped_timer.h"
+#include "drake/common/unused.h"
+
 using namespace std;
 
 namespace drake {
@@ -107,6 +110,10 @@ void ArticulatedStateEstimator::DoCalcDiscreteVariableUpdates(
     const Context& context, DiscreteValues* updates) const {
   // TODO(eric.cousineau): Make "loader" an abstract state?
   // TODO(eric.cousineau): Dunno, ensure this is only executed once.
+  timing::ScopedWithTimer<> timer("Articulated Update");
+  unused(timer);
+
+  std::cout << "Articulated Update Start..." << std::endl;
 
   // TODO(eric.cousineau): Only get a partial update of the state.
   // Use some projection matrix, or just use indexing?

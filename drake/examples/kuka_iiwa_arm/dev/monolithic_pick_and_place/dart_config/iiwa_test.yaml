@@ -96,14 +96,14 @@ dynamics:
       dynamics_other_var: 0.000001
 
 costs:
-  - type: "NonpenetratingObjectCost"
-    nonpenetration_var: 0.001 # m
-    min_considered_penetration_distance: 0.001
-    verbose: True
-    verbose_lcmgl: True
-    num_surface_pts: 200
-    nonpenetrating_robot: "target"
-    penetrable_robots: ["table"]
+  # - type: "NonpenetratingObjectCost"
+  #   nonpenetration_var: 0.001 # m
+  #   min_considered_penetration_distance: 0.001
+  #   verbose: True
+  #   verbose_lcmgl: True
+  #   num_surface_pts: 200
+  #   nonpenetrating_robot: "target"
+  #   penetrable_robots: ["table"]
 
   - type: "KinectFrameCost"
     icp_var: 0.005 # m

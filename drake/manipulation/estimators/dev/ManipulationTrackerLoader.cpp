@@ -17,7 +17,8 @@ ManipulationTrackerLoader::ManipulationTrackerLoader(const YAML::Node& config,
   std::shared_ptr<const RigidBodyTreed> robot = setupRobotFromConfig(config, x0_robot, string(drc_path), true, false);
 
   // initialize tracker itself
-  ManipulationTracker estimator(robot, x0_robot, lcm, config, true);
+  estimator_.reset(new ManipulationTracker(robot, x0_robot, lcm, config, true));
+  ManipulationTracker& estimator = *estimator_;
 
   // and register all of the costs that we know how to handle
   if (config["costs"]){
