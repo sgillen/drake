@@ -18,7 +18,7 @@ if(lcm_FOUND)
       drakeTrajectories
       drakeSchunkWsg
       drakeSensors
-      drakeManipulationTracker
+      # drakeManipulationTracker
       robotlocomotion-lcmtypes-cpp)
 
   add_executable(monolithic_pick_and_place_demo

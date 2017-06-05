@@ -27,7 +27,7 @@
 
 #include "drake/common/scoped_timer.h"
 
-#include "drake/manipulation/estimators/dev/articulated_state_estimator.h"
+// #include "drake/manipulation/estimators/dev/articulated_state_estimator.h"
 #include "drake/common/find_resource.h"
 
 #include "drake/examples/kuka_iiwa_arm/iiwa_world/iiwa_wsg_diagram_factory.h"
@@ -55,12 +55,25 @@ using systems::sensors::DepthSensor;
 using systems::sensors::DepthSensorSpecification;
 using systems::sensors::DepthSensorToLcmPointCloudMessage;
 
-using manipulation::ArticulatedStateEstimator;
-using manipulation::LeafSystemMixin;
+// using manipulation::ArticulatedStateEstimator;
+// using manipulation::LeafSystemMixin;
 
 namespace examples {
 namespace kuka_iiwa_arm {
 namespace monolithic_pick_and_place {
+
+template <typename T_>
+class LeafSystemMixin : public systems::LeafSystem<T_> {
+ public:
+  typedef T_ T;
+  typedef systems::Context<T> Context;
+  typedef systems::DiscreteValues<T> DiscreteValues;
+  typedef systems::SystemOutput<T> SystemOutput;
+  using Inport = systems::InputPortDescriptor<T>;
+  using Outport = systems::OutputPortDescriptor<T>;
+  template <typename U>
+  using Value = systems::Value<U>;
+};
 
 class WallClockPublisher : public LeafSystemMixin<double> {
  public:
@@ -252,7 +265,7 @@ struct PerceptionHack::Impl {
     pbuilder->template AddSystem<WallClockPublisher>(0.001);
 
     if (use_rgbd_camera) {
-      bool use_estimator = false;
+      // bool use_estimator = false;
 
       // Adapted from: .../image_to_lcm_message_demo.cc
 
@@ -332,23 +345,23 @@ struct PerceptionHack::Impl {
             pc_to_lcm->get_outport(),
             depth_lcm_pub->get_input_port(0));
 
-      if (use_estimator) {
-        drake::log()->set_level(spdlog::level::trace);
-        string base_path = "drake/examples/kuka_iiwa_arm/dev/monolithic_pick_and_place/";
-        string config_file =
-            drake::FindResource(base_path + "dart_config/iiwa_test.yaml").get_absolute_path_or_throw();
-        auto estimator = pbuilder->template AddSystem<ArticulatedStateEstimator>(config_file,
-                                                                &rgbd_camera_->depth_camera_info());
+//       if (use_estimator) {
+//         drake::log()->set_level(spdlog::level::trace);
+//         string base_path = "drake/examples/kuka_iiwa_arm/dev/monolithic_pick_and_place/";
+//         string config_file =
+//             drake::FindResource(base_path + "dart_config/iiwa_test.yaml").get_absolute_path_or_throw();
+//         auto estimator = pbuilder->template AddSystem<ArticulatedStateEstimator>(config_file,
+//                                                                 &rgbd_camera_->depth_camera_info());
 
-        pbuilder->Connect(depth_to_pc->get_output_port(0),
-                          estimator->inport_point_cloud());
-        pbuilder->Connect(rgbd_camera_->depth_image_output_port(),
-                          estimator->inport_depth_image());
-        pbuilder->Connect(pplant->get_output_port_plant_state(),
-                          estimator->inport_tree_q_measurement());
-//        pbuilder->Connect(estimator->outport_tree_state_estimate(),
-//                          ???);
-      }
+//         pbuilder->Connect(depth_to_pc->get_output_port(0),
+//                           estimator->inport_point_cloud());
+//         pbuilder->Connect(rgbd_camera_->depth_image_output_port(),
+//                           estimator->inport_depth_image());
+//         pbuilder->Connect(pplant->get_output_port_plant_state(),
+//                           estimator->inport_tree_q_measurement());
+// //        pbuilder->Connect(estimator->outport_tree_state_estimate(),
+// //                          ???);
+//       }
     }
 
     if (use_depth_sensor) {

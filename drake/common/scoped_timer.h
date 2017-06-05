@@ -84,8 +84,8 @@ class ScopedTimerMessage : public ScopedTimer {
                      const std::string& message = "Elapsed time (s)")
     : ScopedTimer(timer,
                   [=](double t) {
-    drake::unused(message, t);
-//                    std::cout << message << ": " << t << std::endl;
+    // drake::unused(message, t);
+                   std::cout << message << ": " << t << std::endl;
                   }) {}
 };
 
