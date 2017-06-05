@@ -18,7 +18,11 @@
 // forward def
 class ManipulationTrackerCost;
 
-std::shared_ptr<RigidBodyTreed> setupRobotFromConfig(YAML::Node config, Eigen::VectorXd& x0_robot, std::string base_path, bool verbose = false, bool less_collision = false);
+typedef std::map<int, std::string> PlantIdMap;
+
+std::shared_ptr<RigidBodyTreed> setupRobotFromConfig(
+    YAML::Node config, Eigen::VectorXd& x0_robot, std::string base_path,
+    PlantIdMap& plant_id_map, bool verbose = false, bool less_collision = false);
 std::shared_ptr<RigidBodyTreed> setupRobotFromConfigSubset(YAML::Node config, Eigen::VectorXd& x0_robot_subset, std::string base_path,
     bool verbose, bool less_collision, bool exclusionary, std::vector<std::string> exceptions, std::vector<int> &index_correspondences);
 
@@ -26,7 +30,10 @@ class ManipulationTracker {
 public:
   typedef std::pair<std::shared_ptr<ManipulationTrackerCost>, std::vector<int>> CostAndView;
 
-  ManipulationTracker(std::shared_ptr<const RigidBodyTreed> robot, Eigen::VectorXd x0_robot, std::shared_ptr<lcm::LCM> lcm, YAML::Node config, bool verbose = false);
+  ManipulationTracker(std::shared_ptr<const RigidBodyTreed> robot,
+                      Eigen::VectorXd x0_robot, std::shared_ptr<lcm::LCM> lcm,
+                      YAML::Node config, const PlantIdMap& plant_id_map,
+                      bool verbose = false);
   ~ManipulationTracker() {}
 
   void initBotConfig(const char* filename);
@@ -42,6 +49,7 @@ public:
 
   void update();
   std::shared_ptr<const RigidBodyTreed> getRobot() { return robot_; }
+  const PlantIdMap& getPlantIdMap() const { return plant_id_map_; }
   Eigen::VectorXd getMean() const { return x_; }
   Eigen::MatrixXd getCovariance() { return covar_; }
 
@@ -92,6 +100,8 @@ private:
 
   // whether update() has been called yet (to set IC)
   bool has_performed_first_update_{false};
+
+  PlantIdMap plant_id_map_;
 };
 
 #endif

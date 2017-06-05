@@ -14,10 +14,11 @@ ManipulationTrackerLoader::ManipulationTrackerLoader(const YAML::Node& config,
                                      const CameraInfo* camera_info)
 {
   VectorXd x0_robot;
-  std::shared_ptr<const RigidBodyTreed> robot = setupRobotFromConfig(config, x0_robot, string(drc_path), true, false);
+  PlantIdMap plant_id_map;
+  std::shared_ptr<const RigidBodyTreed> robot = setupRobotFromConfig(config, x0_robot, string(drc_path), true, false, plant_id_map);
 
   // initialize tracker itself
-  estimator_.reset(new ManipulationTracker(robot, x0_robot, lcm, config, true));
+  estimator_.reset(new ManipulationTracker(robot, x0_robot, lcm, config, true, plant_id_map));
   ManipulationTracker& estimator = *estimator_;
 
   // and register all of the costs that we know how to handle

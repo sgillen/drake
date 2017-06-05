@@ -30,6 +30,62 @@ using Eigen::VectorXd;
 typedef Eigen::Matrix3Xd PointCloud;
 typedef systems::sensors::ImageDepth32F DepthImage;
 
+void PrintJointNameHierarchy(const RigidBodyTreed* tree) {
+  using std::cout;
+  using std::endl;
+  int instance_count = tree->get_num_model_instances();
+  int position_index = 0;
+  for (int instance_id = 0; instance_id < instance_count; ++instance_id) {
+    cout << "model[" << instance_id << "]\n";
+    auto bodies = tree->FindModelInstanceBodies(instance_id);
+    for (const RigidBody<double>* body : bodies) {
+      const auto& joint = body->getJoint();
+      cout << "  joint: " << joint.get_name() << "\n";
+      cout << "  fixed: " << joint.is_fixed() << "\n";
+      cout << "  children: \n";
+      for (int i = 0; i < joint.get_num_positions(); ++i) {
+        cout << "    " << joint.get_position_name(i) << "\n";
+        cout << "      flat: " << tree->get_position_name(position_index) << "\n";
+        position_index++;
+      }
+    }
+  }
+  cout << "flat:\n";
+  for (int i = 0; i < tree->get_num_positions(); ++i) {
+    cout << "  " << tree->get_position_name(i) << " = " << i << "\n";
+  }
+  cout << endl;
+}
+
+std::vector<std::string> GetHierarchicalPositionNameList(
+    const RigidBodyTreed& tree,
+    const ReverseIdMap& instance_name_map) {
+  using std::string;
+  using std::vector;
+  using std::to_string;
+  vector<string> names(tree.get_num_positions());
+  int instance_count = tree.get_num_model_instances();
+  int position_index = 0;
+  for (int instance_id = 0; instance_id < instance_count; ++instance_id) {
+    string instance_name = "unknown_" + to_string(instance_id);
+    auto iter = instance_name_map.find(instance_id);
+    if (iter != instance_name_map.end()) {
+      instance_name = iter->second;
+    }
+    auto bodies = tree.FindModelInstanceBodies(instance_id);
+    for (const RigidBody<double>* body : bodies) {
+      const auto& joint = body->getJoint();
+      for (int i = 0; i < joint.get_num_positions(); ++i) {
+        DRAKE_ASSERT(joint.get_position_name(i) == tree.get_position_name(position_index));
+        string name = instance_name + "::" + joint.get_position_name(i);
+        names[position_index] = name;
+        position_index++;
+      }
+    }
+  }
+  return names;
+}
+
 class ArticulatedStateEstimator::Impl {
  public:
   Impl(const string& config_file, const CameraInfo* camera_info) {
@@ -39,6 +95,7 @@ class ArticulatedStateEstimator::Impl {
     auto config = YAML::LoadFile(config_file);
     loader_.reset(new ManipulationTrackerLoader(config, drc_path, lcm_,
                                                 camera_info));
+    PrintJointNameHierarchy(loader_->estimator_->getRobot().get());
   }
 
   void ImplDiscreteUpdate(const VectorXd& q0,
@@ -164,6 +221,18 @@ const ArticulatedStateEstimator::Outport& ArticulatedStateEstimator::outport_tre
 {
   return get_output_port(outport_tree_state_estimate_index_);
 }
+
+const RigidBodyTreed& ArticulatedStateEstimator::get_tree() const
+{
+  return impl_->loader_->estimator_->getRobot();
+}
+
+const ReverseIdMap&ArticulatedStateEstimator::get_plant_id_map() const
+{
+  return impl_->loader_->estimator_->getPlantIdMap();
+}
+
+
 
 }  // namespace manipulation
 }  // namespace drake

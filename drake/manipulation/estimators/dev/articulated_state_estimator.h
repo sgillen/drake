@@ -19,6 +19,16 @@
 namespace drake {
 namespace manipulation {
 
+// TODO(eric.cousineau): Merge functionality into WorldSimTreeBuilder.
+// TODO(eric.cousineau): Find better location for this.
+typedef std::map<int, std::string> ReverseIdMap;
+
+void PrintJointNameHierarchy(const RigidBodyTreed* tree);
+
+std::vector<std::string> GetHierarchicalPositionNameList(
+    const RigidBodyTreed& tree,
+    const ReverseIdMap& instance_name_map);
+
 /**
  * Simple mixin to get simplified aliases.
  */
@@ -50,6 +60,9 @@ class ArticulatedStateEstimator : public LeafSystemMixin<double> {
   const Inport& inport_depth_image() const;
   const Inport& inport_tree_q_measurement() const;
   const Outport& outport_tree_state_estimate() const;
+
+  const RigidBodyTreed& get_tree() const;
+  const ReverseIdMap& get_plant_id_map() const;
 
 private:
   class Impl;

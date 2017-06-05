@@ -57,6 +57,7 @@ using systems::sensors::DepthSensorToLcmPointCloudMessage;
 
 using manipulation::ArticulatedStateEstimator;
 using manipulation::LeafSystemMixin;
+using manipulation::GetHierarchicalPositionNameList;
 
 namespace examples {
 namespace kuka_iiwa_arm {
@@ -234,7 +235,8 @@ struct PerceptionHack::Impl {
   void CreateAndConnectCamera(
       DiagramBuilder* pbuilder,
       DrakeLcm* plcm,
-      TreePlant* pplant) {
+      TreePlant* pplant,
+      const ReverseIdMap& plant_id_map) {
 
     bool use_rgbd_camera = true;
     bool use_depth_sensor = false;
@@ -340,6 +342,13 @@ struct PerceptionHack::Impl {
         auto estimator = pbuilder->template AddSystem<ArticulatedStateEstimator>(config_file,
                                                                 &rgbd_camera_->depth_camera_info());
 
+        auto plant_position_names = GetHierarchicalPositionNameList(
+                                      pplant->get_plant().get_rigid_body_tree(),
+                                      plant_id_map);
+
+        // TODO: Create selection subsystem to select states, rather than have
+        // the estimator do this.
+
         pbuilder->Connect(depth_to_pc->get_output_port(0),
                           estimator->inport_point_cloud());
         pbuilder->Connect(rgbd_camera_->depth_image_output_port(),
@@ -412,9 +421,9 @@ struct PerceptionHack::Impl {
 
 
 void PerceptionHack::Inject(DiagramBuilder* pbuilder, DrakeLcm* plcm,
-                            TreePlant* pplant) {
+                            TreePlant* pplant, const ReverseIdMap& plant_id_map) {
   impl_.reset(new Impl());
-  impl_->CreateAndConnectCamera(pbuilder, plcm, pplant);
+  impl_->CreateAndConnectCamera(pbuilder, plcm, pplant, plant_id_map);
 }
 
 PerceptionHack::~PerceptionHack() {}

@@ -34,7 +34,7 @@ std::string getUrdfPathFromConfig(const YAML::Node& parent, bool less_collision)
 }
 
 // Taken from: WorldSimTreeBuilder<T>::AddModelInstanceToFrame(...)
-void addModelInstanceFromFile(const string& file_path, RigidBodyTreed* robot) {
+int addModelInstanceFromFile(const string& file_path, RigidBodyTreed* robot) {
   // TODO(eric.cousineau): Expose this sort of functionality in drake::parsers.
   spruce::path p(file_path);
 
@@ -51,18 +51,20 @@ void addModelInstanceFromFile(const string& file_path, RigidBodyTreed* robot) {
 
   DRAKE_DEMAND(extension == ".urdf" || extension == ".sdf");
   if (extension == ".urdf") {
-    drake::parsers::urdf::AddModelInstanceFromUrdfFile(
+    return drake::parsers::urdf::AddModelInstanceFromUrdfFile(
         file_path, floating_base_type,
-        frame, robot);
+        frame, robot).begin()->second;
 
   } else if (extension == ".sdf") {
-    drake::parsers::sdf::AddModelInstancesFromSdfFile(
+    return drake::parsers::sdf::AddModelInstancesFromSdfFile(
         file_path, floating_base_type,
-        frame, robot);
+        frame, robot).begin()->second;
   }
 }
 
-std::shared_ptr<RigidBodyTreed> setupRobotFromConfig(YAML::Node config, Eigen::VectorXd& x0_robot, std::string base_path, bool verbose, bool less_collision){
+std::shared_ptr<RigidBodyTreed> setupRobotFromConfig(
+    YAML::Node config, Eigen::VectorXd& x0_robot, std::string base_path,
+    PlantIdMap& plant_id_map, bool verbose, bool less_collision){
   // generate robot from yaml file by adding each robot in sequence
   // first robot -- need to initialize the RBT
   int old_num_positions = 0;
@@ -72,7 +74,9 @@ std::shared_ptr<RigidBodyTreed> setupRobotFromConfig(YAML::Node config, Eigen::V
   auto manip = config[robots_string].begin();
   auto file_path = base_path + getUrdfPathFromConfig(manip->second, less_collision);
   std::shared_ptr<RigidBodyTreed> robot(new RigidBodyTreed());
-  addModelInstanceFromFile(file_path, robot.get());
+  int id = addModelInstanceFromFile(file_path, robot.get());
+  plant_id_map[id] = manip->first.as<string>();
+
   x0_robot.resize(robot->get_num_positions());
   if (manip->second["q0"] && manip->second["q0"].Type() == YAML::NodeType::Map){
     for (int i=old_num_positions; i < robot->get_num_positions(); i++){
@@ -87,7 +91,9 @@ std::shared_ptr<RigidBodyTreed> setupRobotFromConfig(YAML::Node config, Eigen::V
   manip++;
   // each new robot can be added via addRobotFromURDF
   while (manip != config[robots_string].end()){
-    addModelInstanceFromFile(base_path + getUrdfPathFromConfig(manip->second, less_collision), robot.get());
+    int id = addModelInstanceFromFile(base_path + getUrdfPathFromConfig(manip->second, less_collision), robot.get());
+    plant_id_map[id] = manip->first.as<string>();
+
     x0_robot.conservativeResize(robot->get_num_positions());
     if (manip->second["q0"] && manip->second["q0"].Type() == YAML::NodeType::Map){
       for (int i=old_num_positions; i < robot->get_num_positions(); i++){
@@ -198,11 +204,15 @@ std::shared_ptr<RigidBodyTreed> setupRobotFromConfigSubset(YAML::Node config, Ei
   return robot_subset;
 }
 
-ManipulationTracker::ManipulationTracker(std::shared_ptr<const RigidBodyTreed> robot, Eigen::VectorXd x0_robot, std::shared_ptr<lcm::LCM> lcm, YAML::Node config, bool verbose) :
+ManipulationTracker::ManipulationTracker(
+    std::shared_ptr<const RigidBodyTreed> robot, Eigen::VectorXd x0_robot,
+    std::shared_ptr<lcm::LCM> lcm, YAML::Node config, const PlantIdMap& plant_id_map,
+    bool verbose) :
     robot_(robot),
     robot_kinematics_cache_(robot_->CreateKinematicsCache()),
     lcm_(lcm),
-    verbose_(verbose)
+    verbose_(verbose),
+    plant_id_map_(plant_id_map)
 {
   if (robot_->get_num_positions() + robot_->get_num_velocities() != x0_robot.rows()){
     printf("Expected initial condition with %d rows, got %ld rows.\n", robot_->get_num_positions() + robot_->get_num_velocities(), x0_robot.rows());

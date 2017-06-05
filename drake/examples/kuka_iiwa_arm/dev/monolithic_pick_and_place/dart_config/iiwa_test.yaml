@@ -41,31 +41,31 @@ robots:
       base_y: 0.36
       base_z: 1.1345
 # Posts (except for Pos. C)
-  post_a:
+  yellow_post_1:
     urdf: "/examples/kuka_iiwa_arm/models/objects/yellow_post.urdf"
     q0: 
       base_x: 0.00
       base_y: 1.00
       base_z: 0
-  post_b:
+  yellow_post_2:
     urdf: "/examples/kuka_iiwa_arm/models/objects/yellow_post.urdf"
     q0: 
       base_x: 0.80
       base_y: 0.36
       base_z: 0
-  post_d:
+  yellow_post_3:
     urdf: "/examples/kuka_iiwa_arm/models/objects/yellow_post.urdf"
     q0: 
       base_x: 0.30
       base_y: -0.9
       base_z: 0
-  post_e:
+  yellow_post_4:
     urdf: "/examples/kuka_iiwa_arm/models/objects/yellow_post.urdf"
     q0: 
       base_x: -0.1
       base_y: -1.0
       base_z: 0
-  post_f:
+  yellow_post_5:
     urdf: "/examples/kuka_iiwa_arm/models/objects/yellow_post.urdf"
     q0: 
       base_x: -0.47

@@ -17,7 +17,8 @@ class PerceptionHack {
   using TreePlant = IiwaAndWsgPlantWithStateEstimator<double>;
   using DrakeLcm = drake::lcm::DrakeLcm;
   PerceptionHack() {}
-  void Inject(DiagramBuilder* pbuilder, DrakeLcm* plcm, TreePlant* pplant);
+  void Inject(DiagramBuilder* pbuilder, DrakeLcm* plcm, TreePlant* pplant,
+              const ReverseIdMap& plant_id_map);
   ~PerceptionHack();
  private:
   class Impl;

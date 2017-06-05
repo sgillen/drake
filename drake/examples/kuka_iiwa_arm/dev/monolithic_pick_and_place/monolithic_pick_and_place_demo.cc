@@ -25,6 +25,7 @@
 #include "drake/systems/primitives/constant_vector_source.h"
 
 #include "drake/examples/kuka_iiwa_arm/dev/monolithic_pick_and_place/perception_hack.h"
+#include "drake/manipulation/estimators/dev/articulated_state_estimator.h"
 
 DEFINE_uint64(target, 0, "ID of the target to pick.");
 DEFINE_double(orientation, 2 * M_PI, "Yaw angle of the box.");
@@ -40,6 +41,7 @@ using manipulation::schunk_wsg::SchunkWsgTrajectoryGenerator;
 using manipulation::schunk_wsg::SchunkWsgStatusSender;
 using systems::RigidBodyPlant;
 using systems::Simulator;
+using manipulation::ReverseIdMap;
 
 namespace examples {
 namespace kuka_iiwa_arm {
@@ -96,7 +98,9 @@ std::unique_ptr<systems::RigidBodyPlant<double>> BuildCombinedPlant(
     ModelInstanceInfo<double>* iiwa_instance,
     ModelInstanceInfo<double>* wsg_instance,
     ModelInstanceInfo<double>* box_instance,
+    ReverseIdMap* pinstance_name_map,
     bool use_slow_meshes = false) {
+  using std::string;
   auto tree_builder = std::make_unique<WorldSimTreeBuilder<double>>();
 
   // Adds models to the simulation builder. Instances of these models can be
@@ -116,38 +120,57 @@ std::unique_ptr<systems::RigidBodyPlant<double>> BuildCombinedPlant(
       "wsg",
       "/manipulation/models/wsg_50_description/sdf/schunk_wsg_50_ball_contact.sdf");
 
+  ReverseIdMap name_map(*pinstance_name_map);
   // The main table which the arm sits on.
-  tree_builder->AddFixedModelInstance("table",
+  int id;
+  id = tree_builder->AddFixedModelInstance("table",
                                       kTableBase,
                                       Eigen::Vector3d::Zero());
-  tree_builder->AddFixedModelInstance("table",
+  name_map[id] = "table";
+  id = tree_builder->AddFixedModelInstance("table",
                                       kTableBase + table_position,
                                       Eigen::Vector3d::Zero());
+  name_map[id] = "table_final";
+
+  int post_count = 0;
   for (const Eigen::Vector3d& post_location : post_positions) {
-    tree_builder->AddFixedModelInstance("yellow_post",
+    int id = tree_builder->AddFixedModelInstance("yellow_post",
                                         post_location,
                                         Eigen::Vector3d::Zero());
+    string post_name = "yellow_post_" + std::to_string(post_count + 1);
+    post_count++;
+    name_map[id] = post_name;
   }
+
   tree_builder->AddGround();
   // Chooses an appropriate box.
   int box_id = 0;
   int iiwa_id = tree_builder->AddFixedModelInstance("iiwa", kRobotBase);
   *iiwa_instance = tree_builder->get_model_info_for_instance(iiwa_id);
+  name_map[iiwa_id] = "iiwa";
 
   box_id = tree_builder->AddFloatingModelInstance("target", box_position,
                                                   box_orientation);
   *box_instance = tree_builder->get_model_info_for_instance(box_id);
+  name_map[box_id] = "target";
 
   int wsg_id = tree_builder->AddModelInstanceToFrame(
       "wsg", Eigen::Vector3d::Zero(), Eigen::Vector3d::Zero(),
       tree_builder->tree().findFrame("iiwa_frame_ee"),
       drake::multibody::joints::kFixed);
   *wsg_instance = tree_builder->get_model_info_for_instance(wsg_id);
+  name_map[wsg_id] = "wsg";
 
   return std::make_unique<systems::RigidBodyPlant<double>>(
       tree_builder->Build());
 }
 
+template <typename Key, typename Value>
+void print(std::ostream& os, const std::map<Key, Value> &map) {
+  for (const auto& pair : map) {
+    os << pair.first << ": " << pair.second << endl;
+  }
+}
 
 int DoMain(void) {
 
@@ -217,11 +240,14 @@ int DoMain(void) {
   systems::DiagramBuilder<double> builder;
   ModelInstanceInfo<double> iiwa_instance, wsg_instance, box_instance;
 
+  ReverseIdMap plant_instance_name_map;
   std::unique_ptr<systems::RigidBodyPlant<double>> model_ptr =
       BuildCombinedPlant(post_locations, table_position, target.model_name,
                          box_origin, box_orientation,
-                         &iiwa_instance, &wsg_instance, &box_instance);
+                         &iiwa_instance, &wsg_instance, &box_instance,
+                         &plant_instance_name_map, FLAGS_use_slow_meshes);
 
+  print(std::cout, plant_instance_name_map);
 
   auto plant = builder.AddSystem<IiwaAndWsgPlantWithStateEstimator<double>>(
       std::move(model_ptr), iiwa_instance, wsg_instance, box_instance);
@@ -288,7 +314,7 @@ int DoMain(void) {
 
   PerceptionHack perception;
   if (FLAGS_use_perception) {
-    perception.Inject(&builder, &lcm, plant);
+    perception.Inject(&builder, &lcm, plant, plant_instance_name_map);
   }
 
   auto sys = builder.Build();
