@@ -11,11 +11,14 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
+
+#include "drake/common/unused.h"
 #include "drake/multibody/joints/revolute_joint.h"
 
 using namespace std;
 using namespace Eigen;
 using namespace cv;
+using drake::unused;
 
 template<typename _Tp, int _rows, int _cols, int _options, int _maxRows, int _maxCols>
 void eigen2cv( const Eigen::Matrix<_Tp, _rows, _cols, _options, _maxRows, _maxCols>& src, cv::Mat& dst)
@@ -120,41 +123,44 @@ KinectFrameCost::KinectFrameCost(std::shared_ptr<RigidBodyTreed> robot_,
   last_got_kinect_frame = getUnixTime() - timeout_time*2.;
 }
 
-void KinectFrameCost::initBotConfig(const char* filename)
+void KinectFrameCost::initBotConfig(const char* /*filename*/)
 {
-  if (filename && filename[0])
-    {
-      botparam_ = bot_param_new_from_file(filename);
-    }
-  else
-    {
-    while (!botparam_)
-      {
-        botparam_ = bot_param_new_from_server(lcm->getUnderlyingLCM(), 0);
-      }
-    }
-  botframes_ = bot_frames_get_global(lcm->getUnderlyingLCM(), botparam_);
+  drake::log()->warn("botparam disabled");
+//  if (filename && filename[0])
+//    {
+//      string filename_full = string(std::getenv("DRC_BASE")) + string(filename);
+//      botparam_ = bot_param_new_from_file(filename_full.c_str());
+//    }
+//  else
+//    {
+//    while (!botparam_)
+//      {
+//        botparam_ = bot_param_new_from_server(lcm_->getUnderlyingLCM(), 0);
+//      }
+//    }
+//  botframes_ = bot_frames_get_global(lcm_->getUnderlyingLCM(), botparam_);
 }
 
 int KinectFrameCost::get_trans_with_utime(std::string from_frame, std::string to_frame,
                                long long utime, Eigen::Isometry3d & mat)
 {
-  if (!botframes_)
-  {
-    std::cout << "botframe is not initialized" << std::endl;
+  unused(from_frame, to_frame, utime);
+//  if (!botframes_)
+//  {
+    drake::log()->warn("botframe is disabled");
     mat = mat.matrix().Identity();
     return 0;
-  }
+//  }
 
-  int status;
-  double matx[16];
-  status = bot_frames_get_trans_mat_4x4_with_utime( botframes_, from_frame.c_str(),  to_frame.c_str(), utime, matx);
-  for (int i = 0; i < 4; ++i) {
-    for (int j = 0; j < 4; ++j) {
-      mat(i,j) = matx[i*4+j];
-    }
-  }
-  return status;
+//  int status;
+//  double matx[16];
+//  status = bot_frames_get_trans_mat_4x4_with_utime( botframes_, from_frame.c_str(),  to_frame.c_str(), utime, matx);
+//  for (int i = 0; i < 4; ++i) {
+//    for (int j = 0; j < 4; ++j) {
+//      mat(i,j) = matx[i*4+j];
+//    }
+//  }
+//  return status;
 }
 
 /***********************************************
@@ -668,8 +674,7 @@ void KinectFrameCost::handleSavePointcloudMsg(const lcm::ReceiveBuffer* rbuf,
   latest_cloud_mutex.unlock();
 
   // transform into world frame
-  printf("WARNING: THIS IS NOT UPDATED CORRECTLY ANY MORE. FIX FRAMES BEFORE EXPECTING THIS TO WORK.\n");
-  exit(0);
+  throw std::runtime_error("WARNING: THIS IS NOT UPDATED CORRECTLY ANY MORE. FIX FRAMES BEFORE EXPECTING THIS TO WORK.\n");
   
   Eigen::Isometry3d kinect2tag;
   long long utime = 0;

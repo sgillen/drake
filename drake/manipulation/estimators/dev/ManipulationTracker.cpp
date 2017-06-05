@@ -8,6 +8,7 @@
 
 #include "spruce.hh"
 
+#include "drake/common/unused.h"
 #include "drake/util/drakeGeometryUtil.h"
 #include <drake/multibody/parsers/urdf_parser.h>
 #include <drake/multibody/parsers/sdf_parser.h>
@@ -17,6 +18,7 @@
 using namespace std;
 using namespace Eigen;
 using namespace drake::math;
+using drake::unused;
 
 /*
  * Return the appropriate YAML node for a path.
@@ -280,42 +282,44 @@ ManipulationTracker::ManipulationTracker(std::shared_ptr<const RigidBodyTreed> r
 }
 
 
-void ManipulationTracker::initBotConfig(const char* filename)
+void ManipulationTracker::initBotConfig(const char* /*filename*/)
 {
-  if (filename && filename[0])
-    {
-      string filename_full = string(std::getenv("DRC_BASE")) + string(filename);
-      botparam_ = bot_param_new_from_file(filename_full.c_str());
-    }
-  else
-    {
-    while (!botparam_)
-      {
-        botparam_ = bot_param_new_from_server(lcm_->getUnderlyingLCM(), 0);
-      }
-    }
-  botframes_ = bot_frames_get_global(lcm_->getUnderlyingLCM(), botparam_);
+  drake::log()->warn("botparam disabled");
+//  if (filename && filename[0])
+//    {
+//      string filename_full = string(std::getenv("DRC_BASE")) + string(filename);
+//      botparam_ = bot_param_new_from_file(filename_full.c_str());
+//    }
+//  else
+//    {
+//    while (!botparam_)
+//      {
+//        botparam_ = bot_param_new_from_server(lcm_->getUnderlyingLCM(), 0);
+//      }
+//    }
+//  botframes_ = bot_frames_get_global(lcm_->getUnderlyingLCM(), botparam_);
 }
 
 int ManipulationTracker::get_trans_with_utime(std::string from_frame, std::string to_frame,
                                long long utime, Eigen::Isometry3d & mat)
 {
-  if (!botframes_)
-  {
-    std::cout << "botframe is not initialized" << std::endl;
+  unused(from_frame, to_frame, utime);
+//  if (!botframes_)
+//  {
+    drake::log()->warn("botframe is disabled");
     mat = mat.matrix().Identity();
     return 0;
-  }
+//  }
 
-  int status;
-  double matx[16];
-  status = bot_frames_get_trans_mat_4x4_with_utime( botframes_, from_frame.c_str(),  to_frame.c_str(), utime, matx);
-  for (int i = 0; i < 4; ++i) {
-    for (int j = 0; j < 4; ++j) {
-      mat(i,j) = matx[i*4+j];
-    }
-  }
-  return status;
+//  int status;
+//  double matx[16];
+//  status = bot_frames_get_trans_mat_4x4_with_utime( botframes_, from_frame.c_str(),  to_frame.c_str(), utime, matx);
+//  for (int i = 0; i < 4; ++i) {
+//    for (int j = 0; j < 4; ++j) {
+//      mat(i,j) = matx[i*4+j];
+//    }
+//  }
+//  return status;
 }
 
 Eigen::Ref<const VectorXd> ManipulationTracker::get_q0() const

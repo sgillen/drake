@@ -66,8 +66,8 @@ private:
   bool do_force_align_ = false;
   std::string force_align_robot_;
   std::string force_align_dest_frame_;
-  BotParam* botparam_ = NULL;
-  BotFrames* botframes_ = NULL;
+//  BotParam* botparam_ = NULL;
+//  BotFrames* botframes_ = NULL;
 
   Eigen::VectorXd x_;
   Eigen::MatrixXd covar_;

@@ -30,8 +30,8 @@ public:
   bool constructCost(ManipulationTracker * tracker, const Eigen::VectorXd x_old, Eigen::MatrixXd& Q, Eigen::VectorXd& f, double& K);
 
   void initBotConfig(const char* filename);
-  int get_trans_with_utime(std::string from_frame, std::string to_frame,
-                               long long utime, Eigen::Isometry3d & mat);
+//  int get_trans_with_utime(std::string from_frame, std::string to_frame,
+//                               long long utime, Eigen::Isometry3d & mat);
   //void handleSavePointcloudMsg(const lcm::ReceiveBuffer* rbuf,
   //                         const std::string& chan,
   //                         const bot_core::raw_t* msg);
@@ -72,8 +72,8 @@ private:
   //bot_lcmgl_t* lcmgl_lidar_ = NULL;
   //bot_lcmgl_t* lcmgl_icp_ = NULL;
   //bot_lcmgl_t* lcmgl_measurement_model_ = NULL;
-  BotParam* botparam_ = NULL;
-  BotFrames* botframes_ = NULL;
+//  BotParam* botparam_ = NULL;
+//  BotFrames* botframes_ = NULL;
 
   //std::mutex latest_cloud_mutex;
   //std::mutex camera_offset_mutex;

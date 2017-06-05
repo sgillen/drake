@@ -103,8 +103,8 @@ private:
   bot_lcmgl_t* lcmgl_lidar_ = NULL;
   bot_lcmgl_t* lcmgl_icp_ = NULL;
   bot_lcmgl_t* lcmgl_measurement_model_ = NULL;
-  BotParam* botparam_ = NULL;
-  BotFrames* botframes_ = NULL;
+//  BotParam* botparam_ = NULL;
+//  BotFrames* botframes_ = NULL;
 
   BoundingBox pointcloud_bounds;
 

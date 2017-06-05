@@ -185,42 +185,45 @@ NonpenetratingObjectCost::NonpenetratingObjectCost(std::shared_ptr<RigidBodyTree
   lastReceivedTime = getUnixTime() - timeout_time*2.;
 }
 
-void NonpenetratingObjectCost::initBotConfig(const char* filename)
+void NonpenetratingObjectCost::initBotConfig(const char* /*filename*/)
 {
-  if (filename && filename[0])
-    {
-      botparam_ = bot_param_new_from_file(filename);
-    }
-  else
-    {
-    while (!botparam_)
-      {
-        botparam_ = bot_param_new_from_server(lcm->getUnderlyingLCM(), 0);
-      }
-    }
-  botframes_ = bot_frames_get_global(lcm->getUnderlyingLCM(), botparam_);
+  drake::log()->warn("botparam disabled");
+//  if (filename && filename[0])
+//    {
+//      string filename_full = string(std::getenv("DRC_BASE")) + string(filename);
+//      botparam_ = bot_param_new_from_file(filename_full.c_str());
+//    }
+//  else
+//    {
+//    while (!botparam_)
+//      {
+//        botparam_ = bot_param_new_from_server(lcm_->getUnderlyingLCM(), 0);
+//      }
+//    }
+//  botframes_ = bot_frames_get_global(lcm_->getUnderlyingLCM(), botparam_);
 }
 
-int NonpenetratingObjectCost::get_trans_with_utime(std::string from_frame, std::string to_frame,
-                               long long utime, Eigen::Isometry3d & mat)
-{
-  if (!botframes_)
-  {
-    std::cout << "botframe is not initialized" << std::endl;
-    mat = mat.matrix().Identity();
-    return 0;
-  }
+//int NonpenetratingObjectCost::get_trans_with_utime(std::string from_frame, std::string to_frame,
+//                               long long utime, Eigen::Isometry3d & mat)
+//{
+//  unused(from_frame, to_frame, utime);
+////  if (!botframes_)
+////  {
+//    drake::log()->warn("botframe is disabled");
+//    mat = mat.matrix().Identity();
+//    return 0;
+////  }
 
-  int status;
-  double matx[16];
-  status = bot_frames_get_trans_mat_4x4_with_utime( botframes_, from_frame.c_str(),  to_frame.c_str(), utime, matx);
-  for (int i = 0; i < 4; ++i) {
-    for (int j = 0; j < 4; ++j) {
-      mat(i,j) = matx[i*4+j];
-    }
-  }
-  return status;
-}
+////  int status;
+////  double matx[16];
+////  status = bot_frames_get_trans_mat_4x4_with_utime( botframes_, from_frame.c_str(),  to_frame.c_str(), utime, matx);
+////  for (int i = 0; i < 4; ++i) {
+////    for (int j = 0; j < 4; ++j) {
+////      mat(i,j) = matx[i*4+j];
+////    }
+////  }
+////  return status;
+//}
 
 /***********************************************
             KNOWN POSITION HINTS
