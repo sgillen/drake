@@ -5,56 +5,93 @@ urdf_config: fast
 # Mimick WorldSimTreeBuilder for now
 models:
 # TODO: Use model instance with WSG attached
-- name: "camera"
+  camera:
   urdf:
     all: "drake/examples/kuka_iiwa_arm/models/objects/xtion.urdf"
-- name: "iiwa"
+  iiwa:
   urdf:
     fast: "drake/manipulation/models/iiwa_description/urdf/iiwa14_polytope_collision.urdf"
     slow: "drake/manipulation/models/iiwa_description/urdf/iiwa14_mesh_collision.urdf"
-- name: "table"
+  table:
   urdf:
     fast: "drake/examples/kuka_iiwa_arm/models/table/extra_heavy_duty_table_surface_only_collision.sdf"
     slow: "drake/examples/kuka_iiwa_arm/models/table/extra_heavy_duty_table.sdf"
-- name: "target"
+  target:
   urdf:
     all: "drake/examples/kuka_iiwa_arm/models/objects/block_for_pick_and_place.urdf"
-- name: "yellow_post"
+  yellow_post:
   urdf:
     all: "drake/examples/kuka_iiwa_arm/models/objects/yellow_post.urdf"
 
 # Pose IC stored as {xyz: [], rpy: []}, where angles are radians
 robots:
-- name: "camera"
-  model: "camera"
-  pose0: {xyz: [0, 2, 2], rpy: [0.0, 0.349065850399, -1.57079632679]}
-- name: "iiwa"
-  model: "iiwa"
-  pose0: {xyz: [0, 0, 0.7645]}
-- name: "table"
-  model: "table"
-  pose0: {xyz: [0.243716, 0.625087, 0.]}
-- name: "table_target" # Pos. C
-  model: "table"
-  pose0: {xyz: [1.143716,  0.265087, -0.07]}
-- name: "target"
-  model: "target"
+  camera:
+    urdf: "drake/examples/kuka_iiwa_arm/models/objects/xtion.urdf"
+    q0: 
+      base_x: 0
+      base_y: 2
+      base_z: 2
+      base_roll: 0.0
+      base_pitch: 0.349065850399
+      base_yaw: -1.57079632679
+  iiwa:
+    urdf_less_collision: "drake/manipulation/models/iiwa_description/urdf/iiwa14_polytope_collision.urdf"
+    urdf: "drake/manipulation/models/iiwa_description/urdf/iiwa14_mesh_collision.urdf"
+    q0: 
+      base_x: 0
+      base_y: 0
+      base_z: 0.7645
+  table:
+    urdf_less_collision: "drake/examples/kuka_iiwa_arm/models/table/extra_heavy_duty_table_surface_only_collision.sdf"
+    urdf: "drake/examples/kuka_iiwa_arm/models/table/extra_heavy_duty_table.sdf"
+    q0: 
+      base_x: 0.243716
+      base_y: 0.625087
+      base_z: 0.
+  table_final: # Pos. C
+    urdf_less_collision: "drake/examples/kuka_iiwa_arm/models/table/extra_heavy_duty_table_surface_only_collision.sdf"
+    urdf: "drake/examples/kuka_iiwa_arm/models/table/extra_heavy_duty_table.sdf"
+    q0:
+      base_x: 1.143716
+      base_y: 0.265087
+      base_z: -0.07
+  target:
+    urdf: "drake/examples/kuka_iiwa_arm/models/objects/block_for_pick_and_place.urdf"
+    q0:
+      base_x: 0.8
+      base_y: 0.36
+      base_z: 1.1345
 # Posts (except for Pos. C)
-- name: "post_a"
-  model: "post"
-  pose0: {xyz: [0.00, 1.00, 0]}
-- name: "post_b"
-  model: "post"
-  pose0: {xyz: [0.80, 0.36, 0]}
-- name: "post_d"
-  model: "post"
-  pose0: {xyz: [0.30, -0.9, 0]}
-- name: "post_e"
-  model: "post"
-  pose0: {xyz: [-0.1, -1.0, 0]}
-- name: "post_f"
-  model: "post"
-  pose0: {xyz: [-0.47, -0.8, 0]}
+  post_a:
+    urdf: "post"
+    q0: 
+      base_x: 0.00
+      base_y: 1.00
+      base_z: 0
+  post_b:
+    urdf: "post"
+    q0: 
+      base_x: 0.80
+      base_y: 0.36
+      base_z: 0
+  post_d:
+    urdf: "post"
+    q0: 
+      base_x: 0.30
+      base_y: -0.9
+      base_z: 0
+  post_e:
+    urdf: "post"
+    q0: 
+      base_x: -0.1
+      base_y: -1.0
+      base_z: 0
+  post_f:
+    urdf: "post"
+    q0: 
+      base_x: -0.47
+      base_y: -0.8
+      base_z: 0
 
 force_align:
   # force alignment of these frames in the estimator every iteration

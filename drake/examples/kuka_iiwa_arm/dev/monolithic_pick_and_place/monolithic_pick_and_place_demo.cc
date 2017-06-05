@@ -203,6 +203,12 @@ int DoMain(void) {
   Eigen::Vector3d half_target_height(0, 0, target.dimensions(2) * 0.5);
   box_origin += half_target_height;
 
+  Eigen::Vector3d box_orientation(0, 0, FLAGS_orientation);
+
+  std::cout
+      << "box_origin: " << box_origin.transpose() << std::endl
+      << "box_orientation: " << box_orientation.transpose() << std::endl;
+
   for (size_t i = 0; i < place_locations.size(); i++) {
     place_locations[i].translation() += half_target_height;
   }
@@ -213,7 +219,7 @@ int DoMain(void) {
 
   std::unique_ptr<systems::RigidBodyPlant<double>> model_ptr =
       BuildCombinedPlant(post_locations, table_position, target.model_name,
-                         box_origin, Vector3<double>(0, 0, FLAGS_orientation),
+                         box_origin, box_orientation,
                          &iiwa_instance, &wsg_instance, &box_instance);
 
 
