@@ -644,17 +644,17 @@ void RgbdCamera::Impl::UpdateRenderWindow() const {
     }
   }
 
-  // for (auto& flipper : MakeVtkInstanceArray<vtkImageFlip>(
-  //          color_flipper_, depth_flipper_, label_flipper_)) {
-  //   flipper->Modified();
-  //   flipper->Update();
-  // }
+  for (auto& flipper : MakeVtkInstanceArray<vtkImageFlip>(
+           color_flipper_, depth_flipper_, label_flipper_)) {
+    flipper->Modified();
+    flipper->Update();
+  }
 
-  // for (auto& cast : MakeVtkInstanceArray<vtkImageCast>(
-  //          color_cast_, depth_cast_, label_cast_)) {
-  //   cast->Modified();
-  //   cast->Update();
-  // }
+  for (auto& cast : MakeVtkInstanceArray<vtkImageCast>(
+           color_cast_, depth_cast_, label_cast_)) {
+    cast->Modified();
+    cast->Update();
+  }
 }
 
 void RgbdCamera::Impl::DoCalcOutput(
@@ -708,17 +708,17 @@ void RgbdCamera::Impl::DoCalcOutput(
       output->GetMutableData(kPortLabelImage)->GetMutableValue<
         sensors::ImageLabel16I>();
 
-  void* color_ptr = color_filter_->GetOutput()->GetScalarPointer(0, 0, 0);
+  void* color_ptr = color_cast_->GetOutput()->GetScalarPointer(0, 0, 0);
   const int num_pixels = kImageWidth * kImageHeight;
   memcpy(color_image.at(0, 0), color_ptr,
          num_pixels * color_image.kNumChannels * 1);
 
   float* depth_ptr = static_cast<float*>(
-      depth_filter_->GetOutput()->GetScalarPointer(0, 0, 0));
+      depth_cast_->GetOutput()->GetScalarPointer(0, 0, 0));
   // memcpy(depth_image.at(0, 0), depth_ptr,
   //        num_pixels * depth_image.kNumChannels * 4);
 
-  void* label_ptr = label_filter_->GetOutput()->GetScalarPointer(0, 0, 0);
+  void* label_ptr = label_cast_->GetOutput()->GetScalarPointer(0, 0, 0);
   ImageRgb8U label(kImageWidth, kImageHeight);
   memcpy(label.at(0, 0), label_ptr, num_pixels * 3 * 1);
 
