@@ -626,14 +626,13 @@ void RgbdCamera::Impl::UpdateModelPoses(
 }
 
 void RgbdCamera::Impl::UpdateRenderWindow() const {
-  for (auto& window : MakeVtkInstanceArray<vtkRenderWindow>(
-           color_depth_render_window_, label_render_window_)) {
+  {
     ScopedWithTimer<> scoped1("Window"); unused(scoped1);
-    window->Render();
+    color_depth_render_window_->Render();
   }
 
   for (auto& filter : MakeVtkInstanceArray<vtkWindowToImageFilter>(
-           color_filter_, depth_filter_, label_filter_)) {
+           color_filter_, depth_filter_)) {
     {
       ScopedWithTimer<> scoped1("Filter Modified"); unused(scoped1);
       filter->Modified();
@@ -704,9 +703,9 @@ void RgbdCamera::Impl::DoCalcOutput(
       output->GetMutableData(kPortDepthImage)->GetMutableValue<
         sensors::ImageDepth32F>();
 
-  sensors::ImageLabel16I& label_image =
-      output->GetMutableData(kPortLabelImage)->GetMutableValue<
-        sensors::ImageLabel16I>();
+  // sensors::ImageLabel16I& label_image =
+  //     output->GetMutableData(kPortLabelImage)->GetMutableValue<
+  //       sensors::ImageLabel16I>();
 
   void* color_ptr = color_cast_->GetOutput()->GetScalarPointer(0, 0, 0);
   const int num_pixels = kImageWidth * kImageHeight;
@@ -718,9 +717,9 @@ void RgbdCamera::Impl::DoCalcOutput(
   // memcpy(depth_image.at(0, 0), depth_ptr,
   //        num_pixels * depth_image.kNumChannels * 4);
 
-  void* label_ptr = label_cast_->GetOutput()->GetScalarPointer(0, 0, 0);
-  ImageRgb8U label(kImageWidth, kImageHeight);
-  memcpy(label.at(0, 0), label_ptr, num_pixels * 3 * 1);
+  // void* label_ptr = label_filter_->GetOutput()->GetScalarPointer(0, 0, 0);
+  // ImageRgb8U label(kImageWidth, kImageHeight);
+  // memcpy(label.at(0, 0), label_ptr, num_pixels * 3 * 1);
 
   const int height = color_camera_info_.height();
   const int width = color_camera_info_.width();
@@ -737,12 +736,12 @@ void RgbdCamera::Impl::DoCalcOutput(
       //     CheckRangeAndConvertToMeters(depth_image.at(v, v)[0]);
 
       // Updates the label image.
-      Color color{label.at(u, v)[0],  // R
-                  label.at(u, v)[1],  // G
-                  label.at(u, v)[2]};  // B
+      // Color color{label.at(u, v)[0],  // R
+      //             label.at(u, v)[1],  // G
+      //             label.at(u, v)[2]};  // B
 
-      label_image.at(u, v)[0] =
-          static_cast<int16_t>(color_palette_.LookUpId(color));
+      // label_image.at(u, v)[0] =
+      //     static_cast<int16_t>(color_palette_.LookUpId(color));
     }
   }
 }

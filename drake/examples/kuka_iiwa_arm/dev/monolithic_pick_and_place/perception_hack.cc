@@ -293,9 +293,9 @@ struct PerceptionHack::Impl {
           rgbd_camera_->depth_image_output_port(),
           image_to_lcm_message_->depth_image_input_port());
 
-      pbuilder->Connect(
-          rgbd_camera_->label_image_output_port(),
-          image_to_lcm_message_->label_image_input_port());
+      // pbuilder->Connect(
+      //     rgbd_camera_->label_image_output_port(),
+      //     image_to_lcm_message_->label_image_input_port());
 
 //      if (false) {
       // Camera image publisher.
