@@ -98,12 +98,35 @@ class ArticulatedStateEstimator::Impl {
     PrintJointNameHierarchy(loader_->estimator_->getRobot().get());
   }
 
+  typedef VectorSlice<double> Slice;
+  typedef Slice::Indices Indices;
+
+  void SetQSlices(const Indices& input_indices, const Indices& output_indices) {
+    slices_.reset(new Slices {Slice(input_indices), Slice(output_indices)});
+  }
+
+  int get_num_input_positions() const {
+    return slices_->input.size();
+  }
+  int get_num_update_positions() const {
+    return slices_->update.size();
+  }
+  int get_num_output_positions() const {
+    return loader_->estimator_->getRobot()->get_num_positions();
+  }
+
   void ImplDiscreteUpdate(const VectorXd& q0,
-                          const VectorXd& tree_q_measurement,
+                          const VectorXd& tree_q_measurement_input,
                           const PointCloud& point_cloud,
                           const DepthImage& depth_image,
                           VectorXd* estimated_tree_state) const {
     ManipulationTracker& estimator = *loader_->estimator_;
+
+    DRAKE_ASSERT(slices_ != nullptr);
+
+    VectorXd tree_q_measurement(get_num_update_positions());
+    slices_->input.ReadFromSuperset(tree_q_measurement_input,
+                                    tree_q_measurement);
 
     // TODO(eric.cousineau): Is there a better place for this?
     if (!estimator.has_performed_first_update()) {
@@ -111,10 +134,10 @@ class ArticulatedStateEstimator::Impl {
     }
 
     // Update individual costs.
-    for (auto& cost : loader_->joint_state_costs_) {
+    for (auto&& cost : loader_->joint_state_costs_) {
       // TODO(eric.cousineau): Replace this with only a partial update of the
       // state.
-      cost->readTreeState(tree_q_measurement);
+      cost->readTreeState(tree_q_measurement, slices_->update);
     }
     for (auto& cost : loader_->kinect_frame_costs_) {
       cost->readDepthImageAndPointCloud(depth_image, point_cloud);
@@ -130,17 +153,70 @@ class ArticulatedStateEstimator::Impl {
   shared_ptr<::lcm::LCM> lcm_; // HACK, to satisfy API
   shared_ptr<ManipulationTrackerLoader> loader_;
 
+  struct Slices {
+    // Slice from input.
+    Slice input;
+    // Slice provided to update.
+    Slice update;
+  };
+  shared_ptr<Slices> slices_;
+
   friend class ArticulatedStateEstimator;
 };
 
+template <typename T>
+std::map<T, int> CreateIndexMap(const std::vector<T> &x) {
+  int i = 0;
+  std::map<T, int> out;
+  for (const auto& value : x) {
+    DRAKE_ASSERT(out.find(value) == out.end());
+    out[value] = i;
+    i++;
+  }
+  return std::move(out);
+}
 
-ArticulatedStateEstimator::ArticulatedStateEstimator(const string& config_file,
-                                                     const CameraInfo* camera_info) {
+// TODO(eric.cousineau): Reduce from O(n^2)
+template <typename T>
+void GetCommonIndices(const std::vector<T> &a,
+                      const std::vector<T> &b,
+                      std::vector<int>* a_indices,
+                      std::vector<int>* b_indices) {
+  auto a_map = CreateIndexMap(a);
+  auto b_map = CreateIndexMap(b);
+  for (const auto& a_pair : a_map) {
+    auto b_iter = b_map.find(a_pair.first);
+    if (b_iter != b_map.end()) {
+      a_indices->push_back(a_pair.second);
+      b_indices->push_back(b_iter->second);
+    }
+  }
+}
+
+ArticulatedStateEstimator::ArticulatedStateEstimator(
+    const string& config_file,
+    const CameraInfo* camera_info,
+    const std::vector<string>& input_position_names) {
   impl_.reset(new Impl(config_file, camera_info));
 
+  auto plant_position_names = GetHierarchicalPositionNameList(
+      get_tree(), get_plant_id_map());
+
+  // FIgure out downselection from input port.
+  // TODO(eric.cousineau): Figure out how to do this more cleanly at a
+  // higher-level. Consider implementing the estimator outside of a system,
+  // and feed that and the mapping in, or use something akin to
+  // VectorSliceTranslator.
+  std::vector<int> plant_indices, input_indices;
+  GetCommonIndices(input_position_names, plant_position_names,
+                   &input_indices, &plant_indices);
+
+  impl_->SetQSlices(input_indices, plant_indices);
+
   auto& estimator = *impl_->loader_->estimator_;
-  auto& scene_tree = *estimator.getRobot();
-  const int num_positions = scene_tree.get_num_positions();
+
+  const int num_input_positions = impl_->get_num_input_positions();
+  const int num_output_positions = impl_->get_num_output_positions();
 
   // TODO(eric.cousineau): Just place this in the constructor?
   param_q0_index_ = DeclareNumericParameter(
@@ -155,12 +231,12 @@ ArticulatedStateEstimator::ArticulatedStateEstimator(const string& config_file,
   // TODO(eric.cousineau): Incorporate something akin to
   // KinematicStatePortion.
   inport_tree_q_measurement_index_ =
-      DeclareInputPort(systems::kVectorValued, num_positions).get_index();
+      DeclareInputPort(systems::kVectorValued, num_input_positions).get_index();
   outport_tree_state_estimate_index_ =
-      DeclareOutputPort(systems::kVectorValued, num_positions).get_index();
+      DeclareOutputPort(systems::kVectorValued, num_output_positions).get_index();
 
   state_tree_state_estimate_index_ = 0;
-  DeclareDiscreteState(num_positions);
+  DeclareDiscreteState(num_output_positions);
 }
 
 void ArticulatedStateEstimator::DoCalcDiscreteVariableUpdates(

@@ -1,3 +1,5 @@
+#pragma once
+
 #include <Eigen/Dense>
 #include <type_traits>
 
@@ -23,7 +25,7 @@ bool IsSameDim(const Eigen::MatrixBase<DerivedA>& A,
 }
 
 template <typename Integral>
-static VectorX<Integral> CardinalIndices(Integral size) {
+VectorX<Integral> CardinalIndices(Integral size) {
   VectorX<Integral> indices(size);
   auto begin = indices.data();
   auto end = begin + size;
@@ -40,20 +42,23 @@ static VectorX<Integral> CardinalIndices(Integral size) {
   Classname(Classname&&) = default;             \
   void operator=(Classname&&) = delete;
 
+// TODO: Remove T, as this is useless in this case.
 template <typename T>
 class VectorSlice {
  public:
   typedef VectorX<T> Vector;
-  typedef VectorX<int> Indices;
+  typedef std::vector<int> Indices;
 
   DRAKE_DEFAULT_COPY_AND_MOVE_AND_ASSIGN(VectorSlice);
 
   explicit VectorSlice(const Indices& indices, int super_size = -1)
         : indices_(indices) {
     // TODO(eric.cousineau): Check for uniqueness
-    min_index_ = indices.minCoeff();
-    DRAKE_ASSERT(min_index_ >= 0);
-    max_index_ = indices.maxCoeff();
+    if (indices_.size() > 0) {
+      min_index_ = *std::min_element(indices.begin(), indices.end());
+      DRAKE_ASSERT(min_index_ >= 0);
+      max_index_ = *std::max_element(indices.begin(), indices.end());
+    }
     if (super_size == -1) {
       super_size_ = max_index_;
     } else {
@@ -73,26 +78,15 @@ class VectorSlice {
     return super_size() == other.size();
   }
 
-  void ReadFromSuperset(const Vector& super, Vector *pvalues) const {
+  void ReadFromSuperset(const Vector& super, Eigen::Ref<Vector> values) const {
     DRAKE_ASSERT(is_valid_subset_of(super));
-    Vector& values = *pvalues;
     for (int i = 0; i < this->size(); ++i) {
       int index = this->indices_[i];
       values[i] = super[index];
     }
-    return *this;
   }
 
-  template <typename U>
-  using is_immutable_ref = std::integral_constant<bool,
-      std::is_const<U>::value && std::is_lvalue_reference<U>::value>;
-
-  template <typename U>
-  using is_mutable_vector = std::integral_constant<bool,
-      !is_immutable_ref<U>::value &&
-      !std::is_base_of<VectorSlice, U>::value>;
-
-  void WriteToSuperset(const Vector& values, Eigen::Ref<Vector> super) {
+  void WriteToSuperset(const Vector& values, Eigen::Ref<Vector> super) const {
     DRAKE_ASSERT(is_valid_subset_of(super));
     for (int i = 0; i < this->size(); ++i) {
       int index = this->indices_[i];
@@ -101,9 +95,9 @@ class VectorSlice {
   }
 
  protected:
-  int super_size_;
-  int max_index_;
-  int min_index_;
+  int super_size_{};
+  int max_index_{};
+  int min_index_{};
   const Indices indices_;
 };
 

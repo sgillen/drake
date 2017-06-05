@@ -14,6 +14,8 @@
 #include "drake/systems/sensors/camera_info.h"
 #include "drake/systems/sensors/image.h"
 
+#include "drake/manipulation/estimators/dev/tree_state_portion.h"
+
 #include "drake/lcm/drake_lcm.h"
 
 namespace drake {
@@ -49,7 +51,8 @@ class ArticulatedStateEstimator : public LeafSystemMixin<double> {
  public:
   typedef systems::sensors::CameraInfo CameraInfo;
   ArticulatedStateEstimator(const std::string& config_file,
-                            const CameraInfo* camera_info);
+                            const CameraInfo* camera_info,
+                            const std::vector<std::string> &input_position_names);
 
   void DoCalcDiscreteVariableUpdates(const Context& context,
                                      DiscreteValues* updates) const override;

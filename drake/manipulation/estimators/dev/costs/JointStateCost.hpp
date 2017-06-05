@@ -12,6 +12,10 @@
 
 #include "lcmtypes/bot_core/joint_state_t.hpp"
 
+#include "drake/manipulation/estimators/dev/tree_state_portion.h"
+
+using drake::manipulation::VectorSlice;
+
 class JointStateCost : public ManipulationTrackerCost {
 public:
   JointStateCost(std::shared_ptr<const RigidBodyTreed> robot_, std::shared_ptr<lcm::LCM> lcm_, YAML::Node config);
@@ -19,7 +23,8 @@ public:
 
   bool constructCost(ManipulationTracker * tracker, const Eigen::VectorXd x_old, Eigen::MatrixXd& Q, Eigen::VectorXd& f, double& K);
 
-  void readTreeState(const Eigen::VectorXd& q);
+  void readTreeState(const Eigen::VectorXd& q,
+                     const VectorSlice<double>& slice);
 private:
   std::string state_channelname = "";
   double joint_reported_var = INFINITY;

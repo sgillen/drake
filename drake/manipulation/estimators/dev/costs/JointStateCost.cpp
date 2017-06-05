@@ -77,10 +77,13 @@ bool JointStateCost::constructCost(ManipulationTracker * tracker, const Eigen::V
   }
 }
 
-void JointStateCost::readTreeState(const Eigen::VectorXd& q) {
-  // TODO(eric.cousineau): Add index slicing back in.
-  q_robot_measured = q;
+void JointStateCost::readTreeState(const Eigen::VectorXd& q,
+                                   const VectorSlice<double>& slice) {
+  slice.WriteToSuperset(q, q_robot_measured);
   for (int i = 0; i < (int)q_robot_measured_known.size(); ++i) {
+    q_robot_measured_known[i] = false;
+  }
+  for (int i : slice.indices()) {
     q_robot_measured_known[i] = true;
   }
 }
