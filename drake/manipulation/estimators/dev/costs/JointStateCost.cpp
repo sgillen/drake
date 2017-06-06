@@ -58,14 +58,14 @@ bool JointStateCost::constructCost(ManipulationTracker * tracker, const Eigen::V
     // copy over last known info
     x_robot_measured_mutex.lock();
     VectorXd q_measured = q_robot_measured.block(0,0,nq,1);
-    std::vector<bool> x_robot_measured_known_copy = q_robot_measured_known;
+    std::vector<bool> q_robot_measured_known_copy = q_robot_measured_known;
     x_robot_measured_mutex.unlock();
 
     // min (x - x')^2
     // i.e. min x^2 - 2xx' + x'^2
 
     for (int i=0; i<nq; i++){
-      if (x_robot_measured_known_copy[i]){
+      if (q_robot_measured_known_copy[i]){
         Q(i, i) += JOINT_REPORTED_WEIGHT*1.0;
         f(i) -= JOINT_REPORTED_WEIGHT*q_measured(i);
         K += JOINT_REPORTED_WEIGHT*q_measured(i)*q_measured(i);
