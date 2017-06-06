@@ -18,7 +18,7 @@ class DefaultData {
   DRAKE_DEFAULT_COPY_AND_MOVE_AND_ASSIGN(DefaultData);
   DefaultData() {}
   void set_value(const T& value) {
-    *value_ = value;
+    value_ = value;
   }
   bool has_value() const {
     return value_ != nullopt;
@@ -75,9 +75,11 @@ class AbstractZOH : public LeafSystem<double> {
     }
   }
 
-//  void SetDefaultState(const Context<double>& context,
-//                       State<double>* state) const override {
-//  }
+  void SetDefaultState(const Context<double>& context,
+                       State<double>* state) const override {
+    std::cout << "SetDefaultState" << std::endl;
+    DoCalcUnrestrictedUpdate(context, state);
+  }
 
   void DoCalcOutput(const Context<double>& context,
                     SystemOutput<double>* output) const override {
@@ -88,15 +90,15 @@ class AbstractZOH : public LeafSystem<double> {
     if (!stored_value.has_value()) {
       // HACK(eric.cousineau): Figure out how to resolve this.
       // NOTE: Presently will not be useful until all ports are cached.
-//      throw std::runtime_error("Not implemented");
-      std::cout << "HACCCK" << std::endl;
-      auto& mutable_context = const_cast<Context<double>&>(context);
-      const T& input_value =
-          EvalAbstractInput(mutable_context, 0)->template GetValue<T>();
-      Data& mutable_stored_value =
-          mutable_context.template get_mutable_abstract_state<Data>(0);
-      mutable_stored_value.set_value(input_value);
-      output_value.set_value(mutable_stored_value.value());
+      throw std::runtime_error("Not implemented");
+//      std::cout << "HACCCK" << std::endl;
+//      auto& mutable_context = const_cast<Context<double>&>(context);
+//      const T& input_value =
+//          EvalAbstractInput(mutable_context, 0)->template GetValue<T>();
+//      Data& mutable_stored_value =
+//          mutable_context.template get_mutable_abstract_state<Data>(0);
+//      mutable_stored_value.set_value(input_value);
+//      output_value.set_value(mutable_stored_value.value());
     } else {
       output_value.set_value(stored_value.value());
     }
