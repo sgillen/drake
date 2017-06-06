@@ -7,7 +7,6 @@ if(lcm_FOUND)
       drakeKukaIiwaArmCommon
       drakeKukaIiwaWorld
       pickAndPlaceCommon
-      pickAndPlaceStateMachine
       drakeManipulationPlanner
       drakeLcmSystem
       drakeLCMTypes
