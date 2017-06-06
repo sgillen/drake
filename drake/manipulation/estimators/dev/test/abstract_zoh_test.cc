@@ -28,7 +28,6 @@ template <typename T>
 class TestValue {
  public:
   DRAKE_DEFAULT_COPY_AND_MOVE_AND_ASSIGN(TestValue);
-
   TestValue() {}
   TestValue(const T& value)
       : value_(value) {}
@@ -54,6 +53,21 @@ GTEST_TEST(AbstractZOHTest, ModelAbstractState) {
       y.value() = context.get_time();
     }
   };
+  class PeriodicQuery : public LeafSystem<double> {
+   public:
+    PeriodicQuery() {
+      DeclareAbstractInputPort();
+      DeclarePublishPeriodSec(0.001);
+    }
+    void DoPublish(const Context<double> &context) const override {
+      // Query input.
+      auto&& y = EvalAbstractInput(context, 0)->GetValue<TestValue<double>>();
+      cout << "Periodic Query: " << context.get_time() << ": "
+           << y.value() << endl;
+    }
+    void DoCalcOutput(
+          const Context<double>&, SystemOutput<double>*) const override {}
+  };
 
   DiagramBuilder<double> builder;
   auto* sys = builder.AddSystem<SimpleSystem>();
@@ -66,6 +80,9 @@ GTEST_TEST(AbstractZOHTest, ModelAbstractState) {
   });
   builder.Connect(sys->get_output_port(0),
                   zoh->get_input_port(0));
+  auto* query = builder.AddSystem<PeriodicQuery>();
+  builder.Connect(zoh->get_output_port(0),
+                  query->get_input_port(0));
 
   auto full_sys = builder.Build();
   Simulator<double> simulator(*full_sys);
