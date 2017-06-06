@@ -20,12 +20,15 @@ class DefaultData {
   void set_value(const T& value) {
     *value_ = value;
   }
+  bool has_value() const {
+    return value_ != nullopt;
+  }
   T& value() {
-    DRAKE_DEMAND(value_ != nullopt);
+    DRAKE_DEMAND(has_value());
     return *value_;
   }
   const T& value() const {
-    DRAKE_DEMAND(value_ != nullopt);
+    DRAKE_DEMAND(has_value());
     return *value_;
   }
  private:
@@ -40,7 +43,9 @@ class AbstractZOH : public LeafSystem<double> {
   typedef DefaultData<T> Data;
   typedef std::function<void(double time, const T& value)> OnUpdate;
 
-  AbstractZOH(double period_sec, double offset_sec = 0.) {
+  AbstractZOH(double period_sec, double offset_sec = 0.,
+              bool permit_autoinit = true)
+      : permit_autoinit_(permit_autoinit) {
     // Using LcmSubscriberSystem as a basis
     // This will receive Value<T>, not Value<Data>.
     this->DeclareAbstractInputPort();
@@ -70,16 +75,35 @@ class AbstractZOH : public LeafSystem<double> {
     }
   }
 
+//  void SetDefaultState(const Context<double>& context,
+//                       State<double>* state) const override {
+//  }
+
   void DoCalcOutput(const Context<double>& context,
                     SystemOutput<double>* output) const override {
     const Data& stored_value =
         context.get_abstract_state()->get_value(0).GetValue<Data>();
     Data& output_value =
-        output->GetMutableData(0)->GetMutableValue<Data>();
-    output_value.set_value(stored_value.value());
+      output->GetMutableData(0)->GetMutableValue<Data>();
+    if (!stored_value.has_value()) {
+      // HACK(eric.cousineau): Figure out how to resolve this.
+      // NOTE: Presently will not be useful until all ports are cached.
+//      throw std::runtime_error("Not implemented");
+      std::cout << "HACCCK" << std::endl;
+      auto& mutable_context = const_cast<Context<double>&>(context);
+      const T& input_value =
+          EvalAbstractInput(mutable_context, 0)->template GetValue<T>();
+      Data& mutable_stored_value =
+          mutable_context.template get_mutable_abstract_state<Data>(0);
+      mutable_stored_value.set_value(input_value);
+      output_value.set_value(mutable_stored_value.value());
+    } else {
+      output_value.set_value(stored_value.value());
+    }
   }
  private:
   OnUpdate on_update_;
+  bool permit_autoinit_{};
 };
 
 
