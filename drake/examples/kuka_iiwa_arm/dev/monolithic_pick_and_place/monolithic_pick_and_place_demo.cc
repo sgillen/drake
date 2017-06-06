@@ -24,6 +24,8 @@
 #include "drake/systems/framework/diagram_builder.h"
 #include "drake/systems/primitives/constant_vector_source.h"
 
+#include "scoped_timer.h"
+
 DEFINE_uint64(target, 0, "ID of the target to pick.");
 DEFINE_double(orientation, 2 * M_PI, "Yaw angle of the box.");
 DEFINE_uint32(start_position, 1, "Position index to start from");
@@ -36,6 +38,43 @@ using manipulation::schunk_wsg::SchunkWsgTrajectoryGenerator;
 using manipulation::schunk_wsg::SchunkWsgStatusSender;
 using systems::RigidBodyPlant;
 using systems::Simulator;
+
+using std::unique_ptr;
+
+namespace systems {
+
+class WallClockPublisher : public systems::LeafSystem<double> {
+ public:
+  WallClockPublisher() {
+    // HACK: Store previous time in state, if possible.
+    timer_.reset(new timing::Timer());
+    prev_time_.reset(new double(0.));
+    this->DeclarePerStepAction(
+          systems::DiscreteEvent<double>::kDiscreteUpdateAction);
+  }
+
+  typedef double T;
+
+ protected:
+  void DoCalcOutput(const Context<double>&, SystemOutput<double>*) const override {}
+  void DoCalcDiscreteVariableUpdates(
+      const Context<double>& context, DiscreteValues<double>* discrete_state) const override {
+    unused(discrete_state);
+    if (timer_->is_active()) {
+      double elapsed = timer_->stop();
+      double sim_elapsed = context.get_time() - *prev_time_;
+      std::cout << "Elapsed time: " << elapsed << std::endl;
+      std::cout << "  - Sim: " << sim_elapsed << std::endl;
+    }
+    timer_->start();
+    *prev_time_ = context.get_time();
+  }
+ private:
+  // HACK
+  unique_ptr<double> prev_time_;
+  unique_ptr<timing::Timer> timer_;
+};
+}
 
 namespace examples {
 namespace kuka_iiwa_arm {
@@ -268,6 +307,8 @@ int DoMain(void) {
                   wsg_trajectory_generator->get_command_input_port());
   builder.Connect(state_machine->get_output_port_iiwa_plan(),
                   iiwa_trajectory_generator->get_plan_input_port());
+
+  builder.template AddSystem<systems::WallClockPublisher>();
 
   auto sys = builder.Build();
   Simulator<double> simulator(*sys);

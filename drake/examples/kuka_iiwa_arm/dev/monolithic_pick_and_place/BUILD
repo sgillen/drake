@@ -15,6 +15,7 @@ drake_cc_library(
     ],
     hdrs = [
         "state_machine_system.h",
+        "scoped_timer.h",
     ],
     deps = [
         "//drake/examples/kuka_iiwa_arm:iiwa_common",
