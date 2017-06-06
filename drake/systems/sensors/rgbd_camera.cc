@@ -758,6 +758,8 @@ float RgbdCamera::Impl::CheckRangeAndConvertToMeters(float z_buffer_value) {
   return checked_depth;
 }
 
+// TODO(eric.cousineau): Remove this once computation caching is available, such
+// that a ZOH will be able to fully minimize the number of render calls.
 bool kUseDiscreteCalc = true;
 
 RgbdCamera::RgbdCamera(const std::string& name,
@@ -897,15 +899,16 @@ void RgbdCamera::DoCalcOutput(const systems::Context<double>& context,
 
   if (kUseDiscreteCalc) {
     // Copy data.
-    const rendering::PoseVector<double>& camera_base_pose_state =
-            context.get_abstract_state<rendering::PoseVector<double>>(0);
     const sensors::ImageRgba8U& color_image_state =
-        context.get_abstract_state<sensors::ImageRgba8U>(1);
+        context.get_abstract_state<sensors::ImageRgba8U>(0);
     const sensors::ImageDepth32F& depth_image_state =
-        context.get_abstract_state<sensors::ImageDepth32F>(2);
+        context.get_abstract_state<sensors::ImageDepth32F>(1);
     // label_image
+    const auto& camera_base_pose_state =
+        *dynamic_cast<const rendering::PoseVector<double>*>(
+            context.get_discrete_state(0));
 
-    camera_base_pose = camera_base_pose_state;
+    camera_base_pose.get_mutable_value() = camera_base_pose_state.get_value();
     color_image = color_image_state;
     depth_image = depth_image_state;
     // label_image
@@ -923,8 +926,10 @@ void RgbdCamera::DoCalcUnrestrictedUpdate(
   const Eigen::VectorXd& x =
       this->EvalVectorInput(context, kPortStateInput)->CopyToVector();
 
-  rendering::PoseVector<double>& camera_base_pose =
-          state->get_mutable_abstract_state<rendering::PoseVector<double>>(0);
+  // Is there an easier way to do this???
+  auto& camera_base_pose =
+      *dynamic_cast<rendering::PoseVector<double>*>(
+          state->get_mutable_discrete_state()->get_mutable_vector(0));
 
   // Outputs the image data.
   sensors::ImageRgba8U& color_image =
@@ -937,6 +942,12 @@ void RgbdCamera::DoCalcUnrestrictedUpdate(
   impl_->DoCalcOutput(x,
                       &camera_base_pose,
                       &color_image, &depth_image, nullptr /* &label_image */);
+}
+
+std::unique_ptr<DiscreteValues<double>> RgbdCamera::AllocateDiscreteState() const
+{
+ return std::make_unique<DiscreteValues<double>>(
+     std::make_unique<rendering::PoseVector<double>>());
 }
 
 constexpr float RgbdCamera::InvalidDepth::kTooFar;

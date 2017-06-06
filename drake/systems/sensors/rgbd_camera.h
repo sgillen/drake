@@ -213,7 +213,7 @@ class RgbdCamera : public LeafSystem<double> {
   void DoCalcUnrestrictedUpdate(const systems::Context<double>& context,
                             systems::State<double>* state) const override;
 
-  std::vector<systems::DiscreteValues<double>>
+  std::unique_ptr<DiscreteValues<double>>
   AllocateDiscreteState() const override;
 
  private:
