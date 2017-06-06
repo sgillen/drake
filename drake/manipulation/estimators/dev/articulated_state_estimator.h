@@ -27,9 +27,8 @@ typedef std::map<int, std::string> ReverseIdMap;
 
 void PrintJointNameHierarchy(const RigidBodyTreed* tree);
 
-std::vector<std::string> GetHierarchicalPositionNameList(
-    const RigidBodyTreed& tree,
-    const ReverseIdMap& instance_name_map);
+std::vector<std::string> GetHierarchicalPositionNameList(const RigidBodyTreed& tree,
+    const ReverseIdMap& instance_name_map, bool add_velocity = false);
 
 /**
  * Simple mixin to get simplified aliases.

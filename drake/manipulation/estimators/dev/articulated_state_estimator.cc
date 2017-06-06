@@ -59,13 +59,18 @@ void PrintJointNameHierarchy(const RigidBodyTreed* tree) {
 
 std::vector<std::string> GetHierarchicalPositionNameList(
     const RigidBodyTreed& tree,
-    const ReverseIdMap& instance_name_map) {
+    const ReverseIdMap& instance_name_map,
+    bool add_velocity) {
   using std::string;
   using std::vector;
   using std::to_string;
   vector<string> names(tree.get_num_positions());
   int instance_count = tree.get_num_model_instances();
   int position_index = 0;
+  int velocity_index = 0;
+  if (add_velocity) {
+    names.resize(tree.get_num_positions() + tree.get_num_velocities());
+  }
   for (int instance_id = 0; instance_id < instance_count; ++instance_id) {
     string instance_name = "unknown_" + to_string(instance_id);
     auto iter = instance_name_map.find(instance_id);
@@ -80,6 +85,14 @@ std::vector<std::string> GetHierarchicalPositionNameList(
         string name = instance_name + "::" + joint.get_position_name(i);
         names[position_index] = name;
         position_index++;
+      }
+      if (add_velocity) {
+        for (int i = 0; i < joint.get_num_velocities(); ++i) {
+          DRAKE_ASSERT(joint.get_velocity_name(i) == tree.get_velocity_name(velocity_index));
+          string name = instance_name + "::" + joint.get_velocity_name(i);
+          names[tree.get_num_positions() + velocity_index] = name;
+          velocity_index++;
+        }
       }
     }
   }
@@ -216,8 +229,10 @@ ArticulatedStateEstimator::ArticulatedStateEstimator(
     const std::vector<string>& input_position_names) {
   impl_.reset(new Impl(config_file, camera_info));
 
+  // This presently does not take in velocities.
+  const bool add_velocities = false;
   auto plant_position_names = GetHierarchicalPositionNameList(
-      get_tree(), get_plant_id_map());
+      get_tree(), get_plant_id_map(), add_velocities);
 
   // FIgure out downselection from input port.
   // TODO(eric.cousineau): Figure out how to do this more cleanly at a
@@ -246,8 +261,6 @@ ArticulatedStateEstimator::ArticulatedStateEstimator(
   // TODO(eric.cousineau): Make depth image optional?
   inport_depth_image_index_ =
       DeclareAbstractInputPort(Value<DepthImage>()).get_index();
-  // TODO(eric.cousineau): Incorporate something akin to
-  // KinematicStatePortion.
   inport_tree_q_measurement_index_ =
       DeclareInputPort(systems::kVectorValued, num_input_positions).get_index();
   outport_tree_state_estimate_index_ =

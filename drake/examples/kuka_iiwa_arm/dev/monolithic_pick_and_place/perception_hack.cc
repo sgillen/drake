@@ -422,9 +422,9 @@ struct PerceptionHack::Impl {
 
       auto&& color_image_output_port = rgbd_zoh->get_output_port(0);
       auto&& depth_image_output_port = rgbd_zoh->get_output_port(1);
-      auto&& label_image_output_port = rgbd_zoh->get_output_port(2);
+//      auto&& label_image_output_port = rgbd_zoh->get_output_port(2);
 
-      bool do_publish = false;
+      bool do_publish = true;
       if (do_publish) {
         // Image to LCM.
         image_to_lcm_message_ =
@@ -439,9 +439,10 @@ struct PerceptionHack::Impl {
             depth_image_output_port,
             image_to_lcm_message_->depth_image_input_port());
 
-        pbuilder->Connect(
-            label_image_output_port,
-            image_to_lcm_message_->label_image_input_port());
+        // This port has been disabled.
+//        pbuilder->Connect(
+//            label_image_output_port,
+//            image_to_lcm_message_->label_image_input_port());
 
         // Camera image publisher.
         image_lcm_pub_ = pbuilder->template AddSystem(
@@ -496,9 +497,14 @@ struct PerceptionHack::Impl {
         string config_file =
             drake::FindResource(base_path + "dart_config/iiwa_test.yaml").get_absolute_path_or_throw();
 
+        bool add_velocities = true;
         auto input_position_names = GetHierarchicalPositionNameList(
                                       pplant->get_plant().get_rigid_body_tree(),
-                                      plant_id_map);
+                                      plant_id_map, add_velocities);
+        std::cout << "names\n";
+        for (auto&& name : input_position_names) {
+          std::cout << "  " << name << "\n";
+        }
 
         auto estimator = pbuilder->template AddSystem<ArticulatedStateEstimator>(
                            config_file, &rgbd_camera_->depth_camera_info(),
