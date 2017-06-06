@@ -626,34 +626,32 @@ void RgbdCamera::Impl::UpdateModelPoses(
 }
 
 void RgbdCamera::Impl::UpdateRenderWindow() const {
+  ScopedWithTimer<> scoped_all("UpdateRenderWindow");
   {
-    ScopedWithTimer<> scoped1("Window"); unused(scoped1);
+    ScopedWithTimer<> scoped1("  vtkRenderWindow::Render"); unused(scoped1);
     color_depth_render_window_->Render();
   }
 
   for (auto& filter : MakeVtkInstanceArray<vtkWindowToImageFilter>(
            color_filter_, depth_filter_)) {
-    {
-      ScopedWithTimer<> scoped1("Filter Modified"); unused(scoped1);
-      filter->Modified();
-    }
-    {
-      ScopedWithTimer<> scoped1("Filter Update"); unused(scoped1);
-      filter->Update();
-    }
+    filter->Modified();
+    ScopedWithTimer<> scoped1("  vtkWindowToImageFilter::Update"); unused(scoped1);
+    filter->Update();
   }
 
-  for (auto& flipper : MakeVtkInstanceArray<vtkImageFlip>(
-           color_flipper_, depth_flipper_, label_flipper_)) {
-    flipper->Modified();
-    flipper->Update();
-  }
+  // for (auto& flipper : MakeVtkInstanceArray<vtkImageFlip>(
+  //          color_flipper_, depth_flipper_)) {
+  //   flipper->Modified();
+  //   ScopedWithTimer<> scoped1("  vtkImageFlip::Update"); unused(scoped1);
+  //   flipper->Update();
+  // }
 
-  for (auto& cast : MakeVtkInstanceArray<vtkImageCast>(
-           color_cast_, depth_cast_, label_cast_)) {
-    cast->Modified();
-    cast->Update();
-  }
+  // for (auto& cast : MakeVtkInstanceArray<vtkImageCast>(
+  //          color_cast_, depth_cast_)) {
+  //   cast->Modified();
+  //   ScopedWithTimer<> scoped1("  vtkImageCast::Update"); unused(scoped1);
+  //   cast->Update();
+  // }
 }
 
 void RgbdCamera::Impl::DoCalcOutput(
