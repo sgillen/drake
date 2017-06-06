@@ -103,7 +103,7 @@ std::unique_ptr<systems::RigidBodyPlant<double>> BuildCombinedPlant(
                            "yellow_post.urdf");
   tree_builder->StoreModel(
       "wsg",
-      "/manipulation/models/wsg_50_description" +
+      "/manipulation/models/wsg_50_description"
       "/sdf/schunk_wsg_50_ball_contact.sdf");
 
   // The main table which the arm sits on.
