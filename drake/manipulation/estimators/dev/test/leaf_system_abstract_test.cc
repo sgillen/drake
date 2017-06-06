@@ -38,6 +38,8 @@ class TestValue {
   int value_{};
 };
 
+using namespace std;
+
 // Tests that DeclareAbstractState works expectedly.
 GTEST_TEST(ModelLeafSystemTest, ModelAbstractState) {
   class SimpleStateSystem : public LeafSystem<double> {
@@ -57,6 +59,8 @@ GTEST_TEST(ModelLeafSystemTest, ModelAbstractState) {
           state->get_mutable_discrete_state()
           ->get_mutable_vector(0)->get_mutable_value();
       x[0] += 4;
+
+      cout << "CalcUpdate: " << context.get_time() << endl;
     }
     void DoCalcOutput(
           const Context<double>& context,
@@ -68,18 +72,20 @@ GTEST_TEST(ModelLeafSystemTest, ModelAbstractState) {
       auto&& y = output->GetMutableVectorData(0)->get_mutable_value();
       y[0] = test.value();
       y[1] = x[0];
+
+      cout << "CalcOutput: " << context.get_time() << endl;
     }
   };
 
   SimpleStateSystem dut;
-  auto context = dut.CreateDefaultContext();
-
   Simulator<double> simulator(dut);
   simulator.Initialize();
   simulator.StepTo(0.2);
 
-  EXPECT_EQ(context->get_abstract_state<int>(0), 1);
-  EXPECT_EQ(context->get_abstract_state<std::string>(1), "wow");
+  auto&& context = simulator.get_context();
+
+  EXPECT_EQ(context.get_abstract_state<TestValue>(0).value(), 4);
+  EXPECT_EQ(context.get_discrete_state(0)->get_value()[0], 8);
 }
 
 }  // namespace
