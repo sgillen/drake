@@ -275,7 +275,8 @@ class RgbdCamera::Impl : private ModuleInitVtkRenderingOpenGL2 {
   }
   bool is_discrete() const { return is_discrete_; }
 
-  void DoCalcOutput(const Eigen::VectorXd& x, rendering::PoseVector<double>* pcamera_base_pose,
+  void DoCalcOutput(double t,
+                    const Eigen::VectorXd& x, rendering::PoseVector<double>* pcamera_base_pose,
                     ImageRgba8U* pcolor_image, ImageDepth32F* pdepth_image,
                     ImageLabel16I* plabel_image);
 
@@ -663,12 +664,13 @@ void RgbdCamera::Impl::UpdateRenderWindow() const {
 }
 
 void RgbdCamera::Impl::DoCalcOutput(
+    double t,
     const Eigen::VectorXd& x,
     rendering::PoseVector<double>* camera_base_pose,
     sensors::ImageRgba8U* pcolor_image,
     sensors::ImageDepth32F* pdepth_image,
     sensors::ImageLabel16I* /*plabel_image*/) {
-  drake::log()->info("True camera render");
+  drake::log()->info("True camera render: {}", t);
   ScopedWithTimer<> scope_timer1("DoCalcOutput 1: ");
   unused(scope_timer1);
 
@@ -924,7 +926,7 @@ void RgbdCamera::DoCalcOutput(const systems::Context<double>& context,
     depth_image = depth_image_state;
     // label_image
   } else {
-    impl_->DoCalcOutput(x,
+    impl_->DoCalcOutput(context.get_time(), x,
                         &camera_base_pose,
                         &color_image, &depth_image, nullptr /* &label_image*/);
   }
@@ -944,13 +946,13 @@ void RgbdCamera::DoCalcUnrestrictedUpdate(
 
   // Outputs the image data.
   sensors::ImageRgba8U& color_image =
-      state->get_mutable_abstract_state<sensors::ImageRgba8U>(1);
+      state->get_mutable_abstract_state<sensors::ImageRgba8U>(0);
 
   sensors::ImageDepth32F& depth_image =
-      state->get_mutable_abstract_state<sensors::ImageDepth32F>(2);
+      state->get_mutable_abstract_state<sensors::ImageDepth32F>(1);
   // label_image
 
-  impl_->DoCalcOutput(x,
+  impl_->DoCalcOutput(context.get_time(), x,
                       &camera_base_pose,
                       &color_image, &depth_image, nullptr /* &label_image */);
 }

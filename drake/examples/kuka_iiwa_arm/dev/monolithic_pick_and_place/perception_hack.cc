@@ -281,7 +281,7 @@ struct PerceptionHack::Impl {
     const Vector3d position(0, 2, 2);
     const Vector3d orientation(0, 20, -90); // degrees
 
-//    pbuilder->template AddSystem<WallClockPublisher>();
+    pbuilder->template AddSystem<WallClockPublisher>();
 
     const double camera_dt = 0.033; // ~30 Hz
     if (use_rgbd_camera) {
