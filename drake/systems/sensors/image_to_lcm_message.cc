@@ -52,15 +52,15 @@ void PackImageToLcmMessage(const Image<kPixelType>& image,
 ImageToLcmMessage::ImageToLcmMessage() {
   color_image_input_port_index_ =
       DeclareAbstractInputPort(
-          systems::Value<ImageBgra8U>()).get_index();
+          systems::Value<ImageRgba8U>()).get_index();
 
   depth_image_input_port_index_ =
       DeclareAbstractInputPort(
           systems::Value<ImageDepth32F>()).get_index();
 
-  label_image_input_port_index_ =
-      DeclareAbstractInputPort(
-          systems::Value<ImageLabel16I>()).get_index();
+  // label_image_input_port_index_ =
+  //     DeclareAbstractInputPort(
+  //         systems::Value<ImageLabel16I>()).get_index();
 
   images_t_msg_output_port_index_ =
       DeclareAbstractOutputPort(systems::Value<bot_core::images_t>())
@@ -91,14 +91,14 @@ void ImageToLcmMessage::DoCalcOutput(
     const systems::Context<double>& context,
     systems::SystemOutput<double>* output) const {
 
-  const ImageBgra8U& color_image = this->EvalAbstractInput(
-      context, color_image_input_port_index_)->GetValue<ImageBgra8U>();
+  const ImageRgba8U& color_image = this->EvalAbstractInput(
+      context, color_image_input_port_index_)->GetValue<ImageRgba8U>();
 
   const ImageDepth32F& depth_image = this->EvalAbstractInput(
       context, depth_image_input_port_index_)->GetValue<ImageDepth32F>();
 
-  const ImageLabel16I& label_image = this->EvalAbstractInput(
-      context, label_image_input_port_index_)->GetValue<ImageLabel16I>();
+  // const ImageLabel16I& label_image = this->EvalAbstractInput(
+  //     context, label_image_input_port_index_)->GetValue<ImageLabel16I>();
 
   bot_core::image_t color_image_msg;
   PackImageToLcmMessage(color_image, &color_image_msg);
@@ -106,8 +106,8 @@ void ImageToLcmMessage::DoCalcOutput(
   bot_core::image_t depth_image_msg;
   PackImageToLcmMessage(depth_image, &depth_image_msg);
 
-  bot_core::image_t label_image_msg;
-  PackImageToLcmMessage(label_image, &label_image_msg);
+  // bot_core::image_t label_image_msg;
+  // PackImageToLcmMessage(label_image, &label_image_msg);
 
   bot_core::images_t& msg =
       output->GetMutableData(images_t_msg_output_port_index_)->
@@ -125,7 +125,7 @@ void ImageToLcmMessage::DoCalcOutput(
   msg.images.clear();
   msg.images.push_back(color_image_msg);
   msg.images.push_back(depth_image_msg);
-  msg.images.push_back(label_image_msg);
+  // msg.images.push_back(label_image_msg);
 }
 
 }  // namespace sensors
