@@ -829,7 +829,7 @@ void RgbdCamera::Init(const std::string& name, double period_sec) {
         CreateUnique(new Value<sensors::ImageLabel16I>(label_image)));
     // TODO(eric.cousineau): Is there an easier way to allocate discrete states?
     this->DeclareDiscreteState(pose_vector.size());
-    this->DeclareDiscreteUpdatePeriodSec(period_sec);
+    this->DeclarePeriodicUnrestrictedUpdate(period_sec, 0.);
     impl_->set_is_discrete(true);
     drake::log()->info("WORKAROUND: Using discrete camera update");
   }
@@ -887,7 +887,7 @@ RgbdCamera::camera_base_pose_output_port() const {
 
 void RgbdCamera::DoCalcOutput(const systems::Context<double>& context,
                               systems::SystemOutput<double>* output) const {
-  drake::log()->info("Camera update: {}", context.get_time());
+//  drake::log()->info("Camera update: {}", context.get_time());
   const Eigen::VectorXd& x =
       this->EvalVectorInput(context, kPortStateInput)->CopyToVector();
 

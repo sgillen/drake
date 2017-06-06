@@ -154,7 +154,7 @@ class DepthImageToPointCloud : public LeafSystemMixin<double> {
       // Project from `D` to `B`
       point_cloud = (R_BD * point_cloud).eval();
     }
-    drake::log()->info("Convert image");
+    drake::log()->info("Convert to depth cloud: {}", context.get_time());
   }
 
  private:
@@ -268,7 +268,7 @@ struct PerceptionHack::Impl {
       TreePlant* pplant,
       const ReverseIdMap& plant_id_map) {
 
-    bool use_rgbd_camera = false;
+    bool use_rgbd_camera = true;
     bool use_depth_sensor = false;
 
     const double pi = M_PI;
@@ -281,7 +281,7 @@ struct PerceptionHack::Impl {
     const Vector3d position(0, 2, 2);
     const Vector3d orientation(0, 20, -90); // degrees
 
-    pbuilder->template AddSystem<WallClockPublisher>();
+//    pbuilder->template AddSystem<WallClockPublisher>();
 
     const double camera_dt = 0.033; // ~30 Hz
     if (use_rgbd_camera) {
@@ -317,7 +317,7 @@ struct PerceptionHack::Impl {
       auto&& depth_image_output_port = rgbd_camera_->get_output_port(1);
       auto&& camera_base_pose_output_port = rgbd_camera_->camera_base_pose_output_port();
 
-      bool do_publish = true;
+      bool do_publish = false;
       if (do_publish) {
         // Image to LCM.
         image_to_lcm_message_ =
@@ -342,7 +342,7 @@ struct PerceptionHack::Impl {
             LcmPublisherSystem::Make<bot_core::images_t>(
                 "DRAKE_IMAGE_RGBD", plcm));
         image_lcm_pub_->set_name("publisher");
-        image_lcm_pub_->set_publish_period(0.01);
+        image_lcm_pub_->set_publish_period(camera_dt);
 
         pbuilder->Connect(
             image_to_lcm_message_->images_t_msg_output_port(),
@@ -366,23 +366,26 @@ struct PerceptionHack::Impl {
       pbuilder->Connect(
             depth_image_output_port,
             depth_to_pc->get_input_port(0));
-      typedef PointCloudToLcmPointCloud Converter;
-      auto pc_to_lcm = pbuilder->template AddSystem<Converter>();
-      pbuilder->Connect(
-            depth_to_pc->get_output_port(0),
-            pc_to_lcm->get_inport());
-      pbuilder->Connect(
-            camera_base_pose_output_port,
-            pc_to_lcm->get_pose_inport());
-      // Add LCM publisher
-      auto depth_lcm_pub = pbuilder->template AddSystem<LcmPublisherSystem>(
-          LcmPublisherSystem::Make<Converter::Message>("DRAKE_POINTCLOUD_RGBD",
-                                                       plcm));
-      depth_lcm_pub->set_name("depth_point_cloud_lcm_publisher");
-      depth_lcm_pub->set_publish_period(0.01);
-      pbuilder->Connect(
-            pc_to_lcm->get_outport(),
-            depth_lcm_pub->get_input_port(0));
+
+      if (do_publish) {
+        typedef PointCloudToLcmPointCloud Converter;
+        auto pc_to_lcm = pbuilder->template AddSystem<Converter>();
+        pbuilder->Connect(
+              depth_to_pc->get_output_port(0),
+              pc_to_lcm->get_inport());
+        pbuilder->Connect(
+              camera_base_pose_output_port,
+              pc_to_lcm->get_pose_inport());
+        // Add LCM publisher
+        auto depth_lcm_pub = pbuilder->template AddSystem<LcmPublisherSystem>(
+            LcmPublisherSystem::Make<Converter::Message>("DRAKE_POINTCLOUD_RGBD",
+                                                         plcm));
+        depth_lcm_pub->set_name("depth_point_cloud_lcm_publisher");
+        depth_lcm_pub->set_publish_period(camera_dt);
+        pbuilder->Connect(
+              pc_to_lcm->get_outport(),
+              depth_lcm_pub->get_input_port(0));
+      }
 
       if (use_estimator) {
 //        drake::log()->set_level(spdlog::level::trace);
