@@ -317,7 +317,7 @@ struct PerceptionHack::Impl {
       auto&& depth_image_output_port = rgbd_camera_->get_output_port(1);
       auto&& camera_base_pose_output_port = rgbd_camera_->camera_base_pose_output_port();
 
-      bool do_publish = false;
+      bool do_publish = true;
       if (do_publish) {
         // Image to LCM.
         image_to_lcm_message_ =
