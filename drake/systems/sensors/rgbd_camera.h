@@ -210,6 +210,12 @@ class RgbdCamera : public LeafSystem<double> {
   void DoCalcOutput(const systems::Context<double>& context,
                     systems::SystemOutput<double>* output) const override;
 
+  void DoCalcUnrestrictedUpdate(const systems::Context<double>& context,
+                            systems::State<double>* state) const override;
+
+  std::vector<systems::DiscreteValues<double>>
+  AllocateDiscreteState() const override;
+
  private:
   void Init(const std::string& name);
 

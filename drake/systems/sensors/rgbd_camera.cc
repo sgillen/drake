@@ -758,6 +758,7 @@ float RgbdCamera::Impl::CheckRangeAndConvertToMeters(float z_buffer_value) {
   return checked_depth;
 }
 
+bool kUseDiscreteCalc = true;
 
 RgbdCamera::RgbdCamera(const std::string& name,
                        const RigidBodyTree<double>& tree,
@@ -779,6 +780,14 @@ RgbdCamera::RgbdCamera(const std::string& name,
   Init(name);
 }
 
+/**
+ * Convenience to infer type.
+ */
+template <typename T>
+std::unique_ptr<T> CreateUnique(T* obj) {
+  return std::unique_ptr<T>(obj);
+}
+
 void RgbdCamera::Init(const std::string& name) {
   set_name(name);
   const int kVecNum =
@@ -797,9 +806,21 @@ void RgbdCamera::Init(const std::string& name) {
   this->DeclareAbstractOutputPort(systems::Value<sensors::ImageLabel16I>(
       label_image));
 
-  // Store values in
+  rendering::PoseVector<double> pose_vector;
+  this->DeclareVectorOutputPort(pose_vector);
 
-  this->DeclareVectorOutputPort(rendering::PoseVector<double>());
+  if (kUseDiscreteCalc) {
+    using systems::Value;
+    // Store values in abstract states
+    this->DeclareAbstractState(
+        CreateUnique(new Value<sensors::ImageRgba8U>(color_image)));
+    this->DeclareAbstractState(
+        CreateUnique(new Value<sensors::ImageDepth32F>(depth_image)));
+    this->DeclareAbstractState(
+        CreateUnique(new Value<sensors::ImageLabel16I>(label_image)));
+    // TODO(eric.cousineau): Is there an easier way to allocate discrete states?
+    this->DeclareDiscreteState(pose_vector.size());
+  }
 }
 
 RgbdCamera::~RgbdCamera() {}
@@ -874,9 +895,48 @@ void RgbdCamera::DoCalcOutput(const systems::Context<double>& context,
   //     output->GetMutableData(kPortLabelImage)->GetMutableValue<
   //       sensors::ImageLabel16I>();
 
+  if (kUseDiscreteCalc) {
+    // Copy data.
+    const rendering::PoseVector<double>& camera_base_pose_state =
+            context.get_abstract_state<rendering::PoseVector<double>>(0);
+    const sensors::ImageRgba8U& color_image_state =
+        context.get_abstract_state<sensors::ImageRgba8U>(1);
+    const sensors::ImageDepth32F& depth_image_state =
+        context.get_abstract_state<sensors::ImageDepth32F>(2);
+    // label_image
+
+    camera_base_pose = camera_base_pose_state;
+    color_image = color_image_state;
+    depth_image = depth_image_state;
+    // label_image
+  } else {
+    impl_->DoCalcOutput(x,
+                        &camera_base_pose,
+                        &color_image, &depth_image, nullptr /* &label_image*/);
+  }
+}
+
+void RgbdCamera::DoCalcUnrestrictedUpdate(
+    const systems::Context<double>& context,
+    systems::State<double>* state) const {
+  DRAKE_DEMAND(kUseDiscreteCalc);
+  const Eigen::VectorXd& x =
+      this->EvalVectorInput(context, kPortStateInput)->CopyToVector();
+
+  rendering::PoseVector<double>& camera_base_pose =
+          state->get_mutable_abstract_state<rendering::PoseVector<double>>(0);
+
+  // Outputs the image data.
+  sensors::ImageRgba8U& color_image =
+      state->get_mutable_abstract_state<sensors::ImageRgba8U>(1);
+
+  sensors::ImageDepth32F& depth_image =
+      state->get_mutable_abstract_state<sensors::ImageDepth32F>(2);
+  // label_image
+
   impl_->DoCalcOutput(x,
                       &camera_base_pose,
-                      &color_image, &depth_image, nullptr /* &label_image*/);
+                      &color_image, &depth_image, nullptr /* &label_image */);
 }
 
 constexpr float RgbdCamera::InvalidDepth::kTooFar;
