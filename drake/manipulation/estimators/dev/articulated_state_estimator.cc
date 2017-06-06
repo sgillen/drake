@@ -296,8 +296,9 @@ void ArticulatedStateEstimator::DoCalcDiscreteVariableUpdates(
              .get_value();
 
   VectorXd estimated_tree_state;
-  impl_->ImplDiscreteUpdate(q0, tree_q_measurement,
-                            point_cloud, depth_image, &estimated_tree_state);
+  impl_->ImplDiscreteUpdate(
+        q0, tree_q_measurement, point_cloud, depth_image,
+        &estimated_tree_state);
   updates->get_mutable_vector()->get_mutable_value() = estimated_tree_state;
 }
 
