@@ -270,8 +270,9 @@ class RgbdCamera::Impl : private ModuleInitVtkRenderingOpenGL2 {
 
   static float CheckRangeAndConvertToMeters(float z_buffer_value);
 
-  void DoCalcOutput(const BasicVector<double>& input_vector,
-                    systems::SystemOutput<double>* output) const;
+  void DoCalcOutput(const Eigen::VectorXd& x, rendering::PoseVector<double>* pcamera_base_pose,
+                    ImageRgba8U* pcolor_image, ImageDepth32F* pdepth_image,
+                    ImageLabel16I* plabel_image);
 
   const Eigen::Isometry3d& color_camera_optical_pose() const {
     return X_BC_;
@@ -655,13 +656,21 @@ void RgbdCamera::Impl::UpdateRenderWindow() const {
 }
 
 void RgbdCamera::Impl::DoCalcOutput(
-    const BasicVector<double>& input_vector,
-    systems::SystemOutput<double>* output) const {
+    const Eigen::VectorXd& x,
+    rendering::PoseVector<double>* camera_base_pose,
+    sensors::ImageRgba8U* pcolor_image,
+    sensors::ImageDepth32F* pdepth_image,
+    sensors::ImageLabel16I* /*plabel_image*/) {
   ScopedWithTimer<> scope_timer1("DoCalcOutput 1: ");
   unused(scope_timer1);
 
-  const Eigen::VectorXd q = input_vector.CopyToVector().head(
-      tree_.get_num_positions());
+  // Dereference
+//  auto& camera_base_pose = *pcamera_base_pose;
+  auto& color_image = *pcolor_image;
+  auto& depth_image = *pdepth_image;
+//  auto& label_image = *plabel_image;
+
+  const Eigen::VectorXd q = x.head(tree_.get_num_positions());
   KinematicsCache<double> cache = tree_.doKinematics(q);
 
   Eigen::Isometry3d X_WB;
@@ -671,10 +680,6 @@ void RgbdCamera::Impl::DoCalcOutput(
     // Updates camera pose.
     X_WB = tree_.CalcFramePoseInWorldFrame(cache, frame_);
   }
-
-  rendering::PoseVector<double>* const camera_base_pose =
-      dynamic_cast<rendering::PoseVector<double>*>(
-          output->GetMutableVectorData(kPortCameraPose));
 
   Eigen::Translation<double, 3> trans = Eigen::Translation<double, 3>(
       X_WB.translation());
@@ -691,19 +696,6 @@ void RgbdCamera::Impl::DoCalcOutput(
     ScopedWithTimer<> scope_timer_2("UpdateRenderWindow"); unused(scope_timer_2);
     UpdateRenderWindow();
   }
-
-  // Outputs the image data.
-  sensors::ImageRgba8U& color_image =
-      output->GetMutableData(kPortColorImage)->GetMutableValue<
-        sensors::ImageRgba8U>();
-
-  sensors::ImageDepth32F& depth_image =
-      output->GetMutableData(kPortDepthImage)->GetMutableValue<
-        sensors::ImageDepth32F>();
-
-  // sensors::ImageLabel16I& label_image =
-  //     output->GetMutableData(kPortLabelImage)->GetMutableValue<
-  //       sensors::ImageLabel16I>();
 
   void* color_ptr = color_cast_->GetOutput()->GetScalarPointer(0, 0, 0);
   const int num_pixels = kImageWidth * kImageHeight;
@@ -805,6 +797,8 @@ void RgbdCamera::Init(const std::string& name) {
   this->DeclareAbstractOutputPort(systems::Value<sensors::ImageLabel16I>(
       label_image));
 
+  // Store values in
+
   this->DeclareVectorOutputPort(rendering::PoseVector<double>());
 }
 
@@ -860,10 +854,29 @@ RgbdCamera::camera_base_pose_output_port() const {
 
 void RgbdCamera::DoCalcOutput(const systems::Context<double>& context,
                               systems::SystemOutput<double>* output) const {
-  const BasicVector<double>* input_vector =
-      this->EvalVectorInput(context, kPortStateInput);
+  const Eigen::VectorXd& x =
+      this->EvalVectorInput(context, kPortStateInput)->CopyToVector();
 
-  impl_->DoCalcOutput(*input_vector, output);
+  rendering::PoseVector<double>& camera_base_pose =
+      *dynamic_cast<rendering::PoseVector<double>*>(
+          output->GetMutableVectorData(kPortCameraPose));
+
+  // Outputs the image data.
+  sensors::ImageRgba8U& color_image =
+      output->GetMutableData(kPortColorImage)->GetMutableValue<
+        sensors::ImageRgba8U>();
+
+  sensors::ImageDepth32F& depth_image =
+      output->GetMutableData(kPortDepthImage)->GetMutableValue<
+        sensors::ImageDepth32F>();
+
+  // sensors::ImageLabel16I& label_image =
+  //     output->GetMutableData(kPortLabelImage)->GetMutableValue<
+  //       sensors::ImageLabel16I>();
+
+  impl_->DoCalcOutput(x,
+                      &camera_base_pose,
+                      &color_image, &depth_image, nullptr /* &label_image*/);
 }
 
 constexpr float RgbdCamera::InvalidDepth::kTooFar;
