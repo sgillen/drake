@@ -136,7 +136,8 @@ class RgbdCamera : public LeafSystem<double> {
              const Eigen::Vector3d& position,
              const Eigen::Vector3d& orientation,
              double fov_y,
-             bool show_window);
+             bool show_window,
+             double period_sec = -1.);
 
   /// A constructor for %RgbdCamera that defines `B` using a RigidBodyFrame.
   /// The pose of %RgbdCamera is fixed to a user-defined frame and will be
@@ -161,7 +162,8 @@ class RgbdCamera : public LeafSystem<double> {
              const RigidBodyTree<double>& tree,
              const RigidBodyFrame<double>& frame,
              double fov_y,
-             bool show_window);
+             bool show_window,
+             double period_sec = -1.);
 
   ~RgbdCamera();
 
@@ -217,7 +219,7 @@ class RgbdCamera : public LeafSystem<double> {
   AllocateDiscreteState() const override;
 
  private:
-  void Init(const std::string& name);
+  void Init(const std::string& name, double period_sec);
 
   class Impl;
   std::unique_ptr<Impl> impl_;

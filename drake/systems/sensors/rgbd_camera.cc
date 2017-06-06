@@ -270,6 +270,11 @@ class RgbdCamera::Impl : private ModuleInitVtkRenderingOpenGL2 {
 
   static float CheckRangeAndConvertToMeters(float z_buffer_value);
 
+  void set_is_discrete(bool value) {
+    is_discrete_ = value;
+  }
+  bool is_discrete() const { return is_discrete_; }
+
   void DoCalcOutput(const Eigen::VectorXd& x, rendering::PoseVector<double>* pcamera_base_pose,
                     ImageRgba8U* pcolor_image, ImageDepth32F* pdepth_image,
                     ImageLabel16I* plabel_image);
@@ -329,6 +334,8 @@ class RgbdCamera::Impl : private ModuleInitVtkRenderingOpenGL2 {
   vtkNew<vtkImageCast> color_cast_;
   vtkNew<vtkImageCast> depth_cast_;
   vtkNew<vtkImageCast> label_cast_;
+
+  bool is_discrete_{false};
 };
 
 
@@ -758,28 +765,25 @@ float RgbdCamera::Impl::CheckRangeAndConvertToMeters(float z_buffer_value) {
   return checked_depth;
 }
 
-// TODO(eric.cousineau): Remove this once computation caching is available, such
-// that a ZOH will be able to fully minimize the number of render calls.
-bool kUseDiscreteCalc = true;
-
 RgbdCamera::RgbdCamera(const std::string& name,
                        const RigidBodyTree<double>& tree,
                        const Eigen::Vector3d& position,
                        const Eigen::Vector3d& orientation,
                        double fov_y,
-                       bool show_window)
+                       bool show_window, double period_sec)
     : impl_(new RgbdCamera::Impl(tree, RigidBodyFrame<double>(), position,
                                  orientation, fov_y, show_window, true)) {
-  Init(name);
+  Init(name, period_sec);
 }
 
 RgbdCamera::RgbdCamera(const std::string& name,
                        const RigidBodyTree<double>& tree,
                        const RigidBodyFrame<double>& frame,
                        double fov_y,
-                       bool show_window)
+                       bool show_window,
+                       double period_sec)
     : impl_(new RgbdCamera::Impl(tree, frame, fov_y, show_window, false)) {
-  Init(name);
+  Init(name, period_sec);
 }
 
 /**
@@ -790,7 +794,7 @@ std::unique_ptr<T> CreateUnique(T* obj) {
   return std::unique_ptr<T>(obj);
 }
 
-void RgbdCamera::Init(const std::string& name) {
+void RgbdCamera::Init(const std::string& name, double period_sec) {
   set_name(name);
   const int kVecNum =
       impl_->tree().get_num_positions() + impl_->tree().get_num_velocities();
@@ -811,7 +815,9 @@ void RgbdCamera::Init(const std::string& name) {
   rendering::PoseVector<double> pose_vector;
   this->DeclareVectorOutputPort(pose_vector);
 
-  if (kUseDiscreteCalc) {
+  // TODO(eric.cousineau): Remove this once computation caching is available,
+  // such that a ZOH will be able to fully minimize the number of render calls.
+  if (period_sec > 0.) {
     using systems::Value;
     // Store values in abstract states
     this->DeclareAbstractState(
@@ -822,6 +828,9 @@ void RgbdCamera::Init(const std::string& name) {
         CreateUnique(new Value<sensors::ImageLabel16I>(label_image)));
     // TODO(eric.cousineau): Is there an easier way to allocate discrete states?
     this->DeclareDiscreteState(pose_vector.size());
+    this->DeclareDiscreteUpdatePeriodSec(period_sec);
+    impl_->set_is_discrete(true);
+    drake::log()->info("WORKAROUND: Using discrete camera update");
   }
 }
 
@@ -877,6 +886,7 @@ RgbdCamera::camera_base_pose_output_port() const {
 
 void RgbdCamera::DoCalcOutput(const systems::Context<double>& context,
                               systems::SystemOutput<double>* output) const {
+  drake::log()->info("Camera update: {}", context.get_time());
   const Eigen::VectorXd& x =
       this->EvalVectorInput(context, kPortStateInput)->CopyToVector();
 
@@ -897,7 +907,7 @@ void RgbdCamera::DoCalcOutput(const systems::Context<double>& context,
   //     output->GetMutableData(kPortLabelImage)->GetMutableValue<
   //       sensors::ImageLabel16I>();
 
-  if (kUseDiscreteCalc) {
+  if (impl_->is_discrete()) {
     // Copy data.
     const sensors::ImageRgba8U& color_image_state =
         context.get_abstract_state<sensors::ImageRgba8U>(0);
@@ -922,7 +932,7 @@ void RgbdCamera::DoCalcOutput(const systems::Context<double>& context,
 void RgbdCamera::DoCalcUnrestrictedUpdate(
     const systems::Context<double>& context,
     systems::State<double>* state) const {
-  DRAKE_DEMAND(kUseDiscreteCalc);
+  DRAKE_DEMAND(impl_->is_discrete());
   const Eigen::VectorXd& x =
       this->EvalVectorInput(context, kPortStateInput)->CopyToVector();
 
@@ -946,8 +956,12 @@ void RgbdCamera::DoCalcUnrestrictedUpdate(
 
 std::unique_ptr<DiscreteValues<double>> RgbdCamera::AllocateDiscreteState() const
 {
- return std::make_unique<DiscreteValues<double>>(
-     std::make_unique<rendering::PoseVector<double>>());
+  if (impl_->is_discrete()) {
+   return std::make_unique<DiscreteValues<double>>(
+       std::make_unique<rendering::PoseVector<double>>());
+  } else {
+    return LeafSystem<double>::AllocateDiscreteState();
+  }
 }
 
 constexpr float RgbdCamera::InvalidDepth::kTooFar;

@@ -283,14 +283,16 @@ struct PerceptionHack::Impl {
 
     pbuilder->template AddSystem<WallClockPublisher>();
 
+    const double camera_dt = 0.033; // ~30 Hz
     if (use_rgbd_camera) {
-      bool use_estimator = true;
+      bool use_estimator = false;
 
       // Adapted from: .../image_to_lcm_message_demo.cc
 
       auto rgbd_camera_instance = new RgbdCamera(
           "rgbd_camera", rigid_body_tree,
-          position, orientation * pi / 180, pi / 4, true);
+          position, orientation * pi / 180, pi / 4, true,
+          camera_dt);
       rgbd_camera_ = pbuilder->AddSystem(CreateUnique(rgbd_camera_instance));
       rgbd_camera_->set_name("rgbd_camera");
 
@@ -313,6 +315,7 @@ struct PerceptionHack::Impl {
 
       auto&& color_image_output_port = rgbd_camera_->get_output_port(0);
       auto&& depth_image_output_port = rgbd_camera_->get_output_port(1);
+      auto&& camera_base_pose_output_port = rgbd_camera_->camera_base_pose_output_port();
 
       bool do_publish = true;
       if (do_publish) {
@@ -353,7 +356,7 @@ struct PerceptionHack::Impl {
         rgbd_camera_pose_lcm_pub_->set_publish_period(0.01);
 
         pbuilder->Connect(
-            rgbd_camera_->camera_base_pose_output_port(),
+            camera_base_pose_output_port,
             rgbd_camera_pose_lcm_pub_->get_input_port(0));
       }
 
@@ -369,7 +372,7 @@ struct PerceptionHack::Impl {
             depth_to_pc->get_output_port(0),
             pc_to_lcm->get_inport());
       pbuilder->Connect(
-            rgbd_camera_->camera_base_pose_output_port(),
+            camera_base_pose_output_port,
             pc_to_lcm->get_pose_inport());
       // Add LCM publisher
       auto depth_lcm_pub = pbuilder->template AddSystem<LcmPublisherSystem>(
