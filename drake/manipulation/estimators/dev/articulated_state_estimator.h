@@ -41,6 +41,7 @@ class LeafSystemMixin : public systems::LeafSystem<T_> {
   typedef systems::Context<T> Context;
   typedef systems::DiscreteValues<T> DiscreteValues;
   typedef systems::SystemOutput<T> SystemOutput;
+  typedef systems::State<T> State;
   using Inport = systems::InputPortDescriptor<T>;
   using Outport = systems::OutputPortDescriptor<T>;
   template <typename U>

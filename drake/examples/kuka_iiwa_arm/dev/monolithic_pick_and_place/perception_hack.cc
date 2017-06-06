@@ -65,6 +65,38 @@ namespace examples {
 namespace kuka_iiwa_arm {
 namespace monolithic_pick_and_place {
 
+template <typename T>
+class AbstractZOH : public LeafSystemMixin<double> {
+ public:
+  AbstractZOH(double period_sec, double offset_sec = 0.) {
+    // Using LcmSubscriberSystem as a basis
+    this->DeclareAbstractInputPort();
+    this->DeclareAbstractState(make_unique<systems::Value<T>>());
+    this->DeclareAbstractOutputPort();
+    DeclarePeriodicUnrestrictedUpdate(period_sec, offset_sec);
+  }
+
+ protected:
+  void DoCalcUnrestrictedUpdate(const Context& context,
+                                State* state) const override {
+    const T& input_value =
+        EvalAbstractInput(context, 0)->template GetValue<T>();
+    T& stored_value =
+        state->get_mutable_abstract_state()
+            ->get_mutable_value(0).GetMutableValue<T>();
+    stored_value = input_value;
+  }
+
+  void DoCalcOutput(const Context& context,
+                    SystemOutput* output) const override {
+    const T& stored_value =
+        context.get_abstract_state()->get_value(0).GetValue<T>();
+    T& output_value =
+        output->GetMutableData(0)->GetMutableValue<T>();
+    output_value = stored_value;
+  }
+};
+
 class WallClockPublisher : public LeafSystemMixin<double> {
  public:
   WallClockPublisher(double period_sec) {
