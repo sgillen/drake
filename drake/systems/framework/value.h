@@ -173,6 +173,11 @@ class AbstractValue {
     return std::unique_ptr<AbstractValue>(new Value<T>(value));
   }
 
+ protected:
+  virtual const AbstractValue* GetUserValue() const {
+    return this;
+  }
+
  private:
   // Casts this to a Value<T>*.  Throws std::bad_cast if the cast fails.
   template <typename T>
@@ -196,7 +201,7 @@ class AbstractValue {
   // Casts this to a const Value<T>*. Throws std::bad_cast if the cast fails.
   template <typename T>
   const Value<T>* DownCastOrThrow() const {
-    const Value<T>* value = dynamic_cast<const Value<T>*>(this);
+    const Value<T>* value = dynamic_cast<const Value<T>*>(GetUserValue());
     if (value == nullptr) {
       // This exception is commonly thrown when the AbstractValue does not
       // contain the concrete value type requested.

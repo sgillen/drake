@@ -7,52 +7,73 @@
 namespace drake {
 namespace systems {
 
-// Assume all are copy-and-move constructible.
-// More permissive than Value, in that it allows default construction
-// (but will puke if it is null.)
-// TODO: Consider using std::optional? Does it permit non-default constructible
-// objects?
-template <typename T>
-class DefaultData {
- public:
-  DRAKE_DEFAULT_COPY_AND_MOVE_AND_ASSIGN(DefaultData);
-  DefaultData() {}
-  void set_value(const T& value) {
-    value_ = value;
-  }
-  bool has_value() const {
-    return value_ != nullopt;
-  }
-  T& value() {
-    DRAKE_DEMAND(has_value());
-    return *value_;
-  }
-  const T& value() const {
-    DRAKE_DEMAND(has_value());
-    return *value_;
-  }
- private:
-  optional<T> value_;
-//  using Traits = systems::value_detail::ValueTraits<T>;
-//  typename Traits::Storage value_;
-};
+//// Assume all are copy-and-move constructible.
+//// More permissive than Value, in that it allows default construction
+//// (but will puke if it is null.)
+//// TODO: Consider using std::optional? Does it permit non-default constructible
+//// objects?
+//template <typename T>
+//class DefaultValue : public AbstractValue {
+// public:
+//  DRAKE_DEFAULT_COPY_AND_MOVE_AND_ASSIGN(DefaultValue);
+//  DefaultValue() {}
+//  void SetFrom(const AbstractValue& other) override {
+//    // First, assume that the input is of type Value<T>.
+//    const auto* value_ptr = dynamic_cast<const Value<T>*>(&other);
+//    if (value_ptr) {
+//      value_ = *value_ptr;
+//    } else {
+//      DefaultValue* out = new DefaultValue();
+//      out->value_.emplace
+//      const auto* default_ptr = dynamic_cast<const DefaultValue*>(&other);
+//    }
+//  }
+//  void SetFromOrThrow(const AbstractValue& other) override {
+//    // Lazy
+//    SetFrom(other);
+//  }
+//  std::unique_ptr<AbstractValue> Clone() const override {
+//    return new DefaultValue<T>(*this);
+//  }
+//  void set_value(const T& value) {
+//    value_ = Value<T>(value);
+//  }
+//  bool has_value() const {
+//    return value_ != nullopt;
+//  }
+//  T& value() {
+//    DRAKE_DEMAND(has_value());
+//    return value_->get_mutable_value();
+//  }
+//  const T& value() const {
+//    DRAKE_DEMAND(has_value());
+//    return value_->get_value();
+//  }
+// protected:
+//  const AbstractValue* GetUserValue() const override {
+//    return &value_.value();
+//  }
+// private:
+//  optional<Value<T>> value_;
+////  using Traits = systems::value_detail::ValueTraits<T>;
+////  typename Traits::Storage value_;
+//};
 
 template <typename T>
 class AbstractZOH : public LeafSystem<double> {
  public:
-  typedef DefaultData<T> Data;
   typedef std::function<void(double time, const T& value)> OnUpdate;
 
-  AbstractZOH(double period_sec, double offset_sec = 0.,
-              bool permit_autoinit = true)
-      : permit_autoinit_(permit_autoinit) {
+  AbstractZOH(const T& ic, double period_sec, double offset_sec = 0.,
+              bool use_autoinit = false)
+      : permit_autoinit_(use_autoinit) {
     // Using LcmSubscriberSystem as a basis
     // This will receive Value<T>, not Value<Data>.
     this->DeclareAbstractInputPort();
-    // TODO(eric.cousineau): Is there a way to not care about the type?
-    // And ignore using DefaultData<> altogether?
-    this->DeclareAbstractState(std::make_unique<systems::Value<Data>>());
-    this->DeclareAbstractOutputPort(systems::Value<Data>());
+    // TODO(eric.cousineau): Is there a way to not care about the default constructor,
+    // and just inherit this from an upstream system?
+    this->DeclareAbstractState(std::make_unique<Value<T>>(ic));
+    this->DeclareAbstractOutputPort(Value<T>(ic));
     DeclarePeriodicUnrestrictedUpdate(period_sec, offset_sec);
   }
 
@@ -66,10 +87,10 @@ class AbstractZOH : public LeafSystem<double> {
                                 State<double>* state) const override {
     const T& input_value =
         EvalAbstractInput(context, 0)->template GetValue<T>();
-    Data& stored_value =
+    T& stored_value =
         state->get_mutable_abstract_state()
-            ->get_mutable_value(0).GetMutableValue<Data>();
-    stored_value.set_value(input_value);
+            ->get_mutable_value(0).GetMutableValue<T>();
+    stored_value = input_value;
     if (on_update_) {
       on_update_(context.get_time(), input_value);
     }
@@ -83,31 +104,21 @@ class AbstractZOH : public LeafSystem<double> {
 
   void DoCalcOutput(const Context<double>& context,
                     SystemOutput<double>* output) const override {
-    const Data& stored_value =
-        context.get_abstract_state()->get_value(0).GetValue<Data>();
-    Data& output_value =
-      output->GetMutableData(0)->GetMutableValue<Data>();
-    if (!stored_value.has_value()) {
-      // HACK(eric.cousineau): Figure out how to resolve this.
-      // NOTE: Presently will not be useful until all ports are cached.
-      throw std::runtime_error("Not implemented");
-//      std::cout << "HACCCK" << std::endl;
-//      auto& mutable_context = const_cast<Context<double>&>(context);
-//      const T& input_value =
-//          EvalAbstractInput(mutable_context, 0)->template GetValue<T>();
-//      Data& mutable_stored_value =
-//          mutable_context.template get_mutable_abstract_state<Data>(0);
-//      mutable_stored_value.set_value(input_value);
-//      output_value.set_value(mutable_stored_value.value());
-    } else {
-      output_value.set_value(stored_value.value());
-    }
+    const T& stored_value =
+        context.get_abstract_state()->get_value(0).GetValue<T>();
+    T& output_value =
+      output->GetMutableData(0)->GetMutableValue<T>();
+    output_value = stored_value;
   }
  private:
   OnUpdate on_update_;
   bool permit_autoinit_{};
 };
 
+template <typename T, typename... Extra>
+std::unique_ptr<AbstractZOH<T>> MakeAbstractZOH(const T& ic, Extra&&... extra) {
+  return std::make_unique<AbstractZOH<T>>(ic, std::forward<Extra>(extra)...);
+}
 
 template <typename Visitor>
 void pack_visit(Visitor&& visitor) {}
