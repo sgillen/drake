@@ -668,6 +668,7 @@ void RgbdCamera::Impl::DoCalcOutput(
     sensors::ImageRgba8U* pcolor_image,
     sensors::ImageDepth32F* pdepth_image,
     sensors::ImageLabel16I* /*plabel_image*/) {
+  drake::log()->info("True camera render");
   ScopedWithTimer<> scope_timer1("DoCalcOutput 1: ");
   unused(scope_timer1);
 

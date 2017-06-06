@@ -268,7 +268,7 @@ struct PerceptionHack::Impl {
       TreePlant* pplant,
       const ReverseIdMap& plant_id_map) {
 
-    bool use_rgbd_camera = true;
+    bool use_rgbd_camera = false;
     bool use_depth_sensor = false;
 
     const double pi = M_PI;
