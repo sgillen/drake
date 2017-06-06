@@ -95,18 +95,18 @@ class ArticulatedStateEstimator::Impl {
     auto config = YAML::LoadFile(config_file);
     loader_.reset(new ManipulationTrackerLoader(config, drc_path, lcm_,
                                                 camera_info));
-    PrintJointNameHierarchy(loader_->estimator_->getRobot().get());
   }
 
   typedef VectorSlice<double> Slice;
   typedef Slice::Indices Indices;
 
-  void SetQSlices(const Indices& input_indices, const Indices& output_indices) {
-    slices_.reset(new Slices {Slice(input_indices), Slice(output_indices)});
+  void SetQSlices(const Slice& input_slice,
+                  const Slice& update_slice) {
+    slices_.reset(new Slices {input_slice, update_slice});
   }
 
   int get_num_input_positions() const {
-    return slices_->input.size();
+    return slices_->input.super_size();
   }
   int get_num_update_positions() const {
     return slices_->update.size();
@@ -184,11 +184,28 @@ void GetCommonIndices(const std::vector<T> &a,
                       std::vector<int>* b_indices) {
   auto a_map = CreateIndexMap(a);
   auto b_map = CreateIndexMap(b);
+  vector<bool> a_found(a.size(), false);
+  vector<bool> b_found(b.size(), false);
   for (const auto& a_pair : a_map) {
     auto b_iter = b_map.find(a_pair.first);
     if (b_iter != b_map.end()) {
+      auto& b_pair = *b_iter;
       a_indices->push_back(a_pair.second);
-      b_indices->push_back(b_iter->second);
+      b_indices->push_back(b_pair.second);
+      a_found[a_pair.second] = true;
+      b_found[b_pair.second] = true;
+    }
+  }
+  cout << "a not found:\n";
+  for (int i = 0; i < (int)a.size(); ++i) {
+    if (!a_found[i]) {
+      cout << "  " << a[i] << endl;
+    }
+  }
+  cout << "b not found:\n";
+  for (int i = 0; i < (int)b.size(); ++i) {
+    if (!b_found[i]) {
+      cout << "  " << b[i] << endl;
     }
   }
 }
@@ -210,8 +227,9 @@ ArticulatedStateEstimator::ArticulatedStateEstimator(
   std::vector<int> plant_indices, input_indices;
   GetCommonIndices(input_position_names, plant_position_names,
                    &input_indices, &plant_indices);
-
-  impl_->SetQSlices(input_indices, plant_indices);
+  Impl::Slice input_slice(input_indices, input_position_names.size());
+  Impl::Slice update_slice(plant_indices, plant_position_names.size());
+  impl_->SetQSlices(input_slice, update_slice);
 
   auto& estimator = *impl_->loader_->estimator_;
 

@@ -229,9 +229,9 @@ int DoMain(void) {
 
   Eigen::Vector3d box_orientation(0, 0, FLAGS_orientation);
 
-  std::cout
-      << "box_origin: " << box_origin.transpose() << std::endl
-      << "box_orientation: " << box_orientation.transpose() << std::endl;
+//  std::cout
+//      << "box_origin: " << box_origin.transpose() << std::endl
+//      << "box_orientation: " << box_orientation.transpose() << std::endl;
 
   for (size_t i = 0; i < place_locations.size(); i++) {
     place_locations[i].translation() += half_target_height;
@@ -248,7 +248,7 @@ int DoMain(void) {
                          &iiwa_instance, &wsg_instance, &box_instance,
                          &plant_instance_name_map, FLAGS_use_slow_meshes);
 
-  print(std::cout, plant_instance_name_map);
+//  print(std::cout, plant_instance_name_map);
 
   auto plant = builder.AddSystem<IiwaAndWsgPlantWithStateEstimator<double>>(
       std::move(model_ptr), iiwa_instance, wsg_instance, box_instance);
