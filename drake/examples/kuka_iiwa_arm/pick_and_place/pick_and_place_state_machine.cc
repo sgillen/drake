@@ -1,13 +1,9 @@
-/**
- * @file This file implements a state machine that drives the kuka iiwa arm to
- * pick up a block from one table to place it on another repeatedly.
- */
-
-#include "drake/examples/kuka_iiwa_arm/dev/pick_and_place/pick_and_place_state_machine.h"
+#include "drake/examples/kuka_iiwa_arm/pick_and_place/pick_and_place_state_machine.h"
 
 #include "drake/common/drake_assert.h"
 #include "drake/common/text_logging.h"
 #include "drake/common/trajectories/piecewise_quaternion.h"
+#include "drake/math/rotation_matrix.h"
 
 namespace drake {
 namespace examples {
@@ -16,8 +12,6 @@ namespace pick_and_place {
 namespace {
 
 using manipulation::planner::ConstraintRelaxingIk;
-
-// TODO(sam.creasey) check the anonymous helper functions for style compliance, etc.
 
 // Position the gripper 30cm above the object before grasp.
 const double kPreGraspHeightOffset = 0.3;
@@ -56,9 +50,10 @@ bool PlanStraightLineMotion(const VectorX<double>& q_current,
 
   const std::vector<MatrixX<double>> pos = {X_WEndEffector0.translation(),
                                             X_WEndEffector1.translation()};
-  drake::log()->info("Planning straight line from {} {} to {} {}",
-                     pos[0].transpose(), quats[0].vec(),
-                     pos[1].transpose(), quats[1].vec());
+  drake::log()->debug(
+      "Planning straight line from {} {} to {} {}",
+      pos[0].transpose(), math::rotmat2rpy(X_WEndEffector0.rotation()),
+      pos[1].transpose(), math::rotmat2rpy(X_WEndEffector1.rotation()));
 
   PiecewiseQuaternionSlerp<double> rot_traj({0, duration}, quats);
   PiecewisePolynomial<double> pos_traj =
@@ -75,7 +70,11 @@ bool PlanStraightLineMotion(const VectorX<double>& q_current,
     times->push_back(time);
     waypoints[i].pose.translation() = pos_traj.value(time);
     waypoints[i].pose.linear() = Matrix3<double>(rot_traj.orientation(time));
-    if (i != num_via_points) {
+    drake::log()->debug(
+        "via ({}/{}): {} {}", i, num_via_points,
+        waypoints[i].pose.translation().transpose(),
+        math::rotmat2rpy(waypoints[i].pose.rotation()).transpose());
+    if (true || i != num_via_points) {
       waypoints[i].pos_tol = via_points_pos_tolerance;
       waypoints[i].rot_tol = via_points_rot_tolerance;
     }
@@ -94,16 +93,13 @@ PickAndPlaceStateMachine::PickAndPlaceStateMachine(
       next_place_location_(0),
       loop_(loop),
       state_(OPEN_GRIPPER),
-      // Position and rotation tolerances.
-      // These should be adjusted to a tight bound until IK stops reliably giving
-      // results.
+      // Position and rotation tolerances.  These should be adjusted
+      // to a tight bound until IK stops reliably giving results.
       tight_pos_tol_(0.005, 0.005, 0.005),
       tight_rot_tol_(0.05),
       loose_pos_tol_(0.05, 0.05, 0.05),
       loose_rot_tol_(0.5) {
   DRAKE_DEMAND(!place_locations.empty());
-  drake::log()->info("Place location 0 {}",
-                   place_locations_[0].translation().transpose());
 }
 
 PickAndPlaceStateMachine::~PickAndPlaceStateMachine() {}
@@ -150,7 +146,8 @@ void PickAndPlaceStateMachine::Update(
 
         // 2 seconds, no via points.
         bool res = PlanStraightLineMotion(
-            env_state.get_iiwa_q(), 0, 2, X_Wend_effector_0_, X_Wend_effector_1_,
+            env_state.get_iiwa_q(), 0, 2,
+            X_Wend_effector_0_, X_Wend_effector_1_,
             loose_pos_tol_, loose_rot_tol_, planner, &ik_res, &times);
         DRAKE_DEMAND(res);
 
@@ -178,7 +175,8 @@ void PickAndPlaceStateMachine::Update(
         // 1 second, 3 via points. More via points to ensure the end effector
         // moves in more or less a straight line.
         bool res = PlanStraightLineMotion(
-            env_state.get_iiwa_q(), 3, 1, X_Wend_effector_0_, X_Wend_effector_1_,
+            env_state.get_iiwa_q(), 3, 1,
+            X_Wend_effector_0_, X_Wend_effector_1_,
             tight_pos_tol_, tight_rot_tol_, planner, &ik_res, &times);
         DRAKE_DEMAND(res);
 
@@ -223,7 +221,8 @@ void PickAndPlaceStateMachine::Update(
 
         // 1 seconds, 3 via points.
         bool res = PlanStraightLineMotion(
-            env_state.get_iiwa_q(), 3, 1, X_Wend_effector_0_, X_Wend_effector_1_,
+            env_state.get_iiwa_q(), 3, 1,
+            X_Wend_effector_0_, X_Wend_effector_1_,
             tight_pos_tol_, tight_rot_tol_, planner, &ik_res, &times);
         DRAKE_DEMAND(res);
 
@@ -248,32 +247,22 @@ void PickAndPlaceStateMachine::Update(
         const Isometry3<double>& iiwa_base = env_state.get_iiwa_base();
         X_Wobj_desired_ = iiwa_base * X_IIWAobj_desired_;
 
-        drake::log()->info("X_IIWAobj_desired {} X_Wobj_desired {}",
-                           X_IIWAobj_desired_.translation().transpose(),
-                           X_Wobj_desired_.translation().transpose());
-
         // Recomputes gripper's pose relative the object since the object
         // probably moved during transfer.
         const Isometry3<double> X_Obj_end_effector =
             env_state.get_object_pose().inverse() *
             env_state.get_iiwa_end_effector_pose();
 
-        drake::log()->info("object pose {} inverse {}",
-                           env_state.get_object_pose().translation().transpose(),
-                           env_state.get_object_pose().inverse().translation().transpose());
-
-
         X_Wend_effector_0_ = X_Wend_effector_1_;
         X_Wend_effector_1_ = X_Wobj_desired_ * X_Obj_end_effector;
-        drake::log()->info("target {}",
-                           X_Wend_effector_1_.translation().transpose());
         X_Wend_effector_1_.translation()[2] += kPreGraspHeightOffset;
 
         // 2 seconds, 2 via points. This doesn't have to be a move straight
         // primitive. I did it this way because I have seen the IK gives a
         // wild motion that causes the gripper to lose the object.
         bool res = PlanStraightLineMotion(
-            env_state.get_iiwa_q(), 2, 2, X_Wend_effector_0_, X_Wend_effector_1_,
+            env_state.get_iiwa_q(), 2, 2,
+            X_Wend_effector_0_, X_Wend_effector_1_,
             loose_pos_tol_, loose_rot_tol_, planner, &ik_res, &times);
         DRAKE_DEMAND(res);
 
@@ -311,7 +300,8 @@ void PickAndPlaceStateMachine::Update(
 
         // 1 seconds, 3 via points.
         bool res = PlanStraightLineMotion(
-            env_state.get_iiwa_q(), 3, 1, X_Wend_effector_0_, X_Wend_effector_1_,
+            env_state.get_iiwa_q(), 3, 1,
+            X_Wend_effector_0_, X_Wend_effector_1_,
             tight_pos_tol_, tight_rot_tol_, planner, &ik_res, &times);
         DRAKE_DEMAND(res);
 
@@ -355,7 +345,8 @@ void PickAndPlaceStateMachine::Update(
 
         // 1 seconds, 3 via points.
         bool res = PlanStraightLineMotion(
-            env_state.get_iiwa_q(), 3, 1, X_Wend_effector_0_, X_Wend_effector_1_,
+            env_state.get_iiwa_q(), 3, 1,
+            X_Wend_effector_0_, X_Wend_effector_1_,
             tight_pos_tol_, tight_rot_tol_, planner, &ik_res, &times);
         DRAKE_DEMAND(res);
 

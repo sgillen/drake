@@ -19,7 +19,7 @@
         <cylinder length="0.065" radius="0.177" />
       </geometry>
       <material name="Black">
-	<color rgba="0.0 0.0 0.0 1.0"/>
+        <color rgba="0.0 0.0 0.0 1.0"/>
       </material>
     </visual>
     <collision>
@@ -38,7 +38,7 @@
        <origin xyz="0 0 0" rpy="0 0 0" />
        <mass value="2.0" />
        <inertia ixx="0.01703125" ixy="0" ixz="0" iyy="0.01703125" iyz="0"
-		izz="0.0003125" />
+                izz="0.0003125" />
      </inertial>
      <visual>
        <origin xyz="0 0 0" rpy="0 0 0" />
@@ -46,7 +46,7 @@
          <cylinder length="0.955" radius="0.065" />
        </geometry>
        <material name="Yellow">
-	 <color rgba="1.0 1.0 0.0 1.0"/>
+         <color rgba="1.0 1.0 0.0 1.0"/>
        </material>
      </visual>
      <collision>

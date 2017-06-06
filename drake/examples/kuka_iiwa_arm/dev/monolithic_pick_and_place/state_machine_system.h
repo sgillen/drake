@@ -2,10 +2,11 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "bot_core/robot_state_t.hpp"
 
-#include "drake/examples/kuka_iiwa_arm/dev/pick_and_place/pick_and_place_state_machine.h"
+#include "drake/examples/kuka_iiwa_arm/pick_and_place/pick_and_place_state_machine.h"
 #include "drake/examples/kuka_iiwa_arm/pick_and_place/world_state.h"
 #include "drake/manipulation/planner/constraint_relaxing_ik.h"
 #include "drake/multibody/rigid_body_tree.h"

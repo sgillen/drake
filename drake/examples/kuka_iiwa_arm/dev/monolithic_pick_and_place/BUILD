@@ -8,10 +8,6 @@ load(
     "drake_cc_library",
 )
 
-package(
-    default_visibility = ["//drake/examples/kuka_iiwa_arm/dev/monolithic_pick_and_place:__subpackages__"],
-)
-
 drake_cc_library(
     name = "kuka_pick_and_place_monolithic",
     srcs = [
@@ -19,6 +15,7 @@ drake_cc_library(
     ],
     hdrs = [
         "state_machine_system.h",
+        "scoped_timer.h",
     ],
     deps = [
         "//drake/examples/kuka_iiwa_arm/dev/pick_and_place:pick_and_place_state_machine",

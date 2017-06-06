@@ -58,7 +58,7 @@ bool ConstraintRelaxingIk::PlanSequentialTrajectory(
   const int kMaxNumInitialGuess = 50;
   const int kMaxNumConstraintRelax = 10;
   const Vector3<double> kInitialPosTolerance(0.01, 0.01, 0.01);
-  const double kInitialRotTolerance = 0.01;
+  const double kInitialRotTolerance = 0.009;
   const double kConstraintShrinkFactor = 0.5;
   const double kConstraintGrowFactor = 1.5;
 
@@ -178,14 +178,18 @@ bool ConstraintRelaxingIk::SolveIk(
   // Adds a rotation constraint.
   WorldQuatConstraint quat_con(robot_.get(), end_effector_body_idx_,
                                math::rotmat2quat(waypoint.pose.linear()),
-                               rot_tol, Vector2<double>::Zero());
+                               rot_tol);//, Vector2<double>::Zero());
   if (waypoint.constrain_orientation) {
+    drake::log()->info("Planning with rot {} tol {}",
+                       math::rotmat2rpy(waypoint.pose.linear()).transpose(),
+                       rot_tol);
     constraint_array.push_back(&quat_con);
   }
 
   inverseKin(robot_.get(), q0, q_nom, constraint_array.size(),
              constraint_array.data(), ikoptions, q_res, info->data(),
              infeasible_constraints);
+  drake::log()->info("info: {}", (*info)[0]);
 
   return (*info)[0] == 1;
 }

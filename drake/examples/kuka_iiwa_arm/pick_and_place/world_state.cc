@@ -40,11 +40,11 @@ void WorldState::HandleIiwaStatus(const bot_core::robot_state_t& iiwa_msg) {
         Eigen::aligned_allocator<RigidBodyFrame<double>>(), "world", nullptr,
         iiwa_base_);
 
-    std::shared_ptr<RigidBodyTree<double>> new_iiwa =
-        std::make_shared<RigidBodyTree<double>>();
+    auto mutable_iiwa = std::make_shared<RigidBodyTree<double>>();
     parsers::urdf::AddModelInstanceFromUrdfFile(
-        iiwa_model_path_, multibody::joints::kFixed, base_frame, new_iiwa.get());
-    iiwa_ = new_iiwa;
+        iiwa_model_path_, multibody::joints::kFixed, base_frame,
+        mutable_iiwa.get());
+    iiwa_ = mutable_iiwa;
     end_effector_ = iiwa_->FindBody(end_effector_name_);
   }
 
