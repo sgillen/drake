@@ -179,11 +179,10 @@ class AbstractZOHDiagram : public systems::Diagram<double> {
 
 class WallClockPublisher : public LeafSystemMixin<double> {
  public:
-  WallClockPublisher(double period_sec) {
-    unused(period_sec);
+  WallClockPublisher() {
+    // HACK: Store previous time in state, if possible.
     timer_.reset(new timing::Timer());
     prev_time_.reset(new double(0.));
-//    this->DeclarePeriodicDiscreteUpdate(period_sec, 0.);
     this->DeclarePerStepAction(
           systems::DiscreteEvent<double>::kDiscreteUpdateAction);
   }
@@ -392,7 +391,7 @@ struct PerceptionHack::Impl {
     const Vector3d position(0, 2, 2);
     const Vector3d orientation(0, 20, -90); // degrees
 
-    pbuilder->template AddSystem<WallClockPublisher>(0.001);
+    pbuilder->template AddSystem<WallClockPublisher>();
 
     if (use_rgbd_camera) {
       bool use_estimator = true;
@@ -410,19 +409,20 @@ struct PerceptionHack::Impl {
           pplant->get_output_port_plant_state(),
           rgbd_camera_->state_input_port());
 
-      using namespace systems::sensors;
-      auto rgbd_zoh =
-          new AbstractZOHDiagram<ImageRgba8U, ImageDepth32F, ImageLabel16I>(0.03);
-      pbuilder->AddSystem(CreateUnique(rgbd_zoh));
+//      using namespace systems::sensors;
+//      auto rgbd_zoh =
+//          new AbstractZOHDiagram<ImageRgba8U, ImageDepth32F, ImageLabel16I>(0.03);
+//      pbuilder->AddSystem(CreateUnique(rgbd_zoh));
+//      for (int i = 0; i < 3; ++i) {
+//        pbuilder->Connect(rgbd_camera_->get_output_port(i),
+//                          rgbd_zoh->get_input_port(i));
+//      }
+//      auto&& color_image_output_port = rgbd_zoh->get_output_port(0);
+//      auto&& depth_image_output_port = rgbd_zoh->get_output_port(1);
+////      auto&& label_image_output_port = rgbd_zoh->get_output_port(2);
 
-      for (int i = 0; i < 3; ++i) {
-        pbuilder->Connect(rgbd_camera_->get_output_port(i),
-                          rgbd_zoh->get_input_port(i));
-      }
-
-      auto&& color_image_output_port = rgbd_zoh->get_output_port(0);
-      auto&& depth_image_output_port = rgbd_zoh->get_output_port(1);
-//      auto&& label_image_output_port = rgbd_zoh->get_output_port(2);
+      auto&& color_image_output_port = rgbd_camera_->get_output_port(0);
+      auto&& depth_image_output_port = rgbd_camera_->get_output_port(1);
 
       bool do_publish = true;
       if (do_publish) {
@@ -486,13 +486,13 @@ struct PerceptionHack::Impl {
           LcmPublisherSystem::Make<Converter::Message>("DRAKE_POINTCLOUD_RGBD",
                                                        plcm));
       depth_lcm_pub->set_name("depth_point_cloud_lcm_publisher");
-      depth_lcm_pub->set_publish_period(0.001);
+      depth_lcm_pub->set_publish_period(0.01);
       pbuilder->Connect(
             pc_to_lcm->get_outport(),
             depth_lcm_pub->get_input_port(0));
 
       if (use_estimator) {
-        drake::log()->set_level(spdlog::level::trace);
+//        drake::log()->set_level(spdlog::level::trace);
         string base_path = "drake/examples/kuka_iiwa_arm/dev/monolithic_pick_and_place/";
         string config_file =
             drake::FindResource(base_path + "dart_config/iiwa_test.yaml").get_absolute_path_or_throw();
