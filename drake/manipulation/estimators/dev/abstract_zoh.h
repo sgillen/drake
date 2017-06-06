@@ -66,7 +66,7 @@ class AbstractZOH : public LeafSystem<double> {
 
   AbstractZOH(const T& ic, double period_sec, double offset_sec = 0.,
               bool use_autoinit = false)
-      : permit_autoinit_(use_autoinit) {
+      : use_autoinit_(use_autoinit) {
     // Using LcmSubscriberSystem as a basis
     // This will receive Value<T>, not Value<Data>.
     this->DeclareAbstractInputPort();
@@ -98,8 +98,12 @@ class AbstractZOH : public LeafSystem<double> {
 
   void SetDefaultState(const Context<double>& context,
                        State<double>* state) const override {
-    std::cout << "SetDefaultState" << std::endl;
-    DoCalcUnrestrictedUpdate(context, state);
+    if (use_autoinit_) {
+      // Update initial values with the ICs from upstream blocks.
+      DoCalcUnrestrictedUpdate(context, state);
+    } else {
+      LeafSystem<double>::SetDefaultState(context, state);
+    }
   }
 
   void DoCalcOutput(const Context<double>& context,
@@ -112,7 +116,7 @@ class AbstractZOH : public LeafSystem<double> {
   }
  private:
   OnUpdate on_update_;
-  bool permit_autoinit_{};
+  bool use_autoinit_{};
 };
 
 template <typename T, typename... Extra>
@@ -123,6 +127,7 @@ std::unique_ptr<AbstractZOH<T>> MakeAbstractZOH(const T& ic, Extra&&... extra) {
 template <typename Visitor>
 void pack_visit(Visitor&& visitor) {}
 
+// Visit a set of parameter pack template arguments, using Visitor::run<T>
 template <typename Visitor, typename T, typename... Ts>
 void pack_visit(Visitor&& visitor) {
   visitor.template run<T>();
@@ -136,6 +141,17 @@ struct pack_visitor {
   static void run(Visitor&& visitor) {
     pack_visit<Visitor, Ts...>(std::forward<Visitor>(visitor));
   }
+};
+
+template <typename Visitor>
+void param_visit(Visitor&& visitor) {}
+
+// Visit a set of parameter, using Visitor::run<T>(T&& t)
+template <typename Visitor, typename T, typename... Ts>
+void param_visit(Visitor&& visitor, T&& arg, Ts&&... args) {
+  visitor(std::forward<T>(arg));
+  pack_visit<Visitor, Ts...>(std::forward<Visitor>(visitor),
+                             std::forward<Ts>(args)...);
 };
 
 template <typename... Ts>
