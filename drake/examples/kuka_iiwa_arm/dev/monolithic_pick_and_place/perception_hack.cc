@@ -24,6 +24,7 @@
 #include "drake/systems/rendering/pose_vector.h"
 #include "drake/systems/sensors/depth_sensor_output.h"
 #include "drake/systems/lcm/lcm_and_vector_base_translator.h"
+#include "drake/systems/sensors/image.h"
 
 #include "drake/common/scoped_timer.h"
 
@@ -33,6 +34,7 @@
 #include "drake/examples/kuka_iiwa_arm/iiwa_world/iiwa_wsg_diagram_factory.h"
 
 #include "drake/manipulation/estimators/dev/tree_state_portion.h"
+#include "drake/common/drake_optional.h"
 
 namespace drake {
 
@@ -65,13 +67,43 @@ namespace examples {
 namespace kuka_iiwa_arm {
 namespace monolithic_pick_and_place {
 
+// Assume all are copy-and-move constructible.
+// More permissive than Value, in that it allows default construction
+// (but will puke if it is null.)
+// TODO: Consider using std::optional? Does it permit non-default constructible
+// objects?
+template <typename T>
+class DefaultData {
+ public:
+  DRAKE_DEFAULT_COPY_AND_MOVE_AND_ASSIGN(DefaultData);
+  DefaultData() {}
+  void set_value(const T& value) {
+    *value_ = value;
+  }
+  T& value() {
+    DRAKE_DEMAND(value_ != nullopt);
+    return *value_;
+  }
+  const T& value() const {
+    DRAKE_DEMAND(value_ != nullopt);
+    return *value_;
+  }
+ private:
+  optional<T> value_;
+//  using Traits = systems::value_detail::ValueTraits<T>;
+//  typename Traits::Storage value_;
+};
+
 template <typename T>
 class AbstractZOH : public LeafSystemMixin<double> {
  public:
+  typedef DefaultData<T> Data;
   AbstractZOH(double period_sec, double offset_sec = 0.) {
     // Using LcmSubscriberSystem as a basis
     this->DeclareAbstractInputPort();
-    this->DeclareAbstractState(make_unique<systems::Value<T>>());
+    // TODO(eric.cousineau): Is there a way to not care about the type?
+    // And ignore using DefaultData<> altogether?
+    this->DeclareAbstractState(make_unique<systems::Value<Data>>());
     this->DeclareAbstractOutputPort();
     DeclarePeriodicUnrestrictedUpdate(period_sec, offset_sec);
   }
@@ -79,30 +111,81 @@ class AbstractZOH : public LeafSystemMixin<double> {
  protected:
   void DoCalcUnrestrictedUpdate(const Context& context,
                                 State* state) const override {
-    const T& input_value =
-        EvalAbstractInput(context, 0)->template GetValue<T>();
-    T& stored_value =
+    const Data& input_value =
+        EvalAbstractInput(context, 0)->template GetValue<Data>();
+    Data& stored_value =
         state->get_mutable_abstract_state()
-            ->get_mutable_value(0).GetMutableValue<T>();
-    stored_value = input_value;
+            ->get_mutable_value(0).GetMutableValue<Data>();
+    stored_value.set_value(input_value.value());
   }
 
   void DoCalcOutput(const Context& context,
                     SystemOutput* output) const override {
-    const T& stored_value =
-        context.get_abstract_state()->get_value(0).GetValue<T>();
-    T& output_value =
-        output->GetMutableData(0)->GetMutableValue<T>();
-    output_value = stored_value;
+    const Data& stored_value =
+        context.get_abstract_state()->get_value(0).GetValue<Data>();
+    Data& output_value =
+        output->GetMutableData(0)->GetMutableValue<Data>();
+    output_value.set_value(stored_value.value());
   }
+};
+
+
+template <typename Visitor>
+void pack_visit(Visitor&& visitor) {}
+
+template <typename Visitor, typename T, typename... Ts>
+void pack_visit(Visitor&& visitor) {
+  visitor.template run<T>();
+  pack_visit<Visitor, Ts...>(std::forward<Visitor>(visitor));
+};
+
+// To infer caller type
+template <typename... Ts>
+struct pack_visitor {
+  template <typename Visitor>
+  static void run(Visitor&& visitor) {
+    pack_visit<Visitor, Ts...>(std::forward<Visitor>(visitor));
+  }
+};
+
+template <typename... Ts>
+class AbstractZOHDiagram : public systems::Diagram<double> {
+ public:
+  using T = double;
+  using Builder = systems::DiagramBuilder<T>;
+
+  AbstractZOHDiagram(double period_sec)
+      : period_sec_(period_sec) {
+    Builder builder;
+    pack_visitor<Ts...>::run(Adder{this, &builder});
+    builder.BuildInto(this);
+  }
+
+ protected:
+  struct Adder {
+    AbstractZOHDiagram* self;
+    Builder* builder;
+    template <typename T>
+    void run() {
+      auto* zoh = builder->template AddSystem<AbstractZOH<T>>(self->period_sec_);
+      builder->ExportInput(zoh->get_input_port(0));
+      builder->ExportOutput(zoh->get_output_port(0));
+    }
+  };
+
+ private:
+  double period_sec_;
 };
 
 class WallClockPublisher : public LeafSystemMixin<double> {
  public:
   WallClockPublisher(double period_sec) {
+    unused(period_sec);
     timer_.reset(new timing::Timer());
     prev_time_.reset(new double(0.));
-    this->DeclarePeriodicDiscreteUpdate(period_sec, 0.);
+//    this->DeclarePeriodicDiscreteUpdate(period_sec, 0.);
+    this->DeclarePerStepAction(
+          systems::DiscreteEvent<double>::kDiscreteUpdateAction);
   }
 
   typedef double T;
@@ -327,52 +410,67 @@ struct PerceptionHack::Impl {
           pplant->get_output_port_plant_state(),
           rgbd_camera_->state_input_port());
 
-      // Image to LCM.
-      image_to_lcm_message_ =
-          pbuilder->template AddSystem<ImageToLcmMessage>();
-      image_to_lcm_message_->set_name("converter");
+      using namespace systems::sensors;
+      auto rgbd_zoh =
+          new AbstractZOHDiagram<ImageRgba8U, ImageDepth32F, ImageLabel16I>(0.03);
+      pbuilder->AddSystem(CreateUnique(rgbd_zoh));
 
-      pbuilder->Connect(
-          rgbd_camera_->color_image_output_port(),
-          image_to_lcm_message_->color_image_input_port());
+      for (int i = 0; i < 3; ++i) {
+        pbuilder->Connect(rgbd_camera_->get_output_port(i),
+                          rgbd_zoh->get_input_port(i));
+      }
 
-      pbuilder->Connect(
-          rgbd_camera_->depth_image_output_port(),
-          image_to_lcm_message_->depth_image_input_port());
+      auto&& color_image_output_port = rgbd_zoh->get_output_port(0);
+      auto&& depth_image_output_port = rgbd_zoh->get_output_port(1);
+      auto&& label_image_output_port = rgbd_zoh->get_output_port(2);
 
-      pbuilder->Connect(
-          rgbd_camera_->label_image_output_port(),
-          image_to_lcm_message_->label_image_input_port());
+      bool do_publish = false;
+      if (do_publish) {
+        // Image to LCM.
+        image_to_lcm_message_ =
+            pbuilder->template AddSystem<ImageToLcmMessage>();
+        image_to_lcm_message_->set_name("converter");
 
-//      if (false) {
-      // Camera image publisher.
-      image_lcm_pub_ = pbuilder->template AddSystem(
-          LcmPublisherSystem::Make<bot_core::images_t>(
-              "DRAKE_IMAGE_RGBD", plcm));
-      image_lcm_pub_->set_name("publisher");
-      image_lcm_pub_->set_publish_period(0.01);
+        pbuilder->Connect(
+            color_image_output_port,
+            image_to_lcm_message_->color_image_input_port());
 
-      pbuilder->Connect(
-          image_to_lcm_message_->images_t_msg_output_port(),
-          image_lcm_pub_->get_input_port(0));
+        pbuilder->Connect(
+            depth_image_output_port,
+            image_to_lcm_message_->depth_image_input_port());
 
-      // Camera pose publisher (to visualize)
-      rgbd_camera_pose_lcm_pub_ = pbuilder->template AddSystem<
-        LcmPublisherSystem>("DRAKE_RGBD_CAMERA_POSE",
-                            pose_translator_, plcm);
-      rgbd_camera_pose_lcm_pub_->set_name("pose_lcm_publisher");
-      rgbd_camera_pose_lcm_pub_->set_publish_period(0.01);
+        pbuilder->Connect(
+            label_image_output_port,
+            image_to_lcm_message_->label_image_input_port());
 
-      pbuilder->Connect(
-          rgbd_camera_->camera_base_pose_output_port(),
-          rgbd_camera_pose_lcm_pub_->get_input_port(0));
-//      }
+        // Camera image publisher.
+        image_lcm_pub_ = pbuilder->template AddSystem(
+            LcmPublisherSystem::Make<bot_core::images_t>(
+                "DRAKE_IMAGE_RGBD", plcm));
+        image_lcm_pub_->set_name("publisher");
+        image_lcm_pub_->set_publish_period(0.01);
+
+        pbuilder->Connect(
+            image_to_lcm_message_->images_t_msg_output_port(),
+            image_lcm_pub_->get_input_port(0));
+
+        // Camera pose publisher (to visualize)
+        rgbd_camera_pose_lcm_pub_ = pbuilder->template AddSystem<
+          LcmPublisherSystem>("DRAKE_RGBD_CAMERA_POSE",
+                              pose_translator_, plcm);
+        rgbd_camera_pose_lcm_pub_->set_name("pose_lcm_publisher");
+        rgbd_camera_pose_lcm_pub_->set_publish_period(0.01);
+
+        pbuilder->Connect(
+            rgbd_camera_->camera_base_pose_output_port(),
+            rgbd_camera_pose_lcm_pub_->get_input_port(0));
+      }
 
       // Publish depth image.
       auto depth_to_pc = pbuilder->template AddSystem<DepthImageToPointCloud>(
             rgbd_camera_->depth_camera_info());
       pbuilder->Connect(
-            rgbd_camera_->depth_image_output_port(),
+            depth_image_output_port,
             depth_to_pc->get_input_port(0));
       typedef PointCloudToLcmPointCloud Converter;
       auto pc_to_lcm = pbuilder->template AddSystem<Converter>();
@@ -408,7 +506,7 @@ struct PerceptionHack::Impl {
 
         pbuilder->Connect(depth_to_pc->get_output_port(0),
                           estimator->inport_point_cloud());
-        pbuilder->Connect(rgbd_camera_->depth_image_output_port(),
+        pbuilder->Connect(depth_image_output_port,
                           estimator->inport_depth_image());
 
         pbuilder->Connect(pplant->get_output_port_plant_state(),
