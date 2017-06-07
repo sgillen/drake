@@ -424,8 +424,29 @@ struct PerceptionHack::Impl {
 
         pbuilder->Connect(pplant->get_output_port_plant_state(),
                           estimator->inport_tree_q_measurement());
-//        pbuilder->Connect(estimator->outport_tree_state_estimate(),
-//                          ???);
+
+        // Create visualizer with prefix
+        auto estimator_vis =
+            pbuilder->template AddSystem<DrakeVisualizer>(
+                estimator->get_tree(),
+                plcm,
+                false,
+                "ESTIMATOR_");
+        estimator_vis->set_name("estimator_visualizer");
+
+        pbuilder->Connect(estimator->outport_tree_state_estimate(),
+                          estimator_vis->get_input_port(0));
+
+//        // Make sure it works with duplicating the original plant.
+//        auto estimator_vis =
+//            pbuilder->template AddSystem<DrakeVisualizer>(
+//              rigid_body_tree,
+//              plcm,
+//              false,
+//              "ESTIMATOR_");
+//        estimator_vis->set_name("estimator_visualizer");
+//        pbuilder->Connect(pplant->get_output_port_plant_state(),
+//                          estimator_vis->get_input_port(0));
       }
     }
 

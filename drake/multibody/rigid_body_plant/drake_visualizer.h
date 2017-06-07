@@ -76,7 +76,8 @@ class DrakeVisualizer : public LeafSystem<double> {
    */
   DrakeVisualizer(const RigidBodyTree<double>& tree,
                   drake::lcm::DrakeLcmInterface* lcm,
-                  bool enable_playback = false);
+                  bool enable_playback = false,
+                  const std::string& prefix = "");
 
   /**
    * Sets the publishing period of this system. See
@@ -166,6 +167,8 @@ class DrakeVisualizer : public LeafSystem<double> {
 
   // The (optional) log used for recording and playback.
   std::unique_ptr<SignalLog<double>> log_{nullptr};
+
+  std::string prefix_;
 };
 
 }  // namespace systems

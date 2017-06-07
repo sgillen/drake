@@ -125,7 +125,8 @@ class ArticulatedStateEstimator::Impl {
     return slices_->update.size();
   }
   int get_num_output_positions() const {
-    return loader_->estimator_->getRobot()->get_num_positions();
+    auto robot = loader_->estimator_->getRobot();
+    return robot->get_num_positions() + robot->get_num_velocities();
   }
 
   void ImplDiscreteUpdate(const VectorXd& q0,
@@ -159,7 +160,7 @@ class ArticulatedStateEstimator::Impl {
     // DynamicsCost and NonpenetratingCost presently only rely on priors.
     estimator.update();
     estimator.publish();
-    *estimated_tree_state = estimator.getRobotQ();
+    *estimated_tree_state = estimator.getRobotX();
   }
 
  private:

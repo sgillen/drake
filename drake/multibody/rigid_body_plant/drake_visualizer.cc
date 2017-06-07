@@ -18,10 +18,12 @@ const int kPortIndex = 0;
 
 DrakeVisualizer::DrakeVisualizer(const RigidBodyTree<double>& tree,
                                  drake::lcm::DrakeLcmInterface* lcm,
-                                 bool enable_playback)
+                                 bool enable_playback,
+                                 const std::string& prefix)
     : lcm_(lcm),
       load_message_(multibody::CreateLoadRobotMessage<double>(tree)),
-      draw_message_translator_(tree) {
+      draw_message_translator_(tree),
+      prefix_(prefix) {
   set_name("drake_visualizer");
   const int vector_size =
       tree.get_num_positions() + tree.get_num_velocities();
@@ -116,7 +118,7 @@ void DrakeVisualizer::PlaybackTrajectory(
                                        &message_bytes);
 
     // Publishes onto the specified LCM channel.
-    lcm_->Publish("DRAKE_VIEWER_DRAW", message_bytes.data(),
+    lcm_->Publish(prefix_ + "DRAKE_VIEWER_DRAW", message_bytes.data(),
                   message_bytes.size());
 
     const TimePoint earliest_next_frame = prev_time + Duration(kFrameLength);
@@ -132,7 +134,7 @@ void DrakeVisualizer::PlaybackTrajectory(
   std::vector<uint8_t> message_bytes;
   draw_message_translator_.Serialize(sim_time, data,
                                      &message_bytes);
-  lcm_->Publish("DRAKE_VIEWER_DRAW", message_bytes.data(),
+  lcm_->Publish(prefix_ + "DRAKE_VIEWER_DRAW", message_bytes.data(),
                 message_bytes.size());
 }
 
@@ -158,7 +160,7 @@ void DrakeVisualizer::DoPublish(const Context<double>& context) const {
                                      &message_bytes);
 
   // Publishes onto the specified LCM channel.
-  lcm_->Publish("DRAKE_VIEWER_DRAW", message_bytes.data(),
+  lcm_->Publish(prefix_ + "DRAKE_VIEWER_DRAW", message_bytes.data(),
                 message_bytes.size());
 }
 
@@ -168,7 +170,7 @@ void DrakeVisualizer::PublishLoadRobot() const {
   lcm_message_bytes.resize(lcm_message_length);
   load_message_.encode(lcm_message_bytes.data(), 0, lcm_message_length);
 
-  lcm_->Publish("DRAKE_VIEWER_LOAD_ROBOT", lcm_message_bytes.data(),
+  lcm_->Publish(prefix_ + "DRAKE_VIEWER_LOAD_ROBOT", lcm_message_bytes.data(),
       lcm_message_length);
 }
 

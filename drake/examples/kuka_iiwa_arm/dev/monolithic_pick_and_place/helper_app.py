@@ -10,6 +10,8 @@ from director import lcmframe
 from director import cameraview
 from director import framevisualization
 
+from mod_visualizer import ModVisualizer
+
 # Copying from: spartan:517bffd:apps/iiwa/iiwaManipApp.py
 lcm_pose_t = lcmrobotlocomotion.pose_stamped_t
 
@@ -42,5 +44,6 @@ def convert_pose_to_botcore_position(msg):
 # Main Routine
 global helperApp
 helperApp = HelperApp()
+modVis = ModVisualizer(view)
 app.restoreDefaultWindowState()
 app.initWindowSettings()

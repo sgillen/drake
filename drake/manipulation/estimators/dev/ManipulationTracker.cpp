@@ -608,10 +608,10 @@ void ManipulationTracker::update(){
 
 }
 
-VectorXd ManipulationTracker::getRobotQ() const
+VectorXd ManipulationTracker::getRobotX() const
 {
-  int nq = robot_->get_num_positions();
-  return x_.block(0, 0, nq, 1);
+  int nx = robot_->get_num_positions() + robot_->get_num_velocities();
+  return x_.block(0, 0, nx, 1);
 }
 
 void ManipulationTracker::publish(){
