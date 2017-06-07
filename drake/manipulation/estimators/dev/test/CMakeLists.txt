@@ -18,3 +18,9 @@ target_link_libraries(abstract_zoh_test
   drakeSystemFramework
   drakeSystemAnalysis
   drakeSystemPrimitives)
+
+drake_add_cc_test(pub_test)
+target_link_libraries(pub_test
+  drakeSystemFramework
+  drakeSystemAnalysis
+  drakeSystemPrimitives)
