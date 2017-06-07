@@ -10,11 +10,13 @@
 
 #include "drake/common/drake_path.h"
 
-#include "bot_core/images_t.hpp"
+//#include "bot_core/images_t.hpp"
+#include "robotlocomotion/image_array_t.hpp"
 
 #include "drake/common/drake_assert.h"
 #include "drake/systems/sensors/rgbd_camera.h"
-#include "drake/systems/sensors/image_to_lcm_message.h"
+#include "drake/systems/sensors/image_to_lcm_image_array_t.h"
+//#include "drake/systems/sensors/image_to_lcm_message.h"
 #include "drake/systems/lcm/lcm_publisher_system.h"
 #include "drake/systems/rendering/pose_stamped_t_pose_vector_translator.h"
 
@@ -51,7 +53,7 @@ using systems::RigidBodyPlant;
 using Eigen::Vector3d;
 using Eigen::Matrix3d;
 using systems::sensors::RgbdCamera;
-using systems::sensors::ImageToLcmMessage;
+using systems::sensors::ImageToLcmImageArrayT;
 using systems::lcm::LcmPublisherSystem;
 using systems::rendering::PoseStampedTPoseVectorTranslator;
 using std::make_unique;
@@ -265,7 +267,7 @@ struct PerceptionHack::Impl {
   PoseStampedTPoseVectorTranslator pose_translator_{"camera"};
 
   RgbdCamera* rgbd_camera_{};
-  ImageToLcmMessage* image_to_lcm_message_{};
+  ImageToLcmImageArrayT* image_to_lcm_message_{};
   LcmPublisherSystem* image_lcm_pub_{};
   LcmPublisherSystem* rgbd_camera_pose_lcm_pub_{};
 
@@ -300,7 +302,7 @@ struct PerceptionHack::Impl {
 
     const double camera_dt = 0.033; // ~30 Hz
     if (use_rgbd_camera) {
-      bool use_estimator = true;
+      bool use_estimator = false;
 
       // Adapted from: .../image_to_lcm_message_demo.cc
 
@@ -324,7 +326,8 @@ struct PerceptionHack::Impl {
       if (do_publish) {
         // Image to LCM.
         image_to_lcm_message_ =
-            pbuilder->template AddSystem<ImageToLcmMessage>();
+            pbuilder->template AddSystem<ImageToLcmImageArrayT>(
+                "color", "depth", "label");
         image_to_lcm_message_->set_name("converter");
 
         pbuilder->Connect(
@@ -342,13 +345,13 @@ struct PerceptionHack::Impl {
 
         // Camera image publisher.
         image_lcm_pub_ = pbuilder->template AddSystem(
-            LcmPublisherSystem::Make<bot_core::images_t>(
-                "DRAKE_IMAGE_RGBD", plcm));
+            LcmPublisherSystem::Make<robotlocomotion::image_array_t>(
+                "DRAKE_RGBD_CAMERA_IMAGES", plcm));
         image_lcm_pub_->set_name("publisher");
         image_lcm_pub_->set_publish_period(camera_dt);
 
         pbuilder->Connect(
-            image_to_lcm_message_->images_t_msg_output_port(),
+            image_to_lcm_message_->image_array_t_msg_output_port(),
             image_lcm_pub_->get_input_port(0));
 
         // Camera pose publisher (to visualize)
