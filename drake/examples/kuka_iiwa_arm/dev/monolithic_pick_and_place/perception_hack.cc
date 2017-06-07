@@ -33,6 +33,7 @@
 
 #include "drake/examples/kuka_iiwa_arm/iiwa_world/iiwa_wsg_diagram_factory.h"
 
+#include "drake/manipulation/estimators/dev/abstract_zoh.h"
 #include "drake/manipulation/estimators/dev/tree_state_portion.h"
 #include "drake/common/drake_optional.h"
 
@@ -62,6 +63,8 @@ using systems::sensors::DepthSensorToLcmPointCloudMessage;
 using manipulation::ArticulatedStateEstimator;
 using manipulation::LeafSystemMixin;
 using manipulation::GetHierarchicalPositionNameList;
+
+using systems::AbstractZOH;
 
 namespace examples {
 namespace kuka_iiwa_arm {
@@ -104,6 +107,8 @@ using systems::sensors::DepthSensorOutput;
 using systems::sensors::ImageDepth32F;
 using systems::sensors::CameraInfo;
 
+typedef Eigen::Matrix3Xd PointCloud;
+
 // HACK: Cribbed from rgbd_camera.cc
 const int kImageWidth = 640;  // In pixels
 const int kImageHeight = 480;  // In pixels
@@ -129,9 +134,9 @@ class DepthImageToPointCloud : public LeafSystemMixin<double> {
     depth_image_input_port_index_ = DeclareAbstractInputPort(
         Value<ImageDepth32F>(depth_image)).get_index();
     // TODO(eric.cousineau): Determine proper way to pass a basic point cloud.
-    Eigen::Matrix3Xd point_cloud(3, depth_image.size());
+    PointCloud point_cloud(3, depth_image.size());
     output_port_index_ =
-        DeclareAbstractOutputPort(Value<Eigen::Matrix3Xd>(point_cloud)).get_index();
+        DeclareAbstractOutputPort(Value<PointCloud>(point_cloud)).get_index();
   }
 
  protected:
@@ -140,7 +145,7 @@ class DepthImageToPointCloud : public LeafSystemMixin<double> {
         EvalAbstractInput(context, depth_image_input_port_index_)
         ->GetValue<ImageDepth32F>();
     auto& point_cloud = output->GetMutableData(output_port_index_)
-                        ->GetMutableValue<Eigen::Matrix3Xd>();
+                        ->GetMutableValue<PointCloud>();
     RgbdCamera::ConvertDepthImageToPointCloud(depth_image, camera_info_,
                                               &point_cloud);
     if (ues_depth_frame_) {
@@ -218,6 +223,11 @@ class PointCloudToLcmPointCloud : public LeafSystemMixin<double> {
   int output_port_index_{};
 };
 
+//template <typename Type, typename Port>
+//void HoldOutport(const Port** pptr, double dt, const Type& value = Type) {
+
+//}
+
 //using manipulation::VectorPortion;
 //using manipulation::VectorSlice;
 //using Eigen::VectorXd;
@@ -268,7 +278,7 @@ struct PerceptionHack::Impl {
       TreePlant* pplant,
       const ReverseIdMap& plant_id_map) {
 
-    drake::log()->set_level(spdlog::level::trace);
+//    drake::log()->set_level(spdlog::level::trace);
 
     bool use_rgbd_camera = true;
     bool use_depth_sensor = false;
@@ -369,11 +379,17 @@ struct PerceptionHack::Impl {
             depth_image_output_port,
             depth_to_pc->get_input_port(0));
 
+      auto* pc_zoh = pbuilder->template AddSystem<AbstractZOH<PointCloud>>(camera_dt);
+      pbuilder->Connect(
+            depth_to_pc->get_output_port(0),
+            pc_zoh->get_input_port(0));
+      auto&& pc_output_port = pc_zoh->get_output_port(0);
+
       if (do_publish) {
         typedef PointCloudToLcmPointCloud Converter;
         auto pc_to_lcm = pbuilder->template AddSystem<Converter>();
         pbuilder->Connect(
-              depth_to_pc->get_output_port(0),
+              pc_output_port,
               pc_to_lcm->get_inport());
         pbuilder->Connect(
               camera_base_pose_output_port,
@@ -407,7 +423,7 @@ struct PerceptionHack::Impl {
                            config_file, &rgbd_camera_->depth_camera_info(),
                            input_position_names);
 
-        pbuilder->Connect(depth_to_pc->get_output_port(0),
+        pbuilder->Connect(pc_output_port,
                           estimator->inport_point_cloud());
         pbuilder->Connect(depth_image_output_port,
                           estimator->inport_depth_image());
