@@ -52,7 +52,7 @@ void PackImageToLcmMessage(const Image<kPixelType>& image,
 ImageToLcmMessage::ImageToLcmMessage() {
   color_image_input_port_index_ =
       DeclareAbstractInputPort(
-          systems::Value<ImageRgba8U>()).get_index();
+          systems::Value<ImageBgra8U>()).get_index();
 
   depth_image_input_port_index_ =
       DeclareAbstractInputPort(
@@ -91,8 +91,8 @@ void ImageToLcmMessage::DoCalcOutput(
     const systems::Context<double>& context,
     systems::SystemOutput<double>* output) const {
 
-  const ImageRgba8U& color_image = this->EvalAbstractInput(
-      context, color_image_input_port_index_)->GetValue<ImageRgba8U>();
+  const ImageBgra8U& color_image = this->EvalAbstractInput(
+      context, color_image_input_port_index_)->GetValue<ImageBgra8U>();
 
   const ImageDepth32F& depth_image = this->EvalAbstractInput(
       context, depth_image_input_port_index_)->GetValue<ImageDepth32F>();

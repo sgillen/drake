@@ -277,7 +277,7 @@ class RgbdCamera::Impl : private ModuleInitVtkRenderingOpenGL2 {
 
   void DoCalcOutput(double t,
                     const Eigen::VectorXd& x, rendering::PoseVector<double>* pcamera_base_pose,
-                    ImageRgba8U* pcolor_image, ImageDepth32F* pdepth_image,
+                    ImageBgra8U* pcolor_image, ImageDepth32F* pdepth_image,
                     ImageLabel16I* plabel_image);
 
   const Eigen::Isometry3d& color_camera_optical_pose() const {
@@ -327,14 +327,6 @@ class RgbdCamera::Impl : private ModuleInitVtkRenderingOpenGL2 {
   vtkNew<vtkWindowToImageFilter> color_filter_;
   vtkNew<vtkWindowToImageFilter> depth_filter_;
   vtkNew<vtkWindowToImageFilter> label_filter_;
-
-  vtkNew<vtkImageFlip> color_flipper_;
-  vtkNew<vtkImageFlip> depth_flipper_;
-  vtkNew<vtkImageFlip> label_flipper_;
-
-  vtkNew<vtkImageCast> color_cast_;
-  vtkNew<vtkImageCast> depth_cast_;
-  vtkNew<vtkImageCast> label_cast_;
 
   bool is_discrete_{false};
 };
@@ -409,27 +401,6 @@ RgbdCamera::Impl::Impl(const RigidBodyTree<double>& tree,
     filter->SetMagnification(1);
     filter->ReadFrontBufferOff();
     filter->Update();
-  }
-
-  color_flipper_->SetInputConnection(color_filter_->GetOutputPort());
-  depth_flipper_->SetInputConnection(depth_filter_->GetOutputPort());
-  label_flipper_->SetInputConnection(label_filter_->GetOutputPort());
-  for (auto& flipper : MakeVtkInstanceArray<vtkImageFlip>(
-           color_flipper_, depth_flipper_, label_flipper_)) {
-    flipper->SetFilteredAxis(1);  // Flips y axis.
-    flipper->Update();
-  }
-
-  color_cast_->SetOutputScalarTypeToUnsignedChar();
-  color_cast_->SetInputConnection(color_flipper_->GetOutputPort());
-  depth_cast_->SetOutputScalarTypeToFloat();
-  depth_cast_->SetInputConnection(depth_flipper_->GetOutputPort());
-  label_cast_->SetOutputScalarTypeToUnsignedChar();
-  label_cast_->SetInputConnection(label_flipper_->GetOutputPort());
-
-  for (auto& cast : MakeVtkInstanceArray<vtkImageCast>(
-           color_cast_, depth_cast_, label_cast_)) {
-    cast->Update();
   }
 }
 
@@ -635,39 +606,31 @@ void RgbdCamera::Impl::UpdateModelPoses(
 }
 
 void RgbdCamera::Impl::UpdateRenderWindow() const {
-  ScopedWithTimer<> scoped_all("UpdateRenderWindow");
+//  for (auto& window : MakeVtkInstanceArray<vtkRenderWindow>(
+//           color_depth_render_window_, label_render_window_)) {
   {
-    ScopedWithTimer<> scoped1("  vtkRenderWindow::Render"); unused(scoped1);
+    ScopedWithTimer<> scoped1("Window"); unused(scoped1);
     color_depth_render_window_->Render();
   }
 
   for (auto& filter : MakeVtkInstanceArray<vtkWindowToImageFilter>(
-           color_filter_, depth_filter_)) {
-    filter->Modified();
-    ScopedWithTimer<> scoped1("  vtkWindowToImageFilter::Update"); unused(scoped1);
-    filter->Update();
+           color_filter_, depth_filter_/*, label_filter_*/)) {
+    {
+      ScopedWithTimer<> scoped1("Filter Modified"); unused(scoped1);
+      filter->Modified();
+    }
+    {
+      ScopedWithTimer<> scoped1("Filter Update"); unused(scoped1);
+      filter->Update();
+    }
   }
-
-  // for (auto& flipper : MakeVtkInstanceArray<vtkImageFlip>(
-  //          color_flipper_, depth_flipper_)) {
-  //   flipper->Modified();
-  //   ScopedWithTimer<> scoped1("  vtkImageFlip::Update"); unused(scoped1);
-  //   flipper->Update();
-  // }
-
-  // for (auto& cast : MakeVtkInstanceArray<vtkImageCast>(
-  //          color_cast_, depth_cast_)) {
-  //   cast->Modified();
-  //   ScopedWithTimer<> scoped1("  vtkImageCast::Update"); unused(scoped1);
-  //   cast->Update();
-  // }
 }
 
 void RgbdCamera::Impl::DoCalcOutput(
     double t,
     const Eigen::VectorXd& x,
     rendering::PoseVector<double>* camera_base_pose,
-    sensors::ImageRgba8U* pcolor_image,
+    sensors::ImageBgra8U* pcolor_image,
     sensors::ImageDepth32F* pdepth_image,
     sensors::ImageLabel16I* /*plabel_image*/) {
   drake::log()->info("True camera render: {}", t);
@@ -707,20 +670,6 @@ void RgbdCamera::Impl::DoCalcOutput(
     UpdateRenderWindow();
   }
 
-  void* color_ptr = color_cast_->GetOutput()->GetScalarPointer(0, 0, 0);
-  const int num_pixels = kImageWidth * kImageHeight;
-  memcpy(color_image.at(0, 0), color_ptr,
-         num_pixels * color_image.kNumChannels * 1);
-
-  float* depth_ptr = static_cast<float*>(
-      depth_cast_->GetOutput()->GetScalarPointer(0, 0, 0));
-  // memcpy(depth_image.at(0, 0), depth_ptr,
-  //        num_pixels * depth_image.kNumChannels * 4);
-
-  // void* label_ptr = label_filter_->GetOutput()->GetScalarPointer(0, 0, 0);
-  // ImageRgb8U label(kImageWidth, kImageHeight);
-  // memcpy(label.at(0, 0), label_ptr, num_pixels * 3 * 1);
-
   const int height = color_camera_info_.height();
   const int width = color_camera_info_.width();
   std::unique_ptr<ScopedWithTimer<>> scope_timer2;
@@ -731,17 +680,33 @@ void RgbdCamera::Impl::DoCalcOutput(
     }
 
     for (int u = 0; u < width; ++u) {
-      depth_image.at(u, v)[0] =
-          CheckRangeAndConvertToMeters(*(depth_ptr + v * width + u));
-      //     CheckRangeAndConvertToMeters(depth_image.at(v, v)[0]);
+      const int height_reversed = height - v - 1;  // Makes image upside down.
 
-      // Updates the label image.
-      // Color color{label.at(u, v)[0],  // R
-      //             label.at(u, v)[1],  // G
-      //             label.at(u, v)[2]};  // B
+      // We cast `void*` to `uint8_t*` for RGBA, and to `float*` for ZBuffer,
+      // respectively. This is because these are the types for pixels internally
+      // used in `vtkWindowToImageFiler` class. For more detail, refer to:
+      // http://www.vtk.org/doc/release/5.8/html/a02326.html.
+      // Converts RGBA to BGRA.
+      void* color_ptr = color_filter_->GetOutput()->GetScalarPointer(u, v, 0);
+      color_image.at(u, height_reversed)[0] = *(static_cast<uint8_t*>(color_ptr) + 2);
+      color_image.at(u, height_reversed)[1] = *(static_cast<uint8_t*>(color_ptr) + 1);
+      color_image.at(u, height_reversed)[2] = *(static_cast<uint8_t*>(color_ptr) + 0);
+      color_image.at(u, height_reversed)[3] = *(static_cast<uint8_t*>(color_ptr) + 3);
 
-      // label_image.at(u, v)[0] =
-      //     static_cast<int16_t>(color_palette_.LookUpId(color));
+      // Updates the depth image.
+      const float z_buffer_value = *static_cast<float*>(
+          depth_filter_->GetOutput()->GetScalarPointer(u, v, 0));
+      depth_image.at(u, height_reversed)[0] =
+          CheckRangeAndConvertToMeters(z_buffer_value);
+
+//      // Updates the label image.
+//      void* label_ptr = label_filter_->GetOutput()->GetScalarPointer(u, v, 0);
+//      Color color{*(static_cast<uint8_t*>(label_ptr) + 0),  // R
+//                  *(static_cast<uint8_t*>(label_ptr) + 1),  // G
+//                  *(static_cast<uint8_t*>(label_ptr) + 2)};  // B
+
+//      label_image.at(u, height_reversed)[0] =
+//          static_cast<int16_t>(color_palette_.LookUpId(color));
     }
   }
 }
@@ -803,8 +768,8 @@ void RgbdCamera::Init(const std::string& name, double period_sec) {
       impl_->tree().get_num_positions() + impl_->tree().get_num_velocities();
   this->DeclareInputPort(systems::kVectorValued, kVecNum);
 
-  ImageRgba8U color_image(kImageWidth, kImageHeight);
-  this->DeclareAbstractOutputPort(systems::Value<sensors::ImageRgba8U>(
+  ImageBgra8U color_image(kImageWidth, kImageHeight);
+  this->DeclareAbstractOutputPort(systems::Value<sensors::ImageBgra8U>(
       color_image));
 
   ImageDepth32F depth_image(kImageWidth, kImageHeight);
@@ -824,7 +789,7 @@ void RgbdCamera::Init(const std::string& name, double period_sec) {
     using systems::Value;
     // Store values in abstract states
     this->DeclareAbstractState(
-        CreateUnique(new Value<sensors::ImageRgba8U>(color_image)));
+        CreateUnique(new Value<sensors::ImageBgra8U>(color_image)));
     this->DeclareAbstractState(
         CreateUnique(new Value<sensors::ImageDepth32F>(depth_image)));
     this->DeclareAbstractState(
@@ -897,9 +862,9 @@ void RgbdCamera::DoCalcOutput(const systems::Context<double>& context,
           output->GetMutableVectorData(kPortCameraPose));
 
   // Outputs the image data.
-  sensors::ImageRgba8U& color_image =
+  sensors::ImageBgra8U& color_image =
       output->GetMutableData(kPortColorImage)->GetMutableValue<
-        sensors::ImageRgba8U>();
+        sensors::ImageBgra8U>();
 
   sensors::ImageDepth32F& depth_image =
       output->GetMutableData(kPortDepthImage)->GetMutableValue<
@@ -912,8 +877,8 @@ void RgbdCamera::DoCalcOutput(const systems::Context<double>& context,
   if (impl_->is_discrete()) {
     // Copy data.
     drake::log()->info("Camera discrete copy: {}", context.get_time());
-    const sensors::ImageRgba8U& color_image_state =
-        context.get_abstract_state<sensors::ImageRgba8U>(0);
+    const sensors::ImageBgra8U& color_image_state =
+        context.get_abstract_state<sensors::ImageBgra8U>(0);
     const sensors::ImageDepth32F& depth_image_state =
         context.get_abstract_state<sensors::ImageDepth32F>(1);
     // label_image
@@ -945,8 +910,8 @@ void RgbdCamera::DoCalcUnrestrictedUpdate(
           state->get_mutable_discrete_state()->get_mutable_vector(0));
 
   // Outputs the image data.
-  sensors::ImageRgba8U& color_image =
-      state->get_mutable_abstract_state<sensors::ImageRgba8U>(0);
+  sensors::ImageBgra8U& color_image =
+      state->get_mutable_abstract_state<sensors::ImageBgra8U>(0);
 
   sensors::ImageDepth32F& depth_image =
       state->get_mutable_abstract_state<sensors::ImageDepth32F>(1);

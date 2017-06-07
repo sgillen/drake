@@ -40,8 +40,8 @@ namespace sensors {
 /// and `D`, see the class documentation of CameraInfo.
 ///
 /// Output image format:
-///   - The RGB image has four channels in the following order: red, green
-///     blue, alpha. Each channel is represented by a uint8_t.
+///   - The RGB image has four channels in the following order: blue, green
+///     red, alpha. Each channel is represented by a uint8_t.
 ///
 ///   - The depth image has a depth channel represented by a float. The value
 ///     stored in the depth channel holds *the Z value in `D`.*  Note that this
@@ -191,15 +191,15 @@ class RgbdCamera : public LeafSystem<double> {
   const InputPortDescriptor<double>& state_input_port() const;
 
   /// Returns a descriptor of the abstract valued output port that contains an
-  /// RGBA image of the type ImageRgba8U.
+  /// BGRA image of the type Image<uint8_t>.
   const OutputPortDescriptor<double>& color_image_output_port() const;
 
   /// Returns a descriptor of the abstract valued output port that contains an
-  /// ImageDepth32F.
+  /// Image<float>.
   const OutputPortDescriptor<double>& depth_image_output_port() const;
 
   /// Returns a descriptor of the abstract valued output port that contains an
-  /// label image of the type ImageLabel16I.
+  /// label image of the type Image<int16_t>.
   const OutputPortDescriptor<double>& label_image_output_port() const;
 
   /// Returns a descriptor of the vector valued output port that contains an
