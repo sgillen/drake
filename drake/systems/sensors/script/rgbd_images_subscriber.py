@@ -65,7 +65,7 @@ class ImageViewer(object):
 
 
 def main():
-    image_viewer = ImageViewer("DRAKE_RGB_IMAGE")
+    image_viewer = ImageViewer("DRAKE_IMAGE_RGBD")
 
     try:
         while True:
