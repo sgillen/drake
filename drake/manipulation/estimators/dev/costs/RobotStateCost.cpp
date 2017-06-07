@@ -27,8 +27,6 @@ RobotStateCost::RobotStateCost(std::shared_ptr<const RigidBodyTreed> robot_, std
   if (config["transcribe_floating_base_vars"])
     transcribe_floating_base_vars = config["transcribe_floating_base_vars"].as<bool>();
 
-  state_sub = lcm->subscribe(state_channelname, &RobotStateCost::handleRobotStateMsg, this);
-  state_sub->setQueueCapacity(1);
   lastReceivedTime = getUnixTime() - timeout_time*2.;
   
   x_robot_measured.resize(nq);
@@ -81,36 +79,14 @@ bool RobotStateCost::constructCost(ManipulationTracker * tracker, const Eigen::V
   }
 }
 
-void RobotStateCost::handleRobotStateMsg(const lcm::ReceiveBuffer* rbuf,
-                         const std::string& chan,
-                         const bot_core::robot_state_t* msg){
-  if (verbose)
-    printf("Received robot state on channel  %s\n", chan.c_str());
+void RobotStateCost::readTreeState(const VectorXd& q, const VectorSlice<double>& slice)
+{
   lastReceivedTime = getUnixTime();
-
-  x_robot_measured_mutex.lock();
-
-  if (transcribe_floating_base_vars){
-    x_robot_measured(0) = msg->pose.translation.x;
-    x_robot_measured(1) = msg->pose.translation.y;
-    x_robot_measured(2) = msg->pose.translation.z;
-
-    auto quat = Quaterniond(msg->pose.rotation.w, msg->pose.rotation.x, msg->pose.rotation.y, msg->pose.rotation.z);
-    x_robot_measured.block<3, 1>(3, 0) = quat.toRotationMatrix().eulerAngles(2, 1, 0);
-    for (int i=0; i < 6; i++)
-      x_robot_measured_known[i] = true;
+  slice.WriteToSuperset(q, x_robot_measured);
+  for (int i = 0; i < (int)x_robot_measured_known.size(); ++i) {
+    x_robot_measured_known[i] = false;
   }
-  
-
-  map<string, int> map = robot->computePositionNameToIndexMap();
-  for (int i=0; i < msg->num_joints; i++){
-    auto id = map.find(msg->joint_name[i]);
-    if (id != map.end()){
-      x_robot_measured(id->second) = msg->joint_position[i];
-      x_robot_measured_known[id->second] = true;
-    }
+  for (int i : slice.indices()) {
+    x_robot_measured_known[i] = true;
   }
-
-  x_robot_measured_mutex.unlock();
-
 }

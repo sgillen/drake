@@ -14,6 +14,8 @@
 
 #include "drake/manipulation/estimators/dev/tree_state_portion.h"
 
+// TODO(eric.cousineau): Merge this with RobotStateCost.
+
 using drake::manipulation::VectorSlice;
 
 class JointStateCost : public ManipulationTrackerCost {

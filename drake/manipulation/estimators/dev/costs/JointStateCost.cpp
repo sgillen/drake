@@ -79,6 +79,7 @@ bool JointStateCost::constructCost(ManipulationTracker * tracker, const Eigen::V
 
 void JointStateCost::readTreeState(const Eigen::VectorXd& q,
                                    const VectorSlice<double>& slice) {
+  lastReceivedTime = getUnixTime();
   slice.WriteToSuperset(q, q_robot_measured);
   for (int i = 0; i < (int)q_robot_measured_known.size(); ++i) {
     q_robot_measured_known[i] = false;

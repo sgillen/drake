@@ -129,3 +129,10 @@ costs:
     transcribe_floating_base_vars: False
     verbose: False
     # state_channelname: "EST_ROBOT_STATE"
+
+  - type: "RobotStateCost"
+    joint_known_fb_var: 0.0000001 # m
+    joint_known_encoder_var: 0.000001 # radian
+    transcribe_floating_base_vars: False
+    verbose: False
+    # state_channelname: "EST_ROBOT_STATE"

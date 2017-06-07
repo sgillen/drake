@@ -149,8 +149,9 @@ class ArticulatedStateEstimator::Impl {
 
     // Update individual costs.
     for (auto&& cost : loader_->joint_state_costs_) {
-      // TODO(eric.cousineau): Replace this with only a partial update of the
-      // state.
+      cost->readTreeState(tree_q_measurement, slices_->update);
+    }
+    for (auto&& cost : loader_->robot_state_costs_) {
       cost->readTreeState(tree_q_measurement, slices_->update);
     }
     for (auto& cost : loader_->kinect_frame_costs_) {
