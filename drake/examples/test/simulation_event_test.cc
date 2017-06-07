@@ -48,8 +48,6 @@ class PeriodicUpdater : public LeafSystem<T> {
  public:
   PeriodicUpdater(TimeCallback callback)
       : callback_(callback) {
-    DeclarePerStepAction(
-        systems::DiscreteEvent<T>::kDiscreteUpdateAction);
     DeclarePublishPeriodSec(dt);
     DeclarePeriodicUnrestrictedUpdate(dt, 0);
     DeclarePeriodicDiscreteUpdate(dt, 0);
