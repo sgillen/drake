@@ -65,7 +65,7 @@ int main(int argc, char* argv[]) {
 
   auto lcm_publisher = builder.template AddSystem(
       lcm::LcmPublisherSystem::Make<bot_core::images_t>(
-          "DRAKE_RGB_IMAGE", &real_lcm));
+          "DRAKE_IMAGE_RGBD", &real_lcm));
   lcm_publisher->set_name("publisher");
   lcm_publisher->set_publish_period(dt);
 
