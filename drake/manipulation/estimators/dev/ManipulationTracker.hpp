@@ -51,6 +51,7 @@ public:
   std::shared_ptr<const RigidBodyTreed> getRobot() { return robot_; }
   const PlantIdMap& getPlantIdMap() const { return plant_id_map_; }
   Eigen::VectorXd getMean() const { return x_; }
+  Eigen::VectorXd getRobotQ() const;
   Eigen::MatrixXd getCovariance() { return covar_; }
 
   // helper to publish out to lcm

@@ -302,7 +302,7 @@ struct PerceptionHack::Impl {
 
     const double camera_dt = 0.033; // ~30 Hz
     if (use_rgbd_camera) {
-      bool use_estimator = false;
+      bool use_estimator = true;
 
       // Adapted from: .../image_to_lcm_message_demo.cc
 

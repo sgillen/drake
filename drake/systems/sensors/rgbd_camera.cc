@@ -270,13 +270,17 @@ class RgbdCamera::Impl : private ModuleInitVtkRenderingOpenGL2 {
 
   static float CheckRangeAndConvertToMeters(float z_buffer_value);
 
+  void set_depth_rel_noise_magnitude(double depth_rel_noise_magnitude) {
+    depth_rel_noise_magnitude_ = depth_rel_noise_magnitude;
+  }
   void set_is_discrete(bool value) {
     is_discrete_ = value;
   }
   bool is_discrete() const { return is_discrete_; }
 
   void DoCalcOutput(double t,
-                    const Eigen::VectorXd& x, rendering::PoseVector<double>* pcamera_base_pose,
+                    const Eigen::VectorXd& x,
+                    rendering::PoseVector<double>* pcamera_base_pose,
                     ImageBgra8U* pcolor_image, ImageDepth32F* pdepth_image,
                     ImageLabel16I* plabel_image);
 
@@ -329,6 +333,7 @@ class RgbdCamera::Impl : private ModuleInitVtkRenderingOpenGL2 {
   vtkNew<vtkWindowToImageFilter> label_filter_;
 
   bool is_discrete_{false};
+  double depth_rel_noise_magnitude_{0};
 };
 
 

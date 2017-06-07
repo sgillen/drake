@@ -606,7 +606,13 @@ void ManipulationTracker::update(){
   if (verbose_)
     printf("Total elapsed in EKF update: %f\n", getUnixTime() - now);
 
-} 
+}
+
+VectorXd ManipulationTracker::getRobotQ() const
+{
+  int nq = robot_->get_num_positions();
+  return x_.block(0, 0, nq, 1);
+}
 
 void ManipulationTracker::publish(){
   cout << "State: " << x_.transpose() << endl;
