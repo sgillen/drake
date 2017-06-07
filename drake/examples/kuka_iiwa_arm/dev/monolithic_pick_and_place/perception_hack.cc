@@ -268,6 +268,8 @@ struct PerceptionHack::Impl {
       TreePlant* pplant,
       const ReverseIdMap& plant_id_map) {
 
+    drake::log()->set_level(spdlog::level::trace);
+
     bool use_rgbd_camera = true;
     bool use_depth_sensor = false;
 
@@ -388,7 +390,6 @@ struct PerceptionHack::Impl {
       }
 
       if (use_estimator) {
-//        drake::log()->set_level(spdlog::level::trace);
         string base_path = "drake/examples/kuka_iiwa_arm/dev/monolithic_pick_and_place/";
         string config_file =
             drake::FindResource(base_path + "dart_config/iiwa_test.yaml").get_absolute_path_or_throw();

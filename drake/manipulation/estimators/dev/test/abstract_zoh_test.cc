@@ -39,39 +39,47 @@ class TestValue {
 
 using namespace std;
 
+template <typename T>
+class SimpleSystem : public LeafSystem<double> {
+ public:
+  SimpleSystem() {
+    DeclareAbstractOutputPort(Value<TestValue<T>>());
+  }
+  void DoCalcOutput(
+        const Context<double>& context,
+        SystemOutput<double>* output) const override {
+    cout << "SimpleSystem::CalcOutput" << endl;
+    auto&& y = output->GetMutableData(0)->GetMutableValue<TestValue<T>>();
+    y.value() = context.get_time();
+  }
+};
+
+template <typename T>
+class PeriodicQuery : public LeafSystem<double> {
+ public:
+  PeriodicQuery() {
+    // TODO(eric.cousineau): Figure out why this is publishing every timestep
+    // (@ 0.001s) versus printing at desired rate (@ 0.05s).
+    DeclareAbstractInputPort();
+    DeclarePublishPeriodSec(0.05);
+  }
+  void DoPublish(const Context<double> &context) const override {
+    // Query input.
+    auto&& y = EvalAbstractInput(context, 0)->template GetValue<TestValue<T>>();
+    cout << "Periodic Query: " << context.get_time() << ": "
+         << y.value() << endl;
+  }
+  void DoCalcOutput(
+        const Context<double>&, SystemOutput<double>*) const override {}
+};
+
 // Tests that DeclareAbstractState works expectedly.
 GTEST_TEST(AbstractZOHTest, ModelAbstractState) {
-  class SimpleSystem : public LeafSystem<double> {
-   public:
-    SimpleSystem() {
-      DeclareAbstractOutputPort(Value<TestValue<double>>());
-    }
-    void DoCalcOutput(
-          const Context<double>& context,
-          SystemOutput<double>* output) const override {
-      auto&& y = output->GetMutableData(0)->GetMutableValue<TestValue<double>>();
-      y.value() = context.get_time();
-    }
-  };
-  class PeriodicQuery : public LeafSystem<double> {
-   public:
-    PeriodicQuery() {
-      DeclareAbstractInputPort();
-      DeclarePublishPeriodSec(0.001);
-    }
-    void DoPublish(const Context<double> &context) const override {
-      // Query input.
-      auto&& y = EvalAbstractInput(context, 0)->GetValue<TestValue<double>>();
-      cout << "Periodic Query: " << context.get_time() << ": "
-           << y.value() << endl;
-    }
-    void DoCalcOutput(
-          const Context<double>&, SystemOutput<double>*) const override {}
-  };
+  const double dt = 0.1;
 
   DiagramBuilder<double> builder;
-  auto* sys = builder.AddSystem<SimpleSystem>();
-  auto* zoh = builder.AddSystem<AbstractZOH<TestValue<double>>>(0.1);
+  auto* sys = builder.AddSystem<SimpleSystem<double>>();
+  auto* zoh = builder.AddSystem<AbstractZOH<TestValue<double>>>(dt);
   vector<double> times;
   vector<double> values;
   zoh->ConnectOnUpdate([&](double t, const TestValue<double>& value) {
@@ -80,7 +88,7 @@ GTEST_TEST(AbstractZOHTest, ModelAbstractState) {
   });
   builder.Connect(sys->get_output_port(0),
                   zoh->get_input_port(0));
-  auto* query = builder.AddSystem<PeriodicQuery>();
+  auto* query = builder.AddSystem<PeriodicQuery<double>>();
   builder.Connect(zoh->get_output_port(0),
                   query->get_input_port(0));
 
@@ -93,6 +101,38 @@ GTEST_TEST(AbstractZOHTest, ModelAbstractState) {
   vector<double> values_expected = times_expected;
   EXPECT_EQ(times_expected, times);
   EXPECT_EQ(values_expected, values);
+}
+
+// Tests that DeclareAbstractState works expectedly.
+// WARNING(eric.cousineau): Stack ZOH is not a good idea, at least in the short
+// term, since the entire system will be evaluated per port evaluation.
+GTEST_TEST(AbstractZOHTest, StackTest) {
+  DiagramBuilder<double> builder;
+  auto* sys_stack = builder.AddSystem(
+      StackSystems<double>(false, true,
+            {new SimpleSystem<double>(), new SimpleSystem<float>()}));
+
+  const double dt = 0.1;
+  auto* zoh_stack = builder.AddSystem(
+      StackSystems<double>(true, true,
+           {new AbstractZOH<TestValue<double>>(dt),
+            new AbstractZOH<TestValue<float>>(dt)}));
+  auto* query_stack = builder.AddSystem(
+      StackSystems<double>(true, false,
+           {new PeriodicQuery<double>(),
+            new PeriodicQuery<float>()}));
+
+  for (int i = 0; i < 2; ++i) {
+    builder.Connect(sys_stack->get_output_port(i),
+                    zoh_stack->get_input_port(i));
+    builder.Connect(zoh_stack->get_output_port(i),
+                    query_stack->get_input_port(i));
+  }
+
+  auto full_sys = builder.Build();
+  Simulator<double> simulator(*full_sys);
+  simulator.Initialize();
+  simulator.StepTo(0.2);
 }
 
 }  // namespace

@@ -64,6 +64,9 @@ class AbstractZOH : public LeafSystem<double> {
  public:
   typedef std::function<void(double time, const T& value)> OnUpdate;
 
+  AbstractZOH(double period_sec, bool use_autoinit = false)
+      : AbstractZOH(T(), period_sec, 0., use_autoinit) {}
+
   AbstractZOH(const T& ic, double period_sec, double offset_sec = 0.,
               bool use_autoinit = false)
       : use_autoinit_(use_autoinit) {
@@ -119,69 +122,94 @@ class AbstractZOH : public LeafSystem<double> {
   bool use_autoinit_{};
 };
 
-template <typename T, typename... Extra>
-std::unique_ptr<AbstractZOH<T>> MakeAbstractZOH(const T& ic, Extra&&... extra) {
-  return std::make_unique<AbstractZOH<T>>(ic, std::forward<Extra>(extra)...);
+//template <typename T, typename... Extra>
+//std::unique_ptr<AbstractZOH<T>> MakeAbstractZOH(const T& ic, Extra&&... extra) {
+//  return std::make_unique<AbstractZOH<T>>(ic, std::forward<Extra>(extra)...);
+//}
+
+//template <typename Visitor>
+//void pack_visit(Visitor&& visitor) {}
+
+//// Visit a set of parameter pack template arguments, using Visitor::run<T>
+//template <typename Visitor, typename T, typename... Ts>
+//void pack_visit(Visitor&& visitor) {
+//  visitor.template run<T>();
+//  pack_visit<Visitor, Ts...>(std::forward<Visitor>(visitor));
+//};
+
+//// To infer caller type
+//template <typename... Ts>
+//struct pack_visitor {
+//  template <typename Visitor>
+//  static void run(Visitor&& visitor) {
+//    pack_visit<Visitor, Ts...>(std::forward<Visitor>(visitor));
+//  }
+//};
+
+//template <typename Visitor>
+//void param_visit(Visitor&& visitor) {}
+
+//// Visit a set of parameter, using Visitor::run<T>(T&& t)
+//template <typename Visitor, typename T, typename... Ts>
+//void param_visit(Visitor&& visitor, T&& arg, Ts&&... args) {
+//  visitor(std::forward<T>(arg));
+//  pack_visit<Visitor, Ts...>(std::forward<Visitor>(visitor),
+//                             std::forward<Ts>(args)...);
+//};
+
+/**
+ * Stack a group of SISO systems.
+ * Example:
+ *   auto* stack = StackSystems(true, true, {
+ *     new AbstractZOH(...),
+ *     new AbstractZOH(...)});
+ */
+template <typename T>
+std::unique_ptr<Diagram<T>> StackSystems(
+    bool export_input, bool export_output,
+    const std::vector<LeafSystem<T>*>& systems) {
+  DRAKE_ASSERT(export_input || export_output);
+  DiagramBuilder<T> builder;
+  for (LeafSystem<T>* system : systems) {
+    builder.AddSystem(std::unique_ptr<LeafSystem<T>>(system));
+    if (export_input) {
+      builder.ExportInput(system->get_input_port(0));
+    }
+    if (export_output) {
+      builder.ExportOutput(system->get_output_port(0));
+    }
+  }
+  return builder.Build();
 }
 
-template <typename Visitor>
-void pack_visit(Visitor&& visitor) {}
+//template <typename... Ts>
+//class AbstractZOHDiagram : public systems::Diagram<double> {
+// public:
+//  using T = double;
+//  using Builder = systems::DiagramBuilder<T>;
 
-// Visit a set of parameter pack template arguments, using Visitor::run<T>
-template <typename Visitor, typename T, typename... Ts>
-void pack_visit(Visitor&& visitor) {
-  visitor.template run<T>();
-  pack_visit<Visitor, Ts...>(std::forward<Visitor>(visitor));
-};
+//  AbstractZOHDiagram(double period_sec, const Ts&... ic)
+//      : period_sec_(period_sec) {
+//    Builder builder;
+//    pack_visitor<Ts...>::run(Adder{this, &builder});
+//    builder.BuildInto(this);
+//  }
 
-// To infer caller type
-template <typename... Ts>
-struct pack_visitor {
-  template <typename Visitor>
-  static void run(Visitor&& visitor) {
-    pack_visit<Visitor, Ts...>(std::forward<Visitor>(visitor));
-  }
-};
+// protected:
+//  struct Adder {
+//    AbstractZOHDiagram* self;
+//    Builder* builder;
+//    template <typename T>
+//    void run() {
+//      auto* zoh = builder->template AddSystem<AbstractZOH<T>>(self->period_sec_);
+//      builder->ExportInput(zoh->get_input_port(0));
+//      builder->ExportOutput(zoh->get_output_port(0));
+//    }
+//  };
 
-template <typename Visitor>
-void param_visit(Visitor&& visitor) {}
-
-// Visit a set of parameter, using Visitor::run<T>(T&& t)
-template <typename Visitor, typename T, typename... Ts>
-void param_visit(Visitor&& visitor, T&& arg, Ts&&... args) {
-  visitor(std::forward<T>(arg));
-  pack_visit<Visitor, Ts...>(std::forward<Visitor>(visitor),
-                             std::forward<Ts>(args)...);
-};
-
-template <typename... Ts>
-class AbstractZOHDiagram : public systems::Diagram<double> {
- public:
-  using T = double;
-  using Builder = systems::DiagramBuilder<T>;
-
-  AbstractZOHDiagram(double period_sec)
-      : period_sec_(period_sec) {
-    Builder builder;
-    pack_visitor<Ts...>::run(Adder{this, &builder});
-    builder.BuildInto(this);
-  }
-
- protected:
-  struct Adder {
-    AbstractZOHDiagram* self;
-    Builder* builder;
-    template <typename T>
-    void run() {
-      auto* zoh = builder->template AddSystem<AbstractZOH<T>>(self->period_sec_);
-      builder->ExportInput(zoh->get_input_port(0));
-      builder->ExportOutput(zoh->get_output_port(0));
-    }
-  };
-
- private:
-  double period_sec_;
-};
+// private:
+//  double period_sec_;
+//};
 
 }  // namespace systems
 }  // namespace drake
