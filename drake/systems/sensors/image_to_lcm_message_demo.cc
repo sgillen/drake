@@ -14,9 +14,10 @@
 #include "drake/systems/lcm/lcm_publisher_system.h"
 #include "drake/systems/sensors/rgbd_camera.h"
 #include "drake/systems/rendering/pose_stamped_t_pose_vector_translator.h"
+#include "drake/multibody/rigid_body_plant/drake_visualizer.h"
 #include <gflags/gflags.h>
 
-DEFINE_double(duration, 0.1, "Total duration of the simulation in secondes.");
+DEFINE_double(duration, 1, "Total duration of the simulation in secondes.");
 
 namespace drake {
 
@@ -45,11 +46,17 @@ int main(int argc, char* argv[]) {
   plant->set_normal_contact_parameters(3000, 10);
   plant->set_friction_contact_parameters(0.9, 0.5, 0.01);
 
+  auto viz = builder.AddSystem<systems::DrakeVisualizer>(
+      plant->get_rigid_body_tree(), &real_lcm);
+  builder.Connect(plant->state_output_port(),
+                  viz->get_input_port(0));
+
+  const double dt = 0.01;
   auto rgbd_camera =
       builder.template AddSystem<RgbdCamera>(
           "rgbd_camera", plant->get_rigid_body_tree(),
           Eigen::Vector3d(-1., 0., 1.),
-          Eigen::Vector3d(0., M_PI_4, 0.), M_PI_4, true);
+          Eigen::Vector3d(0., M_PI_4, 0.), M_PI_4, true, dt);
   rgbd_camera->set_name("rgbd_camera");
 
   auto image_to_lcm_message =
@@ -60,14 +67,14 @@ int main(int argc, char* argv[]) {
       lcm::LcmPublisherSystem::Make<bot_core::images_t>(
           "DRAKE_RGB_IMAGE", &real_lcm));
   lcm_publisher->set_name("publisher");
-  lcm_publisher->set_publish_period(0.01);
+  lcm_publisher->set_publish_period(dt);
 
   rendering::PoseStampedTPoseVectorTranslator translator("test_frame");
   auto pose_lcm_publisher = builder.template AddSystem<
     lcm::LcmPublisherSystem>("DRAKE_RGBD_CAMERA_POSE",
                              translator, &real_lcm);
   pose_lcm_publisher->set_name("pose_lcm_publisher");
-  pose_lcm_publisher->set_publish_period(0.01);
+  pose_lcm_publisher->set_publish_period(dt);
 
   builder.Connect(
       plant->get_output_port(0),
@@ -81,9 +88,9 @@ int main(int argc, char* argv[]) {
       rgbd_camera->depth_image_output_port(),
       image_to_lcm_message->depth_image_input_port());
 
-  builder.Connect(
-      rgbd_camera->label_image_output_port(),
-      image_to_lcm_message->label_image_input_port());
+//  builder.Connect(
+//      rgbd_camera->label_image_output_port(),
+//      image_to_lcm_message->label_image_input_port());
 
   builder.Connect(
       image_to_lcm_message->images_t_msg_output_port(),
@@ -99,7 +106,7 @@ int main(int argc, char* argv[]) {
       *diagram, std::move(context));
 
   simulator->set_publish_at_initialization(true);
-  simulator->set_publish_every_time_step(false);
+  simulator->set_publish_every_time_step(true);
   simulator->Initialize();
   simulator->StepTo(FLAGS_duration);
 

@@ -27,6 +27,7 @@ DrakeVisualizer::DrakeVisualizer(const RigidBodyTree<double>& tree,
       tree.get_num_positions() + tree.get_num_velocities();
   DeclareInputPort(kVectorValued, vector_size);
   this->DeclareDiscreteState(1);
+  DeclarePerStepAction(DiscreteEvent<double>::kPublishAction);
   if (enable_playback) log_.reset(new SignalLog<double>(vector_size));
 }
 
