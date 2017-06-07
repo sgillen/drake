@@ -2,7 +2,7 @@
 # This file contains rules for Bazel; see drake/doc/bazel.rst.
 
 load("//tools:cpplint.bzl", "cpplint")
-load("//tools:drake.bzl", "drake_cc_binary")
+load("//tools:drake.bzl", "drake_cc_googletest", "drake_cc_binary")
 
 exports_files([
     "CPPLINT.cfg",
@@ -35,6 +35,15 @@ drake_cc_binary(
     deps = [
         "//drake/systems/analysis:simulator",
         "//drake/systems/framework:leaf_system",
+    ],
+)
+
+drake_cc_googletest(
+    name = "simulation_event_test",
+    deps = [
+        "//drake/systems/analysis:simulator",
+        "//drake/systems/framework:leaf_system",
+        "//drake/systems/framework:diagram_builder",
     ],
 )
 
