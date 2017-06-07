@@ -25,12 +25,36 @@ set(drakeSensors_HEADERS
 set(drakeSensors_TARGET_LINK_LIBRARIES
     drakeRBM
     drakeRigidBodyPlant
-    drakeSystemFramework)
-set(drakeSensors_TARGET_INCLUDE_DIRECTORIES)
+    drakeSystemFramework
+)
 
 if(VTK_FOUND)
+  list(APPEND drakeSensors_SRC_FILES rgbd_camera.cc vtk_util.cc)
+  list(APPEND drakeSensors_HEADERS rgbd_camera.h vtk_util.h)
+endif()
+
+if(lcm_FOUND AND Bullet_FOUND)
+  list(APPEND drakeSensors_SRC_FILES depth_sensor_to_lcm_point_cloud_message.cc)
+  list(APPEND drakeSensors_HEADERS depth_sensor_to_lcm_point_cloud_message.h)
+  list(APPEND drakeSensors_TARGET_LINK_LIBRARIES robotlocomotion-lcmtypes-cpp)
+endif()
+
+if(robotlocomotion-lcmtypes_FOUND)
+  list(APPEND drakeSensors_SRC_FILES image_to_lcm_image_array_t.cc)
+  list(APPEND drakeSensors_HEADERS image_to_lcm_image_array_t.h)
+  list(APPEND drakeSensors_TARGET_LINK_LIBRARIES robotlocomotion-lcmtypes-cpp z)
+endif()
+
+add_library_with_exports(LIB_NAME drakeSensors SOURCE_FILES
+    ${drakeSensors_SRC_FILES})
+
+target_link_libraries(drakeSensors
+    ${drakeSensors_TARGET_LINK_LIBRARIES})
+
+if(VTK_FOUND)
+  target_link_libraries(drakeSensors drakeRendering)
   if(VTK_MAJOR_VERSION GREATER 5)
-    list(APPEND drakeSensors_TARGET_LINK_LIBRARIES
+    target_link_libraries(drakeSensors
       vtkCommonCore
       vtkCommonDataModel
       vtkCommonTransforms
@@ -41,43 +65,20 @@ if(VTK_FOUND)
       vtkRenderingCore
       vtkRenderingOpenGL2)
   else()
-    list(APPEND drakeSensors_TARGET_LINK_LIBRARIES vtkIO vtkRendering)
+    target_link_libraries(drakeSensors vtkIO vtkRendering)
   endif()
-  set(drakeSensors_TARGET_INCLUDE_DIRECTORIES ${VTK_INCLUDE_DIRS})
+  target_include_directories(drakeSensors PUBLIC ${VTK_INCLUDE_DIRS})
 
-  list(APPEND drakeSensors_SRC_FILES rgbd_camera.cc vtk_util.cc)
-  list(APPEND drakeSensors_HEADERS rgbd_camera.h vtk_util.h)
-  list(APPEND drakeSensors_TARGET_LINK_LIBRARIES drakeRendering)
-endif()
-
-if(lcm_FOUND)
-  list(APPEND drakeSensors_SRC_FILES image_to_lcm_message.cc)
-  list(APPEND drakeSensors_HEADERS image_to_lcm_message.h)
-  list(APPEND drakeSensors_TARGET_LINK_LIBRARIES
-       drakeRenderingLcm robotlocomotion-lcmtypes-cpp z)
-endif()
-
-if(lcm_FOUND AND Bullet_FOUND)
-  list(APPEND drakeSensors_SRC_FILES depth_sensor_to_lcm_point_cloud_message.cc)
-  list(APPEND drakeSensors_HEADERS depth_sensor_to_lcm_point_cloud_message.h)
-  list(APPEND drakeSensors_TARGET_LINK_LIBRARIES robotlocomotion-lcmtypes-cpp)
-endif()
-
-add_library_with_exports(LIB_NAME drakeSensors SOURCE_FILES
-    ${drakeSensors_SRC_FILES})
-
-target_link_libraries(drakeSensors
-    ${drakeSensors_TARGET_LINK_LIBRARIES})
-target_include_directories(drakeSensors PUBLIC
-    ${drakeSensors_TARGET_INCLUDE_DIRECTORIES})
-
-if(lcm_FOUND AND VTK_FOUND)
-  add_executable(image_to_lcm_message_demo image_to_lcm_message_demo.cc)
-  target_link_libraries(image_to_lcm_message_demo
-    drakeSensors
-    drakeSystemAnalysis
-    drakeMultibodyParsers
-    gflags)
+  if(lcm_FOUND AND robotlocomotion-lcmtypes_FOUND)
+    add_executable(rgbd_camera_publish_lcm_example rgbd_camera_publish_lcm_example.cc)
+    target_link_libraries(rgbd_camera_publish_lcm_example
+      drakeCommon
+      drakeSensors
+      drakeSystemAnalysis
+      drakeLcmSystem
+      drakeMultibodyParsers
+      gflags)
+  endif()
 endif()
 
 drake_install_libraries(drakeSensors)
