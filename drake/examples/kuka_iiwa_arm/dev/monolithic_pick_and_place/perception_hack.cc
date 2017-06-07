@@ -282,6 +282,7 @@ struct PerceptionHack::Impl {
 
     bool use_rgbd_camera = true;
     bool use_depth_sensor = false;
+    bool use_wall_clock_pub = false;
 
     const double pi = M_PI;
 
@@ -293,7 +294,9 @@ struct PerceptionHack::Impl {
     const Vector3d position(0, 2, 2);
     const Vector3d orientation(0, 20, -90); // degrees
 
-    pbuilder->template AddSystem<WallClockPublisher>();
+    if (use_wall_clock_pub) {
+      pbuilder->template AddSystem<WallClockPublisher>();
+    }
 
     const double camera_dt = 0.033; // ~30 Hz
     if (use_rgbd_camera) {
@@ -312,18 +315,6 @@ struct PerceptionHack::Impl {
       pbuilder->Connect(
           pplant->get_output_port_plant_state(),
           rgbd_camera_->state_input_port());
-
-//      using namespace systems::sensors;
-//      auto rgbd_zoh =
-//          new AbstractZOHDiagram<ImageRgba8U, ImageDepth32F, ImageLabel16I>(0.03);
-//      pbuilder->AddSystem(CreateUnique(rgbd_zoh));
-//      for (int i = 0; i < 3; ++i) {
-//        pbuilder->Connect(rgbd_camera_->get_output_port(i),
-//                          rgbd_zoh->get_input_port(i));
-//      }
-//      auto&& color_image_output_port = rgbd_zoh->get_output_port(0);
-//      auto&& depth_image_output_port = rgbd_zoh->get_output_port(1);
-////      auto&& label_image_output_port = rgbd_zoh->get_output_port(2);
 
       auto&& color_image_output_port = rgbd_camera_->get_output_port(0);
       auto&& depth_image_output_port = rgbd_camera_->get_output_port(1);

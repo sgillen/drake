@@ -889,7 +889,6 @@ RgbdCamera::camera_base_pose_output_port() const {
 
 void RgbdCamera::DoCalcOutput(const systems::Context<double>& context,
                               systems::SystemOutput<double>* output) const {
-//  drake::log()->info("Camera update: {}", context.get_time());
   const Eigen::VectorXd& x =
       this->EvalVectorInput(context, kPortStateInput)->CopyToVector();
 
@@ -912,6 +911,7 @@ void RgbdCamera::DoCalcOutput(const systems::Context<double>& context,
 
   if (impl_->is_discrete()) {
     // Copy data.
+    drake::log()->info("Camera discrete copy: {}", context.get_time());
     const sensors::ImageRgba8U& color_image_state =
         context.get_abstract_state<sensors::ImageRgba8U>(0);
     const sensors::ImageDepth32F& depth_image_state =
