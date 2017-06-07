@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory>
 #include <random>
 
 #include "drake/common/drake_copyable.h"
@@ -31,14 +32,6 @@ class RandomSource : public LeafSystem<double> {
  public:
   DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(RandomSource)
 
-  using Generator = std::mt19937;
-  struct InternalState {
-    Generator generator;
-    Distribution distribution;
-    InternalState(Generator::result_type seed = Generator::default_seed)
-        : generator(seed) {}
-  };
-
   /// Constructs the RandomSource system.
   /// @param num_outputs The dimension of the (single) vector output port.
   /// @param sampling_interval_sec The sampling interval in seconds.
@@ -46,7 +39,7 @@ class RandomSource : public LeafSystem<double> {
     this->DeclarePeriodicUnrestrictedUpdate(sampling_interval_sec, 0.);
     this->DeclareOutputPort(drake::systems::kVectorValued, num_outputs);
     this->DeclareDiscreteState(num_outputs);
-    this->DeclareAbstractState(std::make_unique<Value<InternalState>>());
+    this->DeclareAbstractState(AbstractValue::Make(InternalState()));
   }
 
   /// Initializes the random number generator.
@@ -63,17 +56,16 @@ class RandomSource : public LeafSystem<double> {
         .GetMutableValue<InternalState>();
     const int N = updates->size();
     for (int i = 0; i < N; i++) {
-      double random_value = internal_state.distribution(internal_state.generator);
+      double random_value =
+          internal_state.distribution(internal_state.generator);
       (*updates)[i] = random_value;
     }
   }
 
   std::unique_ptr<AbstractValues> AllocateAbstractState() const override {
-      // TODO(eric.cousineau): Why are AbstractValues's constructors explicit,
-      // ifthey are simply taking cast-able pointers?
-      return std::make_unique<AbstractValues>(
-          std::unique_ptr<AbstractValue>(new Value<InternalState>(seed_)));
-    }
+    return std::make_unique<AbstractValues>(
+        AbstractValue::Make(InternalState(seed_)));
+  }
 
   // Output is the zero-order hold of the discrete state.
   void DoCalcOutput(
@@ -83,10 +75,19 @@ class RandomSource : public LeafSystem<double> {
         context.get_discrete_state(0)->CopyToVector());
   }
 
+  using Generator = std::mt19937;
+
+  struct InternalState {
+    Generator generator;
+    Distribution distribution;
+    explicit InternalState(
+        Generator::result_type seed = Generator::default_seed)
+        : generator(seed) {}
+  };
+
   // Note: currently there is undeclared state in the variables below.
   // TODO(russt): Obtain consistent results across multiple platforms (#4361).
   Generator::result_type seed_{Generator::default_seed};
-//  mutable Distribution distribution_;
 };
 
 namespace internal {
