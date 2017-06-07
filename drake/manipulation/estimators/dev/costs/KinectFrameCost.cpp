@@ -707,10 +707,12 @@ void KinectFrameCost::handleSavePointcloudMsg(const lcm::ReceiveBuffer* rbuf,
 namespace {
 void ToMatrixXd(const KinectFrameCost::DepthImage& image, MatrixXd* pmatrix) {
   auto& X = *pmatrix;
-  X.resize(image.width(), image.height());
+  X.resize(image.height(), image.width());
   for (int u = 0; u < X.rows(); u++) {
     for (int v = 0; v < X.cols(); v++) {
-      X(u, v) = *image.at(u, v);
+      // TODO(eric.cousineau): Figure out best matrix storage format for ease of
+      // understanding.
+      X(u, v) = *image.at(v, u);
     }
   }
 }

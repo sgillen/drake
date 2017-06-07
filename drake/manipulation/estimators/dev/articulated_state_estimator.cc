@@ -159,6 +159,7 @@ class ArticulatedStateEstimator::Impl {
     // DynamicsCost and NonpenetratingCost presently only rely on priors.
     estimator.update();
     estimator.publish();
+    // FIX(eric.cousineau): Presently not using the correct data.
     *estimated_tree_state = estimator.getMean();
   }
 
