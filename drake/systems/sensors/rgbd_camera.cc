@@ -334,8 +334,13 @@ class RgbdCamera::Impl : private ModuleInitVtkRenderingOpenGL2 {
 
   bool is_discrete_{false};
   double depth_rel_noise_magnitude_{0};
-};
 
+  // Modelling after: RandomSource
+  using Generator = std::mt19937;
+  using Distribution = std::normal_distribution<double>;
+  Generator noise_generator_;
+  Distribution noise_distribution_;
+};
 
 RgbdCamera::Impl::Impl(const RigidBodyTree<double>& tree,
                        const RigidBodyFrame<double>& frame,
@@ -701,8 +706,11 @@ void RgbdCamera::Impl::DoCalcOutput(
       // Updates the depth image.
       const float z_buffer_value = *static_cast<float*>(
           depth_filter_->GetOutput()->GetScalarPointer(u, v, 0));
-      depth_image.at(u, height_reversed)[0] =
-          CheckRangeAndConvertToMeters(z_buffer_value);
+      float depth_meters = CheckRangeAndConvertToMeters(z_buffer_value);
+      // Add noise
+      depth_meters *= (1 + depth_rel_noise_magnitude_ / 3.
+                      * noise_distribution_(noise_generator_));
+      depth_image.at(u, height_reversed)[0] = depth_meters;
 
 //      // Updates the label image.
 //      void* label_ptr = label_filter_->GetOutput()->GetScalarPointer(u, v, 0);
@@ -803,6 +811,7 @@ void RgbdCamera::Init(const std::string& name, double period_sec) {
     this->DeclareDiscreteState(pose_vector.size());
     this->DeclarePeriodicUnrestrictedUpdate(period_sec, 0.);
     impl_->set_is_discrete(true);
+    impl_->set_depth_rel_noise_magnitude(0.02); // 2% noise
     drake::log()->info("WORKAROUND: Using discrete camera update");
   }
 }
