@@ -116,12 +116,12 @@ costs:
     #camera_body: "camera"
     world_frame: True
     bounds:
-      xMin: 0.43
-      xMax: 0.67
-      yMin: 0.03
-      yMax: 0.17
-      zMin: 0.7
-      zMax: 1.0
+      xMin: -2
+      xMax: 2
+      yMin: -2
+      yMax: 2
+      zMin: -2
+      zMax: 2
 
   - type: "RobotStateCost"
     joint_known_fb_var: 0.0000001 # m
