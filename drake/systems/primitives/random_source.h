@@ -31,29 +31,49 @@ class RandomSource : public LeafSystem<double> {
  public:
   DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(RandomSource)
 
+  using Generator = std::mt19937;
+  struct InternalState {
+    Generator generator;
+    Distribution distribution;
+    InternalState(Generator::result_type seed = Generator::default_seed)
+        : generator(seed) {}
+  };
+
   /// Constructs the RandomSource system.
   /// @param num_outputs The dimension of the (single) vector output port.
   /// @param sampling_interval_sec The sampling interval in seconds.
   RandomSource(int num_outputs, double sampling_interval_sec) {
-    this->DeclareDiscreteUpdatePeriodSec(sampling_interval_sec);
+    this->DeclarePeriodicUnrestrictedUpdate(sampling_interval_sec, 0.);
     this->DeclareOutputPort(drake::systems::kVectorValued, num_outputs);
     this->DeclareDiscreteState(num_outputs);
+    this->DeclareAbstractState(std::make_unique<Value<InternalState>>());
   }
 
   /// Initializes the random number generator.
-  void set_random_seed(double seed) { generator_.seed(seed); }
+  void set_random_seed(int seed) { seed_ = seed; }
 
  private:
   // Computes a random number and stores it in the discrete state.
-  void DoCalcDiscreteVariableUpdates(
-      const drake::systems::Context<double>& context,
-      drake::systems::DiscreteValues<double>* updates) const override {
+  void DoCalcUnrestrictedUpdate(
+      const Context<double>&,
+      State<double>* state) const override {
+    auto* updates = state->get_mutable_discrete_state();
+    InternalState& internal_state =
+        state->get_mutable_abstract_state()->get_mutable_value(0)
+        .GetMutableValue<InternalState>();
     const int N = updates->size();
     for (int i = 0; i < N; i++) {
-      double random_value = distribution_(generator_);
+      double random_value = internal_state.distribution(internal_state.generator);
       (*updates)[i] = random_value;
     }
   }
+
+  std::unique_ptr<AbstractValues> AllocateAbstractState() const override {
+      // TODO(eric.cousineau): Why are AbstractValues's constructors explicit,
+      // ifthey are simply taking cast-able pointers?
+      return std::make_unique<AbstractValues>(
+          std::unique_ptr<AbstractValue>(new Value<InternalState>(seed_)));
+    }
 
   // Output is the zero-order hold of the discrete state.
   void DoCalcOutput(
@@ -64,11 +84,9 @@ class RandomSource : public LeafSystem<double> {
   }
 
   // Note: currently there is undeclared state in the variables below.
-  // TODO(russt): Use abstract state to save the parameters of the generator and
-  // distribution (waiting on event scheduling for abstract states).
   // TODO(russt): Obtain consistent results across multiple platforms (#4361).
-  mutable std::mt19937 generator_;
-  mutable Distribution distribution_;
+  Generator::result_type seed_{Generator::default_seed};
+//  mutable Distribution distribution_;
 };
 
 namespace internal {
