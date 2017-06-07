@@ -321,6 +321,8 @@ int DoMain(void) {
   auto sys = builder.Build();
   Simulator<double> simulator(*sys);
   simulator.Initialize();
+  simulator.set_publish_every_time_step(false);
+  simulator.set_publish_at_initialization(false);  // Useless until we init the camera properly
 
   auto plan_source_context = sys->GetMutableSubsystemContext(
       simulator.get_mutable_context(), iiwa_trajectory_generator);
