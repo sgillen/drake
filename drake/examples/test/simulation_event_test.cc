@@ -92,6 +92,8 @@ GTEST_TEST(ModelLeafSystemTest, ModelAbstractState) {
 
   Simulator<T> simulator(*sys);
   simulator.Initialize();
+  simulator.set_publish_every_time_step(false);
+  simulator.set_publish_at_initialization(false);  // Useless until we init the camera properly
   simulator.StepTo(0.2);
 }
 
