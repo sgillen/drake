@@ -56,7 +56,7 @@ int main(int argc, char* argv[]) {
       builder.template AddSystem<RgbdCamera>(
           "rgbd_camera", plant->get_rigid_body_tree(),
           Eigen::Vector3d(-1., 0., 1.),
-          Eigen::Vector3d(0., M_PI_4, 0.), M_PI_4, true, dt);
+          Eigen::Vector3d(0., M_PI_4, 0.), M_PI_4, true/*, dt*/);
   rgbd_camera->set_name("rgbd_camera");
 
   auto image_to_lcm_message =

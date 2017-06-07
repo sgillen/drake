@@ -40,8 +40,8 @@ namespace sensors {
 /// and `D`, see the class documentation of CameraInfo.
 ///
 /// Output image format:
-///   - The RGB image has four channels in the following order: red, green
-///     blue, alpha. Each channel is represented by a uint8_t.
+///   - The RGB image has four channels in the following order: blue, green
+///     red, alpha. Each channel is represented by a uint8_t.
 ///
 ///   - The depth image has a depth channel represented by a float. The value
 ///     stored in the depth channel holds *the Z value in `D`.*  Note that this
@@ -136,8 +136,7 @@ class RgbdCamera : public LeafSystem<double> {
              const Eigen::Vector3d& position,
              const Eigen::Vector3d& orientation,
              double fov_y,
-             bool show_window,
-             double period_sec = -1.);
+             bool show_window);
 
   /// A constructor for %RgbdCamera that defines `B` using a RigidBodyFrame.
   /// The pose of %RgbdCamera is fixed to a user-defined frame and will be
@@ -162,8 +161,7 @@ class RgbdCamera : public LeafSystem<double> {
              const RigidBodyTree<double>& tree,
              const RigidBodyFrame<double>& frame,
              double fov_y,
-             bool show_window,
-             double period_sec = -1.);
+             bool show_window);
 
   ~RgbdCamera();
 
@@ -191,15 +189,15 @@ class RgbdCamera : public LeafSystem<double> {
   const InputPortDescriptor<double>& state_input_port() const;
 
   /// Returns a descriptor of the abstract valued output port that contains an
-  /// RGBA image of the type ImageRgba8U.
+  /// BGRA image of the type Image<uint8_t>.
   const OutputPortDescriptor<double>& color_image_output_port() const;
 
   /// Returns a descriptor of the abstract valued output port that contains an
-  /// ImageDepth32F.
+  /// Image<float>.
   const OutputPortDescriptor<double>& depth_image_output_port() const;
 
   /// Returns a descriptor of the abstract valued output port that contains an
-  /// label image of the type ImageLabel16I.
+  /// label image of the type Image<int16_t>.
   const OutputPortDescriptor<double>& label_image_output_port() const;
 
   /// Returns a descriptor of the vector valued output port that contains an
@@ -212,14 +210,8 @@ class RgbdCamera : public LeafSystem<double> {
   void DoCalcOutput(const systems::Context<double>& context,
                     systems::SystemOutput<double>* output) const override;
 
-  void DoCalcUnrestrictedUpdate(const systems::Context<double>& context,
-                            systems::State<double>* state) const override;
-
-  std::unique_ptr<DiscreteValues<double>>
-  AllocateDiscreteState() const override;
-
  private:
-  void Init(const std::string& name, double period_sec);
+  void Init(const std::string& name);
 
   class Impl;
   std::unique_ptr<Impl> impl_;
