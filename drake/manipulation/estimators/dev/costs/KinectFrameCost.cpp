@@ -170,7 +170,7 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
 {
   double now = getUnixTime();
 
-  if (now - lastReceivedTime > timeout_time || (!have_hardcoded_kinect2world_ && !have_camera_body_ && world_frame && now - last_got_kinect_frame > timeout_time)){
+  if (now - lastReceivedTime > timeout_time) { // || (!have_hardcoded_kinect2world_ && !have_camera_body_ && world_frame && now - last_got_kinect_frame > timeout_time)){
     if (verbose)
       printf("KinectFrameCost: constructed but timed out\n");
     return false;

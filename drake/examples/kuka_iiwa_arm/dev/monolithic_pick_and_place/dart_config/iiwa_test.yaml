@@ -72,10 +72,10 @@ robots:
       base_y: -0.8
       base_z: 0
 
-force_align:
-  # force alignment of these frames in the estimator every iteration
-  source_robot: "iiwa"
-  dest_frame: "robot_base"
+# force_align:
+#   # force alignment of these frames in the estimator every iteration
+#   source_robot: "iiwa"
+#   dest_frame: "robot_base"
 
 publish_all: true
 

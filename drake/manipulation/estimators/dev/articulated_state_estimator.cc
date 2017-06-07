@@ -223,10 +223,9 @@ void GetCommonIndices(const std::vector<T> &a,
   }
 }
 
-ArticulatedStateEstimator::ArticulatedStateEstimator(
-    const string& config_file,
+ArticulatedStateEstimator::ArticulatedStateEstimator(const string& config_file,
     const CameraInfo* camera_info,
-    const std::vector<string>& input_position_names) {
+    const std::vector<string>& input_position_names, double dt) {
   impl_.reset(new Impl(config_file, camera_info));
 
   // This presently does not take in velocities.
@@ -268,6 +267,8 @@ ArticulatedStateEstimator::ArticulatedStateEstimator(
 
   state_tree_state_estimate_index_ = 0;
   DeclareDiscreteState(num_output_positions);
+
+  DeclarePeriodicDiscreteUpdate(dt, 0.);
 }
 
 void ArticulatedStateEstimator::DoCalcDiscreteVariableUpdates(

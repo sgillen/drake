@@ -52,7 +52,8 @@ class ArticulatedStateEstimator : public LeafSystemMixin<double> {
   typedef systems::sensors::CameraInfo CameraInfo;
   ArticulatedStateEstimator(const std::string& config_file,
                             const CameraInfo* camera_info,
-                            const std::vector<std::string> &input_position_names);
+                            const std::vector<std::string> &input_position_names,
+                            double dt);
 
   void DoCalcDiscreteVariableUpdates(const Context& context,
                                      DiscreteValues* updates) const override;

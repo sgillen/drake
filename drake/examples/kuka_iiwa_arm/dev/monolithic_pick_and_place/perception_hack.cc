@@ -300,7 +300,7 @@ struct PerceptionHack::Impl {
 
     const double camera_dt = 0.033; // ~30 Hz
     if (use_rgbd_camera) {
-      bool use_estimator = false;
+      bool use_estimator = true;
 
       // Adapted from: .../image_to_lcm_message_demo.cc
 
@@ -412,7 +412,7 @@ struct PerceptionHack::Impl {
 
         auto estimator = pbuilder->template AddSystem<ArticulatedStateEstimator>(
                            config_file, &rgbd_camera_->depth_camera_info(),
-                           input_position_names);
+                           input_position_names, camera_dt);
 
         pbuilder->Connect(pc_output_port,
                           estimator->inport_point_cloud());
