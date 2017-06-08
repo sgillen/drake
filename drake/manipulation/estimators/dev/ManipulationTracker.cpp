@@ -415,7 +415,7 @@ void ManipulationTracker::update(){
     else
       these_vars = dynamics_vars_defaults_;
 
-    printf("For robot %s and link %s, using vars %f and %f\n", robot_->bodies[i]->get_model_name().c_str(), robot_->bodies[i]->get_name().c_str(), these_vars.floating_base_var, these_vars.other_var);
+//    printf("For robot %s and link %s, using vars %f and %f\n", robot_->bodies[i]->get_model_name().c_str(), robot_->bodies[i]->get_name().c_str(), these_vars.floating_base_var, these_vars.other_var);
     if (robot_->bodies[i]->getJoint().is_floating() && !std::isinf(these_vars.floating_base_var)){
       for (int j = 0; j < robot_->bodies[i]->getJoint().get_num_positions(); j++){
         covar_pred(j + robot_->bodies[i]->get_position_start_index(), j + robot_->bodies[i]->get_position_start_index()) += these_vars.floating_base_var;
@@ -433,8 +433,8 @@ void ManipulationTracker::update(){
       }
     }
   }
-  cout << "X Pred: " << x_pred.transpose() << endl;
-  cout << "Covar Pred: " << covar_pred.diagonal().transpose() << endl;
+//  cout << "X Pred: " << x_pred.transpose() << endl;
+//  cout << "Covar Pred: " << covar_pred.diagonal().transpose() << endl;
 
   // TODO: accept parameters for this or pawn it off to a 
   // different object
