@@ -1,5 +1,7 @@
 #include "drake/systems/sensors/rgbd_camera.h"
 
+//#define DRAKE_NO_TIMING
+
 #include <array>
 #include <fstream>
 #include <limits>
@@ -47,7 +49,7 @@ VTK_AUTOINIT_DECLARE(vtkRenderingOpenGL2)
 // HACK
 #include "drake/common/scoped_timer.h"
 using timing::Timer;
-using timing::ScopedWithTimer;
+using timing::TimerWithMessage;
 
 // TODO(kunimatsu-tri) Refactor RenderingWorld out from RgbdCamera,
 // so that other vtk dependent sensor simulators can share the RenderingWorld
@@ -619,18 +621,18 @@ void RgbdCamera::Impl::UpdateRenderWindow() const {
 //  for (auto& window : MakeVtkInstanceArray<vtkRenderWindow>(
 //           color_depth_render_window_, label_render_window_)) {
   {
-    ScopedWithTimer<> scoped1("Window"); unused(scoped1);
+    SCOPE_TIME(scoped1, "Window");
     color_depth_render_window_->Render();
   }
 
   for (auto& filter : MakeVtkInstanceArray<vtkWindowToImageFilter>(
            color_filter_, depth_filter_/*, label_filter_*/)) {
     {
-      ScopedWithTimer<> scoped1("Filter Modified"); unused(scoped1);
+      SCOPE_TIME(scoped1, "Filter Modified");
       filter->Modified();
     }
     {
-      ScopedWithTimer<> scoped1("Filter Update"); unused(scoped1);
+      SCOPE_TIME(scoped1, "Filter Update");
       filter->Update();
     }
   }
@@ -644,8 +646,7 @@ void RgbdCamera::Impl::DoCalcOutput(
     sensors::ImageDepth32F* pdepth_image,
     sensors::ImageLabel16I* /*plabel_image*/) {
   drake::log()->info("True camera render: {}", t);
-  ScopedWithTimer<> scope_timer1("DoCalcOutput 1: ");
-  unused(scope_timer1);
+  SCOPE_TIME(calc, "DoCalcOutput 1: ");
 
   // Dereference
 //  auto& camera_base_pose = *pcamera_base_pose;
@@ -671,25 +672,24 @@ void RgbdCamera::Impl::DoCalcOutput(
   camera_base_pose->set_rotation(quat);
 
   {
-    ScopedWithTimer<> scope_timer_2("UpdateModelPoses"); unused(scope_timer_2);
+    SCOPE_TIME(scope_timer_2, "UpdateModelPoses");
     UpdateModelPoses(cache, (X_WB * X_BC_).inverse());
   }
 
   {
-    ScopedWithTimer<> scope_timer_2("UpdateRenderWindow"); unused(scope_timer_2);
+    SCOPE_TIME(scope_timer_2, "UpdateRenderWindow");
     UpdateRenderWindow();
   }
 
   const int height = color_camera_info_.height();
   const int width = color_camera_info_.width();
-  std::unique_ptr<ScopedWithTimer<>> scope_timer2;
-  auto timer_maker = []() { return new ScopedWithTimer<>("Pix iter"); };
+  SCOPE_TIME(pix, "Pix iter");
+#pragma omp parallel for collapse(2)
   for (int v = 0; v < height; ++v) {
-    if (v % 100 == 0) {
-      scope_timer2.reset(timer_maker());
-    }
-
     for (int u = 0; u < width; ++u) {
+//      if (u == 0 && v % 100 == 0) {
+//        timer_pix.reset();
+//      }
       const int height_reversed = height - v - 1;  // Makes image upside down.
 
       // We cast `void*` to `uint8_t*` for RGBA, and to `float*` for ZBuffer,

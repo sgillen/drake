@@ -108,12 +108,19 @@ class TimerWithMessage {
     : message_(message) {
     timer_.start();
   }
+  void reset() {
+    stop();
+    timer_.start();
+  }
   ~TimerWithMessage() {
+    stop();
+  }
+ private:
+  void stop() {
     double elapsed = timer_.stop();
     std::cout << "[timer] Elapsed time: " << message_
               << ": " << elapsed << " sec\n";
   }
- private:
   Timer timer_;
   std::string message_;
 };
