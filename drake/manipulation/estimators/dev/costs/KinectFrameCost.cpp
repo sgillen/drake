@@ -171,6 +171,17 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
 {
   double now = getUnixTime();
 
+  auto get_full_index = [this](int full_v, int full_u) {
+    DRAKE_ASSERT(full_v >= 0 && full_v <= input_num_pixel_rows);
+    DRAKE_ASSERT(full_u >= 0 && full_u <= input_num_pixel_cols);
+    return full_v*input_num_pixel_cols + full_u;
+  };
+  auto get_index = [this](int v, int u) {
+    DRAKE_ASSERT(v >= 0 && v <= num_pixel_rows);
+    DRAKE_ASSERT(u >= 0 && u <= num_pixel_cols);
+    return v * num_pixel_cols + u;
+  };
+
   if (now - lastReceivedTime > timeout_time) { // || (!have_hardcoded_kinect2world_ && !have_camera_body_ && world_frame && now - last_got_kinect_frame > timeout_time)){
     if (verbose)
       printf("KinectFrameCost: constructed but timed out\n");
@@ -213,7 +224,20 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
 
     // do randomized downsampling, populating data stores to be used by the ICP
     Matrix3Xd points(3, full_cloud.cols()); int i=0;
-    Eigen::MatrixXd depth_image; depth_image.resize(num_pixel_rows, num_pixel_cols);
+    struct Coord {
+      int v;
+      int u;
+    };
+    Eigen::MatrixXd depth_image;
+    depth_image.resize(num_pixel_rows, num_pixel_cols);
+
+    // Start at full size
+    raycast_endpoints.resize(Eigen::NoChange, num_pixel_rows * num_pixel_cols);
+    const double nan = std::numeric_limits<double>::quiet_NaN();
+    raycast_endpoints.setConstant(nan);
+    // Record valid coordinates (v, u) in sampled image
+    std::vector<Coord> raycast_coords;
+
     double constant = 1.0f / camera_info_->focal_x() ;
     if (verbose_lcmgl)
       bot_lcmgl_begin(lcmgl_lidar_, LCMGL_POINTS);
@@ -227,39 +251,50 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
           int full_v = min((int)floor(((double)v)*downsample_amount) + rand()%(int)downsample_amount, input_num_pixel_rows-1);
           int full_u = min((int)floor(((double)u)*downsample_amount) + rand()%(int)downsample_amount, input_num_pixel_cols-1);
 
-          // cut down to just point cloud in our manipulation space
-          Eigen::Vector3d pt = full_cloud.block<3, 1>(0, full_v*input_num_pixel_cols + full_u);
-          // VALGRIND: Reports error. Conditional jump on uninitialized value.
-          // FOLLOWUP: Seems like `racyast_endpoints` needs to not be fully sized,
-          // as this is conditional...
-          if (full_depth_image(full_v, full_u) > 0. &&
-              pt[0] > pointcloud_bounds.xMin && pt[0] < pointcloud_bounds.xMax && 
-              pt[1] > pointcloud_bounds.yMin && pt[1] < pointcloud_bounds.yMax && 
-              pt[2] > pointcloud_bounds.zMin && pt[2] < pointcloud_bounds.zMax){
-            points.block<3, 1>(0, i) = pt;
-            i++;
-
-            if (verbose_lcmgl && (v*num_pixel_cols + u) % 1 == 0){
-              bot_lcmgl_color3f(lcmgl_lidar_, 0.5, 1.0, 0.5);
-              bot_lcmgl_vertex3f(lcmgl_lidar_, pt[0], pt[1], pt[2]);
-            }
-          } else {
-            if (verbose_lcmgl && (v*num_pixel_cols + u) % 50 == 0){
-              bot_lcmgl_color3f(lcmgl_lidar_, 1.0, 0.5, 0.5);
-              bot_lcmgl_vertex3f(lcmgl_lidar_, pt[0], pt[1], pt[2]);
-            }
-          }
-
           // populate depth image using our random sample
-          depth_image(v, u) = full_depth_image(full_v, full_u); 
+          depth_image(v, u) = full_depth_image(full_v, full_u);
+
+          // cut down to just point cloud in our manipulation space
+          Eigen::Vector3d pt = full_cloud.col(get_full_index(full_v, full_u));
+          // VALGRIND: Reports error. Conditional jump on uninitialized value.
+          if (!isnan(pt[0])) {
+            cout << fmt::format("{} x {}: {}\n", v, u, pt.transpose());
+            if (full_depth_image(full_v, full_u) > 0. &&
+                pt[0] > pointcloud_bounds.xMin && pt[0] < pointcloud_bounds.xMax &&
+                pt[1] > pointcloud_bounds.yMin && pt[1] < pointcloud_bounds.yMax &&
+                pt[2] > pointcloud_bounds.zMin && pt[2] < pointcloud_bounds.zMax){
+              points.block<3, 1>(0, i) = pt;
+              i++;
+
+              if (verbose_lcmgl && (get_index(v, u)) % 1 == 0){
+                bot_lcmgl_color3f(lcmgl_lidar_, 0.5, 1.0, 0.5);
+                bot_lcmgl_vertex3f(lcmgl_lidar_, pt[0], pt[1], pt[2]);
+              }
+            } else {
+              if (verbose_lcmgl && (get_index(v, u)) % 50 == 0){
+                bot_lcmgl_color3f(lcmgl_lidar_, 1.0, 0.5, 0.5);
+                bot_lcmgl_vertex3f(lcmgl_lidar_, pt[0], pt[1], pt[2]);
+              }
+            }
+
+
+            // populate raycast endpoints using our random sample
+            // TODO(eric.cousineau): Figure out why just 1m. Can this be
+            // projected further? Why simulate when we have the real data???
+            // NOTE: This may be why there are no points in IIWA.
+            // Distance is ~2m away.
+//            const double z_sim = 1.0; // simulate the depth sensor;
+            const double z_sim = 5.0; // NOTE(eric.cousineau): Push this out further.
+            raycast_endpoints.col(i) = Vector3d(
+              (((double) full_u)- camera_info_->center_x())*z_sim*constant,
+              (((double) full_v)- camera_info_->center_y())*z_sim*constant,
+              z_sim);
+            raycast_endpoints.col(i) *= max_scan_dist/(raycast_endpoints.col(get_index(v, u)).norm());
+
+            raycast_coords.push_back({v, u});
 
             num_points_covered += 1;
-          // populate raycast endpoints using our random sample
-          raycast_endpoints.col(num_pixel_cols*v + u) = Vector3d(
-            (((double) full_u)- camera_info_->center_x())*1.0*constant,
-            (((double) full_v)- camera_info_->center_y())*1.0*constant,
-            1.0); // simulate the depth sensor;
-          raycast_endpoints.col(num_pixel_cols*v + u) *= max_scan_dist/(raycast_endpoints.col(num_pixel_cols*v + u).norm());
+          }
         }
       }
     } else {
@@ -272,6 +307,8 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
     // conservativeResize keeps old coefficients
     // (regular resize would clear them)
     points.conservativeResize(3, i);
+
+    raycast_endpoints.conservativeResize(Eigen::NoChange, num_points_covered);
 
     if (num_points_covered != raycast_endpoints.cols()) {
       drake::log()->error("Did not cover all points, {} / {}",
@@ -338,6 +375,7 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
                   }
                 }
 
+                // TODO(eric.cousineau): Figure out logic here.
                 if (too_close_to_joint == false){
                   z.block<3, 1>(0, k) = points.block<3, 1>(0, j);
                   z_prime.block<3, 1>(0, k) = x.block<3, 1>(0, j);
@@ -449,15 +487,19 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
       // and also initialize observation SDF to Inf where the measurement return is in front of the real return
       // and 0 otherwise
       Eigen::MatrixXd observation_sdf_input = MatrixXd::Constant(num_pixel_rows, num_pixel_cols, 0.0);
-      for (int i=0; i<num_pixel_rows; i++) {
-        for (int j=0; j<num_pixel_cols; j++) {
+      for (int c = 0; c < (int)raycast_coords.size(); ++c) {
+        const auto& coord = raycast_coords[c];
+        const int i = coord.v;
+        const int j = coord.u;
+        {
+//        for (int j=0; j<num_pixel_cols; j++) {
           // fix distance
-          long int thisind = i*num_pixel_cols+j;
+          long int thisind = c; //i*num_pixel_cols+j;
           // this could be done with trig instead by I think this is just as efficient?
           distances(thisind) = distances(thisind)*raycast_endpoints(2, thisind)/max_scan_dist;
           if (i < depth_image.rows() && j < depth_image.cols() && 
             distances(thisind) > 0. && 
-            distances(thisind) < depth_image(i, j)){
+            distances(thisind) < depth_image(i, j)) {
             observation_sdf_input(i, j) = INF;
           }
     //      int thisind = i*num_pixel_cols+j;
@@ -474,7 +516,6 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
     //        bot_lcmgl_vertex3f(lcmgl_measurement_model_, endpt2(0), endpt2(1), endpt2(2));
     //        bot_lcmgl_end(lcmgl_measurement_model_);  
     //      }
-
         }
       }
       MatrixXd observation_sdf;
@@ -488,7 +529,7 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
         }
       }
 
-      // TODO: Not seeing data updates????
+      // TODO(eric.cousineau): Not seeing data updates????
       cv::Mat image;
       cv::Mat image_bg;
       eigen2cv(observation_sdf, image);
@@ -536,16 +577,22 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
           enum DepthCorrections { DC_NONE, DC_LATERAL, DC_DEPTH };
           std::vector<DepthCorrections> depth_correction(num_points_on_body[bdy_i], DC_NONE);
 
-          for (int i=0; i<num_pixel_rows; i++) {
-            for (int j=0; j<num_pixel_cols; j++) {
-              long int thisind = i*num_pixel_cols + j;
+          // TODO(eric.cousineau): Does this need to cover the whole image?
+//          for (int i=0; i<num_pixel_rows; i++) {
+//            for (int j=0; j<num_pixel_cols; j++) {
+          for (int c = 0; c < (int)raycast_coords.size(); ++c) {
+            const auto& coord = raycast_coords[c];
+            const int i = coord.v;
+            const int j = coord.u;
+            {
+              long int thisind = c;
               if (body_idx[thisind] == bdy_i){
                 // project depth into world:
                 Vector3d endpt = origin + distances(thisind) * ((raycast_endpoints_world.block<3, 1>(0, thisind) - origin)/raycast_endpoints(2, thisind));
 
                 // Lateral correction
-                Vector3d camera_correction_vector;
                 if (observation_sdf(thisind) > 0.0 && observation_sdf(thisind) < INF){
+                  Vector3d camera_correction_vector;
                   camera_correction_vector(0) = ((double)(j - mapping_col(i, j)))*distances[thisind]*constant;
                   camera_correction_vector(1) = ((double)(i - mapping_row(i, j)))*distances[thisind]*constant;
                   camera_correction_vector(2) = 0.0;
