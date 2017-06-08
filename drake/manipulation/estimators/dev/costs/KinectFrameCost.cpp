@@ -310,10 +310,8 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
 
     raycast_endpoints.conservativeResize(Eigen::NoChange, num_points_covered);
 
-    if (num_points_covered != raycast_endpoints.cols()) {
-      drake::log()->error("Did not cover all points, {} / {}",
-                          num_points_covered, raycast_endpoints.cols());
-    }
+    drake::log()->info("Kinect: Got {} raycast, {} in-range points",
+                       num_points_covered, i);
 
     /***********************************************
                   Articulated ICP 
@@ -779,11 +777,11 @@ namespace {
 void ToMatrixXd(const KinectFrameCost::DepthImage& image, MatrixXd* pmatrix) {
   auto& X = *pmatrix;
   X.resize(image.height(), image.width());
-  for (int u = 0; u < X.rows(); u++) {
-    for (int v = 0; v < X.cols(); v++) {
+  for (int v = 0; v < X.rows(); v++) {
+    for (int u = 0; u < X.cols(); u++) {
       // TODO(eric.cousineau): Figure out best matrix storage format for ease of
       // understanding.
-      X(u, v) = *image.at(v, u);
+      X(v, u) = *image.at(u, v);
     }
   }
 }
