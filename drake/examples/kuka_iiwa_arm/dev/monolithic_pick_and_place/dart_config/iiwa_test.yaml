@@ -47,12 +47,12 @@ robots:
   #     base_x: 0.00
   #     base_y: 1.00
   #     base_z: 0
-  # yellow_post_2:
-  #   urdf: "/examples/kuka_iiwa_arm/models/objects/yellow_post.urdf"
-  #   q0: 
-  #     base_x: 0.80
-  #     base_y: 0.36
-  #     base_z: 0
+  yellow_post_2:
+    urdf: "/examples/kuka_iiwa_arm/models/objects/yellow_post.urdf"
+    q0: 
+      base_x: 0.80
+      base_y: 0.36
+      base_z: 0
   # yellow_post_3:
   #   urdf: "/examples/kuka_iiwa_arm/models/objects/yellow_post.urdf"
   #   q0: 
@@ -112,7 +112,7 @@ costs:
     min_considered_joint_distance: 0.00
     verbose: True
     verbose_lcmgl: True
-    downsample_amount: 10.0
+    downsample_amount: 15.0
     #camera_body: "camera"
     world_frame: True
     bounds:
