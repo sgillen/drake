@@ -16,6 +16,14 @@ find_package(OpenCV REQUIRED
 
 include_directories(${OpenCV_DIRS})
 
+#add_definitions(-fopenmp)
+# @ref https://stackoverflow.com/questions/12399422/how-to-set-linker-flags-for-openmp-in-cmakes-try-compile-function
+find_package(OpenMP REQUIRED)
+if (OPENMP_FOUND)
+    set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
+    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+endif()
+
 set(drakeManipulationTracker_SRC_FILES
     articulated_state_estimator.cc
     ManipulationTracker.cpp

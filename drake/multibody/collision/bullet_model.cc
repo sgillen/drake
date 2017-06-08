@@ -4,6 +4,12 @@
 #include <limits>
 #include <utility>
 
+#include <omp.h>
+
+#ifndef _OPENMP
+#error "Must enable OpenMP"
+#endif
+
 #include "BulletCollision/NarrowPhaseCollision/btRaycastCallback.h"
 
 #include "drake/common/drake_assert.h"
@@ -682,19 +688,21 @@ void BulletModel::collisionDetectFromPoints(
   closest_points.resize(points.cols());
   VectorXd phi(points.cols());
 
-  btSphereShape shapeA(0.0);
-  btConvexShape* shapeB;
-  btGjkPairDetector::ClosestPointInput input;
-
-  BulletCollisionWorldWrapper& bt_world = getBulletWorld(use_margins);
+  const BulletCollisionWorldWrapper& bt_world = getBulletWorld(use_margins);
 
   // do collision check against all bodies for each point using bullet's
   // internal getclosestpoints solver
+  #pragma omp parallel for
   for (int i = 0; i < points.cols(); i++) {
+
+    const btSphereShape shapeA(0.0);
+    const btConvexShape* shapeB;
+    btGjkPairDetector::ClosestPointInput input;
+
     bool got_one = false;
     for (auto bt_objB_iter = bt_world.bt_collision_objects.begin();
          bt_objB_iter != bt_world.bt_collision_objects.end(); bt_objB_iter++) {
-      std::unique_ptr<btCollisionObject>& bt_objB = bt_objB_iter->second;
+      btCollisionObject* bt_objB = bt_objB_iter->second.get();
       btPointCollector gjkOutput;
 
       shapeB = dynamic_cast<btConvexShape*>(bt_objB->getCollisionShape());
