@@ -266,7 +266,7 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
           // VALGRIND: Reports error. Conditional jump on uninitialized value.
           // Seeing points that are zero - occasionally...
           if (!isnan(pt[0])) {
-            cout << fmt::format("{} x {}: {}\n", v, u, pt.transpose());
+//            cout << fmt::format("{} x {}: {}\n", v, u, pt.transpose());
             if (full_depth_image(full_v, full_u) > 0. &&
                 pt[0] > pointcloud_bounds.xMin && pt[0] < pointcloud_bounds.xMax &&
                 pt[1] > pointcloud_bounds.yMin && pt[1] < pointcloud_bounds.yMax &&

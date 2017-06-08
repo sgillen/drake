@@ -27,13 +27,13 @@ robots:
       base_x: 0.243716
       base_y: 0.625087
       base_z: 0.
-  # table_final: # Pos. C
-  #   urdf_less_collision: "/examples/kuka_iiwa_arm/models/table/extra_heavy_duty_table_surface_only_collision.sdf"
-  #   urdf: "/examples/kuka_iiwa_arm/models/table/extra_heavy_duty_table.sdf"
-  #   q0:
-  #     base_x: 1.143716
-  #     base_y: 0.265087
-  #     base_z: -0.07
+  table_final: # Pos. C
+    urdf_less_collision: "/examples/kuka_iiwa_arm/models/table/extra_heavy_duty_table_surface_only_collision.sdf"
+    urdf: "/examples/kuka_iiwa_arm/models/table/extra_heavy_duty_table.sdf"
+    q0:
+      base_x: 1.143716
+      base_y: 0.265087
+      base_z: -0.07
   target:
     urdf: "/examples/kuka_iiwa_arm/models/objects/block_for_pick_and_place.urdf"
     q0:

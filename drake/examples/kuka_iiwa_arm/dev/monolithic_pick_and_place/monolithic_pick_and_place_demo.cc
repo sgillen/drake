@@ -127,10 +127,10 @@ std::unique_ptr<systems::RigidBodyPlant<double>> BuildCombinedPlant(
                                       kTableBase,
                                       Eigen::Vector3d::Zero());
   name_map[id] = "table";
-//  id = tree_builder->AddFixedModelInstance("table",
-//                                      kTableBase + table_position,
-//                                      Eigen::Vector3d::Zero());
-//  name_map[id] = "table_final";
+  id = tree_builder->AddFixedModelInstance("table",
+                                      kTableBase + table_position,
+                                      Eigen::Vector3d::Zero());
+  name_map[id] = "table_final";
 
 //  int post_count = 0;
 //  for (const Eigen::Vector3d& post_location : post_positions) {

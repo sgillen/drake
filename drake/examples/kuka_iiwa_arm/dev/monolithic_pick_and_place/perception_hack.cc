@@ -326,7 +326,7 @@ struct PerceptionHack::Impl {
       auto&& depth_image_output_port = rgbd_camera_->get_output_port(1);
       auto&& camera_base_pose_output_port = rgbd_camera_->camera_base_pose_output_port();
 
-      bool do_publish = true;
+      bool do_publish = false;
       if (do_publish) {
         // Image to LCM.
         image_to_lcm_message_ =
@@ -370,7 +370,7 @@ struct PerceptionHack::Impl {
             rgbd_camera_pose_lcm_pub_->get_input_port(0));
       }
 
-      // Publish depth image.
+      // Convert depth image.
       auto depth_to_pc = pbuilder->template AddSystem<DepthImageToPointCloud>(
             rgbd_camera_->depth_camera_info());
       pbuilder->Connect(
