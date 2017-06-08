@@ -3,6 +3,7 @@
 
 #include <assert.h> 
 #include <fstream>
+#include <fmt/format.h>
 #include "common/common.hpp"
 #include "drake/util/convexHull.h"
 #include "zlib.h"
@@ -301,6 +302,10 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
           for (int j=0; j < (int)body_idx.size(); j++){
             assert(k < (int)body_idx.size());
             if (body_idx[j] == i){
+              if (j >= points.cols()) {
+                throw std::runtime_error(
+                      fmt::format("j = {}, points.cols() = {}", j, points.cols()));
+              }
               assert(j < points.cols());
               if (points(0, j) == 0.0){
                 cout << "Zero points " << points.block<3, 1>(0, j).transpose() << " slipping in at bdyidx " << body_idx[j] << endl;
@@ -470,10 +475,14 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
         }
       }
 
+      // TODO: Not seeing data updates????
       cv::Mat image;
       cv::Mat image_bg;
       eigen2cv(observation_sdf, image);
       eigen2cv(depth_image, image_bg);
+//      MatrixXd copy_image = depth_image;
+//      copy_image.setConstant(0.5);
+//      eigen2cv(copy_image, image_bg);
       double min, max;
       cv::minMaxIdx(image, &min, &max);
       if (max > 0)
@@ -482,7 +491,7 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
       if (max > 0)
         image_bg = image_bg / max;
       cv::Mat image_disp;
-      cv::addWeighted(image, 1.0, image_bg, 0.0, 0.0, image_disp);
+      cv::addWeighted(image, 0.5, image_bg, 0.5, 0.0, image_disp);
       cv::resize(image_disp, image_disp, cv::Size(640, 480));
       cv::imshow("KinectFrameCostDebug", image_disp);
 
