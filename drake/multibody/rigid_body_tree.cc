@@ -810,6 +810,7 @@ void RigidBodyTree<T>::collisionDetectFromPoints(
   body_x.resize(3, closest_points.size());
   normal.resize(3, closest_points.size());
   phi.resize(closest_points.size());
+  body_idx.resize(closest_points.size());
 
   bool indicate_no_collisions = false;
   for (size_t i = 0; i < closest_points.size(); ++i) {
@@ -822,9 +823,9 @@ void RigidBodyTree<T>::collisionDetectFromPoints(
       indicate_no_collisions = true;
     }
     if (!indicate_no_collisions) {
-      body_idx.push_back(elementB->get_body()->get_body_index());
+      body_idx[i] = elementB->get_body()->get_body_index();
     } else {
-      body_idx.push_back(-1);
+      body_idx[i] = -1;
     }
   }
   if (indicate_no_collisions) {

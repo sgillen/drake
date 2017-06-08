@@ -164,6 +164,13 @@ int KinectFrameCost::get_trans_with_utime(std::string from_frame, std::string to
 //  return status;
 }
 
+#define ASSERT_THROW_FMT(expr, ...) \
+  if (!(expr)) { \
+    throw std::runtime_error(#expr + \
+        std::string("\n") + \
+        fmt::format(__VA_ARGS__)); \
+  }
+
 /***********************************************
             KNOWN POSITION HINTS
 *********************************************/
@@ -257,6 +264,7 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
           // cut down to just point cloud in our manipulation space
           Eigen::Vector3d pt = full_cloud.col(get_full_index(full_v, full_u));
           // VALGRIND: Reports error. Conditional jump on uninitialized value.
+          // Seeing points that are zero - occasionally...
           if (!isnan(pt[0])) {
             cout << fmt::format("{} x {}: {}\n", v, u, pt.transpose());
             if (full_depth_image(full_v, full_u) > 0. &&
@@ -349,11 +357,8 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
           for (int j=0; j < (int)body_idx.size(); j++){
             assert(k < (int)body_idx.size());
             if (body_idx[j] == i){
-              if (j >= points.cols()) {
-                throw std::runtime_error(
-                      fmt::format("j = {}, points.cols() = {}", j, points.cols()));
-              }
-              assert(j < points.cols());
+              ASSERT_THROW_FMT(j < points.cols(),
+                               "j = {}, points.cols() = {}", j, points.cols());
               if (points(0, j) == 0.0){
                 cout << "Zero points " << points.block<3, 1>(0, j).transpose() << " slipping in at bdyidx " << body_idx[j] << endl;
               }
