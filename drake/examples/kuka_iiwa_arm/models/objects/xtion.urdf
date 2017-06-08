@@ -2,18 +2,25 @@
 <!-- From: manipulation_tracking:e50a61e:urdf/xtion.urdf -->
 <robot
   name="xtion">
+  <link name="xtion_base"/>
+  <joint name="xtion_base" type="fixed">
+    <parent link="xtion_base"/>
+    <child link="xtion"/>
+    <origin xyz="0 0 0" rpy="1.57 0 1.57"/>
+  </joint>
+
   <link name="xtion">
     <visual>
       <geometry>
         <box size="0.18 0.02 0.04"/>
       </geometry>
-        <origin xyz="0.05 0 -0.02"/>
+        <origin xyz="0.05 0 -0.02" rpy="0 0 0"/>
     </visual>
     <collision>
       <geometry>
         <box size="0.18 0.02 0.04"/>
       </geometry>
-        <origin xyz="0.05 0 -0.02"/>
+        <origin xyz="0.05 0 -0.02" rpy="0 0 0"/>
     </collision>
     <inertial>
       <mass value="0.1"/>
@@ -33,7 +40,7 @@
   <joint name="xtion_to_lens" type="fixed">
     <parent link="xtion"/>
     <child link="lens_visual"/>
-    <origin rpy="0 0 0" xyz="0.0 0 0.0"/>
+    <origin rpy="0 0.0 0" xyz="0.0 0 0.0"/>
   </joint>
 
 </robot>
