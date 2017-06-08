@@ -204,17 +204,17 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
     // transform into world frame?
     Eigen::Isometry3d kinect2world;
     kinect2world.setIdentity();
-    if (world_frame){
-      if (have_hardcoded_kinect2world_){
-        kinect2world = hardcoded_kinect2world_;
-      } else if (!have_camera_body_){
-        camera_offset_mutex.lock();
-        kinect2world = kinect2world_;
-        camera_offset_mutex.unlock();
-      } else {
-        kinect2world = robot->relativeTransform(robot_kinematics_cache, 0, camera_body_ind_);
-      }
-    }
+//    if (world_frame){
+//      if (have_hardcoded_kinect2world_){
+//        kinect2world = hardcoded_kinect2world_;
+//      } else if (!have_camera_body_){
+//        camera_offset_mutex.lock();
+//        kinect2world = kinect2world_;
+//        camera_offset_mutex.unlock();
+//      } else {
+//        kinect2world = robot->relativeTransform(robot_kinematics_cache, 0, camera_body_ind_);
+//      }
+//    }
 
     //kinect2world.setIdentity();
     full_cloud = kinect2world * full_cloud;
