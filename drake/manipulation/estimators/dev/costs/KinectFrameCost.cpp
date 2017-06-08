@@ -225,6 +225,9 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
 
           // cut down to just point cloud in our manipulation space
           Eigen::Vector3d pt = full_cloud.block<3, 1>(0, full_v*input_num_pixel_cols + full_u);
+          // VALGRIND: Reports error. Conditional jump on uninitialized value.
+          // FOLLOWUP: Seems like `racyast_endpoints` needs to not be fully sized,
+          // as this is conditional...
           if (full_depth_image(full_v, full_u) > 0. &&
               pt[0] > pointcloud_bounds.xMin && pt[0] < pointcloud_bounds.xMax && 
               pt[1] > pointcloud_bounds.yMin && pt[1] < pointcloud_bounds.yMax && 
@@ -426,6 +429,7 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
 
       Matrix3Xd raycast_endpoints_world = kinect2world*raycast_endpoints;
       double before_raycast = getUnixTime();
+      // VALGRIND: Reports error. Conditional jump on uninitialized value.
       robot->collisionRaycast(robot_kinematics_cache,origins,raycast_endpoints_world,distances,normals,body_idx);
       if (verbose)
         printf("Raycast took %f\n", getUnixTime() - before_raycast);
@@ -620,6 +624,8 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
         for (int i = 0; i < distances.rows(); i++){
           if (i % 1 == 0){
             Vector3d endpt = origin + distances(i) * ((raycast_endpoints_world.block<3, 1>(0, i) - origin) / raycast_endpoints(2, i));
+            // VALGRIND: Reports error. Conditional jump on uninitialized value.
+            // NOTE: Is this due to pointcloud_bounds??? Or raycast_endpoints_world?
             if (endpt(0) > pointcloud_bounds.xMin && endpt(0) < pointcloud_bounds.xMax && 
                 endpt(1) > pointcloud_bounds.yMin && endpt(1) < pointcloud_bounds.yMax && 
                 endpt(2) > pointcloud_bounds.zMin && endpt(2) < pointcloud_bounds.zMax &&

@@ -817,6 +817,7 @@ bool BulletModel::collisionRaycast(const Matrix3Xd& origins,
     ray_callback.m_flags |=
         btTriangleRaycastCallback::kF_UseGjkConvexCastRaytest;
 
+    // VALGRIND: Reports error. Conditional jump on uninitialized value.
     bt_world.bt_collision_world->rayTest(ray_from_world, ray_to_world,
                                          ray_callback);
 
