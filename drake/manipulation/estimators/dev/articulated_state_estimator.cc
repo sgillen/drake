@@ -154,7 +154,7 @@ class ArticulatedStateEstimator::Impl {
     for (auto&& cost : loader_->robot_state_costs_) {
       cost->readTreeState(tree_q_measurement, slices_->update);
     }
-    for (auto& cost : loader_->kinect_frame_costs_) {
+    for (shared_ptr<KinectFrameCost> cost : loader_->kinect_frame_costs_) {
       cost->readDepthImageAndPointCloud(depth_image, point_cloud);
     }
 
@@ -293,6 +293,8 @@ void ArticulatedStateEstimator::DoCalcDiscreteVariableUpdates(
   auto&& depth_image =
       EvalAbstractInput(context, inport_depth_image_index_)
              ->GetValue<DepthImage>();
+
+  PrintValidPoints(point_cloud, "In system");
 
   VectorXd q0 =
       GetNumericParameter(context, param_q0_index_)
