@@ -14,12 +14,14 @@
 #include <opencv2/imgproc/imgproc.hpp>
 
 #include "drake/common/unused.h"
+#include "drake/common/scoped_timer.h"
 #include "drake/multibody/joints/revolute_joint.h"
 
 using namespace std;
 using namespace Eigen;
 using namespace cv;
 using drake::unused;
+using namespace timing;
 
 template<typename _Tp, int _rows, int _cols, int _options, int _maxRows, int _maxCols>
 void eigen2cv( const Eigen::Matrix<_Tp, _rows, _cols, _options, _maxRows, _maxCols>& src, cv::Mat& dst)
@@ -250,6 +252,8 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
       bot_lcmgl_begin(lcmgl_lidar_, LCMGL_POINTS);
     int num_points_covered = 0;
     if (full_cloud.cols() > 0){
+      SCOPE_TIME(cloud, "Cloud");
+
       if (full_cloud.cols() != input_num_pixel_cols*input_num_pixel_rows){
         printf("KinectFramecost: WARNING: SOMEHOW FULL CLOUD HAS WRONG NUMBER OF ENTRIES.\n");
       }
@@ -325,6 +329,7 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
                   Articulated ICP 
       *********************************************/
     if (!std::isinf(icp_var)){
+      SCOPE_TIME(icp, "ICP");
       double ICP_WEIGHT = 1. / (2. * icp_var * icp_var);
       now = getUnixTime();
 
@@ -334,8 +339,11 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
       // project all cloud points onto the surface of the object positions
       // via the last state estimate
       double now1 = getUnixTime();
-      robot->collisionDetectFromPoints(robot_kinematics_cache, points,
-                           phi, normal, x, body_x, body_idx, false);
+      {
+        SCOPE_TIME(cloud, "Raycast SDF");
+        robot->collisionDetectFromPoints(robot_kinematics_cache, points,
+                             phi, normal, x, body_x, body_idx, false);
+      }
       if (verbose)
         printf("SDF took %f\n", getUnixTime()-now1);
 
@@ -460,6 +468,7 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
                   FREE SPACE CONSTRAINT
       *********************************************/
     if (!std::isinf(free_space_var)){
+      SCOPE_TIME(free_space, "Free space");
       double FREE_SPACE_WEIGHT = 1. / (2. * free_space_var * free_space_var);
 
       now = getUnixTime();
@@ -533,24 +542,27 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
       }
 
       // TODO(eric.cousineau): Not seeing data updates????
-      cv::Mat image;
-      cv::Mat image_bg;
-      eigen2cv(observation_sdf, image);
-      eigen2cv(depth_image, image_bg);
-//      MatrixXd copy_image = depth_image;
-//      copy_image.setConstant(0.5);
-//      eigen2cv(copy_image, image_bg);
-      double min, max;
-      cv::minMaxIdx(image, &min, &max);
-      if (max > 0)
-        image = image / max;
-      cv::minMaxIdx(image_bg, &min, &max);
-      if (max > 0)
-        image_bg = image_bg / max;
-      cv::Mat image_disp;
-      cv::addWeighted(image, 0.5, image_bg, 0.5, 0.0, image_disp);
-      cv::resize(image_disp, image_disp, cv::Size(640, 480));
-      cv::imshow("KinectFrameCostDebug", image_disp);
+      {
+        SCOPE_TIME(cv, "OpenCV update");
+        cv::Mat image;
+        cv::Mat image_bg;
+        eigen2cv(observation_sdf, image);
+        eigen2cv(depth_image, image_bg);
+  //      MatrixXd copy_image = depth_image;
+  //      copy_image.setConstant(0.5);
+  //      eigen2cv(copy_image, image_bg);
+        double min, max;
+        cv::minMaxIdx(image, &min, &max);
+        if (max > 0)
+          image = image / max;
+        cv::minMaxIdx(image_bg, &min, &max);
+        if (max > 0)
+          image_bg = image_bg / max;
+        cv::Mat image_disp;
+        cv::addWeighted(image, 0.5, image_bg, 0.5, 0.0, image_disp);
+        cv::resize(image_disp, image_disp, cv::Size(640, 480));
+        cv::imshow("KinectFrameCostDebug", image_disp);
+      }
 
       // calculate projection direction to try to resolve this.
       // following Ganapathi / Thrun 2010, we'll do this by balancing

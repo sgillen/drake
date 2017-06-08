@@ -102,4 +102,27 @@ class ScopedWithTimer {
   T scoped_;
 };
 
+class TimerWithMessage {
+ public:
+  TimerWithMessage(const std::string& message)
+    : message_(message) {
+    timer_.start();
+  }
+  ~TimerWithMessage() {
+    double elapsed = timer_.stop();
+    std::cout << "[timer] Elapsed time: " << message_
+              << ": " << elapsed << " sec\n";
+  }
+ private:
+  Timer timer_;
+  std::string message_;
+};
+
+#ifndef DRAKE_NO_TIMING
+#define SCOPE_TIME(name, message) \
+  TimerWithMessage timer_##name(message); unused(timer_##name)
+#else
+#define SCOPE_TIME(name, message)
+#endif
+
 }  // namespace timing
