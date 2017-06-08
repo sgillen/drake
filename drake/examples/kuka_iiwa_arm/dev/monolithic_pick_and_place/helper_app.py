@@ -45,5 +45,6 @@ def convert_pose_to_botcore_position(msg):
 global helperApp
 helperApp = HelperApp()
 modVis = ModVisualizer(view)
+modVis.injectVisualizerChange(drakeVisualizer)
 app.restoreDefaultWindowState()
 app.initWindowSettings()
