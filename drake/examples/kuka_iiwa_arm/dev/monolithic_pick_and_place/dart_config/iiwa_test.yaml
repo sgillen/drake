@@ -27,13 +27,13 @@ robots:
       base_x: 0.243716
       base_y: 0.625087
       base_z: 0.
-  table_final: # Pos. C
-    urdf_less_collision: "/examples/kuka_iiwa_arm/models/table/extra_heavy_duty_table_surface_only_collision.sdf"
-    urdf: "/examples/kuka_iiwa_arm/models/table/extra_heavy_duty_table.sdf"
-    q0:
-      base_x: 1.143716
-      base_y: 0.265087
-      base_z: -0.07
+  # table_final: # Pos. C
+  #   urdf_less_collision: "/examples/kuka_iiwa_arm/models/table/extra_heavy_duty_table_surface_only_collision.sdf"
+  #   urdf: "/examples/kuka_iiwa_arm/models/table/extra_heavy_duty_table.sdf"
+  #   q0:
+  #     base_x: 1.143716
+  #     base_y: 0.265087
+  #     base_z: -0.07
   target:
     urdf: "/examples/kuka_iiwa_arm/models/objects/block_for_pick_and_place.urdf"
     q0:
@@ -41,36 +41,36 @@ robots:
       base_y: 0.36
       base_z: 1.1345
 # Posts (except for Pos. C)
-  yellow_post_1:
-    urdf: "/examples/kuka_iiwa_arm/models/objects/yellow_post.urdf"
-    q0: 
-      base_x: 0.00
-      base_y: 1.00
-      base_z: 0
-  yellow_post_2:
-    urdf: "/examples/kuka_iiwa_arm/models/objects/yellow_post.urdf"
-    q0: 
-      base_x: 0.80
-      base_y: 0.36
-      base_z: 0
-  yellow_post_3:
-    urdf: "/examples/kuka_iiwa_arm/models/objects/yellow_post.urdf"
-    q0: 
-      base_x: 0.30
-      base_y: -0.9
-      base_z: 0
-  yellow_post_4:
-    urdf: "/examples/kuka_iiwa_arm/models/objects/yellow_post.urdf"
-    q0: 
-      base_x: -0.1
-      base_y: -1.0
-      base_z: 0
-  yellow_post_5:
-    urdf: "/examples/kuka_iiwa_arm/models/objects/yellow_post.urdf"
-    q0: 
-      base_x: -0.47
-      base_y: -0.8
-      base_z: 0
+  # yellow_post_1:
+  #   urdf: "/examples/kuka_iiwa_arm/models/objects/yellow_post.urdf"
+  #   q0: 
+  #     base_x: 0.00
+  #     base_y: 1.00
+  #     base_z: 0
+  # yellow_post_2:
+  #   urdf: "/examples/kuka_iiwa_arm/models/objects/yellow_post.urdf"
+  #   q0: 
+  #     base_x: 0.80
+  #     base_y: 0.36
+  #     base_z: 0
+  # yellow_post_3:
+  #   urdf: "/examples/kuka_iiwa_arm/models/objects/yellow_post.urdf"
+  #   q0: 
+  #     base_x: 0.30
+  #     base_y: -0.9
+  #     base_z: 0
+  # yellow_post_4:
+  #   urdf: "/examples/kuka_iiwa_arm/models/objects/yellow_post.urdf"
+  #   q0: 
+  #     base_x: -0.1
+  #     base_y: -1.0
+  #     base_z: 0
+  # yellow_post_5:
+  #   urdf: "/examples/kuka_iiwa_arm/models/objects/yellow_post.urdf"
+  #   q0: 
+  #     base_x: -0.47
+  #     base_y: -0.8
+  #     base_z: 0
 
 # force_align:
 #   # force alignment of these frames in the estimator every iteration

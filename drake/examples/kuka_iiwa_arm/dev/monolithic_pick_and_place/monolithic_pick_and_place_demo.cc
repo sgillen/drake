@@ -127,20 +127,20 @@ std::unique_ptr<systems::RigidBodyPlant<double>> BuildCombinedPlant(
                                       kTableBase,
                                       Eigen::Vector3d::Zero());
   name_map[id] = "table";
-  id = tree_builder->AddFixedModelInstance("table",
-                                      kTableBase + table_position,
-                                      Eigen::Vector3d::Zero());
-  name_map[id] = "table_final";
+//  id = tree_builder->AddFixedModelInstance("table",
+//                                      kTableBase + table_position,
+//                                      Eigen::Vector3d::Zero());
+//  name_map[id] = "table_final";
 
-  int post_count = 0;
-  for (const Eigen::Vector3d& post_location : post_positions) {
-    int id = tree_builder->AddFixedModelInstance("yellow_post",
-                                        post_location,
-                                        Eigen::Vector3d::Zero());
-    string post_name = "yellow_post_" + std::to_string(post_count + 1);
-    post_count++;
-    name_map[id] = post_name;
-  }
+//  int post_count = 0;
+//  for (const Eigen::Vector3d& post_location : post_positions) {
+//    int id = tree_builder->AddFixedModelInstance("yellow_post",
+//                                        post_location,
+//                                        Eigen::Vector3d::Zero());
+//    string post_name = "yellow_post_" + std::to_string(post_count + 1);
+//    post_count++;
+//    name_map[id] = post_name;
+//  }
 
   tree_builder->AddGround();
   // Chooses an appropriate box.
