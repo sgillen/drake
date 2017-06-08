@@ -208,12 +208,16 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
     //kinect2world.setIdentity();
     full_cloud = kinect2world * full_cloud;
 
+    // TODO(eric.cousineau): Record pixel associations for raycast points and
+    // all that. Otherwise, some points are invalid.
+
     // do randomized downsampling, populating data stores to be used by the ICP
     Matrix3Xd points(3, full_cloud.cols()); int i=0;
     Eigen::MatrixXd depth_image; depth_image.resize(num_pixel_rows, num_pixel_cols);
     double constant = 1.0f / camera_info_->focal_x() ;
     if (verbose_lcmgl)
       bot_lcmgl_begin(lcmgl_lidar_, LCMGL_POINTS);
+    int num_points_covered = 0;
     if (full_cloud.cols() > 0){
       if (full_cloud.cols() != input_num_pixel_cols*input_num_pixel_rows){
         printf("KinectFramecost: WARNING: SOMEHOW FULL CLOUD HAS WRONG NUMBER OF ENTRIES.\n");
@@ -249,6 +253,7 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
           // populate depth image using our random sample
           depth_image(v, u) = full_depth_image(full_v, full_u); 
 
+            num_points_covered += 1;
           // populate raycast endpoints using our random sample
           raycast_endpoints.col(num_pixel_cols*v + u) = Vector3d(
             (((double) full_u)- camera_info_->center_x())*1.0*constant,
@@ -268,6 +273,10 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
     // (regular resize would clear them)
     points.conservativeResize(3, i);
 
+    if (num_points_covered != raycast_endpoints.cols()) {
+      drake::log()->error("Did not cover all points, {} / {}",
+                          num_points_covered, raycast_endpoints.cols());
+    }
 
     /***********************************************
                   Articulated ICP 
