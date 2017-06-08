@@ -40,6 +40,7 @@ namespace {
 /// @brief Two points that define (x_min, y_min, z_min) and (x_max, y_max, z_max) for a simple bounding box.
 typedef Matrix<double, 3, 2> SimpleBoundingBox;
 
+// TODO(eric.cousineau): Use Greg's surface sampling code to do this.
 constexpr double inf = std::numeric_limits<double>::infinity();
 
 SimpleBoundingBox GetSimpleBoundingBox(const RigidBodyTreed& robot, const RigidBody<double>& body) {
