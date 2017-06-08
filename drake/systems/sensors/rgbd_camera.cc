@@ -648,6 +648,9 @@ void RgbdCamera::Impl::DoCalcOutput(
   drake::log()->info("True camera render: {}", t);
   SCOPE_TIME(calc, "DoCalcOutput 1: ");
 
+  static never_destroyed<TimerWithMessage> timer_full("(Across Frame) DoCalc");
+  timer_full.access().reset();
+
   // Dereference
 //  auto& camera_base_pose = *pcamera_base_pose;
   auto& color_image = *pcolor_image;

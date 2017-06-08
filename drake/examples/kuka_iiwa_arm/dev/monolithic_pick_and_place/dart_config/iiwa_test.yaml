@@ -114,7 +114,7 @@ costs:
     min_considered_joint_distance: 0.00
     verbose: True
     verbose_lcmgl: True
-    downsample_amount: 15.0
+    downsample_amount: 5.0
     #camera_body: "camera"
     world_frame: True
     bounds:
