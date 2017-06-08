@@ -811,13 +811,24 @@ void RigidBodyTree<T>::collisionDetectFromPoints(
   normal.resize(3, closest_points.size());
   phi.resize(closest_points.size());
 
+  bool indicate_no_collisions = false;
   for (size_t i = 0; i < closest_points.size(); ++i) {
     x.col(i) = closest_points[i].ptB;
     body_x.col(i) = closest_points[i].ptA;
     normal.col(i) = closest_points[i].normal;
     phi[i] = closest_points[i].distance;
     const DrakeCollision::Element* elementB = closest_points[i].elementB;
-    body_idx.push_back(elementB->get_body()->get_body_index());
+    if (elementB == nullptr) {
+      indicate_no_collisions = true;
+    }
+    if (!indicate_no_collisions) {
+      body_idx.push_back(elementB->get_body()->get_body_index());
+    } else {
+      body_idx.push_back(-1);
+    }
+  }
+  if (indicate_no_collisions) {
+    drake::log()->warn("No collision elements present in scene!");
   }
 }
 
