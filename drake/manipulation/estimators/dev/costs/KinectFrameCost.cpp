@@ -105,6 +105,7 @@ KinectFrameCost::KinectFrameCost(std::shared_ptr<RigidBodyTreed> robot_,
 
   lcmgl_lidar_= bot_lcmgl_init(lcm->getUnderlyingLCM(), "trimmed_lidar");
   lcmgl_icp_= bot_lcmgl_init(lcm->getUnderlyingLCM(), "icp_p2pl");
+  lcmgl_raycast_ = bot_lcmgl_init(lcm->getUnderlyingLCM(), "freespace_raycast");
   lcmgl_measurement_model_ = bot_lcmgl_init(lcm->getUnderlyingLCM(), "meas_model");
 
   num_pixel_cols = (int) floor( ((double)input_num_pixel_cols) / downsample_amount);
@@ -203,17 +204,18 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
     robot_kinematics_cache.initialize(q_old);
     robot->doKinematics(robot_kinematics_cache);
 
+    // transform into world frame?
+    Eigen::Isometry3d kinect2world = kinect2world_;
+
     // pull points from buffer
-    Eigen::Matrix3Xd full_cloud;
+    Eigen::Matrix3Xd full_cloud_world;
     Eigen::MatrixXd full_depth_image;
     latest_cloud_mutex.lock();
-    full_cloud = latest_cloud;
+    full_cloud_world = kinect2world * latest_cloud;
     full_depth_image.resize(latest_depth_image.rows(), latest_depth_image.cols());
     full_depth_image= latest_depth_image;
     latest_cloud_mutex.unlock();
-    
-    // transform into world frame?
-    Eigen::Isometry3d kinect2world = kinect2world_;
+
 //    kinect2world.setIdentity();
 //    if (world_frame){
 //      if (have_hardcoded_kinect2world_){
@@ -228,13 +230,12 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
 //    }
 
     //kinect2world.setIdentity();
-    full_cloud = (kinect2world * full_cloud).eval();
 
     // TODO(eric.cousineau): Record pixel associations for raycast points and
     // all that. Otherwise, some points are invalid.
 
     // do randomized downsampling, populating data stores to be used by the ICP
-    Matrix3Xd points(3, full_cloud.cols()); int i=0;
+    Matrix3Xd points(3, full_cloud_world.cols()); int i=0;
     struct Coord {
       int v;
       int u;
@@ -253,10 +254,10 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
     if (verbose_lcmgl)
       bot_lcmgl_begin(lcmgl_lidar_, LCMGL_POINTS);
     int num_points_covered = 0;
-    if (full_cloud.cols() > 0){
+    if (full_cloud_world.cols() > 0){
       SCOPE_TIME(cloud, "Cloud");
 
-      if (full_cloud.cols() != input_num_pixel_cols*input_num_pixel_rows){
+      if (full_cloud_world.cols() != input_num_pixel_cols*input_num_pixel_rows){
         printf("KinectFramecost: WARNING: SOMEHOW FULL CLOUD HAS WRONG NUMBER OF ENTRIES.\n");
       }
       for (int v=0; v<num_pixel_rows; v++) {
@@ -268,7 +269,7 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
           depth_image(v, u) = full_depth_image(full_v, full_u);
 
           // cut down to just point cloud in our manipulation space
-          Eigen::Vector3d pt = full_cloud.col(get_full_index(full_v, full_u));
+          Eigen::Vector3d pt = full_cloud_world.col(get_full_index(full_v, full_u));
           // VALGRIND: Reports error. Conditional jump on uninitialized value.
           // Seeing points that are zero - occasionally...
           if (!isnan(pt[0])) {
@@ -515,12 +516,26 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
           double distance_pre = distances(thisind);
           distances(thisind) = distances(thisind)*raycast_endpoints(2, thisind)/max_scan_dist;
           int body_idx_c = body_idx[thisind];
+          Vector3d color(0.75, 0, 0); // Red: missed
           if (body_idx_c != -1) {
             cout <<
                 fmt::format("[{}, {}] d_sim_k = {} (after = {}), d_meas_k = {}\n",
                             i, j, distance_pre, distances(thisind), depth_image(i, j));
             num_raycast_hit += 1;
+            color = Vector3d(0, 0, 0.75);  // Green: Struck
           }
+
+          {
+            auto&& oc = origins.col(thisind);
+            auto&& rc = raycast_endpoints_world.col(thisind);
+            bot_lcmgl_begin(lcmgl_raycast_, LCMGL_LINES);
+            bot_lcmgl_color3f(lcmgl_raycast_, color[0], color[1], color[2]);
+            bot_lcmgl_line_width(lcmgl_raycast_, 2.0f);
+            bot_lcmgl_vertex3f(lcmgl_raycast_, oc[0], oc[1], oc[2]);
+            bot_lcmgl_vertex3f(lcmgl_raycast_, rc[0], rc[1], rc[2]);
+            bot_lcmgl_end(lcmgl_raycast_);
+          }
+
           if (i < depth_image.rows() && j < depth_image.cols() && 
             distances(thisind) > 0. && 
             distances(thisind) < depth_image(i, j)) {
@@ -543,6 +558,8 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
     //      }
         }
       }
+
+      bot_lcmgl_switch_buffer(lcmgl_raycast_);
 
       std::cout << fmt::format("-- Free Space, Raycasts: {} / {} hit\n",
                                num_raycast_hit, raycast_endpoints.cols());

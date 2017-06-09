@@ -74,6 +74,8 @@ void ToMatlabArray(const std::string& str, MatlabArray* matlab_array) {
   matlab_array->set_data(str.data(), num_bytes);
 }
 
+// TODO(eric.cousineau): See if there is a way to not have these block (maybe
+// WARN_ONCE?) if the stream is not available...
 void internal::PublishCallMatlab(const MatlabRPC& message) {
   // TODO(russt): Provide option for setting the filename.
   static google::protobuf::io::FileOutputStream raw_output(
