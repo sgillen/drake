@@ -1,8 +1,12 @@
 #include "drake/common/trajectories/piecewise_polynomial.h"
 
 #include <algorithm>
+#include <iostream>
+
+#include <fmt/format.h>
 
 #include "drake/common/drake_assert.h"
+
 
 using std::runtime_error;
 using std::vector;
@@ -347,6 +351,8 @@ void PiecewisePolynomial<CoefficientType>::
         "Number of break points does not match number of knots.");
   }
   if (static_cast<int>(T.size()) < min_length) {
+    std::cout << fmt::format("T.size() = {}, min_length = {}\n",
+                             T.size(), min_length);
     throw std::runtime_error("Not enough knots.");
   }
   Eigen::Index rows = Y.front().rows();
@@ -361,6 +367,9 @@ void PiecewisePolynomial<CoefficientType>::
   }
   for (size_t i = 0; i < T.size() - 1; i++) {
     if (T[i + 1] - T[i] < kEpsilonTime) {
+      std::cout << fmt::format("Bad T:\n  ");
+      for (auto&& t : T) { std::cout << fmt::format("{}, ", t); }
+      std::cout << "\n";
       throw std::runtime_error("T must be in increasing order.");
     }
   }

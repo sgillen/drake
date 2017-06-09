@@ -161,7 +161,25 @@ void DrakeVisualizer::DoPublish(const Context<double>& context) const {
   const BasicVector<double>* input_vector = EvalVectorInput(context,
                                                             kPortIndex);
   if (log_ != nullptr) {
-    log_->AddData(context.get_time(), input_vector->get_value());
+    bool skip_entry = false;
+    double cur_time = context.get_time();
+    if (log_->get_input_size() > 0) {
+      // TODO(eric.cousineau): Encountering very small timesteps in simulator.
+      // Need to figure out if this is due to my publishing setup.
+      double prev_time = log_->sample_times().tail(1)(0);
+      DRAKE_ASSERT(cur_time > prev_time);
+      const double kEpsilon = 1e-10;
+      double diff = cur_time - prev_time;
+      if (diff < kEpsilon) {
+        drake::log()->error("At sim_time = {}, encountered small timestep {}."
+                           " Skipping",
+                           cur_time, diff);
+        skip_entry = true;
+      }
+    }
+    if (!skip_entry) {
+      log_->AddData(cur_time, input_vector->get_value());
+    }
   }
 
   // Translates the input vector into an array of bytes representing an LCM

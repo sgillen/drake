@@ -1,5 +1,7 @@
 #include "drake/systems/primitives/signal_log.h"
 
+#include <iostream>
+
 #include "drake/common/drake_assert.h"
 #include "drake/common/eigen_autodiff_types.h"
 
@@ -17,6 +19,14 @@ SignalLog<T>::SignalLog(int input_size, int batch_allocation_size)
 
 template <typename T>
 void SignalLog<T>::AddData(T time, VectorX<T> sample) {
+  if (num_samples_ > 0) {
+    // Ensure that we are recording strictly monotonic data.
+    T prev_time = sample_times_(num_samples_ - 1);
+    DRAKE_ASSERT(time >= prev_time);
+//    std::cout
+//        << "delta for " << time << ": "
+//        << (time - prev_time) << std::endl;
+  }
   if (num_samples_ == 0 || time >= sample_times_(num_samples_ - 1))
     ++num_samples_;
 
