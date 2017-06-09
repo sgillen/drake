@@ -381,6 +381,16 @@ struct PerceptionHack::Impl {
       auto&& depth_camera_pose_output_port =
           camera_pose_transformer->get_output_port(0);
 
+      // Camera pose publisher (to visualize)
+      rgbd_camera_pose_lcm_pub_ = pbuilder->template AddSystem<
+        LcmPublisherSystem>("DRAKE_RGBD_CAMERA_POSE",
+                            pose_translator_, plcm);
+      rgbd_camera_pose_lcm_pub_->set_name("pose_lcm_publisher");
+      rgbd_camera_pose_lcm_pub_->set_publish_period(0.01);
+      pbuilder->Connect(
+          camera_base_pose_output_port,
+          rgbd_camera_pose_lcm_pub_->get_input_port(0));
+
       bool do_publish = false;
       if (do_publish) {
         // Image to LCM.
@@ -412,17 +422,6 @@ struct PerceptionHack::Impl {
         pbuilder->Connect(
             image_to_lcm_message_->image_array_t_msg_output_port(),
             image_lcm_pub_->get_input_port(0));
-
-        // Camera pose publisher (to visualize)
-        rgbd_camera_pose_lcm_pub_ = pbuilder->template AddSystem<
-          LcmPublisherSystem>("DRAKE_RGBD_CAMERA_POSE",
-                              pose_translator_, plcm);
-        rgbd_camera_pose_lcm_pub_->set_name("pose_lcm_publisher");
-        rgbd_camera_pose_lcm_pub_->set_publish_period(0.01);
-
-        pbuilder->Connect(
-            camera_base_pose_output_port,
-            rgbd_camera_pose_lcm_pub_->get_input_port(0));
       }
 
       // Convert depth image.

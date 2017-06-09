@@ -780,8 +780,11 @@ bool BulletModel::collisionRaycast(const Matrix3Xd& origins,
   normals.resize(3, num_points);
   collision_body.resize(num_points);
 
-  BulletCollisionWorldWrapper& bt_world = getBulletWorld(use_margins);
+  const BulletCollisionWorldWrapper& bt_world = getBulletWorld(use_margins);
 
+  // btDbvtBroadphase::rayTest is not thread-safe :( It updates member
+  // cache variables, for both of the methods listed below.
+//  #pragma omp parallel for
   for (int i = 0; i < ray_endpoints.cols(); i++) {
     const int origin_col = (origins.cols() > 1 ? i : 0);
     btVector3 ray_from_world(origins(0, origin_col), origins(1, origin_col),

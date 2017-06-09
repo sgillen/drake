@@ -294,17 +294,18 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
 
 
             // populate raycast endpoints using our random sample
-            // TODO(eric.cousineau): Figure out why just 1m. Can this be
-            // projected further? Why simulate when we have the real data???
-            // NOTE: This may be why there are no points in IIWA.
-            // Distance is ~2m away.
+            // TODO(eric.cousineau): Figure out why just 1m.
+            // FOLLOWUP: Yup, see the max_scan_dist.
 //            const double z_sim = 1.0; // simulate the depth sensor;
             const double z_sim = 5.0; // NOTE(eric.cousineau): Push this out further.
             raycast_endpoints.col(i) = Vector3d(
               (((double) full_u)- camera_info_->center_x())*z_sim*constant,
               (((double) full_v)- camera_info_->center_y())*z_sim*constant,
               z_sim);
-            raycast_endpoints.col(i) *= max_scan_dist/(raycast_endpoints.col(get_index(v, u)).norm());
+            DRAKE_ASSERT(!isnan(raycast_endpoints(0, i)) && "First");
+            // Stretch the point out to max_scan_dist.
+            raycast_endpoints.col(i) *= max_scan_dist/(raycast_endpoints.col(i).norm());
+            DRAKE_ASSERT(!isnan(raycast_endpoints(0, i)) && "Second");
 
             raycast_coords.push_back({v, u});
 
@@ -493,6 +494,9 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
       Matrix3Xd raycast_endpoints_world = kinect2world*raycast_endpoints;
       double before_raycast = getUnixTime();
       // VALGRIND: Reports error. Conditional jump on uninitialized value.
+
+      // TODO(eric.cousineau): Consider replacing this with Kuni's camera renderer.
+      // This will be MUCH faster.
       robot->collisionRaycast(robot_kinematics_cache,origins,raycast_endpoints_world,distances,normals,body_idx);
       if (verbose)
         printf("Raycast took %f\n", getUnixTime() - before_raycast);
@@ -522,10 +526,10 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
                 fmt::format("[{}, {}] d_sim_k = {} (after = {}), d_meas_k = {}\n",
                             i, j, distance_pre, distances(thisind), depth_image(i, j));
             num_raycast_hit += 1;
-            color = Vector3d(0, 0, 0.75);  // Green: Struck
+            color = Vector3d(0, 0.75, 0.0);  // Green: Hit
           }
 
-          {
+          if (c % 5 == 0) {
             auto&& oc = origins.col(thisind);
             auto&& rc = raycast_endpoints_world.col(thisind);
             bot_lcmgl_begin(lcmgl_raycast_, LCMGL_LINES);
@@ -585,19 +589,19 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
 //        eigen2cv(depth_image, image_bg);
         eigen2cv(full_depth_image, image_bg);
 
-        drake::log()->info("Sending Kinect SDF variables to MATLAB");
-        using namespace drake::common;
-//        DRAKE_MATLAB_ASSIGN(full_depth_image);
-//        DRAKE_MATLAB_ASSIGN(full_cloud);
-        CallMatlab("disp", "Create SDF stuff");
-        CallMatlab("plot_depth", depth_image, 1);
-        CallMatlab("plot_depth", observation_sdf, 2);
-        CallMatlab("plot_depth", observation_sdf_input, 3);
-        CallMatlab("drawnow");
+//        drake::log()->info("Sending Kinect SDF variables to MATLAB");
+//        using namespace drake::common;
+////        DRAKE_MATLAB_ASSIGN(full_depth_image);
+////        DRAKE_MATLAB_ASSIGN(full_cloud);
+//        CallMatlab("disp", "Create SDF stuff");
+//        CallMatlab("plot_depth", depth_image, 1);
+//        CallMatlab("plot_depth", observation_sdf, 2);
+//        CallMatlab("plot_depth", observation_sdf_input, 3);
+//        CallMatlab("drawnow");
 
-        DRAKE_MATLAB_ASSIGN(observation_sdf);
-        DRAKE_MATLAB_ASSIGN(depth_image);
-        DRAKE_MATLAB_ASSIGN(observation_sdf_input);
+//        DRAKE_MATLAB_ASSIGN(observation_sdf);
+//        DRAKE_MATLAB_ASSIGN(depth_image);
+//        DRAKE_MATLAB_ASSIGN(observation_sdf_input);
 
 //  //      MatrixXd copy_image = depth_image;
 //  //      copy_image.setConstant(0.5);
