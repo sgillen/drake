@@ -347,7 +347,8 @@ struct PerceptionHack::Impl {
       auto&& depth_image_output_port = rgbd_camera_->get_output_port(1);
       auto&& camera_base_pose_output_port = rgbd_camera_->camera_base_pose_output_port();
 
-      // Project from `D` (depth frame) to `B` (camera frame)
+      // Project from `D` (depth frame) to `B` (camera frame), per documentation
+      // for RgbdCamera.
       // The camera presently outputs X_WB, but we want X_WD.
       // TODO(eric.cousineau): Change system to use Depth sensor pose output
       // port, once the PR lands for this, to get the proper frame externally.
@@ -356,7 +357,10 @@ struct PerceptionHack::Impl {
           0, 0, 1,
           -1, 0, 0,
           0, -1, 0;
-      Eigen::Isometry3d X_BD(R_BD);
+      Eigen::Vector3d p_BD(0, 0.02, 0);
+      Eigen::Isometry3d X_BD;
+      X_BD.linear() = R_BD;
+      X_BD.translation() = p_BD;
       // TODO(eric.cousineau): This was very inconvenient. Is there a simpler
       // way to do this, possibly just in service of double templates?
       PoseVector<double> pose_BD; // sigh...
