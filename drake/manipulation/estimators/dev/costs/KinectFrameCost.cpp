@@ -25,6 +25,7 @@ using namespace cv;
 using drake::unused;
 using namespace timing;
 
+namespace {
 template<typename _Tp, int _rows, int _cols, int _options, int _maxRows, int _maxCols>
 void eigen2cv( const Eigen::Matrix<_Tp, _rows, _cols, _options, _maxRows, _maxCols>& src, cv::Mat& dst)
 {
@@ -42,16 +43,32 @@ void eigen2cv( const Eigen::Matrix<_Tp, _rows, _cols, _options, _maxRows, _maxCo
     }
 }
 
+void ToMatrixXd(const KinectFrameCost::DepthImage& image, MatrixXd* pmatrix) {
+  auto& X = *pmatrix;
+  X.resize(image.height(), image.width());
+  for (int v = 0; v < X.rows(); v++) {
+    for (int u = 0; u < X.cols(); u++) {
+      // TODO(eric.cousineau): Figure out best matrix storage format for ease of
+      // understanding.
+      X(v, u) = *image.at(u, v);
+    }
+  }
+}
+}  // namespace
+
 KinectFrameCost::KinectFrameCost(std::shared_ptr<RigidBodyTreed> robot_,
                                  std::shared_ptr<lcm::LCM> lcm_,
                                  YAML::Node config,
-                                 const CameraInfo* camera_info)
+                                 const CameraInfo* camera_info, const Vector3d& position, const Vector3d& orientation, double fov_y)
   : lcm(lcm_),
     robot(robot_),
     robot_kinematics_cache(robot->CreateKinematicsCache()),
     nq(robot->get_num_positions()),
     camera_info_(camera_info)
 {
+  rgbd_camera_.reset(new RgbdCameraDirect(*robot, position, orientation, fov_y,
+                                          true));
+
   if (config["icp_var"])
     icp_var = config["icp_var"].as<double>();
   if (config["free_space_var"])
@@ -237,8 +254,8 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
     // do randomized downsampling, populating data stores to be used by the ICP
     Matrix3Xd points(3, full_cloud_world.cols()); int i=0;
     struct Coord {
-      int v;
-      int u;
+      int v{-1};
+      int u{-1};
     };
     Eigen::MatrixXd depth_image;
     depth_image.resize(num_pixel_rows, num_pixel_cols);
@@ -249,6 +266,16 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
     raycast_endpoints.setConstant(nan);
     // Record valid coordinates (v, u) in sampled image
     std::vector<Coord> raycast_coords;
+
+    // Store mapping from downsampled image to full image pixels.
+    drake::MatrixX<Coord> full_coords(num_pixel_rows, num_pixel_cols);
+    full_coords.setConstant(Coord{-1, -1});
+
+    auto raycast_full_coords = [&](int i) {
+      const Coord& coord = raycast_coords[i];
+      Coord full_coord = full_coords(coord.v, coord.u);
+      return full_coord;
+    };
 
     double constant = 1.0f / camera_info_->focal_x() ;
     if (verbose_lcmgl)
@@ -264,7 +291,8 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
         for (int u=0; u<num_pixel_cols; u++) {
           int full_v = min((int)floor(((double)v)*downsample_amount) + rand()%(int)downsample_amount, input_num_pixel_rows-1);
           int full_u = min((int)floor(((double)u)*downsample_amount) + rand()%(int)downsample_amount, input_num_pixel_cols-1);
-
+          // Store mapping.
+          full_coords(v, u) = Coord{full_v, full_u};
           // populate depth image using our random sample
           depth_image(v, u) = full_depth_image(full_v, full_u);
 
@@ -342,9 +370,10 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
       std::vector<int> body_idx(points.cols());
       // project all cloud points onto the surface of the object positions
       // via the last state estimate
+      // Compute correspondence between pt_meas_j = r(pix_meas_j) <-> body_j
       double now1 = getUnixTime();
       {
-        SCOPE_TIME(cloud, "Raycast SDF");
+        SCOPE_TIME(cloud, "ICP Raycast SDF for correspondences");
         robot->collisionDetectFromPoints(robot_kinematics_cache, points,
                              phi, normal, x, body_x, body_idx, false);
       }
@@ -354,8 +383,10 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
       // for every unique body points have returned onto...
       std::vector<int> num_points_on_body(robot->bodies.size(), 0);
 
-      for (int i=0; i < (int)body_idx.size(); i++)
+      for (int i=0; i < (int)body_idx.size(); i++) {
+        ASSERT_THROW_FMT(body_idx[i] != -1, "bad body[{}]", i);
         num_points_on_body[body_idx[i]] += 1;
+      }
 
       // for every body...
       for (int i=0; i < (int)robot->bodies.size(); i++){
@@ -473,6 +504,7 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
                   FREE SPACE CONSTRAINT
       *********************************************/
     if (!std::isinf(free_space_var)){
+
       SCOPE_TIME(free_space, "Free space");
       double FREE_SPACE_WEIGHT = 1. / (2. * free_space_var * free_space_var);
 
@@ -481,26 +513,58 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
       // calculate SDFs in the image plane (not voxel grid like DART... too expensive
       // since we're not on a GPU yet)
 
+      bool free_space_use_camera = true;
       // perform raycast to generate "expected" observation
       // (borrowing code from Matthew Woehlke's pull request for the moment here)
-      VectorXd distances(raycast_endpoints.cols());
-      Vector3d origin = kinect2world*Vector3d::Zero();
-      Matrix3Xd origins(3, raycast_endpoints.cols());
-      Matrix3Xd normals(3, raycast_endpoints.cols());
-      std::vector<int> body_idx(raycast_endpoints.cols());
-      for (int i=0; i < raycast_endpoints.cols(); i++)
-        origins.block<3, 1>(0, i) = origin;
+//      VectorXd distances(raycast_endpoints.cols());
+//      Vector3d origin = kinect2world*Vector3d::Zero();
+//      Matrix3Xd origins(3, raycast_endpoints.cols());
+//      Matrix3Xd normals(3, raycast_endpoints.cols());
+//      std::vector<int> body_idx(raycast_endpoints.cols(), -1);
+//      // Invalidate data.
+//      distances.setConstant(nan);
+//      normals.setConstant(nan);
+//      for (int i=0; i < raycast_endpoints.cols(); i++)
+//        origins.block<3, 1>(0, i) = origin;
+
+      DRAKE_DEMAND(free_space_use_camera);
+      using namespace drake::systems::sensors;
+      using namespace drake::systems::rendering;
+      ImageBgra8U full_color_image_sys(input_num_pixel_cols, input_num_pixel_rows);
+      ImageDepth32F full_depth_image_sys(input_num_pixel_cols, input_num_pixel_rows);
+      PoseVector<double> camera_base_pose_sys;
+//      ImageLabel16I label_image; // Will not be used.
+      double camera_time = getUnixTime(); // ehh....
+      rgbd_camera_->CalcImages(camera_time,
+                               q_old,
+                               &camera_base_pose_sys,
+                               &full_color_image_sys, &full_depth_image_sys,
+                               /*&label_image*/ nullptr);
+      MatrixXd full_depth_image_sim;
+      ToMatrixXd(full_depth_image_sys, &full_depth_image_sim);
+      // Camera frame.
+      Matrix3Xd full_point_cloud_sim;
+      RgbdCamera::ConvertDepthImageToPointCloud(
+            full_depth_image_sys, *camera_info_, &full_point_cloud_sim);
+      Matrix3Xd full_point_cloud_world_sim
+          = kinect2world * full_point_cloud_sim;
 
       Matrix3Xd raycast_endpoints_world = kinect2world*raycast_endpoints;
-      double before_raycast = getUnixTime();
+//      double before_raycast = getUnixTime();
       // VALGRIND: Reports error. Conditional jump on uninitialized value.
 
-      // TODO(eric.cousineau): Consider replacing this with Kuni's camera renderer.
-      // This will be MUCH faster.
-      robot->collisionRaycast(robot_kinematics_cache,origins,raycast_endpoints_world,distances,normals,body_idx);
-      if (verbose)
-        printf("Raycast took %f\n", getUnixTime() - before_raycast);
+//      // TODO(eric.cousineau): Consider replacing this with Kuni's camera renderer.
+//      // This will be MUCH faster.
+//      robot->collisionRaycast(robot_kinematics_cache,origins,raycast_endpoints_world,distances,normals,body_idx);
+//      if (verbose)
+//        printf("Raycast took %f\n", getUnixTime() - before_raycast);
 
+
+      // Simulated point cloud points that are of interest to us.
+      // Will use this to compute body correspondence with simulated depth
+      // image.
+      Matrix3Xd points_sim(3, raycast_endpoints.cols());
+      points_sim.setConstant(nan);
 
       // fix the raycast distances to behave like the kinect distances:
       // i.e. the distance is the z-distance of the intersection point in the camera origin frame
@@ -512,38 +576,57 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
         const auto& coord = raycast_coords[c];
         const int i = coord.v;
         const int j = coord.u;
+        Coord full_coord = raycast_full_coords(c);
+        // TODO(eric.cousineau): Use a different down-sampling mechanism???
+        // I'm not sure if I'm a huge fan of the random sampling for
+        // single-hypothesis tracking.
+        const int full_i = full_coord.v;
+        const int full_j = full_coord.u;
+        const int full_index = get_full_index(full_i, full_j);
+
+        // Get simulated point in the world.
+        points_sim.col(c) = full_point_cloud_world_sim.col(full_index);
+        // TODO(eric.cousineau): Should this be discarded?
+        ASSERT_THROW_FMT(!std::isnan(points_sim(0, c)),
+                         "Bad simulated point: c = {}", c);
+
         {
 //        for (int j=0; j<num_pixel_cols; j++) {
           // fix distance
-          long int thisind = c; //i*num_pixel_cols+j;
+//          long int thisind = c; //i*num_pixel_cols+j;
           // this could be done with trig instead by I think this is just as efficient?
-          double distance_pre = distances(thisind);
-          distances(thisind) = distances(thisind)*raycast_endpoints(2, thisind)/max_scan_dist;
-          int body_idx_c = body_idx[thisind];
-          Vector3d color(0.75, 0, 0); // Red: missed
-          if (body_idx_c != -1) {
-            cout <<
-                fmt::format("[{}, {}] d_sim_k = {} (after = {}), d_meas_k = {}\n",
-                            i, j, distance_pre, distances(thisind), depth_image(i, j));
-            num_raycast_hit += 1;
-            color = Vector3d(0, 0.75, 0.0);  // Green: Hit
-          }
+//          double distance_pre = distances(thisind);
+          double distance_meas = depth_image(i, j);
+          double distance_sim = full_depth_image_sim(full_i, full_j);
+//          distances(thisind) = distances(thisind)*raycast_endpoints(2, thisind)/max_scan_dist;
+//          int body_idx_c = body_idx[thisind];
 
-          if (c % 5 == 0) {
-            auto&& oc = origins.col(thisind);
-            auto&& rc = raycast_endpoints_world.col(thisind);
-            bot_lcmgl_begin(lcmgl_raycast_, LCMGL_LINES);
-            bot_lcmgl_color3f(lcmgl_raycast_, color[0], color[1], color[2]);
-            bot_lcmgl_line_width(lcmgl_raycast_, 2.0f);
-            bot_lcmgl_vertex3f(lcmgl_raycast_, oc[0], oc[1], oc[2]);
-            bot_lcmgl_vertex3f(lcmgl_raycast_, rc[0], rc[1], rc[2]);
-            bot_lcmgl_end(lcmgl_raycast_);
-          }
+//          Vector3d color(0.75, 0, 0); // Red: missed
+//          if (body_idx_c != -1) {
+//            cout <<
+//                fmt::format("[{}, {}] d_sim_k = {} (after = {}), d_meas_k = {}\n",
+//                            i, j, distance_pre, distances(thisind), depth_image(i, j));
+//            num_raycast_hit += 1;
+//            color = Vector3d(0, 0.75, 0.0);  // Green: Hit
+//          }
 
-          if (i < depth_image.rows() && j < depth_image.cols() && 
-            distances(thisind) > 0. && 
-            distances(thisind) < depth_image(i, j)) {
-            cout << fmt::format("found inf: [{}, {}]\n", i, j);
+//          if (c % 5 == 0) {
+//            auto&& oc = origins.col(thisind);
+//            auto&& rc = raycast_endpoints_world.col(thisind);
+//            bot_lcmgl_begin(lcmgl_raycast_, LCMGL_LINES);
+//            bot_lcmgl_color3f(lcmgl_raycast_, color[0], color[1], color[2]);
+//            bot_lcmgl_line_width(lcmgl_raycast_, 2.0f);
+//            bot_lcmgl_vertex3f(lcmgl_raycast_, oc[0], oc[1], oc[2]);
+//            bot_lcmgl_vertex3f(lcmgl_raycast_, rc[0], rc[1], rc[2]);
+//            bot_lcmgl_end(lcmgl_raycast_);
+//          }
+
+          // Sanity checks.
+          DRAKE_DEMAND(i >= 0 && j >= 0 && i < depth_image.rows() && j < depth_image.cols());
+          DRAKE_DEMAND(full_i >= 0 && full_j >= 0 && full_i < full_depth_image.rows() && full_j < full_depth_image.cols());
+
+          if (distance_sim > 0. && distance_sim < distance_meas) {
+            cout << fmt::format("found free space violation: [{}, {}]\n", i, j);
             observation_sdf_input(i, j) = INF;
           }
     //      int thisind = i*num_pixel_cols+j;
@@ -561,6 +644,19 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
     //        bot_lcmgl_end(lcmgl_measurement_model_);  
     //      }
         }
+      }
+
+      // Compute simulated body correspondences (the body which a given point is
+      // closest to).
+      VectorXd phi_sim(points_sim.cols());
+      Matrix3Xd normal_sim(3, points_sim.cols());
+      vector<int> body_idx(points_sim.cols());
+      Matrix3Xd x_sim(3, points_sim.cols()), body_x_sim(3, points_sim.cols());
+      {
+        SCOPE_TIME(cloud, "Free Space Raycast SDF for correspondences");
+        robot->collisionDetectFromPoints(
+              robot_kinematics_cache, points_sim,
+              phi_sim, normal_sim, x_sim, body_x_sim, false);
       }
 
       bot_lcmgl_switch_buffer(lcmgl_raycast_);
@@ -627,9 +723,14 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
       double constant = 1.0f / camera_info_->focal_x();
       // for every unique body points have returned onto...
       std::vector<int> num_points_on_body(robot->bodies.size(), 0);
-      for (int bdy_i=0; bdy_i < (int)body_idx.size(); bdy_i++){
-        if (body_idx[bdy_i] >= 0)
-          num_points_on_body[body_idx[bdy_i]] += 1;
+      // Store all correspondences per body, such that we can refer back to them.
+      vector<vector<int>> point_indices_on_body(robot->bodies.size());
+      for (int c=0; c < (int)body_idx.size(); c++){
+        int body_idx_i = body_idx[c];
+        if (body_idx_i >= 0) {
+          num_points_on_body[body_idx_i] += 1;
+          point_indices_on_body[body_idx_i].push_back(c);
+        }
       }
 
       // for every body...
@@ -844,20 +945,6 @@ void KinectFrameCost::handleSavePointcloudMsg(const lcm::ReceiveBuffer* rbuf,
   }
   ofile.close();
 }
-
-namespace {
-void ToMatrixXd(const KinectFrameCost::DepthImage& image, MatrixXd* pmatrix) {
-  auto& X = *pmatrix;
-  X.resize(image.height(), image.width());
-  for (int v = 0; v < X.rows(); v++) {
-    for (int u = 0; u < X.cols(); u++) {
-      // TODO(eric.cousineau): Figure out best matrix storage format for ease of
-      // understanding.
-      X(v, u) = *image.at(u, v);
-    }
-  }
-}
-}  // namespace
 
 void KinectFrameCost::readDepthImageAndPointCloud(
     const Eigen::Isometry3d& camera_frame,
