@@ -4,7 +4,8 @@ if nargin < 2
 end
 
 sfigure(fig_index);
-imshow(reformat_depth(depth_image));
+im_args = {'InitialMagnification','fit'};
+imshow(reformat_depth(depth_image), im_args{:});
 % drawnow();
 disp('Updated depth image');
 

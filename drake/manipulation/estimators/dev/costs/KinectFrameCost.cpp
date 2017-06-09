@@ -589,19 +589,19 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
 //        eigen2cv(depth_image, image_bg);
         eigen2cv(full_depth_image, image_bg);
 
-//        drake::log()->info("Sending Kinect SDF variables to MATLAB");
-//        using namespace drake::common;
-////        DRAKE_MATLAB_ASSIGN(full_depth_image);
-////        DRAKE_MATLAB_ASSIGN(full_cloud);
-//        CallMatlab("disp", "Create SDF stuff");
-//        CallMatlab("plot_depth", depth_image, 1);
-//        CallMatlab("plot_depth", observation_sdf, 2);
-//        CallMatlab("plot_depth", observation_sdf_input, 3);
-//        CallMatlab("drawnow");
+        drake::log()->info("Sending Kinect SDF variables to MATLAB");
+        using namespace drake::common;
+//        DRAKE_MATLAB_ASSIGN(full_depth_image);
+//        DRAKE_MATLAB_ASSIGN(full_cloud);
+        CallMatlab("disp", "Create SDF stuff");
+        CallMatlab("plot_depth", depth_image, 1);
+        CallMatlab("plot_depth", observation_sdf, 2);
+        CallMatlab("plot_depth", observation_sdf_input, 3);
+        CallMatlab("drawnow");
 
-//        DRAKE_MATLAB_ASSIGN(observation_sdf);
-//        DRAKE_MATLAB_ASSIGN(depth_image);
-//        DRAKE_MATLAB_ASSIGN(observation_sdf_input);
+        DRAKE_MATLAB_ASSIGN(observation_sdf);
+        DRAKE_MATLAB_ASSIGN(depth_image);
+        DRAKE_MATLAB_ASSIGN(observation_sdf_input);
 
 //  //      MatrixXd copy_image = depth_image;
 //  //      copy_image.setConstant(0.5);
