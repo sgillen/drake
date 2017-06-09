@@ -37,7 +37,6 @@
 #endif
 
 #include "drake/math/roll_pitch_yaw.h"
-#include "drake/systems/rendering/pose_vector.h"
 #include "drake/systems/sensors/camera_info.h"
 #include "drake/systems/sensors/image.h"
 #include "drake/systems/sensors/vtk_util.h"
@@ -954,6 +953,22 @@ constexpr float RgbdCamera::InvalidDepth::kTooClose;
 
 constexpr int16_t RgbdCamera::Label::kNoBody;
 constexpr int16_t RgbdCamera::Label::kFlatTerrain;
+
+RgbdCameraDirect::RgbdCameraDirect(
+    const RigidBodyTree<double>& tree,
+    const Eigen::Vector3d& position, const Eigen::Vector3d& orientation, double fov_y, bool show_window)
+    : impl_(new RgbdCamera::Impl(tree, RigidBodyFrame<double>(), position,
+                                 orientation, fov_y, show_window, true)) {
+  impl_->set_depth_rel_noise_magnitude(0.02); // same as above
+}
+
+void RgbdCameraDirect::CalcImages(
+    double t, const Eigen::VectorXd& x,
+    rendering::PoseVector<double>* pcamera_base_pose, ImageBgra8U* pcolor_image,
+    ImageDepth32F* pdepth_image, ImageLabel16I* plabel_image) {
+  impl_->DoCalcOutput(t, x, pcamera_base_pose, pcolor_image,
+                      pdepth_image, plabel_image);
+}
 
 }  // namespace sensors
 }  // namespace systems

@@ -10,6 +10,7 @@
 #include "drake/multibody/rigid_body_frame.h"
 #include "drake/multibody/rigid_body_tree.h"
 #include "drake/systems/framework/leaf_system.h"
+#include "drake/systems/rendering/pose_vector.h"
 #include "drake/systems/sensors/camera_info.h"
 #include "drake/systems/sensors/image.h"
 
@@ -220,9 +221,29 @@ class RgbdCamera : public LeafSystem<double> {
 
  private:
   void Init(const std::string& name, double period_sec);
-
   class Impl;
   std::unique_ptr<Impl> impl_;
+  // HACK(eric.cousineau)
+  friend class RgbdCameraDirect;
+};
+
+/// Class accessing RGB-D camera functionality without a system wrapper.
+class RgbdCameraDirect {
+ public:
+  // TODO(eric.cousineau): Add robot frame in.
+  RgbdCameraDirect(const RigidBodyTree<double>& tree,
+             const Eigen::Vector3d& position,
+             const Eigen::Vector3d& orientation,
+             double fov_y,
+             bool show_window);
+
+  void CalcImages(double t,
+                    const Eigen::VectorXd& x,
+                    rendering::PoseVector<double>* pcamera_base_pose,
+                    ImageBgra8U* pcolor_image, ImageDepth32F* pdepth_image,
+                    ImageLabel16I* plabel_image);
+ private:
+  std::unique_ptr<RgbdCamera::Impl> impl_;
 };
 
 }  // namespace sensors
