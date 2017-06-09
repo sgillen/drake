@@ -7,6 +7,7 @@
 #include "drake/common/drake_path.h"
 
 #include "drake/manipulation/estimators/dev/ManipulationTrackerLoader.hpp"
+#include "drake/systems/rendering/pose_vector.h"
 
 #include "drake/manipulation/estimators/dev/tree_state_portion.h"
 
@@ -28,6 +29,7 @@ namespace manipulation {
 
 using Eigen::VectorXd;
 typedef Eigen::Matrix3Xd PointCloud;
+using systems::rendering::PoseVector;
 typedef systems::sensors::ImageDepth32F DepthImage;
 
 void PrintJointNameHierarchy(const RigidBodyTreed* tree) {
@@ -131,6 +133,7 @@ class ArticulatedStateEstimator::Impl {
 
   void ImplDiscreteUpdate(const VectorXd& q0,
                           const VectorXd& tree_q_measurement_input,
+                          const Eigen::Isometry3d& X_WD,
                           const PointCloud& point_cloud,
                           const DepthImage& depth_image,
                           VectorXd* estimated_tree_state) const {
@@ -155,7 +158,7 @@ class ArticulatedStateEstimator::Impl {
       cost->readTreeState(tree_q_measurement, slices_->update);
     }
     for (shared_ptr<KinectFrameCost> cost : loader_->kinect_frame_costs_) {
-      cost->readDepthImageAndPointCloud(depth_image, point_cloud);
+      cost->readDepthImageAndPointCloud(X_WD, depth_image, point_cloud);
     }
 
     // DynamicsCost and NonpenetratingCost presently only rely on priors.
@@ -262,6 +265,8 @@ ArticulatedStateEstimator::ArticulatedStateEstimator(const string& config_file,
   // TODO(eric.cousineau): Make depth image optional?
   inport_depth_image_index_ =
       DeclareAbstractInputPort(Value<DepthImage>()).get_index();
+  inport_depth_camera_pose_index_ =
+      DeclareVectorInputPort(PoseVector<double>()).get_index();
   inport_tree_q_measurement_index_ =
       DeclareInputPort(systems::kVectorValued, num_input_positions).get_index();
   outport_tree_state_estimate_index_ =
@@ -293,6 +298,10 @@ void ArticulatedStateEstimator::DoCalcDiscreteVariableUpdates(
   auto&& depth_image =
       EvalAbstractInput(context, inport_depth_image_index_)
              ->GetValue<DepthImage>();
+  // Ensure that we have the pose from depth camera to the world.
+  auto&& X_WD =
+      EvalVectorInput<PoseVector>(context, inport_depth_camera_pose_index_)
+      ->get_isometry();
 
   PrintValidPoints(point_cloud, "In system");
 
@@ -302,7 +311,8 @@ void ArticulatedStateEstimator::DoCalcDiscreteVariableUpdates(
 
   VectorXd estimated_tree_state;
   impl_->ImplDiscreteUpdate(
-        q0, tree_q_measurement, point_cloud, depth_image,
+        q0, tree_q_measurement,
+        X_WD, point_cloud, depth_image,
         &estimated_tree_state);
   updates->get_mutable_vector()->get_mutable_value() = estimated_tree_state;
 }
@@ -323,6 +333,11 @@ const ArticulatedStateEstimator::Inport& ArticulatedStateEstimator::inport_point
 const ArticulatedStateEstimator::Inport& ArticulatedStateEstimator::inport_depth_image() const
 {
   return get_input_port(inport_depth_image_index_);
+}
+
+const ArticulatedStateEstimator::Inport& ArticulatedStateEstimator::inport_depth_camera_pose() const
+{
+  return get_input_port(inport_depth_camera_pose_index_);
 }
 
 const ArticulatedStateEstimator::Inport& ArticulatedStateEstimator::inport_tree_q_measurement() const

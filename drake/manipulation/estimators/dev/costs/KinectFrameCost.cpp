@@ -213,8 +213,8 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
     latest_cloud_mutex.unlock();
     
     // transform into world frame?
-    Eigen::Isometry3d kinect2world;
-    kinect2world.setIdentity();
+    Eigen::Isometry3d kinect2world = kinect2world_;
+//    kinect2world.setIdentity();
 //    if (world_frame){
 //      if (have_hardcoded_kinect2world_){
 //        kinect2world = hardcoded_kinect2world_;
@@ -561,23 +561,25 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
         DRAKE_MATLAB_ASSIGN(full_depth_image);
         DRAKE_MATLAB_ASSIGN(full_cloud);
         CallMatlab("disp", "Create SDF stuff");
-        CallMatlab("plot_depth", depth_image);
+        CallMatlab("plot_depth", depth_image, 1);
+        CallMatlab("plot_depth", observation_sdf, 2);
+        CallMatlab("plot_depth", observation_sdf, 2);
         CallMatlab("drawnow");
 
-  //      MatrixXd copy_image = depth_image;
-  //      copy_image.setConstant(0.5);
-  //      eigen2cv(copy_image, image_bg);
-        double min, max;
-//        cv::minMaxIdx(image, &min, &max);
+//  //      MatrixXd copy_image = depth_image;
+//  //      copy_image.setConstant(0.5);
+//  //      eigen2cv(copy_image, image_bg);
+//        double min, max;
+////        cv::minMaxIdx(image, &min, &max);
+////        if (max > 0)
+////          image = image / max;
+//        cv::minMaxIdx(image_bg, &min, &max);
 //        if (max > 0)
-//          image = image / max;
-        cv::minMaxIdx(image_bg, &min, &max);
-        if (max > 0)
-          image_bg = image_bg / max;
-//        cv::Mat image_disp;
-//        cv::addWeighted(image, 0.5, image_bg, 0.5, 0.0, image_disp);
-//        cv::resize(image_disp, image_disp, cv::Size(640, 480));
-        cv::imshow("KinectFrameCostDebug", image_bg);
+//          image_bg = image_bg / max;
+////        cv::Mat image_disp;
+////        cv::addWeighted(image, 0.5, image_bg, 0.5, 0.0, image_disp);
+////        cv::resize(image_disp, image_disp, cv::Size(640, 480));
+//        cv::imshow("KinectFrameCostDebug", image_bg);
       }
 
       // calculate projection direction to try to resolve this.
@@ -821,7 +823,9 @@ void ToMatrixXd(const KinectFrameCost::DepthImage& image, MatrixXd* pmatrix) {
 }  // namespace
 
 void KinectFrameCost::readDepthImageAndPointCloud(
-    const DepthImage& depth_image, const PointCloud& point_cloud) {
+    const Eigen::Isometry3d& camera_frame,
+    const DepthImage& depth_image,
+    const PointCloud& point_cloud) {
   ToMatrixXd(depth_image, &latest_depth_image);
   DRAKE_MATLAB_ASSIGN(latest_depth_image);
   latest_cloud = point_cloud;

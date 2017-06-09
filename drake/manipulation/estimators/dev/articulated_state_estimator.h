@@ -75,6 +75,7 @@ class ArticulatedStateEstimator : public LeafSystemMixin<double> {
 
   const Inport& inport_point_cloud() const;
   const Inport& inport_depth_image() const;
+  const Inport& inport_depth_camera_pose() const;
   const Inport& inport_tree_q_measurement() const;
   const Outport& outport_tree_state_estimate() const;
 
@@ -89,6 +90,7 @@ private:
   int param_q0_index_{};
 
   int inport_point_cloud_index_{};
+  int inport_depth_camera_pose_index_{};
   int inport_depth_image_index_{};
   int inport_tree_q_measurement_index_{};
 

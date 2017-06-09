@@ -123,6 +123,37 @@ const int kImageHeight = 480;  // In pixels
 //  return systems::Value<T>(std::forward<T>(value));
 //}
 
+/**
+ * Transform / compose a pose from frame `B` to `W`, with common frame `A`,
+ * using post-multiplication.
+ *
+ * Conceptually:
+ *   input: X_AB
+ *   param: X_WA
+ *   output: X_WB = X_WA * X_AB
+ */
+class PoseTransformer : public LeafSystemMixin<double> {
+ public:
+  PoseTransformer(const Eigen::Isometry3d& X_AB)
+      : X_AB_(X_AB) {
+    DeclareVectorInputPort(PoseVector<double>());
+    DeclareVectorOutputPort(PoseVector<double>());
+  }
+  const Eigen::Isometry3d& get_isometry() const { return X_AB_; }
+ protected:
+  void DoCalcOutput(const Context& context, SystemOutput* output) const override {
+    auto&& pose_in =
+        EvalVectorInput<PoseVector>(context, 0);
+    auto&& pose_out =
+        *dynamic_cast<PoseVector<double>*>(output->GetMutableVectorData(0));
+    Eigen::Isometry3d X_out = X_AB_ * pose_in->get_isometry();
+    pose_out.set_translation(Eigen::Translation3d(X_out.translation()));
+    pose_out.set_rotation(Eigen::Quaterniond(X_out.rotation()));
+  }
+ private:
+  Eigen::Isometry3d X_AB_;
+};
+
 // HACK: Actually outputs DepthSensorOutput, with very non-descriptive sensor
 // information.
 // TODO(eric.cousineau): Decouple point-cloud definition from DepthSensorOutput,
@@ -162,19 +193,7 @@ class DepthImageToPointCloud : public LeafSystemMixin<double> {
     auto pose_WS = EvalVectorInput<PoseVector>(context,
                                                pose_input_port_index_);
     auto X_WS = pose_WS->get_isometry();
-    if (ues_depth_frame_) {
-      // TODO(eric.cousineau): Change system to use Depth sensor pose output
-      // port, once the PR lands for this, to get the proper frame externally.
-      Eigen::Matrix3d R_BD;
-      R_BD <<
-          0, 0, 1,
-          -1, 0, 0,
-          0, -1, 0;
-      // Project from `D` to `B`
-      point_cloud = (X_WS * (R_BD * point_cloud)).eval();
-    } else {
-      point_cloud = (X_WS * point_cloud).eval();
-    }
+    point_cloud = (X_WS * point_cloud).eval();
     drake::log()->info("Convert to depth cloud: {}", context.get_time());
     manipulation::PrintValidPoints(point_cloud, "Converter");
   }
@@ -329,6 +348,23 @@ struct PerceptionHack::Impl {
       auto&& depth_image_output_port = rgbd_camera_->get_output_port(1);
       auto&& camera_base_pose_output_port = rgbd_camera_->camera_base_pose_output_port();
 
+      // Project from `D` (depth frame) to `B` (camera frame)
+      // TODO(eric.cousineau): Change system to use Depth sensor pose output
+      // port, once the PR lands for this, to get the proper frame externally.
+      Eigen::Matrix3d R_BD;
+      R_BD <<
+          0, 0, 1,
+          -1, 0, 0,
+          0, -1, 0;
+      Eigen::Isometry3d X_BD(R_BD);
+      auto camera_pose_transformer =
+          pbuilder->template AddSystem<PoseTransformer>(X_BD);
+
+      pbuilder->Connect(camera_base_pose_output_port,
+                        camera_pose_transformer->get_input_port(0));
+      auto&& depth_camera_pose_output_port =
+          camera_pose_transformer->get_output_port(0);
+
       bool do_publish = true;
       if (do_publish) {
         // Image to LCM.
@@ -380,7 +416,7 @@ struct PerceptionHack::Impl {
             depth_image_output_port,
             depth_to_pc->get_depth_image_inport());
       pbuilder->Connect(
-            camera_base_pose_output_port,
+            depth_camera_pose_output_port,
             depth_to_pc->get_pose_inport());
 
       auto* pc_zoh = pbuilder->template AddSystem<AbstractZOH<PointCloud>>(camera_dt);
@@ -420,14 +456,17 @@ struct PerceptionHack::Impl {
           std::cout << "  " << name << "\n";
         }
 
-        auto estimator = pbuilder->template AddSystem<ArticulatedStateEstimator>(
-                           config_file, &rgbd_camera_->depth_camera_info(),
-                           input_position_names, camera_dt);
+        ArticulatedStateEstimator* estimator =
+            pbuilder->template AddSystem<ArticulatedStateEstimator>(
+                config_file, &rgbd_camera_->depth_camera_info(),
+                input_position_names, camera_dt);
 
         pbuilder->Connect(pc_output_port,
                           estimator->inport_point_cloud());
         pbuilder->Connect(depth_image_output_port,
                           estimator->inport_depth_image());
+        pbuilder->Connect(depth_camera_pose_output_port,
+                          estimator->inport_depth_camera_pose());
 
         pbuilder->Connect(pplant->get_output_port_plant_state(),
                           estimator->inport_tree_q_measurement());

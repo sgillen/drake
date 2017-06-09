@@ -51,7 +51,7 @@ public:
   void handleSavePointcloudMsg(const lcm::ReceiveBuffer* rbuf,
                            const std::string& chan,
                            const bot_core::raw_t* msg);
-  void readDepthImageAndPointCloud(const DepthImage& depth_image,
+  void readDepthImageAndPointCloud(const Eigen::Isometry3d& camera_frame, const DepthImage& depth_image,
                                    const PointCloud& point_cloud);
 
   void handleCameraOffsetMsg(const lcm::ReceiveBuffer* rbuf,
