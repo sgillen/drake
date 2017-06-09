@@ -45,12 +45,13 @@ int addModelInstanceFromFile(const string& file_path,
   std::transform(extension.begin(), extension.end(), extension.begin(),
                  ::tolower);
 
-  const auto floating_base_type = drake::multibody::joints::kRollPitchYaw;
+  auto floating_base_type = drake::multibody::joints::kRollPitchYaw;
   // TODO(eric.cousineau): Register this frame??
   shared_ptr<RigidBodyFrame<double>> weld_frame{nullptr};
   if (!weld_frame_name.empty()) {
     weld_frame = robot->findFrame("iiwa_frame_ee");
     drake::log()->info("Welding frame: {}", weld_frame_name);
+    floating_base_type = drake::multibody::joints::kFixed;
     DRAKE_ASSERT(weld_frame != nullptr);
   }
 
