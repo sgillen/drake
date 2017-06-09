@@ -155,6 +155,7 @@ class PoseTransformer : public LeafSystemMixin<double> {
 
 // HACK: Actually outputs DepthSensorOutput, with very non-descriptive sensor
 // information.
+// Provides point cloud in depth sensor frame.
 // TODO(eric.cousineau): Decouple point-cloud definition from DepthSensorOutput,
 // or decouple / use composition for LCM point cloud translation from this.
 class DepthImageToPointCloud : public LeafSystemMixin<double> {
@@ -167,8 +168,6 @@ class DepthImageToPointCloud : public LeafSystemMixin<double> {
     ImageDepth32F depth_image(kImageWidth, kImageHeight);
     depth_image_input_port_index_ = DeclareAbstractInputPort(
         Value<ImageDepth32F>(depth_image)).get_index();
-    pose_input_port_index_ =
-        DeclareVectorInputPort(PoseVector<double>()).get_index();
     // TODO(eric.cousineau): Determine proper way to pass a basic point cloud.
     PointCloud point_cloud(3, depth_image.size());
     output_port_index_ =
@@ -176,9 +175,6 @@ class DepthImageToPointCloud : public LeafSystemMixin<double> {
   }
   const Inport& get_depth_image_inport() const {
     return get_input_port(depth_image_input_port_index_);
-  }
-  const Inport& get_pose_inport() const {
-    return get_input_port(pose_input_port_index_);
   }
  protected:
   void DoCalcOutput(const Context& context, SystemOutput* output) const override {
@@ -189,10 +185,6 @@ class DepthImageToPointCloud : public LeafSystemMixin<double> {
                         ->GetMutableValue<PointCloud>();
     RgbdCamera::ConvertDepthImageToPointCloud(depth_image, camera_info_,
                                               &point_cloud);
-    auto pose_WS = EvalVectorInput<PoseVector>(context,
-                                               pose_input_port_index_);
-    auto X_WS = pose_WS->get_isometry();
-    point_cloud = (X_WS * point_cloud).eval();
     drake::log()->info("Convert to depth cloud: {}", context.get_time());
     manipulation::PrintValidPoints(point_cloud, "Converter");
   }
@@ -202,10 +194,9 @@ class DepthImageToPointCloud : public LeafSystemMixin<double> {
   bool ues_depth_frame_{};
   int depth_image_input_port_index_{};
   int output_port_index_{};
-  int pose_input_port_index_{};
 };
 
-
+// Publishes point cloud in world frame.
 // TODO(eric.cousineau): Replace with LCM Translator when PR lands
 class PointCloudToLcmPointCloud : public LeafSystemMixin<double> {
  public:
@@ -217,8 +208,13 @@ class PointCloudToLcmPointCloud : public LeafSystemMixin<double> {
         DeclareAbstractInputPort(Value<Data>()).get_index();
     output_port_index_ =
         DeclareAbstractOutputPort(Value<Message>()).get_index();
+    pose_input_port_index_ =
+        DeclareVectorInputPort(PoseVector<double>()).get_index();
   }
 
+  const Inport& get_pose_inport() const {
+    return get_input_port(pose_input_port_index_);
+  }
   const Inport& get_inport() const {
     return get_input_port(input_port_index_);
   }
@@ -230,15 +226,19 @@ class PointCloudToLcmPointCloud : public LeafSystemMixin<double> {
       const Context& context, SystemOutput* output) const {
     const Data& point_cloud = EvalAbstractInput(context, input_port_index_)
                               ->GetValue<Data>();
+    auto pose_WS = EvalVectorInput<PoseVector>(context,
+                                               pose_input_port_index_);
+    auto X_WS = pose_WS->get_isometry();
+    const Data& point_cloud_world = X_WS * point_cloud;
     Message& message = output->GetMutableData(output_port_index_)
                         ->GetMutableValue<Message>();
-    int n_points = point_cloud.cols();
+    int n_points = point_cloud_world.cols();
     // Stolen from DepthSensorToLcmPointCloudMessage
     message.frame_id = std::string(RigidBodyTreeConstants::kWorldName);
     message.n_points = n_points;
     message.points.clear();
     for (int i = 0; i < n_points; ++i) {
-      const auto& point_S = point_cloud.col(i);
+      const auto& point_S = point_cloud_world.col(i);
       Eigen::Vector3f point_W = point_S.cast<float>();
       message.points.push_back({point_W(0), point_W(1), point_W(2)});
     }
@@ -247,6 +247,7 @@ class PointCloudToLcmPointCloud : public LeafSystemMixin<double> {
  private:
   int input_port_index_{};
   int output_port_index_{};
+  int pose_input_port_index_{};
 };
 
 //template <typename Type, typename Port>
@@ -430,9 +431,6 @@ struct PerceptionHack::Impl {
       pbuilder->Connect(
             depth_image_output_port,
             depth_to_pc->get_depth_image_inport());
-      pbuilder->Connect(
-            depth_camera_pose_output_port,
-            depth_to_pc->get_pose_inport());
 
       auto* pc_zoh = pbuilder->template AddSystem<AbstractZOH<PointCloud>>(camera_dt);
       pbuilder->Connect(
@@ -446,6 +444,9 @@ struct PerceptionHack::Impl {
         pbuilder->Connect(
               pc_output_port,
               pc_to_lcm->get_inport());
+        pbuilder->Connect(
+              depth_camera_pose_output_port,
+              pc_to_lcm->get_pose_inport());
         // Add LCM publisher
         auto depth_lcm_pub = pbuilder->template AddSystem<LcmPublisherSystem>(
             LcmPublisherSystem::Make<Converter::Message>("DRAKE_POINTCLOUD_RGBD",
