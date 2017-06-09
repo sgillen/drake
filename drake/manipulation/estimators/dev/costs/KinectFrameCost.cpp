@@ -18,6 +18,7 @@
 #include "drake/multibody/joints/revolute_joint.h"
 
 #include "drake/common/call_matlab.h"
+#define MATLAB_ASSIGN(var) drake::common::CallMatlab("assignin", "base", #var, var)
 
 using namespace std;
 using namespace Eigen;
@@ -554,8 +555,11 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
 
         drake::log()->info("Sending Kinect SDF variables to MATLAB");
         using namespace drake::common;
-        CallMatlab("assignin", "base", "observation_sdf", observation_sdf);
-        CallMatlab("assignin", "base", "depth_image", depth_image);
+
+        MATLAB_ASSIGN(observation_sdf);
+        MATLAB_ASSIGN(depth_image);
+        MATLAB_ASSIGN(full_depth_image);
+        MATLAB_ASSIGN(full_cloud);
         CallMatlab("disp", "Create SDF stuff");
 
   //      MatrixXd copy_image = depth_image;
