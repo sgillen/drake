@@ -1,18 +1,19 @@
+figure(1); clf();
+
 startup_drake_client;
 
 %%
-
-% This is truncated???
 figure(1); clf();
-imshow(depth_image);
+imshow(reformat_depth(depth_image));
 
 figure(2); clf();
 imshow(observation_sdf);
 
 %%
 figure(3); clf();
-% imshow(full_depth_image);
-imshow(latest_depth_image);
+% imshow(reformat_depth(depth_image));
+imshow(reformat_depth(latest_depth_image));
+% imshow(reformat_depth(depth_image_mat));
 
 %%
 figure(4); clf();

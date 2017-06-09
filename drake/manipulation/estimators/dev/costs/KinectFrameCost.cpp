@@ -561,6 +561,8 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
         DRAKE_MATLAB_ASSIGN(full_depth_image);
         DRAKE_MATLAB_ASSIGN(full_cloud);
         CallMatlab("disp", "Create SDF stuff");
+        CallMatlab("plot_depth", depth_image);
+        CallMatlab("drawnow");
 
   //      MatrixXd copy_image = depth_image;
   //      copy_image.setConstant(0.5);
