@@ -970,6 +970,10 @@ class RigidBodyTree {
   /**
    * Computes the *signed* distance from the given points to the nearest body in
    * the RigidBodyTree.
+   * TODO(eric.cousineau): What exactly is X ???
+   * Seems like:
+   * @param x Closest point on the body surface in the world frame
+   * @param body_x Closest point on the body surface, in body frame
    */
   void collisionDetectFromPoints(
       const KinematicsCache<double>& cache,

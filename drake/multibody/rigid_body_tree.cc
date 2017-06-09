@@ -814,6 +814,8 @@ void RigidBodyTree<T>::collisionDetectFromPoints(
 
   bool indicate_no_collisions = false;
   for (size_t i = 0; i < closest_points.size(); ++i) {
+    // TODO(eric.cousineau): ptB seems like a misnormer, at least in terms of
+    // PointPair::ptB (point on body B).
     x.col(i) = closest_points[i].ptB;
     body_x.col(i) = closest_points[i].ptA;
     normal.col(i) = closest_points[i].normal;
