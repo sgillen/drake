@@ -388,14 +388,14 @@ int DoMain(void) {
     DRAKE_DEMAND(std::abs(object_velocity(5)) < angular_velocity_tolerance);
   } else {
     PiecewisePolynomial<double> vis = drake_visualizer->GetReplayCachedSimulation();
-//    systems::DrakeVisualizer* est_visualizer = nullptr;
+    systems::DrakeVisualizer* est_visualizer = nullptr;
     double t_end = vis.getEndTime();
-//    PiecewisePolynomial<double> est_vis;
-//    if (FLAGS_use_perception) {
-//      est_visualizer = perception.GetEstimationVisualizer();
-//      est_vis = est_visualizer->GetReplayCachedSimulation();
-//      t_end = std::max(t_end, est_vis.getEndTime());
-//    }
+    PiecewisePolynomial<double> est_vis;
+    if (FLAGS_use_perception) {
+      est_visualizer = perception.GetEstimationVisualizer();
+      est_vis = est_visualizer->GetReplayCachedSimulation();
+      t_end = std::max(t_end, est_vis.getEndTime());
+    }
     // Playback through each visualizer
     const double kFrameRate = 60.;
     const double kDt = 1 / kFrameRate;
@@ -408,9 +408,9 @@ int DoMain(void) {
       timing::TimePoint next_hit = timing::Clock::now() + timing::Duration(kDt);
       while (t < t_end) {
         drake_visualizer->PlaybackTrajectoryFrame(vis, t);
-  //      if (est_visualizer) {
-  //        est_visualizer->PlaybackTrajectoryFrame(est_vis, t);
-  //      }
+        if (est_visualizer) {
+          est_visualizer->PlaybackTrajectoryFrame(est_vis, t);
+        }
         std::this_thread::sleep_until(next_hit);
         next_hit += timing::Duration(kDt);
         t += kSpeedup * kDt;
