@@ -501,6 +501,7 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
       // i.e. the distance is the z-distance of the intersection point in the camera origin frame
       // and also initialize observation SDF to Inf where the measurement return is in front of the real return
       // and 0 otherwise
+      int num_raycast_hit = 0;
       Eigen::MatrixXd observation_sdf_input = MatrixXd::Constant(num_pixel_rows, num_pixel_cols, 0.0);
       for (int c = 0; c < (int)raycast_coords.size(); ++c) {
         const auto& coord = raycast_coords[c];
@@ -513,10 +514,12 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
           // this could be done with trig instead by I think this is just as efficient?
           double distance_pre = distances(thisind);
           distances(thisind) = distances(thisind)*raycast_endpoints(2, thisind)/max_scan_dist;
-          if (c % 5 == 0) {
+          int body_idx_c = body_idx[thisind];
+          if (body_idx_c != -1) {
             cout <<
                 fmt::format("[{}, {}] d_sim_k = {} (after = {}), d_meas_k = {}\n",
                             i, j, distance_pre, distances(thisind), depth_image(i, j));
+            num_raycast_hit += 1;
           }
           if (i < depth_image.rows() && j < depth_image.cols() && 
             distances(thisind) > 0. && 
@@ -540,6 +543,10 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
     //      }
         }
       }
+
+      std::cout << fmt::format("-- Free Space, Raycasts: {} / {} hit\n",
+                               num_raycast_hit, raycast_endpoints.cols());
+
       MatrixXd observation_sdf;
       MatrixXi mapping_row;
       MatrixXi mapping_col;
