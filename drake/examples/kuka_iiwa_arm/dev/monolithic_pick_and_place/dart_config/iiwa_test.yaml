@@ -21,7 +21,8 @@ robots:
       base_y: 0
       base_z: 0.7645
   wsg:
-    urdf: "/manipulation/models/wsg_50_description/sdf/schunk_wsg_50_ball_contact.sdf"
+    # Do not use full model given that it has loop joints
+    urdf: "/manipulation/models/wsg_50_description/sdf/schunk_wsg_50_estimation.sdf"
     weld_to_frame: iiwa_frame_ee
   # table:
   #   urdf_less_collision: "/examples/kuka_iiwa_arm/models/table/extra_heavy_duty_table_surface_only_collision.sdf"

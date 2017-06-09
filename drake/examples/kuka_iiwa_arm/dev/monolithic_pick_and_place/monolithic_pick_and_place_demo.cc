@@ -338,10 +338,10 @@ int DoMain(void) {
   // to see if the state machine thinks we're done, and if so that the
   // object is near the target.
   const double simulation_step = 1;
-//  while (state_machine->state(simulator.get_context())
-//         != pick_and_place::DONE) {
+  while (state_machine->state(simulator.get_context())
+         != pick_and_place::DONE) {
     simulator.StepTo(simulator.get_context().get_time() + simulation_step);
-//  }
+  }
 
   if (!FLAGS_do_playback) {
     const pick_and_place::WorldState& world_state =

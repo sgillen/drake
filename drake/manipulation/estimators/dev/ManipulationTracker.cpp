@@ -50,6 +50,8 @@ int addModelInstanceFromFile(const string& file_path,
   shared_ptr<RigidBodyFrame<double>> weld_frame{nullptr};
   if (!weld_frame_name.empty()) {
     weld_frame = robot->findFrame("iiwa_frame_ee");
+    drake::log()->info("Welding frame: {}", weld_frame_name);
+    DRAKE_ASSERT(weld_frame != nullptr);
   }
 
   drake::log()->info("Loading model: {}", file_path);
