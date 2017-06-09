@@ -337,7 +337,7 @@ int DoMain(void) {
   // Step the simulator in some small increment.  Between steps, check
   // to see if the state machine thinks we're done, and if so that the
   // object is near the target.
-  const double simulation_step = 0.3;
+  const double simulation_step = 1;
 //  while (state_machine->state(simulator.get_context())
 //         != pick_and_place::DONE) {
     simulator.StepTo(simulator.get_context().get_time() + simulation_step);
@@ -397,8 +397,9 @@ int DoMain(void) {
 //      t_end = std::max(t_end, est_vis.getEndTime());
 //    }
     // Playback through each visualizer
-    double kFrameRate = 60.;
-    double kDt = 1 / kFrameRate;
+    const double kFrameRate = 60.;
+    const double kDt = 1 / kFrameRate;
+    const double kSpeedup = 0.5;
     std::cout << "Playing back..." << std::endl;
     while (true) {
       timing::Timer timer;
@@ -412,7 +413,7 @@ int DoMain(void) {
   //      }
         std::this_thread::sleep_until(next_hit);
         next_hit += timing::Duration(kDt);
-        t += kDt;
+        t += kSpeedup * kDt;
       }
     }
   }
