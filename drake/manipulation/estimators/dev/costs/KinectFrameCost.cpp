@@ -18,7 +18,6 @@
 #include "drake/multibody/joints/revolute_joint.h"
 
 #include "drake/common/call_matlab.h"
-#define MATLAB_ASSIGN(var) drake::common::CallMatlab("assignin", "base", #var, var)
 
 using namespace std;
 using namespace Eigen;
@@ -547,35 +546,36 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
       // TODO(eric.cousineau): Not seeing data updates????
       {
         SCOPE_TIME(cv, "OpenCV update");
-        cv::Mat image;
+//        cv::Mat image;
         cv::Mat image_bg;
-        eigen2cv(observation_sdf, image);
+//        eigen2cv(observation_sdf, image);
 
-        eigen2cv(depth_image, image_bg);
+//        eigen2cv(depth_image, image_bg);
+        eigen2cv(full_depth_image, image_bg);
 
         drake::log()->info("Sending Kinect SDF variables to MATLAB");
         using namespace drake::common;
 
-        MATLAB_ASSIGN(observation_sdf);
-        MATLAB_ASSIGN(depth_image);
-        MATLAB_ASSIGN(full_depth_image);
-        MATLAB_ASSIGN(full_cloud);
+        DRAKE_MATLAB_ASSIGN(observation_sdf);
+        DRAKE_MATLAB_ASSIGN(depth_image);
+        DRAKE_MATLAB_ASSIGN(full_depth_image);
+        DRAKE_MATLAB_ASSIGN(full_cloud);
         CallMatlab("disp", "Create SDF stuff");
 
   //      MatrixXd copy_image = depth_image;
   //      copy_image.setConstant(0.5);
   //      eigen2cv(copy_image, image_bg);
         double min, max;
-        cv::minMaxIdx(image, &min, &max);
-        if (max > 0)
-          image = image / max;
+//        cv::minMaxIdx(image, &min, &max);
+//        if (max > 0)
+//          image = image / max;
         cv::minMaxIdx(image_bg, &min, &max);
         if (max > 0)
           image_bg = image_bg / max;
-        cv::Mat image_disp;
-        cv::addWeighted(image, 0.5, image_bg, 0.5, 0.0, image_disp);
-        cv::resize(image_disp, image_disp, cv::Size(640, 480));
-        cv::imshow("KinectFrameCostDebug", image_disp);
+//        cv::Mat image_disp;
+//        cv::addWeighted(image, 0.5, image_bg, 0.5, 0.0, image_disp);
+//        cv::resize(image_disp, image_disp, cv::Size(640, 480));
+        cv::imshow("KinectFrameCostDebug", image_bg);
       }
 
       // calculate projection direction to try to resolve this.
@@ -821,6 +821,7 @@ void ToMatrixXd(const KinectFrameCost::DepthImage& image, MatrixXd* pmatrix) {
 void KinectFrameCost::readDepthImageAndPointCloud(
     const DepthImage& depth_image, const PointCloud& point_cloud) {
   ToMatrixXd(depth_image, &latest_depth_image);
+  DRAKE_MATLAB_ASSIGN(latest_depth_image);
   latest_cloud = point_cloud;
 
   // HACK: Fake out color image for now.

@@ -235,5 +235,8 @@ MatlabRemoteVariable NewRemoteVariable(T value) {
   return CallMatlabSingleOutput("deal", value);
 }
 
+#define DRAKE_MATLAB_ASSIGN(var) \
+    drake::common::CallMatlab("assignin", "base", #var, var)
+
 }  // namespace common
 }  // namespace drake

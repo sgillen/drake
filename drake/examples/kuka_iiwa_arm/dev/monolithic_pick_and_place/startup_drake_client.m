@@ -1,4 +1,13 @@
 addpath((fullfile(getenv('DRAKE'), 'drake/matlab/util')));
 assert(~isempty(which('call_matlab_client')));
 
-fprintf('Use ''call_matlab_client'' to gather data\n');
+%%
+do_reset = true;
+if do_reset
+    system(['test -f /tmp/matlab_rpc && rm /tmp/matlab_rpc ', ...
+        '&& mkfifo /tmp/matlab_rpc']);
+    fprintf('Reset FIFO buffer\n');
+end
+
+%%
+call_matlab_client;
