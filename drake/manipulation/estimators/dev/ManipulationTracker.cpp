@@ -34,7 +34,9 @@ std::string getUrdfPathFromConfig(const YAML::Node& parent, bool less_collision)
 }
 
 // Taken from: WorldSimTreeBuilder<T>::AddModelInstanceToFrame(...)
-int addModelInstanceFromFile(const string& file_path, RigidBodyTreed* robot) {
+int addModelInstanceFromFile(const string& file_path,
+                             const string& weld_frame_name,
+                             RigidBodyTreed* robot) {
   // TODO(eric.cousineau): Expose this sort of functionality in drake::parsers.
   spruce::path p(file_path);
 
@@ -45,7 +47,10 @@ int addModelInstanceFromFile(const string& file_path, RigidBodyTreed* robot) {
 
   const auto floating_base_type = drake::multibody::joints::kRollPitchYaw;
   // TODO(eric.cousineau): Register this frame??
-  shared_ptr<RigidBodyFrame<double>> frame{nullptr};
+  shared_ptr<RigidBodyFrame<double>> weld_frame{nullptr};
+  if (!weld_frame_name.empty()) {
+    weld_frame = robot->findFrame("iiwa_frame_ee");
+  }
 
   drake::log()->info("Loading model: {}", file_path);
 
@@ -53,12 +58,12 @@ int addModelInstanceFromFile(const string& file_path, RigidBodyTreed* robot) {
   if (extension == ".urdf") {
     return drake::parsers::urdf::AddModelInstanceFromUrdfFile(
         file_path, floating_base_type,
-        frame, robot).begin()->second;
+        weld_frame, robot).begin()->second;
 
   } else if (extension == ".sdf") {
     return drake::parsers::sdf::AddModelInstancesFromSdfFile(
         file_path, floating_base_type,
-        frame, robot).begin()->second;
+        weld_frame, robot).begin()->second;
   } else {
     throw std::runtime_error("Unrecognized extension: " + extension);
   }
@@ -74,26 +79,33 @@ std::shared_ptr<RigidBodyTreed> setupRobotFromConfig(
   string robots_string = "robots";
 
   auto manip = config[robots_string].begin();
-  auto file_path = base_path + getUrdfPathFromConfig(manip->second, less_collision);
+//  auto file_path = base_path + getUrdfPathFromConfig(manip->second, less_collision);
   std::shared_ptr<RigidBodyTreed> robot(new RigidBodyTreed());
-  int id = addModelInstanceFromFile(file_path, robot.get());
-  plant_id_map[id] = manip->first.as<string>();
+//  int id = addModelInstanceFromFile(file_path, robot.get());
+//  plant_id_map[id] = manip->first.as<string>();
 
-  x0_robot.resize(robot->get_num_positions());
-  if (manip->second["q0"] && manip->second["q0"].Type() == YAML::NodeType::Map){
-    for (int i=old_num_positions; i < robot->get_num_positions(); i++){
-      auto find = manip->second["q0"][robot->getPositionName(i)];
-      if (find)
-        x0_robot(i) = find.as<double>();
-      else // unnecessary in this first loop but here for clarity
-        x0_robot(i) = 0.0;
-    }
-  }
-  old_num_positions = robot->get_num_positions();
-  manip++;
+//  x0_robot.resize(robot->get_num_positions());
+//  if (manip->second["q0"] && manip->second["q0"].Type() == YAML::NodeType::Map){
+//    for (int i=old_num_positions; i < robot->get_num_positions(); i++){
+//      auto find = manip->second["q0"][robot->getPositionName(i)];
+//      if (find)
+//        x0_robot(i) = find.as<double>();
+//      else // unnecessary in this first loop but here for clarity
+//        x0_robot(i) = 0.0;
+//    }
+//  }
+//  old_num_positions = robot->get_num_positions();
+//  manip++;
   // each new robot can be added via addRobotFromURDF
   while (manip != config[robots_string].end()){
-    int id = addModelInstanceFromFile(base_path + getUrdfPathFromConfig(manip->second, less_collision), robot.get());
+    string weld_frame_name = "";
+    if (auto&& weld_config = manip->second["weld_to_frame"]) {
+      weld_frame_name = weld_config.as<string>();
+    }
+    int id = addModelInstanceFromFile(
+        base_path + getUrdfPathFromConfig(manip->second, less_collision),
+        weld_frame_name,
+        robot.get());
     plant_id_map[id] = manip->first.as<string>();
 
     x0_robot.conservativeResize(robot->get_num_positions());
@@ -158,9 +170,19 @@ std::shared_ptr<RigidBodyTreed> setupRobotFromConfigSubset(YAML::Node config, Ei
 
   // each new robot can b
   while (manip != config[robots_string].end()) {
-    addModelInstanceFromFile(base_path + getUrdfPathFromConfig(manip->second, less_collision), robot.get());
+    string weld_frame_name = "";
+    if (auto&& weld_config = manip->second["weld_to_frame"]) {
+      weld_frame_name = weld_config.as<string>();
+    }
+    addModelInstanceFromFile(
+        base_path + getUrdfPathFromConfig(manip->second, less_collision),
+        weld_frame_name,
+        robot.get());
     if (vector_contains_str(exceptions, manip->first.as<std::string>()) != exclusionary) { // check (CONTAINED) XOR (EXCLUSIONARY)
-      addModelInstanceFromFile(base_path + getUrdfPathFromConfig(manip->second, less_collision), robot_subset.get());
+      addModelInstanceFromFile(
+            base_path + getUrdfPathFromConfig(manip->second, less_collision),
+            weld_frame_name,
+            robot_subset.get());
 
       x0_robot_subset.conservativeResize(robot_subset->get_num_positions());
 

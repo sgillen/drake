@@ -20,6 +20,9 @@ robots:
       base_x: 0
       base_y: 0
       base_z: 0.7645
+  wsg:
+    urdf: "/manipulation/models/wsg_50_description/sdf/schunk_wsg_50_ball_contact.sdf"
+    weld_to_frame: iiwa_frame_ee
   # table:
   #   urdf_less_collision: "/examples/kuka_iiwa_arm/models/table/extra_heavy_duty_table_surface_only_collision.sdf"
   #   urdf: "/examples/kuka_iiwa_arm/models/table/extra_heavy_duty_table.sdf"
