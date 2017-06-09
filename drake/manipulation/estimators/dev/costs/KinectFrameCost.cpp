@@ -17,6 +17,8 @@
 #include "drake/common/scoped_timer.h"
 #include "drake/multibody/joints/revolute_joint.h"
 
+#include "drake/common/call_matlab.h"
+
 using namespace std;
 using namespace Eigen;
 using namespace cv;
@@ -547,7 +549,15 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
         cv::Mat image;
         cv::Mat image_bg;
         eigen2cv(observation_sdf, image);
+
         eigen2cv(depth_image, image_bg);
+
+        drake::log()->info("Sending Kinect SDF variables to MATLAB");
+        using namespace drake::common;
+        CallMatlab("assignin", "base", "observation_sdf", observation_sdf);
+        CallMatlab("assignin", "base", "depth_image", depth_image);
+        CallMatlab("disp", "Create SDF stuff");
+
   //      MatrixXd copy_image = depth_image;
   //      copy_image.setConstant(0.5);
   //      eigen2cv(copy_image, image_bg);
