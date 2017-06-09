@@ -389,6 +389,7 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
                 }
 
                 // TODO(eric.cousineau): Figure out logic here.
+                // Done.
                 if (too_close_to_joint == false){
                   z.block<3, 1>(0, k) = points.block<3, 1>(0, j);
                   z_prime.block<3, 1>(0, k) = x.block<3, 1>(0, j);
@@ -510,10 +511,17 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
           // fix distance
           long int thisind = c; //i*num_pixel_cols+j;
           // this could be done with trig instead by I think this is just as efficient?
+          double distance_pre = distances(thisind);
           distances(thisind) = distances(thisind)*raycast_endpoints(2, thisind)/max_scan_dist;
+          if (c % 5 == 0) {
+            cout <<
+                fmt::format("[{}, {}] d_sim_k = {} (after = {}), d_meas_k = {}\n",
+                            i, j, distance_pre, distances(thisind), depth_image(i, j));
+          }
           if (i < depth_image.rows() && j < depth_image.cols() && 
             distances(thisind) > 0. && 
             distances(thisind) < depth_image(i, j)) {
+            cout << fmt::format("found inf: [{}, {}]\n", i, j);
             observation_sdf_input(i, j) = INF;
           }
     //      int thisind = i*num_pixel_cols+j;
@@ -553,18 +561,19 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
 //        eigen2cv(depth_image, image_bg);
         eigen2cv(full_depth_image, image_bg);
 
-//        drake::log()->info("Sending Kinect SDF variables to MATLAB");
+        drake::log()->info("Sending Kinect SDF variables to MATLAB");
         using namespace drake::common;
-
-//        DRAKE_MATLAB_ASSIGN(observation_sdf);
-//        DRAKE_MATLAB_ASSIGN(depth_image);
 //        DRAKE_MATLAB_ASSIGN(full_depth_image);
 //        DRAKE_MATLAB_ASSIGN(full_cloud);
-//        CallMatlab("disp", "Create SDF stuff");
-//        CallMatlab("plot_depth", depth_image, 1);
-//        CallMatlab("plot_depth", observation_sdf, 2);
-//        CallMatlab("plot_depth", observation_sdf, 2);
-//        CallMatlab("drawnow");
+        CallMatlab("disp", "Create SDF stuff");
+        CallMatlab("plot_depth", depth_image, 1);
+        CallMatlab("plot_depth", observation_sdf, 2);
+        CallMatlab("plot_depth", observation_sdf_input, 3);
+        CallMatlab("drawnow");
+
+        DRAKE_MATLAB_ASSIGN(observation_sdf);
+        DRAKE_MATLAB_ASSIGN(depth_image);
+        DRAKE_MATLAB_ASSIGN(observation_sdf_input);
 
 //  //      MatrixXd copy_image = depth_image;
 //  //      copy_image.setConstant(0.5);

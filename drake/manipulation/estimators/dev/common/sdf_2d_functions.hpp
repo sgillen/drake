@@ -1,6 +1,8 @@
 #ifndef __sdf_2d_functions_h__
 #define __sdf_2d_functions_h__
 
+#include <Eigen/Dense>
+
 #define INF 1E16
 static inline float square(float x) { return x * x; }
 
