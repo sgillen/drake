@@ -26,6 +26,7 @@
 
 #include "drake/examples/kuka_iiwa_arm/dev/monolithic_pick_and_place/perception_hack.h"
 #include "drake/manipulation/estimators/dev/articulated_state_estimator.h"
+#include "drake/common/scoped_timer.h"
 
 DEFINE_uint64(target, 0, "ID of the target to pick.");
 DEFINE_double(orientation, 2 * M_PI, "Yaw angle of the box.");
@@ -33,6 +34,8 @@ DEFINE_uint32(start_position, 1, "Position index to start from");
 DEFINE_uint32(end_position, 2, "Position index to end at");
 DEFINE_bool(use_perception, true, "Use perception for tracking.");
 DEFINE_bool(use_slow_meshes, false, "Use slow meshes for collision");
+// Follow Andres's example
+DEFINE_bool(do_playback, true, "Play back simulation (indefinitely) after completion");
 
 using robotlocomotion::robot_plan_t;
 
@@ -255,7 +258,7 @@ int DoMain(void) {
   plant->set_name("plant");
 
   auto drake_visualizer = builder.AddSystem<systems::DrakeVisualizer>(
-      plant->get_plant().get_rigid_body_tree(), &lcm);
+      plant->get_plant().get_rigid_body_tree(), &lcm, true);
 
   builder.Connect(plant->get_output_port_plant_state(),
                   drake_visualizer->get_input_port(0));
@@ -334,54 +337,82 @@ int DoMain(void) {
   // Step the simulator in some small increment.  Between steps, check
   // to see if the state machine thinks we're done, and if so that the
   // object is near the target.
-  const double simulation_step = 1.;
-  while (state_machine->state(simulator.get_context())
-         != pick_and_place::DONE) {
+  const double simulation_step = 0.3;
+//  while (state_machine->state(simulator.get_context())
+//         != pick_and_place::DONE) {
     simulator.StepTo(simulator.get_context().get_time() + simulation_step);
+//  }
+
+  if (!FLAGS_do_playback) {
+    const pick_and_place::WorldState& world_state =
+        state_machine->world_state(simulator.get_context());
+    const Isometry3<double>& object_pose = world_state.get_object_pose();
+    const Vector6<double>& object_velocity = world_state.get_object_velocity();
+    Isometry3<double> goal = place_locations.back();
+    goal.translation()(2) += kTableTopZInWorld;
+    Eigen::Vector3d object_rpy = math::rotmat2rpy(object_pose.rotation());
+    Eigen::Vector3d goal_rpy = math::rotmat2rpy(goal.rotation());
+
+    drake::log()->info("Pose: {} {}",
+                       object_pose.translation().transpose(),
+                       object_rpy.transpose());
+    drake::log()->info("Velocity: {}", object_velocity.transpose());
+    drake::log()->info("Goal: {} {}",
+                       goal.translation().transpose(),
+                       goal_rpy.transpose());
+
+    const double position_tolerance = 0.02;
+    Eigen::Vector3d position_error =
+        object_pose.translation() - goal.translation();
+    drake::log()->info("Position error: {}", position_error.transpose());
+    DRAKE_DEMAND(std::abs(position_error(0)) < position_tolerance);
+    DRAKE_DEMAND(std::abs(position_error(1)) < position_tolerance);
+    DRAKE_DEMAND(std::abs(position_error(2)) < position_tolerance);
+
+    const double angle_tolerance = 0.0873;  // 5 degrees
+    Eigen::Vector3d rpy_error = object_rpy - goal_rpy;
+    drake::log()->info("RPY error: {}", rpy_error.transpose());
+    DRAKE_DEMAND(std::abs(rpy_error(0)) < angle_tolerance);
+    DRAKE_DEMAND(std::abs(rpy_error(1)) < angle_tolerance);
+    DRAKE_DEMAND(std::abs(rpy_error(2)) < angle_tolerance);
+
+
+    const double linear_velocity_tolerance = 0.1;
+    DRAKE_DEMAND(std::abs(object_velocity(0)) < linear_velocity_tolerance);
+    DRAKE_DEMAND(std::abs(object_velocity(1)) < linear_velocity_tolerance);
+    DRAKE_DEMAND(std::abs(object_velocity(2)) < linear_velocity_tolerance);
+
+    const double angular_velocity_tolerance = 0.1;
+    DRAKE_DEMAND(std::abs(object_velocity(3)) < angular_velocity_tolerance);
+    DRAKE_DEMAND(std::abs(object_velocity(4)) < angular_velocity_tolerance);
+    DRAKE_DEMAND(std::abs(object_velocity(5)) < angular_velocity_tolerance);
+  } else {
+    PiecewisePolynomial<double> vis = drake_visualizer->GetReplayCachedSimulation();
+    systems::DrakeVisualizer* est_visualizer = nullptr;
+    double t_end = vis.getEndTime();
+    PiecewisePolynomial<double> est_vis;
+    if (FLAGS_use_perception) {
+      est_visualizer = perception.GetEstimationVisualizer();
+      est_vis = est_visualizer->GetReplayCachedSimulation();
+      t_end = std::max(t_end, est_vis.getEndTime());
+    }
+    // Playback through each visualizer
+    timing::Timer timer;
+    timer.start();
+    double kFrameRate = 60.;
+    double kDt = 1 / kFrameRate;
+    double t = 0;
+    timing::TimePoint next_hit = timing::Clock::now() + timing::Duration(kDt);
+    while (t < t_end) {
+      drake_visualizer->PlaybackTrajectoryFrame(vis, t);
+      if (est_visualizer) {
+        est_visualizer->PlaybackTrajectoryFrame(est_vis, t);
+      }
+      std::this_thread::sleep_until(next_hit);
+      next_hit += timing::Duration(kDt);
+      t += kDt;
+    }
   }
-
-  const pick_and_place::WorldState& world_state =
-      state_machine->world_state(simulator.get_context());
-  const Isometry3<double>& object_pose = world_state.get_object_pose();
-  const Vector6<double>& object_velocity = world_state.get_object_velocity();
-  Isometry3<double> goal = place_locations.back();
-  goal.translation()(2) += kTableTopZInWorld;
-  Eigen::Vector3d object_rpy = math::rotmat2rpy(object_pose.rotation());
-  Eigen::Vector3d goal_rpy = math::rotmat2rpy(goal.rotation());
-
-  drake::log()->info("Pose: {} {}",
-                     object_pose.translation().transpose(),
-                     object_rpy.transpose());
-  drake::log()->info("Velocity: {}", object_velocity.transpose());
-  drake::log()->info("Goal: {} {}",
-                     goal.translation().transpose(),
-                     goal_rpy.transpose());
-
-  const double position_tolerance = 0.02;
-  Eigen::Vector3d position_error =
-      object_pose.translation() - goal.translation();
-  drake::log()->info("Position error: {}", position_error.transpose());
-  DRAKE_DEMAND(std::abs(position_error(0)) < position_tolerance);
-  DRAKE_DEMAND(std::abs(position_error(1)) < position_tolerance);
-  DRAKE_DEMAND(std::abs(position_error(2)) < position_tolerance);
-
-  const double angle_tolerance = 0.0873;  // 5 degrees
-  Eigen::Vector3d rpy_error = object_rpy - goal_rpy;
-  drake::log()->info("RPY error: {}", rpy_error.transpose());
-  DRAKE_DEMAND(std::abs(rpy_error(0)) < angle_tolerance);
-  DRAKE_DEMAND(std::abs(rpy_error(1)) < angle_tolerance);
-  DRAKE_DEMAND(std::abs(rpy_error(2)) < angle_tolerance);
-
-
-  const double linear_velocity_tolerance = 0.1;
-  DRAKE_DEMAND(std::abs(object_velocity(0)) < linear_velocity_tolerance);
-  DRAKE_DEMAND(std::abs(object_velocity(1)) < linear_velocity_tolerance);
-  DRAKE_DEMAND(std::abs(object_velocity(2)) < linear_velocity_tolerance);
-
-  const double angular_velocity_tolerance = 0.1;
-  DRAKE_DEMAND(std::abs(object_velocity(3)) < angular_velocity_tolerance);
-  DRAKE_DEMAND(std::abs(object_velocity(4)) < angular_velocity_tolerance);
-  DRAKE_DEMAND(std::abs(object_velocity(5)) < angular_velocity_tolerance);
 
   return 0;
 }

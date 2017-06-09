@@ -61,39 +61,66 @@ void DrakeVisualizer::DoCalcDiscreteVariableUpdates(
 
 void DrakeVisualizer::ReplayCachedSimulation() const {
   if (log_ != nullptr) {
-    // Build piecewise polynomial
-    auto times = log_->sample_times();
-    // NOTE: The SignalLog can record signal for multiple identical time stamps.
-    //  This culls the duplicates as required by the PiecewisePolynomial.
-    std::vector<int> included_times;
-    included_times.reserve(times.rows());
-    std::vector<double> breaks;
-    included_times.push_back(0);
-    breaks.push_back(times(0));
-    int last = 0;
-    for (int i = 1; i < times.rows(); ++i) {
-      double val = times(i);
-      if (val != breaks[last]) {
-        breaks.push_back(val);
-        included_times.push_back(i);
-        ++last;
-      }
-    }
-
-    auto sample_data = log_->data();
-    std::vector<MatrixX<double>> knots;
-    knots.reserve(sample_data.cols());
-    for (int c : included_times) {
-      knots.push_back(sample_data.col(c));
-    }
-    auto func = PiecewisePolynomial<double>::ZeroOrderHold(breaks, knots);
-
-    PlaybackTrajectory(func);
+    PlaybackTrajectory(GetReplayCachedSimulation());
   } else {
     drake::log()->warn(
         "DrakeVisualizer::ReplayCachedSimulation() called on instance that "
         "wasn't initialized to record. Next time, please construct "
         "DrakeVisualizer with recording enabled.");
+  }
+}
+
+PiecewisePolynomial<double> DrakeVisualizer::GetReplayCachedSimulation() const
+{
+  DRAKE_ASSERT(log_ != nullptr);
+  // Build piecewise polynomial
+  auto times = log_->sample_times();
+  // NOTE: The SignalLog can record signal for multiple identical time stamps.
+  //  This culls the duplicates as required by the PiecewisePolynomial.
+  std::vector<int> included_times;
+  included_times.reserve(times.rows());
+  std::vector<double> breaks;
+  included_times.push_back(0);
+  breaks.push_back(times(0));
+  int last = 0;
+  for (int i = 1; i < times.rows(); ++i) {
+    double val = times(i);
+    if (val != breaks[last]) {
+      breaks.push_back(val);
+      included_times.push_back(i);
+      ++last;
+    }
+  }
+
+  auto sample_data = log_->data();
+  std::vector<MatrixX<double>> knots;
+  knots.reserve(sample_data.cols());
+  for (int c : included_times) {
+    knots.push_back(sample_data.col(c));
+  }
+  return PiecewisePolynomial<double>::ZeroOrderHold(breaks, knots);
+}
+
+void DrakeVisualizer::PlaybackTrajectoryFrame(
+    const PiecewisePolynomial<double>& input_trajectory,
+    double sim_time) const {
+  // TODO(eric.cousineau): Consider caching this elsewhere?
+  DRAKE_ASSERT(sim_time >= 0);
+  if (sim_time > input_trajectory.getEndTime()) {
+    drake::log()->warn("Skipping out-of-bounds frame: {}", sim_time);
+  } else {
+    BasicVector<double> data(log_->get_input_size());
+    data.set_value(input_trajectory.value(sim_time));
+
+    // Translates the input vector into an array of bytes representing an LCM
+    // message.
+    std::vector<uint8_t> message_bytes;
+    draw_message_translator_.Serialize(sim_time, data,
+                                       &message_bytes);
+
+    // Publishes onto the specified LCM channel.
+    lcm_->Publish(prefix_ + "DRAKE_VIEWER_DRAW", message_bytes.data(),
+                  message_bytes.size());
   }
 }
 
@@ -107,20 +134,9 @@ void DrakeVisualizer::PlaybackTrajectory(
   const double kFrameLength = 1 / 60.0;
   double sim_time = input_trajectory.getStartTime();
   TimePoint prev_time = Clock::now();
-  BasicVector<double> data(log_->get_input_size());
+
   while (sim_time < input_trajectory.getEndTime()) {
-    data.set_value(input_trajectory.value(sim_time));
-
-    // Translates the input vector into an array of bytes representing an LCM
-    // message.
-    std::vector<uint8_t> message_bytes;
-    draw_message_translator_.Serialize(sim_time, data,
-                                       &message_bytes);
-
-    // Publishes onto the specified LCM channel.
-    lcm_->Publish(prefix_ + "DRAKE_VIEWER_DRAW", message_bytes.data(),
-                  message_bytes.size());
-
+    PlaybackTrajectoryFrame(input_trajectory, sim_time);
     const TimePoint earliest_next_frame = prev_time + Duration(kFrameLength);
     std::this_thread::sleep_until(earliest_next_frame);
     TimePoint curr_time = Clock::now();
@@ -130,12 +146,7 @@ void DrakeVisualizer::PlaybackTrajectory(
 
   // Final evaluation is at the final time stamp, guaranteeing the final state
   // is visualized.
-  data.set_value(input_trajectory.value(input_trajectory.getEndTime()));
-  std::vector<uint8_t> message_bytes;
-  draw_message_translator_.Serialize(sim_time, data,
-                                     &message_bytes);
-  lcm_->Publish(prefix_ + "DRAKE_VIEWER_DRAW", message_bytes.data(),
-                message_bytes.size());
+  PlaybackTrajectoryFrame(input_trajectory, input_trajectory.getEndTime());
 }
 
 void DrakeVisualizer::DoPublish(const Context<double>& context) const {

@@ -277,6 +277,7 @@ struct PerceptionHack::Impl {
 
   DepthSensor* depth_sensor_{};
   LcmPublisherSystem* depth_sensor_pose_lcm_pub_{};
+  DrakeVisualizer* estimator_vis_{};
 
   void CreateAndConnectCamera(
       DiagramBuilder* pbuilder,
@@ -430,16 +431,16 @@ struct PerceptionHack::Impl {
                           estimator->inport_tree_q_measurement());
 
         // Create visualizer with prefix
-        auto estimator_vis =
+        estimator_vis_ =
             pbuilder->template AddSystem<DrakeVisualizer>(
                 estimator->get_tree(),
                 plcm,
-                false,
+                true,
                 "ESTIMATOR_");
-        estimator_vis->set_name("estimator_visualizer");
+        estimator_vis_->set_name("estimator_visualizer");
 
         pbuilder->Connect(estimator->outport_tree_state_estimate(),
-                          estimator_vis->get_input_port(0));
+                          estimator_vis_->get_input_port(0));
 
 //        // Make sure it works with duplicating the original plant.
 //        auto estimator_vis =
@@ -518,6 +519,11 @@ void PerceptionHack::Inject(DiagramBuilder* pbuilder, DrakeLcm* plcm,
                             TreePlant* pplant, const ReverseIdMap& plant_id_map) {
   impl_.reset(new Impl());
   impl_->CreateAndConnectCamera(pbuilder, plcm, pplant, plant_id_map);
+}
+
+systems::DrakeVisualizer*PerceptionHack::GetEstimationVisualizer()
+{
+  return impl_->estimator_vis_;
 }
 
 PerceptionHack::~PerceptionHack() {}

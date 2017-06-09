@@ -104,6 +104,12 @@ class DrakeVisualizer : public LeafSystem<double> {
    */
   void ReplayCachedSimulation() const;
 
+  PiecewisePolynomial<double> GetReplayCachedSimulation() const;
+
+  void PlaybackTrajectoryFrame(
+      const PiecewisePolynomial<double>& input_trajectory,
+      double sim_time) const;
+
   /**
    * Plays back (at real time) a trajectory representing the input signal.
    */

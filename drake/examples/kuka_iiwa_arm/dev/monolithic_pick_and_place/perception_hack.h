@@ -4,6 +4,7 @@
 
 #include "drake/lcm/drake_lcm.h"
 #include "drake/systems/framework/diagram.h"
+#include "drake/multibody/rigid_body_plant/drake_visualizer.h"
 #include "drake/examples/kuka_iiwa_arm/iiwa_world/iiwa_wsg_diagram_factory.h"
 #include "drake/manipulation/estimators/dev/articulated_state_estimator.h"
 
@@ -22,6 +23,7 @@ class PerceptionHack {
   PerceptionHack() {}
   void Inject(DiagramBuilder* pbuilder, DrakeLcm* plcm, TreePlant* pplant,
               const ReverseIdMap& plant_id_map);
+  systems::DrakeVisualizer* GetEstimationVisualizer();
   ~PerceptionHack();
  private:
   class Impl;
