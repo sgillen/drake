@@ -40,6 +40,7 @@
 #include "drake/common/drake_optional.h"
 
 #include "drake/common/call_matlab.h"
+#include "drake/systems/primitives/constant_vector_source.h"
 
 namespace drake {
 
@@ -124,34 +125,32 @@ const int kImageHeight = 480;  // In pixels
 //}
 
 /**
- * Transform / compose a pose from frame `B` to `W`, with common frame `A`,
- * using post-multiplication.
+ * Transform two poses in the order they are supplied.
  *
  * Conceptually:
- *   input: X_AB
- *   param: X_WA
- *   output: X_WB = X_WA * X_AB
+ *   inputs: X_AB, X_BC
+ *   output: X_AC
  */
 class PoseTransformer : public LeafSystemMixin<double> {
  public:
-  PoseTransformer(const Eigen::Isometry3d& X_AB)
-      : X_AB_(X_AB) {
+  PoseTransformer() {
+    DeclareVectorInputPort(PoseVector<double>());
     DeclareVectorInputPort(PoseVector<double>());
     DeclareVectorOutputPort(PoseVector<double>());
   }
-  const Eigen::Isometry3d& get_isometry() const { return X_AB_; }
  protected:
   void DoCalcOutput(const Context& context, SystemOutput* output) const override {
-    auto&& pose_in =
+    auto&& pose_a =
         EvalVectorInput<PoseVector>(context, 0);
+    auto&& pose_b =
+        EvalVectorInput<PoseVector>(context, 1);
     auto&& pose_out =
         *dynamic_cast<PoseVector<double>*>(output->GetMutableVectorData(0));
-    Eigen::Isometry3d X_out = X_AB_ * pose_in->get_isometry();
+    Eigen::Isometry3d X_out =
+        pose_a->get_isometry() * pose_b->get_isometry();
     pose_out.set_translation(Eigen::Translation3d(X_out.translation()));
     pose_out.set_rotation(Eigen::Quaterniond(X_out.rotation()));
   }
- private:
-  Eigen::Isometry3d X_AB_;
 };
 
 // HACK: Actually outputs DepthSensorOutput, with very non-descriptive sensor
@@ -328,7 +327,7 @@ struct PerceptionHack::Impl {
 
     const double camera_dt = 0.033; // ~30 Hz
     if (use_rgbd_camera) {
-      bool use_estimator = true;
+      bool use_estimator = false;
 
       // Adapted from: .../image_to_lcm_message_demo.cc
 
@@ -349,6 +348,7 @@ struct PerceptionHack::Impl {
       auto&& camera_base_pose_output_port = rgbd_camera_->camera_base_pose_output_port();
 
       // Project from `D` (depth frame) to `B` (camera frame)
+      // The camera presently outputs X_WB, but we want X_WD.
       // TODO(eric.cousineau): Change system to use Depth sensor pose output
       // port, once the PR lands for this, to get the proper frame externally.
       Eigen::Matrix3d R_BD;
@@ -357,11 +357,22 @@ struct PerceptionHack::Impl {
           -1, 0, 0,
           0, -1, 0;
       Eigen::Isometry3d X_BD(R_BD);
+      // TODO(eric.cousineau): This was very inconvenient. Is there a simpler
+      // way to do this, possibly just in service of double templates?
+      PoseVector<double> pose_BD; // sigh...
+      pose_BD.set_rotation(Eigen::Quaterniond(X_BD.rotation()));
+      pose_BD.set_translation(Eigen::Translation3d(X_BD.translation()));
+      using systems::ConstantVectorSource;
+      auto* depth_to_camera_pose =
+          pbuilder->template AddSystem<ConstantVectorSource<double>>(
+              pose_BD);
       auto camera_pose_transformer =
-          pbuilder->template AddSystem<PoseTransformer>(X_BD);
+          pbuilder->template AddSystem<PoseTransformer>();
 
       pbuilder->Connect(camera_base_pose_output_port,
                         camera_pose_transformer->get_input_port(0));
+      pbuilder->Connect(depth_to_camera_pose->get_output_port(),
+                        camera_pose_transformer->get_input_port(1));
       auto&& depth_camera_pose_output_port =
           camera_pose_transformer->get_output_port(0);
 
