@@ -559,8 +559,12 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
 //      double before_raycast = getUnixTime();
       // VALGRIND: Reports error. Conditional jump on uninitialized value.
 
-//      // TODO(eric.cousineau): Consider replacing this with Kuni's camera renderer.
-//      // This will be MUCH faster.
+      // TODO(eric.cousineau): HACK: Consider replacing this with Kuni's camera renderer.
+      // Since bullet's racyasting is not parallelizable, this will be MUCH faster.
+      // We still have to use bullet to get correspondences, though... Is there a way to fix that?
+      // TODO(eric.cousineau): See if there is a way that we can associate raycast
+      // pixels with objects (effectively doing the labeling step).
+
 //      robot->collisionRaycast(robot_kinematics_cache,origins,raycast_endpoints_world,distances,normals,body_idx);
 //      if (verbose)
 //        printf("Raycast took %f\n", getUnixTime() - before_raycast);
