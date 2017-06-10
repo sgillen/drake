@@ -252,7 +252,8 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
     // all that. Otherwise, some points are invalid.
 
     // do randomized downsampling, populating data stores to be used by the ICP
-    Matrix3Xd points(3, full_cloud_world.cols()); int num_points_in_range=0;
+    Matrix3Xd points(3, full_cloud_world.cols());
+    int num_points_in_range=0;
     struct Coord {
       int v{-1};
       int u{-1};
@@ -322,18 +323,21 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
 
 
             // populate raycast endpoints using our random sample
+            // TODO(eric.cousineau): Figure out whether we need the out-of-range
+            // points at all.
+
             // TODO(eric.cousineau): Figure out why just 1m.
             // FOLLOWUP: Yup, see the max_scan_dist.
 //            const double z_sim = 1.0; // simulate the depth sensor;
             const double z_sim = 5.0; // NOTE(eric.cousineau): Push this out further.
-            raycast_endpoints.col(num_points_in_range) = Vector3d(
+            raycast_endpoints.col(num_points_valid) = Vector3d(
               (((double) full_u)- camera_info_->center_x())*z_sim*constant,
               (((double) full_v)- camera_info_->center_y())*z_sim*constant,
               z_sim);
-            DRAKE_ASSERT(!isnan(raycast_endpoints(0, num_points_in_range)) && "First");
+            DRAKE_ASSERT(!isnan(raycast_endpoints(0, num_points_valid)) && "First");
             // Stretch the point out to max_scan_dist.
-            raycast_endpoints.col(num_points_in_range) *= max_scan_dist/(raycast_endpoints.col(num_points_in_range).norm());
-            DRAKE_ASSERT(!isnan(raycast_endpoints(0, num_points_in_range)) && "Second");
+            raycast_endpoints.col(num_points_valid) *= max_scan_dist/(raycast_endpoints.col(num_points_valid).norm());
+            DRAKE_ASSERT(!isnan(raycast_endpoints(0, num_points_valid)) && "Second");
 
             raycast_coords.push_back({v, u});
 
@@ -352,7 +356,9 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
     // (regular resize would clear them)
     points.conservativeResize(3, num_points_in_range);
 
+    // These measured raycasts will be used in the free space cost.
     raycast_endpoints.conservativeResize(Eigen::NoChange, num_points_valid);
+
 
     drake::log()->info("Kinect: Got {} raycast, {} in-range points",
                        num_points_valid, num_points_in_range);
@@ -565,6 +571,9 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
       // image.
       Matrix3Xd points_sim(3, num_points_valid);
       points_sim.setConstant(nan);
+      VectorXd distances_sim(num_points_valid);
+      distances_sim.setConstant(NAN);
+
 
       // fix the raycast distances to behave like the kinect distances:
       // i.e. the distance is the z-distance of the intersection point in the camera origin frame
@@ -572,7 +581,7 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
       // and 0 otherwise
       int num_raycast_hit = 0;
       Eigen::MatrixXd observation_sdf_input = MatrixXd::Constant(num_pixel_rows, num_pixel_cols, 0.0);
-      for (int c = 0; c < (int)raycast_coords.size(); ++c) {
+      for (int c = 0; c < (int)num_points_in_range; ++c) {
         const auto& coord = raycast_coords[c];
         const int i = coord.v;
         const int j = coord.u;
@@ -598,6 +607,11 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
 //          double distance_pre = distances(thisind);
           double distance_meas = depth_image(i, j);
           double distance_sim = full_depth_image_sim(full_i, full_j);
+          distances_sim(c) = distance_sim;
+
+          // TODO(eric.cousineau): I still don't get this math down below, what
+          // it physically relates to.
+
 //          distances(thisind) = distances(thisind)*raycast_endpoints(2, thisind)/max_scan_dist;
 //          int body_idx_c = body_idx[thisind];
 
@@ -650,13 +664,13 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
       // closest to).
       VectorXd phi_sim(points_sim.cols());
       Matrix3Xd normal_sim(3, points_sim.cols());
-      vector<int> body_idx(points_sim.cols());
+      vector<int> body_idx_sim(points_sim.cols());
       Matrix3Xd x_sim(3, points_sim.cols()), body_x_sim(3, points_sim.cols());
       {
         SCOPE_TIME(cloud, "Free Space Raycast SDF for correspondences");
         robot->collisionDetectFromPoints(
               robot_kinematics_cache, points_sim,
-              phi_sim, normal_sim, x_sim, body_x_sim, false);
+              phi_sim, normal_sim, x_sim, body_x_sim, body_idx_sim, false);
       }
 
       bot_lcmgl_switch_buffer(lcmgl_raycast_);
@@ -725,8 +739,8 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
       std::vector<int> num_points_on_body(robot->bodies.size(), 0);
       // Store all correspondences per body, such that we can refer back to them.
       vector<vector<int>> point_indices_on_body(robot->bodies.size());
-      for (int c=0; c < (int)body_idx.size(); c++){
-        int body_idx_i = body_idx[c];
+      for (int c=0; c < (int)body_idx_sim.size(); c++){
+        int body_idx_i = body_idx_sim[c];
         if (body_idx_i >= 0) {
           num_points_on_body[body_idx_i] += 1;
           point_indices_on_body[body_idx_i].push_back(c);
@@ -757,14 +771,20 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
             const int i = coord.v;
             const int j = coord.u;
             ASSERT_THROW_FMT(
-                  body_idx[c] == bdy_i, "Mismatch on c = {}, body_idx[c] = {}, bdy_i = {}",
-                  c, body_idx[c], bdy_i);
+                  body_idx_sim[c] == bdy_i, "Mismatch on c = {}, body_idx_sim[c] = {}, bdy_i = {}",
+                  c, body_idx_sim[c], bdy_i);
+
+            long int thisind = c;
+            Coord full_coord = raycast_full_coords(c);
+            const int full_i = full_coord.v;
+            const int full_j = full_coord.u;
+            const int full_index = get_full_index(full_i, full_j);
 
             {
-              long int thisind = c;
-              if (body_idx[thisind] == bdy_i){
+//              if (body_idx_sim[thisind] == bdy_i){
                 // project depth into world:
-                Vector3d endpt = origin + distances(thisind) * ((raycast_endpoints_world.block<3, 1>(0, thisind) - origin)/raycast_endpoints(2, thisind));
+//                Vector3d endpt = origin + distances(thisind) * ((raycast_endpoints_world.block<3, 1>(0, thisind) - origin)/raycast_endpoints(2, thisind));
+              Vector3d endpt = full_point_cloud_world_sim.col(full_index);
 
                 // Lateral correction
                 if (observation_sdf(thisind) > 0.0 && observation_sdf(thisind) < INF){
@@ -810,7 +830,7 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
                     bot_lcmgl_end(lcmgl_measurement_model_);
                   }
                 }
-              }
+//              }
             }
           }
 
