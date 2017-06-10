@@ -24,11 +24,10 @@
 #include <lcmtypes/bot_core/image_t.hpp>
 
 #include "drake/systems/sensors/camera_info.h"
-#include "drake/systems/sensors/rgbd_camera.h"
+
 #include "drake/systems/sensors/image.h"
 
 using drake::systems::sensors::CameraInfo;
-using drake::systems::sensors::RgbdCameraDirect;
 
 /**
  * Handling Kinect cost (point cloud and depth image)
@@ -42,13 +41,9 @@ public:
   KinectFrameCost(std::shared_ptr<RigidBodyTreed> robot_,
                   std::shared_ptr<lcm::LCM> lcm_,
                   YAML::Node config,
-                  const CameraInfo* camera_info,
-                  const Eigen::Vector3d& position,
-                  const Eigen::Vector3d& orientation,
-                  double fov_y);
+                  const CameraInfo* camera_info);
   ~KinectFrameCost() {};
-  bool constructCost(ManipulationTracker * tracker, const Eigen::VectorXd x_old,
-                     Eigen::MatrixXd& Q, Eigen::VectorXd& f, double& K);
+  bool constructCost(ManipulationTracker * tracker, const Eigen::VectorXd x_old, Eigen::MatrixXd& Q, Eigen::VectorXd& f, double& K);
 
   void initBotConfig(const char* filename);
   int get_trans_with_utime(std::string from_frame, std::string to_frame,
@@ -126,7 +121,6 @@ private:
   Eigen::Matrix3Xd latest_color_image;
   Eigen::Matrix3Xd raycast_endpoints;
   const CameraInfo* camera_info_;
-  std::unique_ptr<RgbdCameraDirect> rgbd_camera_;
 
   double lastReceivedTime;
   double last_got_kinect_frame;
