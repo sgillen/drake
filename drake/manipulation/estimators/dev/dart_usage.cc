@@ -1,14 +1,23 @@
 #include "dart.h"
 
 int main() {
-  DartScene scene();
+  // Keep name mangling outside of Dart estimation???
+  DartScene scene(tree, instance_ids);
 
-  DartJointTracking joint_tracking(names, variance);
+  DartEstimator estimator(scene, estimated_joints);
+  auto* joint =
+    estimator.AddObjective<DartJointObjective>(names, ic, weights);
+  auto* depth =
+    estimator.AddObjective<DartDepthImageIcpObjective>(...);
+  auto* nonpen =
+    estimator.AddObjective<DartNonpenetrationObjective>(...);
 
-  // For joint
-  DartJointObjective joint_objective(names, weights);
-  DartDepthImageObjective depth_image_objective;
-  DartNonpenetrationObjective nonpenetration_objective;
+  // Updates...
+  estimator.NewObservationFrame(t);
+  joint->ObserveKinematicState(t, q, v);
+  depth->ObserveImage(t, depth_image, frame);
+  nonpen->Observe(t);
 
-  DartEstimator estimator();
+  // Update estimator
+  tie(q, v) = estimator.Update();
 }

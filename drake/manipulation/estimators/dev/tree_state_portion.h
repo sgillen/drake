@@ -44,7 +44,6 @@ VectorX<Integral> CardinalIndices(Integral size) {
 
 class VectorSlice {
  public:
-  typedef VectorX<T> Vector;
   typedef std::vector<int> Indices;
 
   DRAKE_DEFAULT_COPY_AND_MOVE_AND_ASSIGN(VectorSlice);
@@ -76,7 +75,8 @@ class VectorSlice {
     return super_size() == other.size();
   }
 
-  void ReadFromSuperset(const Vector& super, Eigen::Ref<Vector> values) const {
+  template <typename VectorIn, typename VectorOut>
+  void ReadFromSuperset(const VectorIn& super, VectorOut&& values) const {
     DRAKE_ASSERT(is_valid_subset_of(super));
     for (int i = 0; i < this->size(); ++i) {
       int index = this->indices_[i];
@@ -84,7 +84,8 @@ class VectorSlice {
     }
   }
 
-  void WriteToSuperset(const Vector& values, Eigen::Ref<Vector> super) const {
+  template <typename VectorIn, typename VectorOut>
+  void WriteToSuperset(const VectorIn& values, VectorOut&& super) const {
     DRAKE_ASSERT(is_valid_subset_of(super));
     for (int i = 0; i < this->size(); ++i) {
       int index = this->indices_[i];
@@ -118,11 +119,11 @@ class VectorSlice {
 // TODO(eric.cousineau): Consider storing the size of the superset? This would
 // prevent some minor misidentifications.
 template <typename T>
-class VectorPortion : public VectorSlice<T> {
+class VectorPortion : public VectorSlice {
  public:
   // Helpers
   typedef VectorX<T> Vector;
-  typedef VectorSlice<T> Base;
+  typedef VectorSlice Base;
   typedef typename Base::Indices Indices;
 
 //  DRAKE_MOVE_ONLY_NO_COPY_NO_ASSIGN(VectorPortion);

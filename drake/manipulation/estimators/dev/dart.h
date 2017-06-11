@@ -15,6 +15,11 @@ struct KinematicsState {
   VectorXd v;
 };
 
+struct KinematicsSlice {
+  VectorSlice q;
+  VectorSlice v;
+};
+
 struct KinematicsVars {
   OptVars q;
   OptVars v;
@@ -39,8 +44,7 @@ void DemandAllVariablesHaveUniqueNames(const OptVars& vars) {
 class DartScene {
  public:
   DartScene(TreePtr tree,
-            const InstanceIdMap& instance_id_map,
-            const )
+            const InstanceIdMap& instance_id_map)
       : tree_(tree),
         instance_id_map_(instance_id_map) {}
   int GetInstanceId(const string& name) const {
@@ -76,13 +80,6 @@ class DartFormulation {
   virtual void SetupWithObjectives() = 0;
 
   /// @sec Access from DartObjective
-
-
-  const Indices& get_decision_q_indices() const {
-  }
-
-  const Indices& get_decision_v_indices() const {
-  }
 
   /**
    * This is a VERY relaxed interface for objectives to access.
