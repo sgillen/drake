@@ -12,6 +12,14 @@ typedef map<string, double> JointWeights;
 typedef VectorXDecisionVariable OptVars;
 
 /**
+ * Convenience to infer type.
+ */
+template <typename T>
+std::unique_ptr<T> CreateUnique(T* obj) {
+  return std::unique_ptr<T>(obj);
+}
+
+/**
  * Compute Cartesian jacobian of a point in the world, but attached to a body.
  * This will transform the point to the body frame of interest, and then compute
  * the relevant Jacobian.

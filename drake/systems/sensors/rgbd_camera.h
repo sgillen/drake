@@ -232,8 +232,7 @@ class RgbdCameraDirect {
  public:
   // TODO(eric.cousineau): Add robot frame in.
   RgbdCameraDirect(const RigidBodyTree<double>& tree,
-             const Eigen::Vector3d& position,
-             const Eigen::Vector3d& orientation,
+             const RigidBodyFrame<double>& frame,             
              double fov_y,
              bool show_window);
 

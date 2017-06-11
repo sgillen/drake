@@ -24,3 +24,7 @@ target_link_libraries(pub_test
   drakeSystemFramework
   drakeSystemAnalysis
   drakeSystemPrimitives)
+
+drake_add_cc_test(dart_test)
+target_link_libraries(dart_test
+  drakeManipulationTracker)

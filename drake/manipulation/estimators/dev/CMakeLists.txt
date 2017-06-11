@@ -25,6 +25,8 @@ if (OPENMP_FOUND)
 endif()
 
 set(drakeManipulationTracker_SRC_FILES
+    dart.cc
+    dart_util.cc
     articulated_state_estimator.cc
     ManipulationTracker.cpp
     ManipulationTrackerLoader.cpp
@@ -39,6 +41,8 @@ set(drakeManipulationTracker_SRC_FILES
     )
 
 set(drakeManipulationTracker_HEADERS
+    dart.h
+    dart_util.h
     articulated_state_estimator.h
     abstract_zoh.h
     tree_state_portion.h
