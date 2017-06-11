@@ -19,29 +19,10 @@
 #include "drake/lcm/drake_lcm.h"
 
 #include "fmt/format.h"
+#include "drake/manipulation/estimators/dev/dart_util.h"
 
 namespace drake {
 namespace manipulation {
-
-// TODO(eric.cousineau): Merge functionality into WorldSimTreeBuilder.
-// TODO(eric.cousineau): Find better location for this.
-typedef std::map<int, std::string> ReverseIdMap;
-
-void PrintJointNameHierarchy(const RigidBodyTreed* tree);
-
-std::vector<std::string> GetHierarchicalPositionNameList(const RigidBodyTreed& tree,
-    const ReverseIdMap& instance_name_map, bool add_velocity = false);
-
-inline void PrintValidPoints(const Eigen::Matrix3Xd& points,
-                             const std::string& note) {
-  int num_non_nan = 0;
-  for (int i = 0; i < points.cols(); ++i) {
-    if (!std::isnan(points(0, i))) {
-      num_non_nan += 1;
-    }
-  }
-  std::cout << fmt::format("Valid points: {} - {}\n", num_non_nan, note);
-}
 
 /**
  * Simple mixin to get simplified aliases.

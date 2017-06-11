@@ -164,6 +164,7 @@ void AddQuasiStaticConstraint(
 
 namespace {
 
+// TODO(eric.cousineau): Make this produce a quadratic cost...
 class InverseKinObjective : public solvers::Cost {
  public:
   // All references are aliased for the life of the objective.

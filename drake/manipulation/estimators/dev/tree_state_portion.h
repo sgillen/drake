@@ -42,8 +42,6 @@ VectorX<Integral> CardinalIndices(Integral size) {
   Classname(Classname&&) = default;             \
   void operator=(Classname&&) = delete;
 
-// TODO: Remove T, as this is useless in this case.
-template <typename T>
 class VectorSlice {
  public:
   typedef VectorX<T> Vector;
