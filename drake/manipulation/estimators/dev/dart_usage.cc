@@ -35,18 +35,18 @@ int main() {
     estimator.AddObjective(
         new DartDepthImageIcpObjective(formulation, depth_param));
 
-  DartNonpenetrationObjective::Param nonpen_param {
-    .variance = 0.001,  // m
-    .cliques {
-      {table_id, target_id},
-    },
-    .debug {
-      .use_lcmgl = true,
-    },
-  };
-  auto* nonpen =
-    estimator.AddObjective(
-        new DartNonpenetrationObjective(formulation, nonpen_param));
+  // DartNonpenetrationObjective::Param nonpen_param {
+  //   .variance = 0.001,  // m
+  //   .cliques {
+  //     {table_id, target_id},
+  //   },
+  //   .debug {
+  //     .use_lcmgl = true,
+  //   },
+  // };
+  // auto* nonpen =
+  //   estimator.AddObjective(
+  //       new DartNonpenetrationObjective(formulation, nonpen_param));
 
   // Observations
   estimator.ObserveTime(t);
@@ -75,10 +75,11 @@ int main() {
     }
     Update() {
       for (error : errors) {
-        Je_qopt = scene->SelectJacobianCols(Je_q);
         icp_error_accumulator_.AddL2ErrorCost(e, Je_qopt);
-        icp_error_norm_->UpdateCoefficients(Je_qopt, e);
       }
+      icp_error_accumulator_.RenderCost(
+          icp_error_sum_,
+          formulation_->kinematics_slice.q.indices());
     }
     formulation_;
     // Accumulate L2 norms in full joint space

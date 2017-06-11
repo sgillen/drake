@@ -42,6 +42,7 @@ VectorX<Integral> CardinalIndices(Integral size) {
   Classname(Classname&&) = default;             \
   void operator=(Classname&&) = delete;
 
+// This permits repeated indices.
 class VectorSlice {
  public:
   typedef std::vector<int> Indices;
@@ -78,6 +79,7 @@ class VectorSlice {
   template <typename VectorIn, typename VectorOut>
   void ReadFromSuperset(const VectorIn& super, VectorOut&& values) const {
     DRAKE_ASSERT(is_valid_subset_of(super));
+    values.resize(this->size());
     for (int i = 0; i < this->size(); ++i) {
       int index = this->indices_[i];
       values[i] = super[index];
@@ -97,8 +99,122 @@ class VectorSlice {
   int super_size_{};
   int max_index_{};
   int min_index_{};
-  const Indices indices_;
+  Indices indices_;  // const discards default assignment (as expected).
 };
+
+
+// NOTE: XprType should be `const T&` or `T&` if not using a view.
+// Use perfect forwarding when able.
+// This will ONLY work if .row(int) returns a reference object that does
+// not need to be forwarded.
+// Be wary of scoping.
+template <typename XprType>
+class RowView {
+ public:
+  RowView(XprType xpr)
+      : xpr_(xpr) {}
+
+  int size() const {
+    return xpr_.rows();
+  }
+
+  void resize(int row_count) {
+    xpr_.resize(row_count, xpr_.cols());
+  }
+
+  template <typename Other>
+  void resizeLike(const RowView<Other>& other, int row_count = -1) const {
+    int cols = other.xpr().cols();
+    int rows = row_count == -1 ? other.xpr().rows() : row_count;
+    xpr_.resize(rows, cols);
+  }
+
+  auto xpr() { return xpr_; }
+  auto xpr() const { return xpr_; }
+
+  auto segment(int index, int row_count) {
+    return xpr_.middleRows(index, row_count);
+  }
+
+  // Note: Attempting perfect forwarding does not play well with temporary
+  // row view objects.
+  auto operator[](int index) {
+    return xpr_.row(index);
+  }
+  auto operator()(int index) {
+    return operator[](index);
+  }
+
+  auto operator[](int index) const {
+    return xpr_.row(index);
+  }
+  auto operator()(int index) const {
+    return operator[](index);
+  }
+
+ private:
+  // TODO(eric.cousineau): Add static_assertion.
+  XprType xpr_;
+};
+
+template<typename XprType>
+auto MakeRowView(XprType&& xpr) {
+  return RowView<XprType>(std::forward<XprType>(xpr));
+}
+
+
+template <typename XprType>
+class ColView {
+ public:
+  ColView(XprType xpr)
+      : xpr_(xpr) {}
+
+  int size() const {
+    return xpr_.cols();
+  }
+
+  void resize(int col_count) {
+    xpr_.resize(col_count, xpr_.cols());
+  }
+
+  template <typename Other>
+  void resizeLike(const ColView<Other>& other, int col_count = -1) const {
+    int cols = col_count == -1 ? other.xpr().cols() : col_count;
+    int rows = other.xpr().rows();
+    xpr_.resize(rows, cols);
+  }
+
+  auto xpr() { return xpr_; }
+  auto xpr() const { return xpr_; }
+
+  auto segment(int index, int col_count) {
+    return xpr_.middleCols(index, col_count);
+  }
+
+  auto operator[](int index) {
+    return xpr_.col(index);
+  }
+  auto operator()(int index) {
+    return operator[](index);
+  }
+
+  auto operator[](int index) const {
+    return xpr_.col(index);
+  }
+  auto operator()(int index) const {
+    return operator[](index);
+  }
+
+ private:
+  // TODO(eric.cousineau): Add static_assertion.
+  XprType xpr_;
+};
+
+template<typename XprType>
+auto MakeColView(XprType&& xpr) {
+  return ColView<XprType>(std::forward<XprType>(xpr));
+}
+
 
 /**
  * Simple mechanism to handle (ragged) slices of a vector.
@@ -118,82 +234,82 @@ class VectorSlice {
 // And follow suite with StampedValue<> stuff.
 // TODO(eric.cousineau): Consider storing the size of the superset? This would
 // prevent some minor misidentifications.
-template <typename T>
-class VectorPortion : public VectorSlice {
- public:
-  // Helpers
-  typedef VectorX<T> Vector;
-  typedef VectorSlice Base;
-  typedef typename Base::Indices Indices;
+// template <typename T>
+// class VectorPortion : public VectorSlice {
+//  public:
+//   // Helpers
+//   typedef VectorX<T> Vector;
+//   typedef VectorSlice Base;
+//   typedef typename Base::Indices Indices;
 
-//  DRAKE_MOVE_ONLY_NO_COPY_NO_ASSIGN(VectorPortion);
-  DRAKE_DEFAULT_COPY_AND_MOVE_AND_ASSIGN(VectorPortion);  // Permit use as abstract value
+// //  DRAKE_MOVE_ONLY_NO_COPY_NO_ASSIGN(VectorPortion);
+//   DRAKE_DEFAULT_COPY_AND_MOVE_AND_ASSIGN(VectorPortion);  // Permit use as abstract value
 
-  VectorPortion(const Indices& sub_indices, int super_size = -1)
-      : Base(sub_indices, super_size), values_(this->size()) {}
+//   VectorPortion(const Indices& sub_indices, int super_size = -1)
+//       : Base(sub_indices, super_size), values_(this->size()) {}
 
-  static VectorPortion Make(int size) {
-    return std::move(VectorPortion(CardinalIndices(size)));
-  }
-  template <typename Derived>
-  static VectorPortion Make(const Eigen::MatrixBase<Derived>& values) {
-    DRAKE_ASSERT(values.cols() == 1);
-    auto out{Make(values.size())};
-    out.values() = values;
-    return std::move(out);
-  }
+//   static VectorPortion Make(int size) {
+//     return std::move(VectorPortion(CardinalIndices(size)));
+//   }
+//   template <typename Derived>
+//   static VectorPortion Make(const Eigen::MatrixBase<Derived>& values) {
+//     DRAKE_ASSERT(values.cols() == 1);
+//     auto out{Make(values.size())};
+//     out.values() = values;
+//     return std::move(out);
+//   }
 
-  /**
-   * Aggregate unique vector portions into one. They should all have the same
-   * frame of reference, and they should all be disjoint.
-   */
-  // TODO(eric.cousineau): As mentioned above, construction should check for
-  // uniqueness of indices.
-  static VectorPortion Aggregate(
-      const std::vector<const VectorPortion*>& portions) {
-    // Use const pointers so an initializer list can be used.
-    DRAKE_ASSERT(portions.size() > 0);
-    int size = 0;
-    for (auto portion : portions) {
-      size += portion->size();
-    }
-    Indices indices(size);
-    Vector values(values);
-    // Use Eigen's CommanInitializer.
-    auto indices_init = (indices << portions[0]->indices());
-    auto values_init = (values << portions[0]->values());
-    for (int i = 1; i < portions.size(); ++i) {
-      // Sigh... Only exposed via a comma operator.
-      indices_init, portions[i]->indices();
-      values_init, portions[i]->values();
-    }
-    VectorPortion out(indices);
-    out.values() = values;
-    return out;
-  }
+//   /**
+//    * Aggregate unique vector portions into one. They should all have the same
+//    * frame of reference, and they should all be disjoint.
+//    */
+//   // TODO(eric.cousineau): As mentioned above, construction should check for
+//   // uniqueness of indices.
+//   static VectorPortion Aggregate(
+//       const std::vector<const VectorPortion*>& portions) {
+//     // Use const pointers so an initializer list can be used.
+//     DRAKE_ASSERT(portions.size() > 0);
+//     int size = 0;
+//     for (auto portion : portions) {
+//       size += portion->size();
+//     }
+//     Indices indices(size);
+//     Vector values(values);
+//     // Use Eigen's CommanInitializer.
+//     auto indices_init = (indices << portions[0]->indices());
+//     auto values_init = (values << portions[0]->values());
+//     for (int i = 1; i < portions.size(); ++i) {
+//       // Sigh... Only exposed via a comma operator.
+//       indices_init, portions[i]->indices();
+//       values_init, portions[i]->values();
+//     }
+//     VectorPortion out(indices);
+//     out.values() = values;
+//     return out;
+//   }
 
-  const Vector& values() const { return values_; }
-  // Only offer a reference, such that the shape cannot be changed.
-  Eigen::Ref<Vector> values() { return values_; }
+//   const Vector& values() const { return values_; }
+//   // Only offer a reference, such that the shape cannot be changed.
+//   Eigen::Ref<Vector> values() { return values_; }
 
-  void ReadFromSuperset(const VectorPortion& super) {
-    this->ReadFromSuperset(super.values(), values());
-  }
+//   void ReadFromSuperset(const VectorPortion& super) {
+//     this->ReadFromSuperset(super.values(), values());
+//   }
 
-  void ReadFromSubset(const VectorPortion& sub) {
-    DRAKE_ASSERT(sub.is_valid_subset_of(*this));
-    const auto& sub_indices = sub.indices();
-    const auto& sub_values = sub.values();
-    for (int i = 0; i < sub.size(); ++i) {
-      int index = sub_indices[i];
-      values_[index] = sub_values[i];
-    }
-    return *this;
-  }
+//   void ReadFromSubset(const VectorPortion& sub) {
+//     DRAKE_ASSERT(sub.is_valid_subset_of(*this));
+//     const auto& sub_indices = sub.indices();
+//     const auto& sub_values = sub.values();
+//     for (int i = 0; i < sub.size(); ++i) {
+//       int index = sub_indices[i];
+//       values_[index] = sub_values[i];
+//     }
+//     return *this;
+//   }
 
- protected:
-  Vector values_;
-};
+//  protected:
+//   Vector values_;
+// };
 
 // There is Subvector<T> in the systems framework.
 // However, this only handles contiguous slices.
@@ -220,9 +336,9 @@ class VectorPortion : public VectorSlice {
 //  Portion portion_;
 //};
 
-// Portion of vector that records timestamps.
-template <typename T>
-using VectorStampedPortion = VectorPortion<StampedValue<T>>;
+// // Portion of vector that records timestamps.
+// template <typename T>
+// using VectorStampedPortion = VectorPortion<StampedValue<T>>;
 
 /**
  * Store a portion of the kinematic state of a tree (world).
