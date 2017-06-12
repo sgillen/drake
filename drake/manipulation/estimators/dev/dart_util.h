@@ -299,15 +299,22 @@ class KinematicsSlice {
 
   // Can be State, or something else (such as joint names, decision variables, etc.)
   template <typename KinematicsValues>
-  void ReadFromSuperset(const KinematicsValues& super, KinematicsValues& sub) {
+  void ReadFromSuperset(const KinematicsValues& super, KinematicsValues& sub) const {
     q_.ReadFromSuperset(super.q(), sub.q());
     v_.ReadFromSuperset(super.v(), sub.v());
   }
 
   template <typename KinematicsValues>
-  void WriteToSuperset(const KinematicsValues& sub, KinematicsValues& super) {
+  void WriteToSuperset(const KinematicsValues& sub, KinematicsValues& super) const {
     q_.WriteToSuperset(sub.q(), super.q());
     v_.WriteToSuperset(sub.v(), super.v());
+  }
+
+  template <typename KinematicsValues>
+  KinematicsValues CreateFromSuperset(const KinematicsValues& superset) const {
+    KinematicsValues out(q_.size(), v_.size());
+    ReadFromSuperset(superset, out);
+    return out;
   }
 
  private:

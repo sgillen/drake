@@ -89,8 +89,12 @@ class DartFormulation {
     }
   }
 
-  const KinematicsSlice& kinematics_slice() const { return kinematics_slice_; }
-  const VectorSlice& q_slice() const { return kinematics_slice_.q(); }
+  const KinematicsSlice& kinematics_est_slice() const {
+    return kinematics_est_slice_;
+  }
+  const KinematicsSlice& kinematics_nonest_slice() const {
+    return kinematics_nonest_slice_;
+  }
 
   const DartObjectiveList& objectives() const { return objectives_; }
   const VectorSlice& objective_var_slice(int i) const {
@@ -109,12 +113,13 @@ private:
   Param param_;
   unique_ptr<DartScene> scene_;
   MathematicalProgram prog_;
-  KinematicsVars kinematics_vars_;
-  KinematicsSlice kinematics_slice_;
+  KinematicsVars kinematics_est_vars_;
+  KinematicsSlice kinematics_est_slice_;
+  KinematicsSlice kinematics_nonest_slice_;
 
   DartObjectiveList objectives_;
   // Track which values are use for the optimization.
-  KinematicsSlice kinematics_var_slice_;
+  KinematicsSlice kinematics_est_var_slice_;
   vector<VectorSlice> objective_var_slices_;
 };
 
@@ -210,27 +215,12 @@ class DartEstimator {
     double max_observed_time_diff {1e-4};
   };
 
-  DartEstimator(unique_ptr<DartFormulation> formulation, const Param& param)
-    : param_(param),
-      formulation_(std::move(formulation)),
-      state_prior_with_input_(formulation_->tree()),
-      cache_prior_with_input_(formulation_->tree().CreateKinematicsCache()),
-      state_meas_(formulation_->tree()) {
-    // Add kinematics variables.
-  }
+  DartEstimator(unique_ptr<DartFormulation> formulation, const Param& param);
 
   /**
    * Ensure that the optimization problem is ready to be performed.
    */
-  void Compile() {
-    // Aggregate covariance.
-    int num_var = prog().num_vars();
-    covariance_.resize(num_var, num_var);
-    covariance_.setZero();
-    for (auto& objective : objectives()) {
-      // Aggregate covariance.
-    }
-  }
+  void Compile();
 
   /**
    * Take frame k's non-estimated states as inputs (u_q{k}), and take frame k's
@@ -239,22 +229,26 @@ class DartEstimator {
    * will be done by merging the cache using both the kinematic state
    * prior (x_q{k-1}) and the non-estimated states (u_q{k}), and then providing
    * the observations of the estimated state (v_q{k}) for consumption by other
-   * objectives.
+   * objectives by means of the kinematics cache (`getQ` and `getV`).
    */
-  void ObserveAndInputKinematicState(double t,
-                                     const KinematicsState& state_meas);
+  void ObserveAndInputKinematicsState(
+      double t, const KinematicsState& state_meas);
 
   const KinematicsState& Update(double t);
 
-  const KinematicsState& state_prior(double t) const {
+  const KinematicsState& state_prior_with_input(double t) const {
+    CheckObservationTime(t, latest_state_observation_time_, "state_prior");
     return state_prior_with_input_;
   }
 
   const KinematicsState& state_meas(double t) const {
+    CheckObservationTime(t, latest_state_observation_time_, "state_meas");
     return state_meas_;
   }
 
  protected:
+  void CheckObservationTime(double t_now, double t_obs,
+                            const string& name) const;
   // Convenience.
   const RigidBodyTreed& tree() const { return formulation_->tree(); }
 
@@ -268,6 +262,7 @@ class DartEstimator {
   MatrixXd covariance_;
   VectorXd opt_var_prior_;
 
+  KinematicsState state_prior_;  // Don't keep this?
   // `input` in this case means non-estimated state measurements, such that we
   // combine q_est{k-1} (prior) with input q_nonest_meas{k} (input).
   KinematicsState state_prior_with_input_;
@@ -275,6 +270,7 @@ class DartEstimator {
 
   // This is the measured state, q_meas{k}, for both estimated and
   // non-estimated states.
+  double latest_state_observation_time_{};
   KinematicsState state_meas_;
 };
 

@@ -114,30 +114,25 @@ class DartTest : public ::testing::Test {
 
   void TearDown() override {}
 
-  void SimulateDepthImage(double t, const VectorXd& q, ImageDepth32F* pdepth_image) {
-    const int nq = tree_->get_num_positions();
-    const int nv = tree_->get_num_velocities();
-    VectorXd x(nq + nv);
-    x.setZero();
-    x.head(nq) = q;
-
+  void SimulateDepthImage(double t, const KinematicsState& state_meas,
+                          ImageDepth32F* pdepth_image_meas) {
     // Throw-away items.
     systems::rendering::PoseVector<double> pose;
     ImageBgra8U color_image;
     ImageLabel16I label_image;
 
     rgbd_camera_sim_->CalcImages(
-        t, x,
-        &pose, &color_image, pdepth_image, &label_image);
+        t, state_meas.x(),
+        &pose, &color_image, pdepth_image_meas, &label_image);
   }
 
-  void Observe(double t, const KinematicsState& state_meas) {
+  void SimulateObservation(double t, const KinematicsState& state_meas) {
     // Observe joint states.
-    estimator_->ObserveAndInputKinematicState(state_meas);
+    estimator_->ObserveAndInputKinematicsState(t, state_meas);
 
     // Simulate depth image.
     ImageDepth32F depth_image_meas;
-    SimulateDepthImage(t, q_meas, &depth_image);
+    SimulateDepthImage(t, state_meas, &depth_image_meas);
     depth_obj_->ObserveImage(t, depth_image_meas);
   }
 
@@ -163,8 +158,8 @@ class DartTest : public ::testing::Test {
 TEST_F(DartTest, BasicSetup) {
   double t = 0;
   KinematicsState state_meas(*tree_);
-  estimator_->Observe(t, state_meas);
-  KinematicsState state_est = estimator_->Update(t);
+  SimulateObservation(t, state_meas);
+  KinematicsState state_est = Update(t);
 }
 
 }  // namespace

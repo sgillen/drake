@@ -49,6 +49,7 @@ class VectorSlice {
 
   DRAKE_DEFAULT_COPY_AND_MOVE_AND_ASSIGN(VectorSlice);
 
+  VectorSlice() {}
   explicit VectorSlice(const Indices& indices, int super_size = -1)
         : indices_(indices) {
     // TODO(eric.cousineau): Check for uniqueness
@@ -97,8 +98,8 @@ class VectorSlice {
 
  protected:
   int super_size_{};
-  int max_index_{};
-  int min_index_{};
+  int max_index_{-1};
+  int min_index_{-1};
   Indices indices_;  // const discards default assignment (as expected).
 };
 
