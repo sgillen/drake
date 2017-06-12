@@ -13,14 +13,6 @@ auto ComputeWeight(const T& variance) {
   return 1 / (2 * pow(variance, 2));
 }
 
-/**
- * Accumulate quadratic errors to be rendered into a QuadraticCost.
- */
-struct IcpQuadraticErrorAccumulator {
- public:
-
-};
-
 class DartJointObjective : public DartObjective {
  public:
   struct Param {

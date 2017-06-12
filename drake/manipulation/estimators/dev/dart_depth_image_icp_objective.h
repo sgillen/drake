@@ -1,0 +1,94 @@
+#pragma once
+
+#include "drake/manipulation/estimators/dev/dart.h"
+#include "drake/manipulation/estimators/dev/dart_objectives.h"
+
+#include "drake/systems/sensors/image.h"
+
+namespace drake {
+namespace manipulation {
+
+struct Interval {
+  double min{};
+  double max{};
+  inline bool IsInside(double i) const {
+    return i >= min && i <= max;
+  }
+};
+struct Bounds {
+  Interval x;
+  Interval y;
+  Interval z;
+
+  inline bool IsInside(double xi, double yi, double zi) const {
+    return x.IsInside(xi) && y.IsInside(yi) && z.IsInside(zi);
+  }
+};
+
+/**
+ * Accumulate quadratic point-to-point errors to be rendered into a
+ * QuadraticCost.
+ */
+struct IcpQuadraticErrorAccumulator {
+ public:
+};
+
+/**
+ * ICP-based lineraized QP-based cost objective for both S_mod (positive
+ * returns) and S_obs (negative returns).
+ */
+class DartDepthImageIcpObjective : public DartObjective {
+ public:
+  struct Param {
+    // TODO(eric.cousineau): Incorporate camera parameters.
+    struct Camera {
+      double fov_y{M_PI / 4};
+      bool show_window{false};
+      shared_ptr<RigidBodyFramed> frame;
+    };
+    Camera camera;
+    // Sub-sampling.
+    int image_downsample_factor{5};
+    Bounds point_cloud_bounds {
+      .x = {-1, 1},
+      .y = {-1, 1},
+      .z = {-1, 1},
+    };
+    // Weights.
+    struct Icp {
+      double variance{0.5};
+      double max_distance_m{0.5};
+      double min_joint_distance_m{0.05};
+    };
+    Icp icp;
+    double free_space_variance{0.005};
+    struct Debug {
+      bool use_lcmgl{false};
+    };
+    Debug debug;
+  };
+
+  DartDepthImageIcpObjective(DartFormulation* formulation_, const Param& param);
+  ~DartDepthImageIcpObjective();
+
+  void Init(const KinematicsCached& cache) override;
+  void ObserveImage(double t,
+                    const systems::sensors::ImageDepth32F& depth_image_meas,
+                    const Matrix3Xd* ppoint_cloud = nullptr);
+  void UpdateFormulation(double t, const KinematicsCached& kin_cache,
+                         const VectorXd &obj_prior) override;
+  const OptVars& GetVars() const override { return extra_vars_; }
+  const VectorXd& GetInitialValues() const override { return extra_ic_; }
+ private:
+  shared_ptr<QuadraticCost> cost_;
+  Param param_;
+  class Impl;
+  friend class Impl;
+  unique_ptr<Impl> impl_;
+  // Throw-away?
+  VectorXd extra_ic_;
+  OptVars extra_vars_;
+};
+
+}  // namespace manipulation
+}  // namespace drake

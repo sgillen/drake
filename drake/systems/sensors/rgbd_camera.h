@@ -230,7 +230,6 @@ class RgbdCamera : public LeafSystem<double> {
 /// Class accessing RGB-D camera functionality without a system wrapper.
 class RgbdCameraDirect {
  public:
-  // TODO(eric.cousineau): Add robot frame in.
   RgbdCameraDirect(const RigidBodyTree<double>& tree,
                    const RigidBodyFrame<double>& frame,
                    double fov_y,
@@ -242,6 +241,8 @@ class RgbdCameraDirect {
                     rendering::PoseVector<double>* pcamera_base_pose,
                     ImageBgra8U* pcolor_image, ImageDepth32F* pdepth_image,
                     ImageLabel16I* plabel_image);
+
+  const CameraInfo& depth_camera_info() const;
  private:
   std::unique_ptr<RgbdCamera::Impl> impl_;
 };

@@ -36,7 +36,7 @@
 #include "drake/examples/kuka_iiwa_arm/iiwa_world/iiwa_wsg_diagram_factory.h"
 
 #include "drake/manipulation/estimators/dev/abstract_zoh.h"
-#include "drake/manipulation/estimators/dev/tree_state_portion.h"
+#include "drake/manipulation/estimators/dev/vector_slice.h"
 #include "drake/common/drake_optional.h"
 
 #include "drake/common/call_matlab.h"

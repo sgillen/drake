@@ -35,6 +35,7 @@ set(drakeDartUtil_HEADERS
 set(drakeManipulationTracker_SRC_FILES
     dart.cc
     dart_objectives.cc
+    dart_depth_image_icp_objective.cc
 #    articulated_state_estimator.cc
 
 #    ManipulationTracker.cpp
@@ -52,6 +53,7 @@ set(drakeManipulationTracker_SRC_FILES
 set(drakeManipulationTracker_HEADERS
     dart.h
     dart_objectives.h
+    dart_depth_image_icp_objective.h
 #    articulated_state_estimator.h
     abstract_zoh.h
     vector_slice.h

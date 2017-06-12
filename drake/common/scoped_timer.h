@@ -127,7 +127,7 @@ class TimerWithMessage {
 
 #ifndef DRAKE_NO_TIMING
 #define SCOPE_TIME(name, message) \
-  TimerWithMessage timer_##name(message); unused(timer_##name)
+  timing::TimerWithMessage timer_##name(message); unused(timer_##name)
 #else
 #define SCOPE_TIME(name, message)
 #endif

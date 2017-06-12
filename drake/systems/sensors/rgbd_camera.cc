@@ -973,6 +973,10 @@ void RgbdCameraDirect::CalcImages(
                       pdepth_image, plabel_image);
 }
 
+const CameraInfo& RgbdCameraDirect::depth_camera_info() const {
+  return impl_->depth_camera_info();
+}
+
 }  // namespace sensors
 }  // namespace systems
 }  // namespace drake
