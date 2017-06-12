@@ -1,6 +1,6 @@
-#include <drake/solver/mathematical_program.h>
+#include <drake/solvers/mathematical_program.h>
 
-#include "drake/manipulation/estimation/dev/dart_util.h"
+#include "drake/manipulation/estimators/dev/dart_util.h"
 
 namespace drake {
 namespace manipulation {

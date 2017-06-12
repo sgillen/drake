@@ -121,6 +121,42 @@ GTEST_TEST(VectorSliceTest, ViewSlice) {
   EXPECT_EQ(J_expected, J);
 }
 
+GTEST_TEST(VectorSliceTest, IterableMatrix) {
+  VectorXd x(5);
+  x << 1, 2, 3, 4, 5;
+
+  // Mutable vector.
+  int i = 0;
+  for (auto&& xi : MakeIterableMatrix(x)) {
+    EXPECT_EQ(x(i), xi);
+    xi *= 2;
+    i += 1;
+  }
+
+  // Immutable vector.
+  const VectorXd& x_const = x;
+  i = 0;
+  for (auto&& xi : MakeIterableMatrix(x_const)) {
+    EXPECT_EQ(x(i), xi);
+    // Will trigger a compilation error as expected.
+    // xi *= 2;
+    i += 1;
+  }
+
+  // Immutable matrix.
+  const auto X = (Eigen::MatrixXd(2, 2) << 1, 2, 3, 4).finished();
+
+  i = 2;
+  for (auto&& xi : MakeIterableMatrix(X.col(1))) {
+    EXPECT_EQ(X(i), xi);
+    i += 1;
+  }
+  EXPECT_THROW(MakeIterableMatrix(X.row(1)), std::runtime_error);
+
+  // This will cause a compilation error.
+  // EXPECT_THROW(MakeIterableMatrix(X.block(1, 1, 1, 1)), std::runtime_error);
+}
+
 // GTEST_TEST(KinematicStatePortionTest, StampedTest) {
 //   StampedValue<double> value = 5;
 //   EXPECT_EQ(5., static_cast<double>(value));

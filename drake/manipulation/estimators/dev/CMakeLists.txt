@@ -27,39 +27,40 @@ endif()
 set(drakeManipulationTracker_SRC_FILES
     dart.cc
     dart_util.cc
-    articulated_state_estimator.cc
-    ManipulationTracker.cpp
-    ManipulationTrackerLoader.cpp
-#    costs/AttachedApriltagCost.cpp
-    costs/DynamicsCost.cpp
-#    costs/GelsightCost.cpp
-    costs/JointStateCost.cpp
-    costs/KinectFrameCost.cpp
-    costs/NonpenetratingObjectCost.cpp
-#    costs/OptotrakMarkerCost.cpp
-    costs/RobotStateCost.cpp
+#    articulated_state_estimator.cc
+
+#    ManipulationTracker.cpp
+#    ManipulationTrackerLoader.cpp
+##    costs/AttachedApriltagCost.cpp
+#    costs/DynamicsCost.cpp
+##    costs/GelsightCost.cpp
+#    costs/JointStateCost.cpp
+#    costs/KinectFrameCost.cpp
+#    costs/NonpenetratingObjectCost.cpp
+##    costs/OptotrakMarkerCost.cpp
+#    costs/RobotStateCost.cpp
     )
 
 set(drakeManipulationTracker_HEADERS
     dart.h
     dart_util.h
-    articulated_state_estimator.h
+#    articulated_state_estimator.h
     abstract_zoh.h
-    tree_state_portion.h
+    vector_slice.h
     stamped_value.h
     common/sdf_2d_functions.hpp
-    common/common.hpp
-    ManipulationTracker.hpp
-    ManipulationTrackerLoader.hpp
-#    costs/AttachedApriltagCost.hpp
-    costs/DynamicsCost.hpp
-#    costs/GelsightCost.hpp
-    costs/JointStateCost.hpp
-    costs/KinectFrameCost.hpp
-    costs/ManipulationTrackerCost.hpp
-    costs/NonpenetratingObjectCost.hpp
-#    costs/OptotrakMarkerCost.hpp
-    costs/RobotStateCost.hpp
+#    common/common.hpp
+#    ManipulationTracker.hpp
+#    ManipulationTrackerLoader.hpp
+##    costs/AttachedApriltagCost.hpp
+#    costs/DynamicsCost.hpp
+##    costs/GelsightCost.hpp
+#    costs/JointStateCost.hpp
+#    costs/KinectFrameCost.hpp
+#    costs/ManipulationTrackerCost.hpp
+#    costs/NonpenetratingObjectCost.hpp
+##    costs/OptotrakMarkerCost.hpp
+#    costs/RobotStateCost.hpp
     )
 
 set(drakeManipulationTracker_EXTERNAL_LIBRARIES

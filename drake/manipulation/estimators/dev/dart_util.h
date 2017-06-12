@@ -1,15 +1,31 @@
+#include <memory>
+#include <vector>
+#include <map>
 
+#include "drake/common/drake_path.h"
+#include "drake/common/eigen_types.h"
+#include "drake/multibody/rigid_body_tree.h"
+#include "drake/systems/sensors/rgbd_camera.h"
+#include "drake/common/symbolic_variables.h"
+#include "drake/solvers/decision_variable.h"
+
+#include "drake/manipulation/estimators/dev/vector_slice.h"
 
 namespace drake {
 namespace manipulation {
 
 using namespace std;
+using namespace Eigen;
+
+typedef RigidBodyFrame<double> RigidBodyFramed;
+typedef KinematicsCache<double> KinematicsCached;
+typedef Matrix6X<double> Matrix6Xd;
 
 typedef shared_ptr<const RigidBodyTreed> TreePtr;
 typedef vector<int> Indices;
 typedef map<string, int> InstanceIdMap;
 typedef map<string, double> JointWeights;
-typedef VectorXDecisionVariable OptVars;
+typedef solvers::VectorXDecisionVariable OptVars;
 
 /**
  * Convenience to infer type.
@@ -25,12 +41,12 @@ std::unique_ptr<T> CreateUnique(T* obj) {
  * the relevant Jacobian.
  */
 inline MatrixXd ComputeJacobianWithWorldPoints(
-  const RigidBodyTree& tree, const KinematicsCached& cache,
+  const RigidBodyTreed& tree, const KinematicsCached& cache,
   const Vector3d& pt_W, const RigidBodyFramed* frame_A,
   bool in_terms_of_qdot) {
   // TODO(eric.cousineau): Check if this should require a body, not a frame,
   // to ensure additional constants don't sneak in.
-  int frame_index = frame ? frame->get_frame_index() : 0;
+  int frame_index = frame_A ? frame_A->get_frame_index() : 0;
   if (frame_index != 0) {
     Vector3d pt_A = tree.transformPoints(cache, pt_W, 0, frame_index);
     return tree.transformPointsJacobian(
@@ -55,7 +71,7 @@ inline MatrixXd ComputeJacobianWithWorldPoints(
 inline void ComputeIcpPointToPointError(
   const RigidBodyTreed& tree, const KinematicsCached& cache,
   const RigidBodyFramed* frame_A, const Vector3d& ptA_W,
-  const RigidBodyFramd* frame_B, const Vector3d& ptB_W,
+  const RigidBodyFramed* frame_B, const Vector3d& ptB_W,
   Vector3d* perror_W, MatrixXd* pJerror_W) {
   DRAKE_DEMAND(perror_W);
   DRAKE_DEMAND(pJerror_W);

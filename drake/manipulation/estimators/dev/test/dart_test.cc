@@ -2,6 +2,8 @@
 
 #include <gtest/gtest.h>
 
+#include "drake/common/drake_path.h"
+#include "drake/multibody/rigid_body_tree.h"
 #include "drake/manipulation/estimators/dev/dart_util.h"
 #include "drake/systems/sensors/rgbd_camera.h"
 

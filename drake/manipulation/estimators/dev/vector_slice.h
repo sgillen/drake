@@ -216,6 +216,34 @@ auto MakeColView(XprType&& xpr) {
 }
 
 
+// TODO(eric.cousineau): Do full implementation for more robust access
+// (especially for views!!!). Make static_assert for invalid types.
+template <typename XprType>
+class IterableMatrix {
+ public:
+  IterableMatrix(XprType&& xpr)
+      : xpr_(xpr) {
+    int size = xpr.size();
+    auto* back_ptr = &xpr.coeffRef(size - 1);
+    if (end() - 1 != back_ptr) {
+      throw std::runtime_error("Not a usable storage format");
+    }
+  }
+
+  auto begin() const { return xpr_.data(); }
+
+  auto end() const { return xpr_.data() + xpr_.size(); }
+
+ private:
+  XprType xpr_;
+};
+
+template <typename XprType>
+auto MakeIterableMatrix(XprType&& xpr) {
+  return IterableMatrix<XprType>(std::forward<XprType>(xpr));
+}
+
+
 /**
  * Simple mechanism to handle (ragged) slices of a vector.
  */

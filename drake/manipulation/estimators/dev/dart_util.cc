@@ -1,3 +1,8 @@
+#include "drake/manipulation/estimators/dev/dart_util.h"
+
+
+namespace drake {
+namespace manipulation {
 
 // TODO(eric.cousineau): Reduce from O(n logn)
 template <typename T>
@@ -101,3 +106,6 @@ std::vector<std::string> GetHierarchicalPositionNameList(
   }
   return names;
 }
+
+}  // manipulation
+}  // drake
