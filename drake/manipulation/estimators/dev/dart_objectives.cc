@@ -42,6 +42,8 @@ DartJointObjective::DartJointObjective(
   impl_.reset(new Impl());
 }
 
+DartJointObjective::~DartJointObjective() {}
+
 void DartJointObjective::Init(const KinematicsCached& kin_cache) {
   unused(kin_cache);
   KinematicsState meas_state(kin_cache);

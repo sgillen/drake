@@ -51,6 +51,16 @@ std::unique_ptr<T> CreateUnique(T* obj) {
   return std::unique_ptr<T>(obj);
 }
 
+template <typename Scalar>
+VectorX<Scalar> VectorXInit(std::initializer_list<Scalar> values) {
+  VectorX<Scalar> out(values.size());
+  int i = 0;
+  for (auto& x : values) {
+    out[i] = x;
+  }
+  return out;
+}
+
 
 template <typename T, typename Container>
 std::map<T, int> CreateIndexMap(const Container &x) {

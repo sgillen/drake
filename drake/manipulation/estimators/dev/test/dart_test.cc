@@ -84,7 +84,7 @@ class DartTest : public ::testing::Test {
     EXPECT_EQ(6, initial_state.v().size());
 
     DartJointObjective::Param joint_param = {
-      .joint_variance = {0.05, 0.05, 0.01},
+      .joint_variance = VectorXInit({0.05, 0.05, 0.01}),
     };
     joint_obj_ =
         new DartJointObjective(formulation_, joint_param);

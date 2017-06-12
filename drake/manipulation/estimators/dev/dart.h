@@ -145,6 +145,7 @@ class DartObjective {
  public:
   DartObjective(DartFormulation* formulation)
       : formulation_(formulation) {}
+  virtual ~DartObjective() {}
 
   /**
    * Initialize the objective, adding costs and/or constraints.

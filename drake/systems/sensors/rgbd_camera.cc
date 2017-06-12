@@ -963,6 +963,8 @@ RgbdCameraDirect::RgbdCameraDirect(const RigidBodyTree<double>& tree,
   impl_->set_depth_rel_noise_magnitude(0.02); // same as above
 }
 
+RgbdCameraDirect::~RgbdCameraDirect() {}
+
 void RgbdCameraDirect::CalcImages(
     double t, const Eigen::VectorXd& x,
     rendering::PoseVector<double>* pcamera_base_pose, ImageBgra8U* pcolor_image,

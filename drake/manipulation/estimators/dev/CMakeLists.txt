@@ -99,6 +99,8 @@ set(drakeManipulationTracker_LIBRARIES
     drakeRigidBodyPlant
     drakeMultibodyParsers
     drakeSystemFramework
+    drakeSensors
+    drakeDartUtil
     # drakeUtil
     # drakeXMLUtil
     )  # How to replace this?
@@ -124,7 +126,7 @@ target_link_libraries(drakeDartUtil
 add_library_with_exports(LIB_NAME drakeManipulationTracker SOURCE_FILES
     ${drakeManipulationTracker_SRC_FILES})
 target_link_libraries(drakeManipulationTracker
-    drakeDartUtil ${drakeManipulationTracker_LIBRARIES})
+    ${drakeManipulationTracker_LIBRARIES})
 
 # drake_install_libraries(drakeManipulationTracker)
 # drake_install_headers(${drakeManipulationTracker_HEADERS})

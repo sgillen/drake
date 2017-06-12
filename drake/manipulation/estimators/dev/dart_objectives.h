@@ -28,6 +28,7 @@ class DartJointObjective : public DartObjective {
   };
 
   DartJointObjective(DartFormulation* formulation_, const Param& param);
+  ~DartJointObjective();
 
   void Init(const KinematicsCached& cache) override;
   void UpdateFormulation(double t, const KinematicsCached& kin_cache,
