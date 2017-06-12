@@ -4,40 +4,6 @@
 namespace drake {
 namespace manipulation {
 
-// TODO(eric.cousineau): Reduce from O(n logn)
-template <typename T>
-void GetCommonIndices(const std::vector<T> &a,
-                      const std::vector<T> &b,
-                      std::vector<int>* a_indices,
-                      std::vector<int>* b_indices) {
-  auto a_map = CreateIndexMap(a);
-  auto b_map = CreateIndexMap(b);
-  vector<bool> a_found(a.size(), false);
-  vector<bool> b_found(b.size(), false);
-  for (const auto& a_pair : a_map) {
-    auto b_iter = b_map.find(a_pair.first);
-    if (b_iter != b_map.end()) {
-      auto& b_pair = *b_iter;
-      a_indices->push_back(a_pair.second);
-      b_indices->push_back(b_pair.second);
-      a_found[a_pair.second] = true;
-      b_found[b_pair.second] = true;
-    }
-  }
-  cout << "a not found:\n";
-  for (int i = 0; i < (int)a.size(); ++i) {
-    if (!a_found[i]) {
-      cout << "  " << a[i] << endl;
-    }
-  }
-  cout << "b not found:\n";
-  for (int i = 0; i < (int)b.size(); ++i) {
-    if (!b_found[i]) {
-      cout << "  " << b[i] << endl;
-    }
-  }
-}
-
 void PrintJointNameHierarchy(const RigidBodyTreed* tree) {
   using std::cout;
   using std::endl;
@@ -63,6 +29,47 @@ void PrintJointNameHierarchy(const RigidBodyTreed* tree) {
     cout << "  " << tree->get_position_name(i) << " = " << i << "\n";
   }
   cout << endl;
+}
+
+void GetHierarchicalKinematicNameList(
+    const RigidBodyTreed& tree, const ReverseIdMap& instance_name_map,
+    vector<string>* position_names, vector<string>* velocity_names) {
+  int instance_count = tree.get_num_model_instances();
+  int position_index = 0;
+  int velocity_index = 0;
+  if (position_names) {
+    position_names->resize(tree.get_num_positions());
+  }
+  if (velocity_names) {
+    velocity_names->resize(tree.get_num_positions());
+  }
+  for (int instance_id = 0; instance_id < instance_count; ++instance_id) {
+    string instance_name = "instance_" + to_string(instance_id);
+    auto iter = instance_name_map.find(instance_id);
+    if (iter != instance_name_map.end()) {
+      instance_name = iter->second;
+    }
+    auto bodies = tree.FindModelInstanceBodies(instance_id);
+    for (const RigidBody<double>* body : bodies) {
+      const auto& joint = body->getJoint();
+      if (position_names) {
+        for (int i = 0; i < joint.get_num_positions(); ++i) {
+          DRAKE_ASSERT(joint.get_position_name(i) == tree.get_position_name(position_index));
+          string name = instance_name + "::" + joint.get_position_name(i);
+          position_names->at(position_index) = name;
+          position_index++;
+        }
+      }
+      if (velocity_names) {
+        for (int i = 0; i < joint.get_num_velocities(); ++i) {
+          DRAKE_ASSERT(joint.get_velocity_name(i) == tree.get_velocity_name(velocity_index));
+          string name = instance_name + "::" + joint.get_velocity_name(i);
+          velocity_names->at(velocity_index) = name;
+          velocity_index++;
+        }
+      }
+    }
+  }
 }
 
 std::vector<std::string> GetHierarchicalPositionNameList(

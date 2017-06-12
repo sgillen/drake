@@ -24,9 +24,17 @@ if (OPENMP_FOUND)
     set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 endif()
 
+set(drakeDartUtil_SRC_FILES
+    dart_util.cc
+    )
+set(drakeDartUtil_HEADERS
+    dart_util.h
+    vector_slice.h
+    )
+
 set(drakeManipulationTracker_SRC_FILES
     dart.cc
-    dart_util.cc
+    dart_objectives.cc
 #    articulated_state_estimator.cc
 
 #    ManipulationTracker.cpp
@@ -43,7 +51,7 @@ set(drakeManipulationTracker_SRC_FILES
 
 set(drakeManipulationTracker_HEADERS
     dart.h
-    dart_util.h
+    dart_objectives.h
 #    articulated_state_estimator.h
     abstract_zoh.h
     vector_slice.h
@@ -99,17 +107,30 @@ include_directories(${CMAKE_BINARY_DIR})
 
 include_directories(.)
 
+
+
+add_library_with_exports(LIB_NAME drakeDartUtil SOURCE_FILES
+    ${drakeDartUtil_SRC_FILES})
+target_link_libraries(drakeDartUtil
+    drakeCommon
+    drakeJoints
+    drakeLCMTypes
+    drakeRBM
+    drakeRigidBodyPlant
+    drakeMultibodyParsers
+    )
+
+
 add_library_with_exports(LIB_NAME drakeManipulationTracker SOURCE_FILES
     ${drakeManipulationTracker_SRC_FILES})
-
 target_link_libraries(drakeManipulationTracker
-    ${drakeManipulationTracker_LIBRARIES})
+    drakeDartUtil ${drakeManipulationTracker_LIBRARIES})
 
-drake_install_libraries(drakeManipulationTracker)
-drake_install_headers(${drakeManipulationTracker_HEADERS})
-drake_install_pkg_config_file(drake-sensors
-    TARGET drakeManipulationTracker
-    LIBS -ldrakeManipulationTracker)
+# drake_install_libraries(drakeManipulationTracker)
+# drake_install_headers(${drakeManipulationTracker_HEADERS})
+# drake_install_pkg_config_file(drake-sensors
+#     TARGET drakeManipulationTracker
+#     LIBS -ldrakeManipulationTracker)
 
 add_executable(runManipulationTracker runManipulationTracker.cpp)
 target_link_libraries(runManipulationTracker drakeManipulationTracker)

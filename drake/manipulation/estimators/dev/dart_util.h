@@ -1,7 +1,12 @@
+#pragma once
+
 #include <memory>
 #include <vector>
 #include <map>
 
+#include <fmt/format.h>
+
+#include "drake/common/drake_throw.h"
 #include "drake/common/drake_path.h"
 #include "drake/common/eigen_types.h"
 #include "drake/multibody/rigid_body_tree.h"
@@ -17,14 +22,25 @@ namespace manipulation {
 using namespace std;
 using namespace Eigen;
 
+#define DRAKE_THROW_UNLESS_FMT(condition, ...) \
+  if (!(condition)) { \
+    ::drake::detail::Throw((std::string(#condition) + "\n" + \
+        fmt::format(__VA_ARGS__)).c_str(), \
+        __func__, __FILE__, __LINE__); \
+  }
+
+#define ASSERT_THROW_FMT(...) DRAKE_THROW_UNLESS_FMT(__VA_ARGS__)
+
 typedef RigidBodyFrame<double> RigidBodyFramed;
 typedef KinematicsCache<double> KinematicsCached;
 typedef Matrix6X<double> Matrix6Xd;
 
 typedef shared_ptr<const RigidBodyTreed> TreePtr;
+
 typedef vector<int> Indices;
 typedef map<string, int> InstanceIdMap;
-typedef map<string, double> JointWeights;
+typedef std::map<int, std::string> ReverseIdMap;
+
 typedef solvers::VectorXDecisionVariable OptVars;
 
 /**
@@ -34,6 +50,69 @@ template <typename T>
 std::unique_ptr<T> CreateUnique(T* obj) {
   return std::unique_ptr<T>(obj);
 }
+
+
+template <typename T>
+std::map<T, int> CreateIndexMap(const std::vector<T> &x) {
+  int i = 0;
+  std::map<T, int> out;
+  for (const auto& value : x) {
+    DRAKE_ASSERT(out.find(value) == out.end());
+    out[value] = i;
+    i++;
+  }
+  return std::move(out);
+}
+
+/**
+ * Simple mechanism to get the matching indices between two sets of lists.
+ * If b_indices is null, then a must strictly be a subset of b.
+ */
+template <typename T>
+void GetCommonIndices(const std::vector<T> &a,
+                      const std::vector<T> &b,
+                      std::vector<int>* a_indices,
+                      std::vector<int>* b_indices = nullptr,
+                      bool verbose = false) {
+  auto a_map = CreateIndexMap(a);
+  auto b_map = CreateIndexMap(b);
+  vector<int> a_found(a.size(), false);
+  vector<int> b_found(b.size(), false);
+  for (const auto& a_pair : a_map) {
+    auto b_iter = b_map.find(a_pair.first);
+    if (b_iter != b_map.end()) {
+      auto& b_pair = *b_iter;
+      int& ai_found = a_found.at(a_pair.second);
+      int& bi_found = b_found.at(b_pair.second);
+      ASSERT_THROW_FMT(!ai_found && !bi_found,
+                       "Duplicate elements:\n"
+                       "a: {{ found: {}, value: {} }}\n"
+                       "b: {{ found: {}, index: {} }}\n",
+                       ai_found, a_pair.second,
+                       bi_found, b_pair.second);
+      a_indices->push_back(a_pair.second);
+      b_indices->push_back(b_pair.second);
+      ai_found = true;
+      bi_found = true;
+    }
+  }
+  if (verbose) {
+    auto* log = drake::log();
+    log->trace("  a not found:");
+    for (int i = 0; i < (int)a.size(); ++i) {
+      if (!a_found[i]) {
+        log->trace("    {}", a[i]);
+      }
+    }
+    log->trace("  b not found:");
+    for (int i = 0; i < (int)b.size(); ++i) {
+      if (!b_found[i]) {
+        log->trace("    {}", b[i]);
+      }
+    }
+  }
+}
+
 
 /**
  * Compute Cartesian jacobian of a point in the world, but attached to a body.
@@ -93,12 +172,23 @@ inline void ComputeIcpPointToPointError(
 
 // TODO(eric.cousineau): Merge functionality into WorldSimTreeBuilder.
 // TODO(eric.cousineau): Find better location for this.
-typedef std::map<int, std::string> ReverseIdMap;
 
 void PrintJointNameHierarchy(const RigidBodyTreed* tree);
 
+void GetHierarchicalKinematicNameList(const RigidBodyTreed& tree, const ReverseIdMap& instance_name_map,
+    vector<string>* position_names, vector<string>* velocity_names);
+
 std::vector<std::string> GetHierarchicalPositionNameList(const RigidBodyTreed& tree,
     const ReverseIdMap& instance_name_map, bool add_velocity = false);
+
+template <typename A, typename B>
+map<B, A> ReverseMap(const map<A, B>& in) {
+  map<B, A> out;
+  for (const auto& pair : in) {
+    out[pair.second] = pair.first;
+  }
+  return out;
+}
 
 inline void PrintValidPoints(const Eigen::Matrix3Xd& points,
                              const std::string& note) {
@@ -109,18 +199,6 @@ inline void PrintValidPoints(const Eigen::Matrix3Xd& points,
     }
   }
   std::cout << fmt::format("Valid points: {} - {}\n", num_non_nan, note);
-}
-
-template <typename T>
-std::map<T, int> CreateIndexMap(const std::vector<T> &x) {
-  int i = 0;
-  std::map<T, int> out;
-  for (const auto& value : x) {
-    DRAKE_ASSERT(out.find(value) == out.end());
-    out[value] = i;
-    i++;
-  }
-  return std::move(out);
 }
 
 }  // manipulation

@@ -5,6 +5,7 @@
 #include "drake/common/drake_path.h"
 #include "drake/multibody/rigid_body_tree.h"
 #include "drake/manipulation/estimators/dev/dart_util.h"
+#include "drake/multibody/parsers/urdf_parser.h"
 #include "drake/systems/sensors/rgbd_camera.h"
 
 using namespace std;
@@ -28,15 +29,24 @@ class DartTest : public ::testing::Test {
     string file_path = GetDrakePath() +
         "/examples/kuka_iiwa_arm/models/objects/block_for_pick_and_place.urdf";
     auto floating_base_type = multibody::joints::kRollPitchYaw;
-    RigidBodyFramed* weld_frame = nullptr;
-    tree_.reset(new RigidBodyTreed());
+    shared_ptr<RigidBodyFramed> weld_frame {nullptr};
+    auto* mutable_tree = new RigidBodyTreed();
     parsers::urdf::AddModelInstanceFromUrdfFile(
         file_path, floating_base_type,
-        weld_frame, tree_.get());
-    tree_->compile();
+        weld_frame, mutable_tree);
+    mutable_tree->compile();
 
     // Add camera frame.
-    camera_frame_ = tree_->addFrame(...);
+    const Vector3d position(2, 0, 0);
+    const Vector3d orientation(0, 0, 0); // degrees
+    const double pi = M_PI;
+
+    auto* world_body = const_cast<RigidBody<double>*>(&mutable_tree->world());
+    camera_frame_.reset(new RigidBodyFramed(
+        "depth_sensor", world_body, position, orientation * pi / 180);
+    mutable_tree->addFrame(camera_frame_);
+
+    tree_.reset(mutable_tree);
 
     rgbd_camera_sim_.reset(
         new RgbdCameraDirect(*tree_, camera_frame_*, ));
@@ -59,34 +69,34 @@ class DartTest : public ::testing::Test {
     formulation_ =
         new DartFormulation(CreateUnique(scene_), formulation_param);
 
-    DartJointObjective::Param joint_param = {
-      .joint_variance = {0.05, 0.05, 0.01},
-    };
-    joint_obj_ =
-        new DartJointObjective(formulation_, joint_param);
+//    DartJointObjective::Param joint_param = {
+//      .joint_variance = {0.05, 0.05, 0.01},
+//    };
+//    joint_obj_ =
+//        new DartJointObjective(formulation_, joint_param);
 
-    DartDepthImageIcpObjective::Param depth_param {
-      .camera_frame = camera_frame_,
-      .icp_variance = 0.05,
-      .free_space_variance = 0.005,
-      .downsample_factor = 5,
-      .point_cloud_bounds = {
-          .x = {-2, 2},
-          .y = {-2, 2},
-          .z = {-2, 2},
-      },
-    };
+//    DartDepthImageIcpObjective::Param depth_param {
+//      .camera_frame = camera_frame_,
+//      .icp_variance = 0.05,
+//      .free_space_variance = 0.005,
+//      .downsample_factor = 5,
+//      .point_cloud_bounds = {
+//          .x = {-2, 2},
+//          .y = {-2, 2},
+//          .z = {-2, 2},
+//      },
+//    };
     depth_obj_ = DartDepthImageIcpObjective(formulation_, depth_param);
 
     // Tie things together.
     estimator_.reset(new DartEstimator(formulation_));
-    estimator_->AddObjective(CreateUnique(joint_obj_));
-    estimator_->AddObjective(CreateUnique(depth_obj_));
+//    estimator_->AddObjective(CreateUnique(joint_obj_));
+//    estimator_->AddObjective(CreateUnique(depth_obj_));
   }
 
   void TearDown() override {}
 
-  void SimulateDepthImage(double t, const VectorXd& q, Image32F* pdepth_image) {
+  void SimulateDepthImage(double t, const VectorXd& q, ImageDepth32F* pdepth_image) {
     const int nq = tree_->get_num_positions();
     const int nv = tree_->get_num_velocities();
     VectorXd x(nq + nv);
@@ -125,7 +135,7 @@ class DartTest : public ::testing::Test {
   }
  private:
   shared_ptr<const RigidBodyTreed> tree_;
-  RigidBodyFramed* camera_frame_;
+  shared_ptr<RigidBodyFramed> camera_frame_;
   DartScene* scene_;
   DartFormulation* formulation_;
 
@@ -139,8 +149,8 @@ class DartTest : public ::testing::Test {
 
 TEST_F(DartTest, BasicSetup) {
   double t = 0;
-  KinematicState state_meas(scene_->initial_state());
-  KinematicState state_est(scene_->initial_state());
+  KinematicsState state_meas(scene_->initial_state());
+  KinematicsState state_est(scene_->initial_state());
 
   estimator_->Observe(t, state_meas.q);
   estimator_->Update(t, &state_est.q);

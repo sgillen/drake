@@ -19,6 +19,8 @@
 
 #include "drake/common/call_matlab.h"
 
+#include "drake/manipulation/estimators/dev/dart_util.h"
+
 using namespace std;
 using namespace Eigen;
 using namespace cv;
@@ -182,13 +184,6 @@ int KinectFrameCost::get_trans_with_utime(std::string from_frame, std::string to
 //  }
 //  return status;
 }
-
-#define ASSERT_THROW_FMT(expr, ...) \
-  if (!(expr)) { \
-    throw std::runtime_error(#expr + \
-        std::string("\n") + \
-        fmt::format(__VA_ARGS__)); \
-  }
 
 /***********************************************
             KNOWN POSITION HINTS
