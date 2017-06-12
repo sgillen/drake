@@ -247,5 +247,96 @@ inline void PrintValidPoints(const Eigen::Matrix3Xd& points,
   std::cout << fmt::format("Valid points: {} - {}\n", num_non_nan, note);
 }
 
+
+using namespace drake::solvers;
+using namespace std;
+
+// Contains values
+// Full kinematic state, including non-decision variables.
+class KinematicsState {
+ public:
+  DRAKE_DEFAULT_COPY_AND_MOVE_AND_ASSIGN(KinematicsState);
+
+  KinematicsState(int nq, int nv) {
+    q_.resize(nq);
+    q_.setZero();
+    v_.resize(nv);
+    v_.setZero();
+  }
+  KinematicsState(const RigidBodyTreed& tree)
+    : KinematicsState(tree.get_num_positions(), tree.get_num_velocities()) {}
+
+  Eigen::Ref<VectorXd> q() { return q_; }
+  const VectorXd& q() const { return q_; }
+  Eigen::Ref<VectorXd> v() { return v_; }
+  const VectorXd& v() const { return v_; }
+
+  VectorXd x() const {
+    VectorXd out(q_.rows() + v_.rows());
+    out << q_, v_;
+    return out;
+  }
+ private:
+  VectorXd q_;
+  VectorXd v_;
+};
+
+/**
+ * A partial view into independent kinematic state variables (position and
+ * velocity) for a mechanical system.
+ */
+class KinematicsSlice {
+ public:
+  KinematicsSlice(const RigidBodyTreed& tree, const Indices& q_indices,
+                  const Indices& v_indices)
+      : q_(q_indices, tree.get_num_positions()),
+        v_(v_indices, tree.get_num_velocities()) {}
+
+  const VectorSlice& q() const { return q_; }
+  const VectorSlice& v() const { return v_; }
+
+  // Can be State, or something else (such as joint names, decision variables, etc.)
+  template <typename KinematicsValues>
+  void ReadFromSuperset(const KinematicsValues& super, KinematicsValues& sub) {
+    q_.ReadFromSuperset(super.q(), sub.q());
+    v_.ReadFromSuperset(super.v(), sub.v());
+  }
+
+  template <typename KinematicsValues>
+  void WriteToSuperset(const KinematicsValues& sub, KinematicsValues& super) {
+    q_.WriteToSuperset(sub.q(), super.q());
+    v_.WriteToSuperset(sub.v(), super.v());
+  }
+
+ private:
+  VectorSlice q_;
+  VectorSlice v_;
+};
+
+class KinematicsVars {
+ public:
+  KinematicsVars() {}
+  KinematicsVars(const OptVars& q, const OptVars& v)
+      : q_(q), v_(v) {}
+  // Permit this to be mutable.
+  OptVars& q() { return q_; }
+  const OptVars& q() const { return q_; }
+  OptVars& v() { return v_; }
+  const OptVars& v() const { return v_; }
+ private:
+  OptVars q_;
+  OptVars v_;
+};
+
+inline void DemandAllVariablesHaveUniqueNames(const OptVars& vars) {
+  set<string> names;
+  for (auto&& var : MakeIterableMatrix(vars)) {
+    // Attempt to insert.
+    auto result = names.insert(var.get_name());
+    bool is_unique = result.second;
+    DRAKE_DEMAND(is_unique);
+  }
+}
+
 }  // manipulation
 }  // drake

@@ -1,3 +1,5 @@
+#pragma once
+
 #include <drake/solvers/mathematical_program.h>
 
 #include "drake/common/nice_type_name.h"
@@ -5,96 +7,6 @@
 
 namespace drake {
 namespace manipulation {
-
-using namespace drake::solvers;
-using namespace std;
-
-// Contains values
-// Full kinematic state, including non-decision variables.
-class KinematicsState {
- public:
-  DRAKE_DEFAULT_COPY_AND_MOVE_AND_ASSIGN(KinematicsState);
-
-  KinematicsState(int nq, int nv) {
-    q_.resize(nq);
-    q_.setZero();
-    v_.resize(nv);
-    v_.setZero();
-  }
-  KinematicsState(const RigidBodyTreed& tree)
-    : KinematicsState(tree->get_num_positions(), tree->get_num_velocities()) {}
-
-  Eigen::Ref<VectorXd> q() { return q_; }
-  const VectorXd& q() const { return q_; }
-  Eigen::Ref<VectorXd> v() { return v_; }
-  const VectorXd& v() const { return v_; }
-
-  VectorXd x() const {
-    VectorXd out(q_.rows() + v_.rows());
-    out << q_, v_;
-    return out;
-  }
- private:
-  VectorXd q_;
-  VectorXd v_;
-};
-
-/**
- * A partial view into independent kinematic state variables (position and
- * velocity) for a mechanical system.
- */
-class KinematicsSlice {
- public:
-  KinematicsSlice(const RigidBodyTreed& tree, const Indices& q_indices,
-                  const Indices& v_indices)
-      : q_(q_indices, tree.get_num_positions()),
-        v_(v_indices, tree.get_num_velocities()) {}
-
-  const VectorSlice& q() const { return q_; }
-  const VectorSlice& v() const { return v_; }
-
-  // Can be State, or something else (such as joint names, decision variables, etc.)
-  template <typename KinematicsValues>
-  void ReadFromSuperset(const KinematicsValues& super, KinematicsValues& sub) {
-    q_.ReadFromSuperset(super.q(), sub.q());
-    v_.ReadFromSuperset(super.v(), sub.v());
-  }
-
-  template <typename KinematicsValues>
-  void WriteToSuperset(const KinematicsValues& sub, KinematicsValues& super) {
-    q_.WriteToSuperset(sub.q(), super.q());
-    v_.WriteToSuperset(sub.v(), super.v());
-  }
-
- private:
-  VectorSlice q_;
-  VectorSlice v_;
-};
-
-class KinematicsVars {
- public:
-  KinematicsVars() {}
-  KinematicsVars(const OptVars& q, const OptVars& v)
-      : q_(q), v_(v) {}
-  // Permit this to be mutable.
-  OptVars& q() { return q_; }
-  const OptVars& q() const { return q_; }
-  OptVars& v() { return v_; }
-  const OptVars& v() const { return v_; }
- private:
-  OptVars q_;
-  OptVars v_;
-};
-
-void DemandAllVariablesHaveUniqueNames(const OptVars& vars) {
-  set<string> names;
-  for (auto&& var : MakeIterableMatrix(vars)) {
-    // Attempt to insert.
-    auto result = names.insert(var.get_name());
-    bool is_unique = result.second;
-    DRAKE_DEMAND(is_unique);
-  }
-}
 
 /**
  * A scene that DART is to be used for estimation.
@@ -106,14 +18,7 @@ class DartScene {
  public:
   DartScene(TreePtr tree,
             const KinematicsState& initial_state,
-            const InstanceIdMap& instance_id_map)
-      : tree_(tree),
-        initial_state_(initial_state),
-        instance_id_map_(instance_id_map) {
-    instance_name_map_ = ReverseMap(instance_id_map);
-    GetHierarchicalKinematicNameList(this->tree(), instance_name_map_,
-                                     &position_names_, &velocity_names_);
-  }
+            const InstanceIdMap& instance_id_map);
 
   int GetInstanceId(const string& name) const {
     return instance_id_map_.at(name);
@@ -136,16 +41,7 @@ class DartScene {
 
   KinematicsSlice CreateKinematicsSlice(
       const vector<string>& sub_positions,
-      const vector<string>& sub_velocities) const {
-    // Get slices.
-    vector<int> q_subindices;
-    GetCommonIndices(sub_positions, position_names(),
-                     &q_subindices);
-    vector<int> v_subindices;
-    GetCommonIndices(sub_velocities, velocity_names(),
-                     &v_subindices);
-    return KinematicsSlice(tree(), q_subindices, v_subindices);
-  }
+      const vector<string>& sub_velocities) const;
 
  private:
   TreePtr tree_;
@@ -156,8 +52,14 @@ class DartScene {
   vector<string> velocity_names_;
 };
 
+class DartObjective;
+typedef vector<unique_ptr<DartObjective>> DartObjectiveList;
+
 /**
- * Contains information regarding formulation of tracking problem.
+ * Contains information regarding formulation of tracking problem, such as the
+ * objectives, the variables they create, etc. Will NOT store anything about
+ * the state of the solution (e.g., initial condition (aside from the scene),
+ * etc.).
  */
 // TODO(eric.cousineau): Consider just placing equality constraints rather than
 // removing the non-estimated joints.
@@ -168,18 +70,21 @@ class DartFormulation {
     vector<string> estimated_velocities;
   };
 
-  DartFormulation(unique_ptr<DartScene> scene, const Param& param)
-      : param_(param),
-        scene_(std::move(scene)) {
-    const auto& q_slice = kinematics_slice_->q();
-    const auto& v_slice = kinematics_slice_->v();
+  DartFormulation(unique_ptr<DartScene> scene, const Param& param);
 
-    // Add kinematics variables.
-    kinematics_vars_.q() =
-        prog_.NewContinuousVariables(q_slice.size(), param_.estimated_positions);
-    kinematics_vars_.v() =
-        prog_.NewContinuousVariables(v_slice.size(), param_.estimated_velocities);
+  /**
+   * Create and add an objective, setting this as the formulation.
+   */
+  template <typename Obj, typename ... Args>
+  Obj* AddObjective(Args&&... args) {
+    Obj* objective = new Obj(this, std::forward<Args>(args)...);
+    AddObjective(CreateUnique(objective));
   }
+
+  /**
+   * Add and initialize an objective for this formulation.
+   */
+  void AddObjective(unique_ptr<DartObjective> objective);
 
   const KinematicsSlice& kinematics_slice() const { return *kinematics_slice_; }
   const VectorSlice& q_slice() const { return kinematics_slice_->q(); }
@@ -190,18 +95,19 @@ class DartFormulation {
    * Additionally, no attempt should be made to obtain the prior solution state.
    * Rather, this will be passed in via DartObjective::Update().
    */
-  MathematicalProgram& prog() {
-    return prog_;
-  }
-  const RigidBodyTreed& tree() const {
-    return scene_->tree();
-  }
+  MathematicalProgram& prog() { return prog_; }
+  const RigidBodyTreed& tree() const { return scene_->tree(); }
 private:
+
   Param param_;
   unique_ptr<DartScene> scene_;
   MathematicalProgram prog_;
   KinematicsVars kinematics_vars_;
   unique_ptr<KinematicsSlice> kinematics_slice_;
+
+  DartObjectiveList objectives_;
+  // Track which values are use for the optimization.
+  vector<VectorSlice> opt_var_slices_;
 };
 
 /**
@@ -228,7 +134,7 @@ class DartObjective {
    */
   virtual void Init() = 0;
 
-  virtual string name() const {
+  string name() const {
     return NiceTypeName::Get(*this);
   }
 
@@ -269,8 +175,6 @@ class DartObjective {
   double latest_observation_time_{};
 };
 
-typedef vector<unique_ptr<DartObjective>> DartObjectiveList;
-
 class DartJointObjective : public DartObjective {
  public:
   void Observe(const KinematicsState& full_state) {
@@ -281,6 +185,8 @@ class DartJointObjective : public DartObjective {
 // TODO(eric.cousinaeu): Consider formulation necessary for multi-rate
 // esimators, such as in Cifuentes et al. - note that this is a particle
 // filter, and may not fit into this framework at all.
+// TODO(eric.cousineau): Consider formulation for adding / removing bodies,
+// where the number of variables needs to change on the fly.
 class DartEstimator {
  public:
   struct Param {
@@ -295,11 +201,6 @@ class DartEstimator {
     // Add kinematics variables.
   }
 
-  void AddObjective(unique_ptr<DartObjective> objective) {
-    // Allow objective to initialize values.
-    objectives_.push_back(std::move(objective));
-  }
-
   /**
    * Initialize each objective, track its optimization variables, and ensure
    * that we record the initial state.
@@ -312,34 +213,7 @@ class DartEstimator {
     }
   }
 
-  void Update(double t) {
-    // Get prior solution.
-    MathematicalProgram& prog = this->prog();
-
-    int i = 0;
-    for (auto objective : objectives_) {
-      // Ensure that this objective has had a useful observation.
-      if (objective->RequiresObservation()) {
-        double obj_obs_time = objective->latest_observation_time();
-        double time_diff = t - obj_obs_time;
-        ASSERT_THROW_FMT(time_diff >= 0,
-                         "Observation in the future.\n"
-                         "Update time: {}; Obs: {{name: {}, t: {}}}",
-                         t, objective->name(), obj_obs_time);
-
-        ASSERT_THROW_FMT(time_diff < param_.max_observed_time_diff,
-                         "Observation too old.\n"
-                         "Update time: {}, Obs: {{name: {}, t: {}}}",
-                         t, objective->name(), obj_obs_time);
-      }
-      // Get the prior from the previous solution.
-
-      objective->UpdateFormulation(t, formulation_.get());
-
-      i++;
-    }
-    formulation_.Solve();
-  }
+  void Update(double t);
 
  protected:
   const RigidBodyTreed& tree() const { return formulation_->tree(); }
@@ -347,9 +221,6 @@ class DartEstimator {
  private:
   Param param_;
   unique_ptr<DartFormulation> formulation_;
-  DartObjectiveList objectives_;
-  // Track which values are use for the optimization.
-  vector<VectorSlice> opt_var_slices_;
 
   MatrixXd covariance_;
 
