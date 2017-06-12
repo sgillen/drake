@@ -20,11 +20,11 @@ GTEST_TEST(DartUtil, CommonIndices) {
     EXPECT_EQ(x_indices_expected, x_indices);
     EXPECT_EQ(y_indices_expected, y_indices);
 
-    EXPECT_THROW(GetCommonIndices(x, y, &x_indices), std::runtime_error);
+    EXPECT_THROW(GetSubIndices(x, y, &x_indices), std::runtime_error);
 
     vector<string> y_sub = {"a", "b"};
     vector<int> y_sub_indices;
-    GetCommonIndices(y_sub, y, &y_sub_indices);
+    GetSubIndices(y_sub, y, &y_sub_indices);
     vector<int> y_sub_indices_expected {1, 0};
     EXPECT_EQ(y_sub_indices_expected, y_sub_indices);
   }

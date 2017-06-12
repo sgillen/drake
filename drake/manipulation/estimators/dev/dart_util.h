@@ -64,9 +64,8 @@ std::map<T, int> CreateIndexMap(const Container &x) {
   return std::move(out);
 }
 
-/**
- * Simple mechanism to get the matching indices between two sets of lists.
- *
+namespace internal {
+/*
  * If a_indices and b_indices are supplied, then the indices returend for `a`
  * and `b` are returned in the order in which elements are found along `a`.
  *
@@ -76,9 +75,8 @@ std::map<T, int> CreateIndexMap(const Container &x) {
  *
  * Note that this will not detect if all values are unique.
  */
-// TODO(eric.cousineau): Split into two separate functions.
 template <typename Container>
-void GetCommonIndices(const Container &a,
+void MatchIndices(const Container &a,
                       const Container &b,
                       std::vector<int>* a_indices,
                       std::vector<int>* b_indices = nullptr,
@@ -130,7 +128,37 @@ void GetCommonIndices(const Container &a,
     }
   }
 }
+}  // namespace internal
 
+/**
+ * Get indices of `a` in `b`. `a` must be a subset of `b`, and `a` must be
+ * unique.
+ * @note This will not check if `b` has all unique elements.
+ */
+template <typename Container>
+void GetSubIndices(const Container& a,
+                   const Container& b,
+                   vector<int>* a_in_b_indices,
+                   bool verbose = false) {
+  DRAKE_DEMAND(a_in_b_indices);
+  internal::MatchIndices(a, b, a_in_b_indices, nullptr, verbose);
+}
+
+/**
+ * Get common indices between `a` and `b` in `c`'s indices, where `c` is the
+ * common subset between `a` and `b`, ordered as elements are encountered in
+ * `a`.
+ * @note This will not check if `b` has all unique elements.
+ */
+template <typename Container>
+void GetCommonIndices(const Container& a,
+                   const Container& b,
+                   vector<int>* a_in_c_indices,
+                   vector<int>* b_in_c_indices,
+                   bool verbose = false) {
+  DRAKE_DEMAND(a_in_c_indices && b_in_c_indices);
+  internal::MatchIndices(a, b, a_in_c_indices, b_in_c_indices, verbose);
+}
 
 /**
  * Compute Cartesian jacobian of a point in the world, but attached to a body.
