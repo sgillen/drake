@@ -72,6 +72,31 @@ class VectorSlice {
   int max_index() const { return max_index_; }
   const Indices& indices() const { return indices_; }
 
+  VectorSlice Inverse() const {
+    // TODO(eric.cousineau): Simplify logic.
+    Indices indices_sorted = indices_;
+    std::sort(indices_sorted.begin(), indices_sorted.end());
+    Indices inverse_indices(super_size() - size());
+    int final_index = super_size();
+    int index_i = 0;
+    int index = size() == 0 ? final_index : indices_sorted[index_i];
+    for (int i = 0; i < super_size(); ++i) {
+      if (i < index) {
+        // Add to inverse list.
+        inverse_indices.push_back(i);
+      } else {
+        // Increment index counter.
+        index_i += 1;
+        if (index_i == size()) {
+          index = final_index;
+        } else {
+          index = indices_sorted[index_i];
+        }
+      }
+    }
+    return VectorSlice(inverse_indices, super_size());
+  }
+
   template <typename Container>
   bool is_valid_subset_of(const Container& other) const {
     return super_size() == other.size();

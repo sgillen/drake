@@ -24,12 +24,14 @@ KinematicsSlice DartScene::CreateKinematicsSlice(
   return KinematicsSlice(tree(), q_subindices, v_subindices);
 }
 
-DartFormulation::DartFormulation(unique_ptr<DartScene> scene, const DartFormulation::Param& param)
+DartFormulation::DartFormulation(unique_ptr<DartScene> scene,
+                                 const DartFormulation::Param& param)
   : param_(param),
     scene_(std::move(scene)),
     kinematics_est_slice_(
       scene_->CreateKinematicsSlice(param_.estimated_positions,
-                                    param_.estimated_velocities)) {
+                                    param_.estimated_velocities)),
+    kinematics_nonest_slice_(kinematics_est_slice_.Inverse()) {
   const auto& q_slice = kinematics_est_slice_.q();
   const auto& v_slice = kinematics_est_slice_.v();
 
@@ -47,7 +49,8 @@ void DartFormulation::AddObjective(unique_ptr<DartObjective> objective) {
   final->Init();
 }
 
-DartEstimator::DartEstimator(unique_ptr<DartFormulation> formulation, const DartEstimator::Param& param)
+DartEstimator::DartEstimator(unique_ptr<DartFormulation> formulation,
+                             const DartEstimator::Param& param)
   : param_(param),
     formulation_(std::move(formulation)),
     state_prior_(formulation_->tree()),
@@ -74,6 +77,7 @@ void DartEstimator::ObserveAndInputKinematicsState(
     double t, const KinematicsState& state_meas) {
   latest_state_observation_time_ = t;
   // Update measurement, v_q{k}, where t{k} = t.
+  // TODO(eric.cousineau): Be more precise with sizing here...
   state_meas_ = state_meas;
 
   // Set input in the appropriate places.

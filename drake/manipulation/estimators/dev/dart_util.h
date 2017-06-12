@@ -293,9 +293,15 @@ class KinematicsSlice {
                   const Indices& v_indices)
       : q_(q_indices, tree.get_num_positions()),
         v_(v_indices, tree.get_num_velocities()) {}
+  KinematicsSlice(const VectorSlice& q, const VectorSlice& v)
+      : q_(q), v_(v) {}
 
   const VectorSlice& q() const { return q_; }
   const VectorSlice& v() const { return v_; }
+
+  KinematicsSlice Inverse() const {
+    return KinematicsSlice(q_.Inverse(), v_.Inverse());
+  }
 
   // Can be State, or something else (such as joint names, decision variables, etc.)
   template <typename KinematicsValues>
