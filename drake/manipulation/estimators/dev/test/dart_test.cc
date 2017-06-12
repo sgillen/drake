@@ -92,6 +92,7 @@ class DartTest : public ::testing::Test {
     estimator_.reset(new DartEstimator(formulation_));
 //    estimator_->AddObjective(CreateUnique(joint_obj_));
 //    estimator_->AddObjective(CreateUnique(depth_obj_));
+    estimator_->Compile();
   }
 
   void TearDown() override {}

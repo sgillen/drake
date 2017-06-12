@@ -21,7 +21,7 @@ class KinematicsState {
     v_.resize(nv);
     v_.setZero();
   }
-  KinematicsState(const RigidBodyTreed* tree)
+  KinematicsState(const RigidBodyTreed& tree)
     : KinematicsState(tree->get_num_positions(), tree->get_num_velocities()) {}
 
   Eigen::Ref<VectorXd> q() { return q_; }
@@ -269,7 +269,7 @@ class DartObjective {
   double latest_observation_time_{};
 };
 
-typedef vector<shared_ptr<DartObjective>> DartObjectiveList;
+typedef vector<unique_ptr<DartObjective>> DartObjectiveList;
 
 class DartJointObjective : public DartObjective {
  public:
@@ -290,15 +290,33 @@ class DartEstimator {
   DartEstimator(unique_ptr<DartFormulation> formulation, const Param& param)
     : param_(param),
       formulation_(std::move(formulation)),
+      state_prior_(formulation->tree()),
       cache_prior_(formulation_->tree().CreateKinematicsCache()) {
     // Add kinematics variables.
+  }
+
+  void AddObjective(unique_ptr<DartObjective> objective) {
+    // Allow objective to initialize values.
+    objectives_.push_back(std::move(objective));
+  }
+
+  /**
+   * Initialize each objective, track its optimization variables, and ensure
+   * that we record the initial state.
+   */
+  void Compile() {
+    for (auto& objective : objectives_) {
+      // Initialize each objective.
+      objective->Init();
+      // Aggregate covariance.
+    }
   }
 
   void Update(double t) {
     // Get prior solution.
     MathematicalProgram& prog = this->prog();
-    VectorXd sol_prior_ = prog.GetSolution();
 
+    int i = 0;
     for (auto objective : objectives_) {
       // Ensure that this objective has had a useful observation.
       if (objective->RequiresObservation()) {
@@ -317,6 +335,8 @@ class DartEstimator {
       // Get the prior from the previous solution.
 
       objective->UpdateFormulation(t, formulation_.get());
+
+      i++;
     }
     formulation_.Solve();
   }
@@ -331,6 +351,9 @@ class DartEstimator {
   // Track which values are use for the optimization.
   vector<VectorSlice> opt_var_slices_;
 
+  MatrixXd covariance_;
+
+  VectorXd opt_var_prior_;
   KinematicsState state_prior_;
   KinematicsCached cache_prior_;
 };
