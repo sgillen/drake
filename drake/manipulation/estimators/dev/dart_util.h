@@ -160,6 +160,15 @@ void GetCommonIndices(const Container& a,
   internal::MatchIndices(a, b, a_in_c_indices, b_in_c_indices, verbose);
 }
 
+template <typename Container>
+VectorSlice GetSubSlice(const Container& a,
+                        const Container& b,
+                        bool verbose = false) {
+  vector<int> a_in_b_indices;
+  GetSubIndices(a, b, &a_in_b_indices, verbose);
+  return VectorSlice(a_in_b_indices, b.size());
+}
+
 /**
  * Compute Cartesian jacobian of a point in the world, but attached to a body.
  * This will transform the point to the body frame of interest, and then compute
@@ -264,8 +273,15 @@ class KinematicsState {
     v_.setZero();
   }
 
+  // TODO(eric.cousineau): Consider making static method helpers, or external
+  // functions.
   KinematicsState(const RigidBodyTreed& tree)
     : KinematicsState(tree.get_num_positions(), tree.get_num_velocities()) {}
+
+  KinematicsState(const KinematicsCached& cache) {
+    q_ = cache.getQ();
+    v_ = cache.getV();
+  }
 
   Eigen::Ref<VectorXd> q() { return q_; }
   const VectorXd& q() const { return q_; }
@@ -328,6 +344,11 @@ class KinematicsSlice {
     return KinematicsValues(q_.size(), v_.size());
   }
 
+  /// Size of both `q` and `v`.
+  int size() const {
+    return q_.size() + v_.size();
+  }
+
  private:
   VectorSlice q_;
   VectorSlice v_;
@@ -339,6 +360,7 @@ class KinematicsVars {
   KinematicsVars(const OptVars& q, const OptVars& v)
       : q_(q), v_(v) {}
   // Permit this to be mutable.
+  // TODO(eric.cousineau): Templatize KinematicsState and use that.
   OptVars& q() { return q_; }
   const OptVars& q() const { return q_; }
   OptVars& v() { return v_; }

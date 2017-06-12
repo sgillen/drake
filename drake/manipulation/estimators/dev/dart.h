@@ -10,7 +10,7 @@ namespace manipulation {
 
 /**
  * A scene that DART is to be used for estimation.
- * Contains a scene model, the instances within the scene, and dictates
+ * Contains a scene model, the instances within tscene, and dictates
  * what joints are being optimized over vs. which ones are direct pass-through.
  */
 // TODO(eric.cousineau): Consider merging with WorldSimBuilder.
@@ -82,7 +82,7 @@ class DartFormulation {
   void AddObjective(unique_ptr<DartObjective> objective);
 
   // To be called by DartEstimator. Get slices for each objective.
-  void Compile();
+  void PostInit();
 
   const KinematicsSlice& kinematics_est_slice() const {
     return kinematics_est_slice_;
@@ -92,6 +92,9 @@ class DartFormulation {
   }
   const KinematicsSlice& kinematics_est_var_slice() const {
     return kinematics_est_var_slice_;
+  }
+  const KinematicsVars& kinematics_est_vars() const {
+    return kinematics_est_vars_;
   }
 
   const DartObjectiveList& objectives() const { return objectives_; }
@@ -119,6 +122,7 @@ private:
   // Track which values are use for the optimization.
   KinematicsSlice kinematics_est_var_slice_;
   vector<VectorSlice> objective_var_slices_;
+  bool initialized_{};
 };
 
 MatrixXd CreateDefaultCovarianceMatrix(
@@ -144,8 +148,9 @@ class DartObjective {
 
   /**
    * Initialize the objective, adding costs and/or constraints.
+   * @param cache The kinematics for the initial configuration of the scene.
    */
-  virtual void Init() = 0;
+  virtual void Init(const KinematicsCached& cache) = 0;
 
   /// Get optimization variables for given objective.
   virtual const OptVars& GetVars() const = 0;
@@ -193,6 +198,12 @@ class DartObjective {
     latest_observation_time_ = time;
   }
   DartFormulation& formulation() const { return *formulation_; }
+  const RigidBodyTreed& tree() const { return formulation_->tree(); }
+  // Convenience accessors.
+  const OptVars& q_est_vars() const {
+    return formulation().kinematics_est_vars().q();
+  }
+  MathematicalProgram& prog() const { return formulation_->prog(); }
  private:
   DartFormulation* formulation_{};
   double latest_observation_time_{};
@@ -238,18 +249,19 @@ class DartEstimator {
   }
 
  protected:
-  /**
-   * Ensure that the optimization problem is ready to be performed.
-   */
+  // Initialize all objectives, and ensure that the optimization problem is
+  // ready to be performed.
   void Compile();
 
-  // Convenience.
+  // Ensure an observation time is up-to-date with the present time.
   void CheckObservationTime(double t_now, double t_obs,
                             const string& name) const;
+
+  void UpdateKinematicsWithPriorAndInput();
+
+  // Convenience accessors.
   const RigidBodyTreed& tree() const { return formulation_->tree(); }
-
   MathematicalProgram& prog() { return formulation_->prog(); }
-
   const DartObjectiveList& objectives() { return formulation_->objectives(); }
  private:
   Param param_;

@@ -1,4 +1,5 @@
 #include "drake/manipulation/estimators/dev/dart.h"
+#include "drake/manipulation/estimators/dev/dart_objectives.h"
 
 #include <gtest/gtest.h>
 
@@ -82,11 +83,11 @@ class DartTest : public ::testing::Test {
     EXPECT_EQ(6, initial_state.q().size());
     EXPECT_EQ(6, initial_state.v().size());
 
-//    DartJointObjective::Param joint_param = {
-//      .joint_variance = {0.05, 0.05, 0.01},
-//    };
-//    joint_obj_ =
-//        new DartJointObjective(formulation_, joint_param);
+    DartJointObjective::Param joint_param = {
+      .joint_variance = {0.05, 0.05, 0.01},
+    };
+    joint_obj_ =
+        new DartJointObjective(formulation_, joint_param);
 
 //    DartDepthImageIcpObjective::Param depth_param {
 //      .camera_frame = camera_frame_,
@@ -102,7 +103,7 @@ class DartTest : public ::testing::Test {
 //    depth_obj_ = DartDepthImageIcpObjective(formulation_, depth_param);
 
     formulation_->AddObjective(CreateUnique(joint_obj_));
-    formulation_->AddObjective(CreateUnique(depth_obj_));
+//    formulation_->AddObjective(CreateUnique(depth_obj_));
 
     // Tie things together.
     DartEstimator::Param estimator_param {
@@ -114,26 +115,26 @@ class DartTest : public ::testing::Test {
 
   void TearDown() override {}
 
-  void SimulateDepthImage(double t, const KinematicsState& state_meas,
-                          ImageDepth32F* pdepth_image_meas) {
-    // Throw-away items.
-    systems::rendering::PoseVector<double> pose;
-    ImageBgra8U color_image;
-    ImageLabel16I label_image;
+//  void SimulateDepthImage(double t, const KinematicsState& state_meas,
+//                          ImageDepth32F* pdepth_image_meas) {
+//    // Throw-away items.
+//    systems::rendering::PoseVector<double> pose;
+//    ImageBgra8U color_image;
+//    ImageLabel16I label_image;
 
-    rgbd_camera_sim_->CalcImages(
-        t, state_meas.x(),
-        &pose, &color_image, pdepth_image_meas, &label_image);
-  }
+//    rgbd_camera_sim_->CalcImages(
+//        t, state_meas.x(),
+//        &pose, &color_image, pdepth_image_meas, &label_image);
+//  }
 
   void SimulateObservation(double t, const KinematicsState& state_meas) {
     // Observe joint states.
     estimator_->ObserveAndInputKinematicsState(t, state_meas);
 
-    // Simulate depth image.
-    ImageDepth32F depth_image_meas;
-    SimulateDepthImage(t, state_meas, &depth_image_meas);
-    depth_obj_->ObserveImage(t, depth_image_meas);
+//    // Simulate depth image.
+//    ImageDepth32F depth_image_meas;
+//    SimulateDepthImage(t, state_meas, &depth_image_meas);
+//    depth_obj_->ObserveImage(t, depth_image_meas);
   }
 
   KinematicsState Update(double t) {
@@ -149,7 +150,7 @@ class DartTest : public ::testing::Test {
 
   unique_ptr<RgbdCameraDirect> rgbd_camera_sim_;
 
-//  DartJointObjective* joint_obj_;
+  DartJointObjective* joint_obj_;
 //  DartDepthImageIcpObjective* depth_obj_;
 
   unique_ptr<DartEstimator> estimator_;
