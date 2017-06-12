@@ -48,24 +48,33 @@ void DartFormulation::AddObjective(unique_ptr<DartObjective> objective) {
   objectives_.push_back(std::move(objective));
 }
 
+VectorSlice GetSubSliceVar(const OptVars& a, const OptVars& b) {
+  return GetSubSlice(MakeIterableMatrix(a), MakeIterableMatrix(b));
+}
+
 void DartFormulation::PostInit() {
   DRAKE_DEMAND(!initialized_);
   initialized_ = true;
+  // Initialize state slices.
+  // TODO(eric.cousineau): Figure out better way to do this.
+  OptVars all_vars = prog().decision_variables();
+  kinematics_est_var_slice_ =
+      KinematicsSlice(GetSubSliceVar(kinematics_est_vars_.q(), all_vars),
+                      GetSubSliceVar(kinematics_est_vars_.v(), all_vars));
+
   // TODO(eric.cousineau): Make assumptions on variable ordering more
   // consistent. This permits ragged variable access, while below, it does
   // block-level access.
-  OptVars all_vars = prog().decision_variables();
   int num_vars_sum = kinematics_est_var_slice_.size();
   for (auto& objective : objectives_) {
     OptVars obj_vars = objective->GetVars();
-    objective_var_slices_.push_back(
-          GetSubSlice(MakeIterableMatrix(obj_vars),
-                      MakeIterableMatrix(all_vars)));
+    objective_var_slices_.push_back(GetSubSliceVar(obj_vars, all_vars));
     num_vars_sum += obj_vars.size();
   }
   // Sanity check.
   DRAKE_DEMAND(objective_var_slices_.size() == objectives_.size());
-  DRAKE_DEMAND(num_vars_sum == all_vars.size());
+  ASSERT_THROW_FMT(num_vars_sum == all_vars.size(),
+                   "{} != {}", num_vars_sum, all_vars.size());
 }
 
 DartEstimator::DartEstimator(unique_ptr<DartFormulation> formulation,
