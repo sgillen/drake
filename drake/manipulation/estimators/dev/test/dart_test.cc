@@ -22,18 +22,33 @@ namespace {
 // designs. Make a DispatchSolver that can select from the variety at run-time,
 // and can constraint on the solvers to choose.
 
+typedef vector<pair<string, vector<string>>> InstanceJointList;
+vector<string> FlattenNameList(const InstanceJointList& joints) {
+  vector<string> joints_flat;
+  for (const auto& pair : joints) {
+    const auto& instance_name = pair.first;
+    const auto& instance_joints = pair.second;
+    for (const auto& joint_name : instance_joints) {
+      joints_flat.push_back(instance_name + "::" + joint_name);
+    }
+  }
+  return std::move(joints_flat);
+}
+
 class DartTest : public ::testing::Test {
  protected:
   void SetUp() override {
     // Create a formulation for a simple floating-base target
+    InstanceIdMap instance_id_map;
     string file_path = GetDrakePath() +
         "/examples/kuka_iiwa_arm/models/objects/block_for_pick_and_place.urdf";
     auto floating_base_type = multibody::joints::kRollPitchYaw;
     shared_ptr<RigidBodyFramed> weld_frame {nullptr};
     auto* mutable_tree = new RigidBodyTreed();
-    parsers::urdf::AddModelInstanceFromUrdfFile(
-        file_path, floating_base_type,
-        weld_frame, mutable_tree);
+    instance_id_map["target"] =
+        parsers::urdf::AddModelInstanceFromUrdfFile(
+            file_path, floating_base_type,
+            weld_frame, mutable_tree).begin()->second;
     mutable_tree->compile();
 
     // Add camera frame.
@@ -43,28 +58,26 @@ class DartTest : public ::testing::Test {
 
     auto* world_body = const_cast<RigidBody<double>*>(&mutable_tree->world());
     camera_frame_.reset(new RigidBodyFramed(
-        "depth_sensor", world_body, position, orientation * pi / 180);
+        "depth_sensor", world_body, position, orientation * pi / 180));
     mutable_tree->addFrame(camera_frame_);
 
     tree_.reset(mutable_tree);
 
+    const double fov_y = pi / 4;
     rgbd_camera_sim_.reset(
-        new RgbdCameraDirect(*tree_, camera_frame_*, ));
+        new RgbdCameraDirect(*tree_, *camera_frame_, fov_y, true));
 
-    VectorXd q0(tree_->get_num_positions());
-    q0.setZero();
-    VectorXd v0(tree_->get_num_velocities());
-    v0.setZero();
-
-    EXPECT_EQ(6, q0.size());
-    EXPECT_EQ(6, v0.size());
+    KinematicsState initial_state(*tree_);
+    EXPECT_EQ(6, initial_state.q().size());
+    EXPECT_EQ(6, initial_state.v().size());
 
     scene_ =
-        new DartScene(tree_, q0, v0);
+        new DartScene(tree_, instance_id_map);
 
     // Only interested in x-y-yaw (planar position) of the block
     DartFormulation::Param formulation_param {
-      .estimated_joints = {true, true, false, false, false, true},
+      .estimated_positions = FlattenNameList({
+          {"target", {"base_x", "base_y", "base_yaw"}} }),
     };
     formulation_ =
         new DartFormulation(CreateUnique(scene_), formulation_param);

@@ -954,11 +954,12 @@ constexpr float RgbdCamera::InvalidDepth::kTooClose;
 constexpr int16_t RgbdCamera::Label::kNoBody;
 constexpr int16_t RgbdCamera::Label::kFlatTerrain;
 
-RgbdCameraDirect::RgbdCameraDirect(
-    const RigidBodyTree<double>& tree,
-    const Eigen::Vector3d& position, const Eigen::Vector3d& orientation, double fov_y, bool show_window)
-    : impl_(new RgbdCamera::Impl(tree, RigidBodyFrame<double>(), position,
-                                 orientation, fov_y, show_window, true)) {
+RgbdCameraDirect::RgbdCameraDirect(const RigidBodyTree<double>& tree,
+                                   const RigidBodyFrame<double>& frame,
+                                   double fov_y,
+                                   bool show_window)
+    : impl_(new RgbdCamera::Impl(tree, frame,
+                                 fov_y, show_window, true)) {
   impl_->set_depth_rel_noise_magnitude(0.02); // same as above
 }
 

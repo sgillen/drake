@@ -3,7 +3,7 @@
 namespace drake {
 namespace manipulation {
 
-DartScene::DartScene(TreePtr tree, const KinematicsState& initial_state, const InstanceIdMap& instance_id_map)
+DartScene::DartScene(TreePtr tree, const InstanceIdMap& instance_id_map)
   : tree_(tree),
     initial_state_(initial_state),
     instance_id_map_(instance_id_map) {

@@ -17,7 +17,6 @@ namespace manipulation {
 class DartScene {
  public:
   DartScene(TreePtr tree,
-            const KinematicsState& initial_state,
             const InstanceIdMap& instance_id_map);
 
   int GetInstanceId(const string& name) const {
@@ -35,10 +34,6 @@ class DartScene {
     return velocity_names_;
   }
 
-  const KinematicsState& initial_state() const {
-    return initial_state_;
-  }
-
   KinematicsSlice CreateKinematicsSlice(
       const vector<string>& sub_positions,
       const vector<string>& sub_velocities) const;
@@ -47,7 +42,6 @@ class DartScene {
   TreePtr tree_;
   InstanceIdMap instance_id_map_;
   ReverseIdMap instance_name_map_;
-  KinematicsState initial_state_;
   vector<string> position_names_;
   vector<string> velocity_names_;
 };
@@ -89,6 +83,8 @@ class DartFormulation {
   const KinematicsSlice& kinematics_slice() const { return *kinematics_slice_; }
   const VectorSlice& q_slice() const { return kinematics_slice_->q(); }
 
+  const DartObjectiveList& objectives() const { return objectives_; }
+
   /**
    * This is a VERY relaxed interface for objectives to access.
    * They should NOT attempt to call solve.
@@ -98,7 +94,6 @@ class DartFormulation {
   MathematicalProgram& prog() { return prog_; }
   const RigidBodyTreed& tree() const { return scene_->tree(); }
 private:
-
   Param param_;
   unique_ptr<DartScene> scene_;
   MathematicalProgram prog_;
@@ -134,11 +129,21 @@ class DartObjective {
    */
   virtual void Init() = 0;
 
-  string name() const {
-    return NiceTypeName::Get(*this);
+  /// Get optimization variables for given objective.
+  virtual const OptVars& GetVars() const = 0;
+
+  /// Get initial values for above values.
+  virtual const VectorXd& GetInitialValues() const = 0;
+
+  // TODO(eric.cousineau): Figure out theoretically succinct initialization.
+  virtual MatrixXd GetInitialCovariance() const {
+    // TODO(eric.cousineau): See if there is a better way to do this, per
+    // Greg's comments.
+    const int num_vars = GetVars().size();
+    return kInitialUncorrelatedVariance *
+        MatrixXd::Identity(num_vars, num_vars);
   }
 
-  virtual const OptVars& opt_vars() const = 0;
 
   virtual bool RequiresObservation() const {
     return true;
@@ -149,6 +154,11 @@ class DartObjective {
       const KinematicsCached* cache_prior,
       const VectorXd& obj_priors) = 0;
 
+
+  string name() const {
+    return NiceTypeName::Get(*this);
+  }
+
   /**
    * Each individual subclass must implement its own Observe() functionality
    * to take in (a) time and (b) measurement data (joint states, image, etc.).
@@ -157,14 +167,6 @@ class DartObjective {
     return latest_observation_time_;
   }
 
-  // TODO(eric.cousineau): Figure out more elegance for initial covariance.
-  virtual MatrixXd GetInitialCovariance() const {
-    // TODO(eric.cousineau): See if there is a better way to do this, per
-    // Greg's comments.
-    const int num_vars = opt_vars().size();
-    return kInitialUncorrelatedVariance *
-        MatrixXd::Identity(num_vars, num_vars);
-  }
  protected:
   void set_latest_observation_time(double time) {
     latest_observation_time_ = time;
@@ -190,6 +192,8 @@ class DartJointObjective : public DartObjective {
 class DartEstimator {
  public:
   struct Param {
+    // This MUST be initialized.
+    KinematicsState initial_state;
     double max_observed_time_diff {1e-4};
   };
 
@@ -202,13 +206,14 @@ class DartEstimator {
   }
 
   /**
-   * Initialize each objective, track its optimization variables, and ensure
-   * that we record the initial state.
+   * Ensure that the optimization problem is ready to be performed.
    */
   void Compile() {
-    for (auto& objective : objectives_) {
-      // Initialize each objective.
-      objective->Init();
+    // Aggregate covariance.
+    int num_var = prog().num_vars();
+    covariance_.resize(num_var, num_var);
+    covariance_.setZero();
+    for (auto& objective : objectives()) {
       // Aggregate covariance.
     }
   }
@@ -216,8 +221,10 @@ class DartEstimator {
   void Update(double t);
 
  protected:
+  // Convenience.
   const RigidBodyTreed& tree() const { return formulation_->tree(); }
   MathematicalProgram& prog() { return formulation_->prog(); }
+  const DartObjectiveList& objectives() { return formulation_->objectives(); }
  private:
   Param param_;
   unique_ptr<DartFormulation> formulation_;
@@ -225,6 +232,7 @@ class DartEstimator {
   MatrixXd covariance_;
 
   VectorXd opt_var_prior_;
+
   KinematicsState state_prior_;
   KinematicsCached cache_prior_;
 };
