@@ -90,10 +90,13 @@ class DartFormulation {
   const KinematicsSlice& kinematics_nonest_slice() const {
     return kinematics_nonest_slice_;
   }
+  const KinematicsSlice& kinematics_est_var_slice() const {
+    return kinematics_est_var_slice_;
+  }
 
   const DartObjectiveList& objectives() const { return objectives_; }
   const VectorSlice& objective_var_slice(int i) const {
-    return objective_var_slices_[i];
+    return objective_var_slices_.at(i);
   }
 
   /**
@@ -159,10 +162,19 @@ class DartObjective {
     return true;
   }
 
+  /**
+   * Update problem formulation given priors, new inputs, new observations for
+   * joint states (provided from `cache`
+   * @param t
+   * @param cache Cache from kinematics computed with estimated priors
+   * (`x_q{k-1}`) and non-estimated inputs (`u_q{k}`).
+   * @see DartEstimator::ObserveAndInputKinematicsState for more details.
+   * @param obj_prior
+   */
   virtual void UpdateFormulation(
       double t,
-      const KinematicsCached* cache_prior,
-      const VectorXd& obj_priors) = 0;
+      const KinematicsCached& cache,
+      const VectorXd& obj_prior) = 0;
 
   string name() const {
     return NiceTypeName::Get(*this);
@@ -262,7 +274,7 @@ class DartEstimator {
   KinematicsCached cache_prior_with_input_;
 
   MatrixXd covariance_;
-  VectorXd opt_var_prior_;
+  VectorXd opt_val_prior_;
 };
 
 }  // manipulation

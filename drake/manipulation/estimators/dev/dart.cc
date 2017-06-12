@@ -68,21 +68,55 @@ DartEstimator::DartEstimator(unique_ptr<DartFormulation> formulation,
 }
 
 void DartEstimator::Compile() {
+  // Ensure that the formulation is aware of where each objective is placed.
   formulation_->Compile();
-  // Aggregate covariance.
+
+  // Aggregate covariance and initial conditions.
   int num_var = prog().num_vars();
+  opt_val_prior_.resize(num_var);
   covariance_.resize(num_var, num_var);
   covariance_.setZero();
-  int var_index = 0;
-  // Add joint covariance.
+
+  // Simple iteration.
+  int sub_index = 0;
+  int sub_num_var = 0;
+  auto next_sub = [&](int sub_num_var_next) {
+    // Advance and prep for the next block.
+    sub_index += sub_num_var;
+    sub_num_var = sub_num_var_next;
+  };
+  auto get_covar_sub = [&]() {
+    return covariance_.block(sub_index, sub_index, sub_num_var, sub_num_var);
+  };
+  auto get_init_sub = [&]() {
+    return opt_val_prior_.segment(sub_index, sub_num_var);
+  };
+
+  // Add joint information.
   const auto& est_slice = formulation_->kinematics_est_slice();
+  auto est_initial_state = est_slice.CreateFromSuperset(param_.initial_state);
+
   int nq = est_slice.q().size();
-  covariance_.
+  next_sub(nq);
+  get_init_sub() = est_initial_state.q();
+  get_covar_sub() = CreateDefaultCovarianceMatrix(nq);
+
   int nv = est_slice.v().size();
+  next_sub(nv);
+  get_init_sub() = est_initial_state.v();
+  get_covar_sub() = CreateDefaultCovarianceMatrix(nv);
 
   for (auto& objective : objectives()) {
     // Aggregate covariance.
+    int obj_num_var = objective->GetVars().rows();
+    next_sub(obj_num_var);
+    get_init_sub() = objective->GetInitialValues();
+    get_covar_sub() = objective->GetInitialCovariance();
   }
+
+  // Check final size.
+  next_sub(0);
+  DRAKE_DEMAND(sub_index == num_var);
 }
 
 void DartEstimator::ObserveAndInputKinematicsState(
@@ -99,27 +133,99 @@ void DartEstimator::ObserveAndInputKinematicsState(
   nonest_slice.WriteToSuperset(state_sub_nonest, state_prior_with_input_);
 }
 
+namespace {
+void ComputeQPHessian(const MathematicalProgram& prog,
+                      MatrixXd* pH) {
+  // More efficient way to do this?
+  // Create QP solver directly, and then query the Hessian after?
+  MatrixXd& H = *pH;
+
+  int num_var = prog.num_vars();
+  H.resize(num_var, num_var);
+  H.setZero();
+
+  // Snagged from EqualityConstrainedQPSolver::Solve(...)
+  // TODO(eric.cousineau): Use index slicing, if possible.
+  DRAKE_ASSERT(prog.generic_constraints().empty());
+  DRAKE_ASSERT(prog.generic_costs().empty());
+  DRAKE_ASSERT(prog.linear_constraints().empty());
+  DRAKE_ASSERT(prog.bounding_box_constraints().empty());
+  DRAKE_ASSERT(prog.linear_complementarity_constraints().empty());
+
+  for (auto const& binding : prog.quadratic_costs()) {
+    const auto& Q = binding.constraint()->Q();
+    const auto& b = binding.constraint()->b();
+
+    int num_v_variables = binding.variables().rows();
+
+    std::vector<size_t> v_index(num_v_variables);
+    for (int i = 0; i < num_v_variables; ++i) {
+      v_index[i] = prog.FindDecisionVariableIndex(binding.variables()(i));
+    }
+    for (int i = 0; i < num_v_variables; ++i) {
+      for (int j = 0; j < num_v_variables; ++j) {
+        H(v_index[i], v_index[j]) += Q(i, j);
+      }
+    }
+  }
+}
+}  // namespace
+
 const KinematicsState& DartEstimator::Update(double t) {
   // Get prior solution.
   MathematicalProgram& prog = this->prog();
 
   CheckObservationTime(t, latest_state_observation_time_, "update");
 
+  // Update kinematics.
+  cache_prior_with_input_.initialize(state_prior_with_input_.q(),
+                                     state_prior_with_input_.v());
+  tree().doKinematics(cache_prior_with_input_);
+
+  // Update each objective.
   int i = 0;
   for (auto& objective : objectives()) {
     // Ensure that this objective has had a useful observation.
     if (objective->RequiresObservation()) {
-      double obj_obs_time = objective->latest_observation_time();
-
+      CheckObservationTime(
+          t, objective->latest_observation_time(), objective->name());
     }
 
     // Get the prior from the previous solution.
     const VectorSlice& slice = formulation_->objective_var_slice(i);
-    objective->UpdateFormulation(t, formulation_.get());
+    VectorXd obj_prior(slice.size());
+    slice.ReadFromSuperset(opt_val_prior_, obj_prior);
 
+    objective->UpdateFormulation(t, cache_prior_with_input_, obj_prior);
     i++;
   }
-  formulation_.Solve();
+
+  // Solve.
+  auto result = prog.Solve();
+  DRAKE_ASSERT(result == kSolutionFound);
+
+  // Update covariance, since all quadratic costs will include the Hessian.
+  MatrixXd H;
+  ComputeQPHessian(prog, &H);
+  // TODO(eric.cousineau): Ensure that H is well-conditioned.
+  covariance_ << H.inverse();
+
+  // Get solution.
+  // Using `prior`, because after this, it will become the prior.
+  opt_val_prior_ = prog.GetSolutionVectorValues();
+
+  // Update estimated states.
+  auto& state_est_var_slice = formulation_->kinematics_est_var_slice();
+  auto state_est_sub = state_est_var_slice.CreateZero<KinematicsState>();
+  state_est_var_slice.q().ReadFromSuperset(opt_val_prior_, state_est_sub.q());
+  state_est_var_slice.v().ReadFromSuperset(opt_val_prior_, state_est_sub.v());
+
+  // Update prior with new estimates.
+  // TODO(eric.cousineau): Determine if there should just be one place for
+  // mixing priors with inputs.
+  state_est_var_slice.WriteToSuperset(state_est_sub, state_prior_);
+
+  return state_prior_;
 }
 
 void DartEstimator::CheckObservationTime(double t_now, double t_obs,

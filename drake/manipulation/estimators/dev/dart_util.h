@@ -323,6 +323,11 @@ class KinematicsSlice {
     return out;
   }
 
+  template <typename KinematicsValues>
+  KinematicsValues CreateZero() const {
+    return KinematicsValues(q_.size(), v_.size());
+  }
+
  private:
   VectorSlice q_;
   VectorSlice v_;
