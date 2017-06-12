@@ -58,7 +58,7 @@ void DartFormulation::PostInit() {
   int num_vars_sum = kinematics_est_var_slice_.size();
   for (auto& objective : objectives_) {
     OptVars obj_vars = objective->GetVars();
-    objective_var_slices_.push_back(GetSubSlice(obj_vars, all_vars));
+    objective_var_slices_.push_back(GetSubSlice(obj_vars, MakeIterableMatrix(all_vars)));
     num_vars_sum += obj_vars.size();
   }
   // Sanity check.

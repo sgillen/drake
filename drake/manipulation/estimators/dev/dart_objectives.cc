@@ -52,6 +52,8 @@ void DartJointObjective::Init(const KinematicsCached& kin_cache) {
   Impl::Cache& cache = impl_->cache_;
   int nq = q_est_vars().size();
   cache.Init(nq);
+  cache.W =
+      ComputeWeight(param_.joint_variance.array()).matrix().asDiagonal();
   cache.q_est_meas = est_meas_state.q();
   cache.Update();
   cost_ = make_shared<QuadraticCost>(cache.Q, cache.b, cache.c);

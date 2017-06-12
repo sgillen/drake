@@ -129,7 +129,9 @@ class DartTest : public ::testing::Test {
 
   void SimulateObservation(double t, const KinematicsState& state_meas) {
     // Observe joint states.
-    estimator_->ObserveAndInputKinematicsState(t, state_meas);
+    if (joint_obj_) {
+      estimator_->ObserveAndInputKinematicsState(t, state_meas);
+    }
 
 //    // Simulate depth image.
 //    ImageDepth32F depth_image_meas;
@@ -150,13 +152,13 @@ class DartTest : public ::testing::Test {
 
   unique_ptr<RgbdCameraDirect> rgbd_camera_sim_;
 
-  DartJointObjective* joint_obj_;
+  DartJointObjective* joint_obj_{};
 //  DartDepthImageIcpObjective* depth_obj_;
 
   unique_ptr<DartEstimator> estimator_;
 };
 
-TEST_F(DartTest, BasicSetup) {
+TEST_F(DartTest, JointObjective) {
   double t = 0;
   KinematicsState state_meas(*tree_);
   SimulateObservation(t, state_meas);

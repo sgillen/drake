@@ -244,6 +244,7 @@ auto MakeColView(XprType&& xpr) {
 
 // TODO(eric.cousineau): Do full implementation for more robust access
 // (especially for views!!!). Make static_assert for invalid types.
+// TODO(eric.cousineau): Name this IndexableIterableMatrix or something.
 template <typename XprType>
 class IterableMatrix {
  public:

@@ -75,12 +75,12 @@ namespace internal {
  *
  * Note that this will not detect if all values are unique.
  */
-template <typename Container>
-void MatchIndices(const Container &a,
-                      const Container &b,
-                      std::vector<int>* a_indices,
-                      std::vector<int>* b_indices = nullptr,
-                      bool verbose = false) {
+template <typename ContainerA, typename ContainerB>
+void MatchIndices(const ContainerA &a,
+                  const ContainerB &b,
+                  std::vector<int>* a_indices,
+                  std::vector<int>* b_indices = nullptr,
+                  bool verbose = false) {
   // TODO(eric.cousineau): See if there is a way to only store a reference.
   using T = std::remove_cv_t<std::decay_t<decltype(a[0])>>;
   auto a_map = CreateIndexMap<T>(a);
@@ -135,9 +135,9 @@ void MatchIndices(const Container &a,
  * unique.
  * @note This will not check if `b` has all unique elements.
  */
-template <typename Container>
-void GetSubIndices(const Container& a,
-                   const Container& b,
+template <typename ContainerA, typename ContainerB>
+void GetSubIndices(const ContainerA& a,
+                   const ContainerB& b,
                    vector<int>* a_in_b_indices,
                    bool verbose = false) {
   DRAKE_DEMAND(a_in_b_indices);
@@ -150,9 +150,9 @@ void GetSubIndices(const Container& a,
  * `a`.
  * @note This will not check if `b` has all unique elements.
  */
-template <typename Container>
-void GetCommonIndices(const Container& a,
-                   const Container& b,
+template <typename ContainerA, typename ContainerB>
+void GetCommonIndices(const ContainerA& a,
+                   const ContainerB& b,
                    vector<int>* a_in_c_indices,
                    vector<int>* b_in_c_indices,
                    bool verbose = false) {
@@ -160,9 +160,9 @@ void GetCommonIndices(const Container& a,
   internal::MatchIndices(a, b, a_in_c_indices, b_in_c_indices, verbose);
 }
 
-template <typename Container>
-VectorSlice GetSubSlice(const Container& a,
-                        const Container& b,
+template <typename ContainerA, typename ContainerB>
+VectorSlice GetSubSlice(const ContainerA& a,
+                        const ContainerB& b,
                         bool verbose = false) {
   vector<int> a_in_b_indices;
   GetSubIndices(a, b, &a_in_b_indices, verbose);
