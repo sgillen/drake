@@ -81,13 +81,8 @@ class DartFormulation {
    */
   void AddObjective(unique_ptr<DartObjective> objective);
 
-  void Compile() {
-
-    // To be called by DartEstimator. Get slices for each objective.
-    for (auto& objective : objectives()) {
-
-    }
-  }
+  // To be called by DartEstimator. Get slices for each objective.
+  void Compile();
 
   const KinematicsSlice& kinematics_est_slice() const {
     return kinematics_est_slice_;
@@ -123,12 +118,17 @@ private:
   vector<VectorSlice> objective_var_slices_;
 };
 
+MatrixXd CreateDefaultCovarianceMatrix(
+    int num_vars,
+    double initial_uncorrelated_variance = 1e-10);
+
 /**
  * An QP EKF objective may have induce both costs and constraints.
  * The objective will NOT produce decision variables for the independent
  * kinematic variables (position, velocity).
- * Rather, it will produce any additional slack variables it needs, and
- * store its own state internally.
+ * Rather, it will produce any additional slack variables it needs, and rely
+ * upon prior values provided via `UpdateFormulation()` for state (aside from
+ * basic caching).
  */
 // TODO(eric.cousineau): Look into using a System-compatible but not System-
 // required storage mode for state. (do not worry about inputs).
@@ -136,9 +136,6 @@ private:
 // context and cache.
 class DartObjective {
  public:
-  // TODO(eric.cousineau): See if there is a way to remove this.
-  static constexpr double kInitialUncorrelatedVariance = 1e-10;
-
   DartObjective(DartFormulation* formulation)
       : formulation_(formulation) {}
 
@@ -153,15 +150,10 @@ class DartObjective {
   /// Get initial values for above values.
   virtual const VectorXd& GetInitialValues() const = 0;
 
-  // TODO(eric.cousineau): Figure out theoretically succinct initialization.
   virtual MatrixXd GetInitialCovariance() const {
-    // TODO(eric.cousineau): See if there is a better way to do this, per
-    // Greg's comments.
-    const int num_vars = GetVars().size();
-    return kInitialUncorrelatedVariance *
-        MatrixXd::Identity(num_vars, num_vars);
+    // TODO(eric.cousineau): Figure out theoretically succinct initialization.
+    return CreateDefaultCovarianceMatrix(GetVars().size());
   }
-
 
   virtual bool RequiresObservation() const {
     return true;
@@ -171,7 +163,6 @@ class DartObjective {
       double t,
       const KinematicsCached* cache_prior,
       const VectorXd& obj_priors) = 0;
-
 
   string name() const {
     return NiceTypeName::Get(*this);
@@ -218,11 +209,6 @@ class DartEstimator {
   DartEstimator(unique_ptr<DartFormulation> formulation, const Param& param);
 
   /**
-   * Ensure that the optimization problem is ready to be performed.
-   */
-  void Compile();
-
-  /**
    * Take frame k's non-estimated states as inputs (u_q{k}), and take frame k's
    * measurements as observations (v_q{k}).
    * Since kinematic states are first-class citizens in this esimtator, this
@@ -247,9 +233,14 @@ class DartEstimator {
   }
 
  protected:
+  /**
+   * Ensure that the optimization problem is ready to be performed.
+   */
+  void Compile();
+
+  // Convenience.
   void CheckObservationTime(double t_now, double t_obs,
                             const string& name) const;
-  // Convenience.
   const RigidBodyTreed& tree() const { return formulation_->tree(); }
 
   MathematicalProgram& prog() { return formulation_->prog(); }
@@ -259,8 +250,10 @@ class DartEstimator {
   Param param_;
   unique_ptr<DartFormulation> formulation_;
 
-  MatrixXd covariance_;
-  VectorXd opt_var_prior_;
+  // This is the measured state, q_meas{k}, for both estimated and
+  // non-estimated states.
+  double latest_state_observation_time_{};
+  KinematicsState state_meas_;
 
   KinematicsState state_prior_;  // Don't keep this?
   // `input` in this case means non-estimated state measurements, such that we
@@ -268,10 +261,8 @@ class DartEstimator {
   KinematicsState state_prior_with_input_;
   KinematicsCached cache_prior_with_input_;
 
-  // This is the measured state, q_meas{k}, for both estimated and
-  // non-estimated states.
-  double latest_state_observation_time_{};
-  KinematicsState state_meas_;
+  MatrixXd covariance_;
+  VectorXd opt_var_prior_;
 };
 
 }  // manipulation

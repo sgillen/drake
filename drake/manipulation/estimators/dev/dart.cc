@@ -49,15 +49,22 @@ void DartFormulation::AddObjective(unique_ptr<DartObjective> objective) {
   final->Init();
 }
 
+void DartFormulation::Compile()
+{
+   for (auto& objective : objectives()) {
+
+   }
+}
+
 DartEstimator::DartEstimator(unique_ptr<DartFormulation> formulation,
                              const DartEstimator::Param& param)
   : param_(param),
     formulation_(std::move(formulation)),
+    state_meas_(formulation_->tree()),
     state_prior_(formulation_->tree()),
     state_prior_with_input_(formulation_->tree()),
-    cache_prior_with_input_(formulation_->tree().CreateKinematicsCache()),
-    state_meas_(formulation_->tree()) {
-  // Add kinematics variables.
+    cache_prior_with_input_(formulation_->tree().CreateKinematicsCache()) {
+  Compile();
 }
 
 void DartEstimator::Compile() {
@@ -68,6 +75,11 @@ void DartEstimator::Compile() {
   covariance_.setZero();
   int var_index = 0;
   // Add joint covariance.
+  const auto& est_slice = formulation_->kinematics_est_slice();
+  int nq = est_slice.q().size();
+  covariance_.
+  int nv = est_slice.v().size();
+
   for (auto& objective : objectives()) {
     // Aggregate covariance.
   }
@@ -124,7 +136,12 @@ void DartEstimator::CheckObservationTime(double t_now, double t_obs,
                    t_now, name, t_obs);
 }
 
-
+MatrixXd CreateDefaultCovarianceMatrix(int num_vars, double initial_uncorrelated_variance) {
+  // TODO(eric.cousineau): See if there is a better way to do this, per
+  // Greg's comments.
+  return initial_uncorrelated_variance *
+      MatrixXd::Identity(num_vars, num_vars);
+}
 
 }  // manipulation
 }  // drake

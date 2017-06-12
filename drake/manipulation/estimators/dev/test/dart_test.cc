@@ -101,15 +101,15 @@ class DartTest : public ::testing::Test {
 //    };
     depth_obj_ = DartDepthImageIcpObjective(formulation_, depth_param);
 
+    formulation_->AddObjective(CreateUnique(joint_obj_));
+    formulation_->AddObjective(CreateUnique(depth_obj_));
+
     // Tie things together.
     DartEstimator::Param estimator_param {
       .initial_state = initial_state,
     };
     estimator_.reset(
         new DartEstimator(CreateUnique(formulation_), estimator_param));
-//    estimator_->AddObjective(CreateUnique(joint_obj_));
-//    estimator_->AddObjective(CreateUnique(depth_obj_));
-    estimator_->Compile();
   }
 
   void TearDown() override {}
