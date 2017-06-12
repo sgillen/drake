@@ -230,8 +230,10 @@ class IterableMatrix {
     }
   }
 
+  auto& operator[](int i) { return xpr_.coeffReff(i); }
+  const auto& operator[](int i) const { return xpr_.coeffRef(i); }
+  int size() const { return xpr_.size(); }
   auto begin() const { return xpr_.data(); }
-
   auto end() const { return xpr_.data() + xpr_.size(); }
 
  private:

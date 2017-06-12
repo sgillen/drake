@@ -52,8 +52,8 @@ std::unique_ptr<T> CreateUnique(T* obj) {
 }
 
 
-template <typename T>
-std::map<T, int> CreateIndexMap(const std::vector<T> &x) {
+template <typename T, typename Container>
+std::map<T, int> CreateIndexMap(const Container &x) {
   int i = 0;
   std::map<T, int> out;
   for (const auto& value : x) {
@@ -68,14 +68,16 @@ std::map<T, int> CreateIndexMap(const std::vector<T> &x) {
  * Simple mechanism to get the matching indices between two sets of lists.
  * If b_indices is null, then a must strictly be a subset of b.
  */
-template <typename T>
-void GetCommonIndices(const std::vector<T> &a,
-                      const std::vector<T> &b,
+template <typename Container>
+void GetCommonIndices(const Container &a,
+                      const Container &b,
                       std::vector<int>* a_indices,
                       std::vector<int>* b_indices = nullptr,
                       bool verbose = false) {
-  auto a_map = CreateIndexMap(a);
-  auto b_map = CreateIndexMap(b);
+  // TODO(eric.cousineau): See if there is a way to only store a reference.
+  using T = std::remove_cv_t<std::decay_t<decltype(a[0])>>;
+  auto a_map = CreateIndexMap<T>(a);
+  auto b_map = CreateIndexMap<T>(b);
   vector<int> a_found(a.size(), false);
   vector<int> b_found(b.size(), false);
   for (const auto& a_pair : a_map) {
