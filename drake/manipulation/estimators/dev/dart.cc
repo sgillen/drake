@@ -46,6 +46,10 @@ void DartFormulation::AddObjective(unique_ptr<DartObjective> objective) {
   final->Init();
 }
 
+void DartEstimator::InputNonEstimatedState(double t, const KinematicsState& state) {
+
+}
+
 const KinematicsState& DartEstimator::Update(double t) {
   // Get prior solution.
   MathematicalProgram& prog = this->prog();

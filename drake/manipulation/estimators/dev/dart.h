@@ -55,8 +55,9 @@ typedef vector<unique_ptr<DartObjective>> DartObjectiveList;
  * the state of the solution (e.g., initial condition (aside from the scene),
  * etc.).
  */
-// TODO(eric.cousineau): Consider just placing equality constraints rather than
-// removing the non-estimated joints.
+// TODO(eric.cousineau): Consider minimal formulation such that non-estimated
+// states (inputs) are incoprorated as strict equality constraints. Should do
+// some basic performance testing / qualitative testing.
 class DartFormulation {
  public:
   struct Param {
@@ -196,7 +197,7 @@ class DartJointObjective : public DartObjective {
  private:
 };
 
-// TODO(eric.cousinaeu): Consider formulation necessary for multi-rate
+// TODO(eric.cousineau): Consider formulation necessary for multi-rate
 // esimators, such as in Cifuentes et al. - note that this is a particle
 // filter, and may not fit into this framework at all.
 // TODO(eric.cousineau): Consider formulation for adding / removing bodies,
@@ -212,8 +213,9 @@ class DartEstimator {
   DartEstimator(unique_ptr<DartFormulation> formulation, const Param& param)
     : param_(param),
       formulation_(std::move(formulation)),
-      state_prior_(formulation->tree()),
-      cache_prior_(formulation_->tree().CreateKinematicsCache()) {
+      state_prior_with_input_(formulation_->tree()),
+      cache_prior_with_input_(formulation_->tree().CreateKinematicsCache()),
+      state_meas_(formulation_->tree()) {
     // Add kinematics variables.
   }
 
@@ -230,14 +232,34 @@ class DartEstimator {
     }
   }
 
+  /**
+   * Take frame k's non-estimated states as inputs (u_q{k}), and take frame k's
+   * measurements as observations (v_q{k}).
+   * Since kinematic states are first-class citizens in this esimtator, this
+   * will be done by merging the cache using both the kinematic state
+   * prior (x_q{k-1}) and the non-estimated states (u_q{k}), and then providing
+   * the observations of the estimated state (v_q{k}) for consumption by other
+   * objectives.
+   */
+  void ObserveAndInputKinematicState(double t,
+                                     const KinematicsState& state_meas);
+
   const KinematicsState& Update(double t);
 
-  const KinematicsState& state_prior() const { return state_prior_; }
+  const KinematicsState& state_prior(double t) const {
+    return state_prior_with_input_;
+  }
+
+  const KinematicsState& state_meas(double t) const {
+    return state_meas_;
+  }
 
  protected:
   // Convenience.
   const RigidBodyTreed& tree() const { return formulation_->tree(); }
+
   MathematicalProgram& prog() { return formulation_->prog(); }
+
   const DartObjectiveList& objectives() { return formulation_->objectives(); }
  private:
   Param param_;
@@ -246,8 +268,14 @@ class DartEstimator {
   MatrixXd covariance_;
   VectorXd opt_var_prior_;
 
-  KinematicsState state_prior_;
-  KinematicsCached cache_prior_;
+  // `input` in this case means non-estimated state measurements, such that we
+  // combine q_est{k-1} (prior) with input q_nonest_meas{k} (input).
+  KinematicsState state_prior_with_input_;
+  KinematicsCached cache_prior_with_input_;
+
+  // This is the measured state, q_meas{k}, for both estimated and
+  // non-estimated states.
+  KinematicsState state_meas_;
 };
 
 }  // manipulation

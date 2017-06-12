@@ -133,9 +133,7 @@ class DartTest : public ::testing::Test {
 
   void Observe(double t, const KinematicsState& state_meas) {
     // Observe joint states.
-    VectorXd v(tree_->get_num_velocities());
-    v.setZero();
-    joint_obj_->ObserveState(t, state_meas);
+    estimator_->ObserveAndInputKinematicState(state_meas);
 
     // Simulate depth image.
     ImageDepth32F depth_image_meas;
