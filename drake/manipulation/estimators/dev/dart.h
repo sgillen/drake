@@ -328,6 +328,8 @@ class DartEstimator {
   Param param_;
   unique_ptr<DartFormulation> formulation_;
   DartObjectiveList objectives_;
+  // Track which values are use for the optimization.
+  vector<VectorSlice> opt_var_slices_;
 
   KinematicsState state_prior_;
   KinematicsCached cache_prior_;

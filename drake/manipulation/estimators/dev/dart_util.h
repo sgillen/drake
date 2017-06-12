@@ -66,8 +66,17 @@ std::map<T, int> CreateIndexMap(const Container &x) {
 
 /**
  * Simple mechanism to get the matching indices between two sets of lists.
- * If b_indices is null, then a must strictly be a subset of b.
+ *
+ * If a_indices and b_indices are supplied, then the indices returend for `a`
+ * and `b` are returned in the order in which elements are found along `a`.
+ *
+ * If `b_indices` is null, then `a_indices` will be the same size as `a`,
+ * and will store the correspondence between element `a[i]` and its position in
+ * `b`.
+ *
+ * Note that this will not detect if all values are unique.
  */
+// TODO(eric.cousineau): Split into two separate functions.
 template <typename Container>
 void GetCommonIndices(const Container &a,
                       const Container &b,
@@ -92,10 +101,17 @@ void GetCommonIndices(const Container &a,
                        "b: {{ found: {}, index: {} }}\n",
                        ai_found, a_pair.second,
                        bi_found, b_pair.second);
-      a_indices->push_back(a_pair.second);
-      b_indices->push_back(b_pair.second);
+      if (b_indices) {
+        a_indices->push_back(a_pair.second);
+        b_indices->push_back(b_pair.second);
+      } else {
+        a_indices->push_back(b_pair.second);
+      }
       ai_found = true;
       bi_found = true;
+    } else {
+      ASSERT_THROW_FMT(b_indices, "a[{}] not found in b, but a must be a subset"
+                       " of b since b_indices was not provided.");
     }
   }
   if (verbose) {
