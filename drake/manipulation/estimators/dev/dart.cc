@@ -61,7 +61,6 @@ DartEstimator::DartEstimator(unique_ptr<DartFormulation> formulation,
   : param_(param),
     formulation_(std::move(formulation)),
     state_meas_(formulation_->tree()),
-    state_prior_(formulation_->tree()),
     state_prior_with_input_(formulation_->tree()),
     cache_prior_with_input_(formulation_->tree().CreateKinematicsCache()) {
   Compile();
@@ -129,7 +128,6 @@ void DartEstimator::ObserveAndInputKinematicsState(
   // Set input in the appropriate places.
   const auto& nonest_slice = formulation_->kinematics_nonest_slice();
   auto state_sub_nonest = nonest_slice.CreateFromSuperset(state_meas_);
-  state_prior_with_input_ = state_prior_;
   nonest_slice.WriteToSuperset(state_sub_nonest, state_prior_with_input_);
 }
 
@@ -223,9 +221,9 @@ const KinematicsState& DartEstimator::Update(double t) {
   // Update prior with new estimates.
   // TODO(eric.cousineau): Determine if there should just be one place for
   // mixing priors with inputs.
-  state_est_var_slice.WriteToSuperset(state_est_sub, state_prior_);
+  state_est_var_slice.WriteToSuperset(state_est_sub, state_prior_with_input_);
 
-  return state_prior_;
+  return state_prior_with_input_;
 }
 
 void DartEstimator::CheckObservationTime(double t_now, double t_obs,

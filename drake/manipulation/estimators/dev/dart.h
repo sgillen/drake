@@ -198,13 +198,6 @@ class DartObjective {
   double latest_observation_time_{};
 };
 
-class DartJointObjective : public DartObjective {
- public:
-  void Observe(const KinematicsState& full_state) {
-  }
- private:
-};
-
 // TODO(eric.cousineau): Consider formulation necessary for multi-rate
 // esimators, such as in Cifuentes et al. - note that this is a particle
 // filter, and may not fit into this framework at all.
@@ -267,9 +260,10 @@ class DartEstimator {
   double latest_state_observation_time_{};
   KinematicsState state_meas_;
 
-  KinematicsState state_prior_;  // Don't keep this?
   // `input` in this case means non-estimated state measurements, such that we
   // combine q_est{k-1} (prior) with input q_nonest_meas{k} (input).
+  // TODO(eric.cousineau): Don't store combined state, it's confusing. Rather,
+  // store state_est_prior_ and state_nonest_input_ as slices.
   KinematicsState state_prior_with_input_;
   KinematicsCached cache_prior_with_input_;
 

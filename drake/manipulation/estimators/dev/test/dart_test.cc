@@ -99,7 +99,7 @@ class DartTest : public ::testing::Test {
 //          .z = {-2, 2},
 //      },
 //    };
-    depth_obj_ = DartDepthImageIcpObjective(formulation_, depth_param);
+//    depth_obj_ = DartDepthImageIcpObjective(formulation_, depth_param);
 
     formulation_->AddObjective(CreateUnique(joint_obj_));
     formulation_->AddObjective(CreateUnique(depth_obj_));
@@ -149,8 +149,8 @@ class DartTest : public ::testing::Test {
 
   unique_ptr<RgbdCameraDirect> rgbd_camera_sim_;
 
-  DartJointObjective* joint_obj_;
-  DartDepthImageIcpObjective* depth_obj_;
+//  DartJointObjective* joint_obj_;
+//  DartDepthImageIcpObjective* depth_obj_;
 
   unique_ptr<DartEstimator> estimator_;
 };
@@ -160,6 +160,8 @@ TEST_F(DartTest, BasicSetup) {
   KinematicsState state_meas(*tree_);
   SimulateObservation(t, state_meas);
   KinematicsState state_est = Update(t);
+  // TODO(eric.cousineau): Make meaningful test.
+  EXPECT_TRUE(state_est.q().size() > 0);
 }
 
 }  // namespace
