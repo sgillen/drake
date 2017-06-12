@@ -67,10 +67,6 @@ class DartTest : public ::testing::Test {
     rgbd_camera_sim_.reset(
         new RgbdCameraDirect(*tree_, *camera_frame_, fov_y, true));
 
-    KinematicsState initial_state(*tree_);
-    EXPECT_EQ(6, initial_state.q().size());
-    EXPECT_EQ(6, initial_state.v().size());
-
     scene_ =
         new DartScene(tree_, instance_id_map);
 
@@ -81,6 +77,10 @@ class DartTest : public ::testing::Test {
     };
     formulation_ =
         new DartFormulation(CreateUnique(scene_), formulation_param);
+
+    KinematicsState initial_state(scene_->tree());
+    EXPECT_EQ(6, initial_state.q().size());
+    EXPECT_EQ(6, initial_state.v().size());
 
 //    DartJointObjective::Param joint_param = {
 //      .joint_variance = {0.05, 0.05, 0.01},
@@ -102,7 +102,11 @@ class DartTest : public ::testing::Test {
     depth_obj_ = DartDepthImageIcpObjective(formulation_, depth_param);
 
     // Tie things together.
-    estimator_.reset(new DartEstimator(formulation_));
+    DartEstimator::Param estimator_param {
+      .initial_state = initial_state,
+    };
+    estimator_.reset(
+        new DartEstimator(CreateUnique(formulation_), estimator_param));
 //    estimator_->AddObjective(CreateUnique(joint_obj_));
 //    estimator_->AddObjective(CreateUnique(depth_obj_));
     estimator_->Compile();
@@ -127,14 +131,11 @@ class DartTest : public ::testing::Test {
         &pose, &color_image, pdepth_image, &label_image);
   }
 
-  void Observe(double t, const VectorXd& q_meas) {
-    // Update estimator.
-    estimator_->ObserveTime(t);
-
+  void Observe(double t, const KinematicsState& state_meas) {
     // Observe joint states.
     VectorXd v(tree_->get_num_velocities());
     v.setZero();
-    joint_obj_->ObserveState(t, q_meas, v);
+    joint_obj_->ObserveState(t, state_meas);
 
     // Simulate depth image.
     ImageDepth32F depth_image_meas;
@@ -142,12 +143,12 @@ class DartTest : public ::testing::Test {
     depth_obj_->ObserveImage(t, depth_image_meas);
   }
 
-  void Update(double t, VectorXd* q) {
+  KinematicsState Update(double t) {
     // Update estimate.
-    VectorXd v;
-    estimator_->Update(t, q, &v);
+    return estimator_->Update(t);
   }
- private:
+
+ protected:
   shared_ptr<const RigidBodyTreed> tree_;
   shared_ptr<RigidBodyFramed> camera_frame_;
   DartScene* scene_;
@@ -163,11 +164,9 @@ class DartTest : public ::testing::Test {
 
 TEST_F(DartTest, BasicSetup) {
   double t = 0;
-  KinematicsState state_meas(scene_->initial_state());
-  KinematicsState state_est(scene_->initial_state());
-
-  estimator_->Observe(t, state_meas.q);
-  estimator_->Update(t, &state_est.q);
+  KinematicsState state_meas(*tree_);
+  estimator_->Observe(t, state_meas);
+  KinematicsState state_est = estimator_->Update(t);
 }
 
 }  // namespace

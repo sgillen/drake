@@ -25,9 +25,12 @@ KinematicsSlice DartScene::CreateKinematicsSlice(const vector<string>& sub_posit
 
 DartFormulation::DartFormulation(unique_ptr<DartScene> scene, const DartFormulation::Param& param)
   : param_(param),
-    scene_(std::move(scene)) {
-  const auto& q_slice = kinematics_slice_->q();
-  const auto& v_slice = kinematics_slice_->v();
+    scene_(std::move(scene)),
+    kinematics_slice_(
+      scene_->CreateKinematicsSlice(param_.estimated_positions,
+                                    param_.estimated_velocities)) {
+  const auto& q_slice = kinematics_slice_.q();
+  const auto& v_slice = kinematics_slice_.v();
 
   // Add kinematics variables.
   kinematics_vars_.q() =
@@ -43,12 +46,12 @@ void DartFormulation::AddObjective(unique_ptr<DartObjective> objective) {
   final->Init();
 }
 
-void DartEstimator::Update(double t) {
+const KinematicsState& DartEstimator::Update(double t) {
   // Get prior solution.
   MathematicalProgram& prog = this->prog();
 
   int i = 0;
-  for (auto& objective : objectives_) {
+  for (auto& objective : objectives()) {
     // Ensure that this objective has had a useful observation.
     if (objective->RequiresObservation()) {
       double obj_obs_time = objective->latest_observation_time();
@@ -63,8 +66,9 @@ void DartEstimator::Update(double t) {
                        "Update time: {}, Obs: {{name: {}, t: {}}}",
                        t, objective->name(), obj_obs_time);
     }
-    // Get the prior from the previous solution.
 
+    // Get the prior from the previous solution.
+    const VectorSlice& slice = formulation_->objective_var_slice(i);
     objective->UpdateFormulation(t, formulation_.get());
 
     i++;

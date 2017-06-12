@@ -263,6 +263,7 @@ class KinematicsState {
     v_.resize(nv);
     v_.setZero();
   }
+
   KinematicsState(const RigidBodyTreed& tree)
     : KinematicsState(tree.get_num_positions(), tree.get_num_velocities()) {}
 
@@ -287,6 +288,7 @@ class KinematicsState {
  */
 class KinematicsSlice {
  public:
+  KinematicsSlice() {}
   KinematicsSlice(const RigidBodyTreed& tree, const Indices& q_indices,
                   const Indices& v_indices)
       : q_(q_indices, tree.get_num_positions()),

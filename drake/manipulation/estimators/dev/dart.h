@@ -80,10 +80,21 @@ class DartFormulation {
    */
   void AddObjective(unique_ptr<DartObjective> objective);
 
-  const KinematicsSlice& kinematics_slice() const { return *kinematics_slice_; }
-  const VectorSlice& q_slice() const { return kinematics_slice_->q(); }
+  void Compile() {
+
+    // To be called by DartEstimator. Get slices for each objective.
+    for (auto& objective : objectives()) {
+
+    }
+  }
+
+  const KinematicsSlice& kinematics_slice() const { return kinematics_slice_; }
+  const VectorSlice& q_slice() const { return kinematics_slice_.q(); }
 
   const DartObjectiveList& objectives() const { return objectives_; }
+  const VectorSlice& objective_var_slice(int i) const {
+    return objective_var_slices_[i];
+  }
 
   /**
    * This is a VERY relaxed interface for objectives to access.
@@ -98,11 +109,12 @@ private:
   unique_ptr<DartScene> scene_;
   MathematicalProgram prog_;
   KinematicsVars kinematics_vars_;
-  unique_ptr<KinematicsSlice> kinematics_slice_;
+  KinematicsSlice kinematics_slice_;
 
   DartObjectiveList objectives_;
   // Track which values are use for the optimization.
-  vector<VectorSlice> opt_var_slices_;
+  KinematicsSlice kinematics_var_slice_;
+  vector<VectorSlice> objective_var_slices_;
 };
 
 /**
@@ -218,7 +230,9 @@ class DartEstimator {
     }
   }
 
-  void Update(double t);
+  const KinematicsState& Update(double t);
+
+  const KinematicsState& state_prior() const { return state_prior_; }
 
  protected:
   // Convenience.
@@ -230,7 +244,6 @@ class DartEstimator {
   unique_ptr<DartFormulation> formulation_;
 
   MatrixXd covariance_;
-
   VectorXd opt_var_prior_;
 
   KinematicsState state_prior_;
