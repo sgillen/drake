@@ -15,7 +15,7 @@ robots:
       base_yaw: -1.57079632679
   iiwa:
     urdf_less_collision: "/manipulation/models/iiwa_description/urdf/iiwa14_polytope_collision.urdf"
-    urdf: "/manipulation/models/iiwa_description/urdf/iiwa14_mesh_collision.urdf"
+    urdf: "/manipulation/models/iiwa_description/urdf/iiwa14_mesh_decimated_collison.urdf"
     q0: 
       base_x: 0
       base_y: 0
