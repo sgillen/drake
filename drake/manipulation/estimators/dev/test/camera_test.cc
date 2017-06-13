@@ -37,14 +37,15 @@ int main() {
   const Vector3d orientation(0, 0, 0); // degrees
   const double pi = M_PI;
 
-  auto* world_body = const_cast<RigidBody<double>*>(&tree_->world());
+//  auto* world_body = const_cast<RigidBody<double>*>(&tree_->world());
   auto camera_frame_ = make_shared<RigidBodyFramed>(
-      "depth_sensor", world_body, position, orientation * pi / 180);
+      "depth_sensor", nullptr, position, orientation * pi / 180);
   mutable_tree_->addFrame(camera_frame_);
 
   const double fov_y = pi / 4;
   auto* rgbd_camera_sim_ =
       new RgbdCameraDirect(*tree_, position, orientation, fov_y, true);
+  // Can't get this to work???
 //      new RgbdCameraDirect(*tree_, *camera_frame_, fov_y, true);
 
   VectorXd x0(tree_->get_num_positions() + tree_->get_num_velocities());

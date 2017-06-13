@@ -81,7 +81,7 @@ class DartTest : public ::testing::Test {
 
   void AddDepthObjective() {
     // Add camera frame.
-    const Vector3d position(-2, 0, 0);
+    const Vector3d position(-2, 0, 0.1);
     const Vector3d orientation(0, 0, 0); // degrees
     const double pi = M_PI;
 
@@ -92,7 +92,10 @@ class DartTest : public ::testing::Test {
 
     const double fov_y = pi / 4;
     rgbd_camera_sim_.reset(
-        new RgbdCameraDirect(*tree_, *camera_frame_, fov_y, true));
+//        new RgbdCameraDirect(*tree_, *camera_frame_, fov_y, true));
+          new RgbdCameraDirect(*tree_, position, orientation * pi / 180, fov_y,
+                               true));
+
 
     DartDepthImageIcpObjective::Param depth_param;
     {
@@ -211,7 +214,7 @@ class DartTest : public ::testing::Test {
     KinematicsState state_prev = estimator_->initial_state();
     KinematicsState state_meas(*tree_);
     state_meas.q() <<
-        1, 2, 0, 0, 0, 10 * M_PI / 180.;
+        0.1, -0.2, 0.0, 0, 0, 10 * M_PI / 180.;
     double t = 0;
     double dt = 0.01;
     double t_end = 0.05;
