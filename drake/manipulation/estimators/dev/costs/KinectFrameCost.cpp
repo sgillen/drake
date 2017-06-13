@@ -440,7 +440,7 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
           //              - 2 * (Ks.' * n * n.' * J) ]
           // for Ks = (z - z_prime + Jz*q_old)
 
-          bool POINT_TO_PLANE = false;
+          bool POINT_TO_PLANE = true;
           for (int j=0; j < k; j++){
             MatrixXd Ks = z.col(j) - z_prime.col(j) + J.block(3*j, 0, 3, nq)*q_old;
             if (POINT_TO_PLANE){

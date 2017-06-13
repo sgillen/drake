@@ -116,7 +116,7 @@ costs:
 
   - type: "KinectFrameCost"
     icp_var: 1 # m
-    free_space_var: 1 # 0.5
+    free_space_var: .inf # 1 # 0.5
     max_considered_icp_distance: 0.1
     min_considered_joint_distance: 0.00
     verbose: True
