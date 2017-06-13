@@ -249,6 +249,10 @@ class DartEstimator {
     return state_meas_;
   }
 
+  const KinematicsState& initial_state() const {
+    return param_.initial_state;
+  }
+
  protected:
   // Initialize all objectives, and ensure that the optimization problem is
   // ready to be performed.

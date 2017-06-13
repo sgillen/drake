@@ -175,10 +175,34 @@ class DartTest : public ::testing::Test {
 TEST_F(DartTest, JointObjective) {
   double t = 0;
   KinematicsState state_meas(*tree_);
+  state_meas.q() <<
+      1, 2, 0, 0, 0, 10 * M_PI / 180.;
   SimulateObservation(t, state_meas);
-  KinematicsState state_est = Update(t);
+  KinematicsState state_update = Update(t);
   // TODO(eric.cousineau): Make meaningful test.
-  EXPECT_TRUE(state_est.q().size() > 0);
+  EXPECT_TRUE(state_update.q().size() > 0);
+
+  // Check that we have gotten somewhat closer to our measured state, only in
+  // the estimated coordinates.
+  KinematicsState state_init = estimator_->initial_state();
+  const KinematicsSlice& state_est_slice =
+      formulation_->kinematics_est_slice();
+  // Estimated portion of initial state.
+  auto state_est_init =
+      state_est_slice.CreateFromSuperset(state_init);
+  // Estimated portion of measurement.
+  auto state_est_meas =
+      state_est_slice.CreateFromSuperset(state_meas);
+  // Estimated portion of upate.
+  auto state_est_update =
+      state_est_slice.CreateFromSuperset(state_update);
+
+  // Compute differences.
+  auto diff_est_init =
+      (state_est_init.x() - state_est_meas.x()).eval();
+  auto diff_est_update =
+      (state_est_update.x() - state_est_meas.x()).eval();
+  EXPECT_LT(diff_est_update.norm(), diff_est_init.norm());
 }
 
 }  // namespace
