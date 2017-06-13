@@ -28,9 +28,9 @@ struct Coord {
 class GridSlice {
  public:
   GridSlice(int downsample, int super_width, int super_height)
-      : width_(super_width / downsample),
+      : downsample_(downsample),
+        width_(super_width / downsample),
         height_(super_height / downsample),
-        downsample_(downsample),
         super_width_(super_width),
         super_height_(super_height) {}
   GridSlice(int width, int height)
@@ -158,24 +158,33 @@ struct IcpLinearizedNormAccumulator {
  * `W`, if available.
  */
 struct IcpScene {
+  IcpScene(const RigidBodyTreed& tree,
+           const KinematicsCached& cache,
+           const int frame_W,
+           const int frame_C)
+    : tree(tree),
+      cache(cache),
+      frame_W(frame_W),
+      frame_C(frame_C) {}
   const RigidBodyTreed& tree;
   const KinematicsCached& cache;
-  const int frame_W{-1};
-  const int frame_C{-1};
+  const int frame_W;
+  const int frame_C;
 };
 
 /**
  * A group of points to be rendered in a linearized ICP cost.
  */
 struct IcpPointGroup {
-  const int frame_Bi{-1};
-  const int num_max{};
-  Matrix3Xd meas_pts_W{3, num_max};
-  Matrix3Xd meas_pts_C{3, num_max};
-  Matrix3Xd body_pts_Bi{3, num_max};
-  Matrix3Xd body_pts_W{3, num_max};
-  int num_actual{0};
-
+  IcpPointGroup(int frame_Bi, int num_max)
+    : frame_Bi(frame_Bi),
+      num_max(num_max) {
+    meas_pts_W.resize(3, num_max);
+    meas_pts_W.resize(3, num_max);
+    meas_pts_C.resize(3, num_max);
+    body_pts_Bi.resize(3, num_max);
+    body_pts_W.resize(3, num_max);
+  }
   void Add(const Vector3d& meas_W, const Vector3d& meas_C,
           const Vector3d& body_W, const Vector3d& body_Bi) {
     int i = num_actual++;
@@ -210,6 +219,14 @@ struct IcpPointGroup {
     // Incorproate errors into L2 norm cost.
     error_accumulator->AddTerms(weight, es_W, J_es_W);
   }
+ private:
+  const int frame_Bi{-1};
+  const int num_max{};
+  Matrix3Xd meas_pts_W;
+  Matrix3Xd meas_pts_C;
+  Matrix3Xd body_pts_Bi;
+  Matrix3Xd body_pts_W;
+  int num_actual{0};
 };
 
 class DartDepthImageIcpObjective::Impl {
@@ -234,6 +251,8 @@ DartDepthImageIcpObjective::DartDepthImageIcpObjective(
                              *param_.camera.frame, param_.camera.fov_y,
                              param_.camera.show_window));
 }
+
+DartDepthImageIcpObjective::~DartDepthImageIcpObjective() {}
 
 void DartDepthImageIcpObjective::Init(const KinematicsCached& cache) {
   unused(cache);
@@ -311,12 +330,9 @@ void DartDepthImageIcpObjective::UpdateFormulation(
   Matrix3Xd positive_meas_pts_W(3, num_meas);  // Point cloud points.
   int num_positive = 0;
 
-  IcpScene scene{
-    .tree = tree,
-    .cache = kin_cache,
-    .frame_C = param_.camera.frame->get_frame_index(),
-    .frame_W = tree.world().get_body_index()
-  };
+  IcpScene scene(tree, kin_cache,
+                 param_.camera.frame->get_frame_index(),
+                 tree.world().get_body_index());
 
   const Matrix3Xd& point_cloud_C = impl.meas.point_cloud_C;
   Matrix3Xd point_cloud_W =
@@ -375,12 +391,8 @@ void DartDepthImageIcpObjective::UpdateFormulation(
     const auto& body_positive_indices = positive_body_point_indices[body_index];
 
     const int frame_Bi = body_index;
-
     // Accumulated points per body.
-    IcpPointGroup icp {
-      .num_max = (int)body_positive_indices.size(),
-      .frame_Bi = frame_Bi,
-    };
+    IcpPointGroup icp_body(frame_Bi, body_positive_indices.size());
 
     for (int positive_index : body_positive_indices) {
       // Get coordinate from the measurement.
@@ -401,14 +413,14 @@ void DartDepthImageIcpObjective::UpdateFormulation(
         // Register each point with the appropriate frames to compute the
         // linearized error term.
         const int meas_index = positive_meas_indices[positive_index];
-        icp.Add(positive_meas_pts_W.col(positive_index),
-                point_cloud_C.col(meas_index),
-                positive_body_pts_W.col(positive_index),
-                body_pt_Bi);
+        icp_body.Add(positive_meas_pts_W.col(positive_index),
+                     point_cloud_C.col(meas_index),
+                     positive_body_pts_W.col(positive_index),
+                     body_pt_Bi);
       }
     }
     // Incorporate into error accumulation.
-    icp.AddTerms(scene, &error_accumulator, icp_weight);
+    icp_body.AddTerms(scene, &error_accumulator, icp_weight);
   }
   // Render to full cost, taking only the estimated variables.
   error_accumulator.UpdateCost(kin_est_slice.q(), icp_cost_.get());
