@@ -394,8 +394,11 @@ void DartDepthImageIcpObjective::UpdateFormulation(
         continue;
       }
       const auto& body = tree.get_body(body_index);
-      const auto* revolute_joint =
-          dynamic_cast<const RevoluteJoint*>(&body.getJoint());
+      const RevoluteJoint* revolute_joint = nullptr;
+      if (body_index > 0) {
+        revolute_joint =
+            dynamic_cast<const RevoluteJoint*>(&body.getJoint());
+      }
 
       const int frame_Bi = body_index;
       // Accumulated points per body.
