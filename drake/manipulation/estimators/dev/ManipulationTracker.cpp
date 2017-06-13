@@ -554,10 +554,28 @@ void ManipulationTracker::update(){
     // is it used?
     std::vector<bool> rows_used(nx, false);
     int nx_reduced = 0;
+    ASSERT_THROW_FMT(nx == nq * 2,
+                     "nx: {}, nq: {}", nx, robot_->get_num_positions());
+    drake::log()->info("QP Reduce");
     for (int i=0; i < nx; i++){
-      if ( !(fabs(f[i]) <= 1E-10 && Q.block(i, 0, 1, nx).norm() <= 1E-10 && Q.block(0, i, nx, 1).norm() <= 1E-10) ){
+      bool is_tracked = true;
+      if (i < nq) {
+        is_tracked = std::find(indices_tracked_.begin(),
+                                  indices_tracked_.end(),
+                                  i) != indices_tracked_.end();
+      }
+      if (!is_tracked) {
+        rows_used[i] = false;
+      } else if ( !(fabs(f[i]) <= 1E-10 && Q.block(i, 0, 1, nx).norm() <= 1E-10 && Q.block(0, i, nx, 1).norm() <= 1E-10) ){
         rows_used[i] = true;
         nx_reduced++;
+      }
+      if (!rows_used[i]) {
+        if (i < nq) {
+          drake::log()->info("  Skip joint[{}]: {}", i, robot_->get_position_name(i));
+        } else {
+          drake::log()->info("  Skip extra [{}]", i);
+        }
       }
     }
     // do this reduction (collapse the rows/cols of vars that don't correspond)
