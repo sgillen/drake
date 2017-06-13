@@ -51,6 +51,23 @@ GTEST_TEST(VectorSliceTest, BasicSlice) {
   EXPECT_EQ(superset_expected, superset);
 }
 
+GTEST_TEST(VectorSliceTest, MatrixSlice) {
+  VectorSlice slice{ {2, 0} };
+  Matrix3d X;
+  X <<
+     1, 2, 3,
+     4, 5, 6,
+     7, 8, 9;
+  Eigen::Matrix2d X_sub;
+  slice.ReadFromSupersetMatrix(X, X_sub);
+
+  Eigen::Matrix2d X_sub_expected;
+  X_sub_expected <<
+     9, 7,
+     3, 1;
+  EXPECT_EQ(X_sub_expected, X_sub);
+}
+
 GTEST_TEST(VectorSliceTest, Views) {
   Matrix3d X;
   X <<

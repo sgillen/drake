@@ -112,9 +112,20 @@ class VectorSlice {
     }
   }
 
+  template <typename MatrixIn, typename MatrixOut>
+  void ReadFromSupersetMatrix(const MatrixIn& super, MatrixOut&& values) const {
+    // Select column-wise (for speed on storage order), one-by-one.
+    DRAKE_ASSERT(super.cols() == super_size());
+    values.resize(this->size(), this->size());
+    for (int i = 0; i < this->size(); ++i) {
+      int index = this->indices_[i];
+      ReadFromSuperset(super.col(index), values.col(i));
+    }
+  }
+
   template <typename VectorIn, typename VectorOut>
   void WriteToSuperset(const VectorIn& values, VectorOut&& super) const {
-    DRAKE_ASSERT(is_valid_subset_of(super));
+    DRAKE_ASSERT(is_valid_subset_of(super));  // Do not attepmt to resize.
     for (int i = 0; i < this->size(); ++i) {
       int index = this->indices_[i];
       super[index] = values[i];

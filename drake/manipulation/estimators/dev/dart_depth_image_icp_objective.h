@@ -19,18 +19,9 @@ struct Bounds {
   Interval x;
   Interval y;
   Interval z;
-
   inline bool IsInside(double xi, double yi, double zi) const {
     return x.IsInside(xi) && y.IsInside(yi) && z.IsInside(zi);
   }
-};
-
-/**
- * Accumulate quadratic point-to-point errors to be rendered into a
- * QuadraticCost.
- */
-struct IcpQuadraticErrorAccumulator {
- public:
 };
 
 /**
@@ -80,7 +71,12 @@ class DartDepthImageIcpObjective : public DartObjective {
   const OptVars& GetVars() const override { return extra_vars_; }
   const VectorXd& GetInitialValues() const override { return extra_ic_; }
  private:
-  shared_ptr<QuadraticCost> cost_;
+//  void Downsample
+  void DetermineUnaffectedBodies();
+
+  shared_ptr<QuadraticCost> icp_cost_;
+  shared_ptr<QuadraticCost> free_space_cost_;
+
   Param param_;
   class Impl;
   friend class Impl;
