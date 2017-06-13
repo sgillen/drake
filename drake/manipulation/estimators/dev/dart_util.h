@@ -61,7 +61,7 @@ VectorX<Scalar> VectorXInit(std::initializer_list<Scalar> values) {
   VectorX<Scalar> out(values.size());
   int i = 0;
   for (auto& x : values) {
-    out[i] = x;
+    out[i++] = x;
   }
   return out;
 }

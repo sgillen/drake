@@ -27,11 +27,7 @@ class DartJointObjective : public DartObjective {
                          const VectorXd &obj_prior) override;
   const OptVars& GetVars() const override { return extra_vars_; }
   const VectorXd& GetInitialValues() const override { return extra_ic_; }
-  bool RequiresObservation() const override {
-    // DartEstimator needs to account for joint states, so we do not worry
-    // about that here.
-    return false;
-  }
+  void ObserveState(double t, const KinematicsState& state_meas);
  private:
   shared_ptr<QuadraticCost> cost_;
   Param param_;

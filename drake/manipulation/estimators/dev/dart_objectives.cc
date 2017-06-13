@@ -65,16 +65,22 @@ void DartJointObjective::Init(const KinematicsCached& kin_cache) {
 void DartJointObjective::UpdateFormulation(double t,
                                            const KinematicsCached& kin_cache,
                                            const VectorXd& obj_prior) {
-  KinematicsState meas_state(kin_cache);
-  KinematicsState est_meas_state =
-      formulation().kinematics_est_slice().CreateFromSuperset(meas_state);
+  unused(kin_cache, obj_prior);
   // Simply update the cost.
   Impl::Cache& cache = impl_->cache_;
-  cache.q_est_meas = est_meas_state.q();
   cache.Update();
   cost_->UpdateCoefficients(cache.Q, cache.b, cache.c);
 }
 
+void DartJointObjective::ObserveState(double t,
+                                      const KinematicsState& state_meas) {
+  set_latest_observation_time(t);
+  KinematicsState est_meas_state =
+      formulation().kinematics_est_slice().CreateFromSuperset(state_meas);
+  // Update stored state.
+  Impl::Cache& cache = impl_->cache_;
+  cache.q_est_meas = est_meas_state.q();
+}
 
 }  // namespace manipulation
 }  // namespace drake

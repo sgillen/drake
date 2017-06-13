@@ -72,7 +72,7 @@ class VectorSlice {
     // TODO(eric.cousineau): Simplify logic.
     Indices indices_sorted = indices_;
     std::sort(indices_sorted.begin(), indices_sorted.end());
-    Indices inverse_indices(super_size() - size());
+    Indices inverse_indices;
     int final_index = super_size();
     int index_i = 0;
     int index = size() == 0 ? final_index : indices_sorted[index_i];

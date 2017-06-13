@@ -227,7 +227,14 @@ const KinematicsState& DartEstimator::Update(double t) {
 
   // Solve.
   auto result = prog.Solve();
-  DRAKE_ASSERT(result == kSolutionFound);
+  ASSERT_THROW_FMT(result == kSolutionFound,
+                   "Failed Solve: {}", result);
+
+  // Get solution.
+  // Using `prior`, because after this, it will become the prior.
+  opt_val_prior_ = prog.GetSolutionVectorValues();
+  ASSERT_THROW_FMT(!has_nan(opt_val_prior_),
+                   "Solution has nans:\n{}", opt_val_prior_.transpose());
 
   // Update covariance, since all quadratic costs will include the Hessian.
   int num_vars = prog.num_vars();
@@ -235,13 +242,6 @@ const KinematicsState& DartEstimator::Update(double t) {
   ComputeQPHessian(prog, &H);
   // TODO(eric.cousineau): Ensure that H is well-conditioned.
   covariance_ << H.inverse();
-
-  // Get solution.
-  // Using `prior`, because after this, it will become the prior.
-  opt_val_prior_ = prog.GetSolutionVectorValues();
-
-  ASSERT_THROW_FMT(!has_nan(opt_val_prior_),
-                   "Solution has nans:\n{}", opt_val_prior_.transpose());
 
   // Update estimated states.
   auto& state_est_var_slice = formulation_->kinematics_est_var_slice();
