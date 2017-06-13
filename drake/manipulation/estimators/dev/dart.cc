@@ -246,7 +246,8 @@ const KinematicsState& DartEstimator::Update(double t) {
   // Update prior with new estimates.
   // TODO(eric.cousineau): Determine if there should just be one place for
   // mixing priors with inputs.
-  state_est_var_slice.WriteToSuperset(state_est_sub, state_prior_with_input_);
+  auto& state_est_slice = formulation_->kinematics_est_slice();
+  state_est_slice.WriteToSuperset(state_est_sub, state_prior_with_input_);
 
   return state_prior_with_input_;
 }

@@ -50,20 +50,16 @@ class VectorSlice {
   DRAKE_DEFAULT_COPY_AND_MOVE_AND_ASSIGN(VectorSlice);
 
   VectorSlice() {}
-  explicit VectorSlice(const Indices& indices, int super_size = -1)
+  explicit VectorSlice(const Indices& indices, int super_size)
         : indices_(indices) {
     // TODO(eric.cousineau): Check for uniqueness
     if (indices_.size() > 0) {
       min_index_ = *std::min_element(indices.begin(), indices.end());
-      DRAKE_ASSERT(min_index_ >= 0);
+      DRAKE_DEMAND(min_index_ >= 0);
       max_index_ = *std::max_element(indices.begin(), indices.end());
     }
-    if (super_size == -1) {
-      super_size_ = max_index_;
-    } else {
-      super_size_ = super_size;
-      DRAKE_ASSERT(max_index_ <= super_size_);
-    }
+    super_size_ = super_size;
+    DRAKE_DEMAND(max_index_ <= super_size_);
   }
 
   int size() const { return indices_.size(); }
@@ -104,7 +100,7 @@ class VectorSlice {
 
   template <typename VectorIn, typename VectorOut>
   void ReadFromSuperset(const VectorIn& super, VectorOut&& values) const {
-    DRAKE_ASSERT(is_valid_subset_of(super));
+    DRAKE_DEMAND(is_valid_subset_of(super));
     values.resize(this->size());
     for (int i = 0; i < this->size(); ++i) {
       int index = this->indices_[i];
@@ -115,7 +111,7 @@ class VectorSlice {
   template <typename MatrixIn, typename MatrixOut>
   void ReadFromSupersetMatrix(const MatrixIn& super, MatrixOut&& values) const {
     // Select column-wise (for speed on storage order), one-by-one.
-    DRAKE_ASSERT(super.cols() == super_size());
+    DRAKE_DEMAND(super.cols() == super_size());
     values.resize(this->size(), this->size());
     for (int i = 0; i < this->size(); ++i) {
       int index = this->indices_[i];
@@ -125,7 +121,7 @@ class VectorSlice {
 
   template <typename VectorIn, typename VectorOut>
   void WriteToSuperset(const VectorIn& values, VectorOut&& super) const {
-    DRAKE_ASSERT(is_valid_subset_of(super));  // Do not attepmt to resize.
+    DRAKE_DEMAND(is_valid_subset_of(super));  // Do not attepmt to resize.
     for (int i = 0; i < this->size(); ++i) {
       int index = this->indices_[i];
       super[index] = values[i];
