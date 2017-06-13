@@ -335,6 +335,7 @@ class RgbdCamera::Impl : private ModuleInitVtkRenderingOpenGL2 {
 
   bool is_discrete_{false};
   double depth_rel_noise_magnitude_{0};
+  bool use_openmp_{true};
 
   // Modelling after: RandomSource
   using Generator = std::mt19937;
@@ -686,7 +687,8 @@ void RgbdCamera::Impl::DoCalcOutput(
   const int height = color_camera_info_.height();
   const int width = color_camera_info_.width();
   SCOPE_TIME(pix, "Pix iter");
-//#pragma omp parallel for collapse(2)
+  // https://stackoverflow.com/a/39119009/7829525
+#pragma omp parallel for collapse(2) if(use_openmp_)
   for (int v = 0; v < height; ++v) {
     for (int u = 0; u < width; ++u) {
 //      if (u == 0 && v % 100 == 0) {

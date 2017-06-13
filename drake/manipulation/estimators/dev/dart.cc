@@ -240,8 +240,7 @@ const KinematicsState& DartEstimator::Update(double t) {
   // Update estimated states.
   auto& state_est_var_slice = formulation_->kinematics_est_var_slice();
   auto state_est_sub = state_est_var_slice.CreateZero<KinematicsState>();
-  state_est_var_slice.q().ReadFromSuperset(opt_val_prior_, state_est_sub.q());
-  state_est_var_slice.v().ReadFromSuperset(opt_val_prior_, state_est_sub.v());
+  state_est_var_slice.ReadFromVectorSuperset(opt_val_prior_, state_est_sub);
 
   // Update prior with new estimates.
   // TODO(eric.cousineau): Determine if there should just be one place for

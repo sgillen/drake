@@ -318,11 +318,7 @@ void DartDepthImageIcpObjective::UpdateFormulation(
     if (isnan(pt[0])) {
       return false;
     } else {
-      if (param_.point_cloud_bounds.IsInside(pt[0], pt[1], pt[2])) {
-        return true;
-      } else {
-        return false;
-      }
+      return param_.point_cloud_bounds.IsInside(pt[0], pt[1], pt[2]);
     }
   };
 
