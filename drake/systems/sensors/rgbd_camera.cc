@@ -335,7 +335,7 @@ class RgbdCamera::Impl : private ModuleInitVtkRenderingOpenGL2 {
 
   bool is_discrete_{false};
   double depth_rel_noise_magnitude_{0};
-  bool use_openmp_{true};
+  bool use_openmp_{false};
 
   // Modelling after: RandomSource
   using Generator = std::mt19937;

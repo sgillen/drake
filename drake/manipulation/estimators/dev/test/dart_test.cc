@@ -79,7 +79,7 @@ class DartTest : public ::testing::Test {
 
   void AddDepthObjective() {
     // Add camera frame.
-    const Vector3d position(2, 0, 0);
+    const Vector3d position(-2, 0, 0);
     const Vector3d orientation(0, 0, 0); // degrees
     const double pi = M_PI;
 
@@ -90,7 +90,7 @@ class DartTest : public ::testing::Test {
 
     const double fov_y = pi / 4;
     rgbd_camera_sim_.reset(
-        new RgbdCameraDirect(*tree_, *camera_frame_, fov_y, false));
+        new RgbdCameraDirect(*tree_, *camera_frame_, fov_y, true));
 
     DartDepthImageIcpObjective::Param depth_param;
     {
@@ -102,7 +102,7 @@ class DartTest : public ::testing::Test {
       camera.frame = camera_frame_;  // cannot be in initializer list.
       auto& icp = param.icp;
       icp = {
-        .variance = 0.05,
+        .variance = 0.005,
       };
       auto& free_space = param.free_space;
       free_space.variance = 0.005;
