@@ -81,6 +81,10 @@ private:
   Eigen::VectorXd x_;
   Eigen::MatrixXd covar_;
 
+
+  std::vector<std::string> joints_tracked_;
+  std::vector<int> indices_tracked_;
+
   std::shared_ptr<lcm::LCM> lcm_;
 
   // dynamics updating

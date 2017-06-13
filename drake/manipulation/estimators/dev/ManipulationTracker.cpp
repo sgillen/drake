@@ -12,6 +12,7 @@
 #include "drake/util/drakeGeometryUtil.h"
 #include <drake/multibody/parsers/urdf_parser.h>
 #include <drake/multibody/parsers/sdf_parser.h>
+#include "drake/manipulation/estimators/dev/dart_util.h"
 
 #include "common/common.hpp"
 
@@ -260,6 +261,30 @@ ManipulationTracker::ManipulationTracker(
     if (findit == robot_names_.end())
       robot_names_.push_back((*it)->get_model_name());
   }
+
+  using namespace drake::manipulation;
+
+  vector<string> all_joints =
+      GetHierarchicalPositionNameList(*robot, plant_id_map);
+  InstanceJointList instance_joint_list;
+  for (auto it : config["joints_tracked"]) {
+    InstanceJoints joints;
+    joints.first = it.first.as<string>();
+    joints.second = it.second.as<vector<string>>();
+    instance_joint_list.push_back(joints);
+    drake::log()->info("Joints: {}", joints.first);
+    for (auto& joint : joints.second) {
+      drake::log()->info("  {}", joint);
+    }
+  }
+  joints_tracked_ =
+      FlattenNameList(instance_joint_list);
+  GetSubIndices(joints_tracked_, all_joints, &indices_tracked_, true);
+  drake::log()->info("Joint indices");
+  for (auto& index : indices_tracked_) {
+    drake::log()->info("  {} - {}", index, robot->get_position_name(index));
+  }
+  ASSERT_THROW_FMT(indices_tracked_.size() > 0, "Must have tracked joints");
 
   // get dynamics configuration from yaml
   if (config["dynamics"]){
@@ -577,6 +602,8 @@ void ManipulationTracker::update(){
         ir++;
       }
     }
+  } else {
+    drake::log()->error("Did not have useful costs: {}", K);
   }
 
   if (do_force_align_){

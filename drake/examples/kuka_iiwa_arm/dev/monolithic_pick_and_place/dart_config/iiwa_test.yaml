@@ -85,6 +85,9 @@ robots:
 
 publish_all: true
 
+joints_tracked:
+  target: ['base_x', 'base_y', 'base_z', 'base_roll', 'base_pitch', 'base_yaw']
+
 dynamics:
   dynamics_floating_base_var: 0.0001 # m per frame
   dynamics_other_var: 0.0001 # rad per frame
@@ -113,7 +116,7 @@ costs:
 
   - type: "KinectFrameCost"
     icp_var: 0.005 # m
-    free_space_var: 0.5
+    free_space_var: .inf # 0.5
     max_considered_icp_distance: 0.04
     min_considered_joint_distance: 0.00
     verbose: True

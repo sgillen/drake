@@ -25,19 +25,6 @@ namespace {
 // designs. Make a DispatchSolver that can select from the variety at run-time,
 // and can constraint on the solvers to choose.
 
-typedef vector<pair<string, vector<string>>> InstanceJointList;
-vector<string> FlattenNameList(const InstanceJointList& joints) {
-  vector<string> joints_flat;
-  for (const auto& pair : joints) {
-    const auto& instance_name = pair.first;
-    const auto& instance_joints = pair.second;
-    for (const auto& joint_name : instance_joints) {
-      joints_flat.push_back(instance_name + "::" + joint_name);
-    }
-  }
-  return std::move(joints_flat);
-}
-
 class DartTest : public ::testing::Test {
  protected:
   void SetUp() override {

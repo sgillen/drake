@@ -159,6 +159,20 @@ void GetSubIndices(const ContainerA& a,
   internal::MatchIndices(a, b, a_in_b_indices, nullptr, verbose);
 }
 
+typedef pair<string, vector<string>> InstanceJoints;
+typedef vector<InstanceJoints> InstanceJointList;
+inline vector<string> FlattenNameList(const InstanceJointList& joints) {
+  vector<string> joints_flat;
+  for (const auto& pair : joints) {
+    const auto& instance_name = pair.first;
+    const auto& instance_joints = pair.second;
+    for (const auto& joint_name : instance_joints) {
+      joints_flat.push_back(instance_name + "::" + joint_name);
+    }
+  }
+  return std::move(joints_flat);
+}
+
 /**
  * Get common indices between `a` and `b` in `c`'s indices, where `c` is the
  * common subset between `a` and `b`, ordered as elements are encountered in
