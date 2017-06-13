@@ -86,7 +86,7 @@ robots:
 publish_all: true
 
 joints_tracked:
-  target: ['base_x', 'base_y', 'base_z', 'base_roll', 'base_pitch', 'base_yaw']
+  target: ['base_x', 'base_y', 'base_z', 'base_yaw']  # 'base_roll', 'base_pitch', 
 
 dynamics:
   dynamics_floating_base_var: 0.0001 # m per frame
@@ -115,8 +115,8 @@ costs:
   #   penetrable_robots: ["table"]
 
   - type: "KinectFrameCost"
-    icp_var: 0.001 # m
-    free_space_var: .inf # 0.5
+    icp_var: 1 # m
+    free_space_var: 1 # 0.5
     max_considered_icp_distance: 0.1
     min_considered_joint_distance: 0.00
     verbose: True
