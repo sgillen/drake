@@ -163,7 +163,7 @@ void DrakeVisualizer::DoPublish(const Context<double>& context) const {
   if (log_ != nullptr) {
     bool skip_entry = false;
     double cur_time = context.get_time();
-    if (log_->get_input_size() > 0) {
+    if (log_->sample_times().rows() > 0) {
       // TODO(eric.cousineau): Encountering very small timesteps in simulator.
       // Need to figure out if this is due to my publishing setup.
       double prev_time = log_->sample_times().tail(1)(0);
