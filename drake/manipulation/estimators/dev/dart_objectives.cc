@@ -26,7 +26,7 @@ public:
       // Update given that W and q_est_meas has been upated.
       // See MakeQuadraticErrorCost
       Q = 2 * W;
-      b = -2 * Q * q_est_meas;
+      b = -2 * W * q_est_meas;
       c = q_est_meas.dot(W * q_est_meas);
     }
   };

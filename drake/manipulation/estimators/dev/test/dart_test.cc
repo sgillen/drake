@@ -106,7 +106,7 @@ class DartTest : public ::testing::Test {
       };
       auto& free_space = param.free_space;
       free_space.variance = 0.005;
-      param.image_downsample_factor = 5;
+      param.image_downsample_factor = 10;
       param.point_cloud_bounds = {
           .x = {-2, 2},
           .y = {-2, 2},
@@ -194,9 +194,14 @@ class DartTest : public ::testing::Test {
         (state_est_prev.x() - state_est_meas.x()).eval();
     auto diff_est_update =
         (state_est_update.x() - state_est_meas.x()).eval();
-    EXPECT_LT(diff_est_update.norm(), diff_est_prev.norm())
-        << "diff_est_update: " << diff_est_update.transpose() << endl
-        << "diff_est_prev: " << diff_est_prev.transpose() << endl;
+    const double eps = 1e-5;
+    if (diff_est_update.norm() < eps && diff_est_prev.norm() < eps) {
+      cout << "Converged." << endl;
+    } else {
+      EXPECT_LT(diff_est_update.norm(), diff_est_prev.norm())
+          << "diff_est_update: " << diff_est_update.transpose() << endl
+          << "diff_est_prev: " << diff_est_prev.transpose() << endl;
+    }
     return state_update;
   }
 
@@ -235,11 +240,11 @@ TEST_F(DartTest, JointObjective) {
   CheckShortLoop();
 }
 
-//TEST_F(DartTest, DepthObjective) {
-//  AddDepthObjective();
-//  CreateEstimator();
-//  CheckShortLoop();
-//}
+TEST_F(DartTest, DepthObjective) {
+  AddDepthObjective();
+  CreateEstimator();
+  CheckShortLoop();
+}
 
 //TEST_F(DartTest, JointAndDepthObjective) {
 //  AddJointObjective();

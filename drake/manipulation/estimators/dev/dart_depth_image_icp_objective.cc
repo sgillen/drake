@@ -383,52 +383,55 @@ void DartDepthImageIcpObjective::UpdateFormulation(
     }
   }
 
-  const double icp_weight = ComputeWeight(param_.icp.variance);
-  IcpLinearizedNormAccumulator error_accumulator(tree.get_num_positions());
-  // Go through each point and accumulate the cost.
-  for (int body_index = 0; body_index < tree.get_num_bodies(); body_index++) {
-    const auto& body_positive_indices = positive_body_point_indices[body_index];
-    if (body_positive_indices.size() == 0) {
-      continue;
-    }
-    const auto& body = tree.get_body(body_index);
-    const auto* revolute_joint =
-        dynamic_cast<const RevoluteJoint*>(&body.getJoint());
+  {
+    SCOPE_TIME(icp, "ICP Costs");
+    const double icp_weight = ComputeWeight(param_.icp.variance);
+    IcpLinearizedNormAccumulator error_accumulator(tree.get_num_positions());
+    // Go through each point and accumulate the cost.
+    for (int body_index = 0; body_index < tree.get_num_bodies(); body_index++) {
+      const auto& body_positive_indices = positive_body_point_indices[body_index];
+      if (body_positive_indices.size() == 0) {
+        continue;
+      }
+      const auto& body = tree.get_body(body_index);
+      const auto* revolute_joint =
+          dynamic_cast<const RevoluteJoint*>(&body.getJoint());
 
-    const int frame_Bi = body_index;
-    // Accumulated points per body.
-    IcpPointGroup icp_body(frame_Bi, body_positive_indices.size());
+      const int frame_Bi = body_index;
+      // Accumulated points per body.
+      IcpPointGroup icp_body(frame_Bi, body_positive_indices.size());
 
-    for (int positive_index : body_positive_indices) {
-      // Get coordinate from the measurement.
-      bool use_point = false;
-      Vector3d body_pt_Bi = positive_body_pts_Bi.col(positive_index);
-      if (abs(positive_distances(positive_index)) <= param_.icp.max_distance_m) {
-        // Ensure that this is far enough from the revolute joint axis.
-        use_point = true;
-        if (revolute_joint) {
-          Vector3d joint_axis_B = revolute_joint->rotation_axis();
-          double distance_to_axis = GetDistanceToAxis(body_pt_Bi, joint_axis_B);
-          if (distance_to_axis < param_.icp.min_joint_distance_m) {
-            use_point = false;
+      for (int positive_index : body_positive_indices) {
+        // Get coordinate from the measurement.
+        bool use_point = false;
+        Vector3d body_pt_Bi = positive_body_pts_Bi.col(positive_index);
+        if (abs(positive_distances(positive_index)) <= param_.icp.max_distance_m) {
+          // Ensure that this is far enough from the revolute joint axis.
+          use_point = true;
+          if (revolute_joint) {
+            Vector3d joint_axis_B = revolute_joint->rotation_axis();
+            double distance_to_axis = GetDistanceToAxis(body_pt_Bi, joint_axis_B);
+            if (distance_to_axis < param_.icp.min_joint_distance_m) {
+              use_point = false;
+            }
           }
         }
+        if (use_point) {
+          // Register each point with the appropriate frames to compute the
+          // linearized error term.
+          const int meas_index = positive_meas_indices[positive_index];
+          icp_body.Add(positive_meas_pts_W.col(positive_index),
+                       meas_pts_C.col(meas_index),
+                       positive_body_pts_W.col(positive_index),
+                       body_pt_Bi);
+        }
       }
-      if (use_point) {
-        // Register each point with the appropriate frames to compute the
-        // linearized error term.
-        const int meas_index = positive_meas_indices[positive_index];
-        icp_body.Add(positive_meas_pts_W.col(positive_index),
-                     meas_pts_C.col(meas_index),
-                     positive_body_pts_W.col(positive_index),
-                     body_pt_Bi);
-      }
+      // Incorporate into error accumulation.
+      icp_body.AddTerms(scene, &error_accumulator, icp_weight);
     }
-    // Incorporate into error accumulation.
-    icp_body.AddTerms(scene, &error_accumulator, icp_weight);
+    // Render to full cost, taking only the estimated variables.
+    error_accumulator.UpdateCost(kin_est_slice.q(), icp_cost_.get());
   }
-  // Render to full cost, taking only the estimated variables.
-  error_accumulator.UpdateCost(kin_est_slice.q(), icp_cost_.get());
 }
 
 void DartDepthImageIcpObjective::DetermineUnaffectedBodies() {
