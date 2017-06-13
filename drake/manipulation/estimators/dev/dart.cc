@@ -196,8 +196,11 @@ void ComputeQPHessian(const MathematicalProgram& prog,
 }  // namespace
 
 const KinematicsState& DartEstimator::Update(double t) {
-  // Get prior solution.
+  // Set initial guess to prior solution.
   MathematicalProgram& prog = this->prog();
+  prog.SetInitialGuessForAllVariables(opt_val_prior_);
+  ASSERT_THROW_FMT(!has_nan(opt_val_prior_),
+                   "Initial guess has nans:\n{}", opt_val_prior_.transpose());
 
   CheckObservationTime(t, latest_state_observation_time_, "update");
 
@@ -236,6 +239,9 @@ const KinematicsState& DartEstimator::Update(double t) {
   // Get solution.
   // Using `prior`, because after this, it will become the prior.
   opt_val_prior_ = prog.GetSolutionVectorValues();
+
+  ASSERT_THROW_FMT(!has_nan(opt_val_prior_),
+                   "Solution has nans:\n{}", opt_val_prior_.transpose());
 
   // Update estimated states.
   auto& state_est_var_slice = formulation_->kinematics_est_var_slice();

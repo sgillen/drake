@@ -43,6 +43,11 @@ typedef std::map<int, std::string> ReverseIdMap;
 
 typedef solvers::VectorXDecisionVariable OptVars;
 
+template <typename Derived>
+bool has_nan(const MatrixBase<Derived>& X) {
+  return (X.array() != X.array()).any();
+}
+
 /**
  * Convenience to infer type.
  */
