@@ -686,7 +686,7 @@ void RgbdCamera::Impl::DoCalcOutput(
   const int height = color_camera_info_.height();
   const int width = color_camera_info_.width();
   SCOPE_TIME(pix, "Pix iter");
-#pragma omp parallel for collapse(2)
+//#pragma omp parallel for collapse(2)
   for (int v = 0; v < height; ++v) {
     for (int u = 0; u < width; ++u) {
 //      if (u == 0 && v % 100 == 0) {

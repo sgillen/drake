@@ -131,8 +131,8 @@ class DartTest : public ::testing::Test {
                           ImageDepth32F* pdepth_image_meas) {
     // Throw-away items.
     systems::rendering::PoseVector<double> pose;
-    ImageBgra8U color_image;
-    ImageLabel16I label_image;
+    ImageBgra8U color_image(kImageWidth, kImageHeight);
+    ImageLabel16I label_image(kImageWidth, kImageHeight);
 
     rgbd_camera_sim_->CalcImages(
         t, state_meas.x(),
@@ -147,7 +147,7 @@ class DartTest : public ::testing::Test {
 
     // Simulate depth image.
     if (depth_obj_) {
-      ImageDepth32F depth_image_meas;
+      ImageDepth32F depth_image_meas(kImageWidth, kImageHeight);
       SimulateDepthImage(t, state_meas, &depth_image_meas);
       depth_obj_->ObserveImage(t, depth_image_meas);
     }

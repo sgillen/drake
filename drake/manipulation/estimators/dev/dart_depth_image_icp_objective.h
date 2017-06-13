@@ -8,6 +8,10 @@
 namespace drake {
 namespace manipulation {
 
+// Copied from RgbdCamera.
+const int kImageWidth = 640;  // In pixels
+const int kImageHeight = 480;  // In pixels
+
 struct Interval {
   double min{};
   double max{};

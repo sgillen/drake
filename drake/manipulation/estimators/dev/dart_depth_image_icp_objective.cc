@@ -81,13 +81,17 @@ struct Output {
   GridSlice slice;
   ImageDepth32F depth_image;
   Matrix3Xd point_cloud_C;  // `C` is the (depth) camera frame.
-  void resize(int width, int height) {
+  void Resize(int width, int height) {
     slice = GridSlice(width, height);
-    depth_image.resize(width, height);
+    ResizeToSlice();
+  }
+  void ResizeToSlice() {
+    depth_image.resize(slice.width(), slice.height());
     point_cloud_C.resize(NoChange, slice.size());
   }
   void DownsampleFrom(int downsample, const Output& super) {
     slice = GridSlice(downsample, super.slice.width(), super.slice.height());
+    ResizeToSlice();
     Coord c;
     for (c.v = 0; c.v < slice.height(); c.v += downsample) {
       for (c.u = 0; c.u < slice.width(); c.u += downsample) {
@@ -144,7 +148,7 @@ struct IcpLinearizedNormAccumulator {
     // Some inefficiency here. Could reduce before hand, but we'll just wait
     // for summation to complete.
     slice.ReadFromSupersetMatrix(Q_, Qc);
-    cost->UpdateCoefficients(Q_, b_, c_);
+    cost->UpdateCoefficients(Qc, bc, c_);
   }
  private:
   MatrixXd Q_;
@@ -270,7 +274,7 @@ void DartDepthImageIcpObjective::ObserveImage(
   set_latest_observation_time(t);
 
   Impl& impl = *impl_;
-  impl.meas_full.resize(depth_image_meas.width(), depth_image_meas.height());
+  impl.meas_full.Resize(depth_image_meas.width(), depth_image_meas.height());
   impl.meas_full.depth_image = depth_image_meas;
   if (ppoint_cloud) {
     impl.meas_full.point_cloud_C = *ppoint_cloud;
@@ -387,10 +391,13 @@ void DartDepthImageIcpObjective::UpdateFormulation(
   IcpLinearizedNormAccumulator error_accumulator(tree.get_num_positions());
   // Go through each point and accumulate the cost.
   for (int body_index = 0; body_index < tree.get_num_bodies(); body_index++) {
+    const auto& body_positive_indices = positive_body_point_indices[body_index];
+    if (body_positive_indices.size() == 0) {
+      continue;
+    }
     const auto& body = tree.get_body(body_index);
     const auto* revolute_joint =
         dynamic_cast<const RevoluteJoint*>(&body.getJoint());
-    const auto& body_positive_indices = positive_body_point_indices[body_index];
 
     const int frame_Bi = body_index;
     // Accumulated points per body.
