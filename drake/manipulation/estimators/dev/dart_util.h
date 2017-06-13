@@ -98,11 +98,12 @@ void MatchIndices(const ContainerA &a,
                   bool verbose = false) {
   // TODO(eric.cousineau): See if there is a way to only store a reference.
   using T = std::remove_cv_t<std::decay_t<decltype(a[0])>>;
-  auto a_map = CreateIndexMap<T>(a);
+//  auto a_map = CreateIndexMap<T>(a);
   auto b_map = CreateIndexMap<T>(b);
   vector<int> a_found(a.size(), false);
   vector<int> b_found(b.size(), false);
-  for (const auto& a_pair : a_map) {
+  for (int i = 0; i < (int)a.size(); ++i) {
+    auto a_pair = make_pair(a[i], i);
     auto b_iter = b_map.find(a_pair.first);
     if (b_iter != b_map.end()) {
       auto& b_pair = *b_iter;
