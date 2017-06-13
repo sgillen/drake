@@ -52,11 +52,14 @@ class DartDepthImageIcpObjective : public DartObjective {
       double min_joint_distance_m{0.05};
     };
     Icp icp;
-    double free_space_variance{0.005};
-    struct Debug {
-      bool use_lcmgl{false};
+    struct FreeSpace {
+      double variance{0.005};
     };
-    Debug debug;
+    FreeSpace free_space;
+//    struct Debug {
+//      bool use_lcmgl{false};
+//    };
+//    Debug debug;
   };
 
   DartDepthImageIcpObjective(DartFormulation* formulation_, const Param& param);
@@ -71,7 +74,6 @@ class DartDepthImageIcpObjective : public DartObjective {
   const OptVars& GetVars() const override { return extra_vars_; }
   const VectorXd& GetInitialValues() const override { return extra_ic_; }
  private:
-//  void Downsample
   void DetermineUnaffectedBodies();
 
   shared_ptr<QuadraticCost> icp_cost_;

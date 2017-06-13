@@ -21,7 +21,10 @@ struct Coord {
  */
 // TODO(eric.cousineau): Support per-index mapping.
 // TODO(eric.cousineau): Use better down-sampling (anti-aliasing, etc.). Look
-// into using VTK for performing this.
+// into using VTK for performing this. FOLLOWUP: Nevermind. Very bad for depth
+// images.
+// TODO(eric.cousineau): Consider taking the most prominent (least depth) pixel
+// in a region.
 class GridSlice {
  public:
   GridSlice(int downsample, int super_width, int super_height)
@@ -100,7 +103,6 @@ struct Output {
   }
 };
 
-
 /**
  * Accumulate quadratic point-to-point errors to be rendered into a
  * QuadraticCost.
@@ -121,14 +123,14 @@ struct IcpLinearizedNormAccumulator {
     b_.setZero();
     c_ = 0;
   }
-  void AddTerms(const Matrix3Xd& es, const MatrixXd& Jes) {
+  void AddTerms(double weight, const Matrix3Xd& es, const MatrixXd& Jes) {
     int num_points = es.cols();
     for (int i = 0; i < num_points; ++i) {
       auto&& e = es.col(i);
       auto&& Je = Jes.middleRows(3 * i, 3);
-      Q_ += 2 * Je.transpose() * Je;
-      b_ += 2 * Je.transpose() * e;
-      c_ = e.dot(e);
+      Q_ += weight * 2 * Je.transpose() * Je;
+      b_ += weight * 2 * Je.transpose() * e;
+      c_ = weight * e.dot(e);
     }
   }
   const MatrixXd& Q() const { return Q_; }
@@ -150,7 +152,65 @@ struct IcpLinearizedNormAccumulator {
   double c_;
 };
 
+/**
+ * Accumulate measured points in the camera `C` frame, body / model /
+ * simulated points in the `Bi` frame, and store both in the world frame,
+ * `W`, if available.
+ */
+struct IcpScene {
+  const RigidBodyTreed& tree;
+  const KinematicsCached& cache;
+  const int frame_W{-1};
+  const int frame_C{-1};
+};
 
+/**
+ * A group of points to be rendered in a linearized ICP cost.
+ */
+struct IcpPointGroup {
+  const int frame_Bi{-1};
+  const int num_max{};
+  Matrix3Xd meas_pts_W{3, num_max};
+  Matrix3Xd meas_pts_C{3, num_max};
+  Matrix3Xd body_pts_Bi{3, num_max};
+  Matrix3Xd body_pts_W{3, num_max};
+  int num_actual{0};
+
+  void Add(const Vector3d& meas_W, const Vector3d& meas_C,
+          const Vector3d& body_W, const Vector3d& body_Bi) {
+    int i = num_actual++;
+    meas_pts_W.col(i) = meas_W;
+    meas_pts_C.col(i) = meas_C;
+    body_pts_W.col(i) = body_W;
+    body_pts_Bi.col(i) = body_Bi;
+  }
+  void Finish() {
+    auto trim_pts = [this](auto&& X) {
+      X.conservativeResize(NoChange, num_actual);
+    };
+    trim_pts(meas_pts_W);
+    trim_pts(meas_pts_C);
+    trim_pts(body_pts_W);
+    trim_pts(body_pts_Bi);
+  }
+  void AddTerms(const IcpScene& scene,
+                IcpLinearizedNormAccumulator* error_accumulator,
+                double weight) {
+    // Get point jacobian w.r.t. camera frame, as that is the only influence
+    // on the measured point cloud.
+    MatrixXd J_meas_pts_W =
+        scene.tree.transformPointsJacobian(
+            scene.cache, meas_pts_C, scene.frame_C, scene.frame_W, false);
+    MatrixXd J_body_pts_W =
+        scene.tree.transformPointsJacobian(
+            scene.cache, body_pts_Bi, frame_Bi, scene.frame_W, false);
+    // Compute errors.
+    Matrix3Xd es_W = meas_pts_W - body_pts_W;
+    MatrixXd J_es_W = J_meas_pts_W - J_body_pts_W;
+    // Incorproate errors into L2 norm cost.
+    error_accumulator->AddTerms(weight, es_W, J_es_W);
+  }
+};
 
 class DartDepthImageIcpObjective::Impl {
  public:
@@ -177,8 +237,12 @@ DartDepthImageIcpObjective::DartDepthImageIcpObjective(
 
 void DartDepthImageIcpObjective::Init(const KinematicsCached& cache) {
   unused(cache);
+  int nq_est = q_est_vars().size();
+  // Make a blank cost.
+  icp_cost_ = make_shared<QuadraticCost>(
+      MatrixXd::Zero(nq_est, nq_est), VectorXd::Zero(nq_est), 0);
   prog().AddCost(icp_cost_, q_est_vars());
-  prog().AddCost(free_space_cost_, q_est_vars());
+//  prog().AddCost(free_space_cost_, q_est_vars());
 }
 
 void DartDepthImageIcpObjective::ObserveImage(
@@ -199,7 +263,7 @@ void DartDepthImageIcpObjective::ObserveImage(
           &impl.meas_full.point_cloud_C);
   }
   // Down-sample here at measurement frame.
-  impl_->meas.DownsampleFrom(param_.image_downsample_factor, impl.meas_full);
+  impl.meas.DownsampleFrom(param_.image_downsample_factor, impl.meas_full);
 }
 
 /**
@@ -213,9 +277,8 @@ double GetDistanceToAxis(const Vector3d& pt, const Vector3d& n) {
 
 void DartDepthImageIcpObjective::UpdateFormulation(
     double t, const KinematicsCached& kin_cache, const VectorXd& obj_prior) {
+  unused(t);
   unused(obj_prior);
-  KinematicsState kin_state(kin_cache);
-  const bool use_margins = false;
 
   // Convenience aliases.
   Impl& impl = *impl_;
@@ -224,6 +287,9 @@ void DartDepthImageIcpObjective::UpdateFormulation(
   // HACK(eric.cousineau): Mutable for `collisionDetectFromPoints()`.
   const RigidBodyTreed& tree = this->tree();
   RigidBodyTreed& mutable_tree = const_cast<RigidBodyTreed&>(tree);
+
+  KinematicsState kin_state(kin_cache);
+  const bool use_margins = false;
 
   auto IsValidPoint = [this](auto&& pt) {
     if (isnan(pt[0])) {
@@ -245,12 +311,17 @@ void DartDepthImageIcpObjective::UpdateFormulation(
   Matrix3Xd positive_meas_pts_W(3, num_meas);  // Point cloud points.
   int num_positive = 0;
 
-  const int frame_C = param_.camera.frame->get_frame_index();
-  const int frame_W = tree.world().get_body_index();
+  IcpScene scene{
+    .tree = tree,
+    .cache = kin_cache,
+    .frame_C = param_.camera.frame->get_frame_index(),
+    .frame_W = tree.world().get_body_index()
+  };
+
   const Matrix3Xd& point_cloud_C = impl.meas.point_cloud_C;
   Matrix3Xd point_cloud_W =
-      tree.transformPoints(kin_cache, point_cloud_C,
-                           frame_C, frame_W);
+      tree.transformPoints(scene.cache, point_cloud_C,
+                           scene.frame_C, scene.frame_W);
   Coord c{};
   for (c.v = 0; c.v < meas_slice.height(); c.v++) {
     for (c.u = 0; c.u < meas_slice.width(); c.u++) {
@@ -289,30 +360,29 @@ void DartDepthImageIcpObjective::UpdateFormulation(
   for (int positive_index = 0; positive_index < num_positive; ++positive_index) {
     int body_index = positive_body_indices[positive_index];
     if (body_index > -1) {
-      auto& indices = positive_body_point_indices[body_index];
-      indices.push_back(positive_index);
+      auto& body_positive_indices = positive_body_point_indices[body_index];
+      body_positive_indices.push_back(positive_index);
     }
   }
 
+  const double icp_weight = ComputeWeight(param_.icp.variance);
   IcpLinearizedNormAccumulator error_accumulator(tree.get_num_positions());
   // Go through each point and accumulate the cost.
   for (int body_index = 0; body_index < tree.get_num_bodies(); body_index++) {
     const auto& body = tree.get_body(body_index);
     const auto* revolute_joint =
         dynamic_cast<const RevoluteJoint*>(&body.getJoint());
-    const auto& indices = positive_body_point_indices[body_index];
+    const auto& body_positive_indices = positive_body_point_indices[body_index];
 
     const int frame_Bi = body_index;
 
     // Accumulated points per body.
-    int num_body_points = indices.size();
-    int num_icp_points = 0;
-    Matrix3Xd icp_meas_pts_W(3, num_body_points);
-    Matrix3Xd icp_meas_pts_C(3, num_body_points);
-    Matrix3Xd icp_body_pts_Bi(3, num_body_points);
-    Matrix3Xd icp_body_pts_W(3, num_body_points);
+    IcpPointGroup icp {
+      .num_max = (int)body_positive_indices.size(),
+      .frame_Bi = frame_Bi,
+    };
 
-    for (int positive_index : indices) {
+    for (int positive_index : body_positive_indices) {
       // Get coordinate from the measurement.
       bool use_point = false;
       Vector3d body_pt_Bi = positive_body_pts_Bi.col(positive_index);
@@ -330,41 +400,17 @@ void DartDepthImageIcpObjective::UpdateFormulation(
       if (use_point) {
         // Register each point with the appropriate frames to compute the
         // linearized error term.
-        const int i = num_icp_points++;
-        icp_meas_pts_W.col(i) = positive_meas_pts_W.col(positive_index);
         const int meas_index = positive_meas_indices[positive_index];
-        icp_meas_pts_C.col(i) = point_cloud_C.col(meas_index);
-        icp_body_pts_Bi.col(i) = body_pt_Bi;
-        icp_body_pts_W.col(i) = positive_body_pts_W.col(positive_index);
+        icp.Add(positive_meas_pts_W.col(positive_index),
+                point_cloud_C.col(meas_index),
+                positive_body_pts_W.col(positive_index),
+                body_pt_Bi);
       }
     }
-    // Trim down to complete set.
-    auto trim_pts = [num_icp_points](auto&& X) {
-      X.conservativeResize(NoChange, num_icp_points);
-    };
-    trim_pts(icp_meas_pts_W);
-    trim_pts(icp_meas_pts_C);
-    trim_pts(icp_body_pts_Bi);
-    trim_pts(icp_body_pts_W);
-
-    // Incorporate into linearized distance cost.
-    // Get point jacobian w.r.t. camera frame, as that is the only influence
-    // on the measured point cloud.
-    MatrixXd J_meas_pts_W =
-        tree.transformPointsJacobian(kin_cache, icp_meas_pts_C,
-                                     frame_C, frame_W, false);
-    MatrixXd J_body_pts_W =
-        tree.transformPointsJacobian(kin_cache, icp_body_pts_Bi,
-                                     frame_Bi, frame_W, false);
-    // Compute errors.
-    Matrix3Xd es_W =
-        icp_meas_pts_W - icp_body_pts_W;
-    MatrixXd J_es_W =
-        J_meas_pts_W - J_body_pts_W;
-    // Incorproate errors into L2 norm cost.
-    error_accumulator.AddTerms(es_W, J_es_W);
+    // Incorporate into error accumulation.
+    icp.AddTerms(scene, &error_accumulator, icp_weight);
   }
-  // Render to full cost.
+  // Render to full cost, taking only the estimated variables.
   error_accumulator.UpdateCost(kin_est_slice.q(), icp_cost_.get());
 }
 

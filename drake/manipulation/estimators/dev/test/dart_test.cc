@@ -96,9 +96,11 @@ class DartTest : public ::testing::Test {
         .frame = camera_frame_,
       },
       .icp = {
-        variance = 0.05,
+        .variance = 0.05,
       },
-      .free_space_variance = 0.005,
+      .free_space = {
+        .variance = 0.005,
+      },
       .image_downsample_factor = 5,
       .point_cloud_bounds = {
           .x = {-2, 2},
@@ -106,10 +108,11 @@ class DartTest : public ::testing::Test {
           .z = {-2, 2},
       },
     };
-    depth_obj_ = DartDepthImageIcpObjective(formulation_, depth_param);
+    depth_obj_ =
+        new DartDepthImageIcpObjective(formulation_, depth_param);
 
     formulation_->AddObjective(CreateUnique(joint_obj_));
-//    formulation_->AddObjective(CreateUnique(depth_obj_));
+    formulation_->AddObjective(CreateUnique(depth_obj_));
 
     // Tie things together.
     DartEstimator::Param estimator_param {
