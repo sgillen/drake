@@ -16,7 +16,7 @@
   <xacro:property name="max_velocity" value="10"/>
 
   <xacro:macro name="iiwa14"
-      params="parent hardware_interface robot_name collision_type *origin">
+      params="parent hardware_interface robot_name collision_type *origin mesh_collision_directory:=meshes/collision">
 
     <!--joint between {parent} and link_0-->
     <joint name="${robot_name}_${parent}_joint" type="fixed">
@@ -44,7 +44,7 @@
         <collision>
           <origin xyz="0 0 0" rpy="0 0 0"/>
           <geometry>
-            <mesh filename="../meshes/collision/link_0.obj"/>
+            <mesh filename="../${mesh_collision_directory}/link_0.obj"/>
           </geometry>
           <material name="Grey"/>
         </collision>
@@ -102,7 +102,7 @@
         <collision>
           <origin xyz="0 0 0" rpy="0 0 0"/>
           <geometry>
-            <mesh filename="../meshes/collision/link_1.obj"/>
+            <mesh filename="../${mesh_collision_directory}/link_1.obj"/>
           </geometry>
           <material name="Grey"/>
         </collision>
@@ -153,7 +153,7 @@
         <collision>
           <origin xyz="0 0 0" rpy="0 0 0"/>
           <geometry>
-            <mesh filename="../meshes/collision/link_2.obj"/>
+            <mesh filename="../${mesh_collision_directory}/link_2.obj"/>
           </geometry>
           <material name="Orange"/>
         </collision>
@@ -204,7 +204,7 @@
         <collision>
           <origin xyz="0 0 0" rpy="0 0 0"/>
           <geometry>
-            <mesh filename="../meshes/collision/link_3.obj"/>
+            <mesh filename="../${mesh_collision_directory}/link_3.obj"/>
           </geometry>
           <material name="Grey"/>
         </collision>
@@ -255,7 +255,7 @@
         <collision>
           <origin xyz="0 0 0" rpy="0 0 0"/>
           <geometry>
-            <mesh filename="../meshes/collision/link_4.obj"/>
+            <mesh filename="../${mesh_collision_directory}/link_4.obj"/>
           </geometry>
           <material name="Orange"/>
         </collision>
@@ -306,7 +306,7 @@
         <collision>
           <origin xyz="0 0 0" rpy="0 0 0"/>
           <geometry>
-            <mesh filename="../meshes/collision/link_5.obj"/>
+            <mesh filename="../${mesh_collision_directory}/link_5.obj"/>
           </geometry>
           <material name="Grey"/>
         </collision>
@@ -357,7 +357,7 @@
         <collision>
           <origin xyz="0 0 0" rpy="0 0 0"/>
           <geometry>
-            <mesh filename="../meshes/collision/link_6.obj"/>
+            <mesh filename="../${mesh_collision_directory}/link_6.obj"/>
           </geometry>
           <material name="Orange"/>
         </collision>
@@ -368,7 +368,7 @@
           <geometry>
             <!-- Note that the mesh-based collision model is intentionally being
             used despite being in "primitive" mode. -->
-            <mesh filename="../meshes/collision/link_6.obj"/>
+            <mesh filename="../${mesh_collision_directory}/link_6.obj"/>
           </geometry>
           <material name="Orange"/>
         </collision>
@@ -411,7 +411,7 @@
         <collision>
           <origin xyz="0 0 0" rpy="0 0 0"/>
           <geometry>
-            <mesh filename="../meshes/collision/link_7.obj"/>
+            <mesh filename="../${mesh_collision_directory}/link_7.obj"/>
           </geometry>
           <material name="Grey"/>
         </collision>
@@ -422,7 +422,7 @@
           <geometry>
             <!-- Note that the mesh-based collision model is intentionally being
             used despite being in "primitive" mode. -->
-            <mesh filename="../meshes/collision/link_7.obj"/>
+            <mesh filename="../${mesh_collision_directory}/link_7.obj"/>
           </geometry>
           <material name="Grey"/>
         </collision>
@@ -431,7 +431,7 @@
         <collision>
           <origin xyz="0 0 0" rpy="0 0 0"/>
           <geometry>
-            <mesh filename="../meshes/collision/link_7_polytope.obj"/>
+            <mesh filename="../${mesh_collision_directory}/link_7_polytope.obj"/>
           </geometry>
           <material name="Grey"/>
         </collision>

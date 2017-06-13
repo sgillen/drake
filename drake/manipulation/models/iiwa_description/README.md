@@ -11,7 +11,7 @@ rosrun xacro xacro -o urdf/iiwa14_primitive_collision.urdf urdf/iiwa14_primitive
 rosrun xacro xacro -o urdf/iiwa14_polytope_collision.urdf urdf/iiwa14_polytope_collision.urdf.xacro
 rosrun xacro xacro -o urdf/iiwa14_mesh_collision.urdf urdf/iiwa14_mesh_collision.urdf.xacro
 rosrun xacro xacro -o urdf/dual_iiwa14_polytope_collision.urdf urdf/dual_iiwa14_polytope_collision.urdf.xacro
-
+rosrun xacro xacro -o urdf/iiwa14_mesh_decimated_collison.urdf{,.xacro}
 ```
 
 [1] http://wiki.ros.org/xacro#Conditional_Blocks
