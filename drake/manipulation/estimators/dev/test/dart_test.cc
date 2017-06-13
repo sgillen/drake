@@ -46,28 +46,13 @@ class DartTest : public ::testing::Test {
         "/examples/kuka_iiwa_arm/models/objects/block_for_pick_and_place.urdf";
     auto floating_base_type = multibody::joints::kRollPitchYaw;
     shared_ptr<RigidBodyFramed> weld_frame {nullptr};
-    auto* mutable_tree = new RigidBodyTreed();
+    mutable_tree_ = new RigidBodyTreed();
     instance_id_map["target"] =
         parsers::urdf::AddModelInstanceFromUrdfFile(
             file_path, floating_base_type,
-            weld_frame, mutable_tree).begin()->second;
-    mutable_tree->compile();
-
-    // Add camera frame.
-    const Vector3d position(2, 0, 0);
-    const Vector3d orientation(0, 0, 0); // degrees
-    const double pi = M_PI;
-
-    auto* world_body = const_cast<RigidBody<double>*>(&mutable_tree->world());
-    camera_frame_.reset(new RigidBodyFramed(
-        "depth_sensor", world_body, position, orientation * pi / 180));
-    mutable_tree->addFrame(camera_frame_);
-
-    tree_.reset(mutable_tree);
-
-    const double fov_y = pi / 4;
-    rgbd_camera_sim_.reset(
-        new RgbdCameraDirect(*tree_, *camera_frame_, fov_y, false));
+            weld_frame, mutable_tree_).begin()->second;
+    mutable_tree_->compile();
+    tree_.reset(mutable_tree_);
 
     scene_ =
         new DartScene(tree_, instance_id_map);
@@ -79,17 +64,33 @@ class DartTest : public ::testing::Test {
     };
     formulation_ =
         new DartFormulation(CreateUnique(scene_), formulation_param);
+  }
 
-    KinematicsState initial_state(scene_->tree());
-    EXPECT_EQ(6, initial_state.q().size());
-    EXPECT_EQ(6, initial_state.v().size());
+  void TearDown() override {}
 
+  void AddJointObjective() {
     DartJointObjective::Param joint_param = {
       .joint_variance = VectorXInit({0.05, 0.05, 0.01}),
     };
     joint_obj_ =
         new DartJointObjective(formulation_, joint_param);
     formulation_->AddObjective(CreateUnique(joint_obj_));
+  }
+
+  void AddDepthObjective() {
+    // Add camera frame.
+    const Vector3d position(2, 0, 0);
+    const Vector3d orientation(0, 0, 0); // degrees
+    const double pi = M_PI;
+
+    auto* world_body = const_cast<RigidBody<double>*>(&tree_->world());
+    camera_frame_.reset(new RigidBodyFramed(
+        "depth_sensor", world_body, position, orientation * pi / 180));
+    mutable_tree_->addFrame(camera_frame_);
+
+    const double fov_y = pi / 4;
+    rgbd_camera_sim_.reset(
+        new RgbdCameraDirect(*tree_, *camera_frame_, fov_y, false));
 
     DartDepthImageIcpObjective::Param depth_param;
     {
@@ -115,6 +116,12 @@ class DartTest : public ::testing::Test {
     depth_obj_ =
         new DartDepthImageIcpObjective(formulation_, depth_param);
     formulation_->AddObjective(CreateUnique(depth_obj_));
+  }
+
+  void CreateEstimator() {
+    KinematicsState initial_state(scene_->tree());
+    EXPECT_EQ(6, initial_state.q().size());
+    EXPECT_EQ(6, initial_state.v().size());
 
     // Tie things together.
     DartEstimator::Param estimator_param {
@@ -123,8 +130,6 @@ class DartTest : public ::testing::Test {
     estimator_.reset(
         new DartEstimator(CreateUnique(formulation_), estimator_param));
   }
-
-  void TearDown() override {}
 
   void SimulateDepthImage(double t, const KinematicsState& state_meas,
                           ImageDepth32F* pdepth_image_meas) {
@@ -158,7 +163,51 @@ class DartTest : public ::testing::Test {
     return estimator_->Update(t);
   }
 
+  KinematicsState UpdateAndCheckConvergence(double t,
+                                 KinematicsState& state_prev,
+                                 KinematicsState& state_meas) {
+    SimulateObservation(t, state_meas);
+    KinematicsState state_update = Update(t);
+
+    // Check that we have gotten somewhat closer to our measured state, only in
+    // the estimated coordinates.
+    const KinematicsSlice& state_est_slice =
+        formulation_->kinematics_est_slice();
+    // Estimated portion of initial state.
+    auto state_est_prev =
+        state_est_slice.CreateFromSuperset(state_prev);
+    // Estimated portion of measurement.
+    auto state_est_meas =
+        state_est_slice.CreateFromSuperset(state_meas);
+    // Estimated portion of upate.
+    auto state_est_update =
+        state_est_slice.CreateFromSuperset(state_update);
+
+    // Compute differences.
+    auto diff_est_prev =
+        (state_est_prev.x() - state_est_meas.x()).eval();
+    auto diff_est_update =
+        (state_est_update.x() - state_est_meas.x()).eval();
+    EXPECT_LT(diff_est_update.norm(), diff_est_prev.norm());
+    return state_update;
+  }
+
+  void CheckShortLoop() {
+    KinematicsState state_prev = estimator_->initial_state();
+    KinematicsState state_meas(*tree_);
+    state_meas.q() <<
+        1, 2, 0, 0, 0, 10 * M_PI / 180.;
+    double t = 0;
+    double dt = 0.01;
+    double t_end = 0.05;
+    while (t < t_end) {
+      state_prev = UpdateAndCheckConvergence(t, state_prev, state_meas);
+      t += dt;
+    }
+  }
+
  protected:
+  RigidBodyTreed* mutable_tree_;
   shared_ptr<const RigidBodyTreed> tree_;
   shared_ptr<RigidBodyFramed> camera_frame_;
   DartScene* scene_;
@@ -173,36 +222,22 @@ class DartTest : public ::testing::Test {
 };
 
 TEST_F(DartTest, JointObjective) {
-  double t = 0;
-  KinematicsState state_meas(*tree_);
-  state_meas.q() <<
-      1, 2, 0, 0, 0, 10 * M_PI / 180.;
-  SimulateObservation(t, state_meas);
-  KinematicsState state_update = Update(t);
-  // TODO(eric.cousineau): Make meaningful test.
-  EXPECT_TRUE(state_update.q().size() > 0);
+  AddJointObjective();
+  CreateEstimator();
+  CheckShortLoop();
+}
 
-  // Check that we have gotten somewhat closer to our measured state, only in
-  // the estimated coordinates.
-  KinematicsState state_init = estimator_->initial_state();
-  const KinematicsSlice& state_est_slice =
-      formulation_->kinematics_est_slice();
-  // Estimated portion of initial state.
-  auto state_est_init =
-      state_est_slice.CreateFromSuperset(state_init);
-  // Estimated portion of measurement.
-  auto state_est_meas =
-      state_est_slice.CreateFromSuperset(state_meas);
-  // Estimated portion of upate.
-  auto state_est_update =
-      state_est_slice.CreateFromSuperset(state_update);
+TEST_F(DartTest, DepthObjective) {
+  AddDepthObjective();
+  CreateEstimator();
+  CheckShortLoop();
+}
 
-  // Compute differences.
-  auto diff_est_init =
-      (state_est_init.x() - state_est_meas.x()).eval();
-  auto diff_est_update =
-      (state_est_update.x() - state_est_meas.x()).eval();
-  EXPECT_LT(diff_est_update.norm(), diff_est_init.norm());
+TEST_F(DartTest, JointAndDepthObjective) {
+  AddJointObjective();
+  AddDepthObjective();
+  CreateEstimator();
+  CheckShortLoop();
 }
 
 }  // namespace
