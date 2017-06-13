@@ -89,33 +89,32 @@ class DartTest : public ::testing::Test {
     };
     joint_obj_ =
         new DartJointObjective(formulation_, joint_param);
-
-    DartDepthImageIcpObjective::Param depth_param;
-    {
-      auto& param = depth_param;
-      auto& camera = param.camera;
-      camera = {
-        .fov_y = fov_y,
-      };
-      camera.frame = camera_frame_;  // cannot be in initializer list.
-      auto& icp = param.icp;
-      icp = {
-        .variance = 0.05,
-      };
-      auto& free_space = param.free_space;
-      free_space.variance = 0.005;
-      param.image_downsample_factor = 5;
-      param.point_cloud_bounds = {
-          .x = {-2, 2},
-          .y = {-2, 2},
-          .z = {-2, 2},
-      };
-    };
-    depth_obj_ =
-        new DartDepthImageIcpObjective(formulation_, depth_param);
-
     formulation_->AddObjective(CreateUnique(joint_obj_));
-    formulation_->AddObjective(CreateUnique(depth_obj_));
+
+//    DartDepthImageIcpObjective::Param depth_param;
+//    {
+//      auto& param = depth_param;
+//      auto& camera = param.camera;
+//      camera = {
+//        .fov_y = fov_y,
+//      };
+//      camera.frame = camera_frame_;  // cannot be in initializer list.
+//      auto& icp = param.icp;
+//      icp = {
+//        .variance = 0.05,
+//      };
+//      auto& free_space = param.free_space;
+//      free_space.variance = 0.005;
+//      param.image_downsample_factor = 5;
+//      param.point_cloud_bounds = {
+//          .x = {-2, 2},
+//          .y = {-2, 2},
+//          .z = {-2, 2},
+//      };
+//    };
+//    depth_obj_ =
+//        new DartDepthImageIcpObjective(formulation_, depth_param);
+//    formulation_->AddObjective(CreateUnique(depth_obj_));
 
     // Tie things together.
     DartEstimator::Param estimator_param {
@@ -167,7 +166,7 @@ class DartTest : public ::testing::Test {
   unique_ptr<RgbdCameraDirect> rgbd_camera_sim_;
 
   DartJointObjective* joint_obj_{};
-  DartDepthImageIcpObjective* depth_obj_;
+  DartDepthImageIcpObjective* depth_obj_{};
 
   unique_ptr<DartEstimator> estimator_;
 };
