@@ -10,4 +10,5 @@ if do_reset
 end
 
 %%
+clear mex;
 call_matlab_client;

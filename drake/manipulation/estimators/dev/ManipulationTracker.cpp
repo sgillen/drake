@@ -13,6 +13,7 @@
 #include <drake/multibody/parsers/urdf_parser.h>
 #include <drake/multibody/parsers/sdf_parser.h>
 #include "drake/manipulation/estimators/dev/dart_util.h"
+#include "drake/common/call_matlab.h"
 
 #include "common/common.hpp"
 
@@ -20,6 +21,7 @@ using namespace std;
 using namespace Eigen;
 using namespace drake::math;
 using drake::unused;
+using namespace drake::common;
 
 /*
  * Return the appropriate YAML node for a path.
@@ -510,6 +512,7 @@ void ManipulationTracker::update(){
   double K = 0.;
 
   // generate these from registered costs:
+  int index = 0;
   for (auto it=registeredCostInfo_.begin(); it != registeredCostInfo_.end(); it++){
     int nx_this = (*it).second.size();
     VectorXd f_new(nx_this);
@@ -523,6 +526,7 @@ void ManipulationTracker::update(){
       x_old[i] = x_[(*it).second[i]];
     }
     bool use = (*it).first->constructCost(this, x_old, Q_new, f_new, K_new);
+    CallMatlab("show_sparsity", index, Q_new, f_new, K_new);
     if (use){
       for (int i=0; i<nx_this; i++){
         int loc_i = (*it).second[i];
@@ -530,10 +534,15 @@ void ManipulationTracker::update(){
         for (int j=0; j<nx_this; j++){
           int loc_j = (*it).second[j];
           Q(loc_i, loc_j) += Q_new(i, j);
+          if ((i >= nq || j >= nq) && abs(Q_new(i, j)) > 0) {
+            drake::log()->info("-- Non-zero v:  Q({}, {}) = {}",
+                               i, j, Q_new(i, j));
+          }
         }
       }
       K += K_new;
     }
+    index += 1;
   }
 
   // and, following DART folks specifically here, include the prediction step
@@ -558,7 +567,7 @@ void ManipulationTracker::update(){
                      "nx: {}, nq: {}", nx, robot_->get_num_positions());
     drake::log()->info("QP Reduce");
     for (int i=0; i < nx; i++){
-      bool is_tracked = true;
+      bool is_tracked = false;  // Ignore velocities.
       if (i < nq) {
         is_tracked = std::find(indices_tracked_.begin(),
                                   indices_tracked_.end(),
@@ -596,6 +605,8 @@ void ManipulationTracker::update(){
       }
     }
 
+    CallMatlab("show_sparsity", 9, Q_reduced, f_reduced, 0);
+
     // perform reduced solve
     auto QR = Q_reduced.colPivHouseholderQr();
     VectorXd q_new_reduced = QR.solve(-f_reduced);
@@ -623,6 +634,7 @@ void ManipulationTracker::update(){
   } else {
     drake::log()->error("Did not have useful costs: {}", K);
   }
+  CallMatlab("drawnow");
 
   if (do_force_align_){
     Isometry3d force_align;
