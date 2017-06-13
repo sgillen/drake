@@ -9,6 +9,7 @@
 #include "drake/manipulation/estimators/dev/dart_util.h"
 #include "drake/multibody/parsers/urdf_parser.h"
 #include "drake/systems/sensors/rgbd_camera.h"
+#include "drake/multibody/rigid_body_tree_construction.h"
 
 using namespace std;
 using namespace drake::systems::sensors;
@@ -51,6 +52,7 @@ class DartTest : public ::testing::Test {
         parsers::urdf::AddModelInstanceFromUrdfFile(
             file_path, floating_base_type,
             weld_frame, mutable_tree_).begin()->second;
+    drake::multibody::AddFlatTerrainToWorld(mutable_tree_);
     mutable_tree_->compile();
     tree_.reset(mutable_tree_);
 

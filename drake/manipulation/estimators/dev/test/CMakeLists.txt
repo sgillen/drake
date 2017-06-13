@@ -33,3 +33,9 @@ target_link_libraries(dart_util_test
 drake_add_cc_test(dart_test)
 target_link_libraries(dart_test
   drakeManipulationTracker)
+
+drake_add_cc_test(camera_test)
+target_link_libraries(camera_test
+  drakeCommon
+  drakeSensors
+  drakeDartUtil)

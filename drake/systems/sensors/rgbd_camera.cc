@@ -965,6 +965,10 @@ RgbdCameraDirect::RgbdCameraDirect(const RigidBodyTree<double>& tree,
   impl_->set_depth_rel_noise_magnitude(0.02); // same as above
 }
 
+RgbdCameraDirect::RgbdCameraDirect(const RigidBodyTree<double>& tree, const Eigen::Vector3d& position, const Eigen::Vector3d& orientation, double fov_y, bool show_window)
+    : impl_(new RgbdCamera::Impl(tree, RigidBodyFrame<double>(), position, orientation,
+                                 fov_y, show_window, true)) {}
+
 RgbdCameraDirect::~RgbdCameraDirect() {}
 
 void RgbdCameraDirect::CalcImages(

@@ -234,6 +234,11 @@ class RgbdCameraDirect {
                    const RigidBodyFrame<double>& frame,
                    double fov_y,
                    bool show_window);
+  RgbdCameraDirect(const RigidBodyTree<double>& tree,
+             const Eigen::Vector3d& position,
+             const Eigen::Vector3d& orientation,
+             double fov_y,
+             bool show_window);
   ~RgbdCameraDirect();
 
   void CalcImages(double t,
