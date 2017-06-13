@@ -79,7 +79,7 @@ bool RobotStateCost::constructCost(ManipulationTracker * tracker, const Eigen::V
   }
 }
 
-void RobotStateCost::readTreeState(const VectorXd& q, const VectorSlice<double>& slice)
+void RobotStateCost::readTreeState(const VectorXd& q, const VectorSlice& slice)
 {
   lastReceivedTime = getUnixTime();
   slice.WriteToSuperset(q, x_robot_measured);

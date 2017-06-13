@@ -12,7 +12,7 @@
 
 #include "lcmtypes/bot_core/robot_state_t.hpp"
 
-#include "drake/manipulation/estimators/dev/tree_state_portion.h"
+#include "drake/manipulation/estimators/dev/vector_slice.h"
 
 // TODO(eric.cousineau): Merge this with JointStateCost.
 
@@ -26,7 +26,7 @@ public:
   bool constructCost(ManipulationTracker * tracker, const Eigen::VectorXd x_old, Eigen::MatrixXd& Q, Eigen::VectorXd& f, double& K);
 
   void readTreeState(const Eigen::VectorXd& q,
-                     const VectorSlice<double>& slice);
+                     const VectorSlice& slice);
 private:
   std::string state_channelname = "EST_ROBOT_STATE";
   double joint_known_encoder_var = INFINITY;

@@ -9,7 +9,7 @@
 #include "drake/manipulation/estimators/dev/ManipulationTrackerLoader.hpp"
 #include "drake/systems/rendering/pose_vector.h"
 
-#include "drake/manipulation/estimators/dev/tree_state_portion.h"
+#include "drake/manipulation/estimators/dev/vector_slice.h"
 
 #include "drake/common/scoped_timer.h"
 #include "drake/common/unused.h"
@@ -43,7 +43,7 @@ class ArticulatedStateEstimator::Impl {
                                                 camera_info));
   }
 
-  typedef VectorSlice<double> Slice;
+  typedef VectorSlice Slice;
   typedef Slice::Indices Indices;
 
   void SetQSlices(const Slice& input_slice,

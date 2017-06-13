@@ -32,45 +32,46 @@ set(drakeDartUtil_HEADERS
     vector_slice.h
     )
 
-set(drakeManipulationTracker_SRC_FILES
+set(drakeDart_SRC_FILES
     dart.cc
     dart_objectives.cc
-    dart_depth_image_icp_objective.cc
-#    articulated_state_estimator.cc
+    dart_depth_image_icp_objective.cc)
+set(drakeDart_HEADERS
+    dart.h
+    dart_objectives.h
+    dart_depth_image_icp_objective.h)
 
-#    ManipulationTracker.cpp
-#    ManipulationTrackerLoader.cpp
-##    costs/AttachedApriltagCost.cpp
-#    costs/DynamicsCost.cpp
-##    costs/GelsightCost.cpp
-#    costs/JointStateCost.cpp
-#    costs/KinectFrameCost.cpp
-#    costs/NonpenetratingObjectCost.cpp
-##    costs/OptotrakMarkerCost.cpp
-#    costs/RobotStateCost.cpp
+set(drakeManipulationTracker_SRC_FILES
+   articulated_state_estimator.cc
+   ManipulationTracker.cpp
+   ManipulationTrackerLoader.cpp
+#    costs/AttachedApriltagCost.cpp
+   costs/DynamicsCost.cpp
+#    costs/GelsightCost.cpp
+   costs/JointStateCost.cpp
+   costs/KinectFrameCost.cpp
+   costs/NonpenetratingObjectCost.cpp
+#    costs/OptotrakMarkerCost.cpp
+   costs/RobotStateCost.cpp
     )
 
 set(drakeManipulationTracker_HEADERS
-    dart.h
-    dart_objectives.h
-    dart_depth_image_icp_objective.h
-#    articulated_state_estimator.h
+   articulated_state_estimator.h
     abstract_zoh.h
-    vector_slice.h
-    stamped_value.h
+    # stamped_value.h
     common/sdf_2d_functions.hpp
-#    common/common.hpp
-#    ManipulationTracker.hpp
-#    ManipulationTrackerLoader.hpp
-##    costs/AttachedApriltagCost.hpp
-#    costs/DynamicsCost.hpp
-##    costs/GelsightCost.hpp
-#    costs/JointStateCost.hpp
-#    costs/KinectFrameCost.hpp
-#    costs/ManipulationTrackerCost.hpp
-#    costs/NonpenetratingObjectCost.hpp
-##    costs/OptotrakMarkerCost.hpp
-#    costs/RobotStateCost.hpp
+   common/common.hpp
+   ManipulationTracker.hpp
+   ManipulationTrackerLoader.hpp
+#    costs/AttachedApriltagCost.hpp
+   costs/DynamicsCost.hpp
+#    costs/GelsightCost.hpp
+   costs/JointStateCost.hpp
+   costs/KinectFrameCost.hpp
+   costs/ManipulationTrackerCost.hpp
+   costs/NonpenetratingObjectCost.hpp
+#    costs/OptotrakMarkerCost.hpp
+   costs/RobotStateCost.hpp
     )
 
 set(drakeManipulationTracker_EXTERNAL_LIBRARIES
@@ -103,6 +104,7 @@ set(drakeManipulationTracker_LIBRARIES
     drakeSystemFramework
     drakeSensors
     drakeDartUtil
+    drakeDart
     # drakeUtil
     # drakeXMLUtil
     )  # How to replace this?
@@ -124,6 +126,11 @@ target_link_libraries(drakeDartUtil
     drakeMultibodyParsers
     )
 
+add_library_with_exports(LIB_NAME drakeDart SOURCE_FILES
+    ${drakeDartUtil_SRC_FILES})
+target_link_libraries(drakeDart
+    drakeDartUtil
+    )
 
 add_library_with_exports(LIB_NAME drakeManipulationTracker SOURCE_FILES
     ${drakeManipulationTracker_SRC_FILES})
