@@ -15,8 +15,11 @@
 #include "lcmtypes/bot_core/robot_state_t.hpp"
 #include "lcmtypes/bot_core/rigid_transform_t.hpp"
 
+#include "drake/manipulation/estimators/dev/vector_slice.h"
+
 // forward def
 class ManipulationTrackerCost;
+using drake::manipulation::VectorSlice;
 
 typedef std::map<int, std::string> PlantIdMap;
 
@@ -47,7 +50,7 @@ public:
   // register a cost function with the solver
   void addCost(std::shared_ptr<ManipulationTrackerCost> new_cost);
 
-  void update();
+  void update(const Eigen::VectorXd& q_sub, const VectorSlice& q_slice);
   std::shared_ptr<const RigidBodyTreed> getRobot() { return robot_; }
   const PlantIdMap& getPlantIdMap() const { return plant_id_map_; }
   Eigen::VectorXd getMean() const { return x_; }

@@ -429,13 +429,30 @@ void ManipulationTracker::addCost(std::shared_ptr<ManipulationTrackerCost> new_c
 }
 
 
-void ManipulationTracker::update(){
+void ManipulationTracker::update(const Eigen::VectorXd &q_sub, const VectorSlice& q_slice){
 
   // Performs an EKF-like update of our given state.
 
   // get the robot state ready:
   int nq = robot_->get_num_positions();
   int nx = x_.rows();
+
+  // Update non-measured items.
+  drake::log()->info("Measure");
+  for (int i = 0; i < nq; ++i) {
+    bool is_tracked =
+        std::find(indices_tracked_.begin(), indices_tracked_.end(), i) !=
+            indices_tracked_.end();
+    bool is_updated =
+        std::find(q_slice.indices().begin(), q_slice.indices().end(), i) !=
+            q_slice.indices().end();
+    if (!is_tracked && is_updated) {
+      drake::log()->info("  overwrite {} {}: {}",
+                         i, robot_->get_position_name(i), q_sub(i));
+      x_(i) = q_sub(i);
+    }
+  }
+
   VectorXd q_old = x_.block(0, 0, nq, 1);
   robot_kinematics_cache_.initialize(q_old);
   robot_->doKinematics(robot_kinematics_cache_);

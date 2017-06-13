@@ -128,6 +128,13 @@ class VectorSlice {
     }
   }
 
+  template <typename Container>
+  Container CreateFromSuperset(const Container& super) {
+    Container values(super.size());
+    ReadFromSuperset(super, values);
+    return values;
+  }
+
  protected:
   int super_size_{};
   int max_index_{-1};

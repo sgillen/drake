@@ -63,7 +63,7 @@ class ArticulatedStateEstimator::Impl {
   }
 
   void ImplDiscreteUpdate(const VectorXd& q0,
-                          const VectorXd& tree_q_measurement_input,
+                          const VectorXd& tree_q_sys,
                           const Eigen::Isometry3d& X_WD,
                           const PointCloud& point_cloud,
                           const DepthImage& depth_image,
@@ -72,9 +72,13 @@ class ArticulatedStateEstimator::Impl {
 
     DRAKE_ASSERT(slices_ != nullptr);
 
-    VectorXd tree_q_measurement(get_num_update_positions());
-    slices_->input.ReadFromSuperset(tree_q_measurement_input,
-                                    tree_q_measurement);
+    VectorXd tree_q_sub_common(get_num_update_positions());
+    slices_->input.ReadFromSuperset(tree_q_sys,
+                                    tree_q_sub_common);
+    VectorXd tree_q_est(slices_->update.super_size());
+    tree_q_est.setZero();
+    slices_->update.WriteToSuperset(tree_q_sub_common,
+                                    tree_q_est);
 
     // TODO(eric.cousineau): Is there a better place for this?
     if (!estimator.has_performed_first_update()) {
@@ -83,17 +87,17 @@ class ArticulatedStateEstimator::Impl {
 
     // Update individual costs.
     for (auto&& cost : loader_->joint_state_costs_) {
-      cost->readTreeState(tree_q_measurement, slices_->update);
+      cost->readTreeState(tree_q_sub_common, slices_->update);
     }
     for (auto&& cost : loader_->robot_state_costs_) {
-      cost->readTreeState(tree_q_measurement, slices_->update);
+      cost->readTreeState(tree_q_sub_common, slices_->update);
     }
     for (shared_ptr<KinectFrameCost> cost : loader_->kinect_frame_costs_) {
       cost->readDepthImageAndPointCloud(X_WD, depth_image, point_cloud);
     }
 
     // DynamicsCost and NonpenetratingCost presently only rely on priors.
-    estimator.update();
+    estimator.update(tree_q_est, slices_->update);
     estimator.publish();
     *estimated_tree_state = estimator.getRobotX();
   }
