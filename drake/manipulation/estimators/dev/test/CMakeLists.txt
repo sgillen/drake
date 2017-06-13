@@ -4,7 +4,8 @@ target_link_libraries(test_2D_sdf
 
 drake_add_cc_test(vector_slice_test)
 target_link_libraries(vector_slice_test
-    Eigen3::Eigen)
+    Eigen3::Eigen
+    drakeCommon)
 
 drake_add_cc_test(leaf_system_abstract_test)
 target_link_libraries(leaf_system_abstract_test

@@ -36,7 +36,7 @@ using Eigen::RowVectorXd;
 GTEST_TEST(VectorSliceTest, BasicSlice) {
   auto superset =
       (VectorXd(4) << 1, 2, 3, 4).finished();
-  VectorSlice slice { {0, 3, 2} };
+  VectorSlice slice({0, 3, 2}, 4);
 
   const auto subset_expected =
       (VectorXd(3) << 1, 4, 3).finished();
@@ -52,7 +52,7 @@ GTEST_TEST(VectorSliceTest, BasicSlice) {
 }
 
 GTEST_TEST(VectorSliceTest, MatrixSlice) {
-  VectorSlice slice{ {2, 0} };
+  VectorSlice slice({2, 0}, 3);
   Matrix3d X;
   X <<
      1, 2, 3,

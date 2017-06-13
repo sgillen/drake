@@ -108,7 +108,7 @@ class DartTest : public ::testing::Test {
       param.point_cloud_bounds = {
           .x = {-2, 2},
           .y = {-2, 2},
-//          .z = {-2, 2},
+          .z = {-2, 2},
       };
     };
     depth_obj_ =

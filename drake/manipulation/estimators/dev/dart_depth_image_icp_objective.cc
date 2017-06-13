@@ -330,23 +330,25 @@ void DartDepthImageIcpObjective::UpdateFormulation(
   Matrix3Xd positive_meas_pts_W(3, num_meas);  // Point cloud points.
   int num_positive = 0;
 
+  // Define scene configuration for world and camera.
+  // TODO(eric.cousineau): Consider a configuration with multiple cameras.
   IcpScene scene(tree, kin_cache,
                  param_.camera.frame->get_frame_index(),
                  tree.world().get_body_index());
 
-  const Matrix3Xd& point_cloud_C = impl.meas.point_cloud_C;
-  Matrix3Xd point_cloud_W =
-      tree.transformPoints(scene.cache, point_cloud_C,
+  const Matrix3Xd& meas_pts_C = impl.meas.point_cloud_C;
+  Matrix3Xd meas_pts_W =
+      tree.transformPoints(scene.cache, meas_pts_C,
                            scene.frame_C, scene.frame_W);
   Coord c{};
   for (c.v = 0; c.v < meas_slice.height(); c.v++) {
     for (c.u = 0; c.u < meas_slice.width(); c.u++) {
       int meas_index = meas_slice.CoordToIndex(c);
-      Vector3d pt_W = point_cloud_W.col(meas_index);
-      if (IsValidPoint(pt_W)) {
+      Vector3d meas_pt_W = meas_pts_W.col(meas_index);
+      if (IsValidPoint(meas_pt_W)) {
         int i = num_positive++;
         positive_meas_indices[i] = meas_index;
-        positive_meas_pts_W.col(i) = pt_W;
+        positive_meas_pts_W.col(i) = meas_pt_W;
       }
     }
   }
@@ -414,7 +416,7 @@ void DartDepthImageIcpObjective::UpdateFormulation(
         // linearized error term.
         const int meas_index = positive_meas_indices[positive_index];
         icp_body.Add(positive_meas_pts_W.col(positive_index),
-                     point_cloud_C.col(meas_index),
+                     meas_pts_C.col(meas_index),
                      positive_body_pts_W.col(positive_index),
                      body_pt_Bi);
       }
