@@ -7,11 +7,11 @@ robots:
   camera:
     urdf: "/examples/kuka_iiwa_arm/models/objects/xtion.urdf"
     q0: 
-      base_x: 0
-      base_y: 2
+      base_x: 0.75
+      base_y: 1
       base_z: 2
       base_roll: 0.0
-      base_pitch: 0.349065850399
+      base_pitch: 0.698131700798
       base_yaw: -1.57079632679
   iiwa:
     urdf_less_collision: "/manipulation/models/iiwa_description/urdf/iiwa14_polytope_collision.urdf"
@@ -43,7 +43,7 @@ robots:
     q0:
       base_x: 0.8
       base_y: 0.36
-      base_z: 1.05 # 1.1345
+      base_z: 1.12 # 1.1345
 # Posts (except for Pos. C)
   # yellow_post_1:
   #   urdf: "/examples/kuka_iiwa_arm/models/objects/yellow_post.urdf"
