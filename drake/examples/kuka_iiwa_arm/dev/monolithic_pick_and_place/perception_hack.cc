@@ -155,6 +155,77 @@ class PoseTransformer : public LeafSystemMixin<double> {
   }
 };
 
+class CameraFrustrumView : public LeafSystemMixin<double> {
+ public:
+  CameraFrustrumView(DrakeLcm* lcm,
+      const CameraInfo& camera_info, double period_sec)
+      : camera_info_(camera_info) {
+    DeclarePublishPeriodSec(period_sec);
+    DeclareVectorInputPort(PoseVector<double>());
+    lcmgl_ = bot_lcmgl_init(lcm->get_lcm_instance()->getUnderlyingLCM(),
+                                 "camera_frustrum");
+  }
+ protected:
+  void DoCalcOutput(const Context&, SystemOutput*) const override {}
+  void DoPublish(const Context& context) const override {
+    auto&& pose =
+        EvalVectorInput<PoseVector>(context, 0);
+    Eigen::Isometry3d X_WC = pose->get_isometry();
+    // TODO(eric.cousineau): Generalize ConvertDepthImageToPointCloud to accept
+    // coordinates?
+    const double w = camera_info_.width();
+    const double h = camera_info_.height();
+    // Copied:
+    const float cx = camera_info_.center_x();
+    const float cy = camera_info_.center_y();
+    const float fx_inv = 1.f / camera_info_.focal_x();
+    const float fy_inv = 1.f / camera_info_.focal_y();
+    Matrix3Xd depths(3, 5);
+    // u, v, z
+    depths.transpose() <<
+      0, 0, 0,
+      0, 0, 1,
+      w, 0, 1,
+      w, h, 1,
+      0, h, 1;
+    Matrix3Xd points_C(3, 5);
+    for (int i = 0; i < depths.cols(); ++i) {
+      auto d = depths.col(i);
+      auto c = points_C.col(i);
+      c(0) = d(2) * (d(0) - cx) * fx_inv;
+      c(1) = d(2) * (d(1) - cy) * fy_inv;
+      c(2) = d(2);
+    }
+    // Change frame, pseduo-raycast tail ends to ground.
+    Matrix3Xd points_W = X_WC * points_C;
+    Vector3d c = X_WC.translation();  // Camera position in world.
+    for (int i = 1; i < points_W.cols(); ++i) {
+      Vector3d ci = points_W.col(i) - c;
+      double scale = c(2) / fabs(ci(2));
+      ci *= scale;
+      points_W.col(i) = c + ci;
+    }
+    // Draw each point to flat ground.
+    bot_lcmgl_begin(lcmgl_, LCMGL_LINES);
+    for (int i = 1; i < points_W.cols(); ++i) {
+      auto c0 = points_W.col(0);
+      auto ci = points_W.col(i);
+      int n = 1 + i % 4; // Wrap for drawing box
+      auto cn = points_W.col(n);
+      bot_lcmgl_color3f(lcmgl_, 0.5, 1.0, 0.5);
+      bot_lcmgl_vertex3f(lcmgl_, c0[0], c0[1], c0[2]);
+      bot_lcmgl_vertex3f(lcmgl_, ci[0], ci[1], ci[2]);
+      bot_lcmgl_vertex3f(lcmgl_, ci[0], ci[1], ci[2]);
+      bot_lcmgl_vertex3f(lcmgl_, cn[0], cn[1], cn[2]);
+    }
+    bot_lcmgl_end(lcmgl_);
+    bot_lcmgl_switch_buffer(lcmgl_);
+  }
+ private:
+  bot_lcmgl_t* lcmgl_{};
+  const CameraInfo& camera_info_;
+};
+
 // HACK: Actually outputs DepthSensorOutput, with very non-descriptive sensor
 // information.
 // Provides point cloud in depth sensor frame.
@@ -515,6 +586,12 @@ struct PerceptionHack::Impl {
       pbuilder->Connect(
             depth_image_output_port,
             depth_to_pc->get_depth_image_inport());
+
+      auto cf_view = pbuilder->template AddSystem<CameraFrustrumView>(
+            plcm, rgbd_camera_->depth_camera_info(), camera_dt);
+      pbuilder->Connect(
+            depth_camera_pose_output_port,
+            cf_view->get_input_port(0));
 
       auto* pc_zoh = pbuilder->template AddSystem<AbstractZOH<PointCloud>>(camera_dt);
       pbuilder->Connect(
