@@ -10,5 +10,5 @@ if do_reset
 end
 
 %%
-clear mex;
+clear call_matlab_client;
 call_matlab_client;

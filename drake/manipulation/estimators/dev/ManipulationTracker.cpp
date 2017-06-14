@@ -528,6 +528,8 @@ void ManipulationTracker::update(const Eigen::VectorXd &q_sub, const VectorSlice
   Q.setZero();
   double K = 0.;
 
+  bool debug_matlab = false;
+
   // generate these from registered costs:
   int index = 0;
   for (auto it=registeredCostInfo_.begin(); it != registeredCostInfo_.end(); it++){
@@ -543,7 +545,9 @@ void ManipulationTracker::update(const Eigen::VectorXd &q_sub, const VectorSlice
       x_old[i] = x_[(*it).second[i]];
     }
     bool use = (*it).first->constructCost(this, x_old, Q_new, f_new, K_new);
-    CallMatlab("show_sparsity", index, Q_new, f_new, K_new);
+    if (debug_matlab) {
+      CallMatlab("show_sparsity", index, Q_new, f_new, K_new);
+    }
     if (use){
       for (int i=0; i<nx_this; i++){
         int loc_i = (*it).second[i];
@@ -622,7 +626,9 @@ void ManipulationTracker::update(const Eigen::VectorXd &q_sub, const VectorSlice
       }
     }
 
-    CallMatlab("show_sparsity", 9, Q_reduced, f_reduced, 0);
+    if (debug_matlab) {
+      CallMatlab("show_sparsity", 9, Q_reduced, f_reduced, 0);
+    }
 
     // perform reduced solve
     auto QR = Q_reduced.colPivHouseholderQr();
@@ -651,7 +657,9 @@ void ManipulationTracker::update(const Eigen::VectorXd &q_sub, const VectorSlice
   } else {
     drake::log()->error("Did not have useful costs: {}", K);
   }
-  CallMatlab("drawnow");
+  if (debug_matlab) {
+    CallMatlab("drawnow");
+  }
 
   if (do_force_align_){
     Isometry3d force_align;

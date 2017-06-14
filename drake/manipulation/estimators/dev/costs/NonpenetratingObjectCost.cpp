@@ -12,11 +12,14 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include "drake/multibody/joints/revolute_joint.h"
 
+#include "drake/common/call_matlab.h"
+
 // TODO(eric.cousineau): Consider replacing with hingeloss gradient (linear cost).
 
 using namespace std;
 using namespace Eigen;
 using namespace cv;
+using namespace drake::common;
 
 template<typename _Tp, int _rows, int _cols, int _options, int _maxRows, int _maxCols>
 void eigen2cv( const Eigen::Matrix<_Tp, _rows, _cols, _options, _maxRows, _maxCols>& src, cv::Mat& dst)
@@ -61,6 +64,7 @@ SimpleBoundingBox GetSimpleBoundingBox(const RigidBodyTreed& robot, const RigidB
         bbox_min = bbox_min.cwiseMin(bbox_cur_array.rowwise().minCoeff());
         bbox_max = bbox_max.cwiseMax(bbox_cur_array.rowwise().maxCoeff());
     }
+    drake::log()->info("Bbox: {}", bbox);
     // Expand by a factor
     double expand = 1.2;
     Vector3d width = bbox_max - bbox_min;
@@ -185,6 +189,8 @@ NonpenetratingObjectCost::NonpenetratingObjectCost(std::shared_ptr<RigidBodyTree
           break;
       }
     }
+//    drake::log()->info("Good surface points: {} / {}", num_good_surface_pts,
+//                       num_surface_pts);
   }
 
   surface_pts = robot_object->transformPoints(robot_object_kinematics_cache, surface_pts, 0, robot_object_id);
@@ -269,6 +275,8 @@ bool NonpenetratingObjectCost::constructCost(ManipulationTracker * tracker, cons
 
   Matrix3Xd global_surface_pts = robot_object->transformPoints(robot_object_kinematics_cache, surface_pts, robot_object_id, 0);  
 
+  bool has_pen = false;
+
   if (!std::isinf(nonpenetration_var) && global_surface_pts.cols() > 0){
     double NONPENETRATION_WEIGHT = 1. / (2. * nonpenetration_var * nonpenetration_var);
     
@@ -313,6 +321,9 @@ bool NonpenetratingObjectCost::constructCost(ManipulationTracker * tracker, cons
               body_z_prime.block<3, 1>(0, k) = body_x.block<3, 1>(0, j);
               z_norms.block<3, 1>(0, k) = normal.block<3, 1>(0, j);
               phis(k) = phi(j);
+              drake::log()->info("SDF Penetration: {} {} {}",
+                                 k, robot->get_body(i).get_name(), phi(j));
+              has_pen = true;
               k++;
             }
           }
@@ -371,6 +382,7 @@ bool NonpenetratingObjectCost::constructCost(ManipulationTracker * tracker, cons
           bot_lcmgl_end(lcmgl_nonpen_corresp_);  
       }
     }
+
   }
     
 
@@ -389,6 +401,11 @@ bool NonpenetratingObjectCost::constructCost(ManipulationTracker * tracker, cons
     bot_lcmgl_end(lcmgl_surface_pts_);
 
     bot_lcmgl_switch_buffer(lcmgl_surface_pts_);
+  }
+  if (has_pen) {
+    CallMatlab("disp", "Encountered negative SDF");
+    CallMatlab("show_sparsity", 100, Q, f, K);
+//    throw std::runtime_error("Killing");
   }
   
   // Downsample object surface points
