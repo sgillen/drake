@@ -12,6 +12,7 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include "drake/multibody/joints/revolute_joint.h"
 
+#include "drake/manipulation/estimators/dev/dart_util.h"
 #include "drake/common/call_matlab.h"
 
 // TODO(eric.cousineau): Consider replacing with hingeloss gradient (linear cost).
@@ -20,6 +21,7 @@ using namespace std;
 using namespace Eigen;
 using namespace cv;
 using namespace drake::common;
+using namespace drake::manipulation;
 
 template<typename _Tp, int _rows, int _cols, int _options, int _maxRows, int _maxCols>
 void eigen2cv( const Eigen::Matrix<_Tp, _rows, _cols, _options, _maxRows, _maxCols>& src, cv::Mat& dst)
@@ -127,6 +129,11 @@ NonpenetratingObjectCost::NonpenetratingObjectCost(std::shared_ptr<RigidBodyTree
 
 
   robot_object_id = 1; //robot_object->FindBodyIndex("body");
+
+  string nonpen_name = config["nonpenetrating_robot"].as<string>();
+  string nonpen_name_actual = robot_object_->get_body(robot_object_id).get_name();
+  ASSERT_THROW_FMT(nonpen_name == nonpen_name_actual,
+                   "{} != {}", nonpen_name, nonpen_name_actual);
 
   //lcmgl_lidar_= bot_lcmgl_init(lcm->getUnderlyingLCM(), "trimmed_lidar");
   //lcmgl_icp_= bot_lcmgl_init(lcm->getUnderlyingLCM(), "icp_p2pl");
@@ -273,28 +280,30 @@ bool NonpenetratingObjectCost::constructCost(ManipulationTracker * tracker, cons
   robot_object->doKinematics(robot_object_kinematics_cache);
   
 
-  Matrix3Xd global_surface_pts = robot_object->transformPoints(robot_object_kinematics_cache, surface_pts, robot_object_id, 0);  
+  Matrix3Xd surface_pts_W = robot_object->transformPoints(robot_object_kinematics_cache, surface_pts, robot_object_id, 0);
 
   bool has_pen = false;
 
-  if (!std::isinf(nonpenetration_var) && global_surface_pts.cols() > 0){
+  if (!std::isinf(nonpenetration_var) && surface_pts_W.cols() > 0){
     double NONPENETRATION_WEIGHT = 1. / (2. * nonpenetration_var * nonpenetration_var);
     
-    VectorXd phi(global_surface_pts.cols());
-    Matrix3Xd normal(3, global_surface_pts.cols()), x(3, global_surface_pts.cols()), body_x(3, global_surface_pts.cols());
-    std::vector<int> body_idx(global_surface_pts.cols());
+    VectorXd pen_distances(surface_pts_W.cols());
+    Matrix3Xd pen_normals_W(3, surface_pts_W.cols()),
+        pen_body_pts_W(3, surface_pts_W.cols()),
+        pen_body_pts_Bi(3, surface_pts_W.cols());
+    std::vector<int> pen_body_indices(surface_pts_W.cols());
     // project points onto the collide-with object surfaces
     // via the last state estimate
     double now1 = getUnixTime();
-    robot->collisionDetectFromPoints(robot_kinematics_cache, global_surface_pts,
-                         phi, normal, x, body_x, body_idx, false);
+    robot->collisionDetectFromPoints(robot_kinematics_cache, surface_pts_W,
+                         pen_distances, pen_normals_W, pen_body_pts_W, pen_body_pts_Bi, pen_body_indices, false);
     if (verbose)
       printf("Nonpenetration Contact Points SDF took %f\n", getUnixTime()-now1);
 
     // for every unique body points have returned onto...
     std::vector<int> num_points_on_body(robot->bodies.size(), 0);
-    for (int i=0; i < (int)body_idx.size(); i++)
-      num_points_on_body[body_idx[i]] += 1;
+    for (int i=0; i < (int)pen_body_indices.size(); i++)
+      num_points_on_body[pen_body_indices[i]] += 1;
 
     // for every body...
     for (int i=0; i < (int)robot->bodies.size(); i++){
@@ -302,51 +311,60 @@ bool NonpenetratingObjectCost::constructCost(ManipulationTracker * tracker, cons
 
         // collect results from raycast that correspond to this body out in the world
         VectorXd phis(num_points_on_body[i]);
-        Matrix3Xd z(3, num_points_on_body[i]); // points, in world frame, near this body
-        Matrix3Xd z_prime(3, num_points_on_body[i]); // same points projected onto surface of body
-        Matrix3Xd body_z_prime(3, num_points_on_body[i]); // projected points in body frame
-        Matrix3Xd z_norms(3, num_points_on_body[i]); // normals corresponding to these points
+        Matrix3Xd pts_a_W(3, num_points_on_body[i]); // points, in world frame, near this body
+        Matrix3Xd pts_b_W(3, num_points_on_body[i]); // same points projected onto surface of body
+        Matrix3Xd pts_b_Bi(3, num_points_on_body[i]); // projected points in body frame
+        Matrix3Xd norms_b_Wi(3, num_points_on_body[i]); // normals corresponding to these points
         int k = 0;
 
-        for (int j=0; j < (int)body_idx.size(); j++){
-          assert(k < (int)body_idx.size());
-          if (body_idx[j] == i){
-            assert(j < global_surface_pts.cols());
-            if (global_surface_pts(0, j) == 0.0){
-              cout << "Zero points " << global_surface_pts.block<3, 1>(0, j).transpose() << " slipping in at bdyidx " << body_idx[j] << endl;
+        for (int j=0; j < (int)pen_body_indices.size(); j++){
+          assert(k < (int)pen_body_indices.size());
+          if (pen_body_indices[j] == i){
+            assert(j < surface_pts_W.cols());
+            if (surface_pts_W(0, j) == 0.0){
+              cout << "Zero points " << surface_pts_W.block<3, 1>(0, j).transpose() << " slipping in at bdyidx " << pen_body_indices[j] << endl;
             }
-            if (phi(j) < -min_considered_penetration_distance){
-              z.block<3, 1>(0, k) = global_surface_pts.block<3, 1>(0, j);
-              z_prime.block<3, 1>(0, k) = x.block<3, 1>(0, j);
-              body_z_prime.block<3, 1>(0, k) = body_x.block<3, 1>(0, j);
-              z_norms.block<3, 1>(0, k) = normal.block<3, 1>(0, j);
-              phis(k) = phi(j);
+            if (pen_distances(j) < -min_considered_penetration_distance){
+              pts_a_W.block<3, 1>(0, k) = surface_pts_W.block<3, 1>(0, j);
+              pts_b_W.block<3, 1>(0, k) = pen_body_pts_W.block<3, 1>(0, j);
+              pts_b_Bi.block<3, 1>(0, k) = pen_body_pts_Bi.block<3, 1>(0, j);
+              norms_b_Wi.block<3, 1>(0, k) = pen_normals_W.block<3, 1>(0, j);
+              phis(k) = pen_distances(j);
               drake::log()->info("SDF Penetration: {} {} {}",
-                                 k, robot->get_body(i).get_name(), phi(j));
+                                 k, robot->get_body(i).get_name(), pen_distances(j));
               has_pen = true;
               k++;
             }
           }
         }
 
-        z.conservativeResize(3, k);
-        z_prime.conservativeResize(3, k);
-        body_z_prime.conservativeResize(3, k);
-        z_norms.conservativeResize(3, k);
+        pts_a_W.conservativeResize(3, k);
+        pts_b_W.conservativeResize(3, k);
+        pts_b_Bi.conservativeResize(3, k);
+        norms_b_Wi.conservativeResize(3, k);
         phis.conservativeResize(k);
 
         // forwardkin to get our jacobians on the body we're currently iterating on, as well as from
         // the sensor body id
-        MatrixXd J_prime = robot->transformPointsJacobian(robot_kinematics_cache, body_z_prime, i, 0, false);
-        MatrixXd J_z = robot_object->transformPointsJacobian(robot_object_kinematics_cache, z, robot_object_id, 0, false);
-        MatrixXd J(3*z.cols(), nq_full);
+        const int frame_W = 0;
+        const int frame_A = robot_object_id;  // Object with surface points.
+        const int frame_Bi = i;
+
+        MatrixXd J_prime =
+            robot->transformPointsJacobian(
+              robot_kinematics_cache, pts_b_Bi, frame_Bi, frame_W, false);
+        // TODO(eric.cousineau): Check if this frame assignment is correct.
+        MatrixXd J_z =
+            robot_object->transformPointsJacobian(
+                robot_object_kinematics_cache, pts_a_W, frame_A, frame_W, false);
+        MatrixXd J(3*pts_a_W.cols(), nq_full);
         J.setZero();
 
         for (int j=0; j < nq; j++){
-          J.block(0, robot_correspondences[j], 3*z.cols(), 1) += J_prime.block(0, j, 3*z.cols(), 1);
+          J.block(0, robot_correspondences[j], 3*pts_a_W.cols(), 1) += J_prime.block(0, j, 3*pts_a_W.cols(), 1);
         }
         for (int j=0; j < nq_object; j++){
-          J.block(0, robot_object_correspondences[j], 3*z.cols(), 1) -= J_z.block(0, j, 3*z.cols(), 1);
+          J.block(0, robot_object_correspondences[j], 3*pts_a_W.cols(), 1) -= J_z.block(0, j, 3*pts_a_W.cols(), 1);
         }
 
         // minimize distance between the given set of points on the sensor surface,
@@ -362,7 +380,7 @@ bool NonpenetratingObjectCost::constructCost(ManipulationTracker * tracker, cons
         }
 
         for (int j=0; j < k; j++){
-          MatrixXd Ks = z.col(j) - z_prime.col(j) + J.block(3*j, 0, 3, nq_full)*q_old_full;
+          MatrixXd Ks = pts_a_W.col(j) - pts_b_W.col(j) + J.block(3*j, 0, 3, nq_full)*q_old_full;
           f.block(0, 0, nq_full, 1) -= NONPENETRATION_WEIGHT*(2. * Ks.transpose() * J.block(3*j, 0, 3, nq_full)).transpose()/(double)k;
           Q.block(0, 0, nq_full, nq_full) += NONPENETRATION_WEIGHT*(2. *  J.block(3*j, 0, 3, nq_full).transpose() * J.block(3*j, 0, 3, nq_full))/(double)k;
           K += NONPENETRATION_WEIGHT*Ks.squaredNorm()/(double)k;
@@ -371,10 +389,10 @@ bool NonpenetratingObjectCost::constructCost(ManipulationTracker * tracker, cons
             // visualize point correspondences and normals
 //            double dist_normalized = fmin(0.05, (z.col(j) - z_prime.col(j)).norm()) / 0.05;
           //  bot_lcmgl_color3f(lcmgl_nonpen_corresp_, 1.0, 0.0, (1.0-dist_normalized)*(1.0-dist_normalized));
-            bot_lcmgl_vertex3f(lcmgl_nonpen_corresp_, z(0, j), z(1, j), z(2, j));
+            bot_lcmgl_vertex3f(lcmgl_nonpen_corresp_, pts_a_W(0, j), pts_a_W(1, j), pts_a_W(2, j));
             //Vector3d norm_endpt = z_prime.block<3,1>(0,j) + z_norms.block<3,1>(0,j)*0.01;
             //bot_lcmgl_vertex3f(lcmgl_nonpen_corresp_, norm_endpt(0), norm_endpt(1), norm_endpt(2));
-            bot_lcmgl_vertex3f(lcmgl_nonpen_corresp_, z_prime(0, j), z_prime(1, j), z_prime(2, j));
+            bot_lcmgl_vertex3f(lcmgl_nonpen_corresp_, pts_b_W(0, j), pts_b_W(1, j), pts_b_W(2, j));
             
           }
         }
@@ -394,8 +412,8 @@ bool NonpenetratingObjectCost::constructCost(ManipulationTracker * tracker, cons
     bot_lcmgl_begin(lcmgl_surface_pts_, LCMGL_POINTS);
 
     bot_lcmgl_color3f(lcmgl_surface_pts_, 0, 1, 0);  
-    for (int i=0; i < global_surface_pts.cols(); i++){
-      bot_lcmgl_vertex3f(lcmgl_surface_pts_, global_surface_pts(0, i), global_surface_pts(1, i), global_surface_pts(2, i));
+    for (int i=0; i < surface_pts_W.cols(); i++){
+      bot_lcmgl_vertex3f(lcmgl_surface_pts_, surface_pts_W(0, i), surface_pts_W(1, i), surface_pts_W(2, i));
     }
     bot_lcmgl_color3f(lcmgl_surface_pts_, 1, 0, 0);
     bot_lcmgl_end(lcmgl_surface_pts_);
