@@ -105,32 +105,32 @@ dynamics:
       dynamics_other_var: 0.000001
 
 costs:
-  # - type: "NonpenetratingObjectCost"
-  #   nonpenetration_var: 0.001 # m
-  #   min_considered_penetration_distance: 0.001
-  #   verbose: True
-  #   verbose_lcmgl: True
-  #   num_surface_pts: 200
-  #   nonpenetrating_robot: "target"
-  #   penetrable_robots: ["table"]
-
-  - type: "KinectFrameCost"
-    icp_var: 1 # m
-    free_space_var: .inf # 1 # 0.5
-    max_considered_icp_distance: 0.1
-    min_considered_joint_distance: 0.00
+  - type: "NonpenetratingObjectCost"
+    nonpenetration_var: 0.001 # m
+    min_considered_penetration_distance: 0.001
     verbose: True
     verbose_lcmgl: True
-    downsample_amount: 5.0
-    #camera_body: "camera"
-    world_frame: True
-    bounds:
-      xMin: -2
-      xMax: 2
-      yMin: -2
-      yMax: 2
-      zMin: -2
-      zMax: 2
+    num_surface_pts: 200
+    nonpenetrating_robot: "target"
+    penetrable_robots: ["table", "camera"]
+
+  # - type: "KinectFrameCost"
+  #   icp_var: 1 # m
+  #   free_space_var: .inf # 1 # 0.5
+  #   max_considered_icp_distance: 0.1
+  #   min_considered_joint_distance: 0.00
+  #   verbose: True
+  #   verbose_lcmgl: True
+  #   downsample_amount: 5.0
+  #   #camera_body: "camera"
+  #   world_frame: True
+  #   bounds:
+  #     xMin: -2
+  #     xMax: 2
+  #     yMin: -2
+  #     yMax: 2
+  #     zMin: -2
+  #     zMax: 2
 
   # - type: "RobotStateCost"
   #   joint_known_fb_var: 0.01 # m
