@@ -15,6 +15,27 @@ namespace monolithic_pick_and_place {
 
 using manipulation::ReverseIdMap;
 
+using Eigen::Matrix3Xd;
+
+/**
+ * Use LCMGL to show a point cloud.
+ * Will not perform any frame transforms.
+ */
+class PointCloudVisualizer : public systems::LeafSystem<double> {
+ public:
+  PointCloudVisualizer(drake::lcm::DrakeLcm *lcm, double dt);
+  ~PointCloudVisualizer();
+  void PlaybackFrame(double t) const;
+ protected:
+  void PublishCloud(const Matrix3Xd& cloud) const;
+  void DoPublish(const systems::Context<double>& context) const override;
+  void DoCalcOutput(const systems::Context<double>&,
+                    systems::SystemOutput<double>*) const override;
+ private:
+  class Impl;
+  std::shared_ptr<Impl> impl_;
+};
+
 class PerceptionHack {
  public:
   using DiagramBuilder = drake::systems::DiagramBuilder<double>;
@@ -24,6 +45,7 @@ class PerceptionHack {
   void Inject(DiagramBuilder* pbuilder, DrakeLcm* plcm, TreePlant* pplant,
               const ReverseIdMap& plant_id_map);
   systems::DrakeVisualizer* GetEstimationVisualizer();
+  PointCloudVisualizer* GetPointCloudVisualizer();
   ~PerceptionHack();
  private:
   class Impl;

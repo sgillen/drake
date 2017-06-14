@@ -410,6 +410,7 @@ int DoMain(void) {
         drake_visualizer->PlaybackTrajectoryFrame(vis, t);
         if (est_visualizer) {
           est_visualizer->PlaybackTrajectoryFrame(est_vis, t);
+          perception.GetPointCloudVisualizer()->PlaybackFrame(t);
         }
         std::this_thread::sleep_until(next_hit);
         next_hit += timing::Duration(kDt);

@@ -20,6 +20,8 @@
 #include "drake/systems/lcm/lcm_publisher_system.h"
 #include "drake/systems/rendering/pose_stamped_t_pose_vector_translator.h"
 
+#include <bot_lcmgl_client/lcmgl.h>
+
 #include "drake/systems/sensors/depth_sensor.h"
 #include "drake/systems/sensors/depth_sensor_to_lcm_point_cloud_message.h"
 #include "bot_core/pointcloud_t.hpp"
@@ -196,6 +198,87 @@ class DepthImageToPointCloud : public LeafSystemMixin<double> {
   int output_port_index_{};
 };
 
+class PointCloudVisualizer::Impl {
+ public:
+  struct Log {
+    std::vector<double> times;
+    std::vector<Matrix3Xd> data;
+    void AddData(double t, const Matrix3Xd& in) {
+      times.push_back(t);
+      data.push_back(in);
+    }
+    const Matrix3Xd& GetData(double t) const {
+      DRAKE_DEMAND(times.size() > 0);
+      int i = 0;
+      while (i + 1 < (int)times.size() && t > times[i]) {
+        ++i;
+      }
+      // Will latch last time, 'cause HACK.
+      return data[i];
+    }
+  };
+  mutable Log log_;
+  mutable bot_lcmgl_t* lcmgl_{};
+};
+
+PointCloudVisualizer::PointCloudVisualizer(drake::lcm::DrakeLcm* lcm, double dt) {
+  impl_.reset(new Impl());
+  Impl& impl = *impl_;
+  impl.lcmgl_ = bot_lcmgl_init(lcm->get_lcm_instance()->getUnderlyingLCM(),
+                          "point_cloud_playback");
+  DeclareAbstractInputPort();
+  DeclareVectorInputPort(PoseVector<double>()).get_index();
+  DeclarePublishPeriodSec(dt);
+}
+
+PointCloudVisualizer::~PointCloudVisualizer() {}
+
+void PointCloudVisualizer::PlaybackFrame(double t) const {
+  Impl& impl = *impl_;
+  const Matrix3Xd& data = impl.log_.GetData(t);
+  PublishCloud(data);
+}
+
+void PointCloudVisualizer::PublishCloud(const Eigen::Matrix3Xd& cloud) const {
+  Impl& impl = *impl_;
+  auto* lcmgl_ = impl.lcmgl_;
+  bot_lcmgl_begin(lcmgl_, LCMGL_POINTS);
+  double width = 640;
+  double height = 480;
+  int downsample = 5;
+  for (int v = 0; v < height; v += downsample) {
+    for (int u = 0; u < width; u += downsample) {
+      // TODO(eric.cousineau): Use random downsampling from actual estimation.
+      int dv = rand() % downsample;
+      int du = rand() % downsample;
+      int i = (v + dv) * width + (u + du);
+      auto&& pt = cloud.col(i);
+      if (!std::isnan(pt[0]) && !std::isinf(pt[0])) {
+        bot_lcmgl_color3f(lcmgl_, 0.5, 1.0, 0.5);
+        bot_lcmgl_vertex3f(lcmgl_, pt[0], pt[1], pt[2]);
+      }
+    }
+  }
+  bot_lcmgl_end(lcmgl_);
+  bot_lcmgl_switch_buffer(lcmgl_);
+}
+
+using systems::Context;
+using systems::SystemOutput;
+
+void PointCloudVisualizer::DoPublish(const Context<double>& context) const {
+  const Matrix3Xd& point_cloud = EvalAbstractInput(context, 0)
+                                 ->GetValue<Matrix3Xd>();
+  auto pose_WS = EvalVectorInput<PoseVector>(context, 1);
+  auto X_WS = pose_WS->get_isometry();
+  auto point_cloud_W = X_WS * point_cloud;
+  impl_->log_.AddData(context.get_time(), point_cloud_W);
+  PublishCloud(point_cloud_W);
+}
+
+void PointCloudVisualizer::DoCalcOutput(const Context<double>&,
+                                        SystemOutput<double>*) const {}
+
 // Publishes point cloud in world frame.
 // TODO(eric.cousineau): Replace with LCM Translator when PR lands
 class PointCloudToLcmPointCloud : public LeafSystemMixin<double> {
@@ -299,6 +382,8 @@ struct PerceptionHack::Impl {
   DepthSensor* depth_sensor_{};
   LcmPublisherSystem* depth_sensor_pose_lcm_pub_{};
   DrakeVisualizer* estimator_vis_{};
+
+  PointCloudVisualizer* pc_vis_{};
 
   void CreateAndConnectCamera(
       DiagramBuilder* pbuilder,
@@ -436,6 +521,15 @@ struct PerceptionHack::Impl {
             depth_to_pc->get_output_port(0),
             pc_zoh->get_input_port(0));
       auto&& pc_output_port = pc_zoh->get_output_port(0);
+
+      pc_vis_ =
+          pbuilder->template AddSystem<PointCloudVisualizer>(plcm, camera_dt);
+      pbuilder->Connect(
+            depth_to_pc->get_output_port(0),
+            pc_vis_->get_input_port(0));
+      pbuilder->Connect(
+            depth_camera_pose_output_port,
+            pc_vis_->get_input_port(1));
 
       if (do_publish) {
         typedef PointCloudToLcmPointCloud Converter;
@@ -580,6 +674,11 @@ void PerceptionHack::Inject(DiagramBuilder* pbuilder, DrakeLcm* plcm,
 systems::DrakeVisualizer*PerceptionHack::GetEstimationVisualizer()
 {
   return impl_->estimator_vis_;
+}
+
+PointCloudVisualizer* PerceptionHack::GetPointCloudVisualizer()
+{
+  return impl_->pc_vis_;
 }
 
 PerceptionHack::~PerceptionHack() {}
