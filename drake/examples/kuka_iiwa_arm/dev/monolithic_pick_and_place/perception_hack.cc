@@ -184,6 +184,17 @@ class CameraFrustrumView : public LeafSystemMixin<double> {
       drake::log()->info("Skipping empty point cloud");
       return;
     }
+    if (max_distance_ < 0) {
+      // Find the maximum distance in the point cloud, and assume that is the
+      // maximum depth selected.
+      for (int i = 0; i < point_cloud_C.cols(); ++i) {
+        auto pt = point_cloud_C.col(i);
+        if (!std::isnan(pt[0]) && !std::isinf(pt[0])) {
+          max_distance_ = std::max(max_distance_, pt.norm());
+        }
+      }
+//      max_distance_ = point_cloud_C.rowwise().norm().maxCoeff();
+    }
     Eigen::Isometry3d X_WC = pose->get_isometry();
     // TODO(eric.cousineau): Generalize ConvertDepthImageToPointCloud to accept
     // coordinates?
@@ -268,7 +279,7 @@ class CameraFrustrumView : public LeafSystemMixin<double> {
  private:
   bot_lcmgl_t* lcmgl_{};
   const CameraInfo& camera_info_;
-  double max_distance_{};
+  mutable double max_distance_{};  // :(
 };
 
 // HACK: Actually outputs DepthSensorOutput, with very non-descriptive sensor
@@ -638,7 +649,7 @@ struct PerceptionHack::Impl {
             pc_zoh->get_input_port(0));
       auto&& pc_output_port = pc_zoh->get_output_port(0);
 
-      const double max_distance = 5;
+      const double max_distance = -1;  // Let view decide.
       auto cf_view = pbuilder->template AddSystem<CameraFrustrumView>(
             plcm, rgbd_camera_->depth_camera_info(), camera_dt, max_distance);
       pbuilder->Connect(
