@@ -61,6 +61,11 @@ SimpleBoundingBox GetSimpleBoundingBox(const RigidBodyTreed& robot, const RigidB
         bbox_min = bbox_min.cwiseMin(bbox_cur_array.rowwise().minCoeff());
         bbox_max = bbox_max.cwiseMax(bbox_cur_array.rowwise().maxCoeff());
     }
+    // Expand by a factor
+    double expand = 1.2;
+    Vector3d width = bbox_max - bbox_min;
+    Vector3d center = (bbox_max + bbox_min) / 2;
+    bbox << center - expand * width/2, center + expand*width/2;
     return bbox;
 }
 
@@ -146,13 +151,14 @@ NonpenetratingObjectCost::NonpenetratingObjectCost(std::shared_ptr<RigidBodyTree
 
   default_random_engine generator;
 
+  const auto& body = robot_object->get_body(robot_object_id);
+  const auto bbox = GetSimpleBoundingBox(*robot_object, body);
+
   int num_good_surface_pts = 0;
   while(num_good_surface_pts < num_surface_pts){
     int attempt_num_pts = num_surface_pts - num_good_surface_pts;
     Matrix3Xd source_pts(3, attempt_num_pts);
     Matrix3Xd dest_pts(3, attempt_num_pts);
-    const auto& body = robot_object->get_body(robot_object_id);
-    const auto bbox = GetSimpleBoundingBox(*robot_object, body);
     for (int i=0; i<attempt_num_pts; i++) {
       source_pts.block<3,1>(0,i) = UniformRandPointInSimpleBoundingBox(bbox, generator);
       dest_pts.block<3,1>(0,i) = UniformRandPointInSimpleBoundingBox(bbox, generator);
@@ -231,13 +237,15 @@ void NonpenetratingObjectCost::initBotConfig(const char* /*filename*/)
 *********************************************/
 bool NonpenetratingObjectCost::constructCost(ManipulationTracker * tracker, const Eigen::VectorXd x_old, Eigen::MatrixXd& Q, Eigen::VectorXd& f, double& K)
 {
-  double now = getUnixTime();
+//  double now = getUnixTime();
 
-  if (now - lastReceivedTime > timeout_time){
-    if (verbose)
-      printf("NonpenetratingObjectCost: constructed but timed out\n");
-    //return false;
-  }
+  // TODO(eric.cousineau): Consider using MinDistanceConstraint to do penetration cost.
+
+//  if (now - lastReceivedTime > timeout_time){
+//    if (verbose)
+//      printf("NonpenetratingObjectCost: constructed but timed out\n");
+//    //return false;
+//  }
 
 
   // TODO: LOOOOOOOTS TO DO HERE
