@@ -249,8 +249,8 @@ void PointCloudVisualizer::PublishCloud(const Eigen::Matrix3Xd& cloud) const {
   for (int v = 0; v < height; v += downsample) {
     for (int u = 0; u < width; u += downsample) {
       // TODO(eric.cousineau): Use random downsampling from actual estimation.
-      int dv = rand() % downsample;
-      int du = rand() % downsample;
+      int dv = 0; //rand() % downsample;
+      int du = 0; //rand() % downsample;
       int i = (v + dv) * width + (u + du);
       auto&& pt = cloud.col(i);
       if (!std::isnan(pt[0]) && !std::isinf(pt[0])) {
