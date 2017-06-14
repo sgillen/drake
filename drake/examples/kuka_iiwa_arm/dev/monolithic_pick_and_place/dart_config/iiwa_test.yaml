@@ -90,20 +90,21 @@ joints_tracked:
   # yellow_post_2: ['base_x', 'base_y', 'base_z', 'base_roll', 'base_pitch', 'base_yaw']
 
 dynamics:
-  dynamics_floating_base_var: 0.0001 # m per frame
-  dynamics_other_var: 0.0001 # rad per frame
+  dynamics_floating_base_var: 0.1 # m per frame
+  dynamics_other_var: 0.01 # rad per frame
   verbose: True
-  # and robot-specific additional gains:
-  robot_specific_vars:
-    - robot: "iiwa"
-      dynamics_floating_base_var: 0.00000001 # m per frame
-      dynamics_other_var: 0.01 # rad per frame
-    - robot: "camera"
-      dynamics_floating_base_var: 0.000000001
-      dynamics_other_var: 0.000000001
-    - robot: "target"
-      dynamics_floating_base_var: 0.000001
-      dynamics_other_var: 0.000001
+  # This uses the model name, not instance name.
+  # # and robot-specific additional gains:
+  # robot_specific_vars:
+  #   - robot: "iiwa"
+  #     dynamics_floating_base_var: 0.00000001 # m per frame
+  #     dynamics_other_var: 0.01 # rad per frame
+  #   # - robot: "camera"
+  #   #   dynamics_floating_base_var: 0.000000001
+  #   #   dynamics_other_var: 0.000000001
+  #   - robot: "target"
+  #     dynamics_floating_base_var: 0.000001
+  #     dynamics_other_var: 0.000001
 
 costs:
   - type: "NonpenetratingObjectCost"
@@ -116,13 +117,13 @@ costs:
     penetrable_robots: ["table", "camera"]
 
   - type: "KinectFrameCost"
-    icp_var: 0.01 # m
-    free_space_var: .inf # 1 # 0.5
+    icp_var: 0.001 # m
+    free_space_var: 0.001 # 1 # 0.5
     max_considered_icp_distance: 0.1
     min_considered_joint_distance: 0.00
     verbose: True
     verbose_lcmgl: True
-    downsample_amount: 5.0
+    downsample_amount: 10.0
     #camera_body: "camera"
     world_frame: True
     bounds:
