@@ -155,12 +155,20 @@ class PoseTransformer : public LeafSystemMixin<double> {
   }
 };
 
+/**
+ * Draw a camera frustrum view leveraging a point cloud straight from a depth
+ * image. This will iterate along the borders, and place a point at a maximum
+ * distance if it was not found in the point cloud.
+ */
 class CameraFrustrumView : public LeafSystemMixin<double> {
  public:
   CameraFrustrumView(DrakeLcm* lcm,
-      const CameraInfo& camera_info, double period_sec)
-      : camera_info_(camera_info) {
+      const CameraInfo& camera_info,
+      double period_sec, double max_distance)
+      : camera_info_(camera_info),
+        max_distance_(max_distance) {
     DeclarePublishPeriodSec(period_sec);
+    DeclareAbstractInputPort();
     DeclareVectorInputPort(PoseVector<double>());
     lcmgl_ = bot_lcmgl_init(lcm->get_lcm_instance()->getUnderlyingLCM(),
                                  "camera_frustrum");
@@ -168,55 +176,91 @@ class CameraFrustrumView : public LeafSystemMixin<double> {
  protected:
   void DoCalcOutput(const Context&, SystemOutput*) const override {}
   void DoPublish(const Context& context) const override {
+    const Matrix3Xd& point_cloud_C = EvalAbstractInput(context, 0)
+                                   ->GetValue<Matrix3Xd>();
     auto&& pose =
-        EvalVectorInput<PoseVector>(context, 0);
+        EvalVectorInput<PoseVector>(context, 1);
+    if (point_cloud_C.cols() == 0) {
+      drake::log()->info("Skipping empty point cloud");
+      return;
+    }
     Eigen::Isometry3d X_WC = pose->get_isometry();
     // TODO(eric.cousineau): Generalize ConvertDepthImageToPointCloud to accept
     // coordinates?
-    const double w = camera_info_.width();
-    const double h = camera_info_.height();
+    const int w = camera_info_.width();
+    const int h = camera_info_.height();
     // Copied:
     const float cx = camera_info_.center_x();
     const float cy = camera_info_.center_y();
     const float fx_inv = 1.f / camera_info_.focal_x();
     const float fy_inv = 1.f / camera_info_.focal_y();
-    Matrix3Xd depths(3, 5);
-    // u, v, z
-    depths.transpose() <<
-      0, 0, 0,
-      0, 0, 1,
-      w, 0, 1,
-      w, h, 1,
-      0, h, 1;
-    Matrix3Xd points_C(3, 5);
-    for (int i = 0; i < depths.cols(); ++i) {
-      auto d = depths.col(i);
-      auto c = points_C.col(i);
-      c(0) = d(2) * (d(0) - cx) * fx_inv;
-      c(1) = d(2) * (d(1) - cy) * fy_inv;
-      c(2) = d(2);
+
+    int npix = 5;
+    DRAKE_DEMAND(point_cloud_C.cols() == w * h);
+    DRAKE_DEMAND(w % npix == 0);
+    DRAKE_DEMAND(h % npix == 0);
+    int nw = w / npix;
+    int nh = h / npix;
+    int nn = 2 * (nw + nh);
+
+    Matrix3Xd points_W(3, nn);
+    int index = 0;
+    std::vector<int> corner_indices;  // Laziness.
+    auto add_pt = [&](int u, int v) {
+      int i = v * w + u;
+      ASSERT_THROW_FMT(index < nn, "{} !< {}", index, nn);
+      ASSERT_THROW_FMT(i < point_cloud_C.cols(),
+                       "{} !< {}", i, point_cloud_C.cols());
+      Vector3d pt_C = point_cloud_C.col(i);
+      if (std::isnan(pt_C[0]) || std::isinf(pt_C[0])) {
+        // Recompute with extended depth.
+        double z = 100;
+        pt_C(0) = z * (u - cx) * fx_inv;
+        pt_C(1) = z * (v - cy) * fy_inv;
+        pt_C(2) = z;
+      }
+      // Ensure that point's length is saturated.
+      double pt_norm = pt_C.norm();
+      if (pt_norm > max_distance_) {
+        pt_C *= max_distance_ / pt_norm;
+      }
+      points_W.col(index++) = X_WC * pt_C;
+    };
+    // Make two strips of points in order, including edges.
+    // Make iteration clockwise in camera frame.
+    corner_indices.push_back(index);
+    for (int u = 0; u < w; u += npix) {
+      add_pt(u, 0);
     }
-    // Change frame, pseduo-raycast tail ends to ground.
-    Matrix3Xd points_W = X_WC * points_C;
-    Vector3d c = X_WC.translation();  // Camera position in world.
-    for (int i = 1; i < points_W.cols(); ++i) {
-      Vector3d ci = points_W.col(i) - c;
-      double scale = c(2) / fabs(ci(2));
-      ci *= scale;
-      points_W.col(i) = c + ci;
+    corner_indices.push_back(index);
+    for (int v = 0; v < h; v += npix) {
+      add_pt(w - 1, v);
     }
-    // Draw each point to flat ground.
+    corner_indices.push_back(index);
+    for (int u = w - 1; u >= 0; u -= npix) {
+      add_pt(u, h - 1);
+    }
+    corner_indices.push_back(index);
+    for (int v = h - 1; v >= 0; v -= npix) {
+      add_pt(0, v);
+    }
+    DRAKE_DEMAND(index == nn);
+    // Draw each point connected to the next (looping).
     bot_lcmgl_begin(lcmgl_, LCMGL_LINES);
-    for (int i = 1; i < points_W.cols(); ++i) {
-      auto c0 = points_W.col(0);
+    bot_lcmgl_color3f(lcmgl_, 0.5, 1.0, 0.5);
+    for (int i = 0; i < nn; ++i) {
       auto ci = points_W.col(i);
-      int n = 1 + i % 4; // Wrap for drawing box
+      int n = (i + 1) % nn; // Wrap for drawing box
       auto cn = points_W.col(n);
-      bot_lcmgl_color3f(lcmgl_, 0.5, 1.0, 0.5);
-      bot_lcmgl_vertex3f(lcmgl_, c0[0], c0[1], c0[2]);
-      bot_lcmgl_vertex3f(lcmgl_, ci[0], ci[1], ci[2]);
       bot_lcmgl_vertex3f(lcmgl_, ci[0], ci[1], ci[2]);
       bot_lcmgl_vertex3f(lcmgl_, cn[0], cn[1], cn[2]);
+    }
+    // Draw from each of the four corners.
+    auto c0 = X_WC.translation();
+    for (int i : corner_indices) {
+      auto ci = points_W.col(i);
+      bot_lcmgl_vertex3f(lcmgl_, c0[0], c0[1], c0[2]);
+      bot_lcmgl_vertex3f(lcmgl_, ci[0], ci[1], ci[2]);
     }
     bot_lcmgl_end(lcmgl_);
     bot_lcmgl_switch_buffer(lcmgl_);
@@ -224,6 +268,7 @@ class CameraFrustrumView : public LeafSystemMixin<double> {
  private:
   bot_lcmgl_t* lcmgl_{};
   const CameraInfo& camera_info_;
+  double max_distance_{};
 };
 
 // HACK: Actually outputs DepthSensorOutput, with very non-descriptive sensor
@@ -587,17 +632,21 @@ struct PerceptionHack::Impl {
             depth_image_output_port,
             depth_to_pc->get_depth_image_inport());
 
-      auto cf_view = pbuilder->template AddSystem<CameraFrustrumView>(
-            plcm, rgbd_camera_->depth_camera_info(), camera_dt);
-      pbuilder->Connect(
-            depth_camera_pose_output_port,
-            cf_view->get_input_port(0));
-
       auto* pc_zoh = pbuilder->template AddSystem<AbstractZOH<PointCloud>>(camera_dt);
       pbuilder->Connect(
             depth_to_pc->get_output_port(0),
             pc_zoh->get_input_port(0));
       auto&& pc_output_port = pc_zoh->get_output_port(0);
+
+      const double max_distance = 5;
+      auto cf_view = pbuilder->template AddSystem<CameraFrustrumView>(
+            plcm, rgbd_camera_->depth_camera_info(), camera_dt, max_distance);
+      pbuilder->Connect(
+            pc_output_port,
+            cf_view->get_input_port(0));
+      pbuilder->Connect(
+            depth_camera_pose_output_port,
+            cf_view->get_input_port(1));
 
       pc_vis_ =
           pbuilder->template AddSystem<PointCloudVisualizer>(plcm, camera_dt);
