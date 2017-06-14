@@ -319,8 +319,8 @@ struct PerceptionHack::Impl {
         pplant->get_plant().get_rigid_body_tree());
 
     // Camera.
-    const Vector3d position(0.75, 1, 2); //(0, 2, 2);
-    const Vector3d orientation(0, 40, -90);  //(0, 20, -90); // degrees
+    const Vector3d position(0, 2, 2);
+    const Vector3d orientation(0, 20, -90); // degrees
 
     if (use_wall_clock_pub) {
       pbuilder->template AddSystem<WallClockPublisher>();

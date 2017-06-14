@@ -13,8 +13,8 @@ namespace {
 
 using manipulation::planner::ConstraintRelaxingIk;
 
-// Position the gripper HACKcm above the object before grasp.
-const double kPreGraspHeightOffset = 0.15;
+// Position the gripper 30cm above the object before grasp.
+const double kPreGraspHeightOffset = 0.3;
 
 // Computes the desired end effector pose in the world frame given the object
 // pose in the world frame.
@@ -142,12 +142,11 @@ void PickAndPlaceStateMachine::Update(
         // kPreGraspHeightOffset above the object.
         X_Wend_effector_0_ = env_state.get_iiwa_end_effector_pose();
         X_Wend_effector_1_ = ComputeGraspPose(env_state.get_object_pose());
-        X_Wend_effector_1_.translation()[0] -= 0.05;
         X_Wend_effector_1_.translation()[2] += kPreGraspHeightOffset;
 
         // 2 seconds, no via points.
         bool res = PlanStraightLineMotion(
-            env_state.get_iiwa_q(), 0, 1,
+            env_state.get_iiwa_q(), 0, 2,
             X_Wend_effector_0_, X_Wend_effector_1_,
             loose_pos_tol_, loose_rot_tol_, planner, &ik_res, &times);
         DRAKE_DEMAND(res);
@@ -176,7 +175,7 @@ void PickAndPlaceStateMachine::Update(
         // 1 second, 3 via points. More via points to ensure the end effector
         // moves in more or less a straight line.
         bool res = PlanStraightLineMotion(
-            env_state.get_iiwa_q(), 2, 0.5,
+            env_state.get_iiwa_q(), 3, 1,
             X_Wend_effector_0_, X_Wend_effector_1_,
             tight_pos_tol_, tight_rot_tol_, planner, &ik_res, &times);
         DRAKE_DEMAND(res);
