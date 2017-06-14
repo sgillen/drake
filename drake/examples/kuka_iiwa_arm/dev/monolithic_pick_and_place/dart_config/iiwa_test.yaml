@@ -116,7 +116,7 @@ costs:
     penetrable_robots: ["table", "camera"]
 
   - type: "KinectFrameCost"
-    icp_var: 1 # m
+    icp_var: 0.01 # m
     free_space_var: .inf # 1 # 0.5
     max_considered_icp_distance: 0.1
     min_considered_joint_distance: 0.00
