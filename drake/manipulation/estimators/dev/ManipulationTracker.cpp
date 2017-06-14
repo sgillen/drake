@@ -571,9 +571,13 @@ void ManipulationTracker::update(const Eigen::VectorXd &q_sub, const VectorSlice
   // (x - x_pred)' (covar_pred^(-1)) (x - x_pred)
   // which can be rewritten in our form as 
   covar_pred = covar_pred.inverse();
-//  Q += covar_pred;
-//  f -= x_pred.transpose() * covar_pred;
-//  K += 2 * x_pred.transpose() * covar_pred * x_pred;
+  bool ignore_covar_pred = false;
+
+  if (!ignore_covar_pred) {
+    Q += covar_pred;
+    f -= x_pred.transpose() * covar_pred;
+    K += 2 * x_pred.transpose() * covar_pred * x_pred;
+  }
 
   // do measurement update proper if we had any useful costs
   if (fabs(K) > 0.0){

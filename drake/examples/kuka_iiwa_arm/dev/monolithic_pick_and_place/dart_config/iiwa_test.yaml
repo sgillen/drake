@@ -13,17 +13,17 @@ robots:
       base_roll: 0.0
       base_pitch: 0.349065850399
       base_yaw: -1.57079632679
-  # iiwa:
-  #   urdf_less_collision: "/manipulation/models/iiwa_description/urdf/iiwa14_polytope_collision.urdf"
-  #   urdf: "/manipulation/models/iiwa_description/urdf/iiwa14_mesh_decimated_collison.urdf"
-  #   q0: 
-  #     base_x: 0
-  #     base_y: 0
-  #     base_z: 0.7645
-  # wsg:
-  #   # Do not use full model given that it has loop joints
-  #   urdf: "/manipulation/models/wsg_50_description/sdf/schunk_wsg_50_estimation.sdf"
-  #   weld_to_frame: iiwa_frame_ee
+  iiwa:
+    urdf_less_collision: "/manipulation/models/iiwa_description/urdf/iiwa14_polytope_collision.urdf"
+    urdf: "/manipulation/models/iiwa_description/urdf/iiwa14_mesh_decimated_collison.urdf"
+    q0: 
+      base_x: 0
+      base_y: 0
+      base_z: 0.7645
+  wsg:
+    # Do not use full model given that it has loop joints
+    urdf: "/manipulation/models/wsg_50_description/sdf/schunk_wsg_50_estimation.sdf"
+    weld_to_frame: iiwa_frame_ee
   # # table:
   # #   urdf_less_collision: "/examples/kuka_iiwa_arm/models/table/extra_heavy_duty_table_surface_only_collision.sdf"
   # #   urdf: "/examples/kuka_iiwa_arm/models/table/extra_heavy_duty_table.sdf"
@@ -86,8 +86,8 @@ robots:
 publish_all: true
 
 joints_tracked:
-  target: ['base_x', 'base_y', 'base_z', 'base_roll', 'base_pitch', 'base_yaw']  # 'base_roll', 'base_pitch', 
-  yellow_post_2: ['base_x', 'base_y', 'base_z', 'base_roll', 'base_pitch', 'base_yaw']
+  target: ['base_x', 'base_y', 'base_z', 'base_yaw']  # 'base_roll', 'base_pitch', 
+  # yellow_post_2: ['base_x', 'base_y', 'base_z', 'base_roll', 'base_pitch', 'base_yaw']
 
 dynamics:
   dynamics_floating_base_var: 0.0001 # m per frame
@@ -95,9 +95,9 @@ dynamics:
   verbose: True
   # and robot-specific additional gains:
   robot_specific_vars:
-    # - robot: "iiwa"
-    #   dynamics_floating_base_var: 0.00000001 # m per frame
-    #   dynamics_other_var: 0.01 # rad per frame
+    - robot: "iiwa"
+      dynamics_floating_base_var: 0.00000001 # m per frame
+      dynamics_other_var: 0.01 # rad per frame
     - robot: "camera"
       dynamics_floating_base_var: 0.000000001
       dynamics_other_var: 0.000000001
@@ -107,7 +107,7 @@ dynamics:
 
 costs:
   - type: "NonpenetratingObjectCost"
-    nonpenetration_var: 0.001 # m
+    nonpenetration_var: 1 # m
     min_considered_penetration_distance: 0.001
     verbose: True
     verbose_lcmgl: True
@@ -115,23 +115,23 @@ costs:
     nonpenetrating_robot: "target"
     penetrable_robots: ["table", "camera"]
 
-  # - type: "KinectFrameCost"
-  #   icp_var: 1 # m
-  #   free_space_var: .inf # 1 # 0.5
-  #   max_considered_icp_distance: 0.1
-  #   min_considered_joint_distance: 0.00
-  #   verbose: True
-  #   verbose_lcmgl: True
-  #   downsample_amount: 5.0
-  #   #camera_body: "camera"
-  #   world_frame: True
-  #   bounds:
-  #     xMin: -2
-  #     xMax: 2
-  #     yMin: -2
-  #     yMax: 2
-  #     zMin: -2
-  #     zMax: 2
+  - type: "KinectFrameCost"
+    icp_var: 1 # m
+    free_space_var: .inf # 1 # 0.5
+    max_considered_icp_distance: 0.1
+    min_considered_joint_distance: 0.00
+    verbose: True
+    verbose_lcmgl: True
+    downsample_amount: 5.0
+    #camera_body: "camera"
+    world_frame: True
+    bounds:
+      xMin: -2
+      xMax: 2
+      yMin: -2
+      yMax: 2
+      zMin: -2
+      zMax: 2
 
   # - type: "RobotStateCost"
   #   joint_known_fb_var: 0.01 # m
