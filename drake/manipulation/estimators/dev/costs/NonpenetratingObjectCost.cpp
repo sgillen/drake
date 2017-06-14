@@ -132,8 +132,8 @@ NonpenetratingObjectCost::NonpenetratingObjectCost(std::shared_ptr<RigidBodyTree
 
   string nonpen_name = config["nonpenetrating_robot"].as<string>();
   string nonpen_name_actual = robot_object_->get_body(robot_object_id).get_name();
-  ASSERT_THROW_FMT(nonpen_name == nonpen_name_actual,
-                   "{} != {}", nonpen_name, nonpen_name_actual);
+  drake::log()->info("Desired robot in YAML: {}\nRoot link in robot: {}",
+                     nonpen_name, nonpen_name_actual);
 
   //lcmgl_lidar_= bot_lcmgl_init(lcm->getUnderlyingLCM(), "trimmed_lidar");
   //lcmgl_icp_= bot_lcmgl_init(lcm->getUnderlyingLCM(), "icp_p2pl");
@@ -350,13 +350,17 @@ bool NonpenetratingObjectCost::constructCost(ManipulationTracker * tracker, cons
         const int frame_A = robot_object_id;  // Object with surface points.
         const int frame_Bi = i;
 
+        Matrix3Xd pts_a_A =
+            robot_object->transformPoints(
+                robot_object_kinematics_cache, pts_a_W, frame_W, frame_A);
+
         MatrixXd J_prime =
             robot->transformPointsJacobian(
               robot_kinematics_cache, pts_b_Bi, frame_Bi, frame_W, false);
         // TODO(eric.cousineau): Check if this frame assignment is correct.
         MatrixXd J_z =
             robot_object->transformPointsJacobian(
-                robot_object_kinematics_cache, pts_a_W, frame_A, frame_W, false);
+                robot_object_kinematics_cache, pts_a_A, frame_A, frame_W, false);
         MatrixXd J(3*pts_a_W.cols(), nq_full);
         J.setZero();
 
