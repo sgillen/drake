@@ -155,25 +155,25 @@ class PoseTransformer : public LeafSystemMixin<double> {
   }
 };
 
-template <typename T>
-struct SimpleLog {
- public:
-  std::vector<double> times;
-  std::vector<T> data;
-  void AddData(double t, const T& in) {
-    times.push_back(t);
-    data.push_back(in);
-  }
-  const T& GetData(double t) const {
-    DRAKE_DEMAND(times.size() > 0);
-    int i = 0;
-    while (i + 1 < (int)times.size() && t > times[i]) {
-      ++i;
-    }
-    // Will latch last time, 'cause HACK.
-    return data[i];
-  }
-};
+//template <typename T>
+//struct SimpleLog {
+// public:
+//  std::vector<double> times;
+//  std::vector<T> data;
+//  void AddData(double t, const T& in) {
+//    times.push_back(t);
+//    data.push_back(in);
+//  }
+//  const T& GetData(double t) const {
+//    DRAKE_DEMAND(times.size() > 0);
+//    int i = 0;
+//    while (i + 1 < (int)times.size() && t > times[i]) {
+//      ++i;
+//    }
+//    // Will latch last time, 'cause HACK.
+//    return data[i];
+//  }
+//};
 
 class DepthImageNoise : public LeafSystemMixin<double> {
  public:
@@ -368,7 +368,7 @@ class CameraFrustrumVisualizer : public LeafSystemMixin<double> {
   const CameraInfo& camera_info_;
   double min_depth_{};
   double max_depth_{};
-  mutable SimpleLog<Entry> log_;
+//  mutable SimpleLog<Entry> log_;
 };
 
 // HACK: Actually outputs DepthSensorOutput, with very non-descriptive sensor

@@ -19,6 +19,21 @@ def initDrakeTimeDisplay():
         vis.updateText('sim time: %.3f' % t, 'sim time')
     lcmUtils.addSubscriber('DRAKE_VIEWER_DRAW', lcmbotcore.viewer_draw_t, onViewerDraw)
 
+print """
+NOTE: You may need to hack `lcmlogplayer` to keep checking until it has enough timestamps.
+e.g., in {}, change:
+    while True:
+        # ...
+        event = log.read_next_event()
+        if not event:
+            break
+to:
+    while lastEventTimestamp < 10.5e6:  # Or whatever the end time is
+        # ...
+        event = log.read_next_event()
+        if not event:
+            break
+""".format(director.lcmlogplayer.__file__)
 
 if __name__ == '__main__':
 
@@ -28,7 +43,7 @@ if __name__ == '__main__':
     filename = _argv[1]
 
     logPlayer = LcmLogPlayer()
-    logPlayer.playbackFactor = 0.5
+    logPlayer.playbackFactor = 1
     logPlayer.readLog(filename, eventTimeFunction=getDrakeSimTimeForEvent)
     logPlayer.skipToTime(0.0)
 
