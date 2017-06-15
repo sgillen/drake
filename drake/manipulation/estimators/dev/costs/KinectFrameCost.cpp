@@ -549,16 +549,16 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
             color = Vector3d(0, 0.75, 0.0);  // Green: Hit
           }
 
-          if (c % 5 == 0) {
-            auto&& oc = origins.col(thisind);
-            auto&& rc = raycast_endpoints_world.col(thisind);
-            bot_lcmgl_begin(lcmgl_raycast_, LCMGL_LINES);
-            bot_lcmgl_color3f(lcmgl_raycast_, color[0], color[1], color[2]);
-            bot_lcmgl_line_width(lcmgl_raycast_, 2.0f);
-            bot_lcmgl_vertex3f(lcmgl_raycast_, oc[0], oc[1], oc[2]);
-            bot_lcmgl_vertex3f(lcmgl_raycast_, rc[0], rc[1], rc[2]);
-            bot_lcmgl_end(lcmgl_raycast_);
-          }
+//          if (c % 5 == 0) {
+//            auto&& oc = origins.col(thisind);
+//            auto&& rc = raycast_endpoints_world.col(thisind);
+//            bot_lcmgl_begin(lcmgl_raycast_, LCMGL_LINES);
+//            bot_lcmgl_color3f(lcmgl_raycast_, color[0], color[1], color[2]);
+//            bot_lcmgl_line_width(lcmgl_raycast_, 2.0f);
+//            bot_lcmgl_vertex3f(lcmgl_raycast_, oc[0], oc[1], oc[2]);
+//            bot_lcmgl_vertex3f(lcmgl_raycast_, rc[0], rc[1], rc[2]);
+//            bot_lcmgl_end(lcmgl_raycast_);
+//          }
 
           if (i < depth_image.rows() && j < depth_image.cols() && 
             distances(thisind) > 0. && 
@@ -583,7 +583,7 @@ bool KinectFrameCost::constructCost(ManipulationTracker * tracker, const Eigen::
         }
       }
 
-      bot_lcmgl_switch_buffer(lcmgl_raycast_);
+//      bot_lcmgl_switch_buffer(lcmgl_raycast_);
 
       std::cout << fmt::format("-- Free Space, Raycasts: {} / {} hit\n",
                                num_raycast_hit, raycast_endpoints.cols());

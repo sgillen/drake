@@ -261,11 +261,11 @@ class CameraFrustrumVisualizer : public LeafSystemMixin<double> {
         auto c0n = corners_near.col(next);
         auto ci = corners_far.col(i);
         // Camera origin to near clipping plane.
-        bot_lcmgl_color3f(lcmgl_, 0.8, 1.0, 0.8);
+//        bot_lcmgl_color3f(lcmgl_, 0.8, 1.0, 0.8);
         bot_lcmgl_vertex3f(lcmgl_, cc[0], cc[1], cc[2]);
         bot_lcmgl_vertex3f(lcmgl_, c0[0], c0[1], c0[2]);
         // Near to far clipping pane.
-        bot_lcmgl_color3f(lcmgl_, 0.5, 1.0, 0.5);
+//        bot_lcmgl_color3f(lcmgl_, 0.5, 1.0, 0.5);
         bot_lcmgl_vertex3f(lcmgl_, c0[0], c0[1], c0[2]);
         bot_lcmgl_vertex3f(lcmgl_, ci[0], ci[1], ci[2]);
         // Near clipping pane box.
@@ -911,8 +911,9 @@ void PerceptionHack::Inject(DiagramBuilder* pbuilder, DrakeLcm* plcm,
 void PerceptionHack::PlaybackFrame(double t) {
   auto vis_cache_ = impl_->estimator_vis_->GetReplayCachedSimulation();
   impl_->estimator_vis_->PlaybackTrajectoryFrame(vis_cache_, t);
+  impl_->cf_vis_->PlaybackFrame(t);
+  timing::sleep(0.005);
   impl_->pc_vis_->PlaybackFrame(t);
-//  impl_->cf_vis_->PlaybackFrame(t);
 }
 
 PerceptionHack::~PerceptionHack() {}
