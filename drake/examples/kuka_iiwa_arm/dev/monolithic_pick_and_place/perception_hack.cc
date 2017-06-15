@@ -416,8 +416,8 @@ class DepthImageToPointCloud : public LeafSystemMixin<double> {
 
 class PointCloudVisualizer::Impl {
  public:
-  mutable SimpleLog<Matrix3Xd> log_;
-  mutable bot_lcmgl_t* lcmgl_{};
+  SimpleLog<Matrix3Xd> log_;
+  bot_lcmgl_t* lcmgl_{};
 };
 
 PointCloudVisualizer::PointCloudVisualizer(drake::lcm::DrakeLcm* lcm, double dt) {
@@ -912,7 +912,7 @@ void PerceptionHack::PlaybackFrame(double t) {
   auto vis_cache_ = impl_->estimator_vis_->GetReplayCachedSimulation();
   impl_->estimator_vis_->PlaybackTrajectoryFrame(vis_cache_, t);
   impl_->pc_vis_->PlaybackFrame(t);
-  impl_->cf_vis_->PlaybackFrame(t);
+//  impl_->cf_vis_->PlaybackFrame(t);
 }
 
 PerceptionHack::~PerceptionHack() {}
