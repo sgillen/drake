@@ -44,8 +44,7 @@ class PerceptionHack {
   PerceptionHack() {}
   void Inject(DiagramBuilder* pbuilder, DrakeLcm* plcm, TreePlant* pplant,
               const ReverseIdMap& plant_id_map);
-  systems::DrakeVisualizer* GetEstimationVisualizer();
-  PointCloudVisualizer* GetPointCloudVisualizer();
+  void PlaybackFrame(double t);
   ~PerceptionHack();
  private:
   class Impl;

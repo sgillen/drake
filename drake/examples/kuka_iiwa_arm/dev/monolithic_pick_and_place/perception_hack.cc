@@ -155,6 +155,26 @@ class PoseTransformer : public LeafSystemMixin<double> {
   }
 };
 
+template <typename T>
+struct SimpleLog {
+ public:
+  std::vector<double> times;
+  std::vector<T> data;
+  void AddData(double t, const T& in) {
+    times.push_back(t);
+    data.push_back(in);
+  }
+  const T& GetData(double t) const {
+    DRAKE_DEMAND(times.size() > 0);
+    int i = 0;
+    while (i + 1 < (int)times.size() && t > times[i]) {
+      ++i;
+    }
+    // Will latch last time, 'cause HACK.
+    return data[i];
+  }
+};
+
 class DepthImageNoise : public LeafSystemMixin<double> {
  public:
   DepthImageNoise(double noise_rel_magnitude)
@@ -197,9 +217,9 @@ class DepthImageNoise : public LeafSystemMixin<double> {
  * image. This will iterate along the borders, and place a point at a maximum
  * distance if it was not found in the point cloud.
  */
-class CameraFrustrumView : public LeafSystemMixin<double> {
+class CameraFrustrumVisualizer : public LeafSystemMixin<double> {
  public:
-  CameraFrustrumView(DrakeLcm* lcm,
+  CameraFrustrumVisualizer(DrakeLcm* lcm,
       const CameraInfo& camera_info,
       double period_sec, double max_distance)
       : camera_info_(camera_info),
@@ -210,7 +230,39 @@ class CameraFrustrumView : public LeafSystemMixin<double> {
     lcmgl_ = bot_lcmgl_init(lcm->get_lcm_instance()->getUnderlyingLCM(),
                                  "camera_frustrum");
   }
+  void PlaybackFrame(double t) const {
+    log_.GetData(t).Draw(lcmgl_);
+  }
  protected:
+  struct Entry {
+    Eigen::Isometry3d X_WC;
+    std::vector<int> corner_indices;
+    Matrix3Xd points_W;
+
+    void Draw(bot_lcmgl_t* lcmgl_) const {
+      // Draw each point connected to the next (looping).
+      bot_lcmgl_begin(lcmgl_, LCMGL_LINES);
+      bot_lcmgl_color3f(lcmgl_, 0.5, 1.0, 0.5);
+      int nn = points_W.cols();
+      for (int i = 0; i < nn; ++i) {
+        auto ci = points_W.col(i);
+        int n = (i + 1) % nn; // Wrap for drawing box
+        auto cn = points_W.col(n);
+        bot_lcmgl_vertex3f(lcmgl_, ci[0], ci[1], ci[2]);
+        bot_lcmgl_vertex3f(lcmgl_, cn[0], cn[1], cn[2]);
+      }
+      // Draw from each of the four corners.
+      auto c0 = X_WC.translation();
+      for (int i : corner_indices) {
+        auto ci = points_W.col(i);
+        bot_lcmgl_vertex3f(lcmgl_, c0[0], c0[1], c0[2]);
+        bot_lcmgl_vertex3f(lcmgl_, ci[0], ci[1], ci[2]);
+      }
+      bot_lcmgl_end(lcmgl_);
+      bot_lcmgl_switch_buffer(lcmgl_);
+    }
+  };
+
   void DoCalcOutput(const Context&, SystemOutput*) const override {}
   void DoPublish(const Context& context) const override {
     const Matrix3Xd& point_cloud_C = EvalAbstractInput(context, 0)
@@ -297,30 +349,15 @@ class CameraFrustrumView : public LeafSystemMixin<double> {
       add_pt(0, v);
     }
     DRAKE_DEMAND(index == nn);
-    // Draw each point connected to the next (looping).
-    bot_lcmgl_begin(lcmgl_, LCMGL_LINES);
-    bot_lcmgl_color3f(lcmgl_, 0.5, 1.0, 0.5);
-    for (int i = 0; i < nn; ++i) {
-      auto ci = points_W.col(i);
-      int n = (i + 1) % nn; // Wrap for drawing box
-      auto cn = points_W.col(n);
-      bot_lcmgl_vertex3f(lcmgl_, ci[0], ci[1], ci[2]);
-      bot_lcmgl_vertex3f(lcmgl_, cn[0], cn[1], cn[2]);
-    }
-    // Draw from each of the four corners.
-    auto c0 = X_WC.translation();
-    for (int i : corner_indices) {
-      auto ci = points_W.col(i);
-      bot_lcmgl_vertex3f(lcmgl_, c0[0], c0[1], c0[2]);
-      bot_lcmgl_vertex3f(lcmgl_, ci[0], ci[1], ci[2]);
-    }
-    bot_lcmgl_end(lcmgl_);
-    bot_lcmgl_switch_buffer(lcmgl_);
+    Entry entry {X_WC, corner_indices, points_W};
+    log_.AddData(context.get_time(), entry);
+    entry.Draw(lcmgl_);
   }
  private:
   bot_lcmgl_t* lcmgl_{};
   const CameraInfo& camera_info_;
   mutable double max_distance_{};  // :(
+  mutable SimpleLog<Entry> log_;
 };
 
 // HACK: Actually outputs DepthSensorOutput, with very non-descriptive sensor
@@ -368,24 +405,7 @@ class DepthImageToPointCloud : public LeafSystemMixin<double> {
 
 class PointCloudVisualizer::Impl {
  public:
-  struct Log {
-    std::vector<double> times;
-    std::vector<Matrix3Xd> data;
-    void AddData(double t, const Matrix3Xd& in) {
-      times.push_back(t);
-      data.push_back(in);
-    }
-    const Matrix3Xd& GetData(double t) const {
-      DRAKE_DEMAND(times.size() > 0);
-      int i = 0;
-      while (i + 1 < (int)times.size() && t > times[i]) {
-        ++i;
-      }
-      // Will latch last time, 'cause HACK.
-      return data[i];
-    }
-  };
-  mutable Log log_;
+  mutable SimpleLog<Matrix3Xd> log_;
   mutable bot_lcmgl_t* lcmgl_{};
 };
 
@@ -552,6 +572,7 @@ struct PerceptionHack::Impl {
   DrakeVisualizer* estimator_vis_{};
 
   PointCloudVisualizer* pc_vis_{};
+  CameraFrustrumVisualizer* cf_vis_{};
 
   void CreateAndConnectCamera(
       DiagramBuilder* pbuilder,
@@ -669,14 +690,14 @@ struct PerceptionHack::Impl {
               pure_depth_to_pc->get_depth_image_inport());
 
         const double max_distance = -1;  // Let view decide.
-        auto cf_view = pbuilder->template AddSystem<CameraFrustrumView>(
+        cf_vis_ = pbuilder->template AddSystem<CameraFrustrumVisualizer>(
               plcm, rgbd_camera_->depth_camera_info(), camera_dt, max_distance);
         pbuilder->Connect(
               pure_depth_to_pc->get_output_port(0),
-              cf_view->get_input_port(0));
+              cf_vis_->get_input_port(0));
         pbuilder->Connect(
               depth_camera_pose_output_port,
-              cf_view->get_input_port(1));
+              cf_vis_->get_input_port(1));
       }
 
       bool do_publish = false;
@@ -874,14 +895,11 @@ void PerceptionHack::Inject(DiagramBuilder* pbuilder, DrakeLcm* plcm,
   impl_->CreateAndConnectCamera(pbuilder, plcm, pplant, plant_id_map);
 }
 
-systems::DrakeVisualizer*PerceptionHack::GetEstimationVisualizer()
-{
-  return impl_->estimator_vis_;
-}
-
-PointCloudVisualizer* PerceptionHack::GetPointCloudVisualizer()
-{
-  return impl_->pc_vis_;
+void PerceptionHack::PlaybackFrame(double t) {
+  auto vis_cache_ = impl_->estimator_vis_->GetReplayCachedSimulation();
+  impl_->estimator_vis_->PlaybackTrajectoryFrame(vis_cache_, t);
+  impl_->pc_vis_->PlaybackFrame(t);
+  impl_->cf_vis_->PlaybackFrame(t);
 }
 
 PerceptionHack::~PerceptionHack() {}

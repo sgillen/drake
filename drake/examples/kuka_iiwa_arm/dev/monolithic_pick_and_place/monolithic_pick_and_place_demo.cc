@@ -337,11 +337,11 @@ int DoMain(void) {
   // Step the simulator in some small increment.  Between steps, check
   // to see if the state machine thinks we're done, and if so that the
   // object is near the target.
-  const double simulation_step = 1;
-  while (state_machine->state(simulator.get_context())
-         != pick_and_place::DONE) {
+  const double simulation_step = 0.4;
+//  while (state_machine->state(simulator.get_context())
+//         != pick_and_place::DONE) {
     simulator.StepTo(simulator.get_context().get_time() + simulation_step);
-  }
+//  }
 
   if (!FLAGS_do_playback) {
     const pick_and_place::WorldState& world_state =
@@ -387,15 +387,9 @@ int DoMain(void) {
     DRAKE_DEMAND(std::abs(object_velocity(4)) < angular_velocity_tolerance);
     DRAKE_DEMAND(std::abs(object_velocity(5)) < angular_velocity_tolerance);
   } else {
-    PiecewisePolynomial<double> vis = drake_visualizer->GetReplayCachedSimulation();
-    systems::DrakeVisualizer* est_visualizer = nullptr;
+    PiecewisePolynomial<double> vis =
+        drake_visualizer->GetReplayCachedSimulation();
     double t_end = vis.getEndTime();
-    PiecewisePolynomial<double> est_vis;
-    if (FLAGS_use_perception) {
-      est_visualizer = perception.GetEstimationVisualizer();
-      est_vis = est_visualizer->GetReplayCachedSimulation();
-      t_end = std::max(t_end, est_vis.getEndTime());
-    }
     // Playback through each visualizer
     const double kFrameRate = 60.;
     const double kDt = 1 / kFrameRate;
@@ -408,9 +402,8 @@ int DoMain(void) {
       timing::TimePoint next_hit = timing::Clock::now() + timing::Duration(kDt);
       while (t < t_end) {
         drake_visualizer->PlaybackTrajectoryFrame(vis, t);
-        if (est_visualizer) {
-          est_visualizer->PlaybackTrajectoryFrame(est_vis, t);
-          perception.GetPointCloudVisualizer()->PlaybackFrame(t);
+        if (FLAGS_use_perception) {
+          perception.PlaybackFrame(t);
         }
         std::this_thread::sleep_until(next_hit);
         next_hit += timing::Duration(kDt);
