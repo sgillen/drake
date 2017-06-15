@@ -815,7 +815,7 @@ void RgbdCamera::Init(const std::string& name, double period_sec) {
     this->DeclareDiscreteState(pose_vector.size());
     this->DeclarePeriodicUnrestrictedUpdate(period_sec, 0.);
     impl_->set_is_discrete(true);
-    impl_->set_depth_rel_noise_magnitude(0.02); // 2% noise
+//    impl_->set_depth_rel_noise_magnitude(0.02); // 2% noise
     drake::log()->info("WORKAROUND: Using discrete camera update");
   }
 }
@@ -962,7 +962,7 @@ RgbdCameraDirect::RgbdCameraDirect(const RigidBodyTree<double>& tree,
                                    bool show_window)
     : impl_(new RgbdCamera::Impl(tree, frame,
                                  fov_y, show_window, true)) {
-  impl_->set_depth_rel_noise_magnitude(0.02); // same as above
+//  impl_->set_depth_rel_noise_magnitude(0.02); // same as above
 }
 
 RgbdCameraDirect::RgbdCameraDirect(const RigidBodyTree<double>& tree, const Eigen::Vector3d& position, const Eigen::Vector3d& orientation, double fov_y, bool show_window)

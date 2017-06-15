@@ -155,6 +155,43 @@ class PoseTransformer : public LeafSystemMixin<double> {
   }
 };
 
+class DepthImageNoise : public LeafSystemMixin<double> {
+ public:
+  DepthImageNoise(double noise_rel_magnitude)
+    : noise_rel_magnitude_(noise_rel_magnitude) {
+    ImageDepth32F depth_image(kImageWidth, kImageHeight);
+    DeclareAbstractInputPort(Value<ImageDepth32F>(depth_image));
+    DeclareAbstractOutputPort(Value<ImageDepth32F>(depth_image));
+  }
+ protected:
+  void DoCalcOutput(const Context& context,
+                    SystemOutput* output) const override {
+    const auto& in =
+        EvalAbstractInput(context, 0)->GetValue<ImageDepth32F>();
+    ImageDepth32F& out =
+        output->GetMutableData(0)->GetMutableValue<
+          ImageDepth32F>();
+
+    for (int v = 0; v < in.height(); v++) {
+      for (int u = 0; u < in.width(); u++) {
+        double scale = 1 + noise_rel_magnitude_ *
+                       state_.noise_distribution(state_.noise_generator);
+        *out.at(u, v) = scale * *in.at(u, v);
+      }
+    }
+  }
+ private:
+  double noise_rel_magnitude_;
+  // Modelling after: RandomSource
+  using Generator = std::mt19937;
+  using Distribution = std::normal_distribution<double>;
+  struct InternalState {
+    Generator noise_generator;
+    Distribution noise_distribution;
+  };
+  mutable InternalState state_;
+};
+
 /**
  * Draw a camera frustrum view leveraging a point cloud straight from a depth
  * image. This will iterate along the borders, and place a point at a maximum
@@ -192,6 +229,10 @@ class CameraFrustrumView : public LeafSystemMixin<double> {
         if (!std::isnan(pt[0]) && !std::isinf(pt[0])) {
           max_distance_ = std::max(max_distance_, pt.norm());
         }
+      }
+      if (max_distance_ < 0) {
+        drake::log()->info("No finite depth points to use");
+        return;
       }
 //      max_distance_ = point_cloud_C.rowwise().norm().maxCoeff();
     }
@@ -557,7 +598,23 @@ struct PerceptionHack::Impl {
           rgbd_camera_->state_input_port());
 
       auto&& color_image_output_port = rgbd_camera_->get_output_port(0);
-      auto&& depth_image_output_port = rgbd_camera_->get_output_port(1);
+
+      auto depth_zoh =
+          pbuilder->template AddSystem<AbstractZOH<ImageDepth32F>>(camera_dt);
+      pbuilder->Connect(
+            rgbd_camera_->get_output_port(1),
+            depth_zoh->get_input_port(0));
+
+      // Add noise.
+      auto depth_noise =
+          pbuilder->template AddSystem<DepthImageNoise>(0.02 / 3);
+      pbuilder->Connect(
+            depth_zoh->get_output_port(0),
+            depth_noise->get_input_port(0));
+      // TODO(eric.cousineau): Add ZOH on Depth Image noise (to keep
+      // consistent).
+
+      auto&& depth_image_output_port = depth_noise->get_output_port(0);
       auto&& camera_base_pose_output_port = rgbd_camera_->camera_base_pose_output_port();
 
       // Project from `D` (depth frame) to `B` (camera frame), per documentation
@@ -602,6 +659,25 @@ struct PerceptionHack::Impl {
       pbuilder->Connect(
           camera_base_pose_output_port,
           rgbd_camera_pose_lcm_pub_->get_input_port(0));
+
+      {
+        // Convert depth image.
+        auto pure_depth_to_pc = pbuilder->template AddSystem<DepthImageToPointCloud>(
+              rgbd_camera_->depth_camera_info());
+        pbuilder->Connect(
+              depth_zoh->get_output_port(0),
+              pure_depth_to_pc->get_depth_image_inport());
+
+        const double max_distance = -1;  // Let view decide.
+        auto cf_view = pbuilder->template AddSystem<CameraFrustrumView>(
+              plcm, rgbd_camera_->depth_camera_info(), camera_dt, max_distance);
+        pbuilder->Connect(
+              pure_depth_to_pc->get_output_port(0),
+              cf_view->get_input_port(0));
+        pbuilder->Connect(
+              depth_camera_pose_output_port,
+              cf_view->get_input_port(1));
+      }
 
       bool do_publish = false;
       if (do_publish) {
@@ -648,16 +724,6 @@ struct PerceptionHack::Impl {
             depth_to_pc->get_output_port(0),
             pc_zoh->get_input_port(0));
       auto&& pc_output_port = pc_zoh->get_output_port(0);
-
-      const double max_distance = -1;  // Let view decide.
-      auto cf_view = pbuilder->template AddSystem<CameraFrustrumView>(
-            plcm, rgbd_camera_->depth_camera_info(), camera_dt, max_distance);
-      pbuilder->Connect(
-            pc_output_port,
-            cf_view->get_input_port(0));
-      pbuilder->Connect(
-            depth_camera_pose_output_port,
-            cf_view->get_input_port(1));
 
       pc_vis_ =
           pbuilder->template AddSystem<PointCloudVisualizer>(plcm, camera_dt);
