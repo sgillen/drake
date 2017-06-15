@@ -221,9 +221,10 @@ class CameraFrustrumVisualizer : public LeafSystemMixin<double> {
  public:
   CameraFrustrumVisualizer(DrakeLcm* lcm,
       const CameraInfo& camera_info,
-      double period_sec, double max_distance)
+      double period_sec, double min_depth, double max_depth)
       : camera_info_(camera_info),
-        max_distance_(max_distance) {
+        min_depth_(min_depth),
+        max_depth_(max_depth) {
     DeclarePublishPeriodSec(period_sec);
     DeclareAbstractInputPort();
     DeclareVectorInputPort(PoseVector<double>());
@@ -231,15 +232,16 @@ class CameraFrustrumVisualizer : public LeafSystemMixin<double> {
                                  "camera_frustrum");
   }
   void PlaybackFrame(double t) const {
-    log_.GetData(t).Draw(lcmgl_);
+    log_.GetData(t).Draw(lcmgl_, min_depth_);
   }
  protected:
   struct Entry {
     Eigen::Isometry3d X_WC;
-    std::vector<int> corner_indices;
+    Matrix3Xd corners_near;
+    Matrix3Xd corners_far;
     Matrix3Xd points_W;
 
-    void Draw(bot_lcmgl_t* lcmgl_) const {
+    void Draw(bot_lcmgl_t* lcmgl_, double min_depth) const {
       // Draw each point connected to the next (looping).
       bot_lcmgl_begin(lcmgl_, LCMGL_LINES);
       bot_lcmgl_color3f(lcmgl_, 0.5, 1.0, 0.5);
@@ -252,11 +254,23 @@ class CameraFrustrumVisualizer : public LeafSystemMixin<double> {
         bot_lcmgl_vertex3f(lcmgl_, cn[0], cn[1], cn[2]);
       }
       // Draw from each of the four corners.
-      auto c0 = X_WC.translation();
-      for (int i : corner_indices) {
-        auto ci = points_W.col(i);
+      for (int i = 0; i < 4; ++i) {
+        auto cc = X_WC.translation();
+        auto c0 = corners_near.col(i);
+        int next = (i + 1) % 4;
+        auto c0n = corners_near.col(next);
+        auto ci = corners_far.col(i);
+        // Camera origin to near clipping plane.
+        bot_lcmgl_color3f(lcmgl_, 0.8, 1.0, 0.8);
+        bot_lcmgl_vertex3f(lcmgl_, cc[0], cc[1], cc[2]);
+        bot_lcmgl_vertex3f(lcmgl_, c0[0], c0[1], c0[2]);
+        // Near to far clipping pane.
+        bot_lcmgl_color3f(lcmgl_, 0.5, 1.0, 0.5);
         bot_lcmgl_vertex3f(lcmgl_, c0[0], c0[1], c0[2]);
         bot_lcmgl_vertex3f(lcmgl_, ci[0], ci[1], ci[2]);
+        // Near clipping pane box.
+        bot_lcmgl_vertex3f(lcmgl_, c0[0], c0[1], c0[2]);
+        bot_lcmgl_vertex3f(lcmgl_, c0n[0], c0n[1], c0n[2]);
       }
       bot_lcmgl_end(lcmgl_);
       bot_lcmgl_switch_buffer(lcmgl_);
@@ -272,21 +286,6 @@ class CameraFrustrumVisualizer : public LeafSystemMixin<double> {
     if (point_cloud_C.cols() == 0) {
       drake::log()->info("Skipping empty point cloud");
       return;
-    }
-    if (max_distance_ < 0) {
-      // Find the maximum distance in the point cloud, and assume that is the
-      // maximum depth selected.
-      for (int i = 0; i < point_cloud_C.cols(); ++i) {
-        auto pt = point_cloud_C.col(i);
-        if (!std::isnan(pt[0]) && !std::isinf(pt[0])) {
-          max_distance_ = std::max(max_distance_, pt.norm());
-        }
-      }
-      if (max_distance_ < 0) {
-        drake::log()->info("No finite depth points to use");
-        return;
-      }
-//      max_distance_ = point_cloud_C.rowwise().norm().maxCoeff();
     }
     Eigen::Isometry3d X_WC = pose->get_isometry();
     // TODO(eric.cousineau): Generalize ConvertDepthImageToPointCloud to accept
@@ -318,15 +317,13 @@ class CameraFrustrumVisualizer : public LeafSystemMixin<double> {
       Vector3d pt_C = point_cloud_C.col(i);
       if (std::isnan(pt_C[0]) || std::isinf(pt_C[0])) {
         // Recompute with extended depth.
-        double z = 100;
+        double z = max_depth_;
         pt_C(0) = z * (u - cx) * fx_inv;
         pt_C(1) = z * (v - cy) * fy_inv;
         pt_C(2) = z;
-      }
-      // Ensure that point's length is saturated.
-      double pt_norm = pt_C.norm();
-      if (pt_norm > max_distance_) {
-        pt_C *= max_distance_ / pt_norm;
+      } else if (pt_C[2] > max_depth_) {
+        // Ensure that point's length is saturated.
+        pt_C *= max_depth_ / pt_C[2];
       }
       points_W.col(index++) = X_WC * pt_C;
     };
@@ -349,14 +346,28 @@ class CameraFrustrumVisualizer : public LeafSystemMixin<double> {
       add_pt(0, v);
     }
     DRAKE_DEMAND(index == nn);
-    Entry entry {X_WC, corner_indices, points_W};
+    // Process corners to create view box for minimum depth.
+    Matrix3Xd corners_close(3, 4);
+    Matrix3Xd corners_far(3, 4);
+    int i = 0;
+    for (int index : corner_indices) {
+      // Cheap cheating.
+      Vector3d pt_W = points_W.col(index);
+      Vector3d pt_C = X_WC.inverse() * pt_W;
+      Vector3d pt_near_C = pt_C * (min_depth_ / pt_C[2]);
+      corners_far.col(i) = pt_W;
+      corners_close.col(i) = X_WC * pt_near_C;
+      i++;
+    }
+    Entry entry {X_WC, corners_close, corners_far, points_W};
     log_.AddData(context.get_time(), entry);
-    entry.Draw(lcmgl_);
+    entry.Draw(lcmgl_, min_depth_);
   }
  private:
   bot_lcmgl_t* lcmgl_{};
   const CameraInfo& camera_info_;
-  mutable double max_distance_{};  // :(
+  double min_depth_{};
+  double max_depth_{};
   mutable SimpleLog<Entry> log_;
 };
 
@@ -689,9 +700,11 @@ struct PerceptionHack::Impl {
               depth_zoh->get_output_port(0),
               pure_depth_to_pc->get_depth_image_inport());
 
-        const double max_distance = -1;  // Let view decide.
+        const double min_depth = 0.5;
+        const double max_depth = 5;
         cf_vis_ = pbuilder->template AddSystem<CameraFrustrumVisualizer>(
-              plcm, rgbd_camera_->depth_camera_info(), camera_dt, max_distance);
+              plcm, rgbd_camera_->depth_camera_info(), camera_dt,
+                    min_depth, max_depth);
         pbuilder->Connect(
               pure_depth_to_pc->get_output_port(0),
               cf_vis_->get_input_port(0));
