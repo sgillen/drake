@@ -231,9 +231,9 @@ class CameraFrustrumVisualizer : public LeafSystemMixin<double> {
     lcmgl_ = bot_lcmgl_init(lcm->get_lcm_instance()->getUnderlyingLCM(),
                                  "camera_frustrum");
   }
-  void PlaybackFrame(double t) const {
-    log_.GetData(t).Draw(lcmgl_, min_depth_);
-  }
+//  void PlaybackFrame(double t) const {
+//    log_.GetData(t).Draw(lcmgl_, min_depth_);
+//  }
  protected:
   struct Entry {
     Eigen::Isometry3d X_WC;
@@ -360,7 +360,7 @@ class CameraFrustrumVisualizer : public LeafSystemMixin<double> {
       i++;
     }
     Entry entry {X_WC, corners_close, corners_far, points_W};
-    log_.AddData(context.get_time(), entry);
+//    log_.AddData(context.get_time(), entry);
     entry.Draw(lcmgl_, min_depth_);
   }
  private:
@@ -414,69 +414,88 @@ class DepthImageToPointCloud : public LeafSystemMixin<double> {
   int output_port_index_{};
 };
 
-class PointCloudVisualizer::Impl {
- public:
-  SimpleLog<Matrix3Xd> log_;
-  bot_lcmgl_t* lcmgl_{};
-};
+///**
+// * Use LCMGL to show a point cloud.
+// * Will not perform any frame transforms.
+// */
+//class PointCloudVisualizer : public systems::LeafSystem<double> {
+// public:
+//  PointCloudVisualizer(drake::lcm::DrakeLcm *lcm, double dt);
+//  ~PointCloudVisualizer();
+//  void PlaybackFrame(double t) const;
+// protected:
+//  void PublishCloud(const Matrix3Xd& cloud) const;
+//  void DoPublish(const systems::Context<double>& context) const override;
+//  void DoCalcOutput(const systems::Context<double>&,
+//                    systems::SystemOutput<double>*) const override;
+// private:
+//  class Impl;
+//  std::shared_ptr<Impl> impl_;
+//};
 
-PointCloudVisualizer::PointCloudVisualizer(drake::lcm::DrakeLcm* lcm, double dt) {
-  impl_.reset(new Impl());
-  Impl& impl = *impl_;
-  impl.lcmgl_ = bot_lcmgl_init(lcm->get_lcm_instance()->getUnderlyingLCM(),
-                          "point_cloud_playback");
-  DeclareAbstractInputPort();
-  DeclareVectorInputPort(PoseVector<double>()).get_index();
-  DeclarePublishPeriodSec(dt);
-}
+//class PointCloudVisualizer::Impl {
+// public:
+//  SimpleLog<Matrix3Xd> log_;
+//  bot_lcmgl_t* lcmgl_{};
+//};
 
-PointCloudVisualizer::~PointCloudVisualizer() {}
+//PointCloudVisualizer::PointCloudVisualizer(drake::lcm::DrakeLcm* lcm, double dt) {
+//  impl_.reset(new Impl());
+//  Impl& impl = *impl_;
+//  impl.lcmgl_ = bot_lcmgl_init(lcm->get_lcm_instance()->getUnderlyingLCM(),
+//                          "point_cloud_playback");
+//  DeclareAbstractInputPort();
+//  DeclareVectorInputPort(PoseVector<double>()).get_index();
+//  DeclarePublishPeriodSec(dt);
+//}
 
-void PointCloudVisualizer::PlaybackFrame(double t) const {
-  Impl& impl = *impl_;
-  const Matrix3Xd& data = impl.log_.GetData(t);
-  PublishCloud(data);
-}
+//PointCloudVisualizer::~PointCloudVisualizer() {}
 
-void PointCloudVisualizer::PublishCloud(const Eigen::Matrix3Xd& cloud) const {
-  Impl& impl = *impl_;
-  auto* lcmgl_ = impl.lcmgl_;
-  bot_lcmgl_begin(lcmgl_, LCMGL_POINTS);
-  double width = 640;
-  double height = 480;
-  int downsample = 5;
-  for (int v = 0; v < height; v += downsample) {
-    for (int u = 0; u < width; u += downsample) {
-      // TODO(eric.cousineau): Use random downsampling from actual estimation.
-      int dv = 0; //rand() % downsample;
-      int du = 0; //rand() % downsample;
-      int i = (v + dv) * width + (u + du);
-      auto&& pt = cloud.col(i);
-      if (!std::isnan(pt[0]) && !std::isinf(pt[0])) {
-        bot_lcmgl_color3f(lcmgl_, 0.5, 1.0, 0.5);
-        bot_lcmgl_vertex3f(lcmgl_, pt[0], pt[1], pt[2]);
-      }
-    }
-  }
-  bot_lcmgl_end(lcmgl_);
-  bot_lcmgl_switch_buffer(lcmgl_);
-}
+//void PointCloudVisualizer::PlaybackFrame(double t) const {
+//  Impl& impl = *impl_;
+//  const Matrix3Xd& data = impl.log_.GetData(t);
+//  PublishCloud(data);
+//}
 
-using systems::Context;
-using systems::SystemOutput;
+//void PointCloudVisualizer::PublishCloud(const Eigen::Matrix3Xd& cloud) const {
+//  Impl& impl = *impl_;
+//  auto* lcmgl_ = impl.lcmgl_;
+//  bot_lcmgl_begin(lcmgl_, LCMGL_POINTS);
+//  double width = 640;
+//  double height = 480;
+//  int downsample = 5;
+//  for (int v = 0; v < height; v += downsample) {
+//    for (int u = 0; u < width; u += downsample) {
+//      // TODO(eric.cousineau): Use random downsampling from actual estimation.
+//      int dv = 0; //rand() % downsample;
+//      int du = 0; //rand() % downsample;
+//      int i = (v + dv) * width + (u + du);
+//      auto&& pt = cloud.col(i);
+//      if (!std::isnan(pt[0]) && !std::isinf(pt[0])) {
+//        bot_lcmgl_color3f(lcmgl_, 0.5, 1.0, 0.5);
+//        bot_lcmgl_vertex3f(lcmgl_, pt[0], pt[1], pt[2]);
+//      }
+//    }
+//  }
+//  bot_lcmgl_end(lcmgl_);
+//  bot_lcmgl_switch_buffer(lcmgl_);
+//}
 
-void PointCloudVisualizer::DoPublish(const Context<double>& context) const {
-  const Matrix3Xd& point_cloud = EvalAbstractInput(context, 0)
-                                 ->GetValue<Matrix3Xd>();
-  auto pose_WS = EvalVectorInput<PoseVector>(context, 1);
-  auto X_WS = pose_WS->get_isometry();
-  auto point_cloud_W = X_WS * point_cloud;
-  impl_->log_.AddData(context.get_time(), point_cloud_W);
-  PublishCloud(point_cloud_W);
-}
+//using systems::Context;
+//using systems::SystemOutput;
 
-void PointCloudVisualizer::DoCalcOutput(const Context<double>&,
-                                        SystemOutput<double>*) const {}
+//void PointCloudVisualizer::DoPublish(const Context<double>& context) const {
+//  const Matrix3Xd& point_cloud = EvalAbstractInput(context, 0)
+//                                 ->GetValue<Matrix3Xd>();
+//  auto pose_WS = EvalVectorInput<PoseVector>(context, 1);
+//  auto X_WS = pose_WS->get_isometry();
+//  auto point_cloud_W = X_WS * point_cloud;
+//  impl_->log_.AddData(context.get_time(), point_cloud_W);
+//  PublishCloud(point_cloud_W);
+//}
+
+//void PointCloudVisualizer::DoCalcOutput(const Context<double>&,
+//                                        SystemOutput<double>*) const {}
 
 // Publishes point cloud in world frame.
 // TODO(eric.cousineau): Replace with LCM Translator when PR lands
@@ -485,7 +504,8 @@ class PointCloudToLcmPointCloud : public LeafSystemMixin<double> {
   typedef Eigen::Matrix3Xd Data;
   typedef bot_core::pointcloud_t Message;
 
-  PointCloudToLcmPointCloud() {
+  PointCloudToLcmPointCloud(int downsample)
+      : downsample_(downsample) {
     input_port_index_ =
         DeclareAbstractInputPort(Value<Data>()).get_index();
     output_port_index_ =
@@ -508,28 +528,41 @@ class PointCloudToLcmPointCloud : public LeafSystemMixin<double> {
       const Context& context, SystemOutput* output) const {
     const Data& point_cloud = EvalAbstractInput(context, input_port_index_)
                               ->GetValue<Data>();
+    const double width = kImageWidth;
+    const double height = kImageHeight;
+    Message& message = output->GetMutableData(output_port_index_)
+                        ->GetMutableValue<Message>();
+    message.points.clear();
+    message.frame_id = std::string(RigidBodyTreeConstants::kWorldName);
+    message.n_channels = 0;
+    message.n_points = 0;
+    if (point_cloud.size() == 0) {
+      drake::log()->warn("{}: Empty point cloud. Skipping", this->get_name());
+      return;
+    }
+    ASSERT_THROW_FMT(point_cloud.cols() == width * height,
+                     "{} != {} * {}", point_cloud.cols(), width, height);
     auto pose_WS = EvalVectorInput<PoseVector>(context,
                                                pose_input_port_index_);
     auto X_WS = pose_WS->get_isometry();
-    const Data& point_cloud_world = X_WS * point_cloud;
-    Message& message = output->GetMutableData(output_port_index_)
-                        ->GetMutableValue<Message>();
-    int n_points = point_cloud_world.cols();
-    // Stolen from DepthSensorToLcmPointCloudMessage
-    message.frame_id = std::string(RigidBodyTreeConstants::kWorldName);
-    message.n_points = n_points;
-    message.points.clear();
-    for (int i = 0; i < n_points; ++i) {
-      const auto& point_S = point_cloud_world.col(i);
-      Eigen::Vector3f point_W = point_S.cast<float>();
-      message.points.push_back({point_W(0), point_W(1), point_W(2)});
+    const Data& point_cloud_W = X_WS * point_cloud;
+    for (int v = 0; v < height; v += downsample_) {
+      for (int u = 0; u < width; u += downsample_) {
+        // TODO(eric.cousineau): Use random downsampling from actual estimation.
+        int dv = 0; //rand() % downsample;
+        int du = 0; //rand() % downsample;
+        int i = (v + dv) * width + (u + du);
+        Eigen::Vector3f point_W = point_cloud_W.col(i).cast<float>();
+        message.points.push_back({point_W(0), point_W(1), point_W(2)});
+      }
     }
-    message.n_channels = 0;
+    message.n_points = message.points.size();
   }
  private:
   int input_port_index_{};
   int output_port_index_{};
   int pose_input_port_index_{};
+  int downsample_{};
 };
 
 //template <typename Type, typename Port>
@@ -582,7 +615,7 @@ struct PerceptionHack::Impl {
   LcmPublisherSystem* depth_sensor_pose_lcm_pub_{};
   DrakeVisualizer* estimator_vis_{};
 
-  PointCloudVisualizer* pc_vis_{};
+//  PointCloudVisualizer* pc_vis_{};
   CameraFrustrumVisualizer* cf_vis_{};
 
   void CreateAndConnectCamera(
@@ -759,18 +792,18 @@ struct PerceptionHack::Impl {
             pc_zoh->get_input_port(0));
       auto&& pc_output_port = pc_zoh->get_output_port(0);
 
-      pc_vis_ =
-          pbuilder->template AddSystem<PointCloudVisualizer>(plcm, camera_dt);
-      pbuilder->Connect(
-            depth_to_pc->get_output_port(0),
-            pc_vis_->get_input_port(0));
-      pbuilder->Connect(
-            depth_camera_pose_output_port,
-            pc_vis_->get_input_port(1));
+//      pc_vis_ =
+//          pbuilder->template AddSystem<PointCloudVisualizer>(plcm, camera_dt);
+//      pbuilder->Connect(
+//            depth_to_pc->get_output_port(0),
+//            pc_vis_->get_input_port(0));
+//      pbuilder->Connect(
+//            depth_camera_pose_output_port,
+//            pc_vis_->get_input_port(1));
 
-      if (do_publish) {
+      if (true) { //do_publish) {
         typedef PointCloudToLcmPointCloud Converter;
-        auto pc_to_lcm = pbuilder->template AddSystem<Converter>();
+        auto pc_to_lcm = pbuilder->template AddSystem<Converter>(5);
         pbuilder->Connect(
               pc_output_port,
               pc_to_lcm->get_inport());
@@ -912,9 +945,9 @@ void PerceptionHack::PlaybackFrame(double t) {
   SCOPE_TIME(playback, "playback");
   auto vis_cache_ = impl_->estimator_vis_->GetReplayCachedSimulation();
   impl_->estimator_vis_->PlaybackTrajectoryFrame(vis_cache_, t);
-  impl_->cf_vis_->PlaybackFrame(t);
-  timing::sleep(0.005);
-  impl_->pc_vis_->PlaybackFrame(t);
+//  impl_->cf_vis_->PlaybackFrame(t);
+//  timing::sleep(0.005);
+//  impl_->pc_vis_->PlaybackFrame(t);
 }
 
 PerceptionHack::~PerceptionHack() {}
