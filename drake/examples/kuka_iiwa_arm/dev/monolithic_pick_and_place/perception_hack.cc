@@ -909,6 +909,7 @@ void PerceptionHack::Inject(DiagramBuilder* pbuilder, DrakeLcm* plcm,
 }
 
 void PerceptionHack::PlaybackFrame(double t) {
+  SCOPE_TIME(playback, "playback");
   auto vis_cache_ = impl_->estimator_vis_->GetReplayCachedSimulation();
   impl_->estimator_vis_->PlaybackTrajectoryFrame(vis_cache_, t);
   impl_->cf_vis_->PlaybackFrame(t);
