@@ -32,7 +32,7 @@ to:
         # ...
         event = log.read_next_event()
         if not event:
-            break
+            continue
 """.format(director.lcmlogplayer.__file__)
 
 if __name__ == '__main__':

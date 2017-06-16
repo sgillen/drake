@@ -9,6 +9,7 @@ from director import lcmUtils
 from director import lcmframe
 from director import cameraview
 from director import framevisualization
+from director.screengrabberpanel import ScreenGrabberPanel
 
 from mod_visualizer import ModVisualizer
 
@@ -48,3 +49,20 @@ modVis = ModVisualizer(view)
 modVis.injectVisualizerChange(drakeVisualizer)
 app.restoreDefaultWindowState()
 app.initWindowSettings()
+
+def getCameraPose():
+    c = view.camera()
+    print(c.GetPosition(), c.GetFocalPoint(), c.GetRoll())
+def setCameraPose():
+    c = view.camera()
+    # From getCameraPose()
+    data = ((1.4161725134734127, 5.238205785468341, 2.650582842731615), (0.38262166129766567, -0.9745965626127705, 0.7470121335901613), -150.1008206678558)
+    call = lambda t: t[0](*t[1:])
+    map(call, zip((c.SetPosition, c.SetFocalPoint, c.SetRoll), data))
+    view.render()
+
+setCameraPose()
+recorder = ScreenGrabberPanel.instance
+recorder.ui.viewSizeCombo.currentIndex = 2  # "960x720 (4:3)"
+recorder.ui.lockViewSizeCheck.click()
+recorder.ui.captureRateSpin.value = 60
