@@ -126,6 +126,11 @@ ArticulatedStateEstimator::ArticulatedStateEstimator(const string& config_file,
   const bool add_velocities = false;
   auto plant_position_names = GetHierarchicalPositionNameList(
       get_tree(), get_plant_id_map(), add_velocities);
+  std::cout << "estimator plant names:\n";
+  int index = 0;
+  for (auto&& name : input_position_names) {
+    std::cout << "  " << index++ << ": " << name << "\n";
+  }
 
   // FIgure out downselection from input port.
   // TODO(eric.cousineau): Figure out how to do this more cleanly at a
