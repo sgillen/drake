@@ -2,6 +2,8 @@
 
 import argparse
 import numpy as np
+import scipy as sp
+import scipy.io as spio
 
 import bot_core
 import lcm
@@ -21,6 +23,19 @@ channels = {
     },
 }
 
+class TimeSeries(object):
+    def __init__(self):
+        self.ts = []
+        self.xs = []
+    def add(self, t, x):
+        self.ts.append(t)
+        self.xs.append(x)
+
+data = {
+    'actual': TimeSeries(),
+    'est': TimeSeries(),
+}
+
 last_time = 0.
 while last_time < 10.5:
     filepos = log.tell()
@@ -30,5 +45,14 @@ while last_time < 10.5:
     info = channels.get(event.channel)
     if info is not None:
         msg = bot_core.viewer_draw_t.decode(event.data)
-        last_time = msg.timestamp / 1.e3
+        t = msg.timestamp / 1.e3
+        last_time = max(t, last_time)
+        series = data[info['name']]
+        pos = msg.position[info['index']]
+        quat = msg.quaternion[info['index']]
+        print (t, pos)
+        series.add(t, (pos, quat))
         print last_time
+
+spio.savemat("./data.mat", data, oned_as='column')
+print "Saved"
