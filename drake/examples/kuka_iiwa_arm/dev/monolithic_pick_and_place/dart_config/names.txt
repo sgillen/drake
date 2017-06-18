@@ -1,3 +1,17 @@
+DRAKE_VIEWER_DRAW
+  drake-visualizer:
+    target = robot 8
+  bot-spy:
+    robot_num[29] = 9, link_name[29] = base_link
+
+ESTIMATOR_DRAKE_VIEWER_DRAW
+  drake-visualizer:
+    target = robot 4
+  bot-spy:
+    robot_num[19] = 4, link_name[19] = base_link
+
+
+
 input plane names:
   0: iiwa::iiwa_joint_1
   1: iiwa::iiwa_joint_2
