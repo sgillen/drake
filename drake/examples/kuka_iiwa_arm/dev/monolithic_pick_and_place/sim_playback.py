@@ -42,7 +42,7 @@ if __name__ == '__main__':
 
     filename = _argv[1]
 
-    logPlayer = LcmLogPlayer()
+    logPlayer = LcmLogPlayer(forceEndTime=10.5)
     logPlayer.playbackFactor = 1
     logPlayer.readLog(filename, eventTimeFunction=getDrakeSimTimeForEvent)
     logPlayer.skipToTime(0.0)
