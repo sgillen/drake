@@ -30,9 +30,9 @@ drake_add_cc_test(dart_util_test)
 target_link_libraries(dart_util_test
   drakeDartUtil)
 
-drake_add_cc_test(dart_test)
-target_link_libraries(dart_test
-  drakeManipulationTracker)
+# drake_add_cc_test(dart_test)
+# target_link_libraries(dart_test
+#   drakeManipulationTracker)
 
 drake_add_cc_test(camera_test)
 target_link_libraries(camera_test

@@ -143,12 +143,13 @@ target_link_libraries(drakeManipulationTracker
 #     TARGET drakeManipulationTracker
 #     LIBS -ldrakeManipulationTracker)
 
-add_executable(runManipulationTracker runManipulationTracker.cpp)
-target_link_libraries(runManipulationTracker drakeManipulationTracker)
-drake_add_test(
-    NAME runManipulationTracker COMMAND runManipulationTracker --simulation_sec 0.01)
-
 if(FALSE)
+
+    add_executable(runManipulationTracker runManipulationTracker.cpp)
+    target_link_libraries(runManipulationTracker drakeManipulationTracker)
+    drake_add_test(
+        NAME runManipulationTracker COMMAND runManipulationTracker --simulation_sec 0.01)
+
     add_executable(runErrorCalculator runErrorCalculator.cpp)
     target_link_libraries(runErrorCalculator drakeManipulationTracker)
     drake_add_test(
