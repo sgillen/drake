@@ -1,5 +1,9 @@
-function [tis, x1is, x2is] = resample_series(t1s, x1s, t2s, x2s)
+function [tis, x1is, x2is] = resample_series(t1s, x1s, t2s, x2s, trs)
 % Resample data that varies along rows, such that both timestamps match.
+if nargin < 5
+    % Resample based on this time
+    trs = t1s;
+end
 
 [t1s, x1s] = clean(t1s, x1s);
 [t2s, x2s] = clean(t2s, x2s);
@@ -7,7 +11,7 @@ function [tis, x1is, x2is] = resample_series(t1s, x1s, t2s, x2s)
 t_min = max(t1s(1), t2s(1));
 t_max = min(t1s(end), t2s(end));
 
-tis = t1s(t1s >= t_min & t1s <= t_max);
+tis = trs(trs >= t_min & trs <= t_max);
 x1is = interp1(t1s, x1s, tis');
 x2is = interp1(t2s, x2s, tis');
 

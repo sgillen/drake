@@ -20,12 +20,16 @@ act = fmt(data.actual);
 est = fmt(data.est);
 
 %%
-figure(1); clf();
-hold('all');
-plot(act.ts, act.ps);
-plot(est.ts, est.ps, '--', 'LineWidth' ,2);
+dt = 0.03;
+tds = 0:dt:est.ts(end);
+[tis, esti, acti] = resample_series(est.ts, est.ps, act.ts, act.ps, tds);
+
+logic = tis > 4.7;
+tsis = tis(logic);
+actsi = acti(logic, :);
+estsi = esti(logic, :);
 
 %%
-figure(2); clf();
-[tis, acti, esti] = resample_series(act.ts, act.ps, est.ts, est.ps);
-plot_compare('pos', tis, 'act', acti, 'est', esti);
+figure(1); clf();
+e = plot_compare('Cartesian Position', tsis, 'Actual', actsi, 'Estimated', estsi);
+legend({'x', 'y', 'z'});
