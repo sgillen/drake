@@ -830,9 +830,10 @@ struct PerceptionHack::Impl {
         auto input_position_names = GetHierarchicalPositionNameList(
                                       pplant->get_plant().get_rigid_body_tree(),
                                       plant_id_map, add_velocities);
-        std::cout << "names\n";
+        std::cout << "input plane names:\n";
+        int index = 0;
         for (auto&& name : input_position_names) {
-          std::cout << "  " << name << "\n";
+          std::cout << "  " << index++ << ": " << name << "\n";
         }
 
         ArticulatedStateEstimator* estimator =
