@@ -101,8 +101,6 @@ set(drakeManipulationTracker_LIBRARIES
     drakeRBM
     drakeRigidBodyPlant
     drakeMultibodyParsers
-    drakeSystemFramework
-    drakeSensors
     drakeDartUtil
     drakeDart
     # drakeUtil
@@ -127,15 +125,18 @@ target_link_libraries(drakeDartUtil
     )
 
 add_library_with_exports(LIB_NAME drakeDart SOURCE_FILES
-    ${drakeDartUtil_SRC_FILES})
+    ${drakeDart_SRC_FILES})
 target_link_libraries(drakeDart
     drakeDartUtil
+    drakeSystemFramework
+    drakeSensors
     )
 
 add_library_with_exports(LIB_NAME drakeManipulationTracker SOURCE_FILES
     ${drakeManipulationTracker_SRC_FILES})
 target_link_libraries(drakeManipulationTracker
-    ${drakeManipulationTracker_LIBRARIES})
+    ${drakeManipulationTracker_LIBRARIES}
+    drakeDart)
 
 # drake_install_libraries(drakeManipulationTracker)
 # drake_install_headers(${drakeManipulationTracker_HEADERS})
