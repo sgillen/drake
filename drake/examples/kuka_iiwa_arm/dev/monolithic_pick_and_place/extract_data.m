@@ -33,3 +33,14 @@ estsi = esti(logic, :);
 figure(1); clf();
 e = plot_compare('Cartesian Position', tsis, 'Actual', actsi, 'Estimated', estsi);
 legend({'x', 'y', 'z'});
+
+%%
+figure(2); clf();
+dts = diff(tsis)';
+% dts(end + 1) = dts(end);
+nd = 3;
+zpad = zeros(1, nd);
+da = diff(actsi) ./ repmat(dts, 1, nd);
+db = diff(estsi) ./ repmat(dts, 1, nd);
+e = plot_compare('Cartesian Velocitiy F. Diff', tsis(2:end), 'Actual', da, 'Estimated', db);
+legend({'x', 'y', 'z'});
