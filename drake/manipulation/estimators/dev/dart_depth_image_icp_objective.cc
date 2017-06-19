@@ -11,6 +11,10 @@ using namespace drake::systems::sensors;
 namespace drake {
 namespace manipulation {
 
+// TODO(eric.cousineau): Permit the cost to be plugged into a continuous, non-
+// linear update (e.g., a non-linear MathematicalProgram) per Alejandro's
+// suggestions.
+
 struct Coord {
   int u{0};  // x-pixel coordinate
   int v{0};  // y-pixel coordinate
@@ -400,6 +404,8 @@ void DartDepthImageIcpObjective::UpdateFormulation(
             dynamic_cast<const RevoluteJoint*>(&body.getJoint());
       }
 
+      int used_points = 0;
+
       const int frame_Bi = body_index;
       // Accumulated points per body.
       IcpPointGroup icp_body(frame_Bi, body_positive_indices.size());
@@ -420,6 +426,7 @@ void DartDepthImageIcpObjective::UpdateFormulation(
           }
         }
         if (use_point) {
+          used_points++;
           // Register each point with the appropriate frames to compute the
           // linearized error term.
           const int meas_index = positive_meas_indices[positive_index];
@@ -431,6 +438,9 @@ void DartDepthImageIcpObjective::UpdateFormulation(
       }
       // Incorporate into error accumulation.
       icp_body.AddTerms(scene, &error_accumulator, icp_weight);
+
+      fmt::print(cout, "body: {}, points used: {}\n", body.get_name(),
+                 used_points);
     }
     // Render to full cost, taking only the estimated variables.
     error_accumulator.UpdateCost(kin_est_slice.q(), icp_cost_.get());
