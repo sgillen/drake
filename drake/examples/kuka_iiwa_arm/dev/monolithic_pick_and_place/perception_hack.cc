@@ -1,26 +1,20 @@
 #include "drake/examples/kuka_iiwa_arm/dev/monolithic_pick_and_place/perception_hack.h"
 
 #include <memory>
+#include <bot_lcmgl_client/lcmgl.h>
 
 #include "drake/lcm/drake_lcm.h"
-#include "drake/multibody/rigid_body_plant/drake_visualizer.h"
 #include "drake/multibody/rigid_body_plant/rigid_body_plant.h"
 #include "drake/systems/framework/diagram.h"
 #include "drake/systems/framework/diagram_builder.h"
 
-#include "drake/common/drake_path.h"
-
-//#include "bot_core/images_t.hpp"
 #include "robotlocomotion/image_array_t.hpp"
 
 #include "drake/common/drake_assert.h"
 #include "drake/systems/sensors/rgbd_camera.h"
 #include "drake/systems/sensors/image_to_lcm_image_array_t.h"
-//#include "drake/systems/sensors/image_to_lcm_message.h"
 #include "drake/systems/lcm/lcm_publisher_system.h"
 #include "drake/systems/rendering/pose_stamped_t_pose_vector_translator.h"
-
-#include <bot_lcmgl_client/lcmgl.h>
 
 #include "drake/systems/sensors/depth_sensor.h"
 #include "drake/systems/sensors/depth_sensor_to_lcm_point_cloud_message.h"
@@ -30,22 +24,11 @@
 #include "drake/systems/lcm/lcm_and_vector_base_translator.h"
 #include "drake/systems/sensors/image.h"
 
-#include "drake/common/scoped_timer.h"
-
-#include "drake/manipulation/estimators/dev/articulated_state_estimator.h"
-#include "drake/common/find_resource.h"
-
 #include "drake/examples/kuka_iiwa_arm/iiwa_world/iiwa_wsg_diagram_factory.h"
 
-#include "drake/manipulation/estimators/dev/abstract_zoh.h"
-#include "drake/manipulation/estimators/dev/vector_slice.h"
-#include "drake/common/drake_optional.h"
-
-#include "drake/common/call_matlab.h"
-#include "drake/systems/primitives/constant_vector_source.h"
+#include "drake/examples/kuka_iiwa_arm/dev/monolithic_pick_and_place//abstract_zoh.h"
 
 namespace drake {
-
 
 using std::unique_ptr;
 using std::string;
@@ -63,34 +46,51 @@ using systems::lcm::LcmPublisherSystem;
 using systems::rendering::PoseStampedTPoseVectorTranslator;
 using std::make_unique;
 
-using systems::sensors::DepthSensor;
-using systems::sensors::DepthSensorSpecification;
-using systems::sensors::DepthSensorToLcmPointCloudMessage;
+using systems::rendering::PoseVector;
+using systems::sensors::DepthSensorOutput;
+using systems::sensors::ImageDepth32F;
+using systems::sensors::CameraInfo;
 
-using manipulation::ArticulatedStateEstimator;
-using manipulation::LeafSystemMixin;
-using manipulation::GetHierarchicalPositionNameList;
+typedef Eigen::Matrix3Xd PointCloud;
 
-using systems::AbstractZOH;
+// HACK: Cribbed from rgbd_camera.cc
+const int kImageWidth = 640;  // In pixels
+const int kImageHeight = 480;  // In pixels
 
 namespace examples {
 namespace kuka_iiwa_arm {
 namespace monolithic_pick_and_place {
 
-class WallClockPublisher : public LeafSystemMixin<double> {
+typedef double T;
+
+/**
+ * Simple mixin to get simplified aliases.
+ */
+template <typename T_>
+class LeafSystemMixin : public systems::LeafSystem<T_> {
+ public:
+  typedef T_ T;
+  typedef systems::Context<T> Context;
+  typedef systems::DiscreteValues<T> DiscreteValues;
+  typedef systems::SystemOutput<T> SystemOutput;
+  typedef systems::State<T> State;
+  using Inport = systems::InputPortDescriptor<T>;
+  using Outport = systems::OutputPortDescriptor<T>;
+  template <typename U>
+  using Value = systems::Value<U>;
+};
+
+
+class WallClockPublisher : public LeafSystemMixin<T> {
  public:
   WallClockPublisher() {
     // HACK: Store previous time in state, if possible.
     timer_.reset(new timing::Timer());
     prev_time_.reset(new double(0.));
     this->DeclarePerStepAction(
-          systems::DiscreteEvent<double>::kDiscreteUpdateAction);
+          systems::DiscreteEvent<T>::kDiscreteUpdateAction);
   }
-
-  typedef double T;
-
  protected:
-  void DoCalcOutput(const Context&, SystemOutput*) const override {}
   void DoCalcDiscreteVariableUpdates(
       const Context& context, DiscreteValues* discrete_state) const override {
     unused(discrete_state);
@@ -105,26 +105,9 @@ class WallClockPublisher : public LeafSystemMixin<double> {
   }
  private:
   // HACK
-  unique_ptr<double> prev_time_;
+  unique_ptr<T> prev_time_;
   unique_ptr<timing::Timer> timer_;
 };
-
-using systems::rendering::PoseVector;
-using systems::sensors::DepthSensorOutput;
-using systems::sensors::ImageDepth32F;
-using systems::sensors::CameraInfo;
-
-typedef Eigen::Matrix3Xd PointCloud;
-
-// HACK: Cribbed from rgbd_camera.cc
-const int kImageWidth = 640;  // In pixels
-const int kImageHeight = 480;  // In pixels
-
-// // Sigh...
-//template <typename T>
-//auto MakeValue(T&& value) {
-//  return systems::Value<T>(std::forward<T>(value));
-//}
 
 /**
  * Transform two poses in the order they are supplied.
@@ -133,12 +116,12 @@ const int kImageHeight = 480;  // In pixels
  *   inputs: X_AB, X_BC
  *   output: X_AC
  */
-class PoseTransformer : public LeafSystemMixin<double> {
+class PoseTransformer : public LeafSystemMixin<T> {
  public:
   PoseTransformer() {
-    DeclareVectorInputPort(PoseVector<double>());
-    DeclareVectorInputPort(PoseVector<double>());
-    DeclareVectorOutputPort(PoseVector<double>());
+    DeclareVectorInputPort(PoseVector<T>());
+    DeclareVectorInputPort(PoseVector<T>());
+    DeclareVectorOutputPort(PoseVector<T>());
   }
  protected:
   void DoCalcOutput(const Context& context, SystemOutput* output) const override {
@@ -147,7 +130,7 @@ class PoseTransformer : public LeafSystemMixin<double> {
     auto&& pose_b =
         EvalVectorInput<PoseVector>(context, 1);
     auto&& pose_out =
-        *dynamic_cast<PoseVector<double>*>(output->GetMutableVectorData(0));
+        *dynamic_cast<PoseVector<T>*>(output->GetMutableVectorData(0));
     Eigen::Isometry3d X_out =
         pose_a->get_isometry() * pose_b->get_isometry();
     pose_out.set_translation(Eigen::Translation3d(X_out.translation()));
@@ -155,27 +138,7 @@ class PoseTransformer : public LeafSystemMixin<double> {
   }
 };
 
-//template <typename T>
-//struct SimpleLog {
-// public:
-//  std::vector<double> times;
-//  std::vector<T> data;
-//  void AddData(double t, const T& in) {
-//    times.push_back(t);
-//    data.push_back(in);
-//  }
-//  const T& GetData(double t) const {
-//    DRAKE_DEMAND(times.size() > 0);
-//    int i = 0;
-//    while (i + 1 < (int)times.size() && t > times[i]) {
-//      ++i;
-//    }
-//    // Will latch last time, 'cause HACK.
-//    return data[i];
-//  }
-//};
-
-class DepthImageNoise : public LeafSystemMixin<double> {
+class DepthImageNoise : public LeafSystemMixin<T> {
  public:
   DepthImageNoise(double noise_rel_magnitude)
     : noise_rel_magnitude_(noise_rel_magnitude) {
@@ -203,8 +166,9 @@ class DepthImageNoise : public LeafSystemMixin<double> {
  private:
   double noise_rel_magnitude_;
   // Modelling after: RandomSource
+  // TODO: Use Abstract State.
   using Generator = std::mt19937;
-  using Distribution = std::normal_distribution<double>;
+  using Distribution = std::normal_distribution<T>;
   struct InternalState {
     Generator noise_generator;
     Distribution noise_distribution;
@@ -217,7 +181,7 @@ class DepthImageNoise : public LeafSystemMixin<double> {
  * image. This will iterate along the borders, and place a point at a maximum
  * distance if it was not found in the point cloud.
  */
-class CameraFrustrumVisualizer : public LeafSystemMixin<double> {
+class CameraFrustrumVisualizer : public LeafSystemMixin<T> {
  public:
   CameraFrustrumVisualizer(DrakeLcm* lcm,
       const CameraInfo& camera_info,
@@ -227,13 +191,11 @@ class CameraFrustrumVisualizer : public LeafSystemMixin<double> {
         max_depth_(max_depth) {
     DeclarePublishPeriodSec(period_sec);
     DeclareAbstractInputPort();
-    DeclareVectorInputPort(PoseVector<double>());
+    DeclareVectorInputPort(PoseVector<T>());
     lcmgl_ = bot_lcmgl_init(lcm->get_lcm_instance()->getUnderlyingLCM(),
                                  "camera_frustrum");
   }
-//  void PlaybackFrame(double t) const {
-//    log_.GetData(t).Draw(lcmgl_, min_depth_);
-//  }
+
  protected:
   struct Entry {
     Eigen::Isometry3d X_WC;
@@ -376,7 +338,7 @@ class CameraFrustrumVisualizer : public LeafSystemMixin<double> {
 // Provides point cloud in depth sensor frame.
 // TODO(eric.cousineau): Decouple point-cloud definition from DepthSensorOutput,
 // or decouple / use composition for LCM point cloud translation from this.
-class DepthImageToPointCloud : public LeafSystemMixin<double> {
+class DepthImageToPointCloud : public LeafSystemMixin<T> {
   // Model after: DpethSensorToLcmPointCloudMessage
  public:
   DepthImageToPointCloud(const CameraInfo& camera_info,
@@ -414,92 +376,9 @@ class DepthImageToPointCloud : public LeafSystemMixin<double> {
   int output_port_index_{};
 };
 
-///**
-// * Use LCMGL to show a point cloud.
-// * Will not perform any frame transforms.
-// */
-//class PointCloudVisualizer : public systems::LeafSystem<double> {
-// public:
-//  PointCloudVisualizer(drake::lcm::DrakeLcm *lcm, double dt);
-//  ~PointCloudVisualizer();
-//  void PlaybackFrame(double t) const;
-// protected:
-//  void PublishCloud(const Matrix3Xd& cloud) const;
-//  void DoPublish(const systems::Context<double>& context) const override;
-//  void DoCalcOutput(const systems::Context<double>&,
-//                    systems::SystemOutput<double>*) const override;
-// private:
-//  class Impl;
-//  std::shared_ptr<Impl> impl_;
-//};
-
-//class PointCloudVisualizer::Impl {
-// public:
-//  SimpleLog<Matrix3Xd> log_;
-//  bot_lcmgl_t* lcmgl_{};
-//};
-
-//PointCloudVisualizer::PointCloudVisualizer(drake::lcm::DrakeLcm* lcm, double dt) {
-//  impl_.reset(new Impl());
-//  Impl& impl = *impl_;
-//  impl.lcmgl_ = bot_lcmgl_init(lcm->get_lcm_instance()->getUnderlyingLCM(),
-//                          "point_cloud_playback");
-//  DeclareAbstractInputPort();
-//  DeclareVectorInputPort(PoseVector<double>()).get_index();
-//  DeclarePublishPeriodSec(dt);
-//}
-
-//PointCloudVisualizer::~PointCloudVisualizer() {}
-
-//void PointCloudVisualizer::PlaybackFrame(double t) const {
-//  Impl& impl = *impl_;
-//  const Matrix3Xd& data = impl.log_.GetData(t);
-//  PublishCloud(data);
-//}
-
-//void PointCloudVisualizer::PublishCloud(const Eigen::Matrix3Xd& cloud) const {
-//  Impl& impl = *impl_;
-//  auto* lcmgl_ = impl.lcmgl_;
-//  bot_lcmgl_begin(lcmgl_, LCMGL_POINTS);
-//  double width = 640;
-//  double height = 480;
-//  int downsample = 5;
-//  for (int v = 0; v < height; v += downsample) {
-//    for (int u = 0; u < width; u += downsample) {
-//      // TODO(eric.cousineau): Use random downsampling from actual estimation.
-//      int dv = 0; //rand() % downsample;
-//      int du = 0; //rand() % downsample;
-//      int i = (v + dv) * width + (u + du);
-//      auto&& pt = cloud.col(i);
-//      if (!std::isnan(pt[0]) && !std::isinf(pt[0])) {
-//        bot_lcmgl_color3f(lcmgl_, 0.5, 1.0, 0.5);
-//        bot_lcmgl_vertex3f(lcmgl_, pt[0], pt[1], pt[2]);
-//      }
-//    }
-//  }
-//  bot_lcmgl_end(lcmgl_);
-//  bot_lcmgl_switch_buffer(lcmgl_);
-//}
-
-//using systems::Context;
-//using systems::SystemOutput;
-
-//void PointCloudVisualizer::DoPublish(const Context<double>& context) const {
-//  const Matrix3Xd& point_cloud = EvalAbstractInput(context, 0)
-//                                 ->GetValue<Matrix3Xd>();
-//  auto pose_WS = EvalVectorInput<PoseVector>(context, 1);
-//  auto X_WS = pose_WS->get_isometry();
-//  auto point_cloud_W = X_WS * point_cloud;
-//  impl_->log_.AddData(context.get_time(), point_cloud_W);
-//  PublishCloud(point_cloud_W);
-//}
-
-//void PointCloudVisualizer::DoCalcOutput(const Context<double>&,
-//                                        SystemOutput<double>*) const {}
-
 // Publishes point cloud in world frame.
 // TODO(eric.cousineau): Replace with LCM Translator when PR lands
-class PointCloudToLcmPointCloud : public LeafSystemMixin<double> {
+class PointCloudToLcmPointCloud : public LeafSystemMixin<T> {
  public:
   typedef Eigen::Matrix3Xd Data;
   typedef bot_core::pointcloud_t Message;
@@ -511,7 +390,7 @@ class PointCloudToLcmPointCloud : public LeafSystemMixin<double> {
     output_port_index_ =
         DeclareAbstractOutputPort(Value<Message>()).get_index();
     pose_input_port_index_ =
-        DeclareVectorInputPort(PoseVector<double>()).get_index();
+        DeclareVectorInputPort(PoseVector<T>()).get_index();
   }
 
   const Inport& get_pose_inport() const {
@@ -565,35 +444,6 @@ class PointCloudToLcmPointCloud : public LeafSystemMixin<double> {
   int downsample_{};
 };
 
-//template <typename Type, typename Port>
-//void HoldOutport(const Port** pptr, double dt, const Type& value = Type) {
-
-//}
-
-//using manipulation::VectorPortion;
-//using manipulation::VectorSlice;
-//using Eigen::VectorXd;
-
-//class VectorSliceTranslator : public LeafSystemMixin<double> {
-// public:
-//  typedef VectorSlice<double> Slice;
-
-//  VectorSliceTranslator(const Slice& input_slice)
-//    : input_slice_(input_slice) {
-//    DeclareInputPort(systems::kVectorValued, input_slice_.super_size());
-//    DeclareOutputPort(systems::kVectorValued, input_slice_.size());
-//  }
-
-//  void DoCalcOutput(
-//      const Context& context, SystemOutput* output) const override {
-//    VectorXd input = EvalVectorInput(context, 0)->CopyToVector();
-//    auto&& subset = output->GetMutableVectorData(0)->get_mutable_value();
-//    input_slice_.ReadFromSuperset(input, subset);
-//  }
-// private:
-//  Slice input_slice_;
-//};
-
 /**
  * Convenience to infer type.
  */
@@ -611,29 +461,19 @@ struct PerceptionHack::Impl {
   LcmPublisherSystem* image_lcm_pub_{};
   LcmPublisherSystem* rgbd_camera_pose_lcm_pub_{};
 
-  DepthSensor* depth_sensor_{};
-  LcmPublisherSystem* depth_sensor_pose_lcm_pub_{};
-  DrakeVisualizer* estimator_vis_{};
-
-//  PointCloudVisualizer* pc_vis_{};
   CameraFrustrumVisualizer* cf_vis_{};
 
   void CreateAndConnectCamera(
       DiagramBuilder* pbuilder,
       DrakeLcm* plcm,
-      TreePlant* pplant,
-      const ReverseIdMap& plant_id_map) {
+      TreePlant* pplant) {
 
-//    drake::log()->set_level(spdlog::level::trace);
-
-    bool use_rgbd_camera = true;
-    bool use_depth_sensor = false;
     bool use_wall_clock_pub = false;
 
     const double pi = M_PI;
 
     // HACK
-    auto& rigid_body_tree = const_cast<RigidBodyTree<double>&>(
+    auto& rigid_body_tree = const_cast<RigidBodyTree<T>&>(
         pplant->get_plant().get_rigid_body_tree());
 
     // Camera.
@@ -644,12 +484,8 @@ struct PerceptionHack::Impl {
       pbuilder->template AddSystem<WallClockPublisher>();
     }
 
-    const double camera_dt = 0.033; // ~30 Hz
-    if (use_rgbd_camera) {
-      bool use_estimator = true;
-
-      // Adapted from: .../image_to_lcm_message_demo.cc
-
+    const double camera_dt = 1. / 30; // ~30 Hz
+    if (true) {
       auto rgbd_camera_instance = new RgbdCamera(
           "rgbd_camera", rigid_body_tree,
           position, orientation * pi / 180, pi / 4, true,
@@ -672,7 +508,7 @@ struct PerceptionHack::Impl {
 
       // Add noise.
       auto depth_noise =
-          pbuilder->template AddSystem<DepthImageNoise>(0.02 / 3);
+          pbuilder->template AddSystem<DepthImageNoise>(0.02 / 3);  // 2% noise max at 3 sigma of distribution
       pbuilder->Connect(
             depth_zoh->get_output_port(0),
             depth_noise->get_input_port(0));
@@ -698,12 +534,12 @@ struct PerceptionHack::Impl {
       X_BD.translation() = p_BD;
       // TODO(eric.cousineau): This was very inconvenient. Is there a simpler
       // way to do this, possibly just in service of double templates?
-      PoseVector<double> pose_BD; // sigh...
+      PoseVector<T> pose_BD; // sigh...
       pose_BD.set_rotation(Eigen::Quaterniond(X_BD.rotation()));
       pose_BD.set_translation(Eigen::Translation3d(X_BD.translation()));
       using systems::ConstantVectorSource;
       auto* depth_to_camera_pose =
-          pbuilder->template AddSystem<ConstantVectorSource<double>>(
+          pbuilder->template AddSystem<ConstantVectorSource<T>>(
               pose_BD);
       auto camera_pose_transformer =
           pbuilder->template AddSystem<PoseTransformer>();
@@ -792,15 +628,6 @@ struct PerceptionHack::Impl {
             pc_zoh->get_input_port(0));
       auto&& pc_output_port = pc_zoh->get_output_port(0);
 
-//      pc_vis_ =
-//          pbuilder->template AddSystem<PointCloudVisualizer>(plcm, camera_dt);
-//      pbuilder->Connect(
-//            depth_to_pc->get_output_port(0),
-//            pc_vis_->get_input_port(0));
-//      pbuilder->Connect(
-//            depth_camera_pose_output_port,
-//            pc_vis_->get_input_port(1));
-
       if (true) { //do_publish) {
         typedef PointCloudToLcmPointCloud Converter;
         auto pc_to_lcm = pbuilder->template AddSystem<Converter>(5);
@@ -820,146 +647,18 @@ struct PerceptionHack::Impl {
               pc_to_lcm->get_outport(),
               depth_lcm_pub->get_input_port(0));
       }
-
-      if (use_estimator) {
-        string base_path = "drake/examples/kuka_iiwa_arm/dev/monolithic_pick_and_place/";
-        string config_file =
-            drake::FindResource(base_path + "dart_config/iiwa_test.yaml").get_absolute_path_or_throw();
-
-        bool add_velocities = true;
-        auto input_position_names = GetHierarchicalPositionNameList(
-                                      pplant->get_plant().get_rigid_body_tree(),
-                                      plant_id_map, add_velocities);
-        std::cout << "input plane names:\n";
-        int index = 0;
-        for (auto&& name : input_position_names) {
-          std::cout << "  " << index++ << ": " << name << "\n";
-        }
-
-        ArticulatedStateEstimator* estimator =
-            pbuilder->template AddSystem<ArticulatedStateEstimator>(
-                config_file, &rgbd_camera_->depth_camera_info(),
-                input_position_names, camera_dt);
-
-        pbuilder->Connect(pc_output_port,
-                          estimator->inport_point_cloud());
-        pbuilder->Connect(depth_image_output_port,
-                          estimator->inport_depth_image());
-        pbuilder->Connect(depth_camera_pose_output_port,
-                          estimator->inport_depth_camera_pose());
-
-        pbuilder->Connect(pplant->get_output_port_plant_state(),
-                          estimator->inport_tree_q_measurement());
-
-        // Create visualizer with prefix
-        estimator_vis_ =
-            pbuilder->template AddSystem<DrakeVisualizer>(
-                estimator->get_tree(),
-                plcm,
-                true,
-                "ESTIMATOR_");
-        estimator_vis_->set_name("estimator_visualizer");
-
-        pbuilder->Connect(estimator->outport_tree_state_estimate(),
-                          estimator_vis_->get_input_port(0));
-
-//        // Make sure it works with duplicating the original plant.
-//        auto estimator_vis =
-//            pbuilder->template AddSystem<DrakeVisualizer>(
-//              rigid_body_tree,
-//              plcm,
-//              false,
-//              "ESTIMATOR_");
-//        estimator_vis->set_name("estimator_visualizer");
-//        pbuilder->Connect(pplant->get_output_port_plant_state(),
-//                          estimator_vis->get_input_port(0));
-      }
-    }
-
-    if (use_depth_sensor) {
-      // Try out an equivalent depth sensor (or rather, just send out raycasts).
-      DepthSensorSpecification specification;
-  //    DepthSensorSpecification::set_octant_1_spec(&specification);
-      auto* spec = &specification;
-      spec->set_min_yaw(-pi / 4);
-      spec->set_max_yaw(pi / 4);
-      spec->set_min_pitch(-pi / 4);
-      spec->set_max_pitch(pi / 4);
-      spec->set_num_yaw_values(60);
-      spec->set_num_pitch_values(80);
-      spec->set_min_range(0);
-      spec->set_max_range(5);
-
-      auto world_body = &rigid_body_tree.world();
-      auto frame = make_shared<RigidBodyFrame<double>>(
-          "depth_sensor", world_body, position, orientation * pi / 180);
-      rigid_body_tree.addFrame(frame);
-      auto depth_sensor_instance = new DepthSensor(
-          "depth_sensor", rigid_body_tree, *frame, specification);
-      depth_sensor_ = pbuilder->AddSystem(CreateUnique(depth_sensor_instance));
-      depth_sensor_->set_name("depth_sensor");
-
-      // Connect directly to ground truth state.
-      pbuilder->Connect(
-          pplant->get_output_port_plant_state(),
-          depth_sensor_->get_rigid_body_tree_state_input_port());
-
-      // Point Cloud to LCM.
-      // From: depth_sensor_to_lcm_point_cloud_message_demo
-      auto depth_to_lcm_message_ =
-          pbuilder->template AddSystem<DepthSensorToLcmPointCloudMessage>(specification);
-      auto lcm_publisher_depth_ = pbuilder->template AddSystem(
-          LcmPublisherSystem::Make<bot_core::pointcloud_t>(
-              "DRAKE_POINTCLOUD_DEPTH", plcm));
-      pbuilder->Connect(
-        depth_sensor_->get_sensor_state_output_port(),
-        depth_to_lcm_message_->depth_readings_input_port());
-      pbuilder->Connect(
-          depth_to_lcm_message_->pointcloud_message_output_port(),
-          lcm_publisher_depth_->get_input_port(0));
-      pbuilder->Connect(
-          depth_sensor_->get_pose_output_port(),
-          depth_to_lcm_message_->pose_input_port());
-
-      // Camera pose publisher (to visualize)
-      depth_sensor_pose_lcm_pub_ = pbuilder->template AddSystem<
-        LcmPublisherSystem>("DRAKE_DEPTH_SENSOR_POSE",
-                            pose_translator_, plcm);
-      depth_sensor_pose_lcm_pub_->set_name("pose_lcm_publisher");
-      depth_sensor_pose_lcm_pub_->set_publish_period(0.01);
-
-      pbuilder->Connect(
-          depth_sensor_->get_pose_output_port(),
-          depth_sensor_pose_lcm_pub_->get_input_port(0));
     }
   }
 };
 
 
 void PerceptionHack::Inject(DiagramBuilder* pbuilder, DrakeLcm* plcm,
-                            TreePlant* pplant, const ReverseIdMap& plant_id_map) {
+                            TreePlant* pplant) {
   impl_.reset(new Impl());
-  impl_->CreateAndConnectCamera(pbuilder, plcm, pplant, plant_id_map);
-}
-
-void PerceptionHack::PlaybackFrame(double t) {
-  SCOPE_TIME(playback, "playback");
-  auto vis_cache_ = impl_->estimator_vis_->GetReplayCachedSimulation();
-  impl_->estimator_vis_->PlaybackTrajectoryFrame(vis_cache_, t);
-//  impl_->cf_vis_->PlaybackFrame(t);
-//  timing::sleep(0.005);
-//  impl_->pc_vis_->PlaybackFrame(t);
+  impl_->CreateAndConnectCamera(pbuilder, plcm, pplant);
 }
 
 PerceptionHack::~PerceptionHack() {}
-
-/*
-  const bool use_slow_meshes = false;
-
-  // Sets up a RGBD camera.
-  impl_.reset(new Impl());
-  impl_->CreateAndConnectCamera(&builder, lcm, plant_);
-*/
 
 }  // namespace monolithic_pick_and_place
 }  // namespace kuka_iiwa_arm
