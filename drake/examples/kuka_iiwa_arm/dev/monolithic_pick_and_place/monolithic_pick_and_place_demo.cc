@@ -3,6 +3,7 @@
 #include <vector>
 
 #include <gflags/gflags.h>
+
 #include "bot_core/robot_state_t.hpp"
 #include "robotlocomotion/robot_plan_t.hpp"
 
@@ -16,7 +17,6 @@
 #include "drake/lcmtypes/drake/lcmt_schunk_wsg_command.hpp"
 #include "drake/manipulation/schunk_wsg/schunk_wsg_lcm.h"
 #include "drake/math/rotation_matrix.h"
-#include "drake/multibody/parsers/urdf_parser.h"
 #include "drake/multibody/rigid_body_plant/drake_visualizer.h"
 #include "drake/multibody/rigid_body_plant/rigid_body_plant.h"
 #include "drake/systems/analysis/simulator.h"
@@ -24,10 +24,12 @@
 #include "drake/systems/framework/diagram_builder.h"
 #include "drake/systems/primitives/constant_vector_source.h"
 
+#include "drake/examples/kuka_iiwa_arm/dev/monolithic_pick_and_place/perception_hack.h"
 DEFINE_uint64(target, 0, "ID of the target to pick.");
 DEFINE_double(orientation, 2 * M_PI, "Yaw angle of the box.");
 DEFINE_uint32(start_position, 1, "Position index to start from");
 DEFINE_uint32(end_position, 2, "Position index to end at");
+DEFINE_bool(use_perception, true, "Use perception for tracking.");
 
 using robotlocomotion::robot_plan_t;
 
@@ -140,6 +142,7 @@ std::unique_ptr<systems::RigidBodyPlant<double>> BuildCombinedPlant(
 
 
 int DoMain(void) {
+
   // Locations for the posts from physical pick and place tests with
   // the iiwa+WSG.
   std::vector<Eigen::Vector3d> post_locations;
@@ -268,6 +271,11 @@ int DoMain(void) {
                   wsg_trajectory_generator->get_command_input_port());
   builder.Connect(state_machine->get_output_port_iiwa_plan(),
                   iiwa_trajectory_generator->get_plan_input_port());
+
+  PerceptionHack perception;
+  if (FLAGS_use_perception) {
+    perception.Inject(&builder, &lcm, plant, plant_instance_name_map);
+  }
 
   auto sys = builder.Build();
   Simulator<double> simulator(*sys);
