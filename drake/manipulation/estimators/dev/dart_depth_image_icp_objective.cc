@@ -201,18 +201,10 @@ struct IcpPointGroup {
     body_pts_W.col(i) = body_W;
     body_pts_Bi.col(i) = body_Bi;
   }
-  void Finish() {
-    auto trim_pts = [this](auto&& X) {
-      X.conservativeResize(NoChange, num_actual);
-    };
-    trim_pts(meas_pts_W);
-    trim_pts(meas_pts_C);
-    trim_pts(body_pts_W);
-    trim_pts(body_pts_Bi);
-  }
   void AddTerms(const IcpScene& scene,
                 IcpLinearizedNormAccumulator* error_accumulator,
                 double weight) {
+    Trim();
     // Get point jacobian w.r.t. camera frame, as that is the only influence
     // on the measured point cloud.
     MatrixXd J_meas_pts_W =
@@ -228,6 +220,15 @@ struct IcpPointGroup {
     error_accumulator->AddTerms(weight, es_W, J_es_W);
   }
  private:
+  void Trim() {
+    auto trim_pts = [this](auto&& X) {
+      X.conservativeResize(NoChange, num_actual);
+    };
+    trim_pts(meas_pts_W);
+    trim_pts(meas_pts_C);
+    trim_pts(body_pts_W);
+    trim_pts(body_pts_Bi);
+  }
   const int frame_Bi{-1};
   const int num_max{};
   Matrix3Xd meas_pts_W;
@@ -302,6 +303,7 @@ double GetDistanceToAxis(const Vector3d& pt, const Vector3d& n) {
   return (pt - n * n.dot(pt)).norm();
 }
 
+
 void DartDepthImageIcpObjective::UpdateFormulation(
     double t, const KinematicsCached& kin_cache, const VectorXd& obj_prior) {
   unused(t);
@@ -315,7 +317,7 @@ void DartDepthImageIcpObjective::UpdateFormulation(
   const RigidBodyTreed& tree = this->tree();
   RigidBodyTreed& mutable_tree = const_cast<RigidBodyTreed&>(tree);
 
-  KinematicsState kin_state(kin_cache);
+//  KinematicsState kin_state(kin_cache);
   const bool use_margins = false;
 
   auto IsValidPoint = [this](auto&& pt) {

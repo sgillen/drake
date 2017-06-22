@@ -111,7 +111,10 @@ class DartTest : public ::testing::Test {
   }
 
   void CreateEstimator() {
+    VectorXd q0(6);
+    q0 << 0, 0, 0.2, 0, 0, 0;
     KinematicsState initial_state(scene_->tree());
+    initial_state.q() << q0;
     EXPECT_EQ(6, initial_state.q().size());
     EXPECT_EQ(6, initial_state.v().size());
 
@@ -121,6 +124,7 @@ class DartTest : public ::testing::Test {
     };
     estimator_.reset(
         new DartEstimator(CreateUnique(formulation_), estimator_param));
+    EXPECT_EQ(q0, initial_state.q());
   }
 
   void SimulateDepthImage(double t, const KinematicsState& state_meas,
@@ -201,11 +205,11 @@ class DartTest : public ::testing::Test {
     KinematicsState state_prev = estimator_->initial_state();
     KinematicsState state_meas(*tree_);
     state_meas.q() <<
-        0.1, -0.2, 0.0, 0, 0, 10 * M_PI / 180.;
+        0.1, -0.2, 0.2, 0, 0, 10 * M_PI / 180.;
     double t = 0;
     double dt = 0.01;
     double t_end = 0.05;
-    while (t < t_end) {
+    while (t <= t_end) {
       state_prev = UpdateAndCheckConvergence(t, state_prev, state_meas);
       t += dt;
     }
@@ -226,11 +230,11 @@ class DartTest : public ::testing::Test {
   unique_ptr<DartEstimator> estimator_;
 };
 
-TEST_F(DartTest, JointObjective) {
-  AddJointObjective();
-  CreateEstimator();
-  CheckShortLoop();
-}
+//TEST_F(DartTest, JointObjective) {
+//  AddJointObjective();
+//  CreateEstimator();
+//  CheckShortLoop();
+//}
 
 TEST_F(DartTest, DepthObjective) {
   AddDepthObjective();

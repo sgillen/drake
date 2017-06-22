@@ -18,6 +18,9 @@ struct Interval {
   inline bool IsInside(double i) const {
     return i >= min && i <= max;
   }
+  inline double width() const {
+    return max - min;
+  }
 };
 struct Bounds {
   Interval x;
