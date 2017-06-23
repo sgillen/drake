@@ -59,24 +59,23 @@ namespace systems {
 ////  typename Traits::Storage value_;
 //};
 
-template <typename T>
-class AbstractZOH : public LeafSystem<double> {
+template <typename Data, typename T = double>
+class AbstractZOH : public LeafSystem<T> {
  public:
-  typedef std::function<void(double time, const T& value)> OnUpdate;
+  typedef std::function<void(double time, const Data& value)> OnUpdate;
 
   AbstractZOH(double period_sec, bool use_autoinit = false)
-      : AbstractZOH(T(), period_sec, 0., use_autoinit) {}
+      : AbstractZOH(Data(), period_sec, 0., use_autoinit) {}
 
-  AbstractZOH(const T& ic, double period_sec, double offset_sec = 0.,
+  AbstractZOH(const Data& ic, double period_sec, double offset_sec = 0.,
               bool use_autoinit = false)
       : use_autoinit_(use_autoinit) {
-    // Using LcmSubscriberSystem as a basis
-    // This will receive Value<T>, not Value<Data>.
     this->DeclareAbstractInputPort();
-    // TODO(eric.cousineau): Is there a way to not care about the default constructor,
-    // and just inherit this from an upstream system?
-    this->DeclareAbstractState(std::make_unique<Value<T>>(ic));
-    this->DeclareAbstractOutputPort(Value<T>(ic));
+    // TODO(eric.cousineau): Is there a way to not care about the default
+    // constructor, and just inherit this from an upstream system given
+    // type erasure?
+    this->DeclareAbstractState(std::make_unique<Value<Data>>(ic));
+    this->DeclareAbstractOutputPort(Value<Data>(ic), &CalcOutput);
     DeclarePeriodicUnrestrictedUpdate(period_sec, offset_sec);
   }
 
@@ -86,36 +85,34 @@ class AbstractZOH : public LeafSystem<double> {
   }
 
  protected:
-  void DoCalcUnrestrictedUpdate(const Context<double>& context,
-                                State<double>* state) const override {
-    const T& input_value =
-        EvalAbstractInput(context, 0)->template GetValue<T>();
-    T& stored_value =
+  void DoCalcUnrestrictedUpdate(const Context<T>& context,
+                                State<T>* state) const override {
+    const Data& input_value =
+        EvalAbstractInput(context, 0)->template GetValue<Data>();
+    Data& stored_value =
         state->get_mutable_abstract_state()
-            ->get_mutable_value(0).GetMutableValue<T>();
+            ->get_mutable_value(0).GetMutableValue<Data>();
     stored_value = input_value;
     if (on_update_) {
       on_update_(context.get_time(), input_value);
     }
   }
 
-  void SetDefaultState(const Context<double>& context,
-                       State<double>* state) const override {
+  void SetDefaultState(const Context<T>& context,
+                       State<T>* state) const override {
     if (use_autoinit_) {
       // Update initial values with the ICs from upstream blocks.
       DoCalcUnrestrictedUpdate(context, state);
     } else {
-      LeafSystem<double>::SetDefaultState(context, state);
+      LeafSystem<T>::SetDefaultState(context, state);
     }
   }
 
-  void DoCalcOutput(const Context<double>& context,
-                    SystemOutput<double>* output) const override {
-    const T& stored_value =
-        context.get_abstract_state()->get_value(0).GetValue<T>();
-    T& output_value =
-      output->GetMutableData(0)->GetMutableValue<T>();
-    output_value = stored_value;
+  void CalcOutput(const Context<T>& context,
+                    Data* poutput) const {
+    const Data& stored_value =
+        context.get_abstract_state()->get_value(0).GetValue<Data>();
+    *poutput = stored_value;
   }
  private:
   OnUpdate on_update_;
