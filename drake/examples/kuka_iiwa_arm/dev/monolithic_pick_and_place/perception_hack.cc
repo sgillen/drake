@@ -26,7 +26,7 @@
 
 #include "drake/examples/kuka_iiwa_arm/iiwa_world/iiwa_wsg_diagram_factory.h"
 
-#include "drake/examples/kuka_iiwa_arm/dev/monolithic_pick_and_place//abstract_zoh.h"
+#include "drake/examples/kuka_iiwa_arm/dev/monolithic_pick_and_place/abstract_zoh.h"
 
 namespace drake {
 
@@ -80,35 +80,6 @@ class LeafSystemMixin : public systems::LeafSystem<T_> {
   using Value = systems::Value<U>;
 };
 
-
-class WallClockPublisher : public LeafSystemMixin<T> {
- public:
-  WallClockPublisher() {
-    // HACK: Store previous time in state, if possible.
-    timer_.reset(new timing::Timer());
-    prev_time_.reset(new double(0.));
-    this->DeclarePerStepAction(
-          systems::DiscreteEvent<T>::kDiscreteUpdateAction);
-  }
- protected:
-  void DoCalcDiscreteVariableUpdates(
-      const Context& context, DiscreteValues* discrete_state) const override {
-    unused(discrete_state);
-    if (timer_->is_active()) {
-      double elapsed = timer_->stop();
-      double sim_elapsed = context.get_time() - *prev_time_;
-      std::cout << "Elapsed time: " << elapsed << std::endl;
-      std::cout << "  - Sim: " << sim_elapsed << std::endl;
-    }
-    timer_->start();
-    *prev_time_ = context.get_time();
-  }
- private:
-  // HACK
-  unique_ptr<T> prev_time_;
-  unique_ptr<timing::Timer> timer_;
-};
-
 /**
  * Transform two poses in the order they are supplied.
  *
@@ -121,16 +92,16 @@ class PoseTransformer : public LeafSystemMixin<T> {
   PoseTransformer() {
     DeclareVectorInputPort(PoseVector<T>());
     DeclareVectorInputPort(PoseVector<T>());
-    DeclareVectorOutputPort(PoseVector<T>());
+    DeclareVectorOutputPort(PoseVector<T>(),
+                            &CalcPose);
   }
  protected:
-  void DoCalcOutput(const Context& context, SystemOutput* output) const override {
+  void CalcPose(const Context& context,
+                    PoseVector<T>* pose_out) const {
     auto&& pose_a =
         EvalVectorInput<PoseVector>(context, 0);
     auto&& pose_b =
         EvalVectorInput<PoseVector>(context, 1);
-    auto&& pose_out =
-        *dynamic_cast<PoseVector<T>*>(output->GetMutableVectorData(0));
     Eigen::Isometry3d X_out =
         pose_a->get_isometry() * pose_b->get_isometry();
     pose_out.set_translation(Eigen::Translation3d(X_out.translation()));
@@ -144,16 +115,15 @@ class DepthImageNoise : public LeafSystemMixin<T> {
     : noise_rel_magnitude_(noise_rel_magnitude) {
     ImageDepth32F depth_image(kImageWidth, kImageHeight);
     DeclareAbstractInputPort(Value<ImageDepth32F>(depth_image));
-    DeclareAbstractOutputPort(Value<ImageDepth32F>(depth_image));
+    DeclareAbstractOutputPort(Value<ImageDepth32F>(depth_image),
+                              &CalcNoise);
   }
  protected:
-  void DoCalcOutput(const Context& context,
-                    SystemOutput* output) const override {
+  void CalcNoise(const Context& context,
+                    ImageDepth32F* pout) const {
     const auto& in =
         EvalAbstractInput(context, 0)->GetValue<ImageDepth32F>();
-    ImageDepth32F& out =
-        output->GetMutableData(0)->GetMutableValue<
-          ImageDepth32F>();
+    ImageDepth32F& out = *pout;
 
     for (int v = 0; v < in.height(); v++) {
       for (int u = 0; u < in.width(); u++) {
@@ -164,16 +134,16 @@ class DepthImageNoise : public LeafSystemMixin<T> {
     }
   }
  private:
-  double noise_rel_magnitude_;
+  double noise_rel_magnitude_{};
   // Modelling after: RandomSource
   // TODO: Use Abstract State.
   using Generator = std::mt19937;
   using Distribution = std::normal_distribution<T>;
-  struct InternalState {
+  struct RandomState {
     Generator noise_generator;
     Distribution noise_distribution;
   };
-  mutable InternalState state_;
+  mutable RandomState state_;
 };
 
 /**
@@ -239,7 +209,6 @@ class CameraFrustrumVisualizer : public LeafSystemMixin<T> {
     }
   };
 
-  void DoCalcOutput(const Context&, SystemOutput*) const override {}
   void DoPublish(const Context& context) const override {
     const Matrix3Xd& point_cloud_C = EvalAbstractInput(context, 0)
                                    ->GetValue<Matrix3Xd>();
@@ -351,18 +320,19 @@ class DepthImageToPointCloud : public LeafSystemMixin<T> {
     // TODO(eric.cousineau): Determine proper way to pass a basic point cloud.
     PointCloud point_cloud(3, depth_image.size());
     output_port_index_ =
-        DeclareAbstractOutputPort(Value<PointCloud>(point_cloud)).get_index();
+        DeclareAbstractOutputPort(
+            Value<PointCloud>(point_cloud), &CalcPointCloud).get_index();
   }
   const Inport& get_depth_image_inport() const {
     return get_input_port(depth_image_input_port_index_);
   }
  protected:
-  void DoCalcOutput(const Context& context, SystemOutput* output) const override {
+  void CalcPointCloud(const Context& context,
+                      PointCloud* *ppoint_cloud) const override {
     const auto& depth_image =
         EvalAbstractInput(context, depth_image_input_port_index_)
         ->GetValue<ImageDepth32F>();
-    auto& point_cloud = output->GetMutableData(output_port_index_)
-                        ->GetMutableValue<PointCloud>();
+    auto& point_cloud = *ppoint_cloud;
     RgbdCamera::ConvertDepthImageToPointCloud(depth_image, camera_info_,
                                               &point_cloud);
     drake::log()->info("Convert to depth cloud: {}", context.get_time());
@@ -387,10 +357,11 @@ class PointCloudToLcmPointCloud : public LeafSystemMixin<T> {
       : downsample_(downsample) {
     input_port_index_ =
         DeclareAbstractInputPort(Value<Data>()).get_index();
-    output_port_index_ =
-        DeclareAbstractOutputPort(Value<Message>()).get_index();
     pose_input_port_index_ =
         DeclareVectorInputPort(PoseVector<T>()).get_index();
+    output_port_index_ =
+        DeclareAbstractOutputPort(
+            Value<Message>(), &CalcMessage).get_index();
   }
 
   const Inport& get_pose_inport() const {
@@ -403,14 +374,13 @@ class PointCloudToLcmPointCloud : public LeafSystemMixin<T> {
     return get_output_port(output_port_index_);
   }
  protected:
-  void DoCalcOutput(
-      const Context& context, SystemOutput* output) const {
+  void CalcMessage(
+      const Context& context, Message* pmessage) const {
     const Data& point_cloud = EvalAbstractInput(context, input_port_index_)
                               ->GetValue<Data>();
     const double width = kImageWidth;
     const double height = kImageHeight;
-    Message& message = output->GetMutableData(output_port_index_)
-                        ->GetMutableValue<Message>();
+    Message& message = *pmessage;
     message.points.clear();
     message.frame_id = std::string(RigidBodyTreeConstants::kWorldName);
     message.n_channels = 0;

@@ -25,6 +25,20 @@ drake_cc_library(
     ],
 )
 
+drake_cc_library(
+    name = "perception_hack",
+    srcs = [
+        "perception_hack.cc",
+    ],
+    hdrs = [
+        "abstract_zoh.h",
+        "perception_hack.h",
+    ],
+    deps = [
+        "//drake/systems/sensors:rgbd_camera",
+    ],
+)
+
 drake_cc_binary(
     name = "monolithic_pick_and_place_demo",
     srcs = ["monolithic_pick_and_place_demo.cc"],
@@ -35,6 +49,7 @@ drake_cc_binary(
     ],
     deps = [
         ":kuka_pick_and_place_monolithic",
+        ":perception_hack",
         "//drake/common:find_resource",
         "//drake/common:text_logging_gflags",
         "//drake/examples/kuka_iiwa_arm:iiwa_common",
