@@ -16,11 +16,8 @@
 #include "drake/systems/lcm/lcm_publisher_system.h"
 #include "drake/systems/rendering/pose_stamped_t_pose_vector_translator.h"
 
-#include "drake/systems/sensors/depth_sensor.h"
-#include "drake/systems/sensors/depth_sensor_to_lcm_point_cloud_message.h"
 #include "bot_core/pointcloud_t.hpp"
 #include "drake/systems/rendering/pose_vector.h"
-#include "drake/systems/sensors/depth_sensor_output.h"
 #include "drake/systems/lcm/lcm_and_vector_base_translator.h"
 #include "drake/systems/sensors/image.h"
 
@@ -40,6 +37,7 @@ using systems::RigidBodyPlant;
 
 using Eigen::Vector3d;
 using Eigen::Matrix3d;
+using Eigen::Matrix3Xd;
 using systems::sensors::RgbdCamera;
 using systems::sensors::ImageToLcmImageArrayT;
 using systems::lcm::LcmPublisherSystem;
@@ -47,7 +45,6 @@ using systems::rendering::PoseStampedTPoseVectorTranslator;
 using std::make_unique;
 
 using systems::rendering::PoseVector;
-using systems::sensors::DepthSensorOutput;
 using systems::sensors::ImageDepth32F;
 using systems::sensors::CameraInfo;
 
@@ -93,7 +90,7 @@ class PoseTransformer : public LeafSystemMixin<T> {
     DeclareVectorInputPort(PoseVector<T>());
     DeclareVectorInputPort(PoseVector<T>());
     DeclareVectorOutputPort(PoseVector<T>(),
-                            &CalcPose);
+                            &PoseTransformer::CalcPose);
   }
  protected:
   void CalcPose(const Context& context,
@@ -116,7 +113,7 @@ class DepthImageNoise : public LeafSystemMixin<T> {
     ImageDepth32F depth_image(kImageWidth, kImageHeight);
     DeclareAbstractInputPort(Value<ImageDepth32F>(depth_image));
     DeclareAbstractOutputPort(Value<ImageDepth32F>(depth_image),
-                              &CalcNoise);
+                              &DepthImageNoise::CalcNoise);
   }
  protected:
   void CalcNoise(const Context& context,
@@ -302,13 +299,8 @@ class CameraFrustrumVisualizer : public LeafSystemMixin<T> {
 //  mutable SimpleLog<Entry> log_;
 };
 
-// HACK: Actually outputs DepthSensorOutput, with very non-descriptive sensor
-// information.
-// Provides point cloud in depth sensor frame.
-// TODO(eric.cousineau): Decouple point-cloud definition from DepthSensorOutput,
-// or decouple / use composition for LCM point cloud translation from this.
 class DepthImageToPointCloud : public LeafSystemMixin<T> {
-  // Model after: DpethSensorToLcmPointCloudMessage
+  // Model after: DepthSensorToLcmPointCloudMessage
  public:
   DepthImageToPointCloud(const CameraInfo& camera_info,
                          bool use_depth_frame = true)
@@ -321,7 +313,8 @@ class DepthImageToPointCloud : public LeafSystemMixin<T> {
     PointCloud point_cloud(3, depth_image.size());
     output_port_index_ =
         DeclareAbstractOutputPort(
-            Value<PointCloud>(point_cloud), &CalcPointCloud).get_index();
+            Value<PointCloud>(point_cloud),
+            &DepthImageToPointCloud::CalcPointCloud).get_index();
   }
   const Inport& get_depth_image_inport() const {
     return get_input_port(depth_image_input_port_index_);
@@ -339,7 +332,6 @@ class DepthImageToPointCloud : public LeafSystemMixin<T> {
     manipulation::PrintValidPoints(point_cloud, "Converter");
   }
  private:
-  DepthSensorSpecification spec_;
   const CameraInfo& camera_info_;
   bool ues_depth_frame_{};
   int depth_image_input_port_index_{};
@@ -361,7 +353,8 @@ class PointCloudToLcmPointCloud : public LeafSystemMixin<T> {
         DeclareVectorInputPort(PoseVector<T>()).get_index();
     output_port_index_ =
         DeclareAbstractOutputPort(
-            Value<Message>(), &CalcMessage).get_index();
+            Value<Message>(),
+            &PointCloudToLcmPointCloud::CalcMessage).get_index();
   }
 
   const Inport& get_pose_inport() const {
