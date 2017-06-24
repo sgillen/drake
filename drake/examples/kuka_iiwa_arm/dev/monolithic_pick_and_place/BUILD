@@ -35,7 +35,12 @@ drake_cc_library(
         "perception_hack.h",
     ],
     deps = [
+        "//drake/examples/kuka_iiwa_arm/iiwa_world:iiwa_wsg_diagram_factory",
+        "//drake/lcm",
         "//drake/systems/sensors:rgbd_camera",
+        "//drake/systems/sensors:image_to_lcm_image_array_t",
+        "//drake/systems/rendering:pose_stamped_t_pose_vector_translator",
+        "@libbot//:bot2_lcmgl_client",
     ],
 )
 
