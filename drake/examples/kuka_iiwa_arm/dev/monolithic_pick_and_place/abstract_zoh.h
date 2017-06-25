@@ -75,8 +75,8 @@ class AbstractZOH : public LeafSystem<T> {
     // constructor, and just inherit this from an upstream system given
     // type erasure?
     this->DeclareAbstractState(std::make_unique<Value<Data>>(ic));
-    this->DeclareAbstractOutputPort(Value<Data>(ic), &CalcOutput);
-    DeclarePeriodicUnrestrictedUpdate(period_sec, offset_sec);
+    this->DeclareAbstractOutputPort(Value<Data>(ic), &AbstractZOH::CalcOutput);
+    this->DeclarePeriodicUnrestrictedUpdate(period_sec, offset_sec);
   }
 
   void ConnectOnUpdate(const OnUpdate& on_update) {
@@ -88,10 +88,9 @@ class AbstractZOH : public LeafSystem<T> {
   void DoCalcUnrestrictedUpdate(const Context<T>& context,
                                 State<T>* state) const override {
     const Data& input_value =
-        EvalAbstractInput(context, 0)->template GetValue<Data>();
+        this->EvalAbstractInput(context, 0)->template GetValue<Data>();
     Data& stored_value =
-        state->get_mutable_abstract_state()
-            ->get_mutable_value(0).GetMutableValue<Data>();
+        state->template get_mutable_abstract_state<Data>(0);
     stored_value = input_value;
     if (on_update_) {
       on_update_(context.get_time(), input_value);
@@ -102,7 +101,7 @@ class AbstractZOH : public LeafSystem<T> {
                        State<T>* state) const override {
     if (use_autoinit_) {
       // Update initial values with the ICs from upstream blocks.
-      DoCalcUnrestrictedUpdate(context, state);
+      this->DoCalcUnrestrictedUpdate(context, state);
     } else {
       LeafSystem<T>::SetDefaultState(context, state);
     }
@@ -111,7 +110,7 @@ class AbstractZOH : public LeafSystem<T> {
   void CalcOutput(const Context<T>& context,
                     Data* poutput) const {
     const Data& stored_value =
-        context.get_abstract_state()->get_value(0).GetValue<Data>();
+        context.template get_abstract_state<Data>(0);
     *poutput = stored_value;
   }
  private:
