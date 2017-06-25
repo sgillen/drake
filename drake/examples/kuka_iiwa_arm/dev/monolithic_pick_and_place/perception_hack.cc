@@ -24,6 +24,7 @@
 #include "drake/examples/kuka_iiwa_arm/iiwa_world/iiwa_wsg_diagram_factory.h"
 
 #include "drake/examples/kuka_iiwa_arm/dev/monolithic_pick_and_place/abstract_zoh.h"
+#include "drake/examples/kuka_iiwa_arm/dev/monolithic_pick_and_place/dart_util.h"
 
 namespace drake {
 
@@ -47,6 +48,7 @@ using std::make_unique;
 using systems::rendering::PoseVector;
 using systems::sensors::ImageDepth32F;
 using systems::sensors::CameraInfo;
+using systems::AbstractZOH;
 
 typedef Eigen::Matrix3Xd PointCloud;
 
@@ -72,7 +74,7 @@ class LeafSystemMixin : public systems::LeafSystem<T_> {
   typedef systems::SystemOutput<T> SystemOutput;
   typedef systems::State<T> State;
   using Inport = systems::InputPortDescriptor<T>;
-  using Outport = systems::OutputPortDescriptor<T>;
+  using Outport = systems::OutputPort<T>;
   template <typename U>
   using Value = systems::Value<U>;
 };
@@ -94,13 +96,14 @@ class PoseTransformer : public LeafSystemMixin<T> {
   }
  protected:
   void CalcPose(const Context& context,
-                    PoseVector<T>* pose_out) const {
+                    PoseVector<T>* ppose_out) const {
     auto&& pose_a =
         EvalVectorInput<PoseVector>(context, 0);
     auto&& pose_b =
         EvalVectorInput<PoseVector>(context, 1);
     Eigen::Isometry3d X_out =
         pose_a->get_isometry() * pose_b->get_isometry();
+    auto& pose_out = *ppose_out;
     pose_out.set_translation(Eigen::Translation3d(X_out.translation()));
     pose_out.set_rotation(Eigen::Quaterniond(X_out.rotation()));
   }
@@ -415,7 +418,7 @@ std::unique_ptr<T> CreateUnique(T* obj) {
   return std::unique_ptr<T>(obj);
 }
 
-struct PerceptionHack::Impl {
+class PerceptionHack::Impl {
   // Generic serializer shared between two sensor types.
   PoseStampedTPoseVectorTranslator pose_translator_{"camera"};
 
@@ -431,7 +434,7 @@ struct PerceptionHack::Impl {
       DrakeLcm* plcm,
       TreePlant* pplant) {
 
-    bool use_wall_clock_pub = false;
+    // bool use_wall_clock_pub = false;
 
     const double pi = M_PI;
 
@@ -443,16 +446,16 @@ struct PerceptionHack::Impl {
     const Vector3d position(0, 2, 2);
     const Vector3d orientation(0, 20, -90); // degrees
 
-    if (use_wall_clock_pub) {
-      pbuilder->template AddSystem<WallClockPublisher>();
-    }
+    // if (use_wall_clock_pub) {
+    //   pbuilder->template AddSystem<WallClockPublisher>();
+    // }
 
     const double camera_dt = 1. / 30; // ~30 Hz
     if (true) {
       auto rgbd_camera_instance = new RgbdCamera(
           "rgbd_camera", rigid_body_tree,
-          position, orientation * pi / 180, pi / 4, true,
-          camera_dt);
+          position, orientation * pi / 180, pi / 4, true); //,
+          //camera_dt);
       rgbd_camera_ = pbuilder->AddSystem(CreateUnique(rgbd_camera_instance));
       rgbd_camera_->set_name("rgbd_camera");
 
