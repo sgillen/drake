@@ -32,6 +32,8 @@ drake_cc_library(
     ],
     hdrs = [
         "abstract_zoh.h",
+        "dart_util.h",
+        "vector_slice.h",
         "perception_hack.h",
     ],
     deps = [
