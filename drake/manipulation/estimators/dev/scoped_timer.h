@@ -5,7 +5,7 @@
 
 #include <fmt/format.h>
 
-#include "drake/common/unused.h"
+#include "drake/common/text_logging.h"
 
 namespace drake {
 namespace manipulation {
@@ -15,15 +15,24 @@ using Clock = std::chrono::steady_clock;
 using Duration = std::chrono::duration<double>;
 using TimePoint = std::chrono::time_point<Clock, Duration>;
 
+/**
+ * Sleep in the current thread for a given number of seconds.
+ */
 inline void sleep(double seconds) {
   int ms = std::round(seconds * 1000);
   std::this_thread::sleep_for(std::chrono::milliseconds(ms));
 }
 
+/**
+ * Return the wall time (measuring from the epoch).
+ */
 inline double wall_time() {
   return Duration(Clock::now().time_since_epoch()).count();
 }
 
+/**
+ * Time a given interval with a steady, monotonic clock.
+ */
 class Timer {
  public:
   Timer() {}
@@ -53,28 +62,35 @@ class Timer {
   }
  private:
   TimePoint start_;
-  double elapsed_{}; // When not active
+  double elapsed_{};  // When not active
   bool is_active_{};
 };
 
+/**
+ * A timer that starts upon construction, and ends upon destruction.
+ * When the timer stops, it will print out the elapsed time to an info-level log
+ * statement.
+ */
 class ScopedTimer {
  public:
   ScopedTimer(const std::string& message)
     : message_(message) {
     timer_.start();
   }
-  void reset() {
-    stop();
+  double reset() {
+    double elapsed = stop();
     timer_.start();
+    return elapsed;
   }
   inline double elapsed() const { return timer_.elapsed(); }
   ~ScopedTimer() {
     stop();
   }
  private:
-  void stop() {
+  double stop() {
     double elapsed = timer_.stop();
     drake::log()->info("[timer] {}: {} sec\n", message_, elapsed)
+    return elapsed;
   }
   Timer timer_;
   std::string message_;

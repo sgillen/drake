@@ -24,6 +24,16 @@ drake_cc_googletest(
     ],
 )
 
+drake_cc_library(
+    name = "scoped_timer",
+    hdrs = [
+        "scoped_timer.h",
+    ],
+    deps = [
+        "//drake/common",
+    ],
+)
+
 
 drake_cc_library(
     name = "abstract_zoh",
@@ -55,6 +65,7 @@ drake_cc_library(
         "dart_util.h",
     ],
     deps = [
+        ":scoped_timer",
         ":vector_slice",
         "//drake/common:common",
         "//drake/common:drake_path",
