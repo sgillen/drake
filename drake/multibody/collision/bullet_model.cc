@@ -4,11 +4,11 @@
 #include <limits>
 #include <utility>
 
-#include <omp.h>
+// #include <omp.h>
 
-#ifndef _OPENMP
-#error "Must enable OpenMP"
-#endif
+// #ifndef _OPENMP
+// #error "Must enable OpenMP"
+// #endif
 
 #include "BulletCollision/NarrowPhaseCollision/btRaycastCallback.h"
 
@@ -692,7 +692,7 @@ void BulletModel::collisionDetectFromPoints(
 
   // do collision check against all bodies for each point using bullet's
   // internal getclosestpoints solver
-  #pragma omp parallel for
+  //#pragma omp parallel for
   for (int i = 0; i < points.cols(); i++) {
 
     const btSphereShape shapeA(0.0);

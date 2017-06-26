@@ -7,77 +7,24 @@
 namespace drake {
 namespace systems {
 
-//// Assume all are copy-and-move constructible.
-//// More permissive than Value, in that it allows default construction
-//// (but will puke if it is null.)
-//// TODO: Consider using std::optional? Does it permit non-default constructible
-//// objects?
-//template <typename T>
-//class DefaultValue : public AbstractValue {
-// public:
-//  DRAKE_DEFAULT_COPY_AND_MOVE_AND_ASSIGN(DefaultValue);
-//  DefaultValue() {}
-//  void SetFrom(const AbstractValue& other) override {
-//    // First, assume that the input is of type Value<T>.
-//    const auto* value_ptr = dynamic_cast<const Value<T>*>(&other);
-//    if (value_ptr) {
-//      value_ = *value_ptr;
-//    } else {
-//      DefaultValue* out = new DefaultValue();
-//      out->value_.emplace
-//      const auto* default_ptr = dynamic_cast<const DefaultValue*>(&other);
-//    }
-//  }
-//  void SetFromOrThrow(const AbstractValue& other) override {
-//    // Lazy
-//    SetFrom(other);
-//  }
-//  std::unique_ptr<AbstractValue> Clone() const override {
-//    return new DefaultValue<T>(*this);
-//  }
-//  void set_value(const T& value) {
-//    value_ = Value<T>(value);
-//  }
-//  bool has_value() const {
-//    return value_ != nullopt;
-//  }
-//  T& value() {
-//    DRAKE_DEMAND(has_value());
-//    return value_->get_mutable_value();
-//  }
-//  const T& value() const {
-//    DRAKE_DEMAND(has_value());
-//    return value_->get_value();
-//  }
-// protected:
-//  const AbstractValue* GetUserValue() const override {
-//    return &value_.value();
-//  }
-// private:
-//  optional<Value<T>> value_;
-////  using Traits = systems::value_detail::ValueTraits<T>;
-////  typename Traits::Storage value_;
-//};
-
-template <typename T>
-class AbstractZOH : public LeafSystem<double> {
+template <typename Data, typename T = double>
+class AbstractZOH : public LeafSystem<T> {
  public:
-  typedef std::function<void(double time, const T& value)> OnUpdate;
+  typedef std::function<void(double time, const Data& value)> OnUpdate;
 
   AbstractZOH(double period_sec, bool use_autoinit = false)
-      : AbstractZOH(T(), period_sec, 0., use_autoinit) {}
+      : AbstractZOH(Data(), period_sec, 0., use_autoinit) {}
 
-  AbstractZOH(const T& ic, double period_sec, double offset_sec = 0.,
+  AbstractZOH(const Data& ic, double period_sec, double offset_sec = 0.,
               bool use_autoinit = false)
       : use_autoinit_(use_autoinit) {
-    // Using LcmSubscriberSystem as a basis
-    // This will receive Value<T>, not Value<Data>.
     this->DeclareAbstractInputPort();
-    // TODO(eric.cousineau): Is there a way to not care about the default constructor,
-    // and just inherit this from an upstream system?
-    this->DeclareAbstractState(std::make_unique<Value<T>>(ic));
-    this->DeclareAbstractOutputPort(Value<T>(ic));
-    DeclarePeriodicUnrestrictedUpdate(period_sec, offset_sec);
+    // TODO(eric.cousineau): Is there a way to not care about the default
+    // constructor, and just inherit this from an upstream system given
+    // type erasure?
+    this->DeclareAbstractState(std::make_unique<Value<Data>>(ic));
+    this->DeclareAbstractOutputPort(ic, &AbstractZOH::CalcOutput);
+    this->DeclarePeriodicUnrestrictedUpdate(period_sec, offset_sec);
   }
 
   void ConnectOnUpdate(const OnUpdate& on_update) {
@@ -86,36 +33,33 @@ class AbstractZOH : public LeafSystem<double> {
   }
 
  protected:
-  void DoCalcUnrestrictedUpdate(const Context<double>& context,
-                                State<double>* state) const override {
-    const T& input_value =
-        EvalAbstractInput(context, 0)->template GetValue<T>();
-    T& stored_value =
-        state->get_mutable_abstract_state()
-            ->get_mutable_value(0).GetMutableValue<T>();
+  void DoCalcUnrestrictedUpdate(const Context<T>& context,
+                                State<T>* state) const override {
+    const Data& input_value =
+        this->EvalAbstractInput(context, 0)->template GetValue<Data>();
+    Data& stored_value =
+        state->template get_mutable_abstract_state<Data>(0);
     stored_value = input_value;
     if (on_update_) {
       on_update_(context.get_time(), input_value);
     }
   }
 
-  void SetDefaultState(const Context<double>& context,
-                       State<double>* state) const override {
+  void SetDefaultState(const Context<T>& context,
+                       State<T>* state) const override {
     if (use_autoinit_) {
       // Update initial values with the ICs from upstream blocks.
-      DoCalcUnrestrictedUpdate(context, state);
+      this->DoCalcUnrestrictedUpdate(context, state);
     } else {
-      LeafSystem<double>::SetDefaultState(context, state);
+      LeafSystem<T>::SetDefaultState(context, state);
     }
   }
 
-  void DoCalcOutput(const Context<double>& context,
-                    SystemOutput<double>* output) const override {
-    const T& stored_value =
-        context.get_abstract_state()->get_value(0).GetValue<T>();
-    T& output_value =
-      output->GetMutableData(0)->GetMutableValue<T>();
-    output_value = stored_value;
+  void CalcOutput(const Context<T>& context,
+                    Data* poutput) const {
+    const Data& stored_value =
+        context.template get_abstract_state<Data>(0);
+    *poutput = stored_value;
   }
  private:
   OnUpdate on_update_;
@@ -181,35 +125,6 @@ std::unique_ptr<Diagram<T>> StackSystems(
   }
   return builder.Build();
 }
-
-//template <typename... Ts>
-//class AbstractZOHDiagram : public systems::Diagram<double> {
-// public:
-//  using T = double;
-//  using Builder = systems::DiagramBuilder<T>;
-
-//  AbstractZOHDiagram(double period_sec, const Ts&... ic)
-//      : period_sec_(period_sec) {
-//    Builder builder;
-//    pack_visitor<Ts...>::run(Adder{this, &builder});
-//    builder.BuildInto(this);
-//  }
-
-// protected:
-//  struct Adder {
-//    AbstractZOHDiagram* self;
-//    Builder* builder;
-//    template <typename T>
-//    void run() {
-//      auto* zoh = builder->template AddSystem<AbstractZOH<T>>(self->period_sec_);
-//      builder->ExportInput(zoh->get_input_port(0));
-//      builder->ExportOutput(zoh->get_output_port(0));
-//    }
-//  };
-
-// private:
-//  double period_sec_;
-//};
 
 }  // namespace systems
 }  // namespace drake
