@@ -15,6 +15,7 @@
 
 using std::shared_ptr;
 using std::make_unique;
+using std::unique_ptr;
 
 namespace drake {
 namespace systems {
@@ -59,20 +60,20 @@ class VectorTestBase : public ::testing::Test {
     xd->get_mutable_value() << state_update_;
   }
 
-  void CheckOutput(const VectorX<T>& value) {
-    const BasicVector<T>* output_vector = output_->get_vector_data(0);
-    ASSERT_NE(nullptr, output_vector);
-    EXPECT_EQ(value(0), output_vector->GetAtIndex(0));
-    EXPECT_EQ(value(1), output_vector->GetAtIndex(1));
-    EXPECT_EQ(value(2), output_vector->GetAtIndex(2));
+  void CheckOutput(const VectorX<T>& expected, const BasicVector<T>* actual) {
+    ASSERT_NE(nullptr, actual);
+    EXPECT_EQ(expected(0), actual->GetAtIndex(0));
+    EXPECT_EQ(expected(1), actual->GetAtIndex(1));
+    EXPECT_EQ(expected(2), actual->GetAtIndex(2));
   }
 
-  void DispatchUpdate() {
+  unique_ptr<value_type> DispatchUpdate() {
     DiscreteEvent<T> update_event;
     update_event.action = GetActionType();
     std::unique_ptr<DiscreteValues<T>> update =
         hold_->AllocateDiscreteVariables();
     hold_->CalcDiscreteVariableUpdates(*context_, {update_event}, update.get());
+    return update->get_vector()->Clone();
   }
 
   void CheckReservesState() {
@@ -169,7 +170,7 @@ TYPED_TEST(ZeroOrderHoldTest, ReservesState) {
 TYPED_TEST(ZeroOrderHoldTest, Output) {
   this->UpdateState();
   this->hold_->CalcOutput(*this->context_, this->output_.get());
-  this->CheckOutput(this->state_update_);
+  this->CheckOutput(this->state_update_, this->output_->get_vector_data(0));
 }
 
 // Tests that when the current time is exactly on the sampling period, a update
@@ -177,6 +178,10 @@ TYPED_TEST(ZeroOrderHoldTest, Output) {
 TYPED_TEST(ZeroOrderHoldTest, NextUpdateTimeMustNotBeCurrentTime) {
   // HACK: Is this part of the public GTest API?
   typedef typename TestFixture::T T;
+
+  if (!drake::is_numeric<T>::value) {
+    return;
+  }
 
   // Calculate the next update time.
   this->context_->set_time(0.0);
@@ -198,6 +203,10 @@ TYPED_TEST(ZeroOrderHoldTest, NextUpdateTimeMustNotBeCurrentTime) {
 TYPED_TEST(ZeroOrderHoldTest, NextUpdateTimeIsInTheFuture) {
   typedef typename TestFixture::T T;
 
+  if (!drake::is_numeric<T>::value) {
+    return;
+  }
+
   // Calculate the next update time.
   this->context_->set_time(76.32);
   UpdateActions<T> actions;
@@ -216,9 +225,9 @@ TYPED_TEST(ZeroOrderHoldTest, NextUpdateTimeIsInTheFuture) {
 // Tests that discrete updates update the state.
 TYPED_TEST(ZeroOrderHoldTest, Update) {
   // Fire off an update event.
-  this->DispatchUpdate();
+  auto value_ptr = this->DispatchUpdate();
   // Check that the state has been updated to the input.
-  this->CheckOutput(this->fixed_input_);
+  this->CheckOutput(this->fixed_input_, value_ptr.get());
 }
 
 }  // namespace
