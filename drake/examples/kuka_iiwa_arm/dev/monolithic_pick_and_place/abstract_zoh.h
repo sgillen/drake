@@ -7,58 +7,6 @@
 namespace drake {
 namespace systems {
 
-//// Assume all are copy-and-move constructible.
-//// More permissive than Value, in that it allows default construction
-//// (but will puke if it is null.)
-//// TODO: Consider using std::optional? Does it permit non-default constructible
-//// objects?
-//template <typename T>
-//class DefaultValue : public AbstractValue {
-// public:
-//  DRAKE_DEFAULT_COPY_AND_MOVE_AND_ASSIGN(DefaultValue);
-//  DefaultValue() {}
-//  void SetFrom(const AbstractValue& other) override {
-//    // First, assume that the input is of type Value<T>.
-//    const auto* value_ptr = dynamic_cast<const Value<T>*>(&other);
-//    if (value_ptr) {
-//      value_ = *value_ptr;
-//    } else {
-//      DefaultValue* out = new DefaultValue();
-//      out->value_.emplace
-//      const auto* default_ptr = dynamic_cast<const DefaultValue*>(&other);
-//    }
-//  }
-//  void SetFromOrThrow(const AbstractValue& other) override {
-//    // Lazy
-//    SetFrom(other);
-//  }
-//  std::unique_ptr<AbstractValue> Clone() const override {
-//    return new DefaultValue<T>(*this);
-//  }
-//  void set_value(const T& value) {
-//    value_ = Value<T>(value);
-//  }
-//  bool has_value() const {
-//    return value_ != nullopt;
-//  }
-//  T& value() {
-//    DRAKE_DEMAND(has_value());
-//    return value_->get_mutable_value();
-//  }
-//  const T& value() const {
-//    DRAKE_DEMAND(has_value());
-//    return value_->get_value();
-//  }
-// protected:
-//  const AbstractValue* GetUserValue() const override {
-//    return &value_.value();
-//  }
-// private:
-//  optional<Value<T>> value_;
-////  using Traits = systems::value_detail::ValueTraits<T>;
-////  typename Traits::Storage value_;
-//};
-
 template <typename Data, typename T = double>
 class AbstractZOH : public LeafSystem<T> {
  public:
@@ -75,7 +23,7 @@ class AbstractZOH : public LeafSystem<T> {
     // constructor, and just inherit this from an upstream system given
     // type erasure?
     this->DeclareAbstractState(std::make_unique<Value<Data>>(ic));
-    this->DeclareAbstractOutputPort(Value<Data>(ic), &AbstractZOH::CalcOutput);
+    this->DeclareAbstractOutputPort(ic, &AbstractZOH::CalcOutput);
     this->DeclarePeriodicUnrestrictedUpdate(period_sec, offset_sec);
   }
 
@@ -177,35 +125,6 @@ std::unique_ptr<Diagram<T>> StackSystems(
   }
   return builder.Build();
 }
-
-//template <typename... Ts>
-//class AbstractZOHDiagram : public systems::Diagram<double> {
-// public:
-//  using T = double;
-//  using Builder = systems::DiagramBuilder<T>;
-
-//  AbstractZOHDiagram(double period_sec, const Ts&... ic)
-//      : period_sec_(period_sec) {
-//    Builder builder;
-//    pack_visitor<Ts...>::run(Adder{this, &builder});
-//    builder.BuildInto(this);
-//  }
-
-// protected:
-//  struct Adder {
-//    AbstractZOHDiagram* self;
-//    Builder* builder;
-//    template <typename T>
-//    void run() {
-//      auto* zoh = builder->template AddSystem<AbstractZOH<T>>(self->period_sec_);
-//      builder->ExportInput(zoh->get_input_port(0));
-//      builder->ExportOutput(zoh->get_output_port(0));
-//    }
-//  };
-
-// private:
-//  double period_sec_;
-//};
 
 }  // namespace systems
 }  // namespace drake
