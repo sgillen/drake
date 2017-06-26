@@ -31,6 +31,8 @@ struct TestBase {
   static_assert(deferred_false::value, "This should not be called.");
 };
 
+// TODO(eric.cousineau): Check initial condition.
+
 template <typename T_>
 class VectorTestBase : public ::testing::Test {
  public:
