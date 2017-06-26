@@ -274,7 +274,7 @@ int DoMain(void) {
 
   PerceptionHack perception;
   if (FLAGS_use_perception) {
-    perception.Inject(&builder, &lcm, plant, plant_instance_name_map);
+    perception.Inject(&builder, &lcm, plant);
   }
 
   auto sys = builder.Build();

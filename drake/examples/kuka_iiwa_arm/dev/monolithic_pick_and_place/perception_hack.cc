@@ -16,6 +16,8 @@
 #include "drake/systems/lcm/lcm_publisher_system.h"
 #include "drake/systems/rendering/pose_stamped_t_pose_vector_translator.h"
 
+#include "drake/systems/primitives/constant_vector_source.h"
+
 #include "bot_core/pointcloud_t.hpp"
 #include "drake/systems/rendering/pose_vector.h"
 #include "drake/systems/lcm/lcm_and_vector_base_translator.h"
@@ -31,7 +33,6 @@ namespace drake {
 using std::unique_ptr;
 using std::string;
 using std::make_shared;
-using systems::DrakeVisualizer;
 using systems::DiagramBuilder;
 using lcm::DrakeLcm;
 using systems::RigidBodyPlant;
@@ -115,7 +116,7 @@ class DepthImageNoise : public LeafSystemMixin<T> {
     : noise_rel_magnitude_(noise_rel_magnitude) {
     ImageDepth32F depth_image(kImageWidth, kImageHeight);
     DeclareAbstractInputPort(Value<ImageDepth32F>(depth_image));
-    DeclareAbstractOutputPort(Value<ImageDepth32F>(depth_image),
+    DeclareAbstractOutputPort(depth_image,
                               &DepthImageNoise::CalcNoise);
   }
  protected:
@@ -305,10 +306,8 @@ class CameraFrustrumVisualizer : public LeafSystemMixin<T> {
 class DepthImageToPointCloud : public LeafSystemMixin<T> {
   // Model after: DepthSensorToLcmPointCloudMessage
  public:
-  DepthImageToPointCloud(const CameraInfo& camera_info,
-                         bool use_depth_frame = true)
-      : camera_info_(camera_info),
-        ues_depth_frame_(use_depth_frame) {
+  DepthImageToPointCloud(const CameraInfo& camera_info)
+      : camera_info_(camera_info) {
     ImageDepth32F depth_image(kImageWidth, kImageHeight);
     depth_image_input_port_index_ = DeclareAbstractInputPort(
         Value<ImageDepth32F>(depth_image)).get_index();
@@ -316,7 +315,7 @@ class DepthImageToPointCloud : public LeafSystemMixin<T> {
     PointCloud point_cloud(3, depth_image.size());
     output_port_index_ =
         DeclareAbstractOutputPort(
-            Value<PointCloud>(point_cloud),
+            point_cloud,
             &DepthImageToPointCloud::CalcPointCloud).get_index();
   }
   const Inport& get_depth_image_inport() const {
@@ -324,19 +323,20 @@ class DepthImageToPointCloud : public LeafSystemMixin<T> {
   }
  protected:
   void CalcPointCloud(const Context& context,
-                      PointCloud* *ppoint_cloud) const override {
+                      PointCloud* ppoint_cloud) const {
     const auto& depth_image =
         EvalAbstractInput(context, depth_image_input_port_index_)
         ->GetValue<ImageDepth32F>();
     auto& point_cloud = *ppoint_cloud;
+    Eigen::Matrix3Xf point_cloud_f;
     RgbdCamera::ConvertDepthImageToPointCloud(depth_image, camera_info_,
-                                              &point_cloud);
+                                              &point_cloud_f);
+    point_cloud = point_cloud_f.cast<double>();
     drake::log()->info("Convert to depth cloud: {}", context.get_time());
     manipulation::PrintValidPoints(point_cloud, "Converter");
   }
  private:
   const CameraInfo& camera_info_;
-  bool ues_depth_frame_{};
   int depth_image_input_port_index_{};
   int output_port_index_{};
 };
@@ -356,7 +356,7 @@ class PointCloudToLcmPointCloud : public LeafSystemMixin<T> {
         DeclareVectorInputPort(PoseVector<T>()).get_index();
     output_port_index_ =
         DeclareAbstractOutputPort(
-            Value<Message>(),
+            Message(),
             &PointCloudToLcmPointCloud::CalcMessage).get_index();
   }
 
@@ -419,6 +419,7 @@ std::unique_ptr<T> CreateUnique(T* obj) {
 }
 
 class PerceptionHack::Impl {
+ public:
   // Generic serializer shared between two sensor types.
   PoseStampedTPoseVectorTranslator pose_translator_{"camera"};
 
@@ -473,8 +474,9 @@ class PerceptionHack::Impl {
             depth_zoh->get_input_port(0));
 
       // Add noise.
+      // 1% noise at 1 sigma (when sigma = 1)
       auto depth_noise =
-          pbuilder->template AddSystem<DepthImageNoise>(0.02 / 3);  // 2% noise max at 3 sigma of distribution
+          pbuilder->template AddSystem<DepthImageNoise>(0.01);
       pbuilder->Connect(
             depth_zoh->get_output_port(0),
             depth_noise->get_input_port(0));

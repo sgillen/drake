@@ -171,7 +171,7 @@ inline vector<string> FlattenNameList(const InstanceJointList& joints) {
       joints_flat.push_back(instance_name + "::" + joint_name);
     }
   }
-  return std::move(joints_flat);
+  return joints_flat;
 }
 
 /**
