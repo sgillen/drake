@@ -810,8 +810,11 @@ void RigidBodyTree<T>::collisionDetectFromPoints(
   body_x.resize(3, closest_points.size());
   normal.resize(3, closest_points.size());
   phi.resize(closest_points.size());
+  body_idx.resize(closest_points.size());
 
   for (size_t i = 0; i < closest_points.size(); ++i) {
+    // TODO(eric.cousineau): ptB seems like a misnormer, at least in terms of
+    // PointPair::ptB (point on body B).
     x.col(i) = closest_points[i].ptB;
     body_x.col(i) = closest_points[i].ptA;
     normal.col(i) = closest_points[i].normal;
@@ -820,9 +823,9 @@ void RigidBodyTree<T>::collisionDetectFromPoints(
     // In the case that no closest point was found, elementB will come back
     // as a null pointer which we should not attempt to access.
     if (elementB) {
-      body_idx.push_back(elementB->get_body()->get_body_index());
+      body_idx[i] = elementB->get_body()->get_body_index();
     } else {
-      body_idx.push_back(-1);
+      body_idx[i] = -1;
     }
   }
 }
@@ -835,9 +838,8 @@ bool RigidBodyTree<T>::collisionRaycast(
     // TODO(#2274) Fix NOLINTNEXTLINE(runtime/references).
     VectorXd& distances, bool use_margins) {
   Matrix3Xd normals;
-  updateDynamicCollisionElements(cache);
-  return collision_model_->collisionRaycast(origins, ray_endpoints, use_margins,
-                                            distances, normals);
+  return collisionRaycast(cache, origins, ray_endpoints, distances, normals,
+                          use_margins);
 }
 
 template <typename T>
@@ -848,9 +850,37 @@ bool RigidBodyTree<T>::collisionRaycast(
     // TODO(#2274) Fix NOLINTNEXTLINE(runtime/references).
     VectorXd& distances, Matrix3Xd& normals,
     bool use_margins) {
+  vector<int> body_idx;
+  return collisionRaycast(cache, origins, ray_endpoints, distances, normals,
+                          body_idx, use_margins);
+}
+
+template <typename T>
+bool RigidBodyTree<T>::collisionRaycast(
+    const KinematicsCache<double>& cache,
+    const Matrix3Xd& origins,
+    const Matrix3Xd& ray_endpoints,
+    // TODO(#2274) Fix NOLINTNEXTLINE(runtime/references).
+    VectorXd& distances, Matrix3Xd& normals, vector<int>& body_idx,
+    bool use_margins) {
   updateDynamicCollisionElements(cache);
-  return collision_model_->collisionRaycast(origins, ray_endpoints, use_margins,
-                                            distances, normals);
+
+  int num_points = origins.cols();
+  std::vector<const DrakeCollision::Element*> collision_body;
+  bool ret = collision_model_->collisionRaycast(origins, ray_endpoints,
+                     use_margins, distances, normals, collision_body);
+
+  body_idx.resize(num_points);
+  for (int i = 0; i < num_points; i++){
+    if (distances[i] < 0.0){
+      body_idx[i] = -1;
+    } else {
+      auto element = collision_body[i];
+      DRAKE_ASSERT(element != nullptr);
+      body_idx[i] = element->get_body()->get_body_index();
+    }
+  }
+  return ret;
 }
 
 template <typename T>
