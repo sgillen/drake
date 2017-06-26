@@ -26,11 +26,57 @@ class ZeroOrderHoldTest : public ::testing::Test {
     context_ = hold_->CreateDefaultContext();
     output_ = hold_->AllocateOutput(*context_);
     context_->FixInputPort(0, BasicVector<double>::Make({1.0, 1.0, 3.0}));
+
+    abstract_hold_ = std::make_unique<AbstractZeroOrderHold<TriviallyConstructible>>(kTenHertz);
   }
 
   std::unique_ptr<System<double>> hold_;
   std::unique_ptr<Context<double>> context_;
   std::unique_ptr<SystemOutput<double>> output_;
+};
+
+// Simple trivially constructible class, but not copyable.
+class TriviallyConstructible {
+ public:
+  DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(TriviallyConstructible)
+
+  TriviallyConstructible() {}
+  explicit TriviallyConstructible(double value)
+    : value_(value) {}
+  double value() const { return value_; }
+  void set_value(double value) { value_ = value; }
+ private:
+  double value_;
+};
+
+// Nontrivially constructible class.
+class NontriviallyConstructible {
+ public:
+  DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(TriviallyConstructible)
+
+  explicit NontriviallyConstructible(double value)
+    : value_(value) {}
+  double value() const { return value_; }
+  void set_value(double value) { value_ = value; }
+ private:
+  double value_;
+};
+
+class ZeroOrderHoldTest : public ::testing::Test {
+ protected:
+  void SetUp() override {
+    hold_ = std::make_unique<ZeroOrderHold<double>>(kTenHertz, kLength);
+    context_ = hold_->CreateDefaultContext();
+    output_ = hold_->AllocateOutput(*context_);
+    context_->FixInputPort(0, BasicVector<double>::Make({1.0, 1.0, 3.0}));
+
+    abstract_hold_ = std::make_unique<AbstractZeroOrderHold<TriviallyConstructible>>(kTenHertz);
+  }
+
+  std::unique_ptr<System<double>> hold_;
+  std::unique_ptr<Context<double>> context_;
+  std::unique_ptr<SystemOutput<double>> output_;
+  std::unique_ptr<System<double>> abstract_hold_;
 };
 
 // Tests that the zero-order hold has one input and one output.
