@@ -397,6 +397,7 @@ drake_cc_googletest(
     name = "zero_order_hold_test",
     deps = [
         ":zero_order_hold",
+        "//drake/common:extract_double",
         "//drake/common:eigen_matrix_compare",
         "//drake/systems/framework",
     ],

@@ -82,14 +82,6 @@ class AbstractZeroOrderHold : public LeafSystem<T> {
   AbstractZeroOrderHold(double period_sec, bool use_autoinit = false)
       : AbstractZeroOrderHold(ValueType(), period_sec, use_autoinit) {}
 
-  // /// Set the callback to be called each time the discrete value is to be
-  // /// called, supplying the time and the value provided.
-  // /// This is meant for testing / debugging purposes.
-  // void set_update_callback(const UpdateCallback& on_update) {
-  //   DRAKE_ASSERT(!update_callback_);
-  //   update_callback_ = on_update;
-  // }
-
  protected:
   void DoCalcUnrestrictedUpdate(const Context<T>& context,
                                 State<T>* state) const override {
@@ -118,7 +110,6 @@ class AbstractZeroOrderHold : public LeafSystem<T> {
   }
 
  private:
-  // UpdateCallback update_callback_;
   bool use_autoinit_{};
 };
 
