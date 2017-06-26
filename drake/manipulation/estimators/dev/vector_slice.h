@@ -7,8 +7,6 @@
 #include "drake/common/drake_copyable.h"
 #include "drake/common/eigen_types.h"
 
-#include "drake/systems/framework/vector_base.h"
-
 namespace drake {
 namespace manipulation {
 
