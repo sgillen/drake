@@ -226,6 +226,37 @@ void PerformVTKUpdate(
   exporter->Update();
 }
 
+class InternalState {
+ public:
+  DRAKE_DEFAULT_COPY_AND_MOVE_AND_ASSIGN(InternalState);
+
+  InternalState(int width, int height)
+      : color_image_(width, height),
+        depth_image_(width, height),
+        label_image_(width, height) {}
+
+  ImageRgba8U& color_image() { return color_image_; }
+  const ImageRgba8U& color_image() const { return color_image_; }
+
+  ImageDepth32F& depth_image() { return depth_image_; }
+  const ImageDepth32F& depth_image() const { return depth_image_; }
+
+  ImageLabel16I& label_image() { return label_image_; }
+  const ImageLabel16I& label_image() const { return label_image_; }
+
+  rendering::PoseVector<double>& camera_base_pose() {
+    return camera_base_pose_;
+  }
+  const rendering::PoseVector<double>& camera_base_pose() const {
+    return camera_base_pose_;
+  }
+ private:
+  ImageRgba8U color_image_;
+  ImageDepth32F depth_image_;
+  ImageLabel16I label_image_;
+  rendering::PoseVector<double> camera_base_pose_;
+};
+
 }  // namespace
 
 void RgbdCamera::ConvertDepthImageToPointCloud(const ImageDepth32F& depth_image,
@@ -263,11 +294,13 @@ void RgbdCamera::ConvertDepthImageToPointCloud(const ImageDepth32F& depth_image,
 class RgbdCamera::Impl : private ModuleInitVtkRenderingOpenGL2 {
  public:
   Impl(const RigidBodyTree<double>& tree, const RigidBodyFrame<double>& frame,
-       double fov_y, bool show_window, bool fix_camera);
+       double fov_y, double period_sec, bool show_window,
+       bool auto_init, bool fix_camera);
 
   Impl(const RigidBodyTree<double>& tree, const RigidBodyFrame<double>& frame,
        const Eigen::Vector3d& position, const Eigen::Vector3d& orientation,
-       double fov_y, bool show_window, bool fix_camera);
+       double fov_y, double period_sec, bool show_window,
+       bool auto_init, bool fix_camera);
 
   ~Impl() {}
 
@@ -290,14 +323,16 @@ class RgbdCamera::Impl : private ModuleInitVtkRenderingOpenGL2 {
   const RigidBodyTree<double>& tree() const { return tree_; }
 
   // These are the calculator method implementations for the four output ports.
-  void OutputColorImage(const BasicVector<double>& input_vector,
-                        ImageRgba8U* color_image) const;
-  void OutputDepthImage(const BasicVector<double>& input_vector,
-                        ImageDepth32F* depth_image) const;
-  void OutputLabelImage(const BasicVector<double>& input_vector,
-                        ImageLabel16I* label_image) const;
+  void UpdateState(const BasicVector<double>& input_vector,
+                   InternalState* internal_state) const;
+  void OutputColorImage(ImageRgba8U* color_image) const;
+  void OutputDepthImage(ImageDepth32F* depth_image) const;
+  void OutputLabelImage(ImageLabel16I* label_image) const;
   void OutputPoseVector(const BasicVector<double>& input_vector,
                         rendering::PoseVector<double>* pose_vector) const;
+
+  bool auto_init() const { return auto_init_; }
+  double period_sec() const { return period_sec_; }
 
  private:
   void CreateRenderingWorld();
@@ -309,6 +344,8 @@ class RgbdCamera::Impl : private ModuleInitVtkRenderingOpenGL2 {
 
   const RigidBodyTree<double>& tree_;
   const RigidBodyFrame<double>& frame_;
+  double period_sec_{};
+  bool auto_init_{};
   const CameraInfo color_camera_info_;
   const CameraInfo depth_camera_info_;
   const Eigen::Isometry3d X_BC_;
@@ -340,8 +377,10 @@ RgbdCamera::Impl::Impl(const RigidBodyTree<double>& tree,
                        const RigidBodyFrame<double>& frame,
                        const Eigen::Vector3d& position,
                        const Eigen::Vector3d& orientation,
-                       double fov_y, bool show_window, bool fix_camera)
-    : tree_(tree), frame_(frame),
+                       double fov_y, double period_sec, bool show_window,
+                       bool auto_init, bool fix_camera)
+    : tree_(tree), frame_(frame), period_sec_(period_sec),
+      auto_init_(auto_init),
       color_camera_info_(kImageWidth, kImageHeight, fov_y),
       depth_camera_info_(kImageWidth, kImageHeight, fov_y),
       // The color sensor's origin (`Co`) is offset by 0.02 m on the Y axis of
@@ -591,18 +630,12 @@ void RgbdCamera::Impl::CreateRenderingWorld() {
   }
 }
 
-void RgbdCamera::Impl::OutputColorImage(const BasicVector<double>& input_vector,
-                                        ImageRgba8U* color_image) const {
-  // TODO(sherm1) Should evaluate VTK cache entry.
-  UpdateModelPoses(input_vector);
+void RgbdCamera::Impl::OutputColorImage(ImageRgba8U* color_image) const {
   PerformVTKUpdate(color_depth_render_window_, color_filter_, color_exporter_);
   color_exporter_->Export(color_image->at(0, 0));
 }
 
-void RgbdCamera::Impl::OutputDepthImage(const BasicVector<double>& input_vector,
-                                        ImageDepth32F* depth_image_out) const {
-  // TODO(sherm1) Should evaluate VTK cache entry.
-  UpdateModelPoses(input_vector);
+void RgbdCamera::Impl::OutputDepthImage(ImageDepth32F* depth_image_out) const {
   PerformVTKUpdate(color_depth_render_window_, depth_filter_, depth_exporter_);
   depth_exporter_->Export(depth_image_out->at(0, 0));
 
@@ -617,10 +650,7 @@ void RgbdCamera::Impl::OutputDepthImage(const BasicVector<double>& input_vector,
   }
 }
 
-void RgbdCamera::Impl::OutputLabelImage(const BasicVector<double>& input_vector,
-                                        ImageLabel16I* label_image_out) const {
-  // TODO(sherm1) Should evaluate VTK cache entry.
-  UpdateModelPoses(input_vector);
+void RgbdCamera::Impl::OutputLabelImage(ImageLabel16I* label_image_out) const {
   PerformVTKUpdate(label_render_window_, label_filter_, label_exporter_);
 
   const int height = color_camera_info_.height();
@@ -663,6 +693,16 @@ void RgbdCamera::Impl::OutputPoseVector(
   camera_base_pose->set_translation(trans);
   Eigen::Quaterniond quat = Eigen::Quaterniond(X_WB.linear());
   camera_base_pose->set_rotation(quat);
+}
+
+void RgbdCamera::Impl::UpdateState(const BasicVector<double>& input_vector,
+                                   InternalState *internal_state) const {
+  // TODO(sherm1) Should evaluate VTK cache entry.
+  UpdateModelPoses(input_vector);
+  OutputColorImage(&internal_state->color_image());
+  OutputDepthImage(&internal_state->depth_image());
+  OutputLabelImage(&internal_state->label_image());
+  OutputPoseVector(input_vector, &internal_state->camera_base_pose());
 }
 
 void RgbdCamera::Impl::UpdateModelPoses(
@@ -737,15 +777,17 @@ float RgbdCamera::Impl::CheckRangeAndConvertToMeters(float z_buffer_value) {
   return checked_depth;
 }
 
-
 RgbdCamera::RgbdCamera(const std::string& name,
                        const RigidBodyTree<double>& tree,
                        const Eigen::Vector3d& position,
                        const Eigen::Vector3d& orientation,
                        double fov_y,
-                       bool show_window)
+                       double period_sec,
+                       bool show_window,
+                       bool auto_init)
     : impl_(new RgbdCamera::Impl(tree, RigidBodyFrame<double>(), position,
-                                 orientation, fov_y, show_window, true)) {
+                                 orientation, fov_y, period_sec, show_window,
+                                 auto_init, true)) {
   Init(name);
 }
 
@@ -753,8 +795,11 @@ RgbdCamera::RgbdCamera(const std::string& name,
                        const RigidBodyTree<double>& tree,
                        const RigidBodyFrame<double>& frame,
                        double fov_y,
-                       bool show_window)
-    : impl_(new RgbdCamera::Impl(tree, frame, fov_y, show_window, false)) {
+                       double period_sec,
+                       bool show_window,
+                       bool auto_init)
+    : impl_(new RgbdCamera::Impl(tree, frame, fov_y, period_sec, show_window,
+                                 auto_init, false)) {
   Init(name);
 }
 
@@ -764,20 +809,23 @@ void RgbdCamera::Init(const std::string& name) {
       impl_->tree().get_num_positions() + impl_->tree().get_num_velocities();
   this->DeclareInputPort(systems::kVectorValued, kVecNum);
 
-  ImageRgba8U color_image(kImageWidth, kImageHeight);
-  color_image_port_ = &this->DeclareAbstractOutputPort(
-      sensors::ImageRgba8U(color_image), &RgbdCamera::OutputColorImage);
+  InternalState internal_state(kImageWidth, kImageHeight);
+  this->DeclareAbstractState(
+      AbstractValue::Make(internal_state));
+  this->DeclarePeriodicUnrestrictedUpdate(impl_->period_sec(), 0.);
 
-  ImageDepth32F depth_image(kImageWidth, kImageHeight);
+  color_image_port_ = &this->DeclareAbstractOutputPort(
+      internal_state.color_image(), &RgbdCamera::OutputColorImage);
+
   depth_image_port_ = &this->DeclareAbstractOutputPort(
-      sensors::ImageDepth32F(depth_image), &RgbdCamera::OutputDepthImage);
+      internal_state.depth_image(), &RgbdCamera::OutputDepthImage);
 
   ImageLabel16I label_image(kImageWidth, kImageHeight);
   label_image_port_ = &this->DeclareAbstractOutputPort(
-      sensors::ImageLabel16I(label_image), &RgbdCamera::OutputLabelImage);
+      internal_state.label_image(), &RgbdCamera::OutputLabelImage);
 
   camera_base_pose_port_ = &this->DeclareVectorOutputPort(
-      rendering::PoseVector<double>(), &RgbdCamera::OutputPoseVector);
+      internal_state.camera_base_pose(), &RgbdCamera::OutputPoseVector);
 }
 
 RgbdCamera::~RgbdCamera() {}
@@ -833,34 +881,42 @@ RgbdCamera::label_image_output_port() const {
 void RgbdCamera::OutputPoseVector(
     const Context<double>& context,
     rendering::PoseVector<double>* pose_vector) const {
-  const BasicVector<double>* input_vector =
-      this->EvalVectorInput(context, kPortStateInput);
-
-  impl_->OutputPoseVector(*input_vector, pose_vector);
+  const rendering::PoseVector<double>& pose_state =
+      context.get_abstract_state<InternalState>(0).camera_base_pose();
+  pose_vector->set_translation(pose_state.get_translation());
+  pose_vector->set_rotation(pose_state.get_rotation());
 }
 
 void RgbdCamera::OutputColorImage(const Context<double>& context,
                                   ImageRgba8U* color_image) const {
-  const BasicVector<double>* input_vector =
-      this->EvalVectorInput(context, kPortStateInput);
-
-  impl_->OutputColorImage(*input_vector, color_image);
+  *color_image = context.get_abstract_state<InternalState>(0).color_image();
 }
 
 void RgbdCamera::OutputDepthImage(const Context<double>& context,
                                   ImageDepth32F* depth_image) const {
-  const BasicVector<double>* input_vector =
-      this->EvalVectorInput(context, kPortStateInput);
-
-  impl_->OutputDepthImage(*input_vector, depth_image);
+  *depth_image = context.get_abstract_state<InternalState>(0).depth_image();
 }
 
 void RgbdCamera::OutputLabelImage(const Context<double>& context,
                                   ImageLabel16I* label_image) const {
+  *label_image = context.get_abstract_state<InternalState>(0).label_image();
+}
+void RgbdCamera::DoCalcUnrestrictedUpdate(const Context<double>& context,
+                                          State<double> *state) const {
   const BasicVector<double>* input_vector =
       this->EvalVectorInput(context, kPortStateInput);
-
-  impl_->OutputLabelImage(*input_vector, label_image);
+  InternalState& internal_state =
+      state->get_mutable_abstract_state<InternalState>(0);
+  impl_->UpdateState(*input_vector, &internal_state);
+}
+void RgbdCamera::SetDefaultState(const Context<double>& context,
+                                 State<double> *state) const {
+  if (impl_->auto_init()) {
+    // Update initial values with the initial conditions from upstream blocks.
+    DoCalcUnrestrictedUpdate(context, state);
+  } else {
+    LeafSystem<double>::SetDefaultState(context, state);
+  }
 }
 
 constexpr float RgbdCamera::InvalidDepth::kTooFar;
