@@ -228,8 +228,8 @@ void PerformVTKUpdate(
 
 class InternalAbstractState {
  public:
-  // TODO(eric.cousineau): Consider placing a wrapped
-  // copyable_unique_ptr PoseVector.
+  // TODO(eric.cousineau): Consider placing a wrapped copyable_unique_ptr
+  // PoseVector to make this more concise (if sparsity does not matter).
   DRAKE_DEFAULT_COPY_AND_MOVE_AND_ASSIGN(InternalAbstractState);
 
   InternalAbstractState(int width, int height)
@@ -809,15 +809,17 @@ void RgbdCamera::Init(const std::string& name) {
       impl_->tree().get_num_positions() + impl_->tree().get_num_velocities();
   this->DeclareInputPort(systems::kVectorValued, kVecNum);
 
-  auto internal_state_value =
-      std::make_unique<Value<InternalAbstractState>>(kImageWidth, kImageHeight);
-  InternalAbstractState& internal_state = internal_state_value->GetValue();
+  // Define data for declaring states and outputs.
+  InternalAbstractState internal_state(kImageWidth, kImageHeight);
   rendering::PoseVector<double> camera_base_pose;
+
+  // Declare discrete states and update interval.
   this->DeclareAbstractState(
       AbstractValue::Make(internal_state));
   this->DeclareDiscreteState(camera_base_pose.size());
   this->DeclarePeriodicUnrestrictedUpdate(impl_->period_sec(), 0.);
 
+  // Declare output ports.
   color_image_port_ = &this->DeclareAbstractOutputPort(
       internal_state.color_image(), &RgbdCamera::OutputColorImage);
 
@@ -884,10 +886,11 @@ RgbdCamera::label_image_output_port() const {
 void RgbdCamera::OutputPoseVector(
     const Context<double>& context,
     rendering::PoseVector<double>* pose_vector) const {
-  const rendering::PoseVector<double>& pose_state =
-      context.get_abstract_state<InternalAbstractState>(0).camera_base_pose();
-  pose_vector->set_translation(pose_state.get_translation());
-  pose_vector->set_rotation(pose_state.get_rotation());
+  const rendering::PoseVector<double>* pose_state =
+      dynamic_cast<const rendering::PoseVector<double>*>(
+          context.get_discrete_state(0));
+  pose_vector->set_translation(pose_state->get_translation());
+  pose_vector->set_rotation(pose_state->get_rotation());
 }
 
 void RgbdCamera::OutputColorImage(const Context<double>& context,
@@ -912,7 +915,7 @@ void RgbdCamera::DoCalcUnrestrictedUpdate(const Context<double>& context,
       state->get_mutable_abstract_state<InternalAbstractState>(0);
   auto pose_vector =
       dynamic_cast<rendering::PoseVector<double>*>(
-          state->get_mutable_discrete_state()->get_vector(0));
+          state->get_mutable_discrete_state()->get_mutable_vector(0));
   impl_->UpdateState(*input_vector, &internal_state, pose_vector);
 }
 void RgbdCamera::SetDefaultState(const Context<double>& context,
