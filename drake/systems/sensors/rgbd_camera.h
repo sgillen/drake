@@ -240,6 +240,9 @@ class RgbdCamera : public LeafSystem<double> {
   void SetDefaultState(const Context<double>& context,
                        State<double>* state) const override;
 
+  std::unique_ptr<DiscreteValues<double>>
+  AllocateDiscreteState() const override;
+
   const OutputPort<double>* color_image_port_{};
   const OutputPort<double>* depth_image_port_{};
   const OutputPort<double>* label_image_port_{};
