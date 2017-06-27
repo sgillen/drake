@@ -35,14 +35,16 @@ const double kTolerance = 1e-12;
 const double kColorPixelTolerance = 1.001;
 const double kDepthTolerance = 1e-4;
 const double kFovY = M_PI_4;
+const double kPeriodSec = 0.033;
 const bool kShowWindow = false;
+const bool kAutoInit = true;
 
 class RgbdCameraTest : public ::testing::Test {
  public:
   RgbdCameraTest() : dut_("rgbd_camera", RigidBodyTree<double>(),
                           Eigen::Vector3d(1., 2., 3.),
                           Eigen::Vector3d(0.1, 0.2, 0.3),
-                          kFovY,  kShowWindow) {}
+                          kFovY, kPeriodSec, kShowWindow, kAutoInit) {}
 
   void SetUp() {}
 
@@ -118,7 +120,7 @@ class RenderingSim : public systems::Diagram<double> {
                        const Eigen::Vector3d& orientation) {
     rgbd_camera_ = builder_.AddSystem<RgbdCamera>(
         "rgbd_camera", plant_->get_rigid_body_tree(),
-        position, orientation, kFovY, kShowWindow);
+        position, orientation, kFovY, kPeriodSec, kShowWindow, kAutoInit);
     rgbd_camera_->set_name("rgbd_camera");
     Connect();
   }
@@ -132,7 +134,7 @@ class RenderingSim : public systems::Diagram<double> {
 
     rgbd_camera_ = builder_.AddSystem<RgbdCamera>(
         "rgbd_camera", plant_->get_rigid_body_tree(), *rgbd_camera_frame_.get(),
-        kFovY, kShowWindow);
+        kFovY, kPeriodSec, kShowWindow, kAutoInit);
     rgbd_camera_->set_name("rgbd_camera");
     Connect();
   }
@@ -190,6 +192,7 @@ class ImageTest : public ::testing::Test {
       const Eigen::Isometry3d& pose)> CameraBasePoseVerifier;
 
   void Verify(ImageVerifier verifier) {
+    diagram_->SetDefaultState(*context_, context_->get_mutable_state());
     diagram_->CalcOutput(*context_, output_.get());
 
     auto color_image = output_->GetMutableData(0)->GetMutableValue<
@@ -221,6 +224,7 @@ class ImageTest : public ::testing::Test {
 
     for (int i = 0; i < 3; ++i) {
       cstate->SetAtIndex(2, kZDiffs[i]);
+      diagram_->SetDefaultState(*context_, context_->get_mutable_state());
       diagram_->CalcOutput(*context_, output_.get());
       double expected_horizon = CalcHorizon(kZInitial + kZDiffs[i],
                                             color_image.height());
@@ -230,6 +234,7 @@ class ImageTest : public ::testing::Test {
 
 
   void Verify(CameraBasePoseVerifier verifier) {
+    diagram_->SetDefaultState(*context_, context_->get_mutable_state());
     diagram_->CalcOutput(*context_, output_.get());
     rendering::PoseVector<double>* const camera_base_pose =
         dynamic_cast<rendering::PoseVector<double>*>(
@@ -239,6 +244,7 @@ class ImageTest : public ::testing::Test {
   }
 
   void VerifyLabelImage() {
+    diagram_->SetDefaultState(*context_, context_->get_mutable_state());
     diagram_->CalcOutput(*context_, output_.get());
     auto label_image = output_->GetMutableData(2)->GetMutableValue<
       sensors::ImageLabel16I>();
