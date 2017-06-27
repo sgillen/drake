@@ -228,7 +228,7 @@ void PerformVTKUpdate(
 
 class InternalState {
  public:
-  DRAKE_DEFAULT_COPY_AND_MOVE_AND_ASSIGN(InternalState);
+  DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(InternalState);
 
   InternalState(int width, int height)
       : color_image_(width, height),
@@ -466,9 +466,11 @@ RgbdCamera::Impl::Impl(const RigidBodyTree<double>& tree,
 
 RgbdCamera::Impl::Impl(const RigidBodyTree<double>& tree,
                        const RigidBodyFrame<double>& frame,
-                       double fov_y, bool show_window, bool fix_camera)
+                       double fov_y, double period_sec, bool show_window,
+                       bool auto_init, bool fix_camera)
     : Impl::Impl(tree, frame, Eigen::Vector3d(0., 0., 0.),
-                 Eigen::Vector3d(0., 0., 0.), fov_y, show_window, fix_camera) {}
+                 Eigen::Vector3d(0., 0., 0.), fov_y, period_sec, show_window,
+                 auto_init, fix_camera) {}
 
 
 void RgbdCamera::Impl::CreateRenderingWorld() {
@@ -809,7 +811,9 @@ void RgbdCamera::Init(const std::string& name) {
       impl_->tree().get_num_positions() + impl_->tree().get_num_velocities();
   this->DeclareInputPort(systems::kVectorValued, kVecNum);
 
-  InternalState internal_state(kImageWidth, kImageHeight);
+  auto internal_state_value =
+      std::make_unique<Value<InternalState>>(kImageWidth, kImageHeight);
+  InternalState& internal_state = internal_state_value->GetValue();
   this->DeclareAbstractState(
       AbstractValue::Make(internal_state));
   this->DeclarePeriodicUnrestrictedUpdate(impl_->period_sec(), 0.);
