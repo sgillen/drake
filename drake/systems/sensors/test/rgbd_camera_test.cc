@@ -176,6 +176,18 @@ UV kCorners[4] = {
   UV{kWidth - 1, kHeight - 1}
 };
 
+// Ensure that diagram updates the state by triggering a discrete (unrestricted)
+// update.
+void UpdateDiagram(const Diagram<double>* diagram,
+                   Context<double>* context,
+                   SystemOutput<double>* output) {
+  DiscreteEvent<double> event {
+      .action = DiscreteEvent<double>::kUnrestrictedUpdateAction,
+  };
+  diagram->CalcUnrestrictedUpdate(*context, event,
+                                  context->get_mutable_state());
+  diagram->CalcOutput(*context, output);
+}
 
 class ImageTest : public ::testing::Test {
  public:
@@ -192,9 +204,7 @@ class ImageTest : public ::testing::Test {
       const Eigen::Isometry3d& pose)> CameraBasePoseVerifier;
 
   void Verify(ImageVerifier verifier) {
-    diagram_->SetDefaultState(*context_, context_->get_mutable_state());
-    diagram_->CalcOutput(*context_, output_.get());
-
+    UpdateDiagram(diagram_.get(), context_.get(), output_.get());
     auto color_image = output_->GetMutableData(0)->GetMutableValue<
       sensors::ImageRgba8U>();
     auto depth_image = output_->GetMutableData(1)->GetMutableValue<
@@ -224,8 +234,7 @@ class ImageTest : public ::testing::Test {
 
     for (int i = 0; i < 3; ++i) {
       cstate->SetAtIndex(2, kZDiffs[i]);
-      diagram_->SetDefaultState(*context_, context_->get_mutable_state());
-      diagram_->CalcOutput(*context_, output_.get());
+      UpdateDiagram(diagram_.get(), context_.get(), output_.get());
       double expected_horizon = CalcHorizon(kZInitial + kZDiffs[i],
                                             color_image.height());
       verifier(color_image, depth_image, expected_horizon);
@@ -234,8 +243,7 @@ class ImageTest : public ::testing::Test {
 
 
   void Verify(CameraBasePoseVerifier verifier) {
-    diagram_->SetDefaultState(*context_, context_->get_mutable_state());
-    diagram_->CalcOutput(*context_, output_.get());
+    UpdateDiagram(diagram_.get(), context_.get(), output_.get());
     rendering::PoseVector<double>* const camera_base_pose =
         dynamic_cast<rendering::PoseVector<double>*>(
             output_->GetMutableVectorData(3));
@@ -244,8 +252,7 @@ class ImageTest : public ::testing::Test {
   }
 
   void VerifyLabelImage() {
-    diagram_->SetDefaultState(*context_, context_->get_mutable_state());
-    diagram_->CalcOutput(*context_, output_.get());
+    UpdateDiagram(diagram_.get(), context_.get(), output_.get());
     auto label_image = output_->GetMutableData(2)->GetMutableValue<
       sensors::ImageLabel16I>();
 
