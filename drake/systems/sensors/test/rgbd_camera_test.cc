@@ -37,14 +37,13 @@ const double kDepthTolerance = 1e-4;
 const double kFovY = M_PI_4;
 const double kPeriodSec = 0.033;
 const bool kShowWindow = false;
-const bool kAutoInit = true;
 
 class RgbdCameraTest : public ::testing::Test {
  public:
   RgbdCameraTest() : dut_("rgbd_camera", RigidBodyTree<double>(),
                           Eigen::Vector3d(1., 2., 3.),
                           Eigen::Vector3d(0.1, 0.2, 0.3),
-                          kFovY, kPeriodSec, kShowWindow, kAutoInit) {}
+                          kFovY, kPeriodSec, kShowWindow) {}
 
   void SetUp() {}
 
@@ -208,6 +207,15 @@ class ImageTest : public ::testing::Test {
   // @param do_state_update Enforce that a discrete update will happen given
   // the present context. This will progress the context forward by one period.
   void CalcOutput(bool force_state_update = false) {
+    // TODO(eric.cousineau): Find better division of unittesting.
+    // This whole setup is rather dirty, given that this is testing basic
+    // system semantics (expecting a discrete update, auto_init, etc) with
+    // something much more complex (image updates).
+    // Ideally, this should be split up into non-system functionality (e.g.
+    // RgbdCameraRenderer) where the rendering / scene graph stuff is tested
+    // directly on this device. After that, the system framework-level tests
+    // should only be testing very basic interface components, leveraging
+    // component-based testing.
     bool do_state_update = force_state_update || !auto_init_;
     if (do_state_update) {
       // Compute update for the next time step.
@@ -476,6 +484,10 @@ class ImageTest : public ::testing::Test {
 // Verifies the rendered terrain and the camera's pose.
 TEST_F(ImageTest, TerrainRenderingTest) {
   // Only this test will check if auto_init is functioning correctly.
+  // This is preferred over using parameterized tests as we should only need to
+  // test a few cases for auto_init (ensuring that the initial state is what we
+  // expect).
+  // TODO(eric.cousineau): Add negative test for when auto_init is false.
   for (bool auto_init : {false, true}) {
     drake::log()->info("auto_init: {}", auto_init);
     SetUp("nothing.sdf",
