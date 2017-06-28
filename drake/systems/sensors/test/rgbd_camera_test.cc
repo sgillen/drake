@@ -176,29 +176,6 @@ UV kCorners[4] = {
   UV{kWidth - 1, kHeight - 1}
 };
 
-// Ensure that diagram updates the state by triggering a discrete (unrestricted)
-// update. This will progress the context forward by one period.
-void UpdateDiagram(const Diagram<double>* diagram,
-                   Context<double>* context,
-                   SystemOutput<double>* output) {
-//  DiscreteEvent<double> event {
-//      .action = DiscreteEvent<double>::kUnrestrictedUpdateAction,
-//      .do_unrestricted_update = []
-//  };
-  // Compute update for next timestep.
-  UpdateActions<double> actions;
-  diagram->CalcNextUpdateTime(*context, &actions);
-  EXPECT_EQ(1, actions.events.size());
-  EXPECT_NEAR(context->get_time() + kPeriodSec, actions.time, 1e-10);
-  context->set_time(actions.time);
-  diagram->CalcUnrestrictedUpdate(*context, actions.events[0],
-                                  context->get_mutable_state());
-  diagram->CalcOutput(*context, output);
-  drake::log()->info("UpdateDiagram: {}",
-                     context->get_continuous_state_vector().CopyToVector()
-                         .transpose());
-}
-
 class ImageTest : public ::testing::Test {
  public:
   typedef std::function<void(
@@ -214,13 +191,37 @@ class ImageTest : public ::testing::Test {
       const Eigen::Isometry3d& pose)> CameraBasePoseVerifier;
 
   void Verify(ImageVerifier verifier) {
-    UpdateDiagram(diagram_.get(), context_.get(), output_.get());
+    CalcOutput();
     auto color_image = output_->GetMutableData(0)->GetMutableValue<
       sensors::ImageRgba8U>();
     auto depth_image = output_->GetMutableData(1)->GetMutableValue<
       sensors::ImageDepth32F>();
 
     verifier(color_image, depth_image);
+  }
+
+  // Get the output of the diagram containing the RGB-D camera.
+  // This will use `context_` as the present state, and will update the mutable
+  // leaf portions of `context_`.
+  // @param do_state_update Enforce that a discrete update will happen given
+  // the present context. This will progress the context forward by one period.
+  void CalcOutput(bool do_state_update = true) {
+    if (do_state_update) {
+      // Compute update for the next time step.
+      UpdateActions<double> actions;
+      diagram_->CalcNextUpdateTime(*context_, &actions);
+      // We should only have an update for the RGB-D camera.
+      EXPECT_EQ(1, actions.events.size());
+      const DiscreteEvent<double>& event = actions.events[0];
+      // This update should be done according to the prescribed period.
+      EXPECT_NEAR(context_->get_time() + kPeriodSec, actions.time, 1e-10);
+      EXPECT_EQ(DiscreteEvent<double>::kUnrestrictedUpdateAction,
+                event.action);
+      context_->set_time(actions.time);
+      diagram_->CalcUnrestrictedUpdate(*context_, event,
+                                       context_->get_mutable_state());
+    }
+    diagram_->CalcOutput(*context_, output_.get());
   }
 
   // Calculates the pixel location of the horizon.
@@ -244,8 +245,7 @@ class ImageTest : public ::testing::Test {
 
     for (int i = 0; i < 3; ++i) {
       cstate->SetAtIndex(2, kZDiffs[i]);
-      drake::log()->info("i = {}", i);
-      UpdateDiagram(diagram_.get(), context_.get(), output_.get());
+      CalcOutput();
       double expected_horizon = CalcHorizon(kZInitial + kZDiffs[i],
                                             color_image.height());
       verifier(color_image, depth_image, expected_horizon);
@@ -254,7 +254,7 @@ class ImageTest : public ::testing::Test {
 
 
   void Verify(CameraBasePoseVerifier verifier) {
-    UpdateDiagram(diagram_.get(), context_.get(), output_.get());
+    CalcOutput();
     rendering::PoseVector<double>* const camera_base_pose =
         dynamic_cast<rendering::PoseVector<double>*>(
             output_->GetMutableVectorData(3));
@@ -263,7 +263,7 @@ class ImageTest : public ::testing::Test {
   }
 
   void VerifyLabelImage() {
-    UpdateDiagram(diagram_.get(), context_.get(), output_.get());
+    CalcOutput();
     auto label_image = output_->GetMutableData(2)->GetMutableValue<
       sensors::ImageLabel16I>();
 

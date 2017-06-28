@@ -698,8 +698,6 @@ void RgbdCamera::Impl::UpdateState(const BasicVector<double>& input_vector,
                                    rendering::PoseVector<double>* pose_vector)
                                    const {
   // TODO(sherm1) Should evaluate VTK cache entry.
-  drake::log()->info("UpdateState: {}",
-                     input_vector.CopyToVector().transpose());
   UpdateModelPoses(input_vector);
   OutputColorImage(&internal_state->color_image());
   OutputDepthImage(&internal_state->depth_image());
