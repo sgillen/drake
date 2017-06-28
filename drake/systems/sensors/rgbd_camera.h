@@ -147,7 +147,7 @@ class RgbdCamera : public LeafSystem<double> {
              double fov_y,
              double period_sec,
              bool show_window,
-             bool auto_init = true);
+             bool auto_init = false);
 
   /// A constructor for %RgbdCamera that defines `B` using a RigidBodyFrame.
   /// The pose of %RgbdCamera is fixed to a user-defined frame and will be
@@ -180,7 +180,7 @@ class RgbdCamera : public LeafSystem<double> {
              double fov_y,
              double period_sec,
              bool show_window,
-             bool auto_init = true);
+             bool auto_init = false);
 
   ~RgbdCamera();
 
