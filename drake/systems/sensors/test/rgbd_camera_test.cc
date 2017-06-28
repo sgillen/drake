@@ -181,12 +181,21 @@ UV kCorners[4] = {
 void UpdateDiagram(const Diagram<double>* diagram,
                    Context<double>* context,
                    SystemOutput<double>* output) {
-  DiscreteEvent<double> event {
-      .action = DiscreteEvent<double>::kUnrestrictedUpdateAction,
-  };
-  diagram->CalcUnrestrictedUpdate(*context, event,
+//  DiscreteEvent<double> event {
+//      .action = DiscreteEvent<double>::kUnrestrictedUpdateAction,
+//      .do_unrestricted_update = []
+//  };
+  // Compute update for next timestep.
+  context->set_time(context->get_time() + kPeriodSec);
+  std::vector<DiscreteEvent<double>> events;
+  diagram->GetPerStepEvents(*context, &events);
+  EXPECT_EQ(1, events.size());
+  diagram->CalcUnrestrictedUpdate(*context, events[0],
                                   context->get_mutable_state());
   diagram->CalcOutput(*context, output);
+  drake::log()->info("UpdateDiagram: {}",
+                     context->get_continuous_state_vector().CopyToVector()
+                         .transpose());
 }
 
 class ImageTest : public ::testing::Test {
@@ -234,6 +243,7 @@ class ImageTest : public ::testing::Test {
 
     for (int i = 0; i < 3; ++i) {
       cstate->SetAtIndex(2, kZDiffs[i]);
+      drake::log()->info("i = {}", i);
       UpdateDiagram(diagram_.get(), context_.get(), output_.get());
       double expected_horizon = CalcHorizon(kZInitial + kZDiffs[i],
                                             color_image.height());
