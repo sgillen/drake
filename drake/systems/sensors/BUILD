@@ -356,11 +356,4 @@ drake_cc_googletest(
     deps = [":image_to_lcm_image_array_t"],
 )
 
-sh_test(
-    name = "vtk_test",
-    srcs = [
-        "vtk_test.sh",
-    ],
-)
-
 cpplint()
