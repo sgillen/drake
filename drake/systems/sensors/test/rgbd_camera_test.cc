@@ -117,16 +117,18 @@ class RenderingSim : public systems::Diagram<double> {
 
   // For fixed camera base.
   void InitFixedCamera(const Eigen::Vector3d& position,
-                       const Eigen::Vector3d& orientation) {
+                       const Eigen::Vector3d& orientation,
+                       bool auto_init) {
     rgbd_camera_ = builder_.AddSystem<RgbdCamera>(
         "rgbd_camera", plant_->get_rigid_body_tree(),
-        position, orientation, kFovY, kPeriodSec, kShowWindow, kAutoInit);
+        position, orientation, kFovY, kPeriodSec, kShowWindow, auto_init);
     rgbd_camera_->set_name("rgbd_camera");
     Connect();
   }
 
   // For movable camera base.
-  void InitMovableCamera(const Eigen::Isometry3d& transformation) {
+  void InitMovableCamera(const Eigen::Isometry3d& transformation,
+                         bool auto_init) {
     rgbd_camera_frame_ = std::allocate_shared<RigidBodyFrame<double>>(
         Eigen::aligned_allocator<RigidBodyFrame<double>>(),
         "rgbd camera frame", plant_->get_rigid_body_tree().FindBody("link"),
@@ -134,7 +136,7 @@ class RenderingSim : public systems::Diagram<double> {
 
     rgbd_camera_ = builder_.AddSystem<RgbdCamera>(
         "rgbd_camera", plant_->get_rigid_body_tree(), *rgbd_camera_frame_.get(),
-        kFovY, kPeriodSec, kShowWindow, kAutoInit);
+        kFovY, kPeriodSec, kShowWindow, auto_init);
     rgbd_camera_->set_name("rgbd_camera");
     Connect();
   }
@@ -205,7 +207,8 @@ class ImageTest : public ::testing::Test {
   // leaf portions of `context_`.
   // @param do_state_update Enforce that a discrete update will happen given
   // the present context. This will progress the context forward by one period.
-  void CalcOutput(bool do_state_update = true) {
+  void CalcOutput(bool force_state_update = false) {
+    bool do_state_update = force_state_update || !auto_init_;
     if (do_state_update) {
       // Compute update for the next time step.
       UpdateActions<double> actions;
@@ -220,6 +223,8 @@ class ImageTest : public ::testing::Test {
       context_->set_time(actions.time);
       diagram_->CalcUnrestrictedUpdate(*context_, event,
                                        context_->get_mutable_state());
+    } else {
+      drake::log()->info("Skip update given auto_init_ == true");
     }
     diagram_->CalcOutput(*context_, output_.get());
   }
@@ -245,7 +250,9 @@ class ImageTest : public ::testing::Test {
 
     for (int i = 0; i < 3; ++i) {
       cstate->SetAtIndex(2, kZDiffs[i]);
-      CalcOutput();
+      // We need an update after the first image.
+      bool force_state_update = i > 0;
+      CalcOutput(force_state_update);
       double expected_horizon = CalcHorizon(kZInitial + kZDiffs[i],
                                             color_image.height());
       verifier(color_image, depth_image, expected_horizon);
@@ -436,20 +443,24 @@ class ImageTest : public ::testing::Test {
 
   // For fixed camera base.
   void SetUp(const std::string& sdf, const Eigen::Vector3d& position,
-             const Eigen::Vector3d& orientation) {
+             const Eigen::Vector3d& orientation,
+             bool auto_init = false) {
+    auto_init_ = auto_init;
     diagram_ = std::make_unique<RenderingSim>(
         FindResourceOrThrow("drake/systems/sensors/test/models/" + sdf));
-    diagram_->InitFixedCamera(position, orientation);
+    diagram_->InitFixedCamera(position, orientation, auto_init);
     context_ = diagram_->CreateDefaultContext();
     output_ = diagram_->AllocateOutput(*context_);
   }
 
   // For moving camera base.
   void SetUp(const std::string& sdf,
-             const Eigen::Isometry3d& transformation) {
+             const Eigen::Isometry3d& transformation,
+             bool auto_init = false) {
+    auto_init_ = auto_init;
     diagram_ = std::make_unique<RenderingSim>(
         FindResourceOrThrow("drake/systems/sensors/test/models/" + sdf));
-    diagram_->InitMovableCamera(transformation);
+    diagram_->InitMovableCamera(transformation, auto_init_);
     context_ = diagram_->CreateDefaultContext();
     output_ = diagram_->AllocateOutput(*context_);
   }
@@ -458,16 +469,21 @@ class ImageTest : public ::testing::Test {
   std::unique_ptr<RenderingSim> diagram_;
   std::unique_ptr<systems::Context<double>> context_;
   std::unique_ptr<systems::SystemOutput<double>> output_;
+  bool auto_init_{};
 };
 
 
 // Verifies the rendered terrain and the camera's pose.
 TEST_F(ImageTest, TerrainRenderingTest) {
-  SetUp("nothing.sdf",
-        Eigen::Vector3d(0., 0., 4.999),
-        Eigen::Vector3d(0., M_PI_2, 0.));
-  Verify(ImageTest::VerifyTerrain);
-  Verify(ImageTest::VerifyCameraPose);
+  // Only this test will check if auto_init is functioning correctly.
+  for (bool auto_init : {false, true}) {
+    drake::log()->info("auto_init: {}", auto_init);
+    SetUp("nothing.sdf",
+          Eigen::Vector3d(0., 0., 4.999),
+          Eigen::Vector3d(0., M_PI_2, 0.), auto_init);
+    Verify(ImageTest::VerifyTerrain);
+    Verify(ImageTest::VerifyCameraPose);
+  }
 }
 
 // Verifies the rendered box.
@@ -517,8 +533,11 @@ TEST_F(ImageTest, CameraPoseUpdateTest) {
                                     0., 1., 0., 0.,
                                     0., 0., 1., 11.,
                                     0., 0., 0., 1.).finished());
-  SetUp("nothing.sdf", transformation);
-  VerifyPoseUpdate(ImageTest::VerifyMovingCamera);
+  for (bool auto_init : {false, true}) {
+    drake::log()->info("auto_init: {}", auto_init);
+    SetUp("nothing.sdf", transformation, auto_init);
+    VerifyPoseUpdate(ImageTest::VerifyMovingCamera);
+  }
 }
 
 // Verifies the number of ids in a label image.
