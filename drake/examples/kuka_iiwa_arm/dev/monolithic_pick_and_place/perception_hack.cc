@@ -465,7 +465,13 @@ class PerceptionHack::Impl {
           pplant->get_output_port_plant_state(),
           rgbd_camera_->state_input_port());
 
-      auto&& color_image_output_port = rgbd_camera_->get_output_port(0);
+      auto color_zoh =
+          pbuilder->template AddSystem<AbstractZOH<drake::systems::sensors::ImageRgba8U>>(camera_dt);
+      pbuilder->Connect(
+            rgbd_camera_->get_output_port(0),
+            color_zoh->get_input_port(0));
+
+      auto&& color_image_output_port = color_zoh->get_output_port(0);
 
       auto label_zoh =
           pbuilder->template AddSystem<AbstractZOH<drake::systems::sensors::ImageLabel16I>>(camera_dt);
