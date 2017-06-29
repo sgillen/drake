@@ -26,12 +26,18 @@ ZeroOrderHold<T>::ZeroOrderHold(double period_sec, int size)
 
 template <typename T>
 ZeroOrderHold<T>::ZeroOrderHold(double period_sec, const AbstractValue& value)
-    : period_sec_(period_sec), is_abstract_(false) {
+    : period_sec_(period_sec), is_abstract_(false),
+      abstract_value_(value.Clone()) {
   // TODO(eric.cousineau): Remove value parameter from the constructor once
   // the effective equivalent of #3109 for abstract values lands.
   this->DeclareAbstractInputPort(value);
+  // We must bind these, because the instance-method pointer version expects
+  // this to return a value-type `OutputType`, which would cause unwanted
+  // slicing.
+  using namespace std::placeholders;
   this->DeclareAbstractOutputPort(
-      value, &ZeroOrderHold::DoCalcAbstractOutput);
+      [this](const Context<T>&) { return this->AllocateAbstractValue(); },
+      std::bind(&ZeroOrderHold::DoCalcAbstractOutput, this, _1, _2));
   this->DeclareAbstractState(value.Clone());
   this->DeclarePeriodicUnrestrictedUpdate(period_sec, 0.);
 }
@@ -53,6 +59,12 @@ void ZeroOrderHold<T>::DoCalcDiscreteVariableUpdates(
   const auto& input_value = *this->EvalVectorInput(context, 0);
   auto& state_value = *discrete_state->get_mutable_vector(0);
   state_value.SetFrom(input_value);
+}
+
+template <typename T>
+std::unique_ptr<AbstractValue>
+ZeroOrderHold<T>::AllocateAbstractValue() const {
+  return abstract_value_->Clone();
 }
 
 template <typename T>

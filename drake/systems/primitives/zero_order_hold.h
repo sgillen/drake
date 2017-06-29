@@ -44,6 +44,10 @@ class ZeroOrderHold : public LeafSystem<T> {
       const Context<T>& context,
       DiscreteValues<T>* discrete_state) const override;
 
+  std::unique_ptr<AbstractValue> AllocateAbstractValue() const;
+
+//  std::unique_ptr<AbstractValue> AllocateAbstractValue(const Context) const;
+
   void DoCalcAbstractOutput(
       const Context<T>& context,
       AbstractValue* output) const;
@@ -55,6 +59,7 @@ class ZeroOrderHold : public LeafSystem<T> {
  private:
   const double period_sec_{};
   const bool is_abstract_{};
+  const std::unique_ptr<AbstractValue> abstract_value_;
 };
 
 }  // namespace systems
