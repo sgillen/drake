@@ -33,31 +33,38 @@ class ZeroOrderHoldTest : public ::testing::TestWithParam<bool> {
   ZeroOrderHoldTest()
       : is_abstract_(GetParam()) {}
   void SetUp() override {
-    ic_ << 1.0, 3.14, 2.18;
+    state_override_ << 1.0, 3.14, 2.18;
     input_ << 1.0, 1.0, 3.0;
 
     if (!is_abstract_) {
       hold_ = std::make_unique<ZeroOrderHold<double>>(kTenHertz, kLength);
       action_type_ = DiscreteEvent<double>::kDiscreteUpdateAction;
     } else {
+      // Reflect initial state of NaN.
+      const double nan = std::numeric_limits<double>::quiet_NaN();
       hold_ = std::make_unique<ZeroOrderHold<double>>(
-          kTenHertz, Value<SimpleType>(ic_));
+          kTenHertz, Value<SimpleType>(Eigen::Vector3d::Constant(nan)));
       action_type_ = DiscreteEvent<double>::kUnrestrictedUpdateAction;
     }
     context_ = hold_->CreateDefaultContext();
     output_ = hold_->AllocateOutput(*context_);
-    context_->FixInputPort(
-        0, std::make_unique<BasicVector<double>>(ic_));
+    if (!is_abstract_) {
+      context_->FixInputPort(
+          0, std::make_unique<BasicVector<double>>(input_));
+    } else {
+      context_->FixInputPort(
+          0, AbstractValue::Make<SimpleType>(input_));
+    }
   }
 
-  const bool is_abstract_{};
   std::unique_ptr<System<double>> hold_;
   std::unique_ptr<Context<double>> context_;
   std::unique_ptr<SystemOutput<double>> output_;
 
-  Eigen::Vector3d ic_;
-  Eigen::Vector3d input_;
+  const bool is_abstract_{};
   DiscreteEvent<double>::ActionType action_type_;
+  Eigen::Vector3d state_override_;
+  Eigen::Vector3d input_;
 };
 
 // Tests that the zero-order hold has one input and one output.
@@ -68,7 +75,11 @@ TEST_P(ZeroOrderHoldTest, Topology) {
   EXPECT_EQ(1, output_->get_num_ports());
   EXPECT_EQ(1, hold_->get_num_output_ports());
 
-  EXPECT_FALSE(hold_->HasAnyDirectFeedthrough());
+  if (!is_abstract_) {
+    // Do not test direct feedthrough for abstract types, given that
+    // `DoToSymbolic` is not supported in this case.
+    EXPECT_FALSE(hold_->HasAnyDirectFeedthrough());
+  }
 }
 
 // Tests that the zero-order hold has discrete state.
@@ -78,15 +89,16 @@ TEST_P(ZeroOrderHoldTest, ReservesState) {
     ASSERT_NE(nullptr, xd);
     EXPECT_EQ(kLength, xd->size());
   } else {
-    const SimpleType& value = context_->get_abstract_state<SimpleType>(0);
-    EXPECT_EQ(ic_, value.value);
+    const SimpleType& state_value = context_->get_abstract_state<SimpleType>(0);
+    const Eigen::Vector3d value = state_value.value;
+    EXPECT_TRUE((value.array() != value.array()).all());
   }
 }
 
 // Tests that the output is the state.
 TEST_P(ZeroOrderHoldTest, Output) {
   Eigen::Vector3d output;
-  Eigen::Vector3d output_expected = ic_ * 10.;
+  Eigen::Vector3d output_expected = state_override_;
   if (!is_abstract_) {
     BasicVector<double>* xd = dynamic_cast<BasicVector<double>*>(
         context_->get_mutable_discrete_state(0));
