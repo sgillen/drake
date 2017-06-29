@@ -314,10 +314,22 @@ void PerformVTKUpdate(
     const vtkNew<vtkRenderWindow>& window,
     const vtkNew<vtkWindowToImageFilter>& filter,
     const vtkNew<vtkImageExport>& exporter) {
-  window->Render();
-  filter->Modified();
-  filter->Update();
-  exporter->Update();
+  {
+    DRAKE_SCOPE_TIME(x, "window");
+    window->Render();
+  }
+  {
+    DRAKE_SCOPE_TIME(x, "filter->Modified");
+    filter->Modified();
+  }
+  {
+    DRAKE_SCOPE_TIME(x, "filter->Update");
+    filter->Update();
+  }
+  {
+    DRAKE_SCOPE_TIME(x, "exporter->Update");
+    exporter->Update();
+  }
 }
 
 }  // namespace
@@ -696,6 +708,7 @@ void RgbdCamera::Impl::OutputColorImage(const BasicVector<double>& input_vector,
                                         ImageRgba8U* color_image) const {
   // TODO(sherm1) Should evaluate VTK cache entry.
   UpdateModelPoses(input_vector);
+  drake::log()->info("Color");
   PerformVTKUpdate(color_depth_render_window_, color_filter_, color_exporter_);
   color_exporter_->Export(color_image->at(0, 0));
 }
@@ -704,6 +717,7 @@ void RgbdCamera::Impl::OutputDepthImage(const BasicVector<double>& input_vector,
                                         ImageDepth32F* depth_image_out) const {
   // TODO(sherm1) Should evaluate VTK cache entry.
   UpdateModelPoses(input_vector);
+  drake::log()->info("Depth");
   PerformVTKUpdate(color_depth_render_window_, depth_filter_, depth_exporter_);
   depth_exporter_->Export(depth_image_out->at(0, 0));
 
@@ -722,6 +736,7 @@ void RgbdCamera::Impl::OutputLabelImage(const BasicVector<double>& input_vector,
                                         ImageLabel16I* label_image_out) const {
   // TODO(sherm1) Should evaluate VTK cache entry.
   UpdateModelPoses(input_vector);
+  drake::log()->info("Label");
   PerformVTKUpdate(label_render_window_, label_filter_, label_exporter_);
 
   const int height = color_camera_info_.height();
