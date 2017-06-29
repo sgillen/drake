@@ -8,6 +8,7 @@
 #include "drake/common/unused.h"
 #include "drake/lcm/drake_lcm.h"
 #include "drake/multibody/parsers/sdf_parser.h"
+#include "drake/multibody/rigid_body_plant/drake_visualizer.h"
 #include "drake/multibody/rigid_body_plant/rigid_body_plant.h"
 #include "drake/multibody/rigid_body_tree.h"
 #include "drake/multibody/rigid_body_tree_construction.h"
@@ -90,6 +91,14 @@ int main() {
       kPoseLcmChannelName, translator, &lcm);
   pose_lcm_publisher->set_name("pose_lcm_publisher");
   pose_lcm_publisher->set_publish_period(kCameraPosePublishPeriod);
+
+  auto visualizer = builder.template AddSystem<DrakeVisualizer>(
+      plant->get_rigid_body_tree(), &lcm);
+
+  builder.Connect(
+      plant->get_output_port(0),
+      visualizer->get_input_port(0));
+  visualizer->set_publish_period(0.001);
 
   builder.Connect(
       plant->get_output_port(0),
