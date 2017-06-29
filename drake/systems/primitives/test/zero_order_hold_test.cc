@@ -19,22 +19,49 @@ namespace {
 const double kTenHertz = 0.1;
 const int kLength = 3;
 
-class ZeroOrderHoldTest : public ::testing::Test {
+struct SimpleType {
+  DRAKE_DEFAULT_COPY_AND_MOVE_AND_ASSIGN(SimpleType);
+
+  SimpleType(const Eigen::Vector3d& value)
+      : value(value) {}
+
+  Eigen::Vector3d value;
+};
+
+class ZeroOrderHoldTest : public ::testing::TestWithParam<bool> {
  protected:
+  ZeroOrderHoldTest()
+      : is_abstract_(GetParam()) {}
   void SetUp() override {
-    hold_ = std::make_unique<ZeroOrderHold<double>>(kTenHertz, kLength);
+    ic_ << 1.0, 3.14, 2.18;
+    input_ << 1.0, 1.0, 3.0;
+
+    if (!is_abstract_) {
+      hold_ = std::make_unique<ZeroOrderHold<double>>(kTenHertz, kLength);
+      action_type_ = DiscreteEvent<double>::kDiscreteUpdateAction;
+    } else {
+      hold_ = std::make_unique<ZeroOrderHold<double>>(
+          kTenHertz, Value<SimpleType>(ic_));
+      action_type_ = DiscreteEvent<double>::kUnrestrictedUpdateAction;
+    }
     context_ = hold_->CreateDefaultContext();
     output_ = hold_->AllocateOutput(*context_);
-    context_->FixInputPort(0, BasicVector<double>::Make({1.0, 1.0, 3.0}));
+    context_->FixInputPort(
+        0, std::make_unique<BasicVector<double>>(ic_));
   }
 
+  const bool is_abstract_{};
   std::unique_ptr<System<double>> hold_;
   std::unique_ptr<Context<double>> context_;
   std::unique_ptr<SystemOutput<double>> output_;
+
+  Eigen::Vector3d ic_;
+  Eigen::Vector3d input_;
+  DiscreteEvent<double>::ActionType action_type_;
 };
 
 // Tests that the zero-order hold has one input and one output.
-TEST_F(ZeroOrderHoldTest, Topology) {
+TEST_P(ZeroOrderHoldTest, Topology) {
   EXPECT_EQ(1, hold_->get_num_input_ports());
   EXPECT_EQ(1, context_->get_num_input_ports());
 
@@ -45,30 +72,46 @@ TEST_F(ZeroOrderHoldTest, Topology) {
 }
 
 // Tests that the zero-order hold has discrete state.
-TEST_F(ZeroOrderHoldTest, ReservesState) {
-  const VectorBase<double>* xd = context_->get_discrete_state(0);
-  ASSERT_NE(nullptr, xd);
-  EXPECT_EQ(kLength, xd->size());
+TEST_P(ZeroOrderHoldTest, ReservesState) {
+  if (!is_abstract_) {
+    const VectorBase<double>* xd = context_->get_discrete_state(0);
+    ASSERT_NE(nullptr, xd);
+    EXPECT_EQ(kLength, xd->size());
+  } else {
+    const SimpleType& value = context_->get_abstract_state<SimpleType>(0);
+    EXPECT_EQ(ic_, value.value);
+  }
 }
 
 // Tests that the output is the state.
-TEST_F(ZeroOrderHoldTest, Output) {
-  BasicVector<double>* xd = dynamic_cast<BasicVector<double>*>(
-      context_->get_mutable_discrete_state(0));
-  xd->get_mutable_value() << 1.0, 3.14, 2.18;
+TEST_P(ZeroOrderHoldTest, Output) {
+  Eigen::Vector3d output;
+  Eigen::Vector3d output_expected = ic_ * 10.;
+  if (!is_abstract_) {
+    BasicVector<double>* xd = dynamic_cast<BasicVector<double>*>(
+        context_->get_mutable_discrete_state(0));
+    xd->get_mutable_value() << output_expected;
 
-  hold_->CalcOutput(*context_, output_.get());
+    hold_->CalcOutput(*context_, output_.get());
 
-  const BasicVector<double>* output_vector = output_->get_vector_data(0);
-  ASSERT_NE(nullptr, output_vector);
-  EXPECT_EQ(1.0, output_vector->GetAtIndex(0));
-  EXPECT_EQ(3.14, output_vector->GetAtIndex(1));
-  EXPECT_EQ(2.18, output_vector->GetAtIndex(2));
+    const BasicVector<double>* output_vector = output_->get_vector_data(0);
+    ASSERT_NE(nullptr, output_vector);
+    output = output_vector->CopyToVector();
+  } else {
+    SimpleType& state_value =
+        context_->get_mutable_abstract_state<SimpleType>(0);
+    state_value = SimpleType{output_expected};
+
+    hold_->CalcOutput(*context_, output_.get());
+
+    output = output_->get_data(0)->GetValue<SimpleType>().value;
+  }
+  EXPECT_EQ(output_expected, output);
 }
 
 // Tests that when the current time is exactly on the sampling period, a update
 // is requested in the future.
-TEST_F(ZeroOrderHoldTest, NextUpdateTimeMustNotBeCurrentTime) {
+TEST_P(ZeroOrderHoldTest, NextUpdateTimeMustNotBeCurrentTime) {
   // Calculate the next update time.
   context_->set_time(0.0);
   UpdateActions<double> actions;
@@ -81,12 +124,12 @@ TEST_F(ZeroOrderHoldTest, NextUpdateTimeMustNotBeCurrentTime) {
   // Check that the action is to update.
   ASSERT_EQ(1u, actions.events.size());
   const DiscreteEvent<double>& event = actions.events[0];
-  EXPECT_EQ(DiscreteEvent<double>::kDiscreteUpdateAction, event.action);
+  EXPECT_EQ(action_type_, event.action);
 }
 
 // Tests that when the current time is between updates, a update is requested
 // at the appropriate time in the future.
-TEST_F(ZeroOrderHoldTest, NextUpdateTimeIsInTheFuture) {
+TEST_P(ZeroOrderHoldTest, NextUpdateTimeIsInTheFuture) {
   // Calculate the next update time.
   context_->set_time(76.32);
   UpdateActions<double> actions;
@@ -99,25 +142,33 @@ TEST_F(ZeroOrderHoldTest, NextUpdateTimeIsInTheFuture) {
   // Check that the action is to update.
   ASSERT_EQ(1u, actions.events.size());
   const DiscreteEvent<double>& event = actions.events[0];
-  EXPECT_EQ(DiscreteEvent<double>::kDiscreteUpdateAction, event.action);
+  EXPECT_EQ(action_type_, event.action);
 }
 
 // Tests that discrete updates update the state.
-TEST_F(ZeroOrderHoldTest, Update) {
+TEST_P(ZeroOrderHoldTest, Update) {
   // Fire off an update event.
   DiscreteEvent<double> update_event;
-  update_event.action = DiscreteEvent<double>::kDiscreteUpdateAction;
+  update_event.action = action_type_;
 
-  std::unique_ptr<DiscreteValues<double>> update =
-      hold_->AllocateDiscreteVariables();
-  hold_->CalcDiscreteVariableUpdates(*context_, {update_event}, update.get());
-
-  // Check that the state has been updated to the input.
-  const VectorBase<double>* xd = update->get_vector(0);
-  EXPECT_EQ(1.0, xd->GetAtIndex(0));
-  EXPECT_EQ(1.0, xd->GetAtIndex(1));
-  EXPECT_EQ(3.0, xd->GetAtIndex(2));
+  Eigen::Vector3d value;
+  if (!is_abstract_) {
+    std::unique_ptr<DiscreteValues<double>> update =
+        hold_->AllocateDiscreteVariables();
+    hold_->CalcDiscreteVariableUpdates(*context_, {update_event}, update.get());
+    // Check that the state has been updated to the input.
+    const VectorBase<double>* xd = update->get_vector(0);
+    value = xd->CopyToVector();
+  } else {
+    State<double>* state = context_->get_mutable_state();
+    hold_->CalcUnrestrictedUpdate(*context_, update_event, state);
+    value = state->get_abstract_state<SimpleType>(0).value;
+  }
+  EXPECT_EQ(input_, value);
 }
+
+INSTANTIATE_TEST_CASE_P(test, ZeroOrderHoldTest,
+    ::testing::Values(false, true));
 
 class SymbolicZeroOrderHoldTest : public ::testing::Test {
  protected:
