@@ -309,13 +309,21 @@ void PerformVTKUpdate(
     const vtkPointerArray<vtkWindowToImageFilter, NF>& filters,
     const vtkPointerArray<vtkImageExport, NE>& exporters) {
   for (auto& window : windows) {
+    DRAKE_SCOPE_TIME(x, "window->Render");
     window->Render();
   }
   for (auto& filter : filters) {
-    filter->Modified();
-    filter->Update();
+    {
+      DRAKE_SCOPE_TIME(x, "filter->Modified");
+      filter->Modified();
+    }
+    {
+      DRAKE_SCOPE_TIME(x, "filter->Update");
+      filter->Update();
+    }
   }
   for (auto& exporter : exporters) {
+    DRAKE_SCOPE_TIME(x, "export");
     exporter->Update();
   }
 }
@@ -790,6 +798,8 @@ void RgbdCamera::Impl::OutputPoseVector(
   camera_base_pose->set_rotation(quat);
 }
 
+using namespace std;
+
 void RgbdCamera::Impl::UpdateState(const BasicVector<double>& input_vector,
                                    InternalAbstractState* internal_state,
                                    rendering::PoseVector<double>* pose_vector)
@@ -797,10 +807,12 @@ void RgbdCamera::Impl::UpdateState(const BasicVector<double>& input_vector,
   // TODO(sherm1) Should evaluate VTK cache entry.
   UpdateModelPoses(input_vector);
   // Perform updates here to consolidate rendering.
+  drake::log()->info("Color + Depth");
   PerformVTKUpdate(
       MakeVtkInstanceArray(color_depth_render_window_),
       MakeVtkInstanceArray(color_filter_, depth_filter_),
       MakeVtkInstanceArray(color_exporter_, depth_exporter_));
+  drake::log()->info("Label");
   PerformVTKUpdate(
       MakeVtkInstanceArray(label_render_window_),
       MakeVtkInstanceArray(label_filter_),
