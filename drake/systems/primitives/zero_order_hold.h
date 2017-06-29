@@ -6,16 +6,17 @@
 #include "drake/common/eigen_types.h"
 #include "drake/common/symbolic_expression.h"
 #include "drake/systems/framework/context.h"
-#include "drake/systems/framework/siso_vector_system.h"
+#include "drake/systems/framework/leaf_system.h"
 
 namespace drake {
 namespace systems {
 
-/// A ZeroOrderHold block with input `u`, which may be discrete or continuous,
-/// and discrete output `y`, where the y is sampled from u with a fixed period.
+/// A ZeroOrderHold block with input `u`, which may be vector-valued (discrete
+/// or continuous) or abstract, and discrete output `y`, where the y is sampled
+/// from u with a fixed period.
 /// @ingroup primitive_systems
 template <typename T>
-class ZeroOrderHold : public SisoVectorSystem<T> {
+class ZeroOrderHold : public LeafSystem<T> {
  public:
   DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(ZeroOrderHold)
 
@@ -23,28 +24,37 @@ class ZeroOrderHold : public SisoVectorSystem<T> {
   /// vector-valued input of size @p size.
   ZeroOrderHold(double period_sec, int size);
 
+  /// Constructs a ZeroOrderHold system with the given @p period_sec, over a
+  /// abstract-valued input @p value.
+  ZeroOrderHold(double period_sec, const AbstractValue& value);
+
  protected:
   // System<T> override.  Returns a ZeroOrderHold<symbolic::Expression> with
   // the same dimensions as this ZeroOrderHold.
   ZeroOrderHold<symbolic::Expression>* DoToSymbolic() const override;
 
-  /// Sets the output port value to the value that is currently latched in the
-  /// zero-order hold.
+  /// Sets the output port value to the vector value that is currently
+  /// latched in the zero-order hold.
   void DoCalcVectorOutput(
       const Context<T>& context,
-      const Eigen::VectorBlock<const VectorX<T>>& input,
-      const Eigen::VectorBlock<const VectorX<T>>& state,
-      Eigen::VectorBlock<VectorX<T>>* output) const override;
+      BasicVector<T>* output) const;
 
-  /// Latches the input port into the discrete state.
-  void DoCalcVectorDiscreteVariableUpdates(
+  /// Latches the input port into the discrete vector-valued state.
+  void DoCalcDiscreteVariableUpdates(
       const Context<T>& context,
-      const Eigen::VectorBlock<const VectorX<T>>& input,
-      const Eigen::VectorBlock<const VectorX<T>>& state,
-      Eigen::VectorBlock<VectorX<T>>* discrete_updates) const override;
+      DiscreteValues<T>* discrete_state) const override;
+
+  void DoCalcAbstractOutput(
+      const Context<T>& context,
+      AbstractValue* output) const;
+
+  void DoCalcUnrestrictedUpdate(
+      const Context<T>& context,
+      State<T>* state) const override;
 
  private:
   const double period_sec_{};
+  const bool is_abstract_{};
 };
 
 }  // namespace systems
