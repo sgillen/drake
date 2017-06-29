@@ -44,19 +44,23 @@ class ZeroOrderHold : public LeafSystem<T> {
       const Context<T>& context,
       DiscreteValues<T>* discrete_state) const override;
 
+  // Return a cloned copy of the initial abstract value.
   std::unique_ptr<AbstractValue> AllocateAbstractValue(const Context<T>&) const;
 
+  // Same as `DoCalcVectorOutput`, but for abstract values.
   void DoCalcAbstractOutput(
       const Context<T>& context,
       AbstractValue* output) const;
 
+  // Same as `DoCalcDiscreteVariablesUpdate`, but for abstract values.
   void DoCalcUnrestrictedUpdate(
       const Context<T>& context,
       State<T>* state) const override;
 
  private:
-  const double period_sec_{};
   bool is_abstract() const { return abstract_value_ != nullptr; }
+
+  const double period_sec_{};
   const std::unique_ptr<AbstractValue> abstract_value_;
 };
 
