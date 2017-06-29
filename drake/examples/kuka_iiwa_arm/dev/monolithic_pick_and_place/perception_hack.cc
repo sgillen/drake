@@ -216,7 +216,7 @@ class CameraFrustrumVisualizer : public LeafSystemMixin<T> {
     auto&& pose =
         EvalVectorInput<PoseVector>(context, 1);
     if (point_cloud_C.cols() == 0) {
-      drake::log()->info("Skipping empty point cloud");
+//      drake::log()->info("Skipping empty point cloud");
       return;
     }
     Eigen::Isometry3d X_WC = pose->get_isometry();
@@ -332,8 +332,8 @@ class DepthImageToPointCloud : public LeafSystemMixin<T> {
     RgbdCamera::ConvertDepthImageToPointCloud(depth_image, camera_info_,
                                               &point_cloud_f);
     point_cloud = point_cloud_f.cast<double>();
-    drake::log()->info("Convert to depth cloud: {}", context.get_time());
-    manipulation::PrintValidPoints(point_cloud, "Converter");
+//    drake::log()->info("Convert to depth cloud: {}", context.get_time());
+//    manipulation::PrintValidPoints(point_cloud, "Converter");
   }
  private:
   const CameraInfo& camera_info_;
@@ -382,7 +382,7 @@ class PointCloudToLcmPointCloud : public LeafSystemMixin<T> {
     message.n_channels = 0;
     message.n_points = 0;
     if (point_cloud.size() == 0) {
-      drake::log()->warn("{}: Empty point cloud. Skipping", this->get_name());
+//      drake::log()->warn("{}: Empty point cloud. Skipping", this->get_name());
       return;
     }
     ASSERT_THROW_FMT(point_cloud.cols() == width * height,
