@@ -467,6 +467,14 @@ class PerceptionHack::Impl {
 
       auto&& color_image_output_port = rgbd_camera_->get_output_port(0);
 
+      auto label_zoh =
+          pbuilder->template AddSystem<AbstractZOH<drake::systems::sensors::ImageLabel16I>>(camera_dt);
+      pbuilder->Connect(
+            rgbd_camera_->get_output_port(2),
+            label_zoh->get_input_port(0));
+
+      auto&& label_image_output_port = label_zoh->get_output_port(0);
+
       auto depth_zoh =
           pbuilder->template AddSystem<AbstractZOH<ImageDepth32F>>(camera_dt);
       pbuilder->Connect(
@@ -566,10 +574,10 @@ class PerceptionHack::Impl {
             depth_image_output_port,
             image_to_lcm_message_->depth_image_input_port());
 
-        // This port has been disabled.
-//        pbuilder->Connect(
-//            label_image_output_port,
-//            image_to_lcm_message_->label_image_input_port());
+
+       pbuilder->Connect(
+           label_image_output_port,
+           image_to_lcm_message_->label_image_input_port());
 
         // Camera image publisher.
         image_lcm_pub_ = pbuilder->template AddSystem(
