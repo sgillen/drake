@@ -455,7 +455,7 @@ class PerceptionHack::Impl {
     if (true) {
       auto rgbd_camera_instance = new RgbdCamera(
           "rgbd_camera", rigid_body_tree,
-          position, orientation * pi / 180, pi / 4, true); //,
+          position, orientation * pi / 180, pi / 4, camera_dt, true); //,
           //camera_dt);
       rgbd_camera_ = pbuilder->AddSystem(CreateUnique(rgbd_camera_instance));
       rgbd_camera_->set_name("rgbd_camera");
