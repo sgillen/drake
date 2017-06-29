@@ -31,12 +31,11 @@ drake_cc_library(
         "perception_hack.cc",
     ],
     hdrs = [
-        "abstract_zoh.h",
-        "dart_util.h",
-        "vector_slice.h",
         "perception_hack.h",
     ],
     deps = [
+        "//drake/manipulation/estimators/dev:abstract_zoh",
+        "//drake/manipulation/estimators/dev:dart_util",
         "//drake/examples/kuka_iiwa_arm/iiwa_world:iiwa_wsg_diagram_factory",
         "//drake/lcm",
         "//drake/systems/sensors:rgbd_camera",
