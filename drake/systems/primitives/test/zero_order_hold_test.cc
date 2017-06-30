@@ -28,6 +28,13 @@ struct SimpleType {
   Eigen::Vector3d value;
 };
 
+template <typename EventListType>
+void CheckForSinglePeriodicEvent(const EventListType& events) {
+  EXPECT_EQ(events.size(), 1);
+  EXPECT_EQ(events.front()->get_trigger_type(),
+      Event<double>::TriggerType::kPeriodic);
+}
+
 class ZeroOrderHoldTest : public ::testing::TestWithParam<bool> {
  protected:
   ZeroOrderHoldTest()
@@ -52,6 +59,20 @@ class ZeroOrderHoldTest : public ::testing::TestWithParam<bool> {
     } else {
       context_->FixInputPort(
           0, AbstractValue::Make<SimpleType>(input_));
+    }
+
+    event_info_ = hold_->AllocateCompositeEventCollection();
+    leaf_info_ = dynamic_cast<const LeafCompositeEventCollection<double>*>(
+        event_info_.get());
+  }
+
+  void CheckForUpdateAction() const {
+    if (!is_abstract_) {
+      CheckForSinglePeriodicEvent(
+          leaf_info_->get_discrete_update_events().get_events());
+    } else {
+      CheckForSinglePeriodicEvent(
+          leaf_info_->get_unrestricted_update_events().get_events());
     }
   }
 
@@ -131,10 +152,7 @@ TEST_P(ZeroOrderHoldTest, NextUpdateTimeMustNotBeCurrentTime) {
   EXPECT_NEAR(0.1, next_t, 10e-8);
 
   // Check that the action is to update.
-  const auto& events = leaf_info_->get_discrete_update_events().get_events();
-  EXPECT_EQ(events.size(), 1);
-  EXPECT_EQ(events.front()->get_trigger_type(),
-      Event<double>::TriggerType::kPeriodic);
+  CheckForUpdateAction();
 }
 
 // Tests that when the current time is between updates, a update is requested
@@ -142,37 +160,29 @@ TEST_P(ZeroOrderHoldTest, NextUpdateTimeMustNotBeCurrentTime) {
 TEST_P(ZeroOrderHoldTest, NextUpdateTimeIsInTheFuture) {
   // Calculate the next update time.
   context_->set_time(76.32);
-  UpdateActions<double> actions;
 
   // Check that the time is correct.
-  double next_t = hold_->CalcNextUpdateTime(*context_, &actions);
+  double next_t = hold_->CalcNextUpdateTime(*context_, event_info_.get());
   EXPECT_NEAR(76.4, next_t, 10e-8);
-  EXPECT_EQ(next_t, actions.time);
 
   // Check that the action is to update.
-  const auto& events = leaf_info_->get_discrete_update_events().get_events();
-  EXPECT_EQ(events.size(), 1);
-  EXPECT_EQ(events.front()->get_trigger_type(),
-      Event<double>::TriggerType::kPeriodic);
+  CheckForUpdateAction();
 }
 
 // Tests that discrete updates update the state.
 TEST_P(ZeroOrderHoldTest, Update) {
   // Fire off an update event.
-  DiscreteEvent<double> update_event;
-  update_event.action = action_type_;
-
   Eigen::Vector3d value;
   if (!is_abstract_) {
     std::unique_ptr<DiscreteValues<double>> update =
         hold_->AllocateDiscreteVariables();
-    hold_->CalcDiscreteVariableUpdates(*context_, {update_event}, update.get());
+    hold_->CalcDiscreteVariableUpdates(*context_, update.get());
     // Check that the state has been updated to the input.
     const VectorBase<double>* xd = update->get_vector(0);
     value = xd->CopyToVector();
   } else {
     State<double>* state = context_->get_mutable_state();
-    hold_->CalcUnrestrictedUpdate(*context_, update_event, state);
+    hold_->CalcUnrestrictedUpdate(*context_, state);
     value = state->get_abstract_state<SimpleType>(0).value;
   }
   EXPECT_EQ(input_, value);
@@ -186,8 +196,8 @@ class SymbolicZeroOrderHoldTest : public ::testing::Test {
   void SetUp() override {
     const double period_sec = 0.5;
     const int size = 1;
-    hold_ = std::make_unique<ZeroOrderHold<symbolic::Expression>>(period_sec,
-                                                                  size);
+    hold_ =
+        std::make_unique<ZeroOrderHold<symbolic::Expression>>(period_sec, size);
 
     // Initialize the context with symbolic variables.
     context_ = hold_->CreateDefaultContext();

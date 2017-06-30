@@ -28,6 +28,8 @@ class ZeroOrderHold : public LeafSystem<T> {
   /// abstract-valued input @p value.
   ZeroOrderHold(double period_sec, const AbstractValue& value);
 
+  ~ZeroOrderHold() override {}
+
  protected:
   // System<T> override.  Returns a ZeroOrderHold<symbolic::Expression> with
   // the same dimensions as this ZeroOrderHold.
@@ -41,8 +43,9 @@ class ZeroOrderHold : public LeafSystem<T> {
 
   /// Latches the input port into the discrete vector-valued state.
   void DoCalcDiscreteVariableUpdates(
-      const Context<T>& context,
-      DiscreteValues<T>* discrete_state) const override;
+      const Context <T>& context,
+      const std::vector<const DiscreteUpdateEvent <T> *>& events,
+      DiscreteValues <T> *discrete_state) const override;
 
   // Return a cloned copy of the initial abstract value.
   std::unique_ptr<AbstractValue> AllocateAbstractValue(const Context<T>&) const;
@@ -55,6 +58,7 @@ class ZeroOrderHold : public LeafSystem<T> {
   // Same as `DoCalcDiscreteVariablesUpdate`, but for abstract values.
   void DoCalcUnrestrictedUpdate(
       const Context<T>& context,
+      const std::vector<const UnrestrictedUpdateEvent<T>*>& events,
       State<T>* state) const override;
 
  private:
