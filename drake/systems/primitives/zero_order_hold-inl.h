@@ -21,7 +21,7 @@ ZeroOrderHold<T>::ZeroOrderHold(double period_sec, int size)
   this->DeclareVectorOutputPort(
       dummy_value, &ZeroOrderHold::DoCalcVectorOutput);
   this->DeclareDiscreteState(size);
-  this->DeclareDiscreteUpdatePeriodSec(period_sec);
+  this->DeclarePeriodicDiscreteUpdate(period_sec);
 }
 
 template <typename T>
