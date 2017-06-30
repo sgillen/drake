@@ -958,10 +958,23 @@ class RigidBodyTree {
                         // TODO(#2274) Fix NOLINTNEXTLINE(runtime/references).
                         Eigen::VectorXd& distances, Eigen::Matrix3Xd& normals,
                         bool use_margins = false);
+  bool collisionRaycast(const KinematicsCache<double>& cache,
+                        const Eigen::Matrix3Xd& origins,
+                        const Eigen::Matrix3Xd& ray_endpoints,
+                        // TODO(#2274) Fix NOLINTNEXTLINE(runtime/references).
+                        Eigen::VectorXd& distances, Eigen::Matrix3Xd& normals,
+                        // TODO(#2274) Fix NOLINTNEXTLINE(runtime/references).
+                        std::vector<int>& body_idx,
+                        bool use_margins = false);
 
   /**
    * Computes the *signed* distance from the given points to the nearest body in
    * the RigidBodyTree.
+   * @param phi Distance between the corresponding points.
+   * @param normal Normal of the surface at the given point.
+   * @param x Closest point on the body surface, in the world frame.
+   * @param body_x Closest point on the body surface, in the body frame.
+   * @param body_idx Corresponding body index, -1 if none.
    */
   void collisionDetectFromPoints(
       const KinematicsCache<double>& cache,

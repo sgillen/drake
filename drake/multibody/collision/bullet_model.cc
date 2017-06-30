@@ -3,6 +3,9 @@
 #include <iostream>
 #include <limits>
 #include <utility>
+// TODO(eric.cousineau): Permit OpenMP to be included conditionally based on
+// compiler. Conditionally enable OpenMP parallelization.
+// #include <omp.h>
 
 #include "BulletCollision/NarrowPhaseCollision/btRaycastCallback.h"
 
@@ -682,19 +685,22 @@ void BulletModel::collisionDetectFromPoints(
   closest_points.resize(points.cols());
   VectorXd phi(points.cols());
 
-  btSphereShape shapeA(0.0);
-  btConvexShape* shapeB;
-  btGjkPairDetector::ClosestPointInput input;
-
-  BulletCollisionWorldWrapper& bt_world = getBulletWorld(use_margins);
+  const BulletCollisionWorldWrapper& bt_world = getBulletWorld(use_margins);
 
   // do collision check against all bodies for each point using bullet's
-  // internal getclosestpoints solver
+  // internal getclosestpoints solver.
+  // These calls are thread safe, and can be parallelized.
+  // #pragma omp parallel for
   for (int i = 0; i < points.cols(); i++) {
+
+    const btSphereShape shapeA(0.0);
+    const btConvexShape* shapeB;
+    btGjkPairDetector::ClosestPointInput input;
+
     bool got_one = false;
     for (auto bt_objB_iter = bt_world.bt_collision_objects.begin();
          bt_objB_iter != bt_world.bt_collision_objects.end(); bt_objB_iter++) {
-      std::unique_ptr<btCollisionObject>& bt_objB = bt_objB_iter->second;
+      btCollisionObject* bt_objB = bt_objB_iter->second.get();
       btPointCollector gjkOutput;
 
       shapeB = dynamic_cast<btConvexShape*>(bt_objB->getCollisionShape());
@@ -759,19 +765,27 @@ void BulletModel::collisionDetectFromPoints(
   }
 }
 
-bool BulletModel::collisionRaycast(const Matrix3Xd& origins,
-                                   const Matrix3Xd& ray_endpoints,
-                                   bool use_margins, VectorXd& distances,
-                                   Matrix3Xd& normals) {
-  distances.resize(ray_endpoints.cols());
-  normals.resize(3, ray_endpoints.cols());
+bool BulletModel::collisionRaycast(
+    const Matrix3Xd& origins,
+    const Matrix3Xd& ray_endpoints,
+    bool use_margins, VectorXd& distances,
+    Matrix3Xd& normals,
+    std::vector<const Element*>& collision_body) {
+  const int num_points = ray_endpoints.cols();
+  // Note that if origins.cols() == 1, then it will use a single origin for all
+  // raycasts. Hence, we shall use ray_endpoints to determine the size.
+  DRAKE_ASSERT(origins.cols() == 1 || origins.cols() == num_points);
+  distances.resize(num_points);
+  normals.resize(3, num_points);
+  collision_body.resize(num_points);
 
-  BulletCollisionWorldWrapper& bt_world = getBulletWorld(use_margins);
+  const BulletCollisionWorldWrapper& bt_world = getBulletWorld(use_margins);
 
+  // btDbvtBroadphase::rayTest is not thread-safe. It updates member
+  // cache variables, for both of the methods listed below.
+  // #pragma omp parallel for
   for (int i = 0; i < ray_endpoints.cols(); i++) {
-    int origin_col = (origins.cols() > 1 ? i : 0);  // if a single origin is
-                                                    // passed in, then use it
-                                                    // for all raycasts
+    const int origin_col = (origins.cols() > 1 ? i : 0);
     btVector3 ray_from_world(origins(0, origin_col), origins(1, origin_col),
                              origins(2, origin_col));
     btVector3 ray_to_world(ray_endpoints(0, i), ray_endpoints(1, i),
@@ -813,6 +827,7 @@ bool BulletModel::collisionRaycast(const Matrix3Xd& origins,
     ray_callback.m_flags |=
         btTriangleRaycastCallback::kF_UseGjkConvexCastRaytest;
 
+    // VALGRIND: Reports error. Conditional jump on uninitialized value.
     bt_world.bt_collision_world->rayTest(ray_from_world, ray_to_world,
                                          ray_callback);
 
@@ -829,11 +844,16 @@ bool BulletModel::collisionRaycast(const Matrix3Xd& origins,
       normals(0, i) = normal.getX();
       normals(1, i) = normal.getY();
       normals(2, i) = normal.getZ();
+
+      auto element = static_cast<Element*>(
+        ray_callback.m_collisionObject->getUserPointer());
+      collision_body[i] = element;
     } else {
       distances(i) = -1.;
       normals(0, i) = 0.;
       normals(1, i) = 0.;
       normals(2, i) = 0.;
+      collision_body[i] = nullptr;
     }
   }
 
