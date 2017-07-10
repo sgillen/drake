@@ -23,7 +23,7 @@ public:
     }
 
     void Update() {
-      // Update given that W and q_est_meas has been upated.
+      // Update given that W and q_est_meas has been updated.
       // See MakeQuadraticErrorCost
       Q = 2 * W;
       b = -2 * W * q_est_meas;

@@ -81,7 +81,7 @@ std::map<T, int> CreateIndexMap(const Container &x) {
 
 namespace internal {
 /*
- * If a_indices and b_indices are supplied, then the indices returend for `a`
+ * If a_indices and b_indices are supplied, then the indices returned for `a`
  * and `b` are returned in the order in which elements are found along `a`.
  *
  * If `b_indices` is null, then `a_indices` will be the same size as `a`,
@@ -97,6 +97,7 @@ void MatchIndices(const ContainerA &a,
                   std::vector<int>* b_indices = nullptr,
                   bool verbose = false) {
   // TODO(eric.cousineau): See if there is a way to only store a reference.
+  // See reference_wrapper.
   using T = std::remove_cv_t<std::decay_t<decltype(a[0])>>;
 //  auto a_map = CreateIndexMap<T>(a);
   auto b_map = CreateIndexMap<T>(b);
@@ -176,7 +177,7 @@ inline vector<string> FlattenNameList(const InstanceJointList& joints) {
 
 /**
  * Get common indices between `a` and `b` in `c`'s indices, where `c` is the
- * common subset between `a` and `b`, ordered as elements are encountered in
+ * intersection between `a` and `b`, ordered as elements are encountered in
  * `a`.
  * @note This will not check if `b` has all unique elements.
  */
