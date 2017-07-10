@@ -16,7 +16,7 @@ namespace drake {
 namespace systems {
 namespace {
 
-const double kTenHertz = 0.1;
+const double kTenHertz = 0.2;
 const int kLength = 3;
 
 // A simple type containing a vector, to simplify checking expected values for
@@ -24,8 +24,8 @@ const int kLength = 3;
 // (`Value<SimpleAbstractType>`).
 class SimpleAbstractType {
  public:
-  explicit SimpleAbstractType(const Eigen::Vector3d& value)
-      : value_(value) {}
+  explicit SimpleAbstractType(const Eigen::Vector3d& value_)
+      : value_(value_) {}
   const Eigen::Vector3d& value() const { return value_; }
  private:
   Eigen::Vector3d value_;
