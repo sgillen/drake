@@ -57,6 +57,7 @@ drake_cc_library(
         "//drake/common:number_traits",
         "//drake/common:polynomial",
         "//drake/common:symbolic",
+        "//drake/common:symbolic_polynomial",
     ],
 )
 
@@ -87,6 +88,7 @@ drake_cc_library(
         "//drake/common:monomial",
         "//drake/common:polynomial",
         "//drake/common:symbolic",
+        "//drake/common:symbolic_polynomial",
         "//drake/common:unused",
     ],
 )
@@ -198,6 +200,7 @@ drake_cc_library(
         "//drake/common:number_traits",
         "//drake/common:polynomial",
         "//drake/common:symbolic",
+        "//drake/common:symbolic_polynomial",
     ],
 )
 
@@ -279,7 +282,7 @@ drake_cc_library(
     hdrs = ["test/mathematical_program_test_util.h"],
     deps = [
         ":mathematical_program",
-        "@gtest//:main",
+        "@gtest//:without_main",
     ],
 )
 
@@ -293,7 +296,7 @@ drake_cc_library(
         ":mathematical_program_test_util",
         ":solver_type_converter",
         "//drake/common:eigen_matrix_compare",
-        "@gtest//:main",
+        "@gtest//:without_main",
     ],
 )
 
@@ -724,6 +727,7 @@ drake_cc_googletest(
         ":mathematical_program_test_util",
         "//drake/common:eigen_matrix_compare",
         "//drake/common:is_dynamic_castable",
+        "//drake/common:symbolic_polynomial",
         "//drake/common:symbolic_test_util",
     ],
 )
@@ -784,7 +788,7 @@ drake_cc_googletest(
 
 drake_cc_googletest(
     name = "rotation_constraint_test",
-    size = "medium",
+    size = "large",
     # Excluding because an assertion fails in LLVM code. Issue #6179.
     tags = gurobi_test_tags() + mosek_test_tags() + ["no_tsan"],
     deps = [
