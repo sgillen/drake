@@ -1,9 +1,8 @@
 #include "drake/manipulation/estimators/dev/dart_depth_image_icp_objective.h"
 
 #include "drake/systems/sensors/rgbd_camera.h"
-#include "drake/common/scoped_timer.h"
+#include "drake/manipulation/estimators/dev/scoped_timer.h"
 
-#include <bot_lcmgl_client/lcmgl.h>
 #include "drake/multibody/joints/revolute_joint.h"
 
 using namespace drake::systems::sensors;
@@ -240,7 +239,7 @@ struct IcpPointGroup {
 
 class DartDepthImageIcpObjective::Impl {
  public:
-  unique_ptr<RgbdCameraDirect> rgbd_camera_sim;
+//  unique_ptr<RgbdCameraDirect> rgbd_camera_sim;
   // Measured
   Output meas_full;
   Output meas;  // Sub-sampled
@@ -255,10 +254,10 @@ DartDepthImageIcpObjective::DartDepthImageIcpObjective(
     : DartObjective(formulation_),
       param_(param) {
   impl_.reset(new Impl());
-  impl_->rgbd_camera_sim.reset(
-        new RgbdCameraDirect(tree(),
-                             *param_.camera.frame, param_.camera.fov_y,
-                             param_.camera.show_window));
+//  impl_->rgbd_camera_sim.reset(
+//        new RgbdCameraDirect(tree(),
+//                             *param_.camera.frame, param_.camera.fov_y,
+//                             param_.camera.show_window));
 }
 
 DartDepthImageIcpObjective::~DartDepthImageIcpObjective() {}
@@ -284,11 +283,12 @@ void DartDepthImageIcpObjective::ObserveImage(
   if (ppoint_cloud) {
     impl.meas_full.point_cloud_C = *ppoint_cloud;
   } else {
+    DRAKE_DEMAND(false);
     // (re)Generate point cloud.
-    // TODO(eric.cousineau): Only regenerate down-sampled point cloud.
-    RgbdCamera::ConvertDepthImageToPointCloud(
-          impl.meas_full.depth_image, impl.rgbd_camera_sim->depth_camera_info(),
-          &impl.meas_full.point_cloud_C);
+//    // TODO(eric.cousineau): Only regenerate down-sampled point cloud.
+//    RgbdCamera::ConvertDepthImageToPointCloud(
+//          impl.meas_full.depth_image, impl.rgbd_camera_sim->depth_camera_info(),
+//          &impl.meas_full.point_cloud_C);
   }
   // Down-sample here at measurement frame.
   impl.meas.DownsampleFrom(param_.image_downsample_factor, impl.meas_full);

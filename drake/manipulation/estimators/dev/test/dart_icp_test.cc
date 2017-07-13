@@ -4,7 +4,7 @@
 
 #include <gtest/gtest.h>
 
-#include "drake/common/drake_path.h"
+#include "drake/common/find_resource.h"
 #include "drake/multibody/rigid_body_tree.h"
 #include "drake/manipulation/estimators/dev/dart_util.h"
 #include "drake/multibody/parsers/urdf_parser.h"
@@ -20,6 +20,7 @@ namespace {
 
 // TODO(eric.cousineau): Consider mutable setup.
 // TODO(eric.cousineau): Break into component-wise testing.
+// TODO(eric.cousineau): Consider processing with VTK.
 // TODO(eric.cousineau): Consider breaking MathematicalProgram into a
 // Formulation and Solver components, such that it validates this and other
 // designs. Make a DispatchSolver that can select from the variety at run-time,
@@ -89,8 +90,9 @@ class DartIcpTest : public ::testing::Test {
   void SetUp() override {
     // Create a formulation for a simple floating-base target
     InstanceIdMap instance_id_map;
-    string file_path = GetDrakePath() +
-        "/examples/kuka_iiwa_arm/models/objects/block_for_pick_and_place.urdf";
+    string file_path = FindResourceOrThrow(
+        "drake/examples/kuka_iiwa_arm/models/objects/block_for_pick_and_place"
+        ".urdf");
     auto floating_base_type = multibody::joints::kRollPitchYaw;
     shared_ptr<RigidBodyFramed> weld_frame {nullptr};
     mutable_tree_ = new RigidBodyTreed();
@@ -102,8 +104,42 @@ class DartIcpTest : public ::testing::Test {
     mutable_tree_->compile();
     tree_.reset(mutable_tree_);
 
-    scene_ =
-        new DartScene(tree_, instance_id_map);
+    scene_.reset(new DartScene(tree_, instance_id_map));
+
+    DartFormulation::Param formulation_param {
+      .estimated_positions = FlattenNameList({
+          {"target", {"base_x", "base_y", "base_yaw"}} }),
+    };
+    formulation_.reset(
+        new DartFormulation(CreateUnique(scene_), formulation_param));
+
+
+    const double fov_y = pi / 4;
+    DartDepthImageIcpObjective::Param depth_param;
+    {
+      auto& param = depth_param;
+      auto& camera = param.camera;
+      camera = {
+        .fov_y = fov_y,
+      };
+      camera.frame = camera_frame_;  // cannot be in initializer list.
+      auto& icp = param.icp;
+      icp = {
+        .variance = 0.005,
+      };
+      auto& free_space = param.free_space;
+      free_space.variance = 0.005;
+      param.image_downsample_factor = 10;
+      param.point_cloud_bounds = {
+          .x = {-2, 2},
+          .y = {-2, 2},
+          .z = {-2, 2},
+      };
+    };
+    depth_obj_ =
+        new DartDepthImageIcpObjective(formulation_, depth_param);
+    formulation_->AddObjective(CreateUnique(depth_obj_));
+    depth_obj_.reset(new DartDepthImageIcpObjective(
 
     const Bounds box = {
       .x = {-0.03, 0.03},
@@ -121,9 +157,11 @@ class DartIcpTest : public ::testing::Test {
 
  protected:
   RigidBodyTreed* mutable_tree_;
-  shared_ptr<const RigidBodyTreed> tree_;
-  shared_ptr<RigidBodyFramed> camera_frame_;
-  DartScene* scene_;
+  unique_ptr<const RigidBodyTreed> tree_;
+  unique_ptr<RigidBodyFramed> camera_frame_;
+  unique_ptr<DartScene> scene_;
+  unique_ptr<DartFormulation> formulation_;
+  unique_ptr<DartDepthImageIcpObjective> depth_obj_;
   Matrix3Xd points_;
 };
 

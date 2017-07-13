@@ -68,7 +68,7 @@ drake_cc_library(
         ":scoped_timer",
         ":vector_slice",
         "//drake/common:common",
-        "//drake/common:drake_path",
+        "//drake/common:find_resource",
         "//drake/multibody:rigid_body_tree",
         "//drake/solvers:decision_variable",
         "//drake/systems/sensors:rgbd_camera",
