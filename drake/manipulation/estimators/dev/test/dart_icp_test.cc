@@ -113,6 +113,21 @@ class DartIcpTest : public ::testing::Test {
     formulation_.reset(
         new DartFormulation(CreateUnique(scene_), formulation_param));
 
+    // Add camera frame.
+    const Vector3d position(-2, 0, 0.1);
+    const Vector3d orientation(0, 0, 0); // degrees
+    const double pi = M_PI;
+
+    auto* world_body = const_cast<RigidBody<double>*>(&tree_->world());
+    camera_frame_.reset(new RigidBodyFramed(
+        "depth_sensor", world_body, position, orientation * pi / 180));
+    mutable_tree_->addFrame(camera_frame_);
+
+    const double fov_y = pi / 4;
+//    rgbd_camera_sim_.reset(
+////        new RgbdCameraDirect(*tree_, *camera_frame_, fov_y, true));
+//          new RgbdCameraDirect(*tree_, position, orientation * pi / 180, fov_y,
+//                               true));
 
     const double fov_y = pi / 4;
     DartDepthImageIcpObjective::Param depth_param;
@@ -137,9 +152,8 @@ class DartIcpTest : public ::testing::Test {
       };
     };
     depth_obj_ =
-        new DartDepthImageIcpObjective(formulation_, depth_param);
+        new DartDepthImageIcpObjective(formulation_.get(), depth_param);
     formulation_->AddObjective(CreateUnique(depth_obj_));
-    depth_obj_.reset(new DartDepthImageIcpObjective(
 
     const Bounds box = {
       .x = {-0.03, 0.03},
@@ -157,11 +171,11 @@ class DartIcpTest : public ::testing::Test {
 
  protected:
   RigidBodyTreed* mutable_tree_;
-  unique_ptr<const RigidBodyTreed> tree_;
-  unique_ptr<RigidBodyFramed> camera_frame_;
-  unique_ptr<DartScene> scene_;
+  shared_ptr<const RigidBodyTreed> tree_;
+  shared_ptr<RigidBodyFramed> camera_frame_;
+  DartScene* scene_;
   unique_ptr<DartFormulation> formulation_;
-  unique_ptr<DartDepthImageIcpObjective> depth_obj_;
+  DartDepthImageIcpObjective* depth_obj_;
   Matrix3Xd points_;
 };
 
