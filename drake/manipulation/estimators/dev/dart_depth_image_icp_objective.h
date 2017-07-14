@@ -12,6 +12,9 @@ namespace manipulation {
 const int kImageWidth = 640;  // In pixels
 const int kImageHeight = 480;  // In pixels
 
+typedef int BodyIndex;
+typedef int FrameIndex;
+
 struct Interval {
   double min{};
   double max{};
@@ -29,6 +32,133 @@ struct Bounds {
   inline bool IsInside(double xi, double yi, double zi) const {
     return x.IsInside(xi) && y.IsInside(yi) && z.IsInside(zi);
   }
+};
+
+/**
+ * Accumulate quadratic point-to-point errors to be rendered into a
+ * QuadraticCost.
+ * This will accumulate in all joint coordinates. Extracting indices from there
+ * is delegated to another component.
+ *
+ * Normalize | e + J*q |^2
+ */
+struct IcpLinearizedNormAccumulator {
+ public:
+  IcpLinearizedNormAccumulator(int nvar) {
+    Q_.resize(nvar, nvar);
+    b_.resize(nvar);
+    Clear();
+  }
+  void Clear() {
+    Q_.setZero();
+    b_.setZero();
+    c_ = 0;
+  }
+  void AddTerms(double weight, const Matrix3Xd& es, const MatrixXd& Jes) {
+    int num_points = es.cols();
+    for (int i = 0; i < num_points; ++i) {
+      auto&& e = es.col(i);
+      auto&& Je = Jes.middleRows(3 * i, 3);
+      Q_ += weight * 2 * Je.transpose() * Je;
+      b_ += weight * 2 * Je.transpose() * e;
+      c_ = weight * e.dot(e);
+    }
+  }
+  const MatrixXd& Q() const { return Q_; }
+  const VectorXd& b() const { return b_; }
+  double c() const { return c_; }
+  void UpdateCost(const VectorSlice& slice, QuadraticCost* cost) const {
+    int ncvar = slice.size();
+    MatrixXd Qc(ncvar, ncvar);
+    VectorXd bc(ncvar);
+    slice.ReadFromSuperset(b_, bc);
+    // Some inefficiency here. Could reduce before hand, but we'll just wait
+    // for summation to complete.
+    slice.ReadFromSupersetMatrix(Q_, Qc);
+    cost->UpdateCoefficients(Qc, bc, c_);
+  }
+ private:
+  MatrixXd Q_;
+  VectorXd b_;
+  double c_;
+};
+
+/**
+ * Accumulate measured points in the camera `C` frame, body / model /
+ * simulated points in the `Bi` frame, and store both in the world frame,
+ * `W`, if available.
+ */
+struct IcpScene {
+  IcpScene(const RigidBodyTreed& tree,
+           const KinematicsCached& cache,
+           const FrameIndex frame_W,
+           const FrameIndex frame_C)
+    : tree(tree),
+      cache(cache),
+      frame_W(frame_W),
+      frame_C(frame_C) {}
+  const RigidBodyTreed& tree;
+  const KinematicsCached& cache;
+  const FrameIndex frame_W;
+  const FrameIndex frame_C;
+};
+
+/**
+ * A group of points to be rendered in a linearized ICP cost.
+ */
+struct IcpPointGroup {
+  IcpPointGroup(FrameIndex frame_Bi, int num_max)
+    : frame_Bi(frame_Bi),
+      num_max(num_max) {
+    meas_pts_W.resize(3, num_max);
+    body_pts_W.resize(3, num_max);
+  }
+  void Add(const Vector3d& meas_W, const Vector3d& body_W) {
+    int i = num_actual++;
+    meas_pts_W.col(i) = meas_W;
+    body_pts_W.col(i) = body_W;
+  }
+  void AddTerms(const IcpScene& scene,
+                IcpLinearizedNormAccumulator* error_accumulator,
+                double weight) {
+    Trim();
+
+    // Compute measured and body (model) points in their respective frames for
+    // Jacobian computation.
+    Matrix3Xd meas_pts_C;
+    Matrix3Xd body_pts_Bi;
+    scene.tree.transformPoints(
+        scene.cache, meas_pts_W, scene.frame_W, scene.frame_C);
+    scene.tree.transformPoints(
+            scene.cache, body_pts_W, scene.frame_W, frame_Bi);
+
+    // Get point jacobian w.r.t. camera frame, as that is the only influence
+    // on the measured point cloud.
+    MatrixXd J_meas_pts_W =
+        scene.tree.transformPointsJacobian(
+            scene.cache, meas_pts_C, scene.frame_C, scene.frame_W, false);
+    MatrixXd J_body_pts_W =
+        scene.tree.transformPointsJacobian(
+            scene.cache, body_pts_Bi, frame_Bi, scene.frame_W, false);
+    // Compute errors.
+    Matrix3Xd es_W = meas_pts_W - body_pts_W;
+    MatrixXd J_es_W = J_meas_pts_W - J_body_pts_W;
+    // Incorporate errors into L2 norm cost.
+    error_accumulator->AddTerms(weight, es_W, J_es_W);
+  }
+ private:
+  void Trim() {
+    auto trim_pts = [this](auto&& X) {
+      X.conservativeResize(NoChange, num_actual);
+    };
+    trim_pts(meas_pts_W);
+    trim_pts(body_pts_W);
+  }
+  const FrameIndex frame_Bi{-1};
+  const int num_max{};
+  Matrix3Xd meas_pts_W;
+  Matrix3Xd body_pts_W;
+  int num_actual{0};
 };
 
 /**

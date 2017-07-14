@@ -85,6 +85,79 @@ Matrix3Xd GenerateBoxPointCloud(double space, Bounds box) {
   return pts;
 }
 
+struct PointCloud {
+  Matrix3Xd points;
+  int size() const { return points.size(): }
+};
+
+struct PointCorrespondence {
+  /** @brief Measured point index. */
+  int meas_index{};
+  // TODO(eric.cousineau): Consider storing index for descriptor information.
+  /** @brief Model point, same frame as measured point. */
+  Vector3d model_point;
+  /** @brief Distance between the points. */
+  double distance;
+};
+
+typedef map<BodyIndex, vector<PointCorrespondence>> SceneCorrespondence;
+
+/**
+ * This function depends on `q`.
+ * @param scene
+ * @param meas_pts_W
+ * @param pcorrespondence
+ */
+void ComputeCorrespondences(const IcpScene& scene,
+                            const Matrix3Xd& meas_pts_W,
+                            SceneCorrespondence* pcorrespondence) {
+  DRAKE_DEMAND(pcorrespondence != nullptr);
+  int num_points = meas_pts_W.size();
+  VectorXd distances(num_points);
+  Matrix3Xd body_normals_W(3, num_points);  // world frame.
+  Matrix3Xd body_pts_W(3, num_points);  // body point, world frame.
+  Matrix3Xd body_pts_Bi(3, num_points);  // body point, body frame.
+  vector<BodyIndex> body_indices(num_points);
+
+  const bool use_margins = false;
+  // TOOD(eric.cousineau): Figure out better access.
+  RigidBodyTreed& mutable_tree =
+      const_cast<RigidBodyTreed&>(scene.tree);
+  mutable_tree.collisionDetectFromPoints(
+      scene.cache, meas_pts_W,
+      distances, body_normals_W,
+      body_pts_W, body_pts_Bi,
+      body_indices, use_margins);
+
+  // Bin each correspondence to the given body.
+  for (int i = 0; i < num_points; ++i) {
+    BodyIndex body_index = body_indices[i];
+    if (body_index != -1) {
+      vector<PointCorrespondence>& body_correspondences =
+          (*pcorrespondence)[body_index];
+      PointCorrespondence pc{i, body_pts_W.col(i), distances[i]};
+      body_correspondences.push_back(pc);
+    }
+  }
+}
+
+typedef std::function<void()> CostAccumulator;
+
+double AccumulateCost(IcpScene& scene,
+                      const Matrix3Xd& meas_pts_W,
+                      const SceneCorrespondence& correspondence,
+                      std::function<void()> accumulate) {
+  for (const auto& pair : correspondence) {
+    const BodyIndex body_index = pair.first;
+    const vector<PointCorrespondence>& body_correspondence = pair.second;
+    IcpPointGroup body_pts_group(body_index, body_correspondence.size());
+    for (const auto& pc_W : body_correspondence) {
+      body_pts_group.Add(meas_pts_W.col(pc_W.meas_index), pc_W.model_point);
+    }
+    CostAccumulator(body_pts_group);
+  }
+}
+
 class DartIcpTest : public ::testing::Test {
  protected:
   void SetUp() override {
@@ -104,7 +177,7 @@ class DartIcpTest : public ::testing::Test {
     mutable_tree_->compile();
     tree_.reset(mutable_tree_);
 
-    scene_.reset(new DartScene(tree_, instance_id_map));
+    scene_ = new DartScene(tree_, instance_id_map);
 
     DartFormulation::Param formulation_param {
       .estimated_positions = FlattenNameList({
@@ -124,12 +197,7 @@ class DartIcpTest : public ::testing::Test {
     mutable_tree_->addFrame(camera_frame_);
 
     const double fov_y = pi / 4;
-//    rgbd_camera_sim_.reset(
-////        new RgbdCameraDirect(*tree_, *camera_frame_, fov_y, true));
-//          new RgbdCameraDirect(*tree_, position, orientation * pi / 180, fov_y,
-//                               true));
 
-    const double fov_y = pi / 4;
     DartDepthImageIcpObjective::Param depth_param;
     {
       auto& param = depth_param;
