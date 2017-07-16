@@ -118,11 +118,15 @@ struct IcpPointGroup {
     meas_pts_W.col(i) = meas_W;
     body_pts_W.col(i) = body_W;
   }
-  void AddTerms(const IcpScene& scene,
-                IcpLinearizedNormAccumulator* error_accumulator,
-                double weight) {
-    Trim();
-
+  void Finalize() {
+    auto trim_pts = [this](auto&& X) {
+      X.conservativeResize(NoChange, num_actual);
+    };
+    trim_pts(meas_pts_W);
+    trim_pts(body_pts_W);
+  }
+  void UpdateError(
+      const IcpScene& scene, Matrix3Xd* es_W, MatrixXd* J_es_W) const {
     // Compute measured and body (model) points in their respective frames for
     // Jacobian computation.
     Matrix3Xd meas_pts_C;
@@ -134,26 +138,21 @@ struct IcpPointGroup {
 
     // Get point jacobian w.r.t. camera frame, as that is the only influence
     // on the measured point cloud.
+    // TODO(eric.cousineau): If camera is immovable w.r.t. formulation, do not
+    // update.
     MatrixXd J_meas_pts_W =
         scene.tree.transformPointsJacobian(
             scene.cache, meas_pts_C, scene.frame_C, scene.frame_W, false);
+    // TODO(eric.cousineau): If body is immovable w.r.t. formulation, do not
+    // update.
     MatrixXd J_body_pts_W =
         scene.tree.transformPointsJacobian(
             scene.cache, body_pts_Bi, frame_Bi, scene.frame_W, false);
-    // Compute errors.
-    Matrix3Xd es_W = meas_pts_W - body_pts_W;
-    MatrixXd J_es_W = J_meas_pts_W - J_body_pts_W;
-    // Incorporate errors into L2 norm cost.
-    error_accumulator->AddTerms(weight, es_W, J_es_W);
+    // Compute error and its Jacobian.
+    *es_W = meas_pts_W - body_pts_W;
+    *J_es_W = J_meas_pts_W - J_body_pts_W;
   }
  private:
-  void Trim() {
-    auto trim_pts = [this](auto&& X) {
-      X.conservativeResize(NoChange, num_actual);
-    };
-    trim_pts(meas_pts_W);
-    trim_pts(body_pts_W);
-  }
   const FrameIndex frame_Bi{-1};
   const int num_max{};
   Matrix3Xd meas_pts_W;

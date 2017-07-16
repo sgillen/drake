@@ -87,20 +87,93 @@ Matrix3Xd GenerateBoxPointCloud(double space, Bounds box) {
 
 struct PointCloud {
   Matrix3Xd points;
-  int size() const { return points.size(): }
+  int size() const { return points.size(); }
 };
 
 struct PointCorrespondence {
+  // TODO(eric.cousineau): Consider storing normals, different frames, etc.
   /** @brief Measured point index. */
   int meas_index{};
-  // TODO(eric.cousineau): Consider storing index for descriptor information.
+  /** @brief Measured point. */
+  Vector3d meas_point;
   /** @brief Model point, same frame as measured point. */
   Vector3d model_point;
   /** @brief Distance between the points. */
-  double distance;
+  double distance{-1};
 };
 
 typedef map<BodyIndex, vector<PointCorrespondence>> SceneCorrespondence;
+
+struct BodyCorrespondenceInfluence {
+  /**
+   * @brief Will a correspondence with this body affect the camera
+   * positions?
+   */
+  bool will_affect_camera{};
+  /**
+   * @brief Will a correspondence with this body affect the body's kinematics?
+   */
+  bool will_affect_body{};
+  bool is_influential() const {
+    return will_affect_camera || will_affect_body;
+  }
+};
+
+void GetDofPath(const RigidBodyTreed& tree,
+                BodyIndex body_index,
+                std::vector<int> *pq_indices) {
+  // NOTE: FindKinematicPath will only return joint information, but not DOF
+  // information.
+  auto& q_indices = *pq_indices;
+  const int frame_W = 0;
+
+  KinematicPath kinematic_path =
+      tree.findKinematicPath(frame_W, body_index);
+  int q_index = 0;
+  // Adapted from: RigidBodyTree<>::geometricJacobian
+  for (int cur_body_index : kinematic_path.joint_path) {
+    const DrakeJoint& joint = tree.get_body(cur_body_index).getJoint();
+    for (int i = 0; i < joint.get_num_positions(); ++i) {
+      q_indices.push_back(q_index++);
+    }
+  }
+}
+
+template <typename ContainerA, typename ContainerB>
+bool HasIntersection(const ContainerA& a, const ContainerB& b) {
+  for (const auto& ai : a) {
+    if (std::find(b.begin(), b.end(), ai) != b.end()) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Will a correspondence with a given body influence the optimization
+ * formulation (camera or body position)? Will it mathematically affect
+ * anything, or should computations relevant to this be skipped?
+ * @param scene
+ * @param ComputeCorrespondences
+ */
+BodyCorrespondenceInfluence IsBodyCorrespondenceInfluential(
+    const IcpScene& scene,
+    BodyIndex body_index,
+    VectorSlice *position_slice) {
+  BodyCorrespondenceInfluence out;
+  out.will_affect_camera = (scene.frame_C != scene.frame_W);
+  if (position_slice) {
+    // Check if this body's kinematic chain will be affected by the slice.
+    vector<int> q_indices;
+    GetDofPath(scene.tree, body_index, &q_indices);
+    // If there is any intersection, then this will influence things.
+    out.will_affect_body =
+        HasIntersection(q_indices, position_slice->indices());
+  } else {
+    out.will_affect_body = true;
+  }
+  return out;
+}
 
 /**
  * This function depends on `q`.
@@ -135,28 +208,48 @@ void ComputeCorrespondences(const IcpScene& scene,
     if (body_index != -1) {
       vector<PointCorrespondence>& body_correspondences =
           (*pcorrespondence)[body_index];
-      PointCorrespondence pc{i, body_pts_W.col(i), distances[i]};
+      PointCorrespondence pc{
+          i, meas_pts_W.col(i), body_pts_W.col(i), distances[i]};
       body_correspondences.push_back(pc);
     }
   }
 }
 
-typedef std::function<void()> CostAccumulator;
+typedef std::function<void(const IcpPointGroup&)> CostAccumulator;
 
-double AccumulateCost(IcpScene& scene,
-                      const Matrix3Xd& meas_pts_W,
+double AccumulateCost(const IcpScene& scene,
                       const SceneCorrespondence& correspondence,
-                      std::function<void()> accumulate) {
+                      const CostAccumulator& accumulate) {
   for (const auto& pair : correspondence) {
     const BodyIndex body_index = pair.first;
     const vector<PointCorrespondence>& body_correspondence = pair.second;
     IcpPointGroup body_pts_group(body_index, body_correspondence.size());
     for (const auto& pc_W : body_correspondence) {
-      body_pts_group.Add(meas_pts_W.col(pc_W.meas_index), pc_W.model_point);
+      body_pts_group.Add(pc_W.meas_point, pc_W.model_point);
     }
-    CostAccumulator(body_pts_group);
+    body_pts_group.Finalize();
+    accumulate(body_pts_group);
   }
 }
+
+#ifdef false
+void AccumulateQPCost(const IcpScene& scene,
+                      const SceneCorrespondence& correspondence,
+                      double weight,
+                      const VectorSlice& slice,
+                      QuadraticCost* cost) {
+  const int nvar = scene.tree.get_num_positions();
+  IcpLinearizedNormAccumulator error_accumulator(nvar);
+  Matrix3Xd es;
+  MatrixXd Jes;
+  auto accumulate = [&](const IcpPointGroup& body_pts_group) {
+    body_pts_group.UpdateError(scene, &es, &Jes);
+    error_accumulator.AddTerms(weight, es, Jes);
+  };
+  AccumulateCost(scene, correspondence, accumulate);
+  error_accumulator.UpdateCost(slice, cost);
+}
+#endif
 
 class DartIcpTest : public ::testing::Test {
  protected:
