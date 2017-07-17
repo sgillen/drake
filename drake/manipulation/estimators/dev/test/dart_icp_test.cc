@@ -215,11 +215,11 @@ void ComputeCorrespondences(const IcpScene& scene,
   }
 }
 
-typedef std::function<void(const IcpPointGroup&)> CostAccumulator;
+typedef std::function<void(const IcpPointGroup&)> CostAggregator;
 
-double AccumulateCost(const IcpScene& scene,
-                      const SceneCorrespondence& correspondence,
-                      const CostAccumulator& accumulate) {
+double AggregateCost(const IcpScene& scene,
+                     const SceneCorrespondence& correspondence,
+                     const CostAggregator& aggregate) {
   for (const auto& pair : correspondence) {
     const BodyIndex body_index = pair.first;
     const vector<PointCorrespondence>& body_correspondence = pair.second;
@@ -228,56 +228,60 @@ double AccumulateCost(const IcpScene& scene,
       body_pts_group.Add(pc_W.meas_point, pc_W.model_point);
     }
     body_pts_group.Finalize();
-    accumulate(body_pts_group);
+    aggregate(body_pts_group);
   }
 }
 
-#ifdef false
+class QPCostAggregator {
+ public:
+  QPCostAggregator(const IcpScene& scene, double weight)
+      : scene(&scene), weight(weight),
+        error_accumulator(scene.tree.get_num_positions()) {}
+  IcpLinearizedNormAccumulator error_accumulator;
+
+  void operator()(const IcpPointGroup& body_pts_group) {
+    body_pts_group.UpdateError(*scene, &es, &Jes);
+    error_accumulator.AddTerms(weight, es, Jes);
+  }
+ private:
+  const IcpScene* scene;
+  double weight;
+  Matrix3Xd es;
+  MatrixXd Jes;
+};
+
 void AccumulateQPCost(const IcpScene& scene,
                       const SceneCorrespondence& correspondence,
                       double weight,
                       const VectorSlice& slice,
                       QuadraticCost* cost) {
-  const int nvar = scene.tree.get_num_positions();
-  IcpLinearizedNormAccumulator error_accumulator(nvar);
-  Matrix3Xd es;
-  MatrixXd Jes;
-  auto accumulate = [&](const IcpPointGroup& body_pts_group) {
-    body_pts_group.UpdateError(scene, &es, &Jes);
-    error_accumulator.AddTerms(weight, es, Jes);
-  };
-  AccumulateCost(scene, correspondence, accumulate);
-  error_accumulator.UpdateCost(slice, cost);
+  QPCostAggregator aggregator(scene, weight);
+  AggregateCost(scene, correspondence, std::ref(aggregator));
+  aggregator.error_accumulator.UpdateCost(slice, cost);
 }
-#endif
 
 class DartIcpTest : public ::testing::Test {
  protected:
   void SetUp() override {
     // Create a formulation for a simple floating-base target
-    InstanceIdMap instance_id_map;
     string file_path = FindResourceOrThrow(
         "drake/examples/kuka_iiwa_arm/models/objects/block_for_pick_and_place"
         ".urdf");
     auto floating_base_type = multibody::joints::kRollPitchYaw;
     shared_ptr<RigidBodyFramed> weld_frame {nullptr};
     mutable_tree_ = new RigidBodyTreed();
-    instance_id_map["target"] =
-        parsers::urdf::AddModelInstanceFromUrdfFile(
-            file_path, floating_base_type,
-            weld_frame, mutable_tree_).begin()->second;
+    parsers::urdf::AddModelInstanceFromUrdfFile(
+        file_path, floating_base_type,
+        weld_frame, mutable_tree_);
     drake::multibody::AddFlatTerrainToWorld(mutable_tree_);
     mutable_tree_->compile();
     tree_.reset(mutable_tree_);
 
-    scene_ = new DartScene(tree_, instance_id_map);
-
-    DartFormulation::Param formulation_param {
-      .estimated_positions = FlattenNameList({
-          {"target", {"base_x", "base_y", "base_yaw"}} }),
-    };
-    formulation_.reset(
-        new DartFormulation(CreateUnique(scene_), formulation_param));
+//    DartFormulation::Param formulation_param {
+//      .estimated_positions = FlattenNameList({
+//          {"target", {"base_x", "base_y", "base_yaw"}} }),
+//    };
+    q_slice_.reset(new VectorSlice({0, 1, 5}, 6));
 
     // Add camera frame.
     const Vector3d position(-2, 0, 0.1);
@@ -285,36 +289,13 @@ class DartIcpTest : public ::testing::Test {
     const double pi = M_PI;
 
     auto* world_body = const_cast<RigidBody<double>*>(&tree_->world());
-    camera_frame_.reset(new RigidBodyFramed(
+    shared_ptr<RigidBodyFramed> camera_frame;
+    camera_frame.reset(new RigidBodyFramed(
         "depth_sensor", world_body, position, orientation * pi / 180));
-    mutable_tree_->addFrame(camera_frame_);
+    mutable_tree_->addFrame(camera_frame);
 
-    const double fov_y = pi / 4;
-
-    DartDepthImageIcpObjective::Param depth_param;
-    {
-      auto& param = depth_param;
-      auto& camera = param.camera;
-      camera = {
-        .fov_y = fov_y,
-      };
-      camera.frame = camera_frame_;  // cannot be in initializer list.
-      auto& icp = param.icp;
-      icp = {
-        .variance = 0.005,
-      };
-      auto& free_space = param.free_space;
-      free_space.variance = 0.005;
-      param.image_downsample_factor = 10;
-      param.point_cloud_bounds = {
-          .x = {-2, 2},
-          .y = {-2, 2},
-          .z = {-2, 2},
-      };
-    };
-    depth_obj_ =
-        new DartDepthImageIcpObjective(formulation_.get(), depth_param);
-    formulation_->AddObjective(CreateUnique(depth_obj_));
+    scene_.reset(new IcpScene(*tree_, *tree_cache_, 0,
+                              camera_frame->get_frame_index()));
 
     const Bounds box = {
       .x = {-0.03, 0.03},
@@ -332,11 +313,10 @@ class DartIcpTest : public ::testing::Test {
 
  protected:
   RigidBodyTreed* mutable_tree_;
+  unique_ptr<KinematicsCached> tree_cache_;
   shared_ptr<const RigidBodyTreed> tree_;
-  shared_ptr<RigidBodyFramed> camera_frame_;
-  DartScene* scene_;
-  unique_ptr<DartFormulation> formulation_;
-  DartDepthImageIcpObjective* depth_obj_;
+  unique_ptr<IcpScene> scene_;
+  unique_ptr<VectorSlice> q_slice_;
   Matrix3Xd points_;
 };
 
@@ -345,6 +325,22 @@ TEST_F(DartIcpTest, BasicPointCloud) {
   // zero.
   // Then, perturb measurement away from this, and ensure that error increases.
 
+  // Get correspondences
+  SceneCorrespondence correspondence;
+  ComputeCorrespondences(*scene_, points_, &correspondence);
+  // Compute error
+  int nvar = q_slice_->size();
+  MatrixXd Q(nvar, nvar);
+  VectorXd f(nvar);
+  double c = 0;
+  Q.setIdentity();
+  f.setZero();
+  solvers::QuadraticCost cost(Q, f, c);
+  const double weight = 1;
+  AccumulateQPCost(*scene_, correspondence, weight, *q_slice_, &cost);
+
+  // The error should be near zero for points on the surface.
+  EXPECT_EQ(0, cost.c());
 }
 
 }  // namespace
