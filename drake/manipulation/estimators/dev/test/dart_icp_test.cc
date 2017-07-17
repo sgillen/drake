@@ -10,6 +10,13 @@
 #include "drake/multibody/parsers/urdf_parser.h"
 #include "drake/systems/sensors/rgbd_camera.h"
 #include "drake/multibody/rigid_body_tree_construction.h"
+#include "drake/multibody/rigid_body_plant/drake_visualizer.h"
+#include "drake/lcm/drake_lcm.h"
+#include "drake/lcmtypes/drake/lcmt_viewer_draw.hpp"
+#include "drake/lcmtypes/drake/lcmt_viewer_load_robot.hpp"
+#include "drake/multibody/rigid_body_plant/create_load_robot_message.h"
+#include "bot_core/pointcloud_t.hpp"
+#include "external/lcmtypes_bot2_core/lcmtypes/bot_core/pointcloud_t.hpp"
 
 using namespace std;
 using namespace drake::systems::sensors;
@@ -349,13 +356,8 @@ class DartIcpTest : public ::testing::Test {
       .y = {-0.03, 0.03},
       .z = {-0.1, 0.1},
     };
-    const double space = 0.005;
+    const double space = 0.001;
     points_ = GenerateBoxPointCloud(space, box);
-  }
-
-  void TearDown() override {}
-
-  void AddDepthObjective() {
   }
 
  protected:
@@ -368,6 +370,56 @@ class DartIcpTest : public ::testing::Test {
   Matrix3Xd points_;
 };
 
+typedef Matrix3Xd Data;
+typedef bot_core::pointcloud_t Message;
+void PointCloudToLcm(const Matrix3Xd& pts_W, Message* pmessage) {
+  Message& message = *pmessage;
+  message.points.clear();
+  message.frame_id = std::string(RigidBodyTreeConstants::kWorldName);
+  message.n_channels = 0;
+  message.n_points = pts_W.cols();
+  message.points.resize(message.n_points);
+  for (int i = 0; i < message.n_points; ++i) {
+    Eigen::Vector3f pt_W = pts_W.col(i).cast<float>();
+    message.points[i] = {pt_W(0), pt_W(1), pt_W(2)};
+  }
+  message.n_points = message.points.size();
+}
+
+void Visualize(const IcpScene& scene, const Matrix3Xd& points) {
+  lcm::DrakeLcm lcmc;
+  using namespace systems;
+  {
+    const lcmt_viewer_load_robot load_msg(
+        (multibody::CreateLoadRobotMessage<double>(scene.tree)));
+    vector<uint8_t> bytes(load_msg.getEncodedSize());
+    load_msg.encode(bytes.data(), 0, bytes.size());
+    lcmc.Publish("DRAKE_VIEWER_LOAD_ROBOT", bytes.data(), bytes.size());
+  }
+  {
+    const ViewerDrawTranslator draw_msg_tx(scene.tree);
+    drake::lcmt_viewer_draw draw_msg;
+    vector<uint8_t> bytes;
+    const int nq = scene.tree.get_num_positions();
+    const int nv = scene.tree.get_num_velocities();
+    const int nx = nq + nv;
+    BasicVector<double> x(nx);
+    auto xb = x.get_mutable_value();
+    xb.setZero();
+    xb.head(nq) = scene.cache.getQ();
+    draw_msg_tx.Serialize(0, x, &bytes);
+    lcmc.Publish("DRAKE_VIEWER_DRAW", bytes.data(), bytes.size());
+  }
+  // Publish point cloud
+  {
+    bot_core::pointcloud_t pt_msg;
+    PointCloudToLcm(points, &pt_msg);
+    vector<uint8_t> bytes(pt_msg.getEncodedSize());
+    pt_msg.encode(bytes.data(), 0, bytes.size());
+    lcmc.Publish("DRAKE_POINTCLOUD_RGBD", bytes.data(), bytes.size());
+  }
+}
+
 TEST_F(DartIcpTest, PositiveReturnsBasic) {
   // Feed box points initialized at (0, 0, 0), ensure that cost is (near)
   // zero.
@@ -378,6 +430,8 @@ TEST_F(DartIcpTest, PositiveReturnsBasic) {
   q0.setZero();
   tree_cache_->initialize(q0);
   tree_->doKinematics(*tree_cache_);
+
+  Visualize(*scene_, points_);
 
   // Get correspondences
   SceneCorrespondence correspondence;

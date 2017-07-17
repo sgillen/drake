@@ -113,14 +113,17 @@ drake_cc_library(
 
 drake_cc_googletest(
     name = "dart_icp_test",
+    data = [
+        ":models",
+    ],
     deps = [
         ":dart",
+        "//drake/lcm",
         "//drake/multibody/parsers:parsers",
         "//drake/multibody:rigid_body_tree",
         "//drake/multibody:rigid_body_tree_construction",
-    ],
-    data = [
-        ":models",
+        "//drake/multibody/rigid_body_plant:drake_visualizer",
+        "@lcmtypes_bot2_core",
     ],
 )
 
