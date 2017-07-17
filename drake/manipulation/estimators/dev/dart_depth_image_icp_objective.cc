@@ -243,7 +243,7 @@ void DartDepthImageIcpObjective::UpdateFormulation(
   Matrix3Xd positive_body_pts_Bi(3, num_positive);  // body point, body frame.
   vector<int> positive_body_indices(num_positive);
   {
-    SCOPE_TIME(icp, "ICP Correspondence");
+    DRAKE_SCOPE_TIME(icp, "ICP Correspondence");
     mutable_tree.collisionDetectFromPoints(
           kin_cache, positive_meas_pts_W,
           positive_distances, positive_normals_W,
@@ -263,7 +263,7 @@ void DartDepthImageIcpObjective::UpdateFormulation(
   }
 
   {
-    SCOPE_TIME(icp, "ICP Costs");
+    DRAKE_SCOPE_TIME(icp, "ICP Costs");
     const double icp_weight = ComputeWeight(param_.icp.variance);
     IcpLinearizedNormAccumulator error_accumulator(tree.get_num_positions());
     // Go through each point and accumulate the cost.
@@ -304,15 +304,16 @@ void DartDepthImageIcpObjective::UpdateFormulation(
           used_points++;
           // Register each point with the appropriate frames to compute the
           // linearized error term.
-          const int meas_index = positive_meas_indices[positive_index];
           icp_body.Add(positive_meas_pts_W.col(positive_index),
-                       meas_pts_C.col(meas_index),
-                       positive_body_pts_W.col(positive_index),
-                       body_pt_Bi);
+                       positive_body_pts_W.col(positive_index));
         }
       }
       // Incorporate into error accumulation.
-      icp_body.AddTerms(scene, &error_accumulator, icp_weight);
+      Matrix3Xd es;
+      MatrixXd Jes;
+      icp_body.Finalize();
+      icp_body.UpdateError(scene, &es, &Jes);
+      error_accumulator.AddTerms(icp_weight, es, Jes);
 
       fmt::print(cout, "body: {}, points used: {}\n", body.get_name(),
                  used_points);

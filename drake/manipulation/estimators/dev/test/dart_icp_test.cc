@@ -118,6 +118,7 @@ struct BodyCorrespondenceInfluence {
     return will_affect_camera || will_affect_body;
   }
 };
+typedef vector<BodyCorrespondenceInfluence> Influences;
 
 void GetDofPath(const RigidBodyTreed& tree,
                 BodyIndex body_index,
@@ -159,20 +160,31 @@ bool HasIntersection(const ContainerA& a, const ContainerB& b) {
 BodyCorrespondenceInfluence IsBodyCorrespondenceInfluential(
     const IcpScene& scene,
     BodyIndex body_index,
-    VectorSlice *position_slice) {
+    const VectorSlice *q_slice) {
   BodyCorrespondenceInfluence out;
   out.will_affect_camera = (scene.frame_C != scene.frame_W);
-  if (position_slice) {
+  if (q_slice) {
     // Check if this body's kinematic chain will be affected by the slice.
     vector<int> q_indices;
     GetDofPath(scene.tree, body_index, &q_indices);
     // If there is any intersection, then this will influence things.
     out.will_affect_body =
-        HasIntersection(q_indices, position_slice->indices());
+        HasIntersection(q_indices, q_slice->indices());
   } else {
     out.will_affect_body = true;
   }
   return out;
+}
+
+void ComputeBodyCorrespondenceInfluences(
+    const IcpScene& scene,
+    const VectorSlice* q_slice,
+    Influences* influences) {
+  int num_bodies = scene.tree.get_num_bodies();
+  influences->resize(num_bodies);
+  for (int i = 0; i < num_bodies; ++i) {
+    (*influences)[i] = IsBodyCorrespondenceInfluential(scene, i, q_slice);
+  }
 }
 
 /**
@@ -183,6 +195,7 @@ BodyCorrespondenceInfluence IsBodyCorrespondenceInfluential(
  */
 void ComputeCorrespondences(const IcpScene& scene,
                             const Matrix3Xd& meas_pts_W,
+                            const Influences& influences,
                             SceneCorrespondence* pcorrespondence) {
   DRAKE_DEMAND(pcorrespondence != nullptr);
   int num_points = meas_pts_W.size();
@@ -202,10 +215,18 @@ void ComputeCorrespondences(const IcpScene& scene,
       body_pts_W, body_pts_Bi,
       body_indices, use_margins);
 
+  // Cache whether or not there is influence. This should be effectively used
+  // to filter out points from the set.
+  int num_bodies = scene.tree.get_num_bodies();
+  vector<bool> is_body_influential(num_bodies);
+  for (int i = 0; i < num_bodies; ++i) {
+    is_body_influential[i] = influences[i].is_influential();
+  }
+
   // Bin each correspondence to the given body.
   for (int i = 0; i < num_points; ++i) {
     BodyIndex body_index = body_indices[i];
-    if (body_index != -1) {
+    if (body_index != -1 && is_body_influential[body_index]) {
       vector<PointCorrespondence>& body_correspondences =
           (*pcorrespondence)[body_index];
       PointCorrespondence pc{
@@ -217,7 +238,7 @@ void ComputeCorrespondences(const IcpScene& scene,
 
 typedef std::function<void(const IcpPointGroup&)> CostAggregator;
 
-double AggregateCost(const IcpScene& scene,
+void AggregateCost(const IcpScene& scene,
                      const SceneCorrespondence& correspondence,
                      const CostAggregator& aggregate) {
   for (const auto& pair : correspondence) {
@@ -232,17 +253,38 @@ double AggregateCost(const IcpScene& scene,
   }
 }
 
+class ConstantCostAggregator {
+ public:
+  ConstantCostAggregator(const IcpScene& scene)
+    : scene_(&scene), cost_(0) {}
+
+  void operator()(const IcpPointGroup& pts) {
+    pts.UpdateError(*scene_, &es, &Jes);
+    // Get error squared.
+    cost_ += (es.transpose() * es).sum();
+  }
+  double cost() const {
+    return cost_;
+  }
+ private:
+  const IcpScene* scene_;
+  Matrix3Xd es;
+  MatrixXd Jes;
+  double cost_{};
+};
+
 class QPCostAggregator {
  public:
   QPCostAggregator(const IcpScene& scene, double weight)
-      : scene(&scene), weight(weight),
-        error_accumulator(scene.tree.get_num_positions()) {}
-  IcpLinearizedNormAccumulator error_accumulator;
+      : error_accumulator(scene.tree.get_num_positions()),
+        scene(&scene), weight(weight) {}
 
   void operator()(const IcpPointGroup& body_pts_group) {
     body_pts_group.UpdateError(*scene, &es, &Jes);
     error_accumulator.AddTerms(weight, es, Jes);
   }
+
+  IcpLinearizedNormAccumulator error_accumulator;
  private:
   const IcpScene* scene;
   double weight;
@@ -250,6 +292,7 @@ class QPCostAggregator {
   MatrixXd Jes;
 };
 
+#if false
 void AccumulateQPCost(const IcpScene& scene,
                       const SceneCorrespondence& correspondence,
                       double weight,
@@ -259,6 +302,7 @@ void AccumulateQPCost(const IcpScene& scene,
   AggregateCost(scene, correspondence, std::ref(aggregator));
   aggregator.error_accumulator.UpdateCost(slice, cost);
 }
+#endif
 
 class DartIcpTest : public ::testing::Test {
  protected:
@@ -297,6 +341,9 @@ class DartIcpTest : public ::testing::Test {
     scene_.reset(new IcpScene(*tree_, *tree_cache_, 0,
                               camera_frame->get_frame_index()));
 
+    ComputeBodyCorrespondenceInfluences(*scene_, q_slice_.get(),
+                                        &influences_);
+
     const Bounds box = {
       .x = {-0.03, 0.03},
       .y = {-0.03, 0.03},
@@ -317,30 +364,25 @@ class DartIcpTest : public ::testing::Test {
   shared_ptr<const RigidBodyTreed> tree_;
   unique_ptr<IcpScene> scene_;
   unique_ptr<VectorSlice> q_slice_;
+  Influences influences_;
   Matrix3Xd points_;
 };
 
-TEST_F(DartIcpTest, BasicPointCloud) {
+TEST_F(DartIcpTest, PositiveReturnsBasic) {
   // Feed box points initialized at (0, 0, 0), ensure that cost is (near)
   // zero.
   // Then, perturb measurement away from this, and ensure that error increases.
 
   // Get correspondences
   SceneCorrespondence correspondence;
-  ComputeCorrespondences(*scene_, points_, &correspondence);
+  ComputeCorrespondences(*scene_, points_, influences_, &correspondence);
+
   // Compute error
-  int nvar = q_slice_->size();
-  MatrixXd Q(nvar, nvar);
-  VectorXd f(nvar);
-  double c = 0;
-  Q.setIdentity();
-  f.setZero();
-  solvers::QuadraticCost cost(Q, f, c);
-  const double weight = 1;
-  AccumulateQPCost(*scene_, correspondence, weight, *q_slice_, &cost);
+  ConstantCostAggregator aggregator(*scene_);
+  AggregateCost(*scene_, correspondence, std::ref(aggregator));
 
   // The error should be near zero for points on the surface.
-  EXPECT_EQ(0, cost.c());
+  EXPECT_EQ(0, aggregator.cost());
 }
 
 }  // namespace

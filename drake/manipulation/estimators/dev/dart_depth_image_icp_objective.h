@@ -108,8 +108,7 @@ struct IcpScene {
  */
 struct IcpPointGroup {
   IcpPointGroup(FrameIndex frame_Bi, int num_max)
-    : frame_Bi(frame_Bi),
-      num_max(num_max) {
+    : frame_Bi(frame_Bi) {
     meas_pts_W.resize(3, num_max);
     body_pts_W.resize(3, num_max);
   }
@@ -139,7 +138,7 @@ struct IcpPointGroup {
     // Get point jacobian w.r.t. camera frame, as that is the only influence
     // on the measured point cloud.
     // TODO(eric.cousineau): If camera is immovable w.r.t. formulation, do not
-    // update.
+    // update. Consider passing in body influence information.
     MatrixXd J_meas_pts_W =
         scene.tree.transformPointsJacobian(
             scene.cache, meas_pts_C, scene.frame_C, scene.frame_W, false);
@@ -154,7 +153,6 @@ struct IcpPointGroup {
   }
  private:
   const FrameIndex frame_Bi{-1};
-  const int num_max{};
   Matrix3Xd meas_pts_W;
   Matrix3Xd body_pts_W;
   int num_actual{0};

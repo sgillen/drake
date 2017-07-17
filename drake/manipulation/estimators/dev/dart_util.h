@@ -7,7 +7,6 @@
 #include <fmt/format.h>
 
 #include "drake/common/drake_throw.h"
-#include "drake/common/drake_path.h"
 #include "drake/common/eigen_types.h"
 #include "drake/multibody/rigid_body_tree.h"
 #include "drake/systems/sensors/rgbd_camera.h"

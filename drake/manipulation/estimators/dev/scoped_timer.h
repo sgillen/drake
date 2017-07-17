@@ -89,7 +89,7 @@ class ScopedTimer {
  private:
   double stop() {
     double elapsed = timer_.stop();
-    drake::log()->info("[timer] {}: {} sec\n", message_, elapsed)
+    drake::log()->info("[timer] {}: {} sec\n", message_, elapsed);
     return elapsed;
   }
   Timer timer_;

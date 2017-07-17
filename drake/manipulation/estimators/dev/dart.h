@@ -1,6 +1,6 @@
 #pragma once
 
-#include <drake/solvers/mathematical_program.h>
+#include "drake/solvers/mathematical_program.h"
 
 #include "drake/common/nice_type_name.h"
 #include "drake/manipulation/estimators/dev/dart_util.h"

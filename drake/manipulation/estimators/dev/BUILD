@@ -106,6 +106,9 @@ drake_cc_googletest(
     name = "dart_icp_test",
     deps = [
         ":dart",
+        "//drake/multibody/parsers:parsers",
+        "//drake/multibody:rigid_body_tree",
+        "//drake/multibody:rigid_body_tree_construction",
     ],
 )
 
