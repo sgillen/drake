@@ -110,6 +110,9 @@ drake_cc_googletest(
         "//drake/multibody:rigid_body_tree",
         "//drake/multibody:rigid_body_tree_construction",
     ],
+    data = [
+        "//drake/examples/kuka_iiwa_arm:models",
+    ],
 )
 
 drake_cc_googletest(

@@ -198,7 +198,7 @@ void ComputeCorrespondences(const IcpScene& scene,
                             const Influences& influences,
                             SceneCorrespondence* pcorrespondence) {
   DRAKE_DEMAND(pcorrespondence != nullptr);
-  int num_points = meas_pts_W.size();
+  int num_points = meas_pts_W.cols();
   VectorXd distances(num_points);
   Matrix3Xd body_normals_W(3, num_points);  // world frame.
   Matrix3Xd body_pts_W(3, num_points);  // body point, world frame.
@@ -320,6 +320,7 @@ class DartIcpTest : public ::testing::Test {
     drake::multibody::AddFlatTerrainToWorld(mutable_tree_);
     mutable_tree_->compile();
     tree_.reset(mutable_tree_);
+    tree_cache_.reset(new KinematicsCached(tree_->CreateKinematicsCache()));
 
 //    DartFormulation::Param formulation_param {
 //      .estimated_positions = FlattenNameList({
@@ -372,6 +373,12 @@ TEST_F(DartIcpTest, PositiveReturnsBasic) {
   // Feed box points initialized at (0, 0, 0), ensure that cost is (near)
   // zero.
   // Then, perturb measurement away from this, and ensure that error increases.
+
+  const int nq = tree_->get_num_positions();
+  VectorXd q0(nq);
+  q0.setZero();
+  tree_cache_->initialize(q0);
+  tree_->doKinematics(*tree_cache_);
 
   // Get correspondences
   SceneCorrespondence correspondence;
