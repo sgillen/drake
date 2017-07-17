@@ -25,18 +25,11 @@ namespace drake {
 namespace manipulation {
 namespace {
 
-// TODO(eric.cousineau): Consider mutable setup.
-// TODO(eric.cousineau): Break into component-wise testing.
 // TODO(eric.cousineau): Consider processing with VTK.
 // TODO(eric.cousineau): Consider breaking MathematicalProgram into a
 // Formulation and Solver components, such that it validates this and other
 // designs. Make a DispatchSolver that can select from the variety at run-time,
 // and can constraint on the solvers to choose.
-
-struct Bounds2D {
-  Interval x;
-  Interval y;
-};
 
 struct IntervalIndex {
   int index;
@@ -93,24 +86,21 @@ Matrix3Xd GenerateBoxPointCloud(double space, Bounds box) {
   return pts;
 }
 
-struct PointCloud {
-  Matrix3Xd points;
-  int size() const { return points.size(); }
-};
-
 struct PointCorrespondence {
   // TODO(eric.cousineau): Consider storing normals, different frames, etc.
-  /** @brief Measured point index. */
+  /** @brief Measured feature index (point). */
   int meas_index{};
   /** @brief Measured point. */
   Vector3d meas_point;
+  /** @brief Model feature index (body). */
+  int model_index{};
   /** @brief Model point, same frame as measured point. */
   Vector3d model_point;
   /** @brief Distance between the points. */
   double distance{-1};
 };
 
-typedef map<BodyIndex, vector<PointCorrespondence>> SceneCorrespondence;
+typedef map<BodyIndex, vector<PointCorrespondence>> SceneCorrespondences;
 
 struct BodyCorrespondenceInfluence {
   /**
@@ -122,6 +112,10 @@ struct BodyCorrespondenceInfluence {
    * @brief Will a correspondence with this body affect the body's kinematics?
    */
   bool will_affect_body{};
+  /**
+   * @brief Check if a correspondence with this body will influence the
+   * Jacobian at all.
+   */
   bool is_influential() const {
     return will_affect_camera || will_affect_body;
   }
@@ -204,7 +198,7 @@ void ComputeBodyCorrespondenceInfluences(
 void ComputeCorrespondences(const IcpScene& scene,
                             const Matrix3Xd& meas_pts_W,
                             const Influences& influences,
-                            SceneCorrespondence* pcorrespondence) {
+                            SceneCorrespondences* pcorrespondence) {
   DRAKE_DEMAND(pcorrespondence != nullptr);
   int num_points = meas_pts_W.cols();
   VectorXd distances(num_points);
@@ -238,7 +232,7 @@ void ComputeCorrespondences(const IcpScene& scene,
       vector<PointCorrespondence>& body_correspondences =
           (*pcorrespondence)[body_index];
       PointCorrespondence pc{
-          i, meas_pts_W.col(i), body_pts_W.col(i), distances[i]};
+          i, meas_pts_W.col(i), body_index, body_pts_W.col(i), distances[i]};
       body_correspondences.push_back(pc);
     }
   }
@@ -247,7 +241,7 @@ void ComputeCorrespondences(const IcpScene& scene,
 typedef std::function<void(const IcpPointGroup&)> CostAggregator;
 
 void AggregateCost(const IcpScene& scene,
-                     const SceneCorrespondence& correspondence,
+                     const SceneCorrespondences& correspondence,
                      const CostAggregator& aggregate) {
   for (const auto& pair : correspondence) {
     const BodyIndex body_index = pair.first;
@@ -302,7 +296,7 @@ class QPCostAggregator {
 
 #if false
 void AccumulateQPCost(const IcpScene& scene,
-                      const SceneCorrespondence& correspondence,
+                      const SceneCorrespondences& correspondence,
                       double weight,
                       const VectorSlice& slice,
                       QuadraticCost* cost) {
@@ -396,7 +390,7 @@ void PointCloudToLcm(const Matrix3Xd& pts_W, Message* pmessage) {
 }
 
 void Visualize(const IcpScene& scene, const Matrix3Xd& points,
-               SceneCorrespondence& correspondence) {
+               SceneCorrespondences& correspondence) {
   lcm::DrakeLcm lcmc;
   using namespace systems;
   {
@@ -428,27 +422,16 @@ void Visualize(const IcpScene& scene, const Matrix3Xd& points,
     pt_msg.encode(bytes.data(), 0, bytes.size());
     lcmc.Publish("DRAKE_POINTCLOUD_RGBD", bytes.data(), bytes.size());
   }
-  // TODO: Draw model points, correspondences, etc.
-//  {
-//    bot_core::pointcloud_t pt_msg;
-//    PointCloudToLcm(points, &pt_msg);
-//    vector<uint8_t> bytes(pt_msg.getEncodedSize());
-//    pt_msg.encode(bytes.data(), 0, bytes.size());
-//    lcmc.Publish("DRAKE_POINTCLOUD_RGBD2", bytes.data(), bytes.size());
-//  }
 }
 
-TEST_F(DartIcpTest, PositiveReturnsBasic) {
-  // Feed box points initialized at (0, 0, 0), ensure that cost is (near)
-  // zero.
-  // Then, perturb measurement away from this, and ensure that error increases.
-
+TEST_F(DartIcpTest, PositiveReturnsZeroCost) {
+  // Start box at the given state, ensure that the cost returned is near zero.
   VectorXd q0 = q0_;
   tree_cache_->initialize(q0);
   tree_->doKinematics(*tree_cache_);
 
   // Get correspondences
-  SceneCorrespondence correspondence;
+  SceneCorrespondences correspondence;
   ComputeCorrespondences(*scene_, points_, influences_, &correspondence);
 
   Visualize(*scene_, points_, correspondence);
