@@ -50,12 +50,13 @@ struct PlaneIndices {
 };
 
 Matrix2Xd GeneratePlane(double space, Interval x, Interval y) {
-  const int max = floor(x.width() * y.width() / (space*space));
+  const int nc = floor(x.width() / space);
+  const int nr = floor(y.width() / space);
   int i = 0;
-  Matrix2Xd out(2, max);
-  for (int c = 0; c < x.width(); c++) {
-    for (int r = 0; r < y.width(); r++) {
-      out.col(i) << c * space, r * space;
+  Matrix2Xd out(2, nc * nr);
+  for (int c = 0; c < nc; c++) {
+    for (int r = 0; r < nr; r++) {
+      out.col(i) << c * space + x.min, r * space + y.min;
       i++;
     }
   }
@@ -241,6 +242,9 @@ void ComputeCorrespondences(const IcpScene& scene,
       body_correspondences.push_back(pc);
     }
   }
+  for (int i = 0; i < scene.tree.get_num_bodies(); ++i) {
+    cout << fmt::format("{}: {}\n", i, (*pcorrespondence)[i].size());
+  }
 }
 
 typedef std::function<void(const IcpPointGroup&)> CostAggregator;
@@ -323,7 +327,8 @@ class DartIcpTest : public ::testing::Test {
     parsers::urdf::AddModelInstanceFromUrdfFile(
         file_path, floating_base_type,
         weld_frame, mutable_tree_);
-    drake::multibody::AddFlatTerrainToWorld(mutable_tree_);
+    // TODO(eric.cousineau): Figure out why ground is absorbing points...
+//    drake::multibody::AddFlatTerrainToWorld(mutable_tree_);
     mutable_tree_->compile();
     tree_.reset(mutable_tree_);
     tree_cache_.reset(new KinematicsCached(tree_->CreateKinematicsCache()));
@@ -356,7 +361,7 @@ class DartIcpTest : public ::testing::Test {
       .y = {-0.03, 0.03},
       .z = {-0.1, 0.1},
     };
-    const double space = 0.001;
+    const double space = 0.02;
     points_ = GenerateBoxPointCloud(space, box);
   }
 
@@ -386,7 +391,8 @@ void PointCloudToLcm(const Matrix3Xd& pts_W, Message* pmessage) {
   message.n_points = message.points.size();
 }
 
-void Visualize(const IcpScene& scene, const Matrix3Xd& points) {
+void Visualize(const IcpScene& scene, const Matrix3Xd& points,
+               SceneCorrespondence& correspondence) {
   lcm::DrakeLcm lcmc;
   using namespace systems;
   {
@@ -418,6 +424,14 @@ void Visualize(const IcpScene& scene, const Matrix3Xd& points) {
     pt_msg.encode(bytes.data(), 0, bytes.size());
     lcmc.Publish("DRAKE_POINTCLOUD_RGBD", bytes.data(), bytes.size());
   }
+  // TODO: Draw model points, correspondences, etc.
+//  {
+//    bot_core::pointcloud_t pt_msg;
+//    PointCloudToLcm(points, &pt_msg);
+//    vector<uint8_t> bytes(pt_msg.getEncodedSize());
+//    pt_msg.encode(bytes.data(), 0, bytes.size());
+//    lcmc.Publish("DRAKE_POINTCLOUD_RGBD2", bytes.data(), bytes.size());
+//  }
 }
 
 TEST_F(DartIcpTest, PositiveReturnsBasic) {
@@ -431,18 +445,19 @@ TEST_F(DartIcpTest, PositiveReturnsBasic) {
   tree_cache_->initialize(q0);
   tree_->doKinematics(*tree_cache_);
 
-  Visualize(*scene_, points_);
-
   // Get correspondences
   SceneCorrespondence correspondence;
   ComputeCorrespondences(*scene_, points_, influences_, &correspondence);
+
+  Visualize(*scene_, points_, correspondence);
 
   // Compute error
   ConstantCostAggregator aggregator(*scene_);
   AggregateCost(*scene_, correspondence, std::ref(aggregator));
 
+  double tol = 1e-10;
   // The error should be near zero for points on the surface.
-  EXPECT_EQ(0, aggregator.cost());
+  EXPECT_NEAR(0, aggregator.cost(), tol);
 }
 
 }  // namespace
