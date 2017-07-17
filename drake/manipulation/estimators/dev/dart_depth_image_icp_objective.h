@@ -128,28 +128,32 @@ struct IcpPointGroup {
       const IcpScene& scene, Matrix3Xd* es_W, MatrixXd* J_es_W) const {
     // Compute measured and body (model) points in their respective frames for
     // Jacobian computation.
+    DRAKE_DEMAND(es_W != nullptr);
     Matrix3Xd meas_pts_C;
     Matrix3Xd body_pts_Bi;
     scene.tree.transformPoints(
         scene.cache, meas_pts_W, scene.frame_W, scene.frame_C);
     scene.tree.transformPoints(
             scene.cache, body_pts_W, scene.frame_W, frame_Bi);
+    // Compute error
+    *es_W = meas_pts_W - body_pts_W;
 
     // Get point jacobian w.r.t. camera frame, as that is the only influence
     // on the measured point cloud.
     // TODO(eric.cousineau): If camera is immovable w.r.t. formulation, do not
     // update. Consider passing in body influence information.
-    MatrixXd J_meas_pts_W =
-        scene.tree.transformPointsJacobian(
-            scene.cache, meas_pts_C, scene.frame_C, scene.frame_W, false);
-    // TODO(eric.cousineau): If body is immovable w.r.t. formulation, do not
-    // update.
-    MatrixXd J_body_pts_W =
-        scene.tree.transformPointsJacobian(
-            scene.cache, body_pts_Bi, frame_Bi, scene.frame_W, false);
-    // Compute error and its Jacobian.
-    *es_W = meas_pts_W - body_pts_W;
-    *J_es_W = J_meas_pts_W - J_body_pts_W;
+    if (J_es_W) {
+      MatrixXd J_meas_pts_W =
+          scene.tree.transformPointsJacobian(
+              scene.cache, meas_pts_C, scene.frame_C, scene.frame_W, false);
+      // TODO(eric.cousineau): If body is immovable w.r.t. formulation, do not
+      // update.
+      MatrixXd J_body_pts_W =
+          scene.tree.transformPointsJacobian(
+              scene.cache, body_pts_Bi, frame_Bi, scene.frame_W, false);
+      // Compute Jacobian of error.
+      *J_es_W = J_meas_pts_W - J_body_pts_W;
+    }
   }
  private:
   const FrameIndex frame_Bi{-1};
