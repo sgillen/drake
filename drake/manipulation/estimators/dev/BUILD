@@ -6,6 +6,15 @@ load("//tools:drake.bzl", "drake_cc_googletest", "drake_cc_library")
 
 package(default_visibility = ["//visibility:public"])
 
+filegroup(
+    name = "models",
+    srcs = glob([
+        "**/*.urdf",
+    ]),
+    # TODO(eric.cousineau): Make this private and testonly.
+    visibility = ["//visibility:public"],
+)
+
 drake_cc_library(
     name = "vector_slice",
     hdrs = [
@@ -111,7 +120,7 @@ drake_cc_googletest(
         "//drake/multibody:rigid_body_tree_construction",
     ],
     data = [
-        "//drake/examples/kuka_iiwa_arm:models",
+        ":models",
     ],
 )
 

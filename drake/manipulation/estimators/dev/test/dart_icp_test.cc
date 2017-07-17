@@ -309,8 +309,7 @@ class DartIcpTest : public ::testing::Test {
   void SetUp() override {
     // Create a formulation for a simple floating-base target
     string file_path = FindResourceOrThrow(
-        "drake/examples/kuka_iiwa_arm/models/objects/block_for_pick_and_place"
-        ".urdf");
+        "drake/manipulation/estimators/dev/simple_cuboid.urdf");
     auto floating_base_type = multibody::joints::kRollPitchYaw;
     shared_ptr<RigidBodyFramed> weld_frame {nullptr};
     mutable_tree_ = new RigidBodyTreed();
