@@ -242,9 +242,6 @@ void ComputeCorrespondences(const IcpScene& scene,
       body_correspondences.push_back(pc);
     }
   }
-  for (int i = 0; i < scene.tree.get_num_bodies(); ++i) {
-    cout << fmt::format("{}: {}\n", i, (*pcorrespondence)[i].size());
-  }
 }
 
 typedef std::function<void(const IcpPointGroup&)> CostAggregator;
@@ -328,10 +325,14 @@ class DartIcpTest : public ::testing::Test {
         file_path, floating_base_type,
         weld_frame, mutable_tree_);
     // TODO(eric.cousineau): Figure out why ground is absorbing points...
-//    drake::multibody::AddFlatTerrainToWorld(mutable_tree_);
+    drake::multibody::AddFlatTerrainToWorld(mutable_tree_);
     mutable_tree_->compile();
     tree_.reset(mutable_tree_);
     tree_cache_.reset(new KinematicsCached(tree_->CreateKinematicsCache()));
+
+    Vector3d obj_pos(0, 0, 0.25);
+    q0_.resize(6);
+    q0_.head(3) << obj_pos;
 
 //    DartFormulation::Param formulation_param {
 //      .estimated_positions = FlattenNameList({
@@ -340,7 +341,8 @@ class DartIcpTest : public ::testing::Test {
     q_slice_.reset(new VectorSlice({0, 1, 5}, 6));
 
     // Add camera frame.
-    const Vector3d position(-2, 0, 0.1);
+    Vector3d position(-2, 0, 0.1);
+    position += obj_pos;
     const Vector3d orientation(0, 0, 0); // degrees
     const double pi = M_PI;
 
@@ -363,12 +365,14 @@ class DartIcpTest : public ::testing::Test {
     };
     const double space = 0.02;
     points_ = GenerateBoxPointCloud(space, box);
+    points_.colwise() += obj_pos;
   }
 
  protected:
   RigidBodyTreed* mutable_tree_;
   unique_ptr<KinematicsCached> tree_cache_;
   shared_ptr<const RigidBodyTreed> tree_;
+  VectorXd q0_;
   unique_ptr<IcpScene> scene_;
   unique_ptr<VectorSlice> q_slice_;
   Influences influences_;
@@ -439,9 +443,7 @@ TEST_F(DartIcpTest, PositiveReturnsBasic) {
   // zero.
   // Then, perturb measurement away from this, and ensure that error increases.
 
-  const int nq = tree_->get_num_positions();
-  VectorXd q0(nq);
-  q0.setZero();
+  VectorXd q0 = q0_;
   tree_cache_->initialize(q0);
   tree_->doKinematics(*tree_cache_);
 
