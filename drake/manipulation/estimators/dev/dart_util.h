@@ -230,6 +230,35 @@ inline void PrintValidPoints(const Eigen::Matrix3Xd& points,
   std::cout << fmt::format("Valid points: {} - {}\n", num_non_nan, note);
 }
 
+void GetDofPath(const RigidBodyTreed& tree,
+                int body_index,
+                std::vector<int> *pq_indices) {
+  // NOTE: FindKinematicPath will only return joint information, but not DOF
+  // information.
+  auto& q_indices = *pq_indices;
+  const int frame_W = 0;
+
+  KinematicPath kinematic_path =
+      tree.findKinematicPath(frame_W, body_index);
+  int q_index = 0;
+  // Adapted from: RigidBodyTree<>::geometricJacobian
+  for (int cur_body_index : kinematic_path.joint_path) {
+    const DrakeJoint& joint = tree.get_body(cur_body_index).getJoint();
+    for (int i = 0; i < joint.get_num_positions(); ++i) {
+      q_indices.push_back(q_index++);
+    }
+  }
+}
+
+template <typename ContainerA, typename ContainerB>
+bool HasIntersection(const ContainerA& a, const ContainerB& b) {
+  for (const auto& ai : a) {
+    if (std::find(b.begin(), b.end(), ai) != b.end()) {
+      return true;
+    }
+  }
+  return false;
+}
 
 using namespace drake::solvers;
 using namespace std;

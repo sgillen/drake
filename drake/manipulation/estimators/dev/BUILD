@@ -64,7 +64,6 @@ drake_cc_googletest(
     ],
 )
 
-
 drake_cc_library(
     name = "dart_util",
     srcs = [
@@ -93,6 +92,20 @@ drake_cc_googletest(
 )
 
 drake_cc_library(
+    name = "dart_icp",
+    srcs = [
+        "dart_icp.cc",
+    ],
+    hdrs = [
+        "dart_icp.h",
+    ],
+    deps = [
+        ":dart_util",
+        "//drake/solvers:cost",
+    ],
+)
+
+drake_cc_library(
     name = "dart",
     srcs = [
         "dart.cc",
@@ -105,7 +118,7 @@ drake_cc_library(
         "dart_depth_image_icp_objective.h",
     ],
     deps = [
-        # ":abstract_zoh",
+        ":dart_icp",
         ":dart_util",
         "//drake/solvers:mathematical_program",
     ],
@@ -117,7 +130,7 @@ drake_cc_googletest(
         ":models",
     ],
     deps = [
-        ":dart",
+        ":dart_icp",
         "//drake/lcm",
         "//drake/multibody/parsers:parsers",
         "//drake/multibody:rigid_body_tree",

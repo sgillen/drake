@@ -283,7 +283,7 @@ void DartDepthImageIcpObjective::UpdateFormulation(
 
       const int frame_Bi = body_index;
       // Accumulated points per body.
-      IcpPointGroup icp_body(frame_Bi, body_positive_indices.size());
+      IcpBodyPoints icp_body(frame_Bi, body_positive_indices.size());
 
       for (int positive_index : body_positive_indices) {
         // Get coordinate from the measurement.
@@ -312,8 +312,8 @@ void DartDepthImageIcpObjective::UpdateFormulation(
       Matrix3Xd es;
       MatrixXd Jes;
       icp_body.Finalize();
-      icp_body.UpdateError(scene, &es, &Jes);
-      error_accumulator.AddTerms(icp_weight, es, Jes);
+      icp_body.ComputeError(scene, &es, &Jes);
+      error_accumulator.Accumulate(icp_weight, es, Jes);
 
       fmt::print(cout, "body: {}, points used: {}\n", body.get_name(),
                  used_points);
