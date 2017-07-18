@@ -83,6 +83,8 @@ Matrix3Xd GenerateBoxPointCloud(double space, Bounds box) {
   return pts;
 }
 
+const double pi = M_PI;
+
 class DartIcpTest : public ::testing::Test {
  protected:
   void SetUp() override {
@@ -115,7 +117,6 @@ class DartIcpTest : public ::testing::Test {
     Vector3d position(-2, 0, 0.1);
     position += obj_pos;
     const Vector3d orientation(0, 0, 0); // degrees
-    const double pi = M_PI;
 
     auto* world_body = const_cast<RigidBody<double>*>(&tree_->world());
     shared_ptr<RigidBodyFramed> camera_frame;
@@ -221,11 +222,13 @@ TEST_F(DartIcpTest, PositiveReturnsZeroCost) {
 }
 
 TEST_F(DartIcpTest, PositiveReturnsIncreasingCost) {
-  // Start box at the given state, ensure that the cost returned is near zero.
+  // Start box at the given state, ensure that the cost increases as we move
+  // away from the object.
   double prev_cost = 0;
   for (int i = 0; i < 5; ++i) {
     VectorXd q0 = q0_;
-    q0(2) += 0.1;
+    q0.head(3).setConstant(0.02 * i);
+    q0(5) = pi / 6 * i;
     tree_cache_->initialize(q0);
     tree_->doKinematics(*tree_cache_);
     // Get correspondences

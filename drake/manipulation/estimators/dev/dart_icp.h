@@ -88,6 +88,15 @@ struct IcpScene {
   const FrameIndex frame_C;
 };
 
+//struct IcpSceneState {
+//  IcpSceneState(const IcpScene& scene,
+//                KinematicsCached& cache)
+//      : scene(scene),
+//        cache(cache) {}
+//  const IcpScene& scene;
+//  KinematicsCached& cache;
+//};
+
 /**
  * A group of points to be rendered in a linearized ICP cost.
  */
@@ -111,12 +120,6 @@ struct IcpBodyPoints {
     // Compute measured and body (model) points in their respective frames for
     // Jacobian computation.
     DRAKE_DEMAND(es_W != nullptr);
-    Matrix3Xd meas_pts_C;
-    Matrix3Xd body_pts_Bi;
-    scene.tree.transformPoints(
-        scene.cache, meas_pts_W, scene.frame_W, scene.frame_C);
-    scene.tree.transformPoints(
-            scene.cache, body_pts_W, scene.frame_W, frame_Bi);
     // Compute error
     *es_W = meas_pts_W - body_pts_W;
 
@@ -125,11 +128,15 @@ struct IcpBodyPoints {
     // TODO(eric.cousineau): If camera is immovable w.r.t. formulation, do not
     // update. Consider passing in body influence information.
     if (J_es_W) {
+      Matrix3Xd meas_pts_C = scene.tree.transformPoints(
+              scene.cache, meas_pts_W, scene.frame_W, scene.frame_C);
       MatrixXd J_meas_pts_W =
           scene.tree.transformPointsJacobian(
               scene.cache, meas_pts_C, scene.frame_C, scene.frame_W, false);
       // TODO(eric.cousineau): If body is immovable w.r.t. formulation, do not
       // update.
+      Matrix3Xd body_pts_Bi = scene.tree.transformPoints(
+          scene.cache, body_pts_W, scene.frame_W, frame_Bi);
       MatrixXd J_body_pts_W =
           scene.tree.transformPointsJacobian(
               scene.cache, body_pts_Bi, frame_Bi, scene.frame_W, false);
