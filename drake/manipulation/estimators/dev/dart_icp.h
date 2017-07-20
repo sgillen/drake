@@ -325,7 +325,8 @@ class IcpLinearizedCostAggregator {
       cout << " - i: " << e.transpose() << endl;
       Q_ += weight * 2 * Je.transpose() * Je;
       b_ += weight * (2 * Je.transpose() * e - 2 * Je.transpose() * Je * q0);
-      c_ += weight * (e.dot(e) + q0.dot(Je.transpose() * Je * q0));
+      c_ += weight * (q0.dot(Je.transpose() * Je * q0) - 2 * e.dot(Je * q0) +
+          e.dot(e));
     }
   }
 

@@ -292,7 +292,7 @@ TEST_F(DartIcpTest, ConvergenceTest) {
     // Solve.
     prog.SetInitialGuess(q_var, q0);
     auto result = prog.Solve();
-    EXPECT_EQ(kSolutionFound, result);
+    ASSERT_EQ(kSolutionFound, result);
 
     // Update initial guess.
     q0 = prog.GetSolution(q_var);

@@ -124,11 +124,14 @@ drake_cc_library(
     ],
 )
 
-drake_cc_googletest(
-    name = "dart_icp_test",
+#drake_cc_googletest(
+cc_binary(
+    name = "dart_icp_bin",
     data = [
         ":models",
     ],
+    srcs = ["test/dart_icp_test.cc"],
+    testonly = 1,
     deps = [
         ":dart_icp",
         "//drake/lcm",
@@ -137,6 +140,7 @@ drake_cc_googletest(
         "//drake/multibody:rigid_body_tree_construction",
         "//drake/multibody/rigid_body_plant:drake_visualizer",
         "//drake/solvers:mathematical_program",
+        "@gtest//:main",
         "@lcmtypes_bot2_core",
     ],
 )
