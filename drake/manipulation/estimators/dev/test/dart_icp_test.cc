@@ -85,7 +85,7 @@ Matrix3Xd GenerateBoxPointCloud(double space, Bounds box) {
   return pts;
 }
 
-const double inf = std::numeric_limits<double>::infinity();
+//const double inf = std::numeric_limits<double>::infinity();
 const double pi = M_PI;
 
 class DartIcpTest : public ::testing::Test {
@@ -264,74 +264,61 @@ shared_ptr<solvers::QuadraticCost> MakeConditioningCost(
 TEST_F(DartIcpTest, ConvergenceTest) {
   // Test the number of iterations for the ICP to converge.
   using namespace drake::solvers;
-  MathematicalProgram prog;
+
   const int nq = tree_->get_num_positions();
-  const auto q_var = prog.NewContinuousVariables(nq, "q");
   const VectorSlice q_slice(CardinalIndices(nq), nq);
 
-  const int iter_max = 10;
-  const double cost_min = 10;
+  MathematicalProgram prog;
+  const auto q_var = prog.NewContinuousVariables(nq, "q");
+
   auto qp_cost = MakeZeroQuadraticCost(nq);
   prog.AddCost(qp_cost, q_var);
-  // Add conditioning value.
+
+  // Add conditioning value for positive semi-definite-ness.
   const double psd_cond = 1e-5;
   prog.AddCost(MakeConditioningCost(nq, psd_cond), q_var);
 
   VectorXd q_perturb(6);
-  q_perturb << 4, 5, 6, pi / 8, pi / 6, pi / 5;
+  q_perturb << 0.3, 0.25, 0.25, pi / 8, pi / 12, pi / 10;
   VectorXd q0 = q0_ + q_perturb;
-  cout << q0.transpose() << endl;
+
+  const double q_diff_norm_min = 0.03;
+  const int iter_max = 10;
 
   int iter = 0;
-  double cost = inf;
-  while (cost > cost_min) {
+  IcpSceneCorrespondences correspondence;
+  IcpLinearizedCostAggregator aggregator(*scene_);
+
+  while (true) {
     // Update formulation.
     tree_cache_->initialize(q0);
     tree_->doKinematics(*tree_cache_);
-
-    Visualize(*scene_, points_);
-    drake::manipulation::sleep(1);
-
-    IcpSceneCorrespondences correspondence;
+    correspondence.clear();
+    aggregator.Clear();
     ComputeCorrespondences(*scene_, points_, influences_, &correspondence);
-    IcpLinearizedCostAggregator aggregator(*scene_);
-
     AggregateCost(*scene_, correspondence, std::ref(aggregator));
-//    aggregator.PrintDebug(true);
-    double cost_pre = aggregator.cost();
-
     aggregator.UpdateCost(q_slice, qp_cost.get());
-
-//    cout << fmt::format("Q = [\n{}\n]\n\nf = [\n{}\n]\n\nc = {}\n\n",
-//                        qp_cost->Q(), qp_cost->b(), qp_cost->c());
 
     // Solve.
     prog.SetInitialGuess(q_var, q0);
     auto result = prog.Solve();
     ASSERT_EQ(kSolutionFound, result);
 
-    // Update initial guess.
-    q0 = prog.GetSolution(q_var);
-
-    double cost = prog.GetOptimalCost();
-    VectorXd cost_2(1);
-    qp_cost->Eval(q0, cost_2);
-
-    cout << fmt::format("{}: {} -> {}, {}, {}\n", iter, cost_pre, cost,
-                        cost_2(0), qp_cost->c());
-    if (cost < cost_min) {
+    if ((q0 - q0_).norm() < q_diff_norm_min) {
       break;
     }
+
+    // Update initial guess.
+    q0 = prog.GetSolution(q_var);
 
     ++iter;
     ASSERT_TRUE(iter < iter_max);
   }
+  drake::log()->info("Took {} iterations for acceptable convergence", iter);
 
   tree_cache_->initialize(q0);
   tree_->doKinematics(*tree_cache_);
   Visualize(*scene_, points_);
-  cout << q0.transpose() << endl;
-  drake::manipulation::sleep(1);
 }
 
 }  // namespace
