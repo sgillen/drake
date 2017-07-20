@@ -53,10 +53,10 @@ drake_cc_library(
         ":decision_variable",
         "//drake/common",
         "//drake/common:autodiff",
-        "//drake/common:monomial",
         "//drake/common:number_traits",
         "//drake/common:polynomial",
         "//drake/common:symbolic",
+        "//drake/common:symbolic_monomial",
         "//drake/common:symbolic_polynomial",
     ],
 )
@@ -70,9 +70,9 @@ drake_cc_library(
         ":constraint",
         ":symbolic_extraction",
         "//drake/common",
-        "//drake/common:monomial",
         "//drake/common:polynomial",
         "//drake/common:symbolic",
+        "//drake/common:symbolic_monomial",
     ],
 )
 
@@ -85,9 +85,9 @@ drake_cc_library(
         ":cost",
         ":symbolic_extraction",
         "//drake/common",
-        "//drake/common:monomial",
         "//drake/common:polynomial",
         "//drake/common:symbolic",
+        "//drake/common:symbolic_monomial",
         "//drake/common:symbolic_polynomial",
         "//drake/common:unused",
     ],
@@ -196,9 +196,20 @@ drake_cc_library(
         ":symbolic_extraction",
         "//drake/common",
         "//drake/common:autodiff",
-        "//drake/common:monomial",
         "//drake/common:number_traits",
         "//drake/common:polynomial",
+        "//drake/common:symbolic",
+        "//drake/common:symbolic_monomial",
+        "//drake/common:symbolic_polynomial",
+    ],
+)
+
+drake_cc_library(
+    name = "bilinear_product_util",
+    srcs = ["bilinear_product_util.cc"],
+    hdrs = ["bilinear_product_util.h"],
+    deps = [
+        ":decision_variable",
         "//drake/common:symbolic",
         "//drake/common:symbolic_polynomial",
     ],
@@ -582,6 +593,14 @@ drake_cc_library(
 
 # === test/ ===
 drake_cc_googletest(
+    name = "bilinear_product_util_test",
+    deps = [
+        ":bilinear_product_util",
+        "//drake/common:symbolic_test_util",
+    ],
+)
+
+drake_cc_googletest(
     name = "binding_test",
     srcs = [
         "test/binding_test.cc",
@@ -850,6 +869,14 @@ drake_cc_googletest(
     name = "solver_type_converter_test",
     deps = [
         ":solver_type_converter",
+    ],
+)
+
+drake_cc_googletest(
+    name = "sos_constraint_test",
+    tags = mosek_test_tags(),
+    deps = [
+        ":mathematical_program",
     ],
 )
 
