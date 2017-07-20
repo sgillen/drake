@@ -108,7 +108,9 @@ class DartIcpTest : public ::testing::Test {
 
     Vector3d obj_pos(0, 0, 0.25);
     q0_.resize(6);
-    q0_.head(3) << obj_pos;
+    q0_ << obj_pos, Vector3d::Zero();
+//    q0_.setZero();
+//    q0_.head(3) << obj_pos;
 
 //    DartFormulation::Param formulation_param {
 //      .estimated_positions = FlattenNameList({
@@ -138,7 +140,7 @@ class DartIcpTest : public ::testing::Test {
       .y = {-0.03, 0.03},
       .z = {-0.1, 0.1},
     };
-    const double space = 0.02;
+    const double space = 0.05;
     points_ = GenerateBoxPointCloud(space, box);
     points_.colwise() += obj_pos;
   }
@@ -250,7 +252,13 @@ void Visualize(const IcpScene& scene, const Matrix3Xd& points) {
 shared_ptr<solvers::QuadraticCost> MakeZeroQuadraticCost(int nvar) {
   // Better way to do this?
   return make_shared<solvers::QuadraticCost>(
-      Eigen::MatrixXd::Zero(nvar, nvar), Eigen::VectorXd(nvar), 0);
+      Eigen::MatrixXd::Zero(nvar, nvar), Eigen::VectorXd::Zero(nvar), 0);
+}
+shared_ptr<solvers::QuadraticCost> MakeConditioningCost(
+    int nvar, double value) {
+  return make_shared<solvers::QuadraticCost>(
+      value * Eigen::MatrixXd::Identity(nvar, nvar),
+      Eigen::VectorXd::Zero(nvar), 0);
 }
 
 TEST_F(DartIcpTest, ConvergenceTest) {
@@ -258,13 +266,16 @@ TEST_F(DartIcpTest, ConvergenceTest) {
   using namespace drake::solvers;
   MathematicalProgram prog;
   const int nq = tree_->get_num_positions();
-  auto q_var = prog.NewContinuousVariables(nq, "q");
-  VectorSlice q_slice(CardinalIndices(nq), nq);
+  const auto q_var = prog.NewContinuousVariables(nq, "q");
+  const VectorSlice q_slice(CardinalIndices(nq), nq);
 
   const int iter_max = 10;
   const double cost_min = 10;
   auto qp_cost = MakeZeroQuadraticCost(nq);
   prog.AddCost(qp_cost, q_var);
+  // Add conditioning value.
+  const double psd_cond = 1e-5;
+  prog.AddCost(MakeConditioningCost(nq, psd_cond), q_var);
 
   VectorXd q0 = q0_;
   q0.array().head(3) += 6;
@@ -284,10 +295,14 @@ TEST_F(DartIcpTest, ConvergenceTest) {
     IcpSceneCorrespondences correspondence;
     ComputeCorrespondences(*scene_, points_, influences_, &correspondence);
     IcpLinearizedCostAggregator aggregator(*scene_);
+
     AggregateCost(*scene_, correspondence, std::ref(aggregator));
     double cost_pre = aggregator.cost();
 
     aggregator.UpdateCost(q_slice, qp_cost.get());
+
+    cout << fmt::format("Q = [\n{}\n]\n\nf = [\n{}\n]\n\nc = {}\n\n",
+                        qp_cost->Q(), qp_cost->b(), qp_cost->c());
 
     // Solve.
     prog.SetInitialGuess(q_var, q0);

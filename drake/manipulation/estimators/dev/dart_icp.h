@@ -314,7 +314,7 @@ class IcpLinearizedCostAggregator {
 
   double cost() const { return c_; }
 
-  void operator()(const IcpBodyPoints& body_pts_group, double weight = 1.) {
+  void operator()(const IcpBodyPoints& body_pts_group) {
     const VectorXd& q0 = scene_->cache.getQ();
     body_pts_group.ComputeError(*scene_, &es_, &Jes_);
     int num_points = es_.cols();
@@ -322,11 +322,12 @@ class IcpLinearizedCostAggregator {
     for (int i = 0; i < num_points; ++i) {
       auto&& e = es_.col(i);
       auto&& Je = Jes_.middleRows(3 * i, 3);
+      // Norm of linearization: |e + J*(q - q0)|^2
+      Vector3d k = e - Je * q0;
       cout << " - i: " << e.transpose() << endl;
-      Q_ += weight * 2 * Je.transpose() * Je;
-      b_ += weight * (2 * Je.transpose() * e - 2 * Je.transpose() * Je * q0);
-      c_ += weight * (q0.dot(Je.transpose() * Je * q0) - 2 * e.dot(Je * q0) +
-          e.dot(e));
+      Q_ += 2 * Je.transpose() * Je;
+      b_ += 2 * Je.transpose() * k;
+      c_ += k.dot(k);
     }
   }
 
