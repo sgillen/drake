@@ -100,7 +100,7 @@ class DartIcpTest : public ::testing::Test {
     parsers::urdf::AddModelInstanceFromUrdfFile(
         file_path, floating_base_type,
         weld_frame, mutable_tree_);
-    drake::multibody::AddFlatTerrainToWorld(mutable_tree_);
+//    drake::multibody::AddFlatTerrainToWorld(mutable_tree_);
 
     mutable_tree_->compile();
     tree_.reset(mutable_tree_);
@@ -294,15 +294,18 @@ TEST_F(DartIcpTest, ConvergenceTest) {
     auto result = prog.Solve();
     EXPECT_EQ(kSolutionFound, result);
 
-    double cost = prog.GetOptimalCost();
+    // Update initial guess.
+    q0 = prog.GetSolution(q_var);
 
-    cout << fmt::format("{}: {} -> {}\n", iter, cost_pre, cost);
+    double cost = prog.GetOptimalCost();
+    VectorXd cost_2(1);
+    qp_cost->Eval(q0, cost_2);
+
+    cout << fmt::format("{}: {} -> {}, {}, {}\n", iter, cost_pre, cost,
+                        cost_2(0), qp_cost->c());
     if (cost < cost_min) {
       break;
     }
-
-    // Update initial guess.
-    q0 = prog.GetSolution(q_var);
 
     ++iter;
     ASSERT_TRUE(iter < iter_max);

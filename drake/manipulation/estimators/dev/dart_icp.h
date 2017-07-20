@@ -315,6 +315,7 @@ class IcpLinearizedCostAggregator {
   double cost() const { return c_; }
 
   void operator()(const IcpBodyPoints& body_pts_group, double weight = 1.) {
+    const VectorXd& q0 = scene_->cache.getQ();
     body_pts_group.ComputeError(*scene_, &es_, &Jes_);
     int num_points = es_.cols();
     cout << "n: " << num_points << endl;
@@ -323,8 +324,8 @@ class IcpLinearizedCostAggregator {
       auto&& Je = Jes_.middleRows(3 * i, 3);
       cout << " - i: " << e.transpose() << endl;
       Q_ += weight * 2 * Je.transpose() * Je;
-      b_ += weight * 2 * Je.transpose() * e;
-      c_ += weight * e.dot(e);
+      b_ += weight * (2 * Je.transpose() * e - 2 * Je.transpose() * Je * q0);
+      c_ += weight * (e.dot(e) + q0.dot(Je.transpose() * Je * q0));
     }
   }
 
