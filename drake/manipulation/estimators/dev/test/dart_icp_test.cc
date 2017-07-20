@@ -140,7 +140,7 @@ class DartIcpTest : public ::testing::Test {
       .y = {-0.03, 0.03},
       .z = {-0.1, 0.1},
     };
-    const double space = 0.05;
+    const double space = 0.02;
     points_ = GenerateBoxPointCloud(space, box);
     points_.colwise() += obj_pos;
   }
@@ -277,9 +277,9 @@ TEST_F(DartIcpTest, ConvergenceTest) {
   const double psd_cond = 1e-5;
   prog.AddCost(MakeConditioningCost(nq, psd_cond), q_var);
 
-  VectorXd q0 = q0_;
-  q0.array().head(3) += 6;
-  q0.array().tail(3) += pi / 6;
+  VectorXd q_perturb(6);
+  q_perturb << 4, 5, 6, pi / 8, pi / 6, pi / 5;
+  VectorXd q0 = q0_ + q_perturb;
   cout << q0.transpose() << endl;
 
   int iter = 0;
@@ -297,12 +297,13 @@ TEST_F(DartIcpTest, ConvergenceTest) {
     IcpLinearizedCostAggregator aggregator(*scene_);
 
     AggregateCost(*scene_, correspondence, std::ref(aggregator));
+//    aggregator.PrintDebug(true);
     double cost_pre = aggregator.cost();
 
     aggregator.UpdateCost(q_slice, qp_cost.get());
 
-    cout << fmt::format("Q = [\n{}\n]\n\nf = [\n{}\n]\n\nc = {}\n\n",
-                        qp_cost->Q(), qp_cost->b(), qp_cost->c());
+//    cout << fmt::format("Q = [\n{}\n]\n\nf = [\n{}\n]\n\nc = {}\n\n",
+//                        qp_cost->Q(), qp_cost->b(), qp_cost->c());
 
     // Solve.
     prog.SetInitialGuess(q_var, q0);
@@ -326,6 +327,8 @@ TEST_F(DartIcpTest, ConvergenceTest) {
     ASSERT_TRUE(iter < iter_max);
   }
 
+  tree_cache_->initialize(q0);
+  tree_->doKinematics(*tree_cache_);
   Visualize(*scene_, points_);
   cout << q0.transpose() << endl;
   drake::manipulation::sleep(1);

@@ -318,13 +318,11 @@ class IcpLinearizedCostAggregator {
     const VectorXd& q0 = scene_->cache.getQ();
     body_pts_group.ComputeError(*scene_, &es_, &Jes_);
     int num_points = es_.cols();
-    cout << "n: " << num_points << endl;
     for (int i = 0; i < num_points; ++i) {
       auto&& e = es_.col(i);
       auto&& Je = Jes_.middleRows(3 * i, 3);
       // Norm of linearization: |e + J*(q - q0)|^2
       Vector3d k = e - Je * q0;
-      cout << " - i: " << e.transpose() << endl;
       Q_ += 2 * Je.transpose() * Je;
       b_ += 2 * Je.transpose() * k;
       c_ += k.dot(k);
@@ -340,6 +338,15 @@ class IcpLinearizedCostAggregator {
     // for summation to complete.
     slice.ReadFromSupersetMatrix(Q_, Qc);
     cost->UpdateCoefficients(Qc, bc, c_);
+  }
+
+  void PrintDebug(bool all_points) const {
+    int num_points = es_.cols();
+    cout << "n: " << num_points << endl;
+    for (int i = 0; i < num_points; ++i) {
+      auto&& e = es_.col(i);
+      cout << " - i: " << e.transpose() << endl;
+    }
   }
 
  private:
