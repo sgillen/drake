@@ -136,6 +136,7 @@ drake_cc_googletest(
         "//drake/multibody:rigid_body_tree",
         "//drake/multibody:rigid_body_tree_construction",
         "//drake/multibody/rigid_body_plant:drake_visualizer",
+        "//drake/solvers:mathematical_program",
         "@lcmtypes_bot2_core",
     ],
 )

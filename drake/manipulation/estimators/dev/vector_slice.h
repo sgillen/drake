@@ -20,12 +20,10 @@ bool IsSameDim(const Eigen::MatrixBase<DerivedA>& A,
   return A.rows() == B.rows() && A.cols() == B.cols();
 }
 
-template <typename Integral>
-VectorX<Integral> CardinalIndices(Integral size) {
-  VectorX<Integral> indices(size);
-  auto begin = indices.data();
-  auto end = begin + size;
-  std::iota(begin, end, Integral(0));
+template <typename T>
+std::vector<T> CardinalIndices(T size) {
+  std::vector<T> indices(size);
+  std::iota(indices.begin(), indices.end(), T{});
   return indices;
 }
 

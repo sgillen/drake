@@ -14,6 +14,8 @@
 #include "drake/multibody/rigid_body_plant/create_load_robot_message.h"
 #include "bot_core/pointcloud_t.hpp"
 #include "external/lcmtypes_bot2_core/lcmtypes/bot_core/pointcloud_t.hpp"
+#include "drake/solvers/mathematical_program.h"
+#include "drake/manipulation/estimators/dev/scoped_timer.h"
 
 using namespace std;
 using namespace drake::systems::sensors;
@@ -83,6 +85,7 @@ Matrix3Xd GenerateBoxPointCloud(double space, Bounds box) {
   return pts;
 }
 
+const double inf = std::numeric_limits<double>::infinity();
 const double pi = M_PI;
 
 class DartIcpTest : public ::testing::Test {
@@ -97,8 +100,8 @@ class DartIcpTest : public ::testing::Test {
     parsers::urdf::AddModelInstanceFromUrdfFile(
         file_path, floating_base_type,
         weld_frame, mutable_tree_);
-    // TODO(eric.cousineau): Figure out why ground is absorbing points...
     drake::multibody::AddFlatTerrainToWorld(mutable_tree_);
+
     mutable_tree_->compile();
     tree_.reset(mutable_tree_);
     tree_cache_.reset(new KinematicsCached(tree_->CreateKinematicsCache()));
@@ -165,8 +168,7 @@ void PointCloudToLcm(const Matrix3Xd& pts_W, bot_core::pointcloud_t* pmessage) {
   message.n_points = message.points.size();
 }
 
-void Visualize(const IcpScene& scene, const Matrix3Xd& points,
-               IcpSceneCorrespondences& correspondence) {
+void Visualize(const IcpScene& scene, const Matrix3Xd& points) {
   lcm::DrakeLcm lcmc;
   using namespace systems;
   {
@@ -200,48 +202,115 @@ void Visualize(const IcpScene& scene, const Matrix3Xd& points,
   }
 }
 
-TEST_F(DartIcpTest, PositiveReturnsZeroCost) {
-  // Start box at the given state, ensure that the cost returned is near zero.
-  VectorXd q0 = q0_;
-  tree_cache_->initialize(q0);
-  tree_->doKinematics(*tree_cache_);
+//TEST_F(DartIcpTest, PositiveReturnsZeroCost) {
+//  // Start box at the given state, ensure that the cost returned is near zero.
+//  VectorXd q0 = q0_;
+//  tree_cache_->initialize(q0);
+//  tree_->doKinematics(*tree_cache_);
+//  if (true) {
+//    Visualize(*scene_, points_);
+//  }
+//
+//  // Get correspondences
+//  IcpSceneCorrespondences correspondence;
+//  ComputeCorrespondences(*scene_, points_, influences_, &correspondence);
+//
+//  // Compute error
+//  IcpCostAggregator aggregator(*scene_);
+//  AggregateCost(*scene_, correspondence, std::ref(aggregator));
+//
+//  double tol = 1e-10;
+//  // The error should be near zero for points on the surface.
+//  EXPECT_NEAR(0, aggregator.cost(), tol);
+//}
+//
+//TEST_F(DartIcpTest, PositiveReturnsIncreasingCost) {
+//  // Start box at the given state, ensure that the cost increases as we
+//  // translate away from the object.
+//  double prev_cost = 0;
+//  for (int i = 0; i < 5; ++i) {
+//    VectorXd q0 = q0_;
+//    // NOTE: Due to local minima, cost will not decrease if moving along x,
+//    // y, and z together.
+//    q0(0) = 0.01 * i;
+//    tree_cache_->initialize(q0);
+//    tree_->doKinematics(*tree_cache_);
+//    // Get correspondences
+//    IcpSceneCorrespondences correspondence;
+//    ComputeCorrespondences(*scene_, points_, influences_, &correspondence);
+//    // Compute error
+//    IcpCostAggregator aggregator(*scene_);
+//    AggregateCost(*scene_, correspondence, std::ref(aggregator));
+//    // The error should be near zero for points on the surface.
+//    EXPECT_GT(aggregator.cost(), prev_cost);
+//    prev_cost = aggregator.cost();
+//  }
+//}
 
-  // Get correspondences
-  IcpSceneCorrespondences correspondence;
-  ComputeCorrespondences(*scene_, points_, influences_, &correspondence);
-  if (false) {
-    Visualize(*scene_, points_, correspondence);
-  }
-  // Compute error
-  IcpCostAggregator aggregator(*scene_);
-  AggregateCost(*scene_, correspondence, std::ref(aggregator));
-
-  double tol = 1e-10;
-  // The error should be near zero for points on the surface.
-  EXPECT_NEAR(0, aggregator.cost(), tol);
+shared_ptr<solvers::QuadraticCost> MakeZeroQuadraticCost(int nvar) {
+  // Better way to do this?
+  return make_shared<solvers::QuadraticCost>(
+      Eigen::MatrixXd::Zero(nvar, nvar), Eigen::VectorXd(nvar), 0);
 }
 
-TEST_F(DartIcpTest, PositiveReturnsIncreasingCost) {
-  // Start box at the given state, ensure that the cost increases as we
-  // translate away from the object.
-  double prev_cost = 0;
-  for (int i = 0; i < 5; ++i) {
-    VectorXd q0 = q0_;
-    // NOTE: Due to local minima, cost will not decrease if moving along x,
-    // y, and z together.
-    q0(0) = 0.01 * i;
+TEST_F(DartIcpTest, ConvergenceTest) {
+  // Test the number of iterations for the ICP to converge.
+  using namespace drake::solvers;
+  MathematicalProgram prog;
+  const int nq = tree_->get_num_positions();
+  auto q_var = prog.NewContinuousVariables(nq, "q");
+  VectorSlice q_slice(CardinalIndices(nq), nq);
+
+  const int iter_max = 10;
+  const double cost_min = 10;
+  auto qp_cost = MakeZeroQuadraticCost(nq);
+  prog.AddCost(qp_cost, q_var);
+
+  VectorXd q0 = q0_;
+  q0.array().head(3) += 6;
+  q0.array().tail(3) += pi / 6;
+  cout << q0.transpose() << endl;
+
+  int iter = 0;
+  double cost = inf;
+  while (cost > cost_min) {
+    // Update formulation.
     tree_cache_->initialize(q0);
     tree_->doKinematics(*tree_cache_);
-    // Get correspondences
+
+    Visualize(*scene_, points_);
+    drake::manipulation::sleep(1);
+
     IcpSceneCorrespondences correspondence;
     ComputeCorrespondences(*scene_, points_, influences_, &correspondence);
-    // Compute error
-    IcpCostAggregator aggregator(*scene_);
+    IcpLinearizedCostAggregator aggregator(*scene_);
     AggregateCost(*scene_, correspondence, std::ref(aggregator));
-    // The error should be near zero for points on the surface.
-    EXPECT_GT(aggregator.cost(), prev_cost);
-    prev_cost = aggregator.cost();
+    double cost_pre = aggregator.cost();
+
+    aggregator.UpdateCost(q_slice, qp_cost.get());
+
+    // Solve.
+    prog.SetInitialGuess(q_var, q0);
+    auto result = prog.Solve();
+    EXPECT_EQ(kSolutionFound, result);
+
+    double cost = prog.GetOptimalCost();
+
+    cout << fmt::format("{}: {} -> {}\n", iter, cost_pre, cost);
+    if (cost < cost_min) {
+      break;
+    }
+
+    // Update initial guess.
+    q0 = prog.GetSolution(q_var);
+
+    ++iter;
+    ASSERT_TRUE(iter < iter_max);
   }
+
+  Visualize(*scene_, points_);
+  cout << q0.transpose() << endl;
+  drake::manipulation::sleep(1);
 }
 
 }  // namespace

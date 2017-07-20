@@ -296,9 +296,9 @@ class IcpCostAggregator {
  *
  * Linearized: | e + J*q |^2
  */
-class LinearizedCostAggregator {
+class IcpLinearizedCostAggregator {
  public:
-  LinearizedCostAggregator(const IcpScene& scene)
+  IcpLinearizedCostAggregator(const IcpScene& scene)
       : scene_(&scene) {
     const int nvar = scene.tree.get_num_positions();
     Q_.resize(nvar, nvar);
@@ -312,15 +312,19 @@ class LinearizedCostAggregator {
     c_ = 0;
   }
 
+  double cost() const { return c_; }
+
   void operator()(const IcpBodyPoints& body_pts_group, double weight = 1.) {
     body_pts_group.ComputeError(*scene_, &es_, &Jes_);
     int num_points = es_.cols();
+    cout << "n: " << num_points << endl;
     for (int i = 0; i < num_points; ++i) {
       auto&& e = es_.col(i);
       auto&& Je = Jes_.middleRows(3 * i, 3);
+      cout << " - i: " << e.transpose() << endl;
       Q_ += weight * 2 * Je.transpose() * Je;
       b_ += weight * 2 * Je.transpose() * e;
-      c_ = weight * e.dot(e);
+      c_ += weight * e.dot(e);
     }
   }
 
