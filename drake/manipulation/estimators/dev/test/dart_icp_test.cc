@@ -338,6 +338,128 @@ TEST_F(DartIcpTest, ConvergenceTest) {
   vis_->PublishCloud(points_);
 }
 
+class GradientCost {
+ public:
+  GradientCost(int num_vars)
+        : num_vars_(num_vars) {}
+  virtual void Eval(const VectorXd& x,
+                    // NOLINTNEXTLINE(runtime/references)
+                    Eigen::Ref<Eigen::VectorXd> y,
+                    // NOLINTNEXTLINE(runtime/references)
+                    Eigen::Ref<Eigen::MatrixXd> Jy) const = 0;
+  int num_vars() const { return num_vars_; }
+ private:
+  int num_vars_{};
+};
+
+/**
+ * Convenience class for providing gradients manually, rather than deferring to
+ * AutoDiff.
+ */
+class GradientCostWrapper : public solvers::Cost {
+ public:
+  GradientCostWrapper(unique_ptr<GradientCost> cost)
+      : Cost(cost_->num_vars()), cost_(std::move(cost)) {}
+ protected:
+  void DoEval(const Eigen::Ref<const Eigen::VectorXd>& x,
+                      // NOLINTNEXTLINE(runtime/references)
+                      Eigen::VectorXd& y) const override {
+    MatrixXd Jy;
+    cost_->Eval(x, y, Jy);
+  }
+
+  void DoEval(const Eigen::Ref<const AutoDiffVecXd>& tx,
+                      // TODO(#2274) Fix NOLINTNEXTLINE(runtime/references).
+                      AutoDiffVecXd& ty) const override {
+    // Follow SingleTimeKinematicConstraintWrapper
+    Eigen::VectorXd x = drake::math::autoDiffToValueMatrix(tx);
+    Eigen::VectorXd y;
+    Eigen::MatrixXd Jy;
+    cost_->Eval(x, y, Jy);
+    math::initializeAutoDiffGivenGradientMatrix(
+        y, (Jy * drake::math::autoDiffToGradientMatrix(tx)).eval(), ty);
+  }
+ private:
+  unique_ptr<GradientCost> cost_;
+};
+
+class IcpNonlinearCost : public GradientCost {
+ public:
+  IcpNonlinearCost(IcpScene* scene, const Influences& influences)
+      : GradientCost(scene->tree.get_num_positions()),
+        scene_(scene),
+        influences_(&influences) {
+    cache_.reset(new Cache(*scene));
+  }
+  void UpdatePoints(const Matrix3Xd& points) {
+    points_ = points;
+  }
+  void Eval(const VectorXd& q,
+            // NOLINTNEXTLINE(runtime/references)
+            Eigen::Ref<Eigen::VectorXd> y,
+            // NOLINTNEXTLINE(runtime/references)
+            Eigen::Ref<Eigen::MatrixXd> Jy) const override {
+    auto& cache = const_cast<KinematicsCached&>(scene_->cache);
+    cache.initialize(q);
+    scene_->tree.doKinematics(cache);
+    auto& correspondence = cache_->correspondence;
+    auto& aggregator = cache_->aggregator;
+    correspondence.clear();
+    aggregator.Clear();
+    ComputeCorrespondences(*scene_, points_, *influences_, &correspondence);
+    AggregateCost(*scene_, correspondence, std::ref(aggregator));
+    y.resize(1);
+    y(0) = aggregator.cost();
+    Jy = aggregator.cost_jacobian();
+  }
+ private:
+  IcpScene* scene_;
+  struct Cache {
+    IcpCostAggregator aggregator;
+    IcpSceneCorrespondences correspondence;
+
+    Cache(const IcpScene& scene)
+          : aggregator(scene) {}
+  };
+  unique_ptr<Cache> cache_;
+  const Influences* influences_;
+  Matrix3Xd points_;
+};
+
+TEST_F(DartIcpTest, NonlinearConvergenceTest) {
+  using namespace drake::solvers;
+  // Test the number of iterations for the ICP to converge.
+  using namespace drake::solvers;
+
+  const int nq = tree_->get_num_positions();
+
+  MathematicalProgram prog;
+  const auto q_var = prog.NewContinuousVariables(nq, "q");
+
+  // Add cost for accumulating positive returns.
+  auto qp_cost = MakeZeroQuadraticCost(nq);
+  auto* nlin_cost = new IcpNonlinearCost(scene_.get(), influences_);
+  nlin_cost->UpdatePoints(points_);
+  auto nlin_wrap = make_shared<GradientCostWrapper>(CreateUnique(nlin_cost));
+  prog.AddCost(nlin_wrap, q_var);
+
+  VectorXd q0 = q_init_ + q_perturb_;
+
+  prog.SetInitialGuess(q_var, q0);
+  prog.Solve();
+  auto result = prog.Solve();
+  ASSERT_EQ(kSolutionFound, result);
+
+  VectorXd q_sol = prog.GetSolution(q_var);
+  const double q_diff_norm = (q_sol - q_init_).norm();
+  drake::log()->info("q diff norm = {}", q_diff_norm);
+
+  tree_cache_->initialize(q_sol);
+  tree_->doKinematics(*tree_cache_);
+  vis_->PublishScene();
+  vis_->PublishCloud(points_);
+}
+
 }  // namespace
 }  // namespace manipulation
 }  // namespace drake
