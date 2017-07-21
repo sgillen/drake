@@ -263,6 +263,10 @@ class IcpCostAggregator {
   IcpCostAggregator(const IcpScene& scene)
     : scene_(&scene), cost_(0) {}
 
+  void Clear() {
+    cost_ = 0;
+    Jcost_.setZero();
+  }
   void operator()(const IcpBodyPoints& body_pts) {
     body_pts.ComputeError(*scene_, &es_, &Jes_);
     // Get error squared.
