@@ -18,6 +18,7 @@
 #include "drake/manipulation/estimators/dev/scoped_timer.h"
 #include "drake/math/roll_pitch_yaw.h"
 #include "drake/math/autodiff_gradient.h"
+#include "drake/solvers/snopt_solver.h"
 
 using namespace std;
 using namespace drake::systems::sensors;
@@ -359,12 +360,13 @@ class GradientCost {
 class GradientCostWrapper : public solvers::Cost {
  public:
   GradientCostWrapper(unique_ptr<GradientCost> cost)
-      : Cost(cost_->num_vars()), cost_(std::move(cost)) {}
+      : Cost(cost->num_vars()), cost_(std::move(cost)) {}
  protected:
   void DoEval(const Eigen::Ref<const Eigen::VectorXd>& x,
                       // NOLINTNEXTLINE(runtime/references)
                       Eigen::VectorXd& y) const override {
-    MatrixXd Jy;
+    y.resize(1);
+    MatrixXd Jy(1, x.size());
     cost_->Eval(x, y, Jy);
   }
 
@@ -373,8 +375,8 @@ class GradientCostWrapper : public solvers::Cost {
                       AutoDiffVecXd& ty) const override {
     // Follow SingleTimeKinematicConstraintWrapper
     Eigen::VectorXd x = drake::math::autoDiffToValueMatrix(tx);
-    Eigen::VectorXd y;
-    Eigen::MatrixXd Jy;
+    Eigen::VectorXd y(1);
+    Eigen::MatrixXd Jy(1, x.size());
     cost_->Eval(x, y, Jy);
     math::initializeAutoDiffGivenGradientMatrix(
         y, (Jy * drake::math::autoDiffToGradientMatrix(tx)).eval(), ty);
@@ -445,9 +447,12 @@ TEST_F(DartIcpTest, NonlinearConvergenceTest) {
 
   VectorXd q0 = q_init_ + q_perturb_;
 
+  SnoptSolver solver;
   prog.SetInitialGuess(q_var, q0);
-  prog.Solve();
-  auto result = prog.Solve();
+  // Takes about ~60 iterations to satisfy these tolerances.
+  prog.SetSolverOption(solver.solver_id(), "Iterations limit", 100);
+  prog.SetSolverOption(solver.solver_id(), "Major optimality tolerance", 1e-3);
+  auto result = solver.Solve(prog);
   ASSERT_EQ(kSolutionFound, result);
 
   VectorXd q_sol = prog.GetSolution(q_var);

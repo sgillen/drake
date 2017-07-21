@@ -261,7 +261,9 @@ void AggregateCost(const IcpScene& scene,
 class IcpCostAggregator {
  public:
   IcpCostAggregator(const IcpScene& scene)
-    : scene_(&scene), cost_(0) {}
+    : scene_(&scene), cost_(0) {
+    Jcost_.resize(1, scene.tree.get_num_positions());
+  }
 
   void Clear() {
     cost_ = 0;
@@ -270,11 +272,10 @@ class IcpCostAggregator {
   void operator()(const IcpBodyPoints& body_pts) {
     body_pts.ComputeError(*scene_, &es_, &Jes_);
     // Get error squared.
-    cost_ += (es_.transpose() * es_).sum();
-    Jcost_.resize(1, Jes_.cols());
     for (int i = 0; i < es_.cols(); ++i) {
       auto&& e = es_.col(i);
       auto&& Je = Jes_.middleRows(3 * i, 3);
+      cost_ += e.dot(e);
       Jcost_ += 2 * e.transpose() * Je;
     }
   }
