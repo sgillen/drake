@@ -9,7 +9,10 @@ package(default_visibility = ["//visibility:public"])
 filegroup(
     name = "models",
     srcs = glob([
+        "**/*.obj",
+        "**/*.stl",
         "**/*.urdf",
+        "**/*.vtp",
     ]),
     # TODO(eric.cousineau): Make this private and testonly.
     visibility = ["//visibility:public"],
@@ -53,5 +56,6 @@ cc_binary(
         "//drake/solvers:mathematical_program",
         "@gtest//:main",
         "@lcmtypes_bot2_core",
+        "@vtk//:vtkIOXML",
     ],
 )

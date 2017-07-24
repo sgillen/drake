@@ -364,11 +364,42 @@ def _impl(repository_ctx):
         hdrs = [
             "vtkAbstractPolyDataReader.h",
             "vtkIOCoreModule.h",
+            "vtkIOXMLModule.h",
+            "vtkXMLReader.h",
+            "vtkXMLDataReader.h",
+            "vtkXMLPolyDataReader.h",
+            "vtkXMLUnstructuredDataReader.h",
         ],
         deps = [
             ":vtkCommonCore",
             ":vtkCommonExecutionModel",
             ":vtklz4",
+        ],
+    )
+
+    file_content += _vtk_cc_library(
+        repository_ctx.os.name,
+        "vtkIOXMLParser",
+        hdrs = [
+            "vtkIOXMLModule.h",
+        ],
+        deps = [
+            ":vtkIOCore",
+        ],
+    )
+
+    file_content += _vtk_cc_library(
+        repository_ctx.os.name,
+        "vtkIOXML",
+        hdrs = [
+            "vtkXMLDataReader.h",
+            "vtkXMLPolyDataReader.h",
+            "vtkXMLReader.h",
+            "vtkXMLUnstructuredDataReader.h",
+        ],
+        deps = [
+            ":vtkIOCore",
+            ":vtkIOXMLParser",
         ],
     )
 
