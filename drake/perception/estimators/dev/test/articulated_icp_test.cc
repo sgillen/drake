@@ -138,6 +138,7 @@ Eigen::Isometry3d ComputePCATransform(const Matrix3Xd& A) {
   auto A_center = A.colwise() - A_mean;
   auto A_cov = A_center * A_center.transpose();
   Eigen::Isometry3d X_WA;
+  X_WA.setIdentity();
   X_WA.linear() = math::ProjectMatToRotMat(A_cov);
   X_WA.translation() = A_mean;
   return X_WA;
@@ -168,6 +169,7 @@ Eigen::Isometry3d ComputeSVDTransform(
   // TODO(eric.cousineau): If minimal cost from singular values is important,
   // consider accessing those values.
   Eigen::Isometry3d X_AB;
+  X_AB.setIdentity();
   X_AB.linear() = math::ProjectMatToRotMat(W);
   X_AB.translation() = A_mean - X_AB.linear() * B_mean;
   return X_AB;
@@ -180,33 +182,38 @@ auto CompareTransforms(const Isometry3d& A, const Isometry3d& B,
 
 GTEST_TEST(ArticulatedIcp, SVDAndPCA) {
   const Bounds box(
-      Interval(-0.03, 0.03),
-      Interval(-0.03, 0.03),
+      Interval(-0.02, 0.02),
+      Interval(-0.06, 0.06),
       Interval(-0.1, 0.1));
   const double spacing = 0.01;
-  Matrix3Xd points_A = GenerateBoxPointCloud(spacing, box);
+  Matrix3Xd points = GenerateBoxPointCloud(spacing, box);
   Isometry3d X_WA;
   // Expect identity on PCA.
   X_WA.setIdentity();
-  Isometry3d X_WA_pca = ComputePCATransform(points_A);
+  X_WA.translation() << 0.2, 0.4, 0.6;
+  Matrix3Xd points_A_W = X_WA * points;
+  Isometry3d X_WA_pca = ComputePCATransform(points_A_W);
   const double tol = 1e-5;
   EXPECT_TRUE(CompareTransforms(X_WA, X_WA_pca, spacing / 2));
   // Transform points.
-  Isometry3d X_AB;
-  Vector3d xyz(0.5, 1, 1.5);
-  Vector3d rpy(kPi / 5, kPi / 6, kPi / 7);
-  X_AB.linear() << drake::math::rpy2rotmat(rpy);
-  X_AB.translation() << xyz;
+  Isometry3d X_WB;
+  X_WB.setIdentity();
+  Vector3d xyz_B(0.5, 1, 1.5);
+  Vector3d rpy_B(kPi / 10, kPi / 11, kPi / 12);
+  X_WB.linear() << drake::math::rpy2rotmat(rpy_B);
+  X_WB.translation() << xyz_B;
   // Transform.
-  Matrix3Xd points_B = X_AB.inverse() * points_A;
+  Matrix3Xd points_B_W = X_WB * points;
   // Compute PCA for each, and SVD for the pairs.
-  Isometry3d X_WB_pca = ComputePCATransform(points_B);
+  Isometry3d X_WB_pca = ComputePCATransform(points_B_W);
+  EXPECT_TRUE(CompareTransforms(X_WB, X_WB_pca, tol));
   // Compute relative transform between PCA-estimated frames. They should be
   // close to ground truth relative transformation.
+  Isometry3d X_AB = X_WA.inverse() * X_WB;
   Isometry3d X_AB_pca = X_WA_pca.inverse() * X_WB_pca;
   EXPECT_TRUE(CompareTransforms(X_AB, X_AB_pca, tol));
   // Compute SVD for both point sets.
-  Isometry3d X_AB_svd = ComputeSVDTransform(points_A, points_B);
+  Isometry3d X_AB_svd = ComputeSVDTransform(points_A_W, points_B_W);
   EXPECT_TRUE(CompareTransforms(X_AB, X_AB_svd, tol));
 }
 
