@@ -15,6 +15,7 @@
 #include "drake/multibody/rigid_body_tree.h"
 #include "drake/multibody/rigid_body_tree_construction.h"
 #include "drake/solvers/mathematical_program.h"
+#include "drake/common/eigen_matrix_compare.h"
 
 using std::make_shared;
 using std::shared_ptr;
@@ -124,14 +125,19 @@ Matrix3Xd GenerateBoxPointCloud(double space, Bounds box) {
 }
 
 /**
- * Computes estimated transform from principle component analysis (PCA).
+ * Computes estimated transform by aliging principle directions via principle
+ * component analysis (PCA).
+ * @param A A 3xn matrix represent `n` points in Cartesian space.
+ * @param X_WA Transform of the assumed shape dictated by the points' first and
+ * second moments (mean and covariance).
  */
 Eigen::Isometry3d ComputePCATransform(const Matrix3Xd& A) {
   // Use auto to defer template evaluation / temporaries.
+  // http://www.cse.wustl.edu/~taoju/cse554/lectures/lect07_Alignment.pdf
   Vector3d A_mean = A.rowwise().mean();
   auto A_center = A.colwise() - A_mean;
   auto A_cov = A_center * A_center.transpose();
-  Eigen::Isometry X_WA;
+  Eigen::Isometry3d X_WA;
   X_WA.linear() = math::ProjectMatToRotMat(A_cov);
   X_WA.translation() = A_mean;
   return X_WA;
@@ -164,11 +170,12 @@ Eigen::Isometry3d ComputeSVDTransform(
   Eigen::Isometry3d X_AB;
   X_AB.linear() = math::ProjectMatToRotMat(W);
   X_AB.translation() = A_mean - X_AB.linear() * B_mean;
+  return X_AB;
 }
 
-auto CompareTransforms(const Eigen::Isometry3d& A,
-                       const Eigen::Isometry3d& B) {
-  return CompareMatrices(A.matrix(), B.matrix());
+auto CompareTransforms(const Isometry3d& A, const Isometry3d& B,
+                       double tolerance = 0.0) {
+  return CompareMatrices(A.matrix(), B.matrix(), tolerance);
 }
 
 GTEST_TEST(ArticulatedIcp, SVDAndPCA) {
@@ -183,7 +190,7 @@ GTEST_TEST(ArticulatedIcp, SVDAndPCA) {
   X_WA.setIdentity();
   Isometry3d X_WA_pca = ComputePCATransform(points_A);
   const double tol = 1e-5;
-  EXPECT_NEAR(X_WA, X_WA_pca, tol);
+  EXPECT_TRUE(CompareTransforms(X_WA, X_WA_pca, tol));
   // Transform points.
   Isometry3d X_AB;
   Vector3d xyz(0.5, 1, 1.5);
@@ -192,14 +199,13 @@ GTEST_TEST(ArticulatedIcp, SVDAndPCA) {
   X_AB.translation() << xyz;
   // Transform.
   Matrix3Xd points_B = X_AB.inverse() * points_A;
-  // Compute PCA for points B.
+  // Compute PCA for each, and SVD for the pairs.
   Isometry3d X_WB_pca = ComputePCATransform(points_B);
   // Compute relative transform between PCA-estimated frames. They should be
   // close to ground truth relative transformation.
-  Isometry3d X_AB_pca = X_WA_pca.inverse() * X_WB;
-  EXPECT_TRUE(CompareTransforms(X_AB, X_AB_pca));
-
-  // Compute SVD for points A and B.
+  Isometry3d X_AB_pca = X_WA_pca.inverse() * X_WB_pca;
+  EXPECT_TRUE(CompareTransforms(X_AB, X_AB_pca, tol));
+  // Compute SVD for both point sets.
   Isometry3d X_AB_svd = ComputeSVDTransform(points_A, points_B);
   EXPECT_TRUE(CompareTransforms(X_AB, X_AB_svd));
 }
