@@ -48,6 +48,7 @@ drake_cc_googletest(
         "//drake/multibody:rigid_body_tree_construction",
         "//drake/multibody/rigid_body_plant:drake_visualizer",
         "//drake/solvers:mathematical_program",
+        "//drake/common:eigen_matrix_compare",
         "@lcmtypes_bot2_core",
     ],
 )

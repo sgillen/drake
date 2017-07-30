@@ -183,18 +183,18 @@ GTEST_TEST(ArticulatedIcp, SVDAndPCA) {
       Interval(-0.03, 0.03),
       Interval(-0.03, 0.03),
       Interval(-0.1, 0.1));
-  const double spacing = 0.02;
+  const double spacing = 0.01;
   Matrix3Xd points_A = GenerateBoxPointCloud(spacing, box);
   Isometry3d X_WA;
   // Expect identity on PCA.
   X_WA.setIdentity();
   Isometry3d X_WA_pca = ComputePCATransform(points_A);
   const double tol = 1e-5;
-  EXPECT_TRUE(CompareTransforms(X_WA, X_WA_pca, tol));
+  EXPECT_TRUE(CompareTransforms(X_WA, X_WA_pca, spacing / 2));
   // Transform points.
   Isometry3d X_AB;
   Vector3d xyz(0.5, 1, 1.5);
-  Vector3d rpy(kPi / 4, kPi / 5, kPi / 6);
+  Vector3d rpy(kPi / 5, kPi / 6, kPi / 7);
   X_AB.linear() << drake::math::rpy2rotmat(rpy);
   X_AB.translation() << xyz;
   // Transform.
@@ -207,7 +207,7 @@ GTEST_TEST(ArticulatedIcp, SVDAndPCA) {
   EXPECT_TRUE(CompareTransforms(X_AB, X_AB_pca, tol));
   // Compute SVD for both point sets.
   Isometry3d X_AB_svd = ComputeSVDTransform(points_A, points_B);
-  EXPECT_TRUE(CompareTransforms(X_AB, X_AB_svd));
+  EXPECT_TRUE(CompareTransforms(X_AB, X_AB_svd, tol));
 }
 
 // TODO(eric.cousineau): Move to a proper LCM conversion type.
