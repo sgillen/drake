@@ -8,6 +8,7 @@
 #include "drake/lcmtypes/drake/lcmt_viewer_draw.hpp"
 #include "drake/lcmtypes/drake/lcmt_viewer_load_robot.hpp"
 #include "drake/math/roll_pitch_yaw.h"
+#include "drake/math/rotation_matrix.h"
 #include "drake/multibody/parsers/urdf_parser.h"
 #include "drake/multibody/rigid_body_plant/create_load_robot_message.h"
 #include "drake/multibody/rigid_body_plant/drake_visualizer.h"
@@ -25,6 +26,8 @@ using Eigen::Matrix3Xd;
 using Eigen::MatrixXd;
 using Eigen::Vector3d;
 using Eigen::VectorXd;
+using Eigen::Matrix3d;
+using Eigen::Isometry3d;
 
 namespace drake {
 namespace perception {
@@ -118,6 +121,87 @@ Matrix3Xd GenerateBoxPointCloud(double space, Bounds box) {
   Matrix3Xd pts(3, xy_z.cols() + yz_x.cols() + xz_y.cols());
   pts << xy_z, yz_x, xz_y;
   return pts;
+}
+
+/**
+ * Computes estimated transform from principle component analysis (PCA).
+ */
+Eigen::Isometry3d ComputePCATransform(const Matrix3Xd& A) {
+  // Use auto to defer template evaluation / temporaries.
+  Vector3d A_mean = A.rowwise().mean();
+  auto A_center = A.colwise() - A_mean;
+  auto A_cov = A_center * A_center.transpose();
+  Eigen::Isometry X_WA;
+  X_WA.linear() = math::ProjectMatToRotMat(A_cov);
+  X_WA.translation() = A_mean;
+  return X_WA;
+}
+
+/**
+ * Computes relative transformation to align points `a` with points `b`.
+ * This requires that all correspondences be known.
+ * @param A A 3xn matrix representing `n` points, {Aᵢ}ᵢ ∀ i ∈ {1..n}
+ * @param B A 3xn matrix representing `n` points, {Bᵢ}ᵢ, where Bᵢ corresponds
+ * Aᵢ.
+ * @param X_AB Transformation from `B` to `A`.
+ */
+Eigen::Isometry3d ComputeSVDTransform(
+    const Matrix3Xd& A, const Matrix3Xd& B) {
+  // TODO(eric.cousineau): Consider using Eigen::umeyama(), especially if
+  // scaling is desired.
+  // Following: http://cs.gmu.edu/~kosecka/cs685/cs685-icp.pdf
+  // First moment: Take the mean of each point collection.
+  Vector3d A_mean = A.rowwise().mean();
+  Vector3d B_mean = B.rowwise().mean();
+  // Compute deviations from mean.
+  Matrix3Xd A_center = A.colwise() - A_mean;
+  Matrix3Xd B_center = B.colwise() - B_mean;
+  // Second moment: Compute covariance.
+  Matrix3d W = A_center * B_center.transpose();
+  // Compute SVD decomposition to reduce to a proper SO(3) basis.
+  // TODO(eric.cousineau): If minimal cost from singular values is important,
+  // consider accessing those values.
+  Eigen::Isometry3d X_AB;
+  X_AB.linear() = math::ProjectMatToRotMat(W);
+  X_AB.translation() = A_mean - X_AB.linear() * B_mean;
+}
+
+auto CompareTransforms(const Eigen::Isometry3d& A,
+                       const Eigen::Isometry3d& B) {
+  return CompareMatrices(A.matrix(), B.matrix());
+}
+
+GTEST_TEST(ArticulatedIcp, SVDAndPCA) {
+  const Bounds box(
+      Interval(-0.03, 0.03),
+      Interval(-0.03, 0.03),
+      Interval(-0.1, 0.1));
+  const double spacing = 0.02;
+  Matrix3Xd points_A = GenerateBoxPointCloud(spacing, box);
+  Isometry3d X_WA;
+  // Expect identity on PCA.
+  X_WA.setIdentity();
+  Isometry3d X_WA_pca = ComputePCATransform(points_A);
+  const double tol = 1e-5;
+  EXPECT_NEAR(X_WA, X_WA_pca, tol);
+  // Transform points.
+  Isometry3d X_AB;
+  Vector3d xyz(0.5, 1, 1.5);
+  Vector3d rpy(kPi / 4, kPi / 5, kPi / 6);
+  X_AB.linear() << drake::math::rpy2rotmat(rpy);
+  X_AB.translation() << xyz;
+  // Transform.
+  Matrix3Xd points_B = X_AB.inverse() * points_A;
+  // Compute PCA for points B.
+  Isometry3d X_WB_pca = ComputePCATransform(points_B);
+  // Compute relative transform between PCA-estimated frames. They should be
+  // close to ground truth relative transformation.
+  Isometry3d X_AB_pca = X_WA_pca.inverse() * X_WB;
+  EXPECT_TRUE(CompareTransforms(X_AB, X_AB_pca));
+
+  // Compute SVD for points A and B.
+  Isometry3d X_AB_svd = ComputeSVDTransform(points_A, points_B);
+  EXPECT_TRUE(CompareTransforms(X_AB, X_AB_svd));
 }
 
 // TODO(eric.cousineau): Move to a proper LCM conversion type.
