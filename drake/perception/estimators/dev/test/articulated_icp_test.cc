@@ -40,7 +40,7 @@ using systems::BasicVector;
 using systems::ViewerDrawTranslator;
 
 const double kPi = M_PI;
-const double kQDiffNormMin = 0.01;
+//const double kQDiffNormMin = 0.01;
 
 /**
  * Simple interval class.
@@ -132,11 +132,10 @@ Matrix3Xd GenerateBoxPointCloud(double space, Bounds box) {
  * second moments (mean and covariance).
  */
 Eigen::Isometry3d ComputePCATransform(const Matrix3Xd& A) {
-  // Use auto to defer template evaluation / temporaries.
   // http://www.cse.wustl.edu/~taoju/cse554/lectures/lect07_Alignment.pdf
   Vector3d A_mean = A.rowwise().mean();
-  auto A_center = A.colwise() - A_mean;
-  auto A_cov = A_center * A_center.transpose();
+  auto A_center = (A.colwise() - A_mean).eval();
+  auto A_cov = (A_center * A_center.transpose()).eval();
   Eigen::Isometry3d X_WA;
   X_WA.setIdentity();
   X_WA.linear() = math::ProjectMatToRotMat(A_cov);
@@ -180,43 +179,6 @@ auto CompareTransforms(const Isometry3d& A, const Isometry3d& B,
   return CompareMatrices(A.matrix(), B.matrix(), tolerance);
 }
 
-GTEST_TEST(ArticulatedIcp, SVDAndPCA) {
-  const Bounds box(
-      Interval(-0.02, 0.02),
-      Interval(-0.06, 0.06),
-      Interval(-0.1, 0.1));
-  const double spacing = 0.01;
-  Matrix3Xd points = GenerateBoxPointCloud(spacing, box);
-  Isometry3d X_WA;
-  // Expect identity on PCA.
-  X_WA.setIdentity();
-  X_WA.translation() << 0.2, 0.4, 0.6;
-  Matrix3Xd points_A_W = X_WA * points;
-  Isometry3d X_WA_pca = ComputePCATransform(points_A_W);
-  const double tol = 1e-5;
-  EXPECT_TRUE(CompareTransforms(X_WA, X_WA_pca, spacing / 2));
-  // Transform points.
-  Isometry3d X_WB;
-  X_WB.setIdentity();
-  Vector3d xyz_B(0.5, 1, 1.5);
-  Vector3d rpy_B(kPi / 10, kPi / 11, kPi / 12);
-  X_WB.linear() << drake::math::rpy2rotmat(rpy_B);
-  X_WB.translation() << xyz_B;
-  // Transform.
-  Matrix3Xd points_B_W = X_WB * points;
-  // Compute PCA for each, and SVD for the pairs.
-  Isometry3d X_WB_pca = ComputePCATransform(points_B_W);
-  EXPECT_TRUE(CompareTransforms(X_WB, X_WB_pca, tol));
-  // Compute relative transform between PCA-estimated frames. They should be
-  // close to ground truth relative transformation.
-  Isometry3d X_AB = X_WA.inverse() * X_WB;
-  Isometry3d X_AB_pca = X_WA_pca.inverse() * X_WB_pca;
-  EXPECT_TRUE(CompareTransforms(X_AB, X_AB_pca, tol));
-  // Compute SVD for both point sets.
-  Isometry3d X_AB_svd = ComputeSVDTransform(points_A_W, points_B_W);
-  EXPECT_TRUE(CompareTransforms(X_AB, X_AB_svd, tol));
-}
-
 // TODO(eric.cousineau): Move to a proper LCM conversion type.
 void PointCloudToLcm(const Matrix3Xd& pts_W, bot_core::pointcloud_t* pmessage) {
   bot_core::pointcloud_t& message = *pmessage;
@@ -232,22 +194,110 @@ void PointCloudToLcm(const Matrix3Xd& pts_W, bot_core::pointcloud_t* pmessage) {
   message.n_points = message.points.size();
 }
 
-// TODO(eric.cousineau): Move to proper utility.
-class IcpVisualizer {
+class SimpleVisualizer {
  public:
-  explicit IcpVisualizer(const Scene* scene,
-                         bool auto_init = true)
-      : scene_(scene) {
-    if (auto_init) {
-      Init();
+  void PublishCloud(const Matrix3Xd& points, const string& suffix = "RGBD") {
+    bot_core::pointcloud_t pt_msg;
+    PointCloudToLcm(points, &pt_msg);
+    vector<uint8_t> bytes(pt_msg.getEncodedSize());
+    pt_msg.encode(bytes.data(), 0, bytes.size());
+    lcm_.Publish("DRAKE_POINTCLOUD_" + suffix, bytes.data(), bytes.size());
+  }
+
+  void PublishFrames(const vector<Isometry3d>& frames) {
+    drake::lcmt_viewer_draw msg{};
+    const int num_frames = frames.size();
+    msg.num_links = num_frames;
+    msg.robot_num.resize(num_frames, 0);
+    std::vector<float> pos = {0, 0, 0};
+    std::vector<float> quaternion = {1, 0, 0, 0};
+    msg.position.resize(num_frames, pos);
+    msg.quaternion.resize(num_frames, quaternion);
+    for (int i = 0; i < num_frames; ++i) {
+      const auto& frame = frames[i];
+      msg.link_name.push_back(fmt::format("frame_{}", i));
+      for (int j = 0; j < 3; ++j) {
+        msg.position[i][j] = static_cast<float>(frame.translation()[j]);
+      }
+      Quaternion<double> quat(frame.rotation());
+      msg.quaternion[i][0] = static_cast<float>(quat.w());
+      msg.quaternion[i][1] = static_cast<float>(quat.x());
+      msg.quaternion[i][2] = static_cast<float>(quat.y());
+      msg.quaternion[i][3] = static_cast<float>(quat.z());
     }
+    vector<uint8_t> bytes(msg.getEncodedSize());
+    msg.encode(bytes.data(), 0, bytes.size());
+    lcm_.Publish("DRAKE_DRAW_FRAMES", bytes.data(), bytes.size());
+
+    using namespace std;
+    cout << "Published frame" << endl;
+  }
+
+  lcm::DrakeLcm& lcm() { return lcm_; }
+ private:
+  lcm::DrakeLcm lcm_;
+};
+
+GTEST_TEST(ArticulatedIcp, SVDAndPCA) {
+  const Bounds box(
+      Interval(-0.02, 0.02),
+      Interval(-0.06, 0.06),
+      Interval(-0.1, 0.1));
+  using namespace std;
+  cout << "Starting" << endl;
+  SimpleVisualizer vis;
+
+  const double spacing = 0.01;
+  Matrix3Xd points = GenerateBoxPointCloud(spacing, box);
+  Isometry3d X_WA;
+  // Expect identity on PCA.
+  X_WA.setIdentity();
+  X_WA.translation() << 0.2, 0.4, 0.6;
+  Matrix3Xd points_A_W = X_WA * points;
+  vis.PublishCloud(points_A_W, "A");
+  Isometry3d X_WA_pca = ComputePCATransform(points_A_W);
+  const double tol = 1e-5;
+  EXPECT_TRUE(CompareTransforms(X_WA, X_WA_pca, spacing / 2));
+  // Transform points.
+  Isometry3d X_WB;
+  X_WB.setIdentity();
+  Vector3d xyz_B(0.5, 1, 1.5);
+  Vector3d rpy_B(kPi / 10, kPi / 11, kPi / 12);
+  X_WB.linear() << drake::math::rpy2rotmat(rpy_B);
+  X_WB.translation() << xyz_B;
+  // Transform.
+  Matrix3Xd points_B_W = X_WB * points;
+  vis.PublishCloud(points_B_W, "B");
+  // Compute PCA for each, and SVD for the pairs.
+  Isometry3d X_WB_pca = ComputePCATransform(points_B_W);
+  EXPECT_TRUE(CompareTransforms(X_WB, X_WB_pca, tol));
+  // Compute relative transform between PCA-estimated frames. They should be
+  // close to ground truth relative transformation.
+  Isometry3d X_AB = X_WA.inverse() * X_WB;
+  Isometry3d X_AB_pca = X_WA_pca.inverse() * X_WB_pca;
+  EXPECT_TRUE(CompareTransforms(X_AB, X_AB_pca, tol));
+  // Compute SVD for both point sets.
+  Isometry3d X_AB_svd = ComputeSVDTransform(points_A_W, points_B_W);
+  EXPECT_TRUE(CompareTransforms(X_AB, X_AB_svd, tol));
+
+  vis.PublishFrames({X_WA, X_WB,
+                     X_WA_pca, X_WB_pca,
+                     X_WA * X_AB, X_WA * X_AB_svd});
+}
+
+// TODO(eric.cousineau): Move to proper utility.
+class IcpVisualizer : public SimpleVisualizer {
+ public:
+  explicit IcpVisualizer(const Scene* scene)
+      : scene_(scene) {
+    Init();
   }
   void Init() {
     const lcmt_viewer_load_robot load_msg(
         (multibody::CreateLoadRobotMessage<double>(scene_->tree())));
     vector<uint8_t> bytes(load_msg.getEncodedSize());
     load_msg.encode(bytes.data(), 0, bytes.size());
-    lcm_.Publish("DRAKE_VIEWER_LOAD_ROBOT", bytes.data(), bytes.size());
+    lcm().Publish("DRAKE_VIEWER_LOAD_ROBOT", bytes.data(), bytes.size());
   }
   void PublishScene(const SceneState& scene_state) {
     const ViewerDrawTranslator draw_msg_tx(scene_->tree());
@@ -261,18 +311,10 @@ class IcpVisualizer {
     xb.setZero();
     xb.head(num_q) = scene_state.q();
     draw_msg_tx.Serialize(0, x, &bytes);
-    lcm_.Publish("DRAKE_VIEWER_DRAW", bytes.data(), bytes.size());
-  }
-  void PublishCloud(const Matrix3Xd& points) {
-    bot_core::pointcloud_t pt_msg;
-    PointCloudToLcm(points, &pt_msg);
-    vector<uint8_t> bytes(pt_msg.getEncodedSize());
-    pt_msg.encode(bytes.data(), 0, bytes.size());
-    lcm_.Publish("DRAKE_POINTCLOUD_RGBD", bytes.data(), bytes.size());
+    lcm().Publish("DRAKE_VIEWER_DRAW", bytes.data(), bytes.size());
   }
 
  private:
-  lcm::DrakeLcm lcm_;
   const Scene* scene_;
 };
 
@@ -350,6 +392,8 @@ class ArticulatedIcpTest : public ::testing::Test {
   Matrix3Xd points_;
   unique_ptr<IcpVisualizer> vis_;
 };
+
+#if false
 
 TEST_F(ArticulatedIcpTest, PositiveReturnsZeroCost) {
   // Start box at the given state, ensure that the cost returned is near zero.
@@ -466,6 +510,8 @@ TEST_F(ArticulatedIcpTest, PositiveReturnsConvergenceTest) {
   vis_->PublishScene(scene_state);
   vis_->PublishCloud(points_);
 }
+
+#endif
 
 }  // namespace
 }  // namespace estimators
