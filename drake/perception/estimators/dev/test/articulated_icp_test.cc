@@ -169,11 +169,11 @@ Eigen::Isometry3d ComputeSVDTransform(
   // Compute SVD decomposition to reduce to a proper SO(3) basis.
   // TODO(eric.cousineau): If minimal cost from singular values is important,
   // consider accessing those values.
-  Eigen::Isometry3d X_WB;
-  X_WB.setIdentity();
-  X_WB.linear() = math::ProjectMatToRotMat(W_py);
-  X_WB.translation() = X_WB.linear() * p_B_mean - y_W_mean;
-  return X_WB.inverse();
+  Eigen::Isometry3d X_BW;
+  X_BW.setIdentity();
+  X_BW.linear() = math::ProjectMatToRotMat(W_py);
+  X_BW.translation() = p_B_mean - X_BW.linear() * y_W_mean;
+  return X_BW.inverse();
 }
 
 auto CompareTransforms(const Isometry3d& A, const Isometry3d& B,
@@ -266,8 +266,8 @@ GTEST_TEST(ArticulatedIcp, SVDAndPCA) {
   // Transform points.
   Isometry3d X_WB;
   X_WB.setIdentity();
-  Vector3d xyz_B(0.5, 1, 1.5);
-  Vector3d rpy_B(kPi / 10, kPi / 11, kPi / 12);
+  Vector3d xyz_B(0.1, 0.2, 0.3);
+  Vector3d rpy_B(kPi / 10, 0, 0);
   X_WB.linear() << drake::math::rpy2rotmat(rpy_B);
   X_WB.translation() << xyz_B;
   // Transform.
@@ -280,9 +280,8 @@ GTEST_TEST(ArticulatedIcp, SVDAndPCA) {
   Isometry3d X_WB_svd = ComputeSVDTransform(points_B, points_B_W);
   EXPECT_TRUE(CompareTransforms(X_WB, X_WB_svd, tol));
 
-  vis.PublishFrames({X_I, X_WB,
-                     X_I_pca, X_WB_pca,
-                     X_I * X_WB, X_I * X_WB_svd});
+  vis.PublishFrames({X_I, X_WB, //X_I_pca, X_WB_pca,
+                     X_WB_svd});
 }
 
 // TODO(eric.cousineau): Move to proper utility.
