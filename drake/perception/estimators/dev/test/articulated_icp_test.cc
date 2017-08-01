@@ -85,8 +85,8 @@ Matrix2Xd Generate2DPlane(double space, Interval x, Interval y) {
   const int nr = floor(y.width() / space);
   int i = 0;
   Matrix2Xd out(2, nc * nr);
-  for (int c = 1; c < nc; c++) {
-    for (int r = 1; r < nr; r++) {
+  for (int c = 0; c < nc; c++) {
+    for (int r = 0; r < nr; r++) {
       out.col(i) << c * space + x.min, r * space + y.min;
       i++;
     }
@@ -146,35 +146,34 @@ Eigen::Isometry3d ComputePCATransform(const Matrix3Xd& A) {
 /**
  * Computes relative transformation to align points `a` with points `b`.
  * This requires that all correspondences be known.
- * @param A A 3xn matrix representing `n` points, {Aᵢ}ᵢ ∀ i ∈ {1..n}
- * @param B A 3xn matrix representing `n` points, {Bᵢ}ᵢ, where Bᵢ corresponds
- * Aᵢ.
- * @param X_AB Transformation from `A` to `T`, `X_BA`.
+ * @param p_B A 3xn matrix representing `n` points in the body frame,
+ * {p_Bᵢ}ᵢ ∀ i ∈ {1..n}
+ * @param y_W A 3xn matrix representing `n` measured points of the body, in
+ * the world frame, {y_Wᵢ}ᵢ, where y_Wᵢ corresponds to p_Bᵢ.
+ * @param X_AB Transformation from `B` to `W`, e.g., the pose of body `B` in
+ * the world.
  */
 Eigen::Isometry3d ComputeSVDTransform(
-    const Matrix3Xd& A, const Matrix3Xd& B) {
+    const Matrix3Xd& p_B, const Matrix3Xd& y_W) {
   // TODO(eric.cousineau): Consider using Eigen::umeyama(), especially if
   // scaling is desired.
   // Following: http://cs.gmu.edu/~kosecka/cs685/cs685-icp.pdf
   // First moment: Take the mean of each point collection.
-  Vector3d A_mean = A.rowwise().mean();
-  Vector3d B_mean = B.rowwise().mean();
+  Vector3d p_B_mean = p_B.rowwise().mean();
+  Vector3d y_W_mean = y_W.rowwise().mean();
   // Compute deviations from mean.
-  Matrix3Xd A_center = A.colwise() - A_mean;
-  Matrix3Xd B_center = B.colwise() - B_mean;
+  auto p_B_center = p_B.colwise() - p_B_mean;
+  auto y_W_center = y_W.colwise() - y_W_mean;
   // Second moment: Compute covariance.
-  Matrix3d W = A_center * B_center.transpose();
+  Matrix3d W_py = p_B_center * y_W_center.transpose();
   // Compute SVD decomposition to reduce to a proper SO(3) basis.
   // TODO(eric.cousineau): If minimal cost from singular values is important,
   // consider accessing those values.
-  Eigen::Isometry3d X_BA;
-  X_BA.setIdentity();
-  X_BA.linear() = math::ProjectMatToRotMat(W);
-  // TODO(eric.cousineau): Flesh this math out better.
-  X_BA.translation() = -B_mean + X_BA.rotation() * A_mean;
-  using namespace std;
-  cout << "Det: " << X_BA.linear().determinant() << endl;
-  return X_BA;
+  Eigen::Isometry3d X_WB;
+  X_WB.setIdentity();
+  X_WB.linear() = math::ProjectMatToRotMat(W_py);
+  X_WB.translation() = X_WB.linear() * p_B_mean - y_W_mean;
+  return X_WB.inverse();
 }
 
 auto CompareTransforms(const Isometry3d& A, const Isometry3d& B,
@@ -251,41 +250,39 @@ GTEST_TEST(ArticulatedIcp, SVDAndPCA) {
   SimpleVisualizer vis;
 
   const double spacing = 0.01;
-  Matrix3Xd points = GenerateBoxPointCloud(spacing, box);
-  Isometry3d X_WA;
+  // Generate points in body frame.
+  Matrix3Xd points_B = GenerateBoxPointCloud(spacing, box);
   // Expect identity on PCA.
-  X_WA.setIdentity();
-  X_WA.translation() << 0.0, 0.0, 0.3;
-  Matrix3Xd points_A_W = X_WA * points;
-  vis.PublishCloud(points_A_W, "A");
-  Isometry3d X_WA_pca = ComputePCATransform(points_A_W);
+  Isometry3d X_I;
+  X_I.setIdentity();
+  // Show the points in the world frame with identity transform.
+  Matrix3Xd points_BI_W = X_I * points_B;
+  vis.PublishCloud(points_BI_W, "BI");
+  Isometry3d X_I_pca = ComputePCATransform(points_BI_W);
   const double tol = 1e-5;
-  EXPECT_TRUE(CompareTransforms(X_WA, X_WA_pca, spacing / 2));
+  // Since our model is geometrically centered, this should be at or near
+  // identity with PCA.
+  EXPECT_TRUE(CompareTransforms(X_I, X_I_pca, spacing / 2));
   // Transform points.
   Isometry3d X_WB;
   X_WB.setIdentity();
-  Vector3d xyz_B(0.2, 0.3, 0.4);
-  Vector3d rpy_B(kPi / 6, 0, 0); //kPi / 10, kPi / 11, kPi / 12);
+  Vector3d xyz_B(0.5, 1, 1.5);
+  Vector3d rpy_B(kPi / 10, kPi / 11, kPi / 12);
   X_WB.linear() << drake::math::rpy2rotmat(rpy_B);
   X_WB.translation() << xyz_B;
   // Transform.
-  Matrix3Xd points_B_W = X_WB * points;
-  vis.PublishCloud(points_B_W, "B");
+  Matrix3Xd points_B_W = X_WB * points_B;
+  vis.PublishCloud(points_B_W, "BW");
   // Compute PCA for each, and SVD for the pairs.
   Isometry3d X_WB_pca = ComputePCATransform(points_B_W);
   EXPECT_TRUE(CompareTransforms(X_WB, X_WB_pca, tol));
-  // Compute relative transform between PCA-estimated frames. They should be
-  // close to ground truth relative transformation.
-  Isometry3d X_BA = X_WB.inverse() * X_WA;
-  Isometry3d X_BA_pca = X_WB_pca.inverse() * X_WA_pca;
-  EXPECT_TRUE(CompareTransforms(X_BA, X_BA_pca, tol));
   // Compute SVD for both point sets.
-  Isometry3d X_BA_svd = ComputeSVDTransform(points_A_W, points_B_W);
-  EXPECT_TRUE(CompareTransforms(X_BA, X_BA_svd, tol));
+  Isometry3d X_WB_svd = ComputeSVDTransform(points_B, points_B_W);
+  EXPECT_TRUE(CompareTransforms(X_WB, X_WB_svd, tol));
 
-  vis.PublishFrames({X_WA, X_WB,
-                     X_WA_pca, X_WB_pca,
-                     X_WB * X_BA, X_WB * X_BA_svd});
+  vis.PublishFrames({X_I, X_WB,
+                     X_I_pca, X_WB_pca,
+                     X_I * X_WB, X_I * X_WB_svd});
 }
 
 // TODO(eric.cousineau): Move to proper utility.
