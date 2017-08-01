@@ -248,7 +248,13 @@ Matrix3<typename Derived::Scalar> ProjectMatToRotMat(
     const Eigen::MatrixBase<Derived>& M) {
   DRAKE_DEMAND(M.rows() == 3 && M.cols() == 3);
   const auto svd = M.jacobiSvd(Eigen::ComputeFullU | Eigen::ComputeFullV);
-  return svd.matrixU() * svd.matrixV().transpose();
+  Matrix3<typename Derived::Scalar> R =
+      svd.matrixU() * svd.matrixV().transpose();
+  if (R.determinant() < 0) {
+    // http://nghiaho.com/?page_id=671
+    R.col(2) *= -1;
+  }
+  return R;
 }
 
 /**
