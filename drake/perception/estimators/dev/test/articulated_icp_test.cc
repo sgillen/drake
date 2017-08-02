@@ -41,9 +41,9 @@ using systems::ViewerDrawTranslator;
 const double kQDiffNormMin = 0.01;
 
 // TODO(eric.cousineau): Move to proper utility.
-class IcpVisualizer : public SimpleVisualizer {
+class ArticulatedIcpVisualizer : public IcpVisualizer {
  public:
-  explicit IcpVisualizer(const Scene* scene)
+  explicit ArticulatedIcpVisualizer(const Scene* scene)
       : scene_(scene) {
     Init();
   }
@@ -133,7 +133,7 @@ class ArticulatedIcpTest : public ::testing::Test {
     points_ = T_WB * GenerateBoxPointCloud(space, box);
 
     // Create visualizer.
-    vis_.reset(new IcpVisualizer(scene_.get()));
+    vis_.reset(new ArticulatedIcpVisualizer(scene_.get()));
   }
 
  protected:
@@ -145,7 +145,7 @@ class ArticulatedIcpTest : public ::testing::Test {
   unique_ptr<Scene> scene_;
   ArticulatedBodyInfluences influences_;
   Matrix3Xd points_;
-  unique_ptr<IcpVisualizer> vis_;
+  unique_ptr<ArticulatedIcpVisualizer> vis_;
 };
 
 TEST_F(ArticulatedIcpTest, PositiveReturnsZeroCost) {

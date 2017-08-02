@@ -116,7 +116,7 @@ Matrix3Xd GenerateBoxPointCloud(double space, Bounds box) {
                                         X_actual.rotation(), tolerance);
 }
 
-void SimpleVisualizer::PublishCloud(const Matrix3Xd& points,
+void IcpVisualizer::PublishCloud(const Matrix3Xd& points,
                                     const string& suffix) {
   bot_core::pointcloud_t pt_msg;
   PointCloudToLcm(points, &pt_msg);
@@ -125,7 +125,7 @@ void SimpleVisualizer::PublishCloud(const Matrix3Xd& points,
   lcm_.Publish("DRAKE_POINTCLOUD_" + suffix, bytes.data(), bytes.size());
 }
 
-void SimpleVisualizer::PublishFrames(
+void IcpVisualizer::PublishFrames(
     const vector<pair<string, Isometry3d>>& frames) {
   drake::lcmt_viewer_draw msg{};
   const int num_frames = frames.size();

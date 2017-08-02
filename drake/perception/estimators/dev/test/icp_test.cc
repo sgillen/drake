@@ -62,7 +62,7 @@ GTEST_TEST(Icp, PcaAndSvd) {
   // For visualization, use `show_frames`:
   //   drake-visualizer --script \
   //       ./drake/multibody/rigid_body_plant/visualization/show_frames.py
-  SimpleVisualizer vis;
+  IcpVisualizer vis;
   vis.PublishCloud(points_B, "B");
   vis.PublishCloud(points_B_W, "BW");
   vis.PublishFrames({{"X_BB", X_BB},

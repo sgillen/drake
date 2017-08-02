@@ -85,7 +85,7 @@ Eigen::Matrix3Xd GenerateBoxPointCloud(double space, Bounds box);
     const Eigen::Isometry3d& X_expected, const Eigen::Isometry3d& X_actual,
     double tolerance = 0.0);
 
-class SimpleVisualizer {
+class IcpVisualizer {
  public:
   void PublishCloud(const Eigen::Matrix3Xd& points,
                     const std::string& suffix = "RGBD");
