@@ -4,12 +4,16 @@
 
 #include "drake/common/find_resource.h"
 
+#include "drake/lcmtypes/drake/lcmt_viewer_load_robot.hpp"
 #include "drake/math/roll_pitch_yaw.h"
-#include "drake/math/rotation_matrix.h"
 #include "drake/multibody/parsers/urdf_parser.h"
 #include "drake/multibody/rigid_body_tree.h"
 #include "drake/multibody/rigid_body_tree_construction.h"
+#include "drake/multibody/rigid_body_plant/create_load_robot_message.h"
+#include "drake/multibody/rigid_body_plant/viewer_draw_translator.h"
 #include "drake/solvers/mathematical_program.h"
+
+#include "drake/perception/estimators/dev/test/test_util.h"
 
 using std::make_shared;
 using std::pair;
@@ -34,7 +38,7 @@ using solvers::MathematicalProgram;
 using systems::BasicVector;
 using systems::ViewerDrawTranslator;
 
-//const double kQDiffNormMin = 0.01;
+const double kQDiffNormMin = 0.01;
 
 // TODO(eric.cousineau): Move to proper utility.
 class IcpVisualizer : public SimpleVisualizer {

@@ -51,7 +51,7 @@ drake_cc_library(
     deps = [
         "//drake/common:eigen_matrix_compare",
         "//drake/lcm",
-        "//drake/multibody/rigid_body_plant:drake_visualizer",
+        "//drake/lcmtypes:viewer",
         "//drake/multibody:rigid_body_tree",
         "@lcmtypes_bot2_core",
     ],
@@ -76,6 +76,8 @@ drake_cc_googletest(
         ":test_util",
         "//drake/common:find_resource",
         "//drake/multibody/parsers:parsers",
+        "//drake/multibody/rigid_body_plant:create_load_robot_message",
+        "//drake/multibody/rigid_body_plant:drake_visualizer",  # For ViewerDrawTranslator #noqa
         "//drake/multibody:rigid_body_tree",
         "//drake/multibody:rigid_body_tree_construction",
         "//drake/solvers:mathematical_program",
