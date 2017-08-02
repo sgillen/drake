@@ -232,23 +232,31 @@ Matrix3<T> ZRotation(const T& theta) {
   return R;
 }
 
-/// Projects a full-rank 3x3 matrix @p M onto O(3), defined as
+/// Projects a full-rank 3x3 matrix @p M onto SO(3), defined as
 /// <pre>
 ///   min_R  \sum_i,j | R(i,j) - M(i,j) |^2
 ///  subject to   R*R^T = I.
 /// </pre>
+/// while ensuring that det(R)=1.
 ///
 /// The algorithm (just SVD) can be derived as a small modification of
 /// section 3.2 in http://haralick.org/conferences/pose_estimation.pdf .
 ///
-/// Note that it does not enforce det(R)=1; you could get det(R)=-1 if that
-/// solution is closer to the matrix M using the norm above.
+/// If SVD returns det(R)=-1 (due to R minimizing the cost above), then
+/// the z-axis will be flipped to satisfy this determinant.
 template <typename Derived>
 Matrix3<typename Derived::Scalar> ProjectMatToRotMat(
     const Eigen::MatrixBase<Derived>& M) {
   DRAKE_DEMAND(M.rows() == 3 && M.cols() == 3);
   const auto svd = M.jacobiSvd(Eigen::ComputeFullU | Eigen::ComputeFullV);
-  return svd.matrixU() * svd.matrixV().transpose();
+  Matrix3<typename Derived::Scalar> R =
+      svd.matrixU() * svd.matrixV().transpose();
+  // Flip z-axis if it does not satisfy the cross product of the x- and
+  // y-axes, per suggestion in: http://nghiaho.com/?page_id=671
+  if (R.determinant() < 0) {
+    R.col(2) *= -1;
+  }
+  return R;
 }
 
 /**

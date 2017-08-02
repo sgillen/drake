@@ -16,6 +16,16 @@ filegroup(
 )
 
 drake_cc_library(
+    name = "icp",
+    srcs = ["icp.cc"],
+    hdrs = ["icp.h"],
+    deps = [
+        "//drake/common",
+        "//drake/math:geometric_transform",
+    ],
+)
+
+drake_cc_library(
     name = "scene",
     srcs = ["scene.cc"],
     hdrs = ["scene.h"],
@@ -34,6 +44,28 @@ drake_cc_library(
     ],
 )
 
+drake_cc_library(
+    name = "test_util",
+    srcs = ["test/test_util.cc"],
+    hdrs = ["test/test_util.h"],
+    deps = [
+        "//drake/common:eigen_matrix_compare",
+        "//drake/lcm",
+        "//drake/multibody/rigid_body_plant:drake_visualizer",
+        "//drake/multibody:rigid_body_tree",
+        "@lcmtypes_bot2_core",
+    ],
+    testonly = 1,
+)
+
+drake_cc_googletest(
+    name = "icp_test",
+    deps = [
+        ":icp",
+        ":test_util",
+    ],
+)
+
 drake_cc_googletest(
     name = "articulated_icp_test",
     data = [
@@ -41,13 +73,11 @@ drake_cc_googletest(
     ],
     deps = [
         ":articulated_icp",
+        ":test_util",
         "//drake/common:find_resource",
-        "//drake/lcm",
         "//drake/multibody/parsers:parsers",
         "//drake/multibody:rigid_body_tree",
         "//drake/multibody:rigid_body_tree_construction",
-        "//drake/multibody/rigid_body_plant:drake_visualizer",
         "//drake/solvers:mathematical_program",
-        "@lcmtypes_bot2_core",
     ],
 )
