@@ -37,8 +37,8 @@ Eigen::Isometry3d ComputePCATransform(const Eigen::Matrix3Xd& y_W);
  * @param X_WB Transformation from `B` to `W`, i.e., the pose of body `B` in
  * the world frame.
  */
-Eigen::Isometry3d ComputeSVDTransform(
-    const Eigen::Matrix3Xd& p_B, const Eigen::Matrix3Xd& y_W);
+Eigen::Isometry3d ComputeSVDTransform(const Eigen::Matrix3Xd& p_B,
+                                      const Eigen::Matrix3Xd& y_W);
 
 }  // namespace estimators
 }  // namespace perception

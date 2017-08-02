@@ -2,10 +2,10 @@
 
 #include <bot_core/pointcloud_t.hpp>
 
+#include "drake/common/drake_assert.h"
+#include "drake/common/eigen_matrix_compare.h"
 #include "drake/lcm/drake_lcm.h"
 #include "drake/lcmtypes/drake/lcmt_viewer_draw.hpp"
-#include "drake/common/eigen_matrix_compare.h"
-#include "drake/common/drake_assert.h"
 
 namespace drake {
 namespace perception {
@@ -64,9 +64,9 @@ Eigen::Matrix3Xd GenerateBoxPointCloud(double space, Bounds box);
 /*
  * Compare two transforms as matrices.
  */
-::testing::AssertionResult CompareTransforms(
-    const Eigen::Isometry3d& A, const Eigen::Isometry3d& B,
-    double tolerance = 0.0);
+::testing::AssertionResult CompareTransforms(const Eigen::Isometry3d& A,
+                                             const Eigen::Isometry3d& B,
+                                             double tolerance = 0.0);
 
 /*
  * Compare `R_actual` against `R_expected` to ensure that the axes are

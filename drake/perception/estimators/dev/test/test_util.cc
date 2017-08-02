@@ -15,7 +15,7 @@ namespace perception {
 namespace estimators {
 
 void PointCloudToLcm(const Eigen::Matrix3Xd& pts_W,
-                     bot_core::pointcloud_t *pmessage) {
+                     bot_core::pointcloud_t* pmessage) {
   bot_core::pointcloud_t& message = *pmessage;
   message.points.clear();
   // TODO(eric.cousineau): Better way to get world name that is not RBT
@@ -81,13 +81,11 @@ Matrix3Xd GenerateBoxPointCloud(double space, Bounds box) {
   return CompareMatrices(A.matrix(), B.matrix(), tolerance);
 }
 
-::testing::AssertionResult CompareRotationWithoutAxisSign(const Matrix3d& R_expected,
-                                                          const Matrix3d& R_actual,
-                                                          double tolerance) {
+::testing::AssertionResult CompareRotationWithoutAxisSign(
+    const Matrix3d& R_expected, const Matrix3d& R_actual, double tolerance) {
   // First, ensure that R_actual is a rotation matrix.
-  ::testing::AssertionResult check_rotation =
-      CompareMatrices(Matrix3d::Identity(), R_actual.transpose() * R_actual,
-                      tolerance);
+  ::testing::AssertionResult check_rotation = CompareMatrices(
+      Matrix3d::Identity(), R_actual.transpose() * R_actual, tolerance);
   if (!check_rotation) {
     return check_rotation;
   }
@@ -98,18 +96,18 @@ Matrix3Xd GenerateBoxPointCloud(double space, Bounds box) {
     return ::testing::AssertionSuccess();
   } else {
     return ::testing::AssertionFailure()
-        << "tr(abs(R_expected' * R_actual)) = " << tr << " != 3 by an error"
-        << " of " << fabs(tr - 3) << "\n" << "R_expected' * R_actual =\n"
-        << I_check;
+           << "tr(abs(R_expected' * R_actual)) = " << tr << " != 3 by an error"
+           << " of " << fabs(tr - 3) << "\n"
+           << "R_expected' * R_actual =\n"
+           << I_check;
   }
 }
 ::testing::AssertionResult CompareTransformWithoutAxisSign(
     const Isometry3d& X_expected, const Isometry3d& X_actual,
     double tolerance) {
   // Check translation.
-  ::testing::AssertionResult check_translation =
-      CompareMatrices(X_expected.translation(), X_actual.translation(),
-                      tolerance);
+  ::testing::AssertionResult check_translation = CompareMatrices(
+      X_expected.translation(), X_actual.translation(), tolerance);
   if (!check_translation) {
     return check_translation;
   }
