@@ -19,7 +19,12 @@ Eigen::Isometry3d EstimatePcaBodyPose(const Matrix3Xd& y_W) {
   Eigen::Isometry3d X_WB;
   X_WB.setIdentity();
   Eigen::SelfAdjointEigenSolver<Matrix3d> eig(W_yy);
+  // Eigenvectors are ordered from smallest eigenvalue to largest eigenvalue.
+  // For PCA, we would like the x-axis to correspond to the largest
+  // eigenvalue, so we will swap the x- and y-axes from the resultant
+  // eigenvectors.
   Matrix3d R_WB = eig.eigenvectors();
+  R_WB.col(0).swap(R_WB.col(2));
   if (R_WB.determinant() < 0) {
     // Apply same correction as in ProjectMatToRotMat.
     R_WB.col(2) *= -1;
