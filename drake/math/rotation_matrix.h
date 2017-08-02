@@ -248,7 +248,14 @@ Matrix3<typename Derived::Scalar> ProjectMatToRotMat(
     const Eigen::MatrixBase<Derived>& M) {
   DRAKE_DEMAND(M.rows() == 3 && M.cols() == 3);
   const auto svd = M.jacobiSvd(Eigen::ComputeFullU | Eigen::ComputeFullV);
-  return svd.matrixU() * svd.matrixV().transpose();
+  Matrix3<typename Derived::Scalar> R =
+      svd.matrixU() * svd.matrixV().transpose();
+  // Flip z-axis if it does not satisfy the cross product of the x- and
+  // y-axes, per suggestion in: http://nghiaho.com/?page_id=671
+  if (R.determinant() < 0) {
+    R.col(2) *= -1;
+  }
+  return R;
 }
 
 /**

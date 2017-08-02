@@ -125,50 +125,56 @@ Matrix3Xd GenerateBoxPointCloud(double space, Bounds box) {
 }
 
 /**
- * Computes estimated transform by aliging principle directions via principle
+ * Computes estimated transform by aligning principle directions via principle
  * component analysis (PCA).
- * @param A A 3xn matrix represent `n` points in Cartesian space.
- * @param X_WA Transform of the assumed shape dictated by the points' first and
- * second moments (mean and covariance).
+ * @param y_W A 3xn matrix represent `n` measured points, fixed in body `A`
+ * (inferred via PCA), expressed in world coordinates.
+ * @param X_WA The pose of the inferred shape in the world frame.
  */
-Eigen::Isometry3d ComputePCATransform(const Matrix3Xd& A) {
+Eigen::Isometry3d ComputePCATransform(const Matrix3Xd& y_W) {
   // http://www.cse.wustl.edu/~taoju/cse554/lectures/lect07_Alignment.pdf
-  Vector3d A_mean = A.rowwise().mean();
-  auto A_center = (A.colwise() - A_mean).eval();
-  auto A_cov = (A_center * A_center.transpose()).eval();
+  Vector3d y_mean = y_W.rowwise().mean();
+  auto y_center = (y_W.colwise() - y_mean).eval();
+  auto W_yy = (y_center * y_center.transpose()).eval();
   Eigen::Isometry3d X_WA;
   X_WA.setIdentity();
-  X_WA.linear() = math::ProjectMatToRotMat(A_cov);
-  X_WA.translation() = A_mean;
+  X_WA.linear() = math::ProjectMatToRotMat(W_yy);
+  X_WA.translation() = y_mean;
   return X_WA;
 }
 
 /**
- * Computes relative transformation to align points `a` with points `b`.
- * This requires that all correspondences be known.
- * @param p_B A 3xn matrix representing `n` points in the body frame,
- * {p_Bᵢ}ᵢ ∀ i ∈ {1..n}
- * @param y_W A 3xn matrix representing `n` measured points of the body, in
- * the world frame, {y_Wᵢ}ᵢ, where y_Wᵢ corresponds to p_Bᵢ.
- * @param X_AB Transformation from `B` to `W`, e.g., the pose of body `B` in
- * the world.
+ * Computes the pose of a body described by points `p` (expressed in the body
+ * frame), given observed points `y` (expressed in the world frame).
+ * This requires that all correspondences be known. This performs the
+ * optimization:
+ *    min  ∑ᵢ |X_WB * p_Bᵢ - y_Wᵢ|²
+ *   X_WB
+ * which is implemented as a widely-used simplification of the quaternion-based
+ * formulation presented in:
+ *    Besl, Paul J., and Neil D. McKay. "A method for registration of 3-D
+ *    shapes." IEEE Transactions on pattern analysis and machine intelligence
+ *    14.2 (1992): 239-256.
+ * @param p_B A 3xn matrix representing `n` points, fixed and expressed in the
+ * body frame, {p_Bᵢ}ᵢ ∀ i ∈ {1..n}
+ * @param y_W A 3xn matrix representing `n` measured points of the body,
+ * fixed in the body frame and expressed in the world frame, {y_Wᵢ}ᵢ,
+ * where y_Wᵢ corresponds to p_Bᵢ.
+ * @param X_WB Transformation from `B` to `W`, i.e., the pose of body `B` in
+ * the world frame.
  */
 Eigen::Isometry3d ComputeSVDTransform(
     const Matrix3Xd& p_B, const Matrix3Xd& y_W) {
-  // TODO(eric.cousineau): Consider using Eigen::umeyama(), especially if
-  // scaling is desired.
-  // Following: http://cs.gmu.edu/~kosecka/cs685/cs685-icp.pdf
   // First moment: Take the mean of each point collection.
   Vector3d p_B_mean = p_B.rowwise().mean();
   Vector3d y_W_mean = y_W.rowwise().mean();
-  // Compute deviations from mean.
+  // Compute deviations from mean, using expression templates since we only
+  // evaluate this once.
   auto p_B_center = p_B.colwise() - p_B_mean;
   auto y_W_center = y_W.colwise() - y_W_mean;
   // Second moment: Compute covariance.
   Matrix3d W_py = p_B_center * y_W_center.transpose();
   // Compute SVD decomposition to reduce to a proper SO(3) basis.
-  // TODO(eric.cousineau): If minimal cost from singular values is important,
-  // consider accessing those values.
   Eigen::Isometry3d X_BW;
   X_BW.setIdentity();
   X_BW.linear() = math::ProjectMatToRotMat(W_py);
