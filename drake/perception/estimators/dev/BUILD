@@ -6,15 +6,6 @@ load("//tools:drake.bzl", "drake_cc_googletest", "drake_cc_library")
 
 package(default_visibility = ["//visibility:public"])
 
-filegroup(
-    name = "models",
-    srcs = glob([
-        "**/*.urdf",
-    ]),
-    visibility = ["//visibility:private"],
-    testonly = 1,
-)
-
 drake_cc_library(
     name = "icp",
     srcs = ["icp.cc"],
@@ -58,6 +49,15 @@ drake_cc_library(
     testonly = 1,
 )
 
+filegroup(
+    name = "test_models",
+    srcs = glob([
+        "test/**/*.urdf",
+    ]),
+    visibility = ["//visibility:private"],
+    testonly = 1,
+)
+
 drake_cc_googletest(
     name = "icp_test",
     deps = [
@@ -69,7 +69,7 @@ drake_cc_googletest(
 drake_cc_googletest(
     name = "articulated_icp_test",
     data = [
-        ":models",
+        ":test_models",
     ],
     deps = [
         ":articulated_icp",

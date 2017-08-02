@@ -78,7 +78,7 @@ class ArticulatedIcpTest : public ::testing::Test {
   void SetUp() override {
     // Create a formulation for a simple floating-base target
     string file_path = FindResourceOrThrow(
-        "drake/perception/estimators/dev/simple_cuboid.urdf");
+        "drake/perception/estimators/dev/test/simple_cuboid.urdf");
     // TODO(eric.cousineau): Use kQuaternion.
     auto floating_base_type = multibody::joints::kRollPitchYaw;
     shared_ptr<RigidBodyFramed> weld_frame{nullptr};
