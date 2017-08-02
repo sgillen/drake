@@ -18,6 +18,7 @@
 #include "drake/common/eigen_matrix_compare.h"
 
 using std::make_shared;
+using std::pair;
 using std::shared_ptr;
 using std::string;
 using std::unique_ptr;
@@ -81,8 +82,10 @@ struct PlaneIndices {
 };
 
 Matrix2Xd Generate2DPlane(double space, Interval x, Interval y) {
-  const int nc = floor(x.width() / space);
-  const int nr = floor(y.width() / space);
+  // Ensure that we cover the edge, such that we have a balanced centroid for
+  // PCA / SVD.
+  const int nc = floor(x.width() / space) + 1;
+  const int nr = floor(y.width() / space) + 1;
   int i = 0;
   Matrix2Xd out(2, nc * nr);
   for (int c = 0; c < nc; c++) {
@@ -132,13 +135,19 @@ Matrix3Xd GenerateBoxPointCloud(double space, Bounds box) {
  * @param X_WA The pose of the inferred shape in the world frame.
  */
 Eigen::Isometry3d ComputePCATransform(const Matrix3Xd& y_W) {
-  // http://www.cse.wustl.edu/~taoju/cse554/lectures/lect07_Alignment.pdf
+  // @see http://www.cse.wustl.edu/~taoju/cse554/lectures/lect07_Alignment.pdf
   Vector3d y_mean = y_W.rowwise().mean();
-  auto y_center = (y_W.colwise() - y_mean).eval();
+  Matrix3Xd y_center = y_W.colwise() - y_mean;
   auto W_yy = (y_center * y_center.transpose()).eval();
   Eigen::Isometry3d X_WA;
   X_WA.setIdentity();
-  X_WA.linear() = math::ProjectMatToRotMat(W_yy);
+  Eigen::SelfAdjointEigenSolver<Matrix3d> eig(W_yy);
+  Matrix3d R_WA = eig.eigenvectors();
+  if (R_WA.determinant() < 0) {
+    // Apply same correction as in ProjectMatToRotMat.
+    R_WA.col(2) *= -1;
+  }
+  X_WA.linear() = R_WA;
   X_WA.translation() = y_mean;
   return X_WA;
 }
@@ -165,6 +174,8 @@ Eigen::Isometry3d ComputePCATransform(const Matrix3Xd& y_W) {
  */
 Eigen::Isometry3d ComputeSVDTransform(
     const Matrix3Xd& p_B, const Matrix3Xd& y_W) {
+  const int num_points = p_B.cols();
+  DRAKE_DEMAND(y_W.cols() == num_points);
   // First moment: Take the mean of each point collection.
   Vector3d p_B_mean = p_B.rowwise().mean();
   Vector3d y_W_mean = y_W.rowwise().mean();
@@ -173,7 +184,7 @@ Eigen::Isometry3d ComputeSVDTransform(
   auto p_B_center = p_B.colwise() - p_B_mean;
   auto y_W_center = y_W.colwise() - y_W_mean;
   // Second moment: Compute covariance.
-  Matrix3d W_py = p_B_center * y_W_center.transpose();
+  Matrix3d W_py = p_B_center * y_W_center.transpose() / num_points;
   // Compute SVD decomposition to reduce to a proper SO(3) basis.
   Eigen::Isometry3d X_BW;
   X_BW.setIdentity();
@@ -185,6 +196,49 @@ Eigen::Isometry3d ComputeSVDTransform(
 auto CompareTransforms(const Isometry3d& A, const Isometry3d& B,
                        double tolerance = 0.0) {
   return CompareMatrices(A.matrix(), B.matrix(), tolerance);
+}
+
+/*
+ * Compare `R_actual` against `R_expected` to ensure that the axes are
+ * aligned, but may have different signs. This is done by checking:
+ *   tr(abs(R_expected' R_actual)) == 3
+ */
+::testing::AssertionResult CompareRotationWithoutAxisSign(
+    const Matrix3d& R_expected, const Matrix3d& R_actual,
+    double tolerance = 0.0) {
+  // First, ensure that R_actual is a rotation matrix.
+  ::testing::AssertionResult check_rotation =
+      CompareMatrices(Matrix3d::Identity(), R_actual.transpose() * R_actual,
+                      tolerance);
+  if (!check_rotation) {
+    return check_rotation;
+  }
+  // Next, check the trace of the absolute expected identity.
+  const Matrix3d I_check = R_expected.transpose() * R_actual;
+  const double tr = I_check.diagonal().cwiseAbs().sum();
+  if (fabs(tr - 3) < tolerance) {
+    return ::testing::AssertionSuccess();
+  } else {
+    return ::testing::AssertionFailure()
+        << "tr(abs(R_expected' * R_actual)) = " << tr << " != 3 by an error"
+        << " of " << fabs(tr - 3) << "\n" << "R_expected' * R_actual =\n"
+        << I_check;
+  }
+}
+
+::testing::AssertionResult CompareTransformWithoutAxisSign(
+    const Isometry3d& X_expected, const Isometry3d& X_actual,
+    double tolerance = 0.0) {
+  // Check translation.
+  ::testing::AssertionResult check_translation =
+      CompareMatrices(X_expected.translation(), X_actual.translation(),
+                      tolerance);
+  if (!check_translation) {
+    return check_translation;
+  }
+  // Next, check rotation matrices.
+  return CompareRotationWithoutAxisSign(X_expected.rotation(),
+                                        X_actual.rotation(), tolerance);
 }
 
 // TODO(eric.cousineau): Move to a proper LCM conversion type.
@@ -212,7 +266,7 @@ class SimpleVisualizer {
     lcm_.Publish("DRAKE_POINTCLOUD_" + suffix, bytes.data(), bytes.size());
   }
 
-  void PublishFrames(const vector<Isometry3d>& frames) {
+  void PublishFrames(const vector<pair<string, Isometry3d>>& frames) {
     drake::lcmt_viewer_draw msg{};
     const int num_frames = frames.size();
     msg.num_links = num_frames;
@@ -222,8 +276,9 @@ class SimpleVisualizer {
     msg.position.resize(num_frames, pos);
     msg.quaternion.resize(num_frames, quaternion);
     for (int i = 0; i < num_frames; ++i) {
-      const auto& frame = frames[i];
-      msg.link_name.push_back(fmt::format("frame_{}", i));
+      const string& name = frames[i].first;
+      const auto& frame = frames[i].second;
+      msg.link_name.push_back(name);
       for (int j = 0; j < 3; ++j) {
         msg.position[i][j] = static_cast<float>(frame.translation()[j]);
       }
@@ -236,9 +291,6 @@ class SimpleVisualizer {
     vector<uint8_t> bytes(msg.getEncodedSize());
     msg.encode(bytes.data(), 0, bytes.size());
     lcm_.Publish("DRAKE_DRAW_FRAMES", bytes.data(), bytes.size());
-
-    using namespace std;
-    cout << "Published frame" << endl;
   }
 
   lcm::DrakeLcm& lcm() { return lcm_; }
@@ -246,48 +298,52 @@ class SimpleVisualizer {
   lcm::DrakeLcm lcm_;
 };
 
-GTEST_TEST(ArticulatedIcp, SVDAndPCA) {
+GTEST_TEST(ArticulatedIcp, PcaAndSvd) {
   const Bounds box(
-      Interval(-0.02, 0.02),
-      Interval(-0.06, 0.06),
-      Interval(-0.1, 0.1));
-  using namespace std;
-  cout << "Starting" << endl;
-  SimpleVisualizer vis;
-
+      Interval(-0.01, 0.01),
+      Interval(-0.05, 0.05),
+      Interval(-0.2, 0.2));
   const double spacing = 0.01;
   // Generate points in body frame.
   Matrix3Xd points_B = GenerateBoxPointCloud(spacing, box);
   // Expect identity on PCA.
-  Isometry3d X_I;
-  X_I.setIdentity();
+  Isometry3d X_BB = Isometry3d::Identity();
   // Show the points in the world frame with identity transform.
-  Matrix3Xd points_BI_W = X_I * points_B;
-  vis.PublishCloud(points_BI_W, "BI");
-  Isometry3d X_I_pca = ComputePCATransform(points_BI_W);
+  // Note that `Bi` is the body frame inferred by PCA.
+  Isometry3d X_BBi_pca = ComputePCATransform(points_B);
   const double tol = 1e-5;
   // Since our model is geometrically centered, this should be at or near
-  // identity with PCA.
-  EXPECT_TRUE(CompareTransforms(X_I, X_I_pca, spacing / 2));
+  // identity with PCA, with possible permutations on the axis signs.
+  EXPECT_TRUE(CompareTransformWithoutAxisSign(X_BB, X_BBi_pca, tol));
   // Transform points.
   Isometry3d X_WB;
   X_WB.setIdentity();
-  Vector3d xyz_B(0.1, 0.2, 0.3);
-  Vector3d rpy_B(kPi / 10, 0, 0);
-  X_WB.linear() << drake::math::rpy2rotmat(rpy_B);
-  X_WB.translation() << xyz_B;
+  Vector3d xyz(0.1, 0.2, 0.3);
+  Vector3d rpy(kPi / 10, 0, 0);
+  X_WB.linear() << drake::math::rpy2rotmat(rpy);
+  X_WB.translation() << xyz;
+  // Quick meta-test on CompareTransformWithoutAxisSign.
+  EXPECT_FALSE(CompareTransformWithoutAxisSign(X_BB, X_WB, tol));
   // Transform.
   Matrix3Xd points_B_W = X_WB * points_B;
-  vis.PublishCloud(points_B_W, "BW");
-  // Compute PCA for each, and SVD for the pairs.
-  Isometry3d X_WB_pca = ComputePCATransform(points_B_W);
-  EXPECT_TRUE(CompareTransforms(X_WB, X_WB_pca, tol));
-  // Compute SVD for both point sets.
+  // Compute PCA for body. Note that frame `Bj` is also inferred by PCA, and
+  // may not represent the same frame as `Bi` due to axis sign permutations.
+  Isometry3d X_WBj_pca = ComputePCATransform(points_B_W);
+  EXPECT_TRUE(CompareTransformWithoutAxisSign(X_WB, X_WBj_pca, tol));
+  // Compute SVD for the body pose.
   Isometry3d X_WB_svd = ComputeSVDTransform(points_B, points_B_W);
   EXPECT_TRUE(CompareTransforms(X_WB, X_WB_svd, tol));
-
-  vis.PublishFrames({X_I, X_WB, //X_I_pca, X_WB_pca,
-                     X_WB_svd});
+  SimpleVisualizer vis;
+  vis.PublishCloud(points_B, "B");
+  vis.PublishCloud(points_B_W, "BW");
+  // Compute frame if `Bi` and `Bj` are indeed the same.
+  Isometry3d X_WB_pca_check = X_WBj_pca * X_BBi_pca.inverse();
+  vis.PublishFrames({{"X_BB", X_BB},
+                     {"X_WB", X_WB},
+                     {"X_BBi_pca", X_BBi_pca},
+                     {"X_WBj_pca", X_WBj_pca},
+                     {"X_WB_pca_check", X_WB_pca_check},
+                     {"X_WB_svd", X_WB_svd}});
 }
 
 // TODO(eric.cousineau): Move to proper utility.
