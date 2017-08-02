@@ -15,7 +15,7 @@ namespace estimators {
  * (inferred via PCA), expressed in world coordinates.
  * @param X_WB The pose of the inferred shape in the world frame.
  */
-Eigen::Isometry3d ComputePCATransform(const Eigen::Matrix3Xd& y_W);
+Eigen::Isometry3d EstimatePcaBodyPose(const Eigen::Matrix3Xd& y_W);
 
 /**
  * Computes the pose of a body described by points `p` (expressed in the body
@@ -37,8 +37,8 @@ Eigen::Isometry3d ComputePCATransform(const Eigen::Matrix3Xd& y_W);
  * @param X_WB Transformation from `B` to `W`, i.e., the pose of body `B` in
  * the world frame.
  */
-Eigen::Isometry3d ComputeSVDTransform(const Eigen::Matrix3Xd& p_B,
-                                      const Eigen::Matrix3Xd& y_W);
+Eigen::Isometry3d ComputeSvdBodyPose(const Eigen::Matrix3Xd& p_B,
+                                     const Eigen::Matrix3Xd& y_W);
 
 }  // namespace estimators
 }  // namespace perception

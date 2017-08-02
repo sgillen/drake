@@ -11,7 +11,7 @@ namespace drake {
 namespace perception {
 namespace estimators {
 
-Eigen::Isometry3d ComputePCATransform(const Matrix3Xd& y_W) {
+Eigen::Isometry3d EstimatePcaBodyPose(const Matrix3Xd& y_W) {
   // @see http://www.cse.wustl.edu/~taoju/cse554/lectures/lect07_Alignment.pdf
   Vector3d y_mean = y_W.rowwise().mean();
   Matrix3Xd y_center = y_W.colwise() - y_mean;
@@ -29,8 +29,8 @@ Eigen::Isometry3d ComputePCATransform(const Matrix3Xd& y_W) {
   return X_WB;
 }
 
-Eigen::Isometry3d ComputeSVDTransform(const Matrix3Xd& p_B,
-                                      const Matrix3Xd& y_W) {
+Eigen::Isometry3d ComputeSvdBodyPose(const Matrix3Xd& p_B,
+                                     const Matrix3Xd& y_W) {
   const int num_points = p_B.cols();
   DRAKE_DEMAND(y_W.cols() == num_points);
   // First moment: Take the mean of each point collection.

@@ -26,7 +26,7 @@ GTEST_TEST(Icp, PcaAndSvd) {
   Isometry3d X_BB = Isometry3d::Identity();
   // Show the points in the world frame with identity transform.
   // Note that `Bi` is the body frame inferred by PCA.
-  Isometry3d X_BBi_pca = ComputePCATransform(points_B);
+  Isometry3d X_BBi_pca = EstimatePcaBodyPose(points_B);
   const double tol = 1e-5;
   // Since our model is geometrically centered, this should be at or near
   // identity with PCA, with possible permutations on the axis signs.
@@ -44,10 +44,10 @@ GTEST_TEST(Icp, PcaAndSvd) {
   Matrix3Xd points_B_W = X_WB * points_B;
   // Compute PCA for body. Note that frame `Bj` is also inferred by PCA, and
   // may not represent the same frame as `Bi` due to axis sign permutations.
-  Isometry3d X_WBj_pca = ComputePCATransform(points_B_W);
+  Isometry3d X_WBj_pca = EstimatePcaBodyPose(points_B_W);
   EXPECT_TRUE(CompareTransformWithoutAxisSign(X_WB, X_WBj_pca, tol));
   // Compute SVD for the body pose.
-  Isometry3d X_WB_svd = ComputeSVDTransform(points_B, points_B_W);
+  Isometry3d X_WB_svd = ComputeSvdBodyPose(points_B, points_B_W);
   EXPECT_TRUE(CompareTransforms(X_WB, X_WB_svd, tol));
   SimpleVisualizer vis;
   vis.PublishCloud(points_B, "B");
