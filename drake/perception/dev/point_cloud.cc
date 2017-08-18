@@ -1,5 +1,9 @@
-//
-// Created by eacousineau on 8/17/17.
-//
-
 #include "point_cloud.h"
+
+namespace drake {
+namespace perception {
+
+
+
+}  // namespace perception
+}  // namespace drake

@@ -1,8 +1,12 @@
 #pragma once
 
 #include <memory>
+#include <vector>
 
 #include <Eigen/Dense>
+
+#include "drake/common/eigen_types.h"
+#include "drake/systems/sensors/image.h"
 
 namespace drake {
 namespace perception {
@@ -64,6 +68,38 @@ const FeatureType kFeaturePFH(3, "PFH");
 const FeatureType kFeatureSHOT(3, "SHOT");
 const FeatureType kFeatureFPCS(4, "FPCS");
 
+struct ImageCoord {
+  /// x-coordinate of the pixel.
+  int u;
+  /// y-coordinate of the pixel.
+  int v;
+};
+
+class ImageDim {
+ public:
+  ImageDim(int width, int height)
+      : width_(width), height_(height) {
+    DRAKE_DEMAND(width_ > 0 && height_ > 0);
+  }
+  inline int size() const {
+    return width_ * height_;
+  }
+  inline int GetIndex(ImageCoord coord) const {
+    DRAKE_ASSERT(coord.u >= 0 && coord.u < width_);
+    DRAKE_ASSERT(coord.v >= 0 && coord.v < height_);
+    return width_ * coord.v + coord.u;
+  }
+  inline ImageCoord GetCoord(int index) const {
+    DRAKE_ASSERT(index >= 0);
+    DRAKE_ASSERT(index < size());
+    ImageCoord coord{index % width_, index / width_};
+    return coord;
+  }
+ private:
+  int width_;
+  int height_;
+};
+
 /**
  * Implements a contiguous point cloud.
  *
@@ -93,13 +129,19 @@ class PointCloud {
     /// construct a point cloud
     kFeatures = 1 << 3,
     kAll = kPoints | kColors | kNormals | kFeatures,
+    // Others: Curvature?
   };
 
   /// Geometric scalar type (e.g. for point, normals.)
-  typedef double T;
+  typedef float T;
+
+  typedef systems::sensors::ImageTraits<systems::sensors::PixelType::kRgb8U>
+          ImageTraits;
   /// Color scalar type. Channels are assumed to be RGB only.
-  typedef float C;
-  static constexpr int NC = 3;  // Number of channels.
+  typedef ImageTraits::ChannelType C;
+  /// Number of channels.
+  static constexpr int NC = ImageTraits::kNumChannels;
+
   /// Feature scalar type.
   typedef double F;
   /// Index type.
@@ -116,7 +158,7 @@ class PointCloud {
    */
   PointCloud(Index new_size,
              Capabilities capabilities = kPoints,
-             const FeatureType& feature_type = None);
+             const FeatureType& feature_type = kFeatureNone);
 
   PointCloud(const PointCloud& other,
              Capabilities copy_capabilities = kAllPossible);
@@ -128,9 +170,6 @@ class PointCloud {
 
   void AddItem();
 
-  Index width() const;
-  Index height() const;
-
   bool has_points() const;
   // Lifetime is only valid as long as point cloud has not been resized.
   // References' lifetimes should be MINIMAL.
@@ -138,7 +177,7 @@ class PointCloud {
   Eigen::Ref<Matrix3X<T>> mutable_points();
   // For algorithms needing fast access, do NOT use this accessor. Use the
   // entire reference.
-  Eigen::Ref<const Vector3<T>> point(Index i) const;
+  Vector3<T> point(Index i) const;
   Eigen::Ref<Vector3<T>> mutable_point(Index i);
 
   bool has_colors() const;
@@ -164,21 +203,29 @@ class PointCloud {
 
   void CopyFrom(
       const PointCloud& other,
-      Capabilities c = kAllPossible,
       const Indices& indices,
+      Capabilities c = kAllPossible,
       bool allow_subset = false,
       bool allow_resize = true);
 
-  void RigidTransform(const Eigen::Isometry3d& X);
-  void AffineTransform(const Eigen::Affine3d& T);
+  // Transform points/normals given rigid or affine transform.
+  // Note that normals will only have the linear portion applied, not the
+  // translation.
+  void TransformInPlace(const Eigen::Isometry3d& X);
+  void AffineTransformInPlace(const Eigen::Affine3d& T);
 
-  // Bundle items together? Point + color, point + normal, etc.?
+  /// Indicates if this point cloud has been sampled from an image, and has
+  /// not be resized since then. If so, then `image_dim()` may be used.
+  bool has_image_dim() const;
+  ImageDim image_dim() const;
+
+  void DemandCapabilities(Capabilities expected);
 
  private:
   // Enable direct access to VTK pointer?
-  const FeatureType feature_;
+  const FeatureType feature_type_;
+  class Internal;
   std::unique_ptr<Internal> internal_;
-  void RequireCapabilities(Capabilities expected);
 };
 
 void usage() {
@@ -198,6 +245,8 @@ void usage() {
   PointCloud normals(0, PointCloud::kNormals);
 
   filters::NormalEstimation(cloud, &normals);
+
+  // Create point cloud with points and features.
 }
 
 }  // namespace perception
