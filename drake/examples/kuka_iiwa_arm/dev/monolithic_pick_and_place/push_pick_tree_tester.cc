@@ -5,6 +5,7 @@
 #include <thread>
 
 #include <gflags/gflags.h>
+#include <stdlib.h>
 
 #include "drake/common/eigen_types.h"
 #include "drake/common/find_resource.h"
@@ -15,9 +16,9 @@
 #include "drake/multibody/rigid_body_tree.h"
 #include "drake/manipulation/util/world_sim_tree_builder.h"
 #include "drake/manipulation/util/simple_tree_visualizer.h"
-//
-//DEFINE_int32(num_configurations, 10,
-//"Number of random test configurations to display in the demo");
+
+DEFINE_int32(num_configurations, 10,
+"Number of random test configurations to display in the demo");
 
 namespace drake {
 namespace examples {
@@ -25,7 +26,7 @@ namespace kuka_iiwa_arm {
 namespace monolithic_pick_and_place_demo {
 using manipulation::util::ModelInstanceInfo;
 using manipulation::util::WorldSimTreeBuilder;
-using manipulation::util::S;
+using manipulation::util::SimpleTreeVisualizer;
 
 // Adds a demo tree.
 const char* const kModelPath =
@@ -33,63 +34,63 @@ const char* const kModelPath =
         "iiwa14_polytope_collision.urdf";
 
 
-std::unique_ptr<RigidBodyTreed> BuildDemoTree(
-    ModelInstanceInfo<double>* iiwa_instance, ModelInstanceInfo<double>* wsg_instance,
-    ModelInstanceInfo<double>* box_instance) {
-auto tree_builder = std::make_unique<WorldSimTreeBuilder<double>>();
+std::unique_ptr<RigidBodyTreed> BuildDemoTree() {
+  auto tree_builder = std::make_unique<WorldSimTreeBuilder<double>>();
 
-// Adds models to the simulation builder. Instances of these models can be
-// subsequently added to the world.
-tree_builder->StoreModel("iiwa", kModelPath);
-tree_builder->StoreModel("table",
-"drake/examples/kuka_iiwa_arm/models/table/"
-"extra_heavy_duty_table_surface_only_collision.sdf");
-tree_builder->StoreModel("box",
-"drake/examples/kuka_iiwa_arm/models/objects/"
-"block_for_pick_and_place.urdf");
-tree_builder->StoreModel(
-"wsg",
-"drake/manipulation/models/wsg_50_description/sdf/schunk_wsg_50.sdf");
+  // Adds models to the simulation builder. Instances of these models can be
+  // subsequently added to the world.
+  tree_builder->StoreModel("iiwa", kModelPath);
+  tree_builder->StoreModel("table",
+  "drake/examples/kuka_iiwa_arm/models/table/"
+  "extra_heavy_duty_table_surface_only_collision.sdf");
+  tree_builder->StoreModel("book",
+  "drake/examples/kuka_iiwa_arm/models/objects/"
+  "book.urdf");
+  tree_builder->StoreModel(
+  "wsg",
+  "drake/manipulation/models/wsg_50_description/sdf/schunk_wsg_50.sdf");
 
-// Build a world with two fixed tables.  A box is placed one on
-// table, and the iiwa arm is fixed to the other.
-tree_builder->AddFixedModelInstance("table",
-Eigen::Vector3d::Zero() /* xyz */,
-    Eigen::Vector3d::Zero() /* rpy */);
-tree_builder->AddFixedModelInstance("table",
-Eigen::Vector3d(0.8, 0, 0) /* xyz */,
-Eigen::Vector3d::Zero() /* rpy */);
-tree_builder->AddFixedModelInstance("table",
-Eigen::Vector3d(0, 0.85, 0) /* xyz */,
-Eigen::Vector3d::Zero() /* rpy */);
+  drake::log()->info("About to add tables");
+  // Build a world with two fixed tables.  A box is placed one on
+  // table, and the iiwa arm is fixed to the other.
+  tree_builder->AddFixedModelInstance("table",
+  Eigen::Vector3d::Zero() /* xyz */,
+      Eigen::Vector3d::Zero() /* rpy */);
+  tree_builder->AddFixedModelInstance("table",
+  Eigen::Vector3d(0.8, 0, 0) /* xyz */,
+  Eigen::Vector3d::Zero() /* rpy */);
+  tree_builder->AddFixedModelInstance("table",
+  Eigen::Vector3d(0, 0.85, 0) /* xyz */,
+  Eigen::Vector3d::Zero() /* rpy */);
 
-tree_builder->AddGround();
+  tree_builder->AddGround();
 
-// The `z` coordinate of the top of the table in the world frame.
-// The quantity 0.736 is the `z` coordinate of the frame associated with the
-// 'surface' collision element in the SDF. This element uses a box of height
-// 0.057m thus giving the surface height (`z`) in world coordinates as
-// 0.736 + 0.057 / 2.
-const double kTableTopZInWorld = 0.736 + 0.057 / 2;
+  // The `z` coordinate of the top of the table in the world frame.
+  // The quantity 0.736 is the `z` coordinate of the frame associated with the
+  // 'surface' collision element in the SDF. This element uses a box of height
+  // 0.01m thus giving the surface height (`z`) in world coordinates as
+  // 0.736 + 0.01 / 2.
+  const double kTableTopZInWorld = 0.736 + 0.01 / 2;
 
-// Coordinates for kRobotBase originally from iiwa_world_demo.cc.
-// The intention is to center the robot on the table.
-const Eigen::Vector3d kRobotBase(-0.243716, -0.625087, kTableTopZInWorld);
-// Start the box slightly above the table.  If we place it at
-// the table top exactly, it may start colliding the table (which is
-// not good, as it will likely shoot off into space).
-const Eigen::Vector3d kBoxBase(1 + -0.43, -0.65, kTableTopZInWorld + 0.1);
+  // Coordinates for kRobotBase originally from iiwa_world_demo.cc.
+  // The intention is to center the robot on the table.
+  const Eigen::Vector3d kRobotBase(-0.243716, -0.625087, kTableTopZInWorld);
+  // Start the box slightly above the table.  If we place it at
+  // the table top exactly, it may start colliding the table (which is
+  // not good, as it will likely shoot off into space).
+  const Eigen::Vector3d kBoxBase(1 + -0.43, -0.65, kTableTopZInWorld + 0.05);
 
-int id = tree_builder->AddFixedModelInstance("iiwa", kRobotBase);
-*iiwa_instance = tree_builder->get_model_info_for_instance(id);
-id = tree_builder->AddFloatingModelInstance("box", kBoxBase,
-                                            Vector3<double>(0, 0, 1));
-*box_instance = tree_builder->get_model_info_for_instance(id);
-id = tree_builder->AddModelInstanceToFrame(
-    "wsg", tree_builder->tree().findFrame("iiwa_frame_ee"),
-    drake::multibody::joints::kFixed);
-*wsg_instance = tree_builder->get_model_info_for_instance(id);
+  drake::log()->info("About to add iiwa");
+  tree_builder->AddFixedModelInstance("iiwa", kRobotBase);
+  drake::log()->info("About to add box");
+  tree_builder->AddFloatingModelInstance("book", kBoxBase,
+                                              Vector3<double>(0, 0, 1));
+  drake::log()->info("About to add wsg");
+  tree_builder->AddModelInstanceToFrame(
+      "wsg", tree_builder->tree().findFrame("iiwa_frame_ee"),
+      drake::multibody::joints::kFixed);
 
+  drake::log()->info("About to build");
   return tree_builder->Build();
 }
 
@@ -97,23 +98,28 @@ id = tree_builder->AddModelInstanceToFrame(
 int DoMain() {
   drake::lcm::DrakeLcm lcm;
 
-
-  auto tree = std::make_unique<RigidBodyTree<double>>();
-
-  auto weld_to_frame = std::allocate_shared<RigidBodyFrame<double>>(
-      Eigen::aligned_allocator<RigidBodyFrame<double>>(), "world", nullptr,
-      Eigen::Vector3d::Zero() /* base position */,
-      Eigen::Vector3d::Zero() /* base orientation */);
-
-  drake::parsers::urdf::AddModelInstanceFromUrdfFile(
-      FindResourceOrThrow(kModelPath), drake::multibody::joints::kFixed,
-      weld_to_frame, tree.get());
+//
+  std::unique_ptr<RigidBodyTreed> tree = BuildDemoTree();
 
   SimpleTreeVisualizer simple_tree_visualizer(*tree.get(), &lcm);
 
   // Simple demo that iterates through a bunch of joint configurations.
   for (int i = 0; i < FLAGS_num_configurations; ++i) {
-    simple_tree_visualizer.visualize(Eigen::VectorXd::Random(7));
+
+    VectorX<double> positions = VectorX<double>::Zero(tree->get_num_positions());
+      positions.segment<7>(0) = VectorX<double>::Random(7 /* IIWA */);
+    //positions.segment<4>(10) = //VectorX<double>::Random(4 /* box orientation */);
+
+    double box_z = (double) (M_PI -  std::rand() * 2 * M_PI);
+    drake::log()->info("Box z {}", box_z);
+    Eigen::Quaterniond box_pose_quat;
+    box_pose_quat = Eigen::AngleAxisd(box_z, Eigen::Vector3d::UnitZ());
+    positions.segment<4>(10) = box_pose_quat.coeffs();
+    drake::log()->info("quat coeffs    {} ",box_pose_quat.coeffs().transpose());
+//    /drake::log()->info("quat coeffs aa {} ",);
+    //simple_tree_visualizer.visualize(Eigen::VectorXd::Random(tree->get_num_positions()));
+
+    simple_tree_visualizer.visualize(positions);
 
     // Sleep for a second just so that the new configuration can be seen
     // on the visualizer.
@@ -130,5 +136,5 @@ int DoMain() {
 
 int main(int argc, char* argv[]) {
   gflags::ParseCommandLineFlags(&argc, &argv, true);
-  return drake::manipulation::DoMain();
+  return drake::examples::kuka_iiwa_arm::monolithic_pick_and_place_demo::DoMain();
 }
