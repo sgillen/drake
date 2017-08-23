@@ -153,19 +153,15 @@ std::unique_ptr<systems::RigidBodyPlant<double>> BuildCombinedPlant(
       drake::multibody::joints::kFixed);
   *wsg_instance = tree_builder->get_model_info_for_instance(wsg_id);
 
-  // Attach camera to wsg's end effector.
-  Eigen::Isometry3d X_EC;
-  // From: tri_exp:27a7d76:book_pulling.cc (Jiaji's code)
-//  X_EC.linear() <<
-//    0.3994,   -0.9168,   -0.0015,
-//    0.9163,    0.3992,   -0.0317,
-//    0.0297,    0.0113,    0.9995;
-//  X_EC.translation() << -0.0646, 0.001, 0.1121;
-  X_EC.linear() <<
+  // Attach camera (X) to wsg's end effector (G).
+  Eigen::Isometry3d X_GX;
+  // Based on tri_exp:27a7d76:book_pulling.cc (Jiaji's code), but changed to
+  // align with present model frames.
+  X_GX.linear() <<
       1, 0, 0,
       0, 0, 1,
       0, -1, 0;
-  X_EC.translation() << 0, -0.015, -0.025;
+  X_GX.translation() << 0, -0.015, -0.025;
   {
     auto&& tree = tree_builder->tree();
     int count = tree.get_num_bodies();
@@ -178,7 +174,7 @@ std::unique_ptr<systems::RigidBodyPlant<double>> BuildCombinedPlant(
       tree_builder->tree().FindBody("body", "", wsg_id);
   auto xtion_fixture =
       std::make_shared<RigidBodyFrame<double>>(
-          "xtion_fixture", wsg_body, X_EC);
+          "xtion_fixture", wsg_body, X_GX);
   tree_builder->mutable_tree().addFrame(xtion_fixture);
   tree_builder->AddModelInstanceToFrame(
       "xtion", xtion_fixture,
@@ -339,6 +335,11 @@ int DoMain(void) {
                   wsg_controller->get_command_input_port());
   builder.Connect(state_machine->get_output_port_iiwa_plan(),
                   iiwa_trajectory_generator->get_plan_input_port());
+
+  {
+    // Add in depth camera.
+
+  }
 
   auto sys = builder.Build();
   Simulator<double> simulator(*sys);
