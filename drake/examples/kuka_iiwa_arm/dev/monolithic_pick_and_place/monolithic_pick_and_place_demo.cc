@@ -122,6 +122,10 @@ std::unique_ptr<systems::RigidBodyPlant<double>> BuildCombinedPlant(
       "drake/manipulation/models/wsg_50_description"
       "/sdf/schunk_wsg_50_ball_contact.sdf");
 
+  tree_builder->StoreModel(
+        "xtion",
+        "drake/examples/kuka_iiwa_arm/models/cameras/asus_xtion.urdf");
+
   // The main table which the arm sits on.
   tree_builder->AddFixedModelInstance("table",
                                       kTableBase,
@@ -148,6 +152,37 @@ std::unique_ptr<systems::RigidBodyPlant<double>> BuildCombinedPlant(
       "wsg", tree_builder->tree().findFrame("iiwa_frame_ee"),
       drake::multibody::joints::kFixed);
   *wsg_instance = tree_builder->get_model_info_for_instance(wsg_id);
+
+  // Attach camera to wsg's end effector.
+  Eigen::Isometry3d X_EC;
+  // From: tri_exp:27a7d76:book_pulling.cc (Jiaji's code)
+//  X_EC.linear() <<
+//    0.3994,   -0.9168,   -0.0015,
+//    0.9163,    0.3992,   -0.0317,
+//    0.0297,    0.0113,    0.9995;
+//  X_EC.translation() << -0.0646, 0.001, 0.1121;
+  X_EC.linear() <<
+      1, 0, 0,
+      0, 0, 1,
+      0, -1, 0;
+  X_EC.translation() << 0, -0.015, -0.025;
+  {
+    auto&& tree = tree_builder->tree();
+    int count = tree.get_num_bodies();
+    for (int i = 0; i < count; ++i) {
+      auto&& body = tree.get_body(i);
+      drake::log()->info("Body {}: {}", i, body.get_name());
+    }
+  }
+  RigidBody<double>* const wsg_body =
+      tree_builder->tree().FindBody("body", "", wsg_id);
+  auto xtion_fixture =
+      std::make_shared<RigidBodyFrame<double>>(
+          "xtion_fixture", wsg_body, X_EC);
+  tree_builder->mutable_tree().addFrame(xtion_fixture);
+  tree_builder->AddModelInstanceToFrame(
+      "xtion", xtion_fixture,
+      drake::multibody::joints::kFixed);
 
   return std::make_unique<systems::RigidBodyPlant<double>>(
       tree_builder->Build());
