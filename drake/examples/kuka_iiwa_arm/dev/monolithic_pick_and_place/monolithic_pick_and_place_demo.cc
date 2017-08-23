@@ -375,20 +375,21 @@ int DoMain(void) {
 
     // 30 Hz
     const double kDt = 1. / 30;
+    const int kWidth = 640, kHeight = 480;
 
-    Value<ImageRgba8U> image_rgb;
+    Value<ImageRgba8U> image_rgb(kWidth, kHeight);
     auto zoh_rgb =
         builder.template AddSystem<ZeroOrderHold>(kDt, image_rgb);
     builder.Connect(rgbd_camera->color_image_output_port(),
                     zoh_rgb->get_input_port());
 
-    Value<ImageDepth32F> image_depth;
+    Value<ImageDepth32F> image_depth(kWidth, kHeight);
     auto zoh_depth =
         builder.template AddSystem<ZeroOrderHold>(kDt, image_depth);
     builder.Connect(rgbd_camera->depth_image_output_port(),
                     zoh_depth->get_input_port());
 
-    Value<ImageLabel16I> image_label;
+    Value<ImageLabel16I> image_label(kWidth, kHeight);
     auto zoh_label =
         builder.template AddSystem<ZeroOrderHold>(kDt, image_label);
     builder.Connect(rgbd_camera->label_image_output_port(),
