@@ -370,7 +370,7 @@ int DoMain(void) {
             *xtion_sensor_frame, M_PI_4, true);
 
     builder.Connect(
-        plant->get_output_port(0),
+        plant->get_output_port_plant_state(),
         rgbd_camera->state_input_port());
 
     // 30 Hz
