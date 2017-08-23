@@ -47,7 +47,7 @@ DEFINE_double(realtime_rate, 0.0, "Rate at which to run the simulation, "
 DEFINE_bool(quick, false, "Run only a brief simulation and return success "
     "without executing the entire task");
 
-const bool use_movable_camera = false;
+const bool use_movable_camera = true;
 
 using robotlocomotion::robot_plan_t;
 
@@ -216,6 +216,8 @@ std::unique_ptr<systems::RigidBodyPlant<double>> BuildCombinedPlant(
       0, 1, 0,
       0, 0, 1,
       1, 0, 0;
+  // TODO(eric.cousineau): Once relative transforms between B, C, D can be
+  // defined, impose correct constraints on the frame offsets.
   X_XB.translation() << 0.0, 0.0325, 0.021;
   // Compose frame to get proper orientation for RgbdCamera.
   auto xtion_sensor_frame =
