@@ -78,7 +78,7 @@ std::unique_ptr<RigidBodyTreed> BuildDemoTree() {
   // Start the box slightly above the table.  If we place it at
   // the table top exactly, it may start colliding the table (which is
   // not good, as it will likely shoot off into space).
-  const Eigen::Vector3d kBoxBase(1 + -0.43, -0.65, kTableTopZInWorld + 0.05);
+  const Eigen::Vector3d kBoxBase(1 + -0.43, -0.65, kTableTopZInWorld + 0.03);
 
   drake::log()->info("About to add iiwa");
   tree_builder->AddFixedModelInstance("iiwa", kRobotBase);
@@ -103,17 +103,18 @@ int DoMain() {
 
   SimpleTreeVisualizer simple_tree_visualizer(*tree.get(), &lcm);
 
+  drake::log()->info("tree num positions {}", tree->get_num_positions());
   // Simple demo that iterates through a bunch of joint configurations.
   for (int i = 0; i < FLAGS_num_configurations; ++i) {
 
     VectorX<double> positions = VectorX<double>::Zero(tree->get_num_positions());
-      positions.segment<7>(0) = VectorX<double>::Random(7 /* IIWA */);
-    //positions.segment<4>(10) = //VectorX<double>::Random(4 /* box orientation */);
+      //positions.segment<7>(0) = VectorX<double>::Random(7 /* IIWA */);
+    //positions.segment<4>(10) = VectorX<double>::Random(4 /* box orientation */);
 
     double box_z = (double) (M_PI -  std::rand() * 2 * M_PI);
     drake::log()->info("Box z {}", box_z);
-    Eigen::Quaterniond box_pose_quat;
-    box_pose_quat = Eigen::AngleAxisd(box_z, Eigen::Vector3d::UnitZ());
+    Eigen::Quaterniond box_pose_quat = Eigen::Quaterniond::Identity();
+    box_pose_quat = Eigen::AngleAxis<double>(box_z, Eigen::Vector3d::UnitY());
     positions.segment<4>(10) = box_pose_quat.coeffs();
     drake::log()->info("quat coeffs    {} ",box_pose_quat.coeffs().transpose());
 //    /drake::log()->info("quat coeffs aa {} ",);
