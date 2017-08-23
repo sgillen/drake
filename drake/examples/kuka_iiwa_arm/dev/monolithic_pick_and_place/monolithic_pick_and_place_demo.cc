@@ -47,6 +47,8 @@ DEFINE_double(realtime_rate, 0.0, "Rate at which to run the simulation, "
 DEFINE_bool(quick, false, "Run only a brief simulation and return success "
     "without executing the entire task");
 
+const bool use_movable_camera = false;
+
 using robotlocomotion::robot_plan_t;
 
 namespace drake {
@@ -176,21 +178,32 @@ std::unique_ptr<systems::RigidBodyPlant<double>> BuildCombinedPlant(
       drake::log()->info("Body {}: {}", i, body.get_name());
     }
   }
-  Eigen::Isometry3d X_WX;
-  X_WX.setIdentity();
-  X_WX.linear() <<
-      0, 0, 1,
-      1, 0, 0,
-      0, 1, 0;
-  X_WX.translation() << 0.215, 0.010, 0.765;
+
   RigidBody<double>* const wsg_body =
       tree_builder->tree().FindBody("body", "", wsg_id);
-  unused(wsg_body);
+  RigidBody<double>* src_body = wsg_body;
+  Eigen::Isometry3d X_SX = X_GX;
+
+  if (!use_movable_camera) {
+    src_body = &tree_builder->mutable_tree().world();
+
+    Eigen::Isometry3d X_WX;
+    // Place it on the table top.
+    X_WX.setIdentity();
+    X_WX.linear() <<
+        0, 0, 1,
+        1, 0, 0,
+        0, 1, 0;
+    // From director, measurement panel
+//    X_WX.translation() << 0.215, 0.010, 0.765;
+    X_WX.translation() << -0.233, 0.293, 0.765;
+    X_SX = X_WX;
+  }
+
   auto xtion_fixture =
       std::make_shared<RigidBodyFrame<double>>(
           "xtion_fixture",
-          &tree_builder->mutable_tree().world(), X_WX);
-//          wsg_body, X_GX);
+          src_body, X_SX);
   tree_builder->mutable_tree().addFrame(xtion_fixture);
   tree_builder->AddModelInstanceToFrame(
       "xtion", xtion_fixture,
@@ -377,8 +390,7 @@ int DoMain(void) {
     using namespace systems::sensors;
 
     RgbdCamera* rgbd_camera{};
-    bool use_movable = false;
-    if (use_movable) {
+    if (use_movable_camera) {
       rgbd_camera =
           builder.template AddSystem<RgbdCamera>(
               "rgbd_camera", plant->get_tree(),
