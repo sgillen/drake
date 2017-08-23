@@ -34,6 +34,7 @@
 #include "drake/systems/sensors/rgbd_camera.h"
 #include "drake/systems/primitives/zero_order_hold.h"
 #include "drake/systems/sensors/image_to_lcm_image_array_t.h"
+#include "drake/systems/lcm/lcm_publisher_system.h"
 
 DEFINE_int32(target, 0, "ID of the target to pick.");
 DEFINE_double(orientation, 2 * M_PI, "Yaw angle of the box.");
@@ -187,16 +188,21 @@ std::unique_ptr<systems::RigidBodyPlant<double>> BuildCombinedPlant(
   // Add sensor frame, `B` for RgbdCamera.
   Eigen::Isometry3d X_XB;
   X_XB.setIdentity();
-  // ...
+  X_XB.linear() <<
+      0, 1, 0,
+      0, 0, 1,
+      1, 0, 0;
+  // Compose frame to get proper orientation for RgbdCamera.
   auto xtion_sensor_frame =
       std::make_shared<RigidBodyFrame<double>>(
-          "xtion_sensor_frame", xtion_fixture, X_XB);
+          "xtion_sensor_frame",
+          wsg_body,
+          X_GX * X_XB);
   tree_builder->mutable_tree().addFrame(xtion_sensor_frame);
 
   return std::make_unique<systems::RigidBodyPlant<double>>(
       tree_builder->Build());
 }
-
 
 int DoMain(void) {
   // Locations for the posts from physical pick and place tests with
@@ -354,8 +360,10 @@ int DoMain(void) {
     auto xtion_sensor_frame =
         plant->get_tree().findFrame("xtion_sensor_frame");
 
-    using namespace systems::sensors;
     using namespace systems;
+    using namespace systems::lcm;
+    using namespace systems::sensors;
+
     auto rgbd_camera =
         builder.template AddSystem<RgbdCamera>(
             "rgbd_camera", plant->get_tree(),
@@ -380,37 +388,42 @@ int DoMain(void) {
     builder.Connect(rgbd_camera->depth_image_output_port(),
                     zoh_depth->get_input_port());
 
+    Value<ImageLabel16I> image_label;
+    auto zoh_label =
+        builder.template AddSystem<ZeroOrderHold>(kDt, image_label);
+    builder.Connect(rgbd_camera->label_image_output_port(),
+                    zoh_label->get_input_port());
+
     bool do_publish = true;
     if (do_publish) {
       // Image to LCM.
-      auto image_to_lcm_message_ =
+      auto image_to_lcm_message =
           builder.AddSystem<ImageToLcmImageArrayT>(
               "color", "depth", "label");
-      image_to_lcm_message_->set_name("converter");
+      image_to_lcm_message->set_name("converter");
 
       builder.Connect(
           zoh_rgb->get_output_port(),
-          image_to_lcm_message_->color_image_input_port());
+          image_to_lcm_message->color_image_input_port());
 
       builder.Connect(
           zoh_depth->get_output_port(),
-          image_to_lcm_message_->depth_image_input_port());
-
-      // This port has been disabled.
-//        pbuilder->Connect(
-//            label_image_output_port,
-//            image_to_lcm_message_->label_image_input_port());
-
-      // Camera image publisher.
-      auto image_lcm_pub_ = builder.AddSystem(
-          LcmPublisherSystem::Make<robotlocomotion::image_array_t>(
-              "DRAKE_RGBD_CAMERA_IMAGES", plcm));
-      image_lcm_pub_->set_name("publisher");
-      image_lcm_pub_->set_publish_period(camera_dt);
+          image_to_lcm_message->depth_image_input_port());
 
       builder.Connect(
-          image_to_lcm_message_->image_array_t_msg_output_port(),
-          image_lcm_pub_->get_input_port(0));
+          zoh_label->get_output_port(),
+          image_to_lcm_message->label_image_input_port());
+
+      // Camera image publisher.
+      auto image_lcm_pub = builder.AddSystem(
+          LcmPublisherSystem::Make<robotlocomotion::image_array_t>(
+              "DRAKE_RGBD_CAMERA_IMAGES", &lcm));
+      image_lcm_pub->set_name("image_publisher");
+      image_lcm_pub->set_publish_period(kDt);
+
+      builder.Connect(
+          image_to_lcm_message->image_array_t_msg_output_port(),
+          image_lcm_pub->get_input_port(0));
     }
   }
 
