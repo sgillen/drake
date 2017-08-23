@@ -51,6 +51,7 @@ drake_cc_binary(
         "//drake/systems/sensors:rgbd_camera",
         "//drake/systems/sensors:image_to_lcm_image_array_t",
         "//drake/systems/primitives",
+        "//drake/multibody/rigid_body_plant:frame_visualizer",
         "@com_github_gflags_gflags//:gflags",
         "@lcmtypes_bot2_core",
     ],

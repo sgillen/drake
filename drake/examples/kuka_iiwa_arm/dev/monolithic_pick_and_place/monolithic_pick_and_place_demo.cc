@@ -35,6 +35,7 @@
 #include "drake/systems/primitives/zero_order_hold.h"
 #include "drake/systems/sensors/image_to_lcm_image_array_t.h"
 #include "drake/systems/lcm/lcm_publisher_system.h"
+#include "drake/multibody/rigid_body_plant/frame_visualizer.h"
 
 DEFINE_int32(target, 0, "ID of the target to pick.");
 DEFINE_double(orientation, 2 * M_PI, "Yaw angle of the box.");
@@ -175,11 +176,21 @@ std::unique_ptr<systems::RigidBodyPlant<double>> BuildCombinedPlant(
       drake::log()->info("Body {}: {}", i, body.get_name());
     }
   }
+  Eigen::Isometry3d X_WX;
+  X_WX.setIdentity();
+  X_WX.linear() <<
+      0, 0, 1,
+      1, 0, 0,
+      0, 1, 0;
+  X_WX.translation() << 0.215, 0.010, 0.765;
   RigidBody<double>* const wsg_body =
       tree_builder->tree().FindBody("body", "", wsg_id);
+  unused(wsg_body);
   auto xtion_fixture =
       std::make_shared<RigidBodyFrame<double>>(
-          "xtion_fixture", wsg_body, X_GX);
+          "xtion_fixture",
+          &tree_builder->mutable_tree().world(), X_WX);
+//          wsg_body, X_GX);
   tree_builder->mutable_tree().addFrame(xtion_fixture);
   tree_builder->AddModelInstanceToFrame(
       "xtion", xtion_fixture,
@@ -192,12 +203,13 @@ std::unique_ptr<systems::RigidBodyPlant<double>> BuildCombinedPlant(
       0, 1, 0,
       0, 0, 1,
       1, 0, 0;
+  X_XB.translation() << 0.0, 0.0325, 0.021;
   // Compose frame to get proper orientation for RgbdCamera.
   auto xtion_sensor_frame =
       std::make_shared<RigidBodyFrame<double>>(
           "xtion_sensor_frame",
-          wsg_body,
-          X_GX * X_XB);
+          xtion_fixture->get_mutable_rigid_body(),
+          xtion_fixture->get_transform_to_body() * X_XB);
   tree_builder->mutable_tree().addFrame(xtion_sensor_frame);
 
   return std::make_unique<systems::RigidBodyPlant<double>>(
@@ -364,10 +376,23 @@ int DoMain(void) {
     using namespace systems::lcm;
     using namespace systems::sensors;
 
-    auto rgbd_camera =
-        builder.template AddSystem<RgbdCamera>(
-            "rgbd_camera", plant->get_tree(),
-            *xtion_sensor_frame, M_PI_4, true);
+    RgbdCamera* rgbd_camera{};
+    bool use_movable = false;
+    if (use_movable) {
+      rgbd_camera =
+          builder.template AddSystem<RgbdCamera>(
+              "rgbd_camera", plant->get_tree(),
+              *xtion_sensor_frame, M_PI_4, true);
+    } else {
+      Eigen::Isometry3d X_WB =
+          xtion_sensor_frame->get_transform_to_body();
+      rgbd_camera =
+          builder.template AddSystem<RgbdCamera>(
+              "rgbd_camera", plant->get_tree(),
+              X_WB.translation(),
+              math::rotmat2rpy(X_WB.rotation()),
+              M_PI_4, true);
+    }
 
     builder.Connect(
         plant->get_output_port_plant_state(),
@@ -426,6 +451,18 @@ int DoMain(void) {
           image_to_lcm_message->image_array_t_msg_output_port(),
           image_lcm_pub->get_input_port(0));
     }
+
+    // Add frame visualizer.
+    auto&& tree = plant->get_tree();
+    std::vector<RigidBodyFrame<double>> frames;
+    for (auto&& frame : tree.frames)
+      frames.push_back(*frame);
+    auto frame_viz =
+        builder.AddSystem<FrameVisualizer>(
+            &tree, frames, &lcm);
+    builder.Connect(
+        plant->get_output_port_plant_state(),
+        frame_viz->get_input_port(0));
   }
 
   auto sys = builder.Build();
