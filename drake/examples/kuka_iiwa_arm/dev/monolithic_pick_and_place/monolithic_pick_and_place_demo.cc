@@ -31,11 +31,7 @@
 #include "drake/systems/lcm/lcm_publisher_system.h"
 #include "drake/systems/primitives/constant_vector_source.h"
 
-#include "drake/systems/sensors/rgbd_camera.h"
-#include "drake/systems/primitives/zero_order_hold.h"
-#include "drake/systems/sensors/image_to_lcm_image_array_t.h"
-#include "drake/systems/lcm/lcm_publisher_system.h"
-#include "drake/multibody/rigid_body_plant/frame_visualizer.h"
+#include "drake/examples/kuka_iiwa_arm/iiwa_camera.h"
 
 DEFINE_int32(target, 0, "ID of the target to pick.");
 DEFINE_double(orientation, 2 * M_PI, "Yaw angle of the box.");
@@ -111,7 +107,8 @@ std::unique_ptr<systems::RigidBodyPlant<double>> BuildCombinedPlant(
     const Eigen::Vector3d& box_orientation,
     ModelInstanceInfo<double>* iiwa_instance,
     ModelInstanceInfo<double>* wsg_instance,
-    ModelInstanceInfo<double>* box_instance) {
+    ModelInstanceInfo<double>* box_instance,
+    std::unique_ptr<IiwaCamera>* pcamera = nullptr) {
   auto tree_builder = std::make_unique<WorldSimTreeBuilder<double>>();
 
   // Adds models to the simulation builder. Instances of these models can be
@@ -129,10 +126,6 @@ std::unique_ptr<systems::RigidBodyPlant<double>> BuildCombinedPlant(
       "wsg",
       "drake/manipulation/models/wsg_50_description"
       "/sdf/schunk_wsg_50_ball_contact.sdf");
-
-  tree_builder->StoreModel(
-        "xtion",
-        "drake/examples/kuka_iiwa_arm/models/cameras/asus_xtion.urdf");
 
   // The main table which the arm sits on.
   tree_builder->AddFixedModelInstance("table",
@@ -161,71 +154,9 @@ std::unique_ptr<systems::RigidBodyPlant<double>> BuildCombinedPlant(
       drake::multibody::joints::kFixed);
   *wsg_instance = tree_builder->get_model_info_for_instance(wsg_id);
 
-  // Attach camera (X) to wsg's end effector (G).
-  Eigen::Isometry3d X_GX;
-  // Based on tri_exp:27a7d76:book_pulling.cc (Jiaji's code), but changed to
-  // align with present model frames.
-  X_GX.linear() <<
-      1, 0, 0,
-      0, 0, 1,
-      0, -1, 0;
-  X_GX.translation() << 0, -0.015, -0.025;
-  {
-    auto&& tree = tree_builder->tree();
-    int count = tree.get_num_bodies();
-    for (int i = 0; i < count; ++i) {
-      auto&& body = tree.get_body(i);
-      drake::log()->info("Body {}: {}", i, body.get_name());
-    }
+  if (pcamera) {
+    *pcamera->reset(new IiwaCamera(tree_builder.get(), wsg_id));
   }
-
-  RigidBody<double>* const wsg_body =
-      tree_builder->tree().FindBody("body", "", wsg_id);
-  RigidBody<double>* src_body = wsg_body;
-  Eigen::Isometry3d X_SX = X_GX;
-
-  if (!use_movable_camera) {
-    src_body = &tree_builder->mutable_tree().world();
-
-    Eigen::Isometry3d X_WX;
-    // Place it on the table top.
-    X_WX.setIdentity();
-    X_WX.linear() <<
-        0, 0, 1,
-        1, 0, 0,
-        0, 1, 0;
-    // From director, measurement panel
-//    X_WX.translation() << 0.215, 0.010, 0.765;
-    X_WX.translation() << -0.233, 0.293, 0.765;
-    X_SX = X_WX;
-  }
-
-  auto xtion_fixture =
-      std::make_shared<RigidBodyFrame<double>>(
-          "xtion_fixture",
-          src_body, X_SX);
-  tree_builder->mutable_tree().addFrame(xtion_fixture);
-  tree_builder->AddModelInstanceToFrame(
-      "xtion", xtion_fixture,
-      drake::multibody::joints::kFixed);
-
-  // Add sensor frame, `B` for RgbdCamera.
-  Eigen::Isometry3d X_XB;
-  X_XB.setIdentity();
-  X_XB.linear() <<
-      0, 1, 0,
-      0, 0, 1,
-      1, 0, 0;
-  // TODO(eric.cousineau): Once relative transforms between B, C, D can be
-  // defined, impose correct constraints on the frame offsets.
-  X_XB.translation() << 0.0, 0.0325, 0.021;
-  // Compose frame to get proper orientation for RgbdCamera.
-  auto xtion_sensor_frame =
-      std::make_shared<RigidBodyFrame<double>>(
-          "xtion_sensor_frame",
-          xtion_fixture->get_mutable_rigid_body(),
-          xtion_fixture->get_transform_to_body() * X_XB);
-  tree_builder->mutable_tree().addFrame(xtion_sensor_frame);
 
   return std::make_unique<systems::RigidBodyPlant<double>>(
       tree_builder->Build());
@@ -300,6 +231,9 @@ int DoMain(void) {
   systems::DiagramBuilder<double> builder;
   ModelInstanceInfo<double> iiwa_instance, wsg_instance, box_instance;
 
+  std::unique_ptr<IiwaCamera> camera;
+  std::unique_ptr<IiwaCamera>* pcamera = true ? &camera : nullptr;
+
   // Offset from the center of the second table to the pick/place
   // location on the table.
   const Eigen::Vector3d table_offset(0.30, 0, 0);
@@ -307,7 +241,8 @@ int DoMain(void) {
       BuildCombinedPlant(post_locations, table_position + table_offset,
                          target.model_name,
                          box_origin, Vector3<double>(0, 0, FLAGS_orientation),
-                         &iiwa_instance, &wsg_instance, &box_instance);
+                         &iiwa_instance, &wsg_instance, &box_instance,
+                         pcamera);
 
   auto plant = builder.AddSystem<IiwaAndWsgPlantWithStateEstimator<double>>(
       std::move(model_ptr), iiwa_instance, wsg_instance, box_instance);
@@ -382,101 +317,8 @@ int DoMain(void) {
   builder.Connect(state_machine->get_output_port_iiwa_plan(),
                   iiwa_trajectory_generator->get_plan_input_port());
 
-  {
-    // Add in depth camera.
-    auto xtion_sensor_frame =
-        plant->get_tree().findFrame("xtion_sensor_frame");
-
-    using namespace systems;
-    using namespace systems::lcm;
-    using namespace systems::sensors;
-
-    RgbdCamera* rgbd_camera{};
-    if (use_movable_camera) {
-      rgbd_camera =
-          builder.template AddSystem<RgbdCamera>(
-              "rgbd_camera", plant->get_tree(),
-              *xtion_sensor_frame, M_PI_4, true);
-    } else {
-      Eigen::Isometry3d X_WB =
-          xtion_sensor_frame->get_transform_to_body();
-      rgbd_camera =
-          builder.template AddSystem<RgbdCamera>(
-              "rgbd_camera", plant->get_tree(),
-              X_WB.translation(),
-              math::rotmat2rpy(X_WB.rotation()),
-              M_PI_4, true);
-    }
-
-    builder.Connect(
-        plant->get_output_port_plant_state(),
-        rgbd_camera->state_input_port());
-
-    // 30 Hz
-    const double kDt = 1. / 30;
-    const int kWidth = 640, kHeight = 480;
-
-    Value<ImageRgba8U> image_rgb(kWidth, kHeight);
-    auto zoh_rgb =
-        builder.template AddSystem<ZeroOrderHold>(kDt, image_rgb);
-    builder.Connect(rgbd_camera->color_image_output_port(),
-                    zoh_rgb->get_input_port());
-
-    Value<ImageDepth32F> image_depth(kWidth, kHeight);
-    auto zoh_depth =
-        builder.template AddSystem<ZeroOrderHold>(kDt, image_depth);
-    builder.Connect(rgbd_camera->depth_image_output_port(),
-                    zoh_depth->get_input_port());
-
-    Value<ImageLabel16I> image_label(kWidth, kHeight);
-    auto zoh_label =
-        builder.template AddSystem<ZeroOrderHold>(kDt, image_label);
-    builder.Connect(rgbd_camera->label_image_output_port(),
-                    zoh_label->get_input_port());
-
-    bool do_publish = true;
-    if (do_publish) {
-      // Image to LCM.
-      auto image_to_lcm_message =
-          builder.AddSystem<ImageToLcmImageArrayT>(
-              "color", "depth", "label");
-      image_to_lcm_message->set_name("converter");
-
-      builder.Connect(
-          zoh_rgb->get_output_port(),
-          image_to_lcm_message->color_image_input_port());
-
-      builder.Connect(
-          zoh_depth->get_output_port(),
-          image_to_lcm_message->depth_image_input_port());
-
-      builder.Connect(
-          zoh_label->get_output_port(),
-          image_to_lcm_message->label_image_input_port());
-
-      // Camera image publisher.
-      auto image_lcm_pub = builder.AddSystem(
-          LcmPublisherSystem::Make<robotlocomotion::image_array_t>(
-              "DRAKE_RGBD_CAMERA_IMAGES", &lcm));
-      image_lcm_pub->set_name("image_publisher");
-      image_lcm_pub->set_publish_period(kDt);
-
-      builder.Connect(
-          image_to_lcm_message->image_array_t_msg_output_port(),
-          image_lcm_pub->get_input_port(0));
-    }
-
-    // Add frame visualizer.
-    auto&& tree = plant->get_tree();
-    std::vector<RigidBodyFrame<double>> frames;
-    for (auto&& frame : tree.frames)
-      frames.push_back(*frame);
-    auto frame_viz =
-        builder.AddSystem<FrameVisualizer>(
-            &tree, frames, &lcm);
-    builder.Connect(
-        plant->get_output_port_plant_state(),
-        frame_viz->get_input_port(0));
+  if (camera) {
+    camera->AddToDiagram(&builder, plant->get_plant(), &lcm);
   }
 
   auto sys = builder.Build();
