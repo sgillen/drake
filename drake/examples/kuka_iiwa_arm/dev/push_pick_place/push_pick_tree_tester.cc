@@ -49,6 +49,9 @@ std::unique_ptr<RigidBodyTreed> BuildDemoTree() {
   tree_builder->StoreModel(
   "wsg",
   "drake/manipulation/models/wsg_50_description/sdf/schunk_wsg_50.sdf");
+  tree_builder->StoreModel(
+      "white_table_top",
+      "drake/examples/kuka_iiwa_arm/models/table/white_table_top.urdf");
 
   drake::log()->info("About to add tables");
   // Build a world with two fixed tables.  A box is placed one on
@@ -56,14 +59,6 @@ std::unique_ptr<RigidBodyTreed> BuildDemoTree() {
   tree_builder->AddFixedModelInstance("table",
   Eigen::Vector3d::Zero() /* xyz */,
       Eigen::Vector3d::Zero() /* rpy */);
-  tree_builder->AddFixedModelInstance("table",
-  Eigen::Vector3d(0.8, 0, 0) /* xyz */,
-  Eigen::Vector3d::Zero() /* rpy */);
-  tree_builder->AddFixedModelInstance("table",
-  Eigen::Vector3d(0, 0.85, 0) /* xyz */,
-  Eigen::Vector3d::Zero() /* rpy */);
-
-  tree_builder->AddGround();
 
   // The `z` coordinate of the top of the table in the world frame.
   // The quantity 0.736 is the `z` coordinate of the frame associated with the
@@ -72,13 +67,19 @@ std::unique_ptr<RigidBodyTreed> BuildDemoTree() {
   // 0.736 + 0.01 / 2.
   const double kTableTopZInWorld = 0.736 + 0.01 / 2;
 
+  tree_builder->AddFixedModelInstance("white_table_top",
+      Eigen::Vector3d(0.463, -0.843, kTableTopZInWorld + 0.011 ),
+      Eigen::Vector3d::Zero());
+  tree_builder->AddGround();
+
+
   // Coordinates for kRobotBase originally from iiwa_world_demo.cc.
   // The intention is to center the robot on the table.
   const Eigen::Vector3d kRobotBase(-0.243716, -0.625087, kTableTopZInWorld);
   // Start the box slightly above the table.  If we place it at
   // the table top exactly, it may start colliding the table (which is
   // not good, as it will likely shoot off into space).
-  const Eigen::Vector3d kBoxBase(1 + -0.43, -0.65, kTableTopZInWorld + 0.03);
+  const Eigen::Vector3d kBoxBase(1 + -0.63, -0.65, kTableTopZInWorld + 0.03);
 
   drake::log()->info("About to add iiwa");
   tree_builder->AddFixedModelInstance("iiwa", kRobotBase);
@@ -108,18 +109,13 @@ int DoMain() {
   for (int i = 0; i < FLAGS_num_configurations; ++i) {
 
     VectorX<double> positions = VectorX<double>::Zero(tree->get_num_positions());
-      //positions.segment<7>(0) = VectorX<double>::Random(7 /* IIWA */);
+    positions.segment<7>(0) = VectorX<double>::Random(7 /* IIWA */);
     //positions.segment<4>(10) = VectorX<double>::Random(4 /* box orientation */);
 
-    double box_z = (double) (M_PI -  std::rand() * 2 * M_PI);
+    double box_z = ((double)std::rand() / RAND_MAX) * M_PI;
     drake::log()->info("Box z {}", box_z);
-    Eigen::Quaterniond box_pose_quat = Eigen::Quaterniond::Identity();
-    box_pose_quat = Eigen::AngleAxis<double>(box_z, Eigen::Vector3d::UnitY());
+    Eigen::Quaterniond box_pose_quat{Eigen::AngleAxis<double>(box_z, Eigen::Vector3d::UnitX())};
     positions.segment<4>(10) = box_pose_quat.coeffs();
-    drake::log()->info("quat coeffs    {} ",box_pose_quat.coeffs().transpose());
-//    /drake::log()->info("quat coeffs aa {} ",);
-    //simple_tree_visualizer.visualize(Eigen::VectorXd::Random(tree->get_num_positions()));
-
     simple_tree_visualizer.visualize(positions);
 
     // Sleep for a second just so that the new configuration can be seen
