@@ -16,91 +16,126 @@
 namespace drake {
 namespace examples {
 namespace kuka_iiwa_arm {
-namespace push_and_pick {
+namespace push_pick_place {
 
 
-/// Different states for the push and pick task.
-enum PushAndPickState {
-  kOpenGripper,
-  kApproachPreVerticalPush,
-  kApproachVerticalPush,
-  kVerticalPushMove,
-//  kLiftFromVerticalPush
-//  kApproachPreReorientPush,
-//  kApproachReorientPush,
-//  kReorientPushMove,
-//  kApproachPreSidewaysPick,
-//  kApproachSidewaysPick,
-//  kCloseGripper,
-//  kLiftFromPick,
-//  kReturnToHome,
-//  kOpenGripper
-};
 
-/// A class which controls the push and pick actions for moving a
-/// single target in the environment.
-class PushAndPickStateMachine {
+/**
+ * A class that implements the Finite-State-Machine logic for the
+ * Push-And-Pick demo. This system should be used by coupling the outputs with
+ * the `IiwaMove` and `GripperAction` systems and the inputs are to be
+ * connected to the appropriate output ports of the `IiwaStatusSender`,
+ * `SchunkWsgStatusSender` and `OracularStateEstimator` systems.
+ */
+class PushAndPickStateMachineSystem : public systems::LeafSystem<double> {
  public:
-  DRAKE_DEFAULT_COPY_AND_MOVE_AND_ASSIGN(PushAndPickStateMachine)
+  /**
+   * Constructor for the PickAndPlaceStateMachineSystem
+   * @param iiwa_base, The pose of the base of the IIWA robot system.
+   * @param period_sec : The update interval of the unrestricted update of
+   * this system. This should be bigger than that of the PlanSource components.
+   */
+  PushAndPickStateMachineSystem(
+      const std::string& iiwa_model_path,
+      const std::string& end_effector_name,
+      const Isometry3<double>& iiwa_base,
+      const std::vector<Isometry3<double>>& place_locations,
+      const double period_sec = 0.01);
 
-  typedef std::function<void(
-  const robotlocomotion::robot_plan_t*)> IiwaPublishCallback;
-  typedef std::function<void(
-  const lcmt_schunk_wsg_command*)> WsgPublishCallback;
+  std::unique_ptr<systems::AbstractValues> AllocateAbstractState()
+  const override;
 
-  /// Construct a pick and place state machine.  @p place_locations
-  /// should contain a list of locations to place the target.  The
-  /// state machine will cycle through the target locations, placing
-  /// the item then picking it back up at the next target.  If @p loop
-  /// is true, the state machine will loop through the pick and place
-  /// locations, otherwise it will remain in the kDone state once
-  /// complete.
-  PickAndPlaceStateMachine(
-      const std::vector<Isometry3<double>>& place_locations, bool loop);
-  ~PickAndPlaceStateMachine();
+  // This kind of a system is not a direct feedthrough.
+  bool DoHasDirectFeedthrough(const systems::SparsityMatrix*,
+                              int, int) const final {
+    return false;
+  }
 
-  /// Update the state machine based on the state of the world in @p
-  /// env_state.  When a new robot plan is available, @p iiwa_callback
-  /// will be invoked with the new plan.  If the desired gripper state
-  /// changes, @p wsg_callback is invoked.  @p planner should contain
-  /// an appropriate planner for the robot.
-  void Update(const WorldState& env_state,
-              const IiwaPublishCallback& iiwa_callback,
-              const WsgPublishCallback& wsg_callback,
-              manipulation::planner::ConstraintRelaxingIk* planner);
+  void SetDefaultState(const systems::Context<double>& context,
+                       systems::State<double>* state) const override;
 
+  void DoCalcUnrestrictedUpdate(const systems::Context<double>& context,
+                                const std::vector<const systems::UnrestrictedUpdateEvent<double>*>&,
+                                systems::State<double>* state) const override;
 
-  PickAndPlaceState state() const { return state_; }
+  /**
+   * Getter for the input port corresponding to the abstract input with iiwa
+   * state message (LCM `robot_state_t` message).
+   * @return The corresponding `sytems::InputPortDescriptor`.
+   */
+  const systems::InputPortDescriptor<double>& get_input_port_iiwa_state()
+  const {
+    return this->get_input_port(input_port_iiwa_state_);
+  }
+
+  /**
+   * Getter for the input port corresponding to the abstract input with box
+   * state message (LCM `botcore::robot_state_t` message).
+   * @return The corresponding `sytems::InputPortDescriptor`.
+   */
+  const systems::InputPortDescriptor<double>& get_input_port_box_state() const {
+    return this->get_input_port(input_port_box_state_);
+  }
+
+  /**
+   * Getter for the input port corresponding to the abstract input with the wsg
+   * status message (LCM `lcmt_schunk_wsg_status` message).
+   * @return The corresponding `sytems::InputPortDescriptor`.
+   */
+  const systems::InputPortDescriptor<double>& get_input_port_wsg_status()
+  const {
+    return this->get_input_port(input_port_wsg_status_);
+  }
+
+  const systems::OutputPort<double>& get_output_port_iiwa_plan()
+  const {
+    return this->get_output_port(output_port_iiwa_plan_);
+  }
+
+  const systems::OutputPort<double>& get_output_port_wsg_command()
+  const {
+    return this->get_output_port(output_port_wsg_command_);
+  }
+
+  /// Return the state of the pick and place state machine.
+  pick_and_place::PickAndPlaceState state(
+      const systems::Context<double>&) const;
+
+  /// Return the state of the pick and place world.  Note that this
+  /// reference is into data contained inside the passed in context.
+  const pick_and_place::WorldState& world_state(
+      const systems::Context<double>&) const;
 
  private:
+  void CalcIiwaPlan(
+      const systems::Context<double>& context,
+      robotlocomotion::robot_plan_t* iiwa_plan) const;
+
+  void CalcWsgCommand(
+      const systems::Context<double>& context,
+      lcmt_schunk_wsg_command* wsg_command) const;
+
+  struct InternalState;
+
+  RigidBodyTree<double> iiwa_tree_{};
+  // Input ports.
+  int input_port_iiwa_state_{-1};
+  int input_port_box_state_{-1};
+  int input_port_wsg_status_{-1};
+  // Output ports.
+  int output_port_iiwa_plan_{-1};
+  int output_port_wsg_command_{-1};
+
+  std::string iiwa_model_path_;
+  std::string end_effector_name_;
+  const Isometry3<double> iiwa_base_;
+
+  const std::unique_ptr<
+      manipulation::planner::ConstraintRelaxingIk> planner_{nullptr};
+
   std::vector<Isometry3<double>> place_locations_;
-  int next_place_location_;
-  bool loop_;
-
-  WsgAction wsg_act_;
-  IiwaMove iiwa_move_;
-
-  PickAndPlaceState state_;
-
-  // Poses used for storing end-points of Iiwa trajectories at various states
-  // of the demo.
-  Isometry3<double> X_Wend_effector_0_;
-  Isometry3<double> X_Wend_effector_1_;
-
-  // Desired object end pose relative to the base of the iiwa arm.
-  Isometry3<double> X_IIWAobj_desired_;
-
-  // Desired object end pose in the world frame.
-  Isometry3<double> X_Wobj_desired_;
-
-  Vector3<double> tight_pos_tol_;
-  double tight_rot_tol_;
-
-  Vector3<double> loose_pos_tol_;
-  double loose_rot_tol_;
 };
-
-}  // namespace push_and_pick
+}  // namespace push_pick_place
 }  // namespace kuka_iiwa_arm
 }  // namespace examples
 }  // namespace drake

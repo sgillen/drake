@@ -16,21 +16,24 @@
 namespace drake {
 namespace examples {
 namespace kuka_iiwa_arm {
-namespace pick_and_place {
+namespace push_pick_place {
 
-
-/// Different states for the pick and place task.
-enum PickAndPlaceState {
+/// Different states for the push and pick task.
+enum PushAndPickState {
   kOpenGripper,
-  kApproachPickPregrasp,
-  kApproachPick,
-  kGrasp,
-  kLiftFromPick,
-  kApproachPlacePregrasp,
-  kApproachPlace,
-  kPlace,
-  kLiftFromPlace,
-  kDone,
+  kApproachPreVerticalPush,
+  kApproachVerticalPush,
+  kVerticalPushMove,
+//  kLiftFromVerticalPush
+//  kApproachPreReorientPush,
+//  kApproachReorientPush,
+//  kReorientPushMove,
+//  kApproachPreSidewaysPick,
+//  kApproachSidewaysPick,
+//  kCloseGripper,
+//  kLiftFromPick,
+//  kReturnToHome,
+//  kOpenGripper
 };
 
 /// A class which controls the pick and place actions for moving a
