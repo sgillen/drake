@@ -8,8 +8,7 @@
 
 #include "drake/common/find_resource.h"
 #include "drake/common/text_logging_gflags.h"
-#include "drake/examples/kuka_iiwa_arm/dev/monolithic_pick_and_place/state_machine_system.h"
-#include "drake/examples/kuka_iiwa_arm/dev/push_pick_place/push_and_pick_state_machine.h"
+#include "drake/examples/kuka_iiwa_arm/dev/push_pick_place/push_and_pick_state_machine_system.h"
 #include "drake/examples/kuka_iiwa_arm/iiwa_common.h"
 #include "drake/examples/kuka_iiwa_arm/iiwa_world/iiwa_wsg_diagram_factory.h"
 #include "drake/lcm/drake_lcm.h"
@@ -32,7 +31,7 @@
 #include "drake/systems/lcm/lcm_publisher_system.h"
 #include "drake/systems/primitives/constant_vector_source.h"
 
-DEFINE_double(orientation,  M_PI, "Yaw angle of the book.");
+DEFINE_double(orientation,  0.25*M_PI, "Yaw angle of the book.");
 DEFINE_double(dt, 1e-3, "Integration step size");
 DEFINE_double(realtime_rate, 0.0, "Rate at which to run the simulation, "
 "relative to realtime");
@@ -44,7 +43,7 @@ using robotlocomotion::robot_plan_t;
 namespace drake {
 namespace examples {
 namespace kuka_iiwa_arm {
-namespace push_pick_place {
+namespace push_and_pick {
 namespace {
 using manipulation::schunk_wsg::SchunkWsgController;
 using manipulation::schunk_wsg::SchunkWsgStatusSender;
@@ -70,7 +69,8 @@ const double kTableTopZInWorld = 0.736 + 0.057 / 2;
 // Coordinates for kRobotBase originally from iiwa_world_demo.cc.
 // The intention is to center the robot on the table.
 // TODO(sam.creasey) fix this
-const Eigen::Vector3d kRobotBase(0, 0, kTableTopZInWorld);
+//const Eigen::Vector3d kRobotBase(0, 0, kTableTopZInWorld);
+const Eigen::Vector3d kRobotBase(-0.243716, -0.625087, kTableTopZInWorld);
 const Eigen::Vector3d kTableBase(0.243716, 0.625087, 0.);
 
 // Start the box slightly above the table.  If we place it at
@@ -80,11 +80,12 @@ const Eigen::Vector3d kBookBase(1 + -0.63, -0.65, kTableTopZInWorld + 0.03);
 
 
 std::unique_ptr<systems::RigidBodyPlant<double>> BuildCombinedPlant(
-    const Eigen::Vector3d& book_position = ,
-    const Eigen::Vector3d& book_orientation = Vector3<double>(0, 0, 1),
     ModelInstanceInfo<double>* iiwa_instance,
     ModelInstanceInfo<double>* wsg_instance,
-    ModelInstanceInfo<double>* book_instance) {
+    ModelInstanceInfo<double>* book_instance,
+    const Eigen::Vector3d& book_position = kBookBase,
+    const Eigen::Vector3d& book_orientation = Vector3<double>(0, 0, -1)
+    ) {
   auto tree_builder = std::make_unique<WorldSimTreeBuilder<double>>();
 
   // Adds models to the simulation builder. Instances of these models can be
@@ -104,6 +105,7 @@ std::unique_ptr<systems::RigidBodyPlant<double>> BuildCombinedPlant(
       "white_table_top",
       "drake/examples/kuka_iiwa_arm/models/table/white_table_top.urdf");
 
+  drake::log()->info("AddfixedModelInstance");
 
   // The main table which the arm sits on.
   tree_builder->AddFixedModelInstance(
@@ -115,6 +117,7 @@ std::unique_ptr<systems::RigidBodyPlant<double>> BuildCombinedPlant(
   // 0.01m thus giving the surface height (`z`) in world coordinates as
   // 0.736 + 0.01 / 2.
 
+  drake::log()->info("AddfixedModelInstance white_table_top");
   tree_builder->AddFixedModelInstance("white_table_top",
                                       Eigen::Vector3d(0.463, -0.843,
                                       kTableTopZInWorld + 0.011 ),
@@ -124,14 +127,17 @@ std::unique_ptr<systems::RigidBodyPlant<double>> BuildCombinedPlant(
   // Chooses an appropriate box.
   int box_id = 0;
 
+  drake::log()->info("AddfixedModelInstance iiwa");
 
   int iiwa_id = tree_builder->AddFixedModelInstance("iiwa", kRobotBase);
   *iiwa_instance = tree_builder->get_model_info_for_instance(iiwa_id);
 
-  box_id = tree_builder->AddFloatingModelInstance("target", kBookBase,
+  drake::log()->info("AddfixedModelInstance book");
+  box_id = tree_builder->AddFloatingModelInstance("book", kBookBase,
                                                   book_orientation);
   *book_instance = tree_builder->get_model_info_for_instance(box_id);
 
+  drake::log()->info("AddfixedModelInstance wsg");
   int wsg_id = tree_builder->AddModelInstanceToFrame(
       "wsg", tree_builder->tree().findFrame("iiwa_frame_ee"),
       drake::multibody::joints::kFixed);
@@ -149,8 +155,8 @@ int DoMain(void) {
 
   std::unique_ptr<systems::RigidBodyPlant<double>> model_ptr =
       BuildCombinedPlant(
-                         kBookBase, Vector3<double>(0, 0, FLAGS_orientation),
-                         &iiwa_instance, &wsg_instance, &box_instance);
+          &iiwa_instance, &wsg_instance, &book_instance,
+          kBookBase, Vector3<double>(0, 0, FLAGS_orientation));
 
   auto plant = builder.AddSystem<IiwaAndWsgPlantWithStateEstimator<double>>(
       std::move(model_ptr), iiwa_instance, wsg_instance, book_instance);
@@ -199,20 +205,20 @@ int DoMain(void) {
   const Eigen::Vector3d robot_base(0, 0, kTableTopZInWorld);
   Isometry3<double> iiwa_base = Isometry3<double>::Identity();
   iiwa_base.translation() = robot_base;
-
-  if (FLAGS_end_position >= 0) {
-    if (FLAGS_end_position >= static_cast<int>(place_locations.size())) {
-      throw std::runtime_error("Invalid end position specified.");
-    }
-    std::vector<Isometry3<double>> new_place_locations;
-    new_place_locations.push_back(place_locations[FLAGS_end_position]);
-    place_locations.swap(new_place_locations);
-  }
+//
+//  if (FLAGS_end_position >= 0) {
+//    if (FLAGS_end_position >= static_cast<int>(place_locations.size())) {
+//      throw std::runtime_error("Invalid end position specified.");
+//    }
+//    std::vector<Isometry3<double>> new_place_locations;
+//    new_place_locations.push_back(place_locations[FLAGS_end_position]);
+//    place_locations.swap(new_place_locations);
+//  }
 
   auto state_machine =
       builder.template AddSystem<PushAndPickStateMachineSystem>(
           FindResourceOrThrow(kIiwaUrdf), kIiwaEndEffectorName,
-          iiwa_base, place_locations);
+          iiwa_base);
 
   builder.Connect(plant->get_output_port_box_robot_state_msg(),
                   state_machine->get_input_port_box_state());
@@ -248,13 +254,13 @@ int DoMain(void) {
   while (state_machine->state(
       sys->GetSubsystemContext(*state_machine,
                                simulator.get_context()))
-      != pick_and_place::kDone) {
+      != push_and_pick::kDone) {
     simulator.StepTo(simulator.get_context().get_time() + simulation_step);
-    if (FLAGS_quick) {
-      // We've run a single step, just get out now since we won't have
-      // reached our destination.
-      return 0;
-    }
+//    if (FLAGS_quick) {
+//      // We've run a single step, just get out now since we won't have
+//      // reached our destination.
+//      return 0;
+//    }
   }
 //
 //  const pick_and_place::WorldState& world_state =
@@ -306,7 +312,7 @@ int DoMain(void) {
 }
 
 }  // namespace
-}  // namespace push_pick_place
+}  // namespace push_and_pick
 }  // namespace kuka_iiwa_arm
 }  // namespace examples
 }  // namespace drake
@@ -314,5 +320,5 @@ int DoMain(void) {
 int main(int argc, char* argv[]) {
   gflags::ParseCommandLineFlags(&argc, &argv, true);
   drake::logging::HandleSpdlogGflags();
-  return drake::examples::kuka_iiwa_arm::monolithic_pick_and_place::DoMain();
+  return drake::examples::kuka_iiwa_arm::push_and_pick::DoMain();
 }

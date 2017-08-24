@@ -14,9 +14,11 @@ drake_cc_library(
     name = "push_and_pick_state_machine",
     srcs = [
         "push_and_pick_state_machine.cc",
+        "push_and_pick_state_machine_system.cc",
     ],
     hdrs = [
         "push_and_pick_state_machine.h",
+        "push_and_pick_state_machine_system.h",
     ],
     deps = [
         "//drake/examples/kuka_iiwa_arm:iiwa_common",
@@ -40,12 +42,16 @@ drake_cc_binary(
     deps = [
         "//drake/common",
         "//drake/common:find_resource",
+        "//drake/examples/kuka_iiwa_arm/pick_and_place",
         "//drake/lcm",
         "//drake/manipulation/util:simple_tree_visualizer",
         "//drake/manipulation/util:world_sim_tree_builder",
         "//drake/multibody/parsers",
         "//drake/systems/framework",
+        "//drake/util:lcm_util",
         "@com_github_gflags_gflags//:gflags",
+        "@lcmtypes_bot2_core",
+        "@lcmtypes_robotlocomotion",
     ],
 )
 
