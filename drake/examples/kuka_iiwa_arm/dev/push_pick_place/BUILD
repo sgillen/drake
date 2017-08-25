@@ -11,6 +11,18 @@ load("//tools:lint.bzl", "add_lint_tests")
 #
 
 drake_cc_library(
+    name = "push_and_pick_utils",
+    srcs = [],
+    hdrs = ["push_and_pick_utils.h"],
+    deps = [
+        "//drake/common",
+        "//drake/common/trajectories:piecewise_polynomial",
+        "//drake/common/trajectories:piecewise_quaternion",
+        "//drake/manipulation/planner:constraint_relaxing_ik",
+    ],
+)
+
+drake_cc_library(
     name = "push_and_pick_state_machine",
     srcs = [
         "push_and_pick_state_machine.cc",
@@ -21,6 +33,7 @@ drake_cc_library(
         "push_and_pick_state_machine_system.h",
     ],
     deps = [
+        ":push_and_pick_utils",
         "//drake/examples/kuka_iiwa_arm:iiwa_common",
         "//drake/examples/kuka_iiwa_arm/pick_and_place",
         "//drake/multibody:rigid_body_tree",

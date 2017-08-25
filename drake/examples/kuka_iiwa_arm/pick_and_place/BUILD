@@ -13,6 +13,18 @@ package(
 )
 
 drake_cc_library(
+    name = "pick_and_place_utils",
+    srcs = [],
+    hdrs = ["pick_and_place_utils.h"],
+    deps = [
+        "//drake/common",
+        "//drake/common/trajectories:piecewise_polynomial",
+        "//drake/common/trajectories:piecewise_quaternion",
+        "//drake/manipulation/planner:constraint_relaxing_ik",
+    ],
+)
+
+drake_cc_library(
     name = "pick_and_place",
     srcs = [
         "action.cc",
@@ -25,6 +37,7 @@ drake_cc_library(
         "world_state.h",
     ],
     deps = [
+        ":pick_and_place_utils",
         "//drake/common",
         "//drake/common/trajectories:piecewise_polynomial",
         "//drake/common/trajectories:piecewise_quaternion",

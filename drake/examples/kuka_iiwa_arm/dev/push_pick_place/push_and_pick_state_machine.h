@@ -23,11 +23,14 @@ using pick_and_place::IiwaMove;
 using pick_and_place::WsgAction;
 
 /// Different states for the push and pick task.
-enum PushAndPickState {
+enum VerticalPushAndPickState {
   kOpenGripper,
   kApproachPreVerticalPush,
   kApproachVerticalPush,
   kVerticalPushMove,
+//  kApproachPreSidewaysPush,
+//  kApproachSidewaysPush,
+//  kSidewaysPushMove,
 //
 //  kLiftFromVerticalPush
 //  kApproachPreReorientPush,
@@ -40,6 +43,27 @@ enum PushAndPickState {
 //  kReturnToHome,
 //  kOpenGripper
   kDone
+};
+
+
+/// Different states for the push and pick task.
+enum SidewaysPushAndPickState {
+  kOpenGripper,
+  kApproachPreSidewaysPush,
+  kApproachSidewaysPush,
+  kSidewaysPushMove,
+
+//  kLiftFromVerticalPush
+//  kApproachPreReorientPush,
+//  kApproachReorientPush,
+//  kReorientPushMove,
+//  kApproachPreSidewaysPick,
+//  kApproachSidewaysPick,
+//  kCloseGripper,
+//  kLiftFromPick,
+//  kReturnToHome,
+//  kOpenGripper
+      kDone
 };
 
 /// A class which controls the pick and place actions for moving a

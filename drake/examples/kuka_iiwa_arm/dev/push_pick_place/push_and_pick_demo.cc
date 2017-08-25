@@ -33,7 +33,7 @@
 
 DEFINE_double(orientation,  0.25*M_PI, "Yaw angle of the book.");
 DEFINE_double(dt, 1e-3, "Integration step size");
-DEFINE_double(realtime_rate, 0.0, "Rate at which to run the simulation, "
+DEFINE_double(realtime_rate, 0.5, "Rate at which to run the simulation, "
 "relative to realtime");
 //DEFINE_bool(quick, false, "Run only a brief simulation and return success "
 //"without executing the entire task");
@@ -76,16 +76,15 @@ const Eigen::Vector3d kTableBase(0.243716, 0.625087, 0.);
 // Start the box slightly above the table.  If we place it at
 // the table top exactly, it may start colliding the table (which is
 // not good, as it will likely shoot off into space).
-const Eigen::Vector3d kBookBase(1 + -0.63, -0.65, kTableTopZInWorld + 0.03);
+const Eigen::Vector3d kBookBase(1 + -0.63,-0.65 , kTableTopZInWorld + 0.03);
 
 
 std::unique_ptr<systems::RigidBodyPlant<double>> BuildCombinedPlant(
     ModelInstanceInfo<double>* iiwa_instance,
     ModelInstanceInfo<double>* wsg_instance,
     ModelInstanceInfo<double>* book_instance,
-    const Eigen::Vector3d& book_position = kBookBase,
-    const Eigen::Vector3d& book_orientation = Vector3<double>(0, 0, -1)
-    ) {
+    const Eigen::Vector3d& book_position,
+    const Eigen::Vector3d& book_orientation) {
   auto tree_builder = std::make_unique<WorldSimTreeBuilder<double>>();
 
   // Adds models to the simulation builder. Instances of these models can be
@@ -97,6 +96,9 @@ std::unique_ptr<systems::RigidBodyPlant<double>> BuildCombinedPlant(
   tree_builder->StoreModel("book",
                            "drake/examples/kuka_iiwa_arm/models/objects/"
                                "book.urdf");
+//  tree_builder->StoreModel("book",
+//                           "drake/examples/kuka_iiwa_arm/models/objects/"
+//                               "black_box.urdf");
   tree_builder->StoreModel(
       "wsg",
       "drake/manipulation/models/wsg_50_description"
@@ -120,7 +122,7 @@ std::unique_ptr<systems::RigidBodyPlant<double>> BuildCombinedPlant(
   drake::log()->info("AddfixedModelInstance white_table_top");
   tree_builder->AddFixedModelInstance("white_table_top",
                                       Eigen::Vector3d(0.463, -0.843,
-                                      kTableTopZInWorld + 0.011 ),
+                                      kTableTopZInWorld - 0.011 ),
                                       Eigen::Vector3d::Zero());
   tree_builder->AddGround();
 
@@ -133,7 +135,7 @@ std::unique_ptr<systems::RigidBodyPlant<double>> BuildCombinedPlant(
   *iiwa_instance = tree_builder->get_model_info_for_instance(iiwa_id);
 
   drake::log()->info("AddfixedModelInstance book");
-  box_id = tree_builder->AddFloatingModelInstance("book", kBookBase,
+  box_id = tree_builder->AddFloatingModelInstance("book", book_position,
                                                   book_orientation);
   *book_instance = tree_builder->get_model_info_for_instance(box_id);
 
@@ -202,18 +204,9 @@ int DoMain(void) {
   builder.Connect(plant->get_output_port_wsg_state(),
                   wsg_status_sender->get_input_port(0));
 
-  const Eigen::Vector3d robot_base(0, 0, kTableTopZInWorld);
+  const Eigen::Vector3d robot_base = kRobotBase;//(0, 0, kTableTopZInWorld);
   Isometry3<double> iiwa_base = Isometry3<double>::Identity();
   iiwa_base.translation() = robot_base;
-//
-//  if (FLAGS_end_position >= 0) {
-//    if (FLAGS_end_position >= static_cast<int>(place_locations.size())) {
-//      throw std::runtime_error("Invalid end position specified.");
-//    }
-//    std::vector<Isometry3<double>> new_place_locations;
-//    new_place_locations.push_back(place_locations[FLAGS_end_position]);
-//    place_locations.swap(new_place_locations);
-//  }
 
   auto state_machine =
       builder.template AddSystem<PushAndPickStateMachineSystem>(
@@ -247,6 +240,8 @@ int DoMain(void) {
       Eigen::VectorXd::Zero(7),
       plan_source_context.get_mutable_state());
 
+  drake::log()->info("Intended book position {}", kBookBase.transpose());
+
   // Step the simulator in some small increment.  Between steps, check
   // to see if the state machine thinks we're done, and if so that the
   // object is near the target.
@@ -256,58 +251,7 @@ int DoMain(void) {
                                simulator.get_context()))
       != push_and_pick::kDone) {
     simulator.StepTo(simulator.get_context().get_time() + simulation_step);
-//    if (FLAGS_quick) {
-//      // We've run a single step, just get out now since we won't have
-//      // reached our destination.
-//      return 0;
-//    }
   }
-//
-//  const pick_and_place::WorldState& world_state =
-//      state_machine->world_state(
-//          sys->GetSubsystemContext(*state_machine,
-//                                   simulator.get_context()));
-//  const Isometry3<double>& object_pose = world_state.get_object_pose();
-//  const Vector6<double>& object_velocity = world_state.get_object_velocity();
-//  Isometry3<double> goal = place_locations.back();
-//  goal.translation()(2) += kTableTopZInWorld;
-//  Eigen::Vector3d object_rpy = math::rotmat2rpy(object_pose.rotation());
-//  Eigen::Vector3d goal_rpy = math::rotmat2rpy(goal.rotation());
-//
-//  drake::log()->info("Pose: {} {}",
-//                     object_pose.translation().transpose(),
-//                     object_rpy.transpose());
-//  drake::log()->info("Velocity: {}", object_velocity.transpose());
-//  drake::log()->info("Goal: {} {}",
-//                     goal.translation().transpose(),
-//                     goal_rpy.transpose());
-//
-//  const double position_tolerance = 0.02;
-//  Eigen::Vector3d position_error =
-//      object_pose.translation() - goal.translation();
-//  drake::log()->info("Position error: {}", position_error.transpose());
-//  DRAKE_DEMAND(std::abs(position_error(0)) < position_tolerance);
-//  DRAKE_DEMAND(std::abs(position_error(1)) < position_tolerance);
-//  DRAKE_DEMAND(std::abs(position_error(2)) < position_tolerance);
-//
-//  const double angle_tolerance = 0.0873;  // 5 degrees
-//  Eigen::Vector3d rpy_error = object_rpy - goal_rpy;
-//  drake::log()->info("RPY error: {}", rpy_error.transpose());
-//  DRAKE_DEMAND(std::abs(rpy_error(0)) < angle_tolerance);
-//  DRAKE_DEMAND(std::abs(rpy_error(1)) < angle_tolerance);
-//  DRAKE_DEMAND(std::abs(rpy_error(2)) < angle_tolerance);
-//
-//
-//  const double linear_velocity_tolerance = 0.1;
-//  DRAKE_DEMAND(std::abs(object_velocity(0)) < linear_velocity_tolerance);
-//  DRAKE_DEMAND(std::abs(object_velocity(1)) < linear_velocity_tolerance);
-//  DRAKE_DEMAND(std::abs(object_velocity(2)) < linear_velocity_tolerance);
-//
-//  const double angular_velocity_tolerance = 0.1;
-//  DRAKE_DEMAND(std::abs(object_velocity(3)) < angular_velocity_tolerance);
-//  DRAKE_DEMAND(std::abs(object_velocity(4)) < angular_velocity_tolerance);
-//  DRAKE_DEMAND(std::abs(object_velocity(5)) < angular_velocity_tolerance);
-
   return 0;
 }
 
