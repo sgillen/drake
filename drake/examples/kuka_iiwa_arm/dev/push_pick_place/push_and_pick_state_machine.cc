@@ -189,7 +189,7 @@ void PushAndPickStateMachine::Update(
         X_Wend_effector_1_ = ComputePushPose(env_state.get_object_pose());
        // drake::log()->info("translation target re offset = {}", X_Wend_effector_1_.translation().transpose());
         X_Wend_effector_1_.translation()[2] += kPreGraspHeightOffset;
-
+        X_Wend_effector_1_.translation()[1] -= 0.0;
         //drake::log()->info("translation target = {}", X_Wend_effector_1_.translation().transpose());
 
         // 2 seconds, no via points.
