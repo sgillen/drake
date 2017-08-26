@@ -44,6 +44,7 @@ void WorldState::HandleIiwaStatus(const bot_core::robot_state_t& iiwa_msg) {
     parsers::urdf::AddModelInstanceFromUrdfFile(
         iiwa_model_path_, multibody::joints::kFixed, base_frame,
         mutable_iiwa.get());
+
     iiwa_ = mutable_iiwa;
     end_effector_ = iiwa_->FindBody(end_effector_name_);
   }

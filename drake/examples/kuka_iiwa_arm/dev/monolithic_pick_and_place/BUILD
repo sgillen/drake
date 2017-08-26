@@ -141,4 +141,26 @@ pick_and_place_test(
     ],
 )
 
+drake_cc_binary(
+    name = "push_pick_tree_tester",
+    srcs = ["push_pick_tree_tester.cc"],
+    add_test_rule = 1,
+    data = [
+        "//drake/examples/kuka_iiwa_arm:models",
+        "//drake/manipulation/models/iiwa_description:models",
+        "//drake/manipulation/models/wsg_50_description:models",
+    ],
+    test_rule_args = ["--num_configurations=1"],
+    deps = [
+        "//drake/common",
+        "//drake/common:find_resource",
+        "//drake/lcm",
+        "//drake/manipulation/util:simple_tree_visualizer",
+        "//drake/manipulation/util:world_sim_tree_builder",
+        "//drake/multibody/parsers",
+        "//drake/systems/framework",
+        "@com_github_gflags_gflags//:gflags",
+    ],
+)
+
 add_lint_tests()
