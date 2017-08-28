@@ -30,13 +30,11 @@
 #include "drake/systems/framework/diagram_builder.h"
 #include "drake/systems/lcm/lcm_publisher_system.h"
 #include "drake/systems/primitives/constant_vector_source.h"
-
-DEFINE_double(orientation,  0.25*M_PI, "Yaw angle of the book.");
-DEFINE_double(dt, 1e-3, "Integration step size");
+// -0.25* MP_PI
+DEFINE_double(orientation,  -0.25*M_PI, "Yaw angle of the book.");
+DEFINE_double(dt, 7.5e-4, "Integration step size");
 DEFINE_double(realtime_rate, 0.5, "Rate at which to run the simulation, "
 "relative to realtime");
-//DEFINE_bool(quick, false, "Run only a brief simulation and return success "
-//"without executing the entire task");
 
 using robotlocomotion::robot_plan_t;
 
@@ -77,6 +75,7 @@ const Eigen::Vector3d kTableBase(0.243716, 0.625087, 0.);
 // the table top exactly, it may start colliding the table (which is
 // not good, as it will likely shoot off into space).
 const Eigen::Vector3d kBookBase(1 + -0.63,-0.65 , kTableTopZInWorld + 0.03);
+//const Eigen::Vector3d kBookBase(0.228,-0.27 , kTableTopZInWorld + 0.03);
 
 
 std::unique_ptr<systems::RigidBodyPlant<double>> BuildCombinedPlant(
@@ -160,7 +159,8 @@ int DoMain(void) {
           &iiwa_instance, &wsg_instance, &book_instance,
           kBookBase, Vector3<double>(0, 0, FLAGS_orientation));
 
-  auto plant = builder.AddSystem<IiwaAndWsgPlantWithStateEstimator<double>>(
+  auto plant =
+      builder.AddSystem<IiwaAndWsgPlantWithStateEstimator<double>>(
       std::move(model_ptr), iiwa_instance, wsg_instance, book_instance);
   plant->set_name("plant");
 //

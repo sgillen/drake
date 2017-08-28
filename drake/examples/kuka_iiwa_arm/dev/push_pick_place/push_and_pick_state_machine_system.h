@@ -13,6 +13,7 @@
 #include "drake/examples/kuka_iiwa_arm/pick_and_place/world_state.h"
 #include "drake/lcmt_schunk_wsg_command.hpp"
 #include "drake/manipulation/planner/constraint_relaxing_ik.h"
+#include "drake/systems/framework/system_symbolic_inspector.h"
 
 namespace drake {
 namespace examples {
@@ -41,7 +42,7 @@ class PushAndPickStateMachineSystem : public systems::LeafSystem<double> {
   const override;
 
   // This kind of a system is not a direct feedthrough.
-  bool DoHasDirectFeedthrough(const systems::SparsityMatrix*,
+  bool DoHasDirectFeedthrough(const systems::SystemSymbolicInspector*,
                               int, int) const final {
     return false;
   }

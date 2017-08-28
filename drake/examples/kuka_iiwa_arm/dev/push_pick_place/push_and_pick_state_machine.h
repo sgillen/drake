@@ -21,46 +21,48 @@ namespace push_and_pick {
 using pick_and_place::WorldState;
 using pick_and_place::IiwaMove;
 using pick_and_place::WsgAction;
-
-/// Different states for the push and pick task.
-enum VerticalPushAndPickState {
-  kOpenGripper,
-  kApproachPreVerticalPush,
-  kApproachVerticalPush,
-  kVerticalPushMove,
-//  kApproachPreSidewaysPush,
-//  kApproachSidewaysPush,
-//  kSidewaysPushMove,
 //
-//  kLiftFromVerticalPush
-//  kApproachPreReorientPush,
-//  kApproachReorientPush,
-//  kReorientPushMove,
-//  kApproachPreSidewaysPick,
-//  kApproachSidewaysPick,
-//  kCloseGripper,
-//  kLiftFromPick,
-//  kReturnToHome,
-//  kOpenGripper
-  kDone
-};
+///// Different states for the push and pick task.
+//enum VerticalPushAndPickState {
+//  kOpenGripper,
+//  kApproachPreVerticalPush,
+//  kApproachVerticalPush,
+//  kVerticalPushMove,
+////  kApproachPreSidewaysPush,
+////  kApproachSidewaysPush,
+////  kSidewaysPushMove,
+////  kLiftFromVerticalPush
+////  kApproachPreReorientPush,
+////  kApproachReorientPush,
+////  kReorientPushMove,
+////  kApproachPreSidewaysPick,
+////  kApproachSidewaysPick,
+////  kCloseGripper,
+////  kLiftFromPick,
+////  kReturnToHome,
+////  kOpenGripper
+//  kDone
+//};
 
 
 /// Different states for the push and pick task.
-enum SidewaysPushAndPickState {
+enum PushAndPickState {
   kOpenGripper,
-  kApproachPreSidewaysPush,
-  kApproachSidewaysPush,
-  kSidewaysPushMove,
-
-//  kLiftFromVerticalPush
-//  kApproachPreReorientPush,
-//  kApproachReorientPush,
-//  kReorientPushMove,
-//  kApproachPreSidewaysPick,
-//  kApproachSidewaysPick,
-//  kCloseGripper,
-//  kLiftFromPick,
+  kApproachPrePushRotate,
+  kApproachPushRotate,
+  kPushRotate,
+  kApproachPreSidewaysXPush,
+  kApproachSidewaysXPush,
+  kSidewaysXPushRotate,
+  kSidewaysYPushRotate,
+  kSidewaysXPushMove,
+  kApproachPreSidewaysYPush,
+  kApproachSidewaysYPush,
+  kSidewaysYPushMove,
+  kApproachPreSidewaysPick,
+  kApproachSidewaysPick,
+  kCloseGripper,
+  kLiftFromPick,
 //  kReturnToHome,
 //  kOpenGripper
       kDone
