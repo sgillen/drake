@@ -34,48 +34,56 @@
       </geometry>
     </collision>
     <collision>
+      <!-- 1 -->
       <origin xyz="-0.1145 -0.0895 -0.0045" rpy="0 0 0"/>
       <geometry>
         <sphere radius="1e-7"/>
       </geometry>
     </collision>
     <collision>
+      <!-- 2 -->
       <origin xyz="-0.1145 -0.0895 0.0045" rpy="0 0 0"/>
       <geometry>
         <sphere radius="1e-7"/>
       </geometry>
     </collision>
     <collision>
+      <!-- 3 -->
       <origin xyz="-0.1145 0.0895 -0.0045" rpy="0 0 0"/>
       <geometry>
         <sphere radius="1e-7"/>
       </geometry>
     </collision>
     <collision>
+      <!-- 4 -->
       <origin xyz="-0.1145 0.0895 0.0045" rpy="0 0 0"/>
       <geometry>
         <sphere radius="1e-7"/>
       </geometry>
     </collision>
     <collision>
+      <!-- 5 -->
       <origin xyz="0.1145 -0.0895 -0.0045" rpy="0 0 0"/>
       <geometry>
         <sphere radius="1e-7"/>
       </geometry>
     </collision>
     <collision>
+      <!-- 6 -->
       <origin xyz="0.1145 -0.0895 0.0045" rpy="0 0 0"/>
       <geometry>
         <sphere radius="1e-7"/>
       </geometry>
     </collision>
     <collision>
+      <!-- 7 -->
       <origin xyz="0.1145 0.0895 -0.0045" rpy="0 0 0"/>
       <geometry>
         <sphere radius="1e-7"/>
       </geometry>
     </collision>
     <collision>
+      <!-- 8 -->
       <origin xyz="0.1145 0.0895 0.0045" rpy="0 0 0"/>
       <geometry>
         <sphere radius="1e-7"/>
@@ -83,58 +91,74 @@
     </collision>
     <!-- middle balls -->
     <collision>
-          <origin xyz="0 0 0" rpy="0 0 0"/>
-          <geometry>
-            <sphere radius="1e-7"/>
-          </geometry>
-    </collision>
-    <collision>
+      <!-- 9 -->
       <origin xyz="-0.1145 0 -0.0045" rpy="0 0 0"/>
       <geometry>
         <sphere radius="1e-7"/>
       </geometry>
     </collision>
     <collision>
+      <!-- 10 -->
       <origin xyz="-0.1145 0 0.0045" rpy="0 0 0"/>
       <geometry>
         <sphere radius="1e-7"/>
       </geometry>
     </collision>
     <collision>
-        <origin xyz="0.1145 0 -0.0045" rpy="0 0 0"/>
-        <geometry>
-            <sphere radius="1e-7"/>
-        </geometry>
-    </collision>
-        <collision>
-          <origin xyz="0.1145 0 0.0045" rpy="0 0 0"/>
-          <geometry>
-            <sphere radius="1e-7"/>
-        </geometry>
+      <!-- 11 -->
+      <origin xyz="0 -0.0895 -0.0045" rpy="0 0 0"/>
+      <geometry>
+        <sphere radius="1e-7"/>
+      </geometry>
     </collision>
     <collision>
-        <origin xyz="0 -0.0895 -0.0045" rpy="0 0 0"/>
-        <geometry>
-            <sphere radius="1e-7"/>
-        </geometry>
-    </collision>
-    <collision>
+        <!-- 12 -->
         <origin xyz="0 -0.0895 0.0045" rpy="0 0 0"/>
             <geometry>
                 <sphere radius="1e-7"/>
             </geometry>
     </collision>
     <collision>
+        <!-- 13 -->
         <origin xyz="0 0.0895 -0.0045" rpy="0 0 0"/>
             <geometry>
                 <sphere radius="1e-7"/>
             </geometry>
     </collision>
     <collision>
+        <!-- 14 -->
         <origin xyz="0 0.0895 0.0045" rpy="0 0 0"/>
             <geometry>
                 <sphere radius="1e-7"/>
                 </geometry>
     </collision>
+    <collision>
+        <!-- 15 -->
+        <origin xyz="0.1145 0 -0.0045" rpy="0 0 0"/>
+        <geometry>
+            <sphere radius="1e-7"/>
+        </geometry>
+        </collision>
+        <collision>
+          <!-- 16 -->
+          <origin xyz="0.1145 0 0.0045" rpy="0 0 0"/>
+        <geometry>
+            <sphere radius="1e-7"/>
+        </geometry>
+    </collision>
+    <collision>
+            <!-- 17 -->
+            <origin xyz="0.0 0.0 -0.0045" rpy="0 0 0"/>
+            <geometry>
+                <sphere radius="1e-7"/>
+            </geometry>
+            </collision>
+            <collision>
+            <!-- 18 -->
+              <origin xyz="0.0 0.0 0.0045" rpy="0 0 0"/>
+            <geometry>
+                <sphere radius="1e-7"/>
+            </geometry>
+        </collision>
    </link>
 </robot>

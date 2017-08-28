@@ -21,13 +21,13 @@ using manipulation::planner::ConstraintRelaxingIk;
 
 // Position the gripper 10cm above the object before grasp.
 const double kPrePushHeightOffset = 0.18;
-const double kPenetrationDepth = 0.10;
+const double kPenetrationDepth = 0.08;
 using pick_and_place::PlanStraightLineMotion;
 using pick_and_place::ComputeGraspPose;
 //const Vector3<double> kDesiredGraspPosition(0.228, -0.243, 0.7545);
 const Vector3<double> kDesiredSidewaysGraspPosition(0.228, -0.27, 0.77045);
 const Vector3<double> kDesiredGraspPosition(0.228, -0.243, 0.77045);
-const Vector3<double> kDesiredGraspGripperPosition(0.228, -0.356, 0.77045);
+const Vector3<double> kDesiredGraspGripperPosition(0.228 + 0.23/2, -0.356, 0.77045);
 const Vector3<double> kLiftFromPickPosition(0.0, -0.625087, 1.7645);
 const Matrix3<double> kDesiredGraspGripperOrientation(
     (Eigen::MatrixXd(3,3) <<
@@ -197,15 +197,16 @@ void PushAndPickStateMachine::Update(
     case kApproachPreSidewaysXPush : {
 // Approaches kPreGraspHeightOffset above the center of the object.
       if (!iiwa_move_.ActionStarted()) {
-        drake::log()->info("Starting ApproachPushRotate");
+        drake::log()->info("Starting kApproachPreSidewaysXPush");
         // Computes the desired end effector pose in the world frame to be
         // kPreGraspHeightOffset above the object.
         X_Wend_effector_0_ = env_state.get_iiwa_end_effector_pose();
-        X_Wend_effector_1_ = ComputeEdgeXPushPose(env_state.get_object_pose(), kPenetrationDepth + 0.1);
+        X_Wend_effector_1_ = ComputeEdgeXPushPose(
+            env_state.get_object_pose(), kPrePushHeightOffset);
         // set rotation to ideal rotation right here.....
         // 2 seconds, no via points.
         bool res = PlanStraightLineMotion(
-            env_state.get_iiwa_q(), 0, 0.5,
+            env_state.get_iiwa_q(), 0, 1.0,
             X_Wend_effector_0_, X_Wend_effector_1_,
             loose_pos_tol_, loose_rot_tol_, planner, &ik_res, &times);
         DRAKE_DEMAND(res);
@@ -214,7 +215,7 @@ void PushAndPickStateMachine::Update(
         iiwa_move_.MoveJoints(env_state, iiwa, times, ik_res.q_sol, &plan);
         iiwa_callback(&plan);
 
-        drake::log()->info("kApproachPreSidewaysPush at {}",
+        drake::log()->info("kApproachPreSidewaysXPush at {}",
                            env_state.get_iiwa_time());
       }
 
@@ -231,7 +232,8 @@ void PushAndPickStateMachine::Update(
         // Computes the desired end effector pose in the world frame to be
         // kPreGraspHeightOffset above the object.
         X_Wend_effector_0_ = env_state.get_iiwa_end_effector_pose();
-        X_Wend_effector_1_ = ComputeEdgeXPushPose(env_state.get_object_pose(), kPenetrationDepth );
+        X_Wend_effector_1_ = ComputeEdgeXPushPose(
+            env_state.get_object_pose(), kPenetrationDepth);
 
         drake::log()->info("kApproachSidewaysXPush Original \n {}\n Target \n{}\n Object \n {}",
                            X_Wend_effector_0_.translation().transpose(),
@@ -256,7 +258,8 @@ void PushAndPickStateMachine::Update(
       }
 
       if (iiwa_move_.ActionFinished(env_state)) {
-        if(IsPositionXYClose(env_state.get_object_pose().translation(), kDesiredSidewaysGraspPosition, 0.01)) {
+        if(IsPositionXYClose(env_state.get_object_pose().translation(),
+                             kDesiredSidewaysGraspPosition, 0.01)) {
           state_ = kApproachPreSidewaysPick;
         } else {
           state_=kSidewaysXPushMove;
@@ -267,16 +270,18 @@ void PushAndPickStateMachine::Update(
     case kSidewaysXPushMove : {
       // Approaches kPreGraspHeightOffset above the center of the object.
       if (!iiwa_move_.ActionStarted()) {
-        drake::log()->info("Starting ApproachPushRotate");
+        drake::log()->info("Starting kSidewaysXPushMove");
         // Computes the desired end effector pose in the world frame to be
         // kPreGraspHeightOffset above the object.
         X_Wend_effector_0_ = env_state.get_iiwa_end_effector_pose();
-        X_Wend_effector_1_.translation() = kDesiredGraspPosition;
-        X_Wend_effector_1_.translation()[1] -= -0.1;
+        X_Wend_effector_1_.translation() = kDesiredGraspGripperPosition;
+        X_Wend_effector_1_.translation()[2] = X_Wend_effector_0_.translation()[2];
+        X_Wend_effector_1_.translation()[0] = X_Wend_effector_0_.translation()[0] - 0.02;
+        X_Wend_effector_1_.translation()[1] += 0.05;
+        X_Wend_effector_1_.translation()[2] -= 0.05;
+        //X_Wend_effector_1_.translation()[1] -= -0.1;
         // set rotation to ideal rotation right here.....
         // 2 seconds, no via points.
-
-
 
         drake::log()->info("SidewaysXPushMove Original \n {}\n Target \n{}\n Object \n {}",
                            X_Wend_effector_0_.translation().transpose(),
@@ -286,7 +291,7 @@ void PushAndPickStateMachine::Update(
 
 
         bool res = PlanStraightLineMotion(
-            env_state.get_iiwa_q(), 2, 4,
+            env_state.get_iiwa_q(), 3, 2,
             X_Wend_effector_0_, X_Wend_effector_1_,
             loose_pos_tol_, loose_rot_tol_, planner, &ik_res, &times);
         DRAKE_DEMAND(res);
@@ -300,22 +305,63 @@ void PushAndPickStateMachine::Update(
       }
 
       if (iiwa_move_.ActionFinished(env_state)) {
-        if(IsPositionXYClose(env_state.get_object_pose().translation(), kDesiredGraspPosition, 0.01)) {
-          state_ = kApproachPreSidewaysPick;
-        } else {
-          state_=kApproachPreSidewaysXPush;
-        }
+        state_ = kRiseFromSidewaysXPushMove;
         iiwa_move_.Reset();
       }
       break;
     }
+      case kRiseFromSidewaysXPushMove : {
+        // Approaches kPreGraspHeightOffset above the center of the object.
+        if (!iiwa_move_.ActionStarted()) {
+          drake::log()->info("Starting kRiseFromSidewaysYPushMove");
+          // Computes the desired end effector pose in the world frame to be
+          // kPreGraspHeightOffset above the object.
+          X_Wend_effector_0_ = env_state.get_iiwa_end_effector_pose();
+          X_Wend_effector_1_ = X_Wend_effector_0_;
+          X_Wend_effector_1_.translation()[2] += kPrePushHeightOffset;
+          // X_Wend_effector_1_.linear() = kDesiredGraspGripperOrientation;
+
+
+          drake::log()->info("kRiseFromSidewaysYPushMove Original \n {}\n Target \n{}\n Object \n {}",
+                             X_Wend_effector_0_.translation().transpose(),
+                             X_Wend_effector_1_.translation().transpose(),
+                             env_state.get_object_pose().translation().transpose());
+
+
+          // set rotation to ideal rotation right here.....
+          // 2 seconds, no via points.
+          bool res = PlanStraightLineMotion(
+              env_state.get_iiwa_q(), 0, 0.5,
+              X_Wend_effector_0_, X_Wend_effector_1_,
+              loose_pos_tol_, loose_rot_tol_, planner, &ik_res, &times);
+          DRAKE_DEMAND(res);
+
+          robotlocomotion::robot_plan_t plan{};
+          iiwa_move_.MoveJoints(env_state, iiwa, times, ik_res.q_sol, &plan);
+          iiwa_callback(&plan);
+
+          drake::log()->info("kRiseFromSidewaysYPushMove at {}",
+                             env_state.get_iiwa_time());
+        }
+
+        if (iiwa_move_.ActionFinished(env_state)) {
+        if(IsPositionXYClose(env_state.get_object_pose().translation(), kDesiredGraspPosition, 0.01)) {
+          state_ = kApproachPreSidewaysPick;
+        } else {
+          state_=kApproachPreSidewaysYPush;
+        }
+          iiwa_move_.Reset();
+        }
+        break;
+      }
     case kApproachPreSidewaysYPush : {
       if (!iiwa_move_.ActionStarted()) {
         drake::log()->info("Starting kApproachReSidewaysYPush");
         // Computes the desired end effector pose in the world frame to be
         // kPreGraspHeightOffset above the object.
         X_Wend_effector_0_ = env_state.get_iiwa_end_effector_pose();
-        X_Wend_effector_1_ = ComputeEdgeYPushPose(env_state.get_object_pose(), kPrePushHeightOffset );
+        X_Wend_effector_1_ = ComputeEdgeYPushPose(
+            env_state.get_object_pose(), kPrePushHeightOffset );
         // set rotation to ideal rotation right here.....
         // 2 seconds, no via points.
         bool res = PlanStraightLineMotion(
@@ -344,7 +390,8 @@ void PushAndPickStateMachine::Update(
         // Computes the desired end effector pose in the world frame to be
         // kPreGraspHeightOffset above the object.
         X_Wend_effector_0_ = env_state.get_iiwa_end_effector_pose();
-        X_Wend_effector_1_ = ComputeEdgeYPushPose(env_state.get_object_pose(), kPenetrationDepth );
+        X_Wend_effector_1_ = ComputeEdgeYPushPose(
+            env_state.get_object_pose(), kPenetrationDepth );
 
         drake::log()->info("kApproachSidewaysYPush Original \n {}\n Target \n{}\n Object \n {}",
                            X_Wend_effector_0_.translation().transpose(),
@@ -382,6 +429,10 @@ void PushAndPickStateMachine::Update(
         X_Wend_effector_0_ = env_state.get_iiwa_end_effector_pose();
         X_Wend_effector_1_.translation() = kDesiredGraspGripperPosition;
         X_Wend_effector_1_.translation()[2] = X_Wend_effector_0_.translation()[2];
+        X_Wend_effector_1_.translation()[1] =
+           0.5*( X_Wend_effector_0_.translation()[1] +
+               X_Wend_effector_1_.translation()[1]);
+        X_Wend_effector_1_.translation()[0] -= 0.01;
         X_Wend_effector_1_.linear() = kDesiredGraspGripperOrientation;
 
 
@@ -394,7 +445,7 @@ void PushAndPickStateMachine::Update(
         // set rotation to ideal rotation right here.....
         // 2 seconds, no via points.
         bool res = PlanStraightLineMotion(
-            env_state.get_iiwa_q(), 2, 4,
+            env_state.get_iiwa_q(), 2, 2,
             X_Wend_effector_0_, X_Wend_effector_1_,
             loose_pos_tol_, loose_rot_tol_, planner, &ik_res, &times);
         DRAKE_DEMAND(res);
@@ -408,17 +459,55 @@ void PushAndPickStateMachine::Update(
       }
 
       if (iiwa_move_.ActionFinished(env_state)) {
-        /*
-        if(IsPositionXYClose(env_state.get_object_pose().translation(), kDesiredGraspPosition, 0.01)) {
-          state_ = kApproachPreSidewaysPick;
-        } else {
-          state_=kApproachPreSidewaysXPush;
-        }*/
-        state_ = kDone;
+        state_ = kRiseFromSidewaysYPushMove;
         iiwa_move_.Reset();
       }
       break;
     }
+      case kRiseFromSidewaysYPushMove : {
+        // Approaches kPreGraspHeightOffset above the center of the object.
+        if (!iiwa_move_.ActionStarted()) {
+          drake::log()->info("Starting kRiseFromSidewaysYPushMove");
+          // Computes the desired end effector pose in the world frame to be
+          // kPreGraspHeightOffset above the object.
+          X_Wend_effector_0_ = env_state.get_iiwa_end_effector_pose();
+          X_Wend_effector_1_ = X_Wend_effector_0_;
+          X_Wend_effector_1_.translation()[2] += kPrePushHeightOffset;
+         // X_Wend_effector_1_.linear() = kDesiredGraspGripperOrientation;
+
+
+          drake::log()->info("kRiseFromSidewaysYPushMove Original \n {}\n Target \n{}\n Object \n {}",
+                             X_Wend_effector_0_.translation().transpose(),
+                             X_Wend_effector_1_.translation().transpose(),
+                             env_state.get_object_pose().translation().transpose());
+
+
+          // set rotation to ideal rotation right here.....
+          // 2 seconds, no via points.
+          bool res = PlanStraightLineMotion(
+              env_state.get_iiwa_q(), 0, 0.5,
+              X_Wend_effector_0_, X_Wend_effector_1_,
+              loose_pos_tol_, loose_rot_tol_, planner, &ik_res, &times);
+          DRAKE_DEMAND(res);
+
+          robotlocomotion::robot_plan_t plan{};
+          iiwa_move_.MoveJoints(env_state, iiwa, times, ik_res.q_sol, &plan);
+          iiwa_callback(&plan);
+
+          drake::log()->info("kRiseFromSidewaysYPushMove at {}",
+                             env_state.get_iiwa_time());
+        }
+
+        if (iiwa_move_.ActionFinished(env_state)) {
+          if(IsPositionXYClose(env_state.get_object_pose().translation(), kDesiredGraspPosition, 0.01)) {
+            state_ = kApproachPreSidewaysPick;
+          } else {
+            state_=kApproachPreSidewaysXPush;
+          }
+          iiwa_move_.Reset();
+        }
+        break;
+      }
     case kSidewaysXPushRotate : {
       break;
     }
@@ -432,7 +521,7 @@ void PushAndPickStateMachine::Update(
         // Computes the desired end effector pose in the world frame to be
         // kPreGraspHeightOffset above the object.
         X_Wend_effector_0_ = env_state.get_iiwa_end_effector_pose();
-        X_Wend_effector_1_ =ComputeSidewaysGraspPose(env_state.get_object_pose(), 0.2, 0.0 *M_PI);
+        X_Wend_effector_1_ =ComputeSidewaysGraspPose(env_state.get_object_pose(), 0.1, 0.0 *M_PI);
         X_Wend_effector_1_.translation()[2] += 0.2;
         // set rotation to ideal rotation right here.....
         // 2 seconds, no via points.
@@ -466,10 +555,18 @@ void PushAndPickStateMachine::Update(
 //        X_Wend_effector_1_ = ComputeSidewaysGraspPose(env_state.get_object_pose(), 0.165, -0.25 * M_PI);
 //        X_Wend_effector_1_.translation()[2] += 0.065;
 
-        X_Wend_effector_1_ = ComputeSidewaysGraspPose(env_state.get_object_pose(), 0.16, -0.34 * M_PI);
+        X_Wend_effector_1_ = ComputeSidewaysGraspPose(env_state.get_object_pose(), 0.145, -0.32 * M_PI);
         X_Wend_effector_1_.translation()[2] += 0.0625;
 
 
+        drake::log()->info("kApproachSidewaysPick Original \n {}\n Target \n{}\n Object \n {}",
+                           X_Wend_effector_0_.translation().transpose(),
+                           X_Wend_effector_1_.translation().transpose(),
+                           env_state.get_object_pose().translation().transpose());
+
+        drake::log()->info("kApproachSidewaysPick Ini Pose for IK \n{}, \nDesired pose for IK \n{}",
+                           X_Wend_effector_0_.linear(),
+                           X_Wend_effector_1_.linear());
 
         // set rotation to ideal rotation right here.....
         // 2 seconds, no via points.
@@ -518,10 +615,10 @@ void PushAndPickStateMachine::Update(
         // Computes the desired end effector pose in the world frame to be
         // kPreGraspHeightOffset above the object.
         X_Wend_effector_0_ = env_state.get_iiwa_end_effector_pose();
-        X_Wend_effector_1_ =  ComputeSidewaysGraspPose(env_state.get_object_pose(), -0.55, -0.5 * M_PI);
-        X_Wend_effector_1_.translation()[2] += 0.575;
+        X_Wend_effector_1_ =  ComputeSidewaysGraspPose(env_state.get_object_pose(), -0.55, -0.55 * M_PI);
+        X_Wend_effector_1_.translation()[2] += 0.375;
         X_Wend_effector_1_.translation()[0] = 0.2;
-        X_Wend_effector_1_.translation()[1] = -0.843;
+        X_Wend_effector_1_.translation()[1] = -0.43;
         //X_Wend_effector_1_.linear() =kDesiredSiredGraspGripperOrientation;
             //kDesiredGraspGripperOrientation;
 

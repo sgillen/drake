@@ -21,29 +21,6 @@ namespace push_and_pick {
 using pick_and_place::WorldState;
 using pick_and_place::IiwaMove;
 using pick_and_place::WsgAction;
-//
-///// Different states for the push and pick task.
-//enum VerticalPushAndPickState {
-//  kOpenGripper,
-//  kApproachPreVerticalPush,
-//  kApproachVerticalPush,
-//  kVerticalPushMove,
-////  kApproachPreSidewaysPush,
-////  kApproachSidewaysPush,
-////  kSidewaysPushMove,
-////  kLiftFromVerticalPush
-////  kApproachPreReorientPush,
-////  kApproachReorientPush,
-////  kReorientPushMove,
-////  kApproachPreSidewaysPick,
-////  kApproachSidewaysPick,
-////  kCloseGripper,
-////  kLiftFromPick,
-////  kReturnToHome,
-////  kOpenGripper
-//  kDone
-//};
-
 
 /// Different states for the push and pick task.
 enum PushAndPickState {
@@ -56,9 +33,11 @@ enum PushAndPickState {
   kSidewaysXPushRotate,
   kSidewaysYPushRotate,
   kSidewaysXPushMove,
+  kRiseFromSidewaysXPushMove,
   kApproachPreSidewaysYPush,
   kApproachSidewaysYPush,
   kSidewaysYPushMove,
+  kRiseFromSidewaysYPushMove,
   kApproachPreSidewaysPick,
   kApproachSidewaysPick,
   kCloseGripper,
