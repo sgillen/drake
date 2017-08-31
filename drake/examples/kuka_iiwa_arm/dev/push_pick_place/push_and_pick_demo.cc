@@ -18,6 +18,7 @@
 #include "drake/manipulation/planner/robot_plan_interpolator.h"
 #include "drake/manipulation/schunk_wsg/schunk_wsg_controller.h"
 #include "drake/manipulation/schunk_wsg/schunk_wsg_lcm.h"
+#include "drake/manipulation/sensors/xtion.h"
 #include "drake/manipulation/util/world_sim_tree_builder.h"
 #include "drake/math/rotation_matrix.h"
 #include "drake/multibody/parsers/urdf_parser.h"
@@ -35,6 +36,7 @@ DEFINE_double(orientation,  -0.25*M_PI, "Yaw angle of the book.");
 DEFINE_double(dt, 7.5e-4, "Integration step size");
 DEFINE_double(realtime_rate, 0.5, "Rate at which to run the simulation, "
 "relative to realtime");
+DEFINE_bool(with_camera, true, "Attach an Asus Xtion to the gripper.");
 
 using robotlocomotion::robot_plan_t;
 
@@ -51,6 +53,7 @@ using systems::Simulator;
 using manipulation::util::ModelInstanceInfo;
 using manipulation::planner::RobotPlanInterpolator;
 using manipulation::util::WorldSimTreeBuilder;
+using manipulation::sensors::Xtion;
 
 const char kIiwaUrdf[] =
     "drake/manipulation/models/iiwa_description/urdf/"
@@ -83,7 +86,8 @@ std::unique_ptr<systems::RigidBodyPlant<double>> BuildCombinedPlant(
     ModelInstanceInfo<double>* wsg_instance,
     ModelInstanceInfo<double>* book_instance,
     const Eigen::Vector3d& book_position,
-    const Eigen::Vector3d& book_orientation) {
+    const Eigen::Vector3d& book_orientation,
+    Xtion** pcamera = nullptr) {
   auto tree_builder = std::make_unique<WorldSimTreeBuilder<double>>();
 
   // Adds models to the simulation builder. Instances of these models can be
@@ -144,6 +148,20 @@ std::unique_ptr<systems::RigidBodyPlant<double>> BuildCombinedPlant(
       drake::multibody::joints::kFixed);
   *wsg_instance = tree_builder->get_model_info_for_instance(wsg_id);
 
+  if (pcamera) {
+    // Attach Xtion (X) to WSG's end effector (G).
+    Eigen::Isometry3d X_GX;
+    X_GX.setIdentity();
+    X_GX.linear() <<
+        0, 1, 0,
+        1, 0, 0,
+        0, 0, -1;
+    // clang-format on
+    X_GX.translation() << 0, -0.015, -0.025;
+    auto wsg_body = tree_builder->mutable_tree().FindBody("body", "", wsg_id);
+    *pcamera = new Xtion(tree_builder.get(), wsg_body, X_GX);
+  }
+
   return std::make_unique<systems::RigidBodyPlant<double>>(
       tree_builder->Build());
 }
@@ -153,11 +171,13 @@ int DoMain(void) {
   lcm::DrakeLcm lcm;
   systems::DiagramBuilder<double> builder;
   ModelInstanceInfo<double> iiwa_instance, wsg_instance, book_instance;
+  Xtion* camera = nullptr;
 
   std::unique_ptr<systems::RigidBodyPlant<double>> model_ptr =
       BuildCombinedPlant(
           &iiwa_instance, &wsg_instance, &book_instance,
-          kBookBase, Vector3<double>(0, 0, FLAGS_orientation));
+          kBookBase, Vector3<double>(0, 0, FLAGS_orientation),
+          FLAGS_with_camera ? &camera : nullptr);
 
   auto plant =
       builder.AddSystem<IiwaAndWsgPlantWithStateEstimator<double>>(
@@ -213,8 +233,11 @@ int DoMain(void) {
           FindResourceOrThrow(kIiwaUrdf), kIiwaEndEffectorName,
           iiwa_base);
 
+  // TODO(eric.cousineau): Replace this with an estimate from Jiaji's box
+  // estimator.
   builder.Connect(plant->get_output_port_box_robot_state_msg(),
                   state_machine->get_input_port_box_state());
+
   builder.Connect(wsg_status_sender->get_output_port(0),
                   state_machine->get_input_port_wsg_status());
   builder.Connect(plant->get_output_port_iiwa_robot_state_msg(),
@@ -223,6 +246,15 @@ int DoMain(void) {
                   wsg_controller->get_command_input_port());
   builder.Connect(state_machine->get_output_port_iiwa_plan(),
                   iiwa_trajectory_generator->get_plan_input_port());
+
+  // Add camera if enabled.
+  if (camera) {
+    camera->Build(&lcm, true, true);
+    builder.AddSystem(std::unique_ptr<Xtion>(camera));
+    builder.Connect(
+        plant->get_output_port_plant_state(),
+        camera->get_input_port_state());
+  }
 
   auto sys = builder.Build();
   Simulator<double> simulator(*sys);
