@@ -24,12 +24,14 @@ constexpr int kIiwaArmNumJoints = 7;
 /// @param iiwa_instance Identifier for the arm in @p world_tree.
 /// @param end_effector_link_name Link name of the end effector.
 /// @param wsg_instance Identifier for the gripper in @p world_tree.
+/// @param ee_fixed_id Identifiers for additional instances that
+/// are fixed to the end effector.
 /// @return Lumped inertia parameters.
 template <typename T>
 Matrix6<T> ComputeLumpedGripperInertiaInEndEffectorFrame(
     const RigidBodyTree<T>& world_tree,
     int iiwa_instance, const std::string& end_effector_link_name,
-    int wsg_instance);
+    int wsg_instance, const std::vector<int>& ee_fixed_id = {});
 
 /// Verifies that @p tree matches assumptions about joint indices.
 /// Aborts if the tree isn't as expected.

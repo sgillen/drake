@@ -36,7 +36,7 @@ template <typename T>
 Matrix6<T> ComputeLumpedGripperInertiaInEndEffectorFrame(
     const RigidBodyTree<T>& world_tree,
     int iiwa_instance, const std::string& end_effector_link_name,
-    int wsg_instance) {
+    int wsg_instance, const std::vector<int>& ee_fixed_id) {
   KinematicsCache<T> world_cache = world_tree.CreateKinematicsCache();
   world_cache.initialize(world_tree.getZeroConfiguration());
   world_tree.doKinematics(world_cache);
@@ -56,6 +56,8 @@ Matrix6<T> ComputeLumpedGripperInertiaInEndEffectorFrame(
 
   // Computes the lumped inertia for the gripper.
   std::set<int> gripper_instance_set = {wsg_instance};
+  for (int id : ee_fixed_id)
+    gripper_instance_set.insert(id);
   Matrix6<T> lumped_gripper_inertia_W =
     world_tree.LumpedSpatialInertiaInWorldFrame(
         world_cache, gripper_instance_set);
@@ -69,7 +71,8 @@ Matrix6<T> ComputeLumpedGripperInertiaInEndEffectorFrame(
 
 template Matrix6<double>
 ComputeLumpedGripperInertiaInEndEffectorFrame(
-    const RigidBodyTree<double>&, int, const std::string&, int);
+    const RigidBodyTree<double>&, int, const std::string&, int,
+    const std::vector<int>&);
 
 void VerifyIiwaTree(const RigidBodyTree<double>& tree) {
   std::map<std::string, int> name_to_idx = tree.computePositionNameToIndexMap();

@@ -36,7 +36,8 @@ template <typename T>
 IiwaAndWsgPlantWithStateEstimator<T>::IiwaAndWsgPlantWithStateEstimator(
     std::unique_ptr<RigidBodyPlant<T>> combined_plant,
     const ModelInstanceInfo<T>& iiwa_info, const ModelInstanceInfo<T>& wsg_info,
-    const ModelInstanceInfo<T>& box_info) {
+    const ModelInstanceInfo<T>& box_info,
+    const std::vector<ModelInstanceInfo<T>>& ee_fixed_info) {
   this->set_name("IiwaAndWsgPlantWithStateEstimator");
 
   SimDiagramBuilder<T> builder;
@@ -69,10 +70,13 @@ IiwaAndWsgPlantWithStateEstimator<T>::IiwaAndWsgPlantWithStateEstimator(
   // Updates the controller's model's end effector's inertia to include
   // the added gripper.
   const std::string kEndEffectorLinkName = "iiwa_link_7";
+  std::vector<int> ee_fixed_id;
+  for (const auto& info : ee_fixed_info)
+    ee_fixed_id.push_back(info.instance_id);
   Matrix6<T> lumped_gripper_inertia_EE =
       ComputeLumpedGripperInertiaInEndEffectorFrame(
           plant_->get_rigid_body_tree(), iiwa_info.instance_id,
-          kEndEffectorLinkName, wsg_info.instance_id);
+          kEndEffectorLinkName, wsg_info.instance_id, ee_fixed_id);
   RigidBody<T>* controller_ee =
       iiwa_controller_->get_robot_for_control().FindBody(kEndEffectorLinkName);
   controller_ee->set_spatial_inertia(lumped_gripper_inertia_EE);
