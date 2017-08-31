@@ -87,7 +87,8 @@ std::unique_ptr<systems::RigidBodyPlant<double>> BuildCombinedPlant(
     ModelInstanceInfo<double>* book_instance,
     const Eigen::Vector3d& book_position,
     const Eigen::Vector3d& book_orientation,
-    Xtion** pcamera = nullptr) {
+    Xtion** pcamera = nullptr,
+    ModelInstanceInfo<double>* camera_instance = nullptr) {
   auto tree_builder = std::make_unique<WorldSimTreeBuilder<double>>();
 
   // Adds models to the simulation builder. Instances of these models can be
@@ -159,7 +160,11 @@ std::unique_ptr<systems::RigidBodyPlant<double>> BuildCombinedPlant(
     // clang-format on
     X_GX.translation() << 0, -0.015, -0.025;
     auto wsg_body = tree_builder->mutable_tree().FindBody("body", "", wsg_id);
-    *pcamera = new Xtion(tree_builder.get(), wsg_body, X_GX);
+    Xtion* camera = new Xtion(tree_builder.get(), wsg_body, X_GX);
+    *pcamera = camera;
+    DRAKE_DEMAND(camera_instance != nullptr);
+    *camera_instance =
+        tree_builder->get_model_info_for_instance(camera->instance_id());
   }
 
   return std::make_unique<systems::RigidBodyPlant<double>>(
@@ -170,18 +175,22 @@ std::unique_ptr<systems::RigidBodyPlant<double>> BuildCombinedPlant(
 int DoMain(void) {
   lcm::DrakeLcm lcm;
   systems::DiagramBuilder<double> builder;
-  ModelInstanceInfo<double> iiwa_instance, wsg_instance, book_instance;
+  ModelInstanceInfo<double> iiwa_instance, wsg_instance, book_instance,
+      camera_instance;
   Xtion* camera = nullptr;
 
   std::unique_ptr<systems::RigidBodyPlant<double>> model_ptr =
       BuildCombinedPlant(
           &iiwa_instance, &wsg_instance, &book_instance,
           kBookBase, Vector3<double>(0, 0, FLAGS_orientation),
-          FLAGS_with_camera ? &camera : nullptr);
+          FLAGS_with_camera ? &camera : nullptr,
+          &camera_instance);
 
+  std::vector<ModelInstanceInfo<double>> ee_fixed_info = {camera_instance};
   auto plant =
       builder.AddSystem<IiwaAndWsgPlantWithStateEstimator<double>>(
-      std::move(model_ptr), iiwa_instance, wsg_instance, book_instance);
+      std::move(model_ptr), iiwa_instance, wsg_instance, book_instance,
+      ee_fixed_info);
   plant->set_name("plant");
 //
 //  auto contact_viz =

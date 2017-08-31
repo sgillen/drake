@@ -90,6 +90,9 @@ class Xtion : public systems::Diagram<double> {
   double period() const { return period_; }
   void set_period(double period) { period_ = period; }
 
+  /// @return Instance id in the tree to which this camera was added.
+  int instance_id() const { return instance_id_; }
+
  private:
   std::string name_{"xtion"};
   std::string lcm_channel_{"DRAKE_RGBD_CAMERA_IMAGES"};
@@ -98,6 +101,7 @@ class Xtion : public systems::Diagram<double> {
   const RigidBodyTree<double>* tree_{};
   std::shared_ptr<RigidBodyFrame<double>> fixture_frame_;
   std::shared_ptr<RigidBodyFrame<double>> sensor_frame_;
+  int instance_id_{};
 
   int input_port_state_{-1};
   int output_port_color_image_{-1};

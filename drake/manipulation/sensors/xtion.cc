@@ -56,11 +56,11 @@ Xtion::Xtion(WorldSimTreeBuilder<double>* tree_builder,
                                                             parent, X_PX);
 
   tree_builder->mutable_tree().addFrame(fixture_frame_);
-  int xtion_id = tree_builder->AddModelInstanceToFrame(
+  instance_id_ = tree_builder->AddModelInstanceToFrame(
       name_, fixture_frame_, drake::multibody::joints::kFixed);
 
   RigidBody<double>* xtion_body =
-      tree_builder->mutable_tree().FindBody("base_link", "", xtion_id);
+      tree_builder->mutable_tree().FindBody("base_link", "", instance_id_);
 
   // Add sensor frame, `B` for RgbdCamera.
   Eigen::Isometry3d X_XB = get_X_XB();
