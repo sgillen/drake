@@ -45,6 +45,7 @@ drake_cc_binary(
         "//drake/lcmtypes:iiwa",
         "//drake/manipulation/planner:robot_plan_interpolator",
         "//drake/manipulation/schunk_wsg:schunk_wsg_controller",
+        "//drake/manipulation/sensors:xtion",
         "//drake/manipulation/util:world_sim_tree_builder",
         "//drake/multibody/rigid_body_plant:contact_results_to_lcm",
         "//drake/systems/analysis:simulator",
@@ -141,25 +142,12 @@ pick_and_place_test(
     ],
 )
 
-drake_cc_binary(
-    name = "push_pick_tree_tester",
-    srcs = ["push_pick_tree_tester.cc"],
-    add_test_rule = 1,
-    data = [
-        "//drake/examples/kuka_iiwa_arm:models",
-        "//drake/manipulation/models/iiwa_description:models",
-        "//drake/manipulation/models/wsg_50_description:models",
-    ],
-    test_rule_args = ["--num_configurations=1"],
-    deps = [
-        "//drake/common",
-        "//drake/common:find_resource",
-        "//drake/lcm",
-        "//drake/manipulation/util:simple_tree_visualizer",
-        "//drake/manipulation/util:world_sim_tree_builder",
-        "//drake/multibody/parsers",
-        "//drake/systems/framework",
-        "@com_github_gflags_gflags//:gflags",
+# Adds a small test using the camera.
+pick_and_place_test(
+    name = "pick_and_place_camera",
+    args = [
+        "--quick",
+        "--with_camera",
     ],
 )
 
