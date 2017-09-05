@@ -1,0 +1,93 @@
+++ dirname ./test_gamut.sh
++ cd .
++ t everything
++ config=everything
++ bazel run --config everything :ref_map_tmp
+INFO: Found 1 target...
+Target //drake/tmp:ref_map_tmp up-to-date:
+  bazel-bin/drake/tmp/ref_map_tmp
+INFO: Elapsed time: 2.128s, Critical Path: 1.73s
+
+INFO: Running command line: bazel-bin/drake/tmp/ref_map_tmp
++ bazel run -c dbg --config everything :ref_map_tmp
+INFO: Found 1 target...
+Target //drake/tmp:ref_map_tmp up-to-date:
+  bazel-bin/drake/tmp/ref_map_tmp
+INFO: Elapsed time: 2.139s, Critical Path: 1.81s
+
+INFO: Running command line: bazel-bin/drake/tmp/ref_map_tmp
++ t memcheck
++ config=memcheck
++ bazel run --config memcheck :ref_map_tmp
+INFO: Found 1 target...
+Target //drake/tmp:ref_map_tmp up-to-date:
+  bazel-bin/drake/tmp/ref_map_tmp
+INFO: Elapsed time: 2.329s, Critical Path: 1.98s
+
+INFO: Running command line: bazel-bin/drake/tmp/ref_map_tmp
++ bazel run -c dbg --config memcheck :ref_map_tmp
+INFO: Found 1 target...
+Target //drake/tmp:ref_map_tmp up-to-date:
+  bazel-bin/drake/tmp/ref_map_tmp
+INFO: Elapsed time: 2.360s, Critical Path: 2.01s
+
+INFO: Running command line: bazel-bin/drake/tmp/ref_map_tmp
++ t asan
++ config=asan
++ bazel run --config asan :ref_map_tmp
+INFO: Found 1 target...
+Target //drake/tmp:ref_map_tmp up-to-date:
+  bazel-bin/drake/tmp/ref_map_tmp
+INFO: Elapsed time: 2.431s, Critical Path: 2.09s
+
+INFO: Running command line: bazel-bin/drake/tmp/ref_map_tmp
++ bazel run -c dbg --config asan :ref_map_tmp
+INFO: Found 1 target...
+Target //drake/tmp:ref_map_tmp up-to-date:
+  bazel-bin/drake/tmp/ref_map_tmp
+INFO: Elapsed time: 2.455s, Critical Path: 2.14s
+
+INFO: Running command line: bazel-bin/drake/tmp/ref_map_tmp
++ t msan
++ config=msan
++ bazel run --config msan :ref_map_tmp
+INFO: Found 1 target...
+Target //drake/tmp:ref_map_tmp up-to-date:
+  bazel-bin/drake/tmp/ref_map_tmp
+INFO: Elapsed time: 2.492s, Critical Path: 2.15s
+
+INFO: Running command line: bazel-bin/drake/tmp/ref_map_tmp
++ bazel run -c dbg --config msan :ref_map_tmp
+INFO: Found 1 target...
+Target //drake/tmp:ref_map_tmp up-to-date:
+  bazel-bin/drake/tmp/ref_map_tmp
+INFO: Elapsed time: 2.737s, Critical Path: 2.40s
+
+INFO: Running command line: bazel-bin/drake/tmp/ref_map_tmp
++ t lsan
++ config=lsan
++ bazel run --config lsan :ref_map_tmp
+INFO: Found 1 target...
+Target //drake/tmp:ref_map_tmp up-to-date:
+  bazel-bin/drake/tmp/ref_map_tmp
+INFO: Elapsed time: 2.419s, Critical Path: 2.08s
+
+INFO: Running command line: bazel-bin/drake/tmp/ref_map_tmp
++ bazel run -c dbg --config lsan :ref_map_tmp
+INFO: Found 1 target...
+Target //drake/tmp:ref_map_tmp up-to-date:
+  bazel-bin/drake/tmp/ref_map_tmp
+INFO: Elapsed time: 2.351s, Critical Path: 2.00s
+
+INFO: Running command line: bazel-bin/drake/tmp/ref_map_tmp
++ t tsan
++ config=tsan
++ bazel run --config tsan :ref_map_tmp
+INFO: Found 1 target...
+Target //drake/tmp:ref_map_tmp up-to-date:
+  bazel-bin/drake/tmp/ref_map_tmp
+INFO: Elapsed time: 2.514s, Critical Path: 2.17s
+
+INFO: Running command line: bazel-bin/drake/tmp/ref_map_tmp
+FATAL: ThreadSanitizer: unexpected memory mapping 0x55716dfe5000-0x55716e0ce000
+ERROR: Non-zero return code '66' from command: Process exited with status 66.
