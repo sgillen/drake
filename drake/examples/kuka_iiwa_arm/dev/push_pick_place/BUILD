@@ -10,6 +10,8 @@ load("//tools:lint.bzl", "add_lint_tests")
 #load(":pick_and_place_test.bzl", "pick_and_place_test")
 #
 
+package(default_visibility = ["//visibility:public"])
+
 drake_cc_library(
     name = "push_and_pick_utils",
     srcs = [],

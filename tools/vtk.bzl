@@ -161,10 +161,12 @@ def _impl(repository_ctx):
             "vtkAutoInit.h",
             "vtkBuffer.h",
             "vtkCollection.h",
+            "vtkCommand.h",
             "vtkCommonCoreModule.h",
             "vtkConfigure.h",
             "vtkDataArray.h",
             "vtkDebugLeaksManager.h",
+            "vtkFloatArray.h",
             "vtkGenericDataArray.h",
             "vtkGenericDataArray.txx",
             "vtkGenericDataArrayLookupHelper.h",
@@ -173,6 +175,7 @@ def _impl(repository_ctx):
             "vtkIndent.h",
             "vtkIntArray.h",
             "vtkIOStream.h",
+            "vtkLookupTable.h",
             "vtkMath.h",
             "vtkMathConfigure.h",
             "vtkNew.h",
@@ -183,6 +186,7 @@ def _impl(repository_ctx):
             "vtkOStrStreamWrapper.h",
             "vtkPoints.h",
             "vtkSetGet.h",
+            "vtkScalarsToColors.h",
             "vtkSmartPointer.h",
             "vtkSmartPointerBase.h",
             "vtkStdString.h",
@@ -519,6 +523,31 @@ def _impl(repository_ctx):
             ":vtkCommonDataModel",
             ":vtkRenderingCore",
             ":vtkglew",
+        ],
+    )
+
+    file_content += _vtk_cc_library(
+        repository_ctx.os.name,
+        "vtkFiltersModeling",
+    )
+
+    file_content += _vtk_cc_library(
+        repository_ctx.os.name,
+        "vtkRenderingLOD",
+        hdrs = [
+            "vtkLODActor.h",
+            "vtkRenderingLODModule.h",
+        ],
+        deps = [
+            
+            ":vtkCommonCore",
+            ":vtkCommonDataModel",
+            ":vtkCommonExecutionModel",
+            ":vtkCommonMath",
+            ":vtkCommonSystem",
+            ":vtkFiltersCore",
+            ":vtkFiltersModeling",
+            ":vtkRenderingCore",
         ],
     )
 
