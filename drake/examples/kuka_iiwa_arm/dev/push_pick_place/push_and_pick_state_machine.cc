@@ -8,6 +8,10 @@
 #include "drake/examples/kuka_iiwa_arm/dev/push_pick_place/push_and_pick_utils.h"
 #include "drake/examples/kuka_iiwa_arm/pick_and_place/pick_and_place_utils.h"
 
+using Eigen::Vector3d;
+using Eigen::Isometry3d;
+using Eigen::VectorXd;
+
 namespace drake {
 namespace examples {
 namespace kuka_iiwa_arm {
@@ -22,6 +26,7 @@ using manipulation::planner::ConstraintRelaxingIk;
 // Position the gripper 10cm above the object before grasp.
 const double kPrePushHeightOffset = 0.18;
 const double kPenetrationDepth = 0.08;
+using pick_and_place::PlanSequenceMotion;
 using pick_and_place::PlanStraightLineMotion;
 using pick_and_place::ComputeGraspPose;
 //const Vector3<double> kDesiredGraspPosition(0.228, -0.243, 0.7545);
@@ -79,14 +84,14 @@ void PushAndPickStateMachine::Update(
 
   // Pose of arc scan (Ai) relative to world (W).
   auto GetScanPose = [=](double theta) {
-    DRAKE_ASSERT(theta >= scan_theta_start && theta <= scan_theta_stop);
+    DRAKE_ASSERT(theta >= scan_theta_start && theta <= scan_theta_end);
     Vector3d P_WAo = P_WTc + P_TcAo;
     Vector3d P_AoAi(0, -scan_dist * cos(theta), scan_dist * sin(theta));
-    Vector3d P_WAi = P_WAo + P_AoAi;
     Isometry3d X_WAi;
     X_WAi.setIdentity();
     X_WAi.translation() = P_WAo + P_AoAi;
-    X_WAi.linear() = RotY(M_PI / 2) * RotZ(theta);
+    // Point down.
+    X_WAi.linear() << -Vector3d::UnitZ(), Vector3d::UnitY(), Vector3d::UnitX();
     return X_WAi;
   };
 
@@ -136,13 +141,16 @@ void PushAndPickStateMachine::Update(
                 GetScanPose(scan_theta_start)},
             loose_pos_tol_, loose_rot_tol_,
             planner, &ik_res, &times);
+        DRAKE_DEMAND(res);
 
+        robotlocomotion::robot_plan_t plan{};
         iiwa_move_.MoveJoints(env_state, iiwa,
                               times, ik_res.q_sol,
                               &plan);
+        iiwa_callback(&plan);
       }
 
-      if (iiwa_move_.ActionFinished()) {
+      if (iiwa_move_.ActionFinished(env_state)) {
         state_ = kScanSweep;
         iiwa_move_.Reset();
       }
@@ -152,7 +160,7 @@ void PushAndPickStateMachine::Update(
       if (!iiwa_move_.ActionStarted()) {
         log()->info("kScanSweep");
         const double t = 2;
-        vector<Isometry3d> scan_poses(scan_waypoints);
+        std::vector<Isometry3d> scan_poses(scan_waypoints);
         for (int i = 0; i < scan_waypoints; ++i) {
           const double theta =
               scan_theta_start + (scan_theta_end - scan_theta_start) *
@@ -165,13 +173,16 @@ void PushAndPickStateMachine::Update(
             scan_poses,
             loose_pos_tol_, loose_rot_tol_,
               planner, &ik_res, &times);
+        DRAKE_DEMAND(res);
 
-          iiwa_move_.MoveJoints(env_state, iiwa,
-                                times, ik_res.q_sol,
-                                &plan);
+        robotlocomotion::robot_plan_t plan{};
+        iiwa_move_.MoveJoints(env_state, iiwa,
+                              times, ik_res.q_sol,
+                              &plan);
+        iiwa_callback(&plan);
       }
 
-      if (iiwa_move_.ActionFinished()) {
+      if (iiwa_move_.ActionFinished(env_state)) {
         state_ = kScanFinishAndProcess;
         iiwa_move_.Reset();
       }

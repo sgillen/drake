@@ -1,5 +1,7 @@
 #pragma once
 
+#include <vector>
+
 #include "drake/common/text_logging.h"
 #include "drake/common/trajectories/piecewise_quaternion.h"
 #include "drake/math/rotation_matrix.h"
@@ -94,7 +96,7 @@ bool PlanSequenceMotion(const VectorX<double>& q_current,
                         const std::vector<Isometry3<double>>& X_WEs,
                         const Vector3<double>& via_points_pos_tolerance,
                         const double via_points_rot_tolerance,
-                        ConstraintRelaxingIk* planner, IkResults* ik_res,
+                        ConstraintRelaxingIk* planner, IKResults* ik_res,
                         std::vector<double>* ptimes) {
   int num_coarse = X_WEs.size();
   int num_fine = num_coarse * upsample;
@@ -106,13 +108,13 @@ bool PlanSequenceMotion(const VectorX<double>& q_current,
   const double dt_k = duration / (num_coarse - 1); 
   std::vector<double> times_coarse(num_coarse);
   for (int k = 0; k < num_coarse; ++k) {
-    times_coarse[i] = k * dt_k;
+    times_coarse[k] = k * dt_k;
   }
   std::vector<ConstraintRelaxingIk::IkCartesianWaypoint>
       waypoints(num_fine);
 
-  const eigen_aligned_std_vector<Quaternion<double>> quats(num_coarse);  
-  const std::vector<MatrixX<double>> pos(num_coarse);
+  eigen_aligned_std_vector<Quaternion<double>> quats(num_coarse);
+  std::vector<MatrixX<double>> pos(num_coarse);
   for (int k = 0; k < num_coarse; ++k) {
     quats[k] = X_WEs[k].linear();
     pos[k] = X_WEs[k].translation();
@@ -140,7 +142,7 @@ bool PlanSequenceMotion(const VectorX<double>& q_current,
     waypoints[i].constrain_orientation = true;
   }
   // ???
-  DRAKE_DEMAND(times->size() == waypoints.size() + 1);
+  DRAKE_DEMAND(times.size() == waypoints.size() + 1);
   const bool planner_result =
       planner->PlanSequentialTrajectory(waypoints, q_current, ik_res);
   drake::log()->debug("q initial: {}", q_current.transpose());
