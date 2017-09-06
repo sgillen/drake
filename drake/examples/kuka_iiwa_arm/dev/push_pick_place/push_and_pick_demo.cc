@@ -36,7 +36,7 @@ DEFINE_double(orientation,  -0.25*M_PI, "Yaw angle of the book.");
 DEFINE_double(dt, 7.5e-4, "Integration step size");
 DEFINE_double(realtime_rate, 0.5, "Rate at which to run the simulation, "
 "relative to realtime");
-DEFINE_bool(with_camera, true, "Attach an Asus Xtion to the gripper.");
+DEFINE_bool(with_camera, false, "Attach an Asus Xtion to the gripper.");
 
 using robotlocomotion::robot_plan_t;
 

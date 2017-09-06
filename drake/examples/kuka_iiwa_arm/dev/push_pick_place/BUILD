@@ -34,6 +34,8 @@ drake_cc_library(
     ],
     deps = [
         ":push_and_pick_utils",
+        "//drake/lcm",
+        "//drake/lcmtypes:viewer",
         "//drake/examples/kuka_iiwa_arm:iiwa_common",
         "//drake/examples/kuka_iiwa_arm/pick_and_place",
         "//drake/multibody:rigid_body_tree",

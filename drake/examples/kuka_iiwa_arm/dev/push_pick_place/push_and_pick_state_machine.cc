@@ -7,10 +7,13 @@
 #include "drake/math/rotation_matrix.h"
 #include "drake/examples/kuka_iiwa_arm/dev/push_pick_place/push_and_pick_utils.h"
 #include "drake/examples/kuka_iiwa_arm/pick_and_place/pick_and_place_utils.h"
+#include "drake/lcm/drake_lcm.h"
+#include "drake/lcmtypes/drake/lcmt_viewer_draw.hpp"
 
 using Eigen::Vector3d;
 using Eigen::Isometry3d;
 using Eigen::VectorXd;
+using Eigen::Matrix3d;
 
 namespace drake {
 namespace examples {
@@ -23,6 +26,42 @@ using pick_and_place::WsgAction;
 
 using manipulation::planner::ConstraintRelaxingIk;
 
+
+using std::string;
+using std::vector;
+using std::pair;
+using Eigen::Quaternion;
+void PublishFrames(
+    lcm::DrakeLcmInterface* lcm,
+    const vector<pair<string, Isometry3d>>& frames) {
+  drake::lcmt_viewer_draw msg{};
+  const int num_frames = frames.size();
+  msg.num_links = num_frames;
+  msg.robot_num.resize(num_frames, 0);
+  const vector<float> pos = {0, 0, 0};
+  const vector<float> quaternion = {1, 0, 0, 0};
+  msg.position.resize(num_frames, pos);
+  msg.quaternion.resize(num_frames, quaternion);
+  for (int i = 0; i < num_frames; ++i) {
+    const string& name = frames[i].first;
+    const auto& frame = frames[i].second;
+    msg.link_name.push_back(name);
+    for (int j = 0; j < 3; ++j) {
+      msg.position[i][j] = static_cast<float>(frame.translation()[j]);
+    }
+    Quaternion<float> quat(frame.rotation().cast<float>());
+    msg.quaternion[i][0] = quat.w();
+    msg.quaternion[i][1] = quat.x();
+    msg.quaternion[i][2] = quat.y();
+    msg.quaternion[i][3] = quat.z();
+  }
+  vector<uint8_t> bytes(msg.getEncodedSize());
+  msg.encode(bytes.data(), 0, bytes.size());
+  lcm->Publish("DRAKE_DRAW_FRAMES", bytes.data(), bytes.size());
+}
+
+
+
 // Position the gripper 10cm above the object before grasp.
 const double kPrePushHeightOffset = 0.18;
 const double kPenetrationDepth = 0.08;
@@ -32,7 +71,9 @@ using pick_and_place::ComputeGraspPose;
 //const Vector3<double> kDesiredGraspPosition(0.228, -0.243, 0.7545);
 const Vector3<double> kDesiredSidewaysGraspPosition(0.228, -0.27, 0.77045);
 const Vector3<double> kDesiredGraspPosition(0.228, -0.243, 0.77045);
-const Vector3<double> kDesiredGraspGripperPosition(0.228 + 0.23/2, -0.356, 0.77045);
+const Vector3<double> kDesiredGraspGripperPosition(0.228 + 0.23/2,
+                                                   -0.375, //-0.356,
+                                                   0.77045);
 const Vector3<double> kLiftFromPickPosition(0.0, -0.625087, 1.7645);
 const Matrix3<double> kDesiredGraspGripperOrientation(
     (Eigen::MatrixXd(3,3) <<
@@ -73,34 +114,46 @@ void PushAndPickStateMachine::Update(
   // Permit modification from perception.
   WorldState env_state = env_state_in;
 
-  const double scan_dist = 0.5;  // m
-  const double scan_theta_start = -M_PI / 4;  // rad
-  const double scan_theta_end = M_PI / 4;  // rad
-  const int scan_waypoints = 10;
+  const double scan_dist = 0.6;  // m
+  const double scan_theta_start = -M_PI / 6;  // rad
+  // TODO(eric.cousineau): Figure out how to connect the trajectories, or use
+  // the full ik traj stuff.
+  const double scan_theta_end = 0; //M_PI / 6;  // rad
+  const int scan_waypoints = 5;
   // Center position of table-top relative to world.
-  const Vector3<double> P_WTc(0, 0, 0);
+  // (Estimated from using measurement panel.)
+  const Vector3<double> P_WTc(0.47442, -0.79625, 0.76600);
   // Emitting position of arc scan (Ao) relative to table-top center (Tc).
   const Vector3<double> P_TcAo(0, 0, 0);
 
   // Orientation adjustment from A to gripper (G).
-  Isometry3<double> X_GA;
-  X_GA.setIdentity();
-  X_GA.linear() << Vector3d::UnitY(), Vector3d::UnitX(), -Vector3d::UnitZ();
+  Matrix3<double> R_GA;
+//  R_GA << Vector3d::UnitY(), Vector3d::UnitX(), -Vector3d::UnitZ();
+  R_GA.setIdentity();
+
+  // TODO(eric.cousineau): Orientation as a gaze constraint in IK.
 
   // Pose of arc scan (Ai) relative to world (W). Transformed to be in the
   // gripper frame (G, Gi).
   auto GetGripperScanPose = [=](double theta) {
     DRAKE_ASSERT(theta >= scan_theta_start && theta <= scan_theta_end);
     Vector3d P_WAo = P_WTc + P_TcAo;
-    Vector3d P_AoAi(0, -scan_dist * cos(theta), scan_dist * sin(theta));
+    Vector3d P_AoAi_W(0, -scan_dist * sin(theta), scan_dist * cos(theta));
     Isometry3d X_WAi;
     X_WAi.setIdentity();
-    X_WAi.translation() = P_WAo + P_AoAi;
+    X_WAi.translation() = P_WAo + P_AoAi_W;
     // Point down.
-    X_WAi.linear() << -Vector3d::UnitZ(), Vector3d::UnitY(), Vector3d::UnitX();
-    Isometry3d X_WGi = X_WAi * X_GA.inverse();
+    Matrix3d R_WAi;
+    R_WAi << -Vector3d::UnitZ(), Vector3d::UnitY(), Vector3d::UnitX();
+    R_WAi *= Eigen::AngleAxis<double>(theta, Vector3d::UnitZ()).matrix();
+    X_WAi.linear() = R_WAi;
+    Isometry3d X_WGi;
+    X_WGi.linear() = X_WAi.rotation() * R_GA.inverse();
+    X_WGi.translation() = X_WAi.translation();
     return X_WGi;
   };
+  // Hack.
+  lcm::DrakeLcm lcm;
 
   switch (state_) {
     // Opens the gripper.
@@ -141,11 +194,18 @@ void PushAndPickStateMachine::Update(
         // TODO(eric.cousineau): Not a fan of starting from initial config by
         // using IK given current pose...
 
-        double t = 2;
+        double t = 1;
+        Isometry3d X_WG0 = env_state.get_iiwa_end_effector_pose();
+        Isometry3d X_WGi0 = GetGripperScanPose(scan_theta_start);
+
+        PublishFrames(&lcm, {
+            {"X_WG0", X_WG0},
+            {"X_WGi[0]", X_WGi0},
+        });
+
         bool res = PlanSequenceMotion(
             env_state.get_iiwa_q(), 2, t,
-            {env_state.get_iiwa_end_effector_pose(),
-                GetGripperScanPose(scan_theta_start)},
+            {X_WG0, X_WGi0},
             loose_pos_tol_, loose_rot_tol_,
             planner, &ik_res, &times);
         DRAKE_DEMAND(res);
@@ -166,14 +226,18 @@ void PushAndPickStateMachine::Update(
     case kScanSweep: {
       if (!iiwa_move_.ActionStarted()) {
         log()->info("kScanSweep");
-        const double t = 2;
+        const double t = 1;
         std::vector<Isometry3d> scan_poses(scan_waypoints);
+        std::vector<std::pair<string, Isometry3d>> frames;
         for (int i = 0; i < scan_waypoints; ++i) {
           const double theta =
               scan_theta_start + (scan_theta_end - scan_theta_start) *
                   i / (scan_waypoints - 1);
           scan_poses[i] = GetGripperScanPose(theta);
+          frames.push_back({fmt::format("X_Gi[{}]", i),
+                            scan_poses[i]});
         }
+        PublishFrames(&lcm, frames);
 
         bool res = PlanSequenceMotion(
             env_state.get_iiwa_q(), 2, t,
