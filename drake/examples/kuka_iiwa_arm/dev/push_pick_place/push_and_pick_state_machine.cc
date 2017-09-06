@@ -82,8 +82,14 @@ void PushAndPickStateMachine::Update(
   // Emitting position of arc scan (Ao) relative to table-top center (Tc).
   const Vector3<double> P_TcAo(0, 0, 0);
 
-  // Pose of arc scan (Ai) relative to world (W).
-  auto GetScanPose = [=](double theta) {
+  // Orientation adjustment from A to gripper (G).
+  Isometry3<double> X_GA;
+  X_GA.setIdentity();
+  X_GA.linear() << Vector3d::UnitY(), Vector3d::UnitX(), -Vector3d::UnitZ();
+
+  // Pose of arc scan (Ai) relative to world (W). Transformed to be in the
+  // gripper frame (G, Gi).
+  auto GetGripperScanPose = [=](double theta) {
     DRAKE_ASSERT(theta >= scan_theta_start && theta <= scan_theta_end);
     Vector3d P_WAo = P_WTc + P_TcAo;
     Vector3d P_AoAi(0, -scan_dist * cos(theta), scan_dist * sin(theta));
@@ -92,7 +98,8 @@ void PushAndPickStateMachine::Update(
     X_WAi.translation() = P_WAo + P_AoAi;
     // Point down.
     X_WAi.linear() << -Vector3d::UnitZ(), Vector3d::UnitY(), Vector3d::UnitX();
-    return X_WAi;
+    Isometry3d X_WGi = X_WAi * X_GA.inverse();
+    return X_WGi;
   };
 
   switch (state_) {
@@ -138,7 +145,7 @@ void PushAndPickStateMachine::Update(
         bool res = PlanSequenceMotion(
             env_state.get_iiwa_q(), 2, t,
             {env_state.get_iiwa_end_effector_pose(),
-                GetScanPose(scan_theta_start)},
+                GetGripperScanPose(scan_theta_start)},
             loose_pos_tol_, loose_rot_tol_,
             planner, &ik_res, &times);
         DRAKE_DEMAND(res);
@@ -165,7 +172,7 @@ void PushAndPickStateMachine::Update(
           const double theta =
               scan_theta_start + (scan_theta_end - scan_theta_start) *
                   i / (scan_waypoints - 1);
-          scan_poses[i] = GetScanPose(theta);
+          scan_poses[i] = GetGripperScanPose(theta);
         }
 
         bool res = PlanSequenceMotion(
