@@ -41,7 +41,7 @@ def _vtk_cc_library(os_name, name, hdrs = None, visibility = None, deps = None,
         includes = []
 
         if not visibility:
-            visibility = ["//visibility:private"]
+            visibility = ["//visibility:public"]
 
     if not deps:
         deps = []
@@ -505,6 +505,7 @@ def _impl(repository_ctx):
         ],
         deps = [
             ":vtkCommonColor",
+            ":vtkCommonComputationalGeometry",
             ":vtkCommonCore",
             ":vtkCommonDataModel",
             ":vtkCommonExecutionModel",
@@ -529,6 +530,10 @@ def _impl(repository_ctx):
     file_content += _vtk_cc_library(
         repository_ctx.os.name,
         "vtkFiltersModeling",
+        deps = [
+            ":vtkFiltersSources",
+            ":vtkFiltersGeneral",
+        ],
     )
 
     file_content += _vtk_cc_library(
