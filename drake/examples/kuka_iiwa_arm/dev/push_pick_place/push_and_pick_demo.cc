@@ -36,7 +36,15 @@ DEFINE_double(orientation,  -0.25*M_PI, "Yaw angle of the book.");
 DEFINE_double(dt, 7.5e-4, "Integration step size");
 DEFINE_double(realtime_rate, 0.5, "Rate at which to run the simulation, "
 "relative to realtime");
-DEFINE_bool(with_camera, false, "Attach an Asus Xtion to the gripper.");
+DEFINE_bool(with_camera, true, "Attach an Asus Xtion to the gripper.");
+
+/*
+For running:
+  drake-visualizer \
+    --script ./drake/multibody/rigid_body_plant/visualization/show_frames.py \
+    --script drake/systems/sensors/visualization/show_images.py \
+    --bot-config drake/systems/sensors/visualization/bot_frames.cfg
+*/
 
 using robotlocomotion::robot_plan_t;
 
@@ -258,7 +266,7 @@ int DoMain(void) {
 
   // Add camera if enabled.
   if (camera) {
-    camera->Build(&lcm, true, true);
+    camera->Build(&lcm, true, false);
     builder.AddSystem(std::unique_ptr<Xtion>(camera));
     builder.Connect(
         plant->get_output_port_plant_state(),
