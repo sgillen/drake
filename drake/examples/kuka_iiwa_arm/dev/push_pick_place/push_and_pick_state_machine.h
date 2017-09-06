@@ -25,6 +25,11 @@ using pick_and_place::WsgAction;
 /// Different states for the push and pick task.
 enum PushAndPickState {
   kOpenGripper,
+  // Perception.
+  kScanApproach,
+  kScanSweep,
+  kScanFinishAndProcess,
+  // Movin' it.
   kApproachPrePushRotate,
   kApproachPushRotate,
   kPushRotate,

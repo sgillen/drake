@@ -88,6 +88,69 @@ bool PlanStraightLineMotion(const VectorX<double>& q_current,
   return planner_result;
 }
 
+
+bool PlanSequenceMotion(const VectorX<double>& q_current,
+                        const int upsample, double duration,
+                        const std::vector<Isometry3<double>>& X_WEs,
+                        const Vector3<double>& via_points_pos_tolerance,
+                        const double via_points_rot_tolerance,
+                        ConstraintRelaxingIk* planner, IkResults* ik_res,
+                        std::vector<double>* ptimes) {
+  int num_coarse = X_WEs.size();
+  int num_fine = num_coarse * upsample;
+  DRAKE_DEMAND(num_coarse > 1);
+  DRAKE_DEMAND(duration > 0);
+  DRAKE_DEMAND(ptimes != nullptr);
+
+  // Generate coarse times for piecewise trajectories.
+  const double dt_k = duration / (num_coarse - 1); 
+  std::vector<double> times_coarse(num_coarse);
+  for (int k = 0; k < num_coarse; ++k) {
+    times_coarse[i] = k * dt_k;
+  }
+  std::vector<ConstraintRelaxingIk::IkCartesianWaypoint>
+      waypoints(num_fine);
+
+  const eigen_aligned_std_vector<Quaternion<double>> quats(num_coarse);  
+  const std::vector<MatrixX<double>> pos(num_coarse);
+  for (int k = 0; k < num_coarse; ++k) {
+    quats[k] = X_WEs[k].linear();
+    pos[k] = X_WEs[k].translation();
+  }
+
+  // Makes a slerp trajectory from start to end.
+  PiecewiseQuaternionSlerp<double> rot_traj(times_coarse, quats);
+  PiecewisePolynomial<double> pos_traj =
+      PiecewisePolynomial<double>::FirstOrderHold(times_coarse, pos);
+
+  const double dt = duration / (num_fine - 1);
+  double time = 0;
+  std::vector<double>& times = *ptimes;
+  times.clear();
+  times.push_back(time);
+  for (int i = 0; i < num_fine; ++i) {
+    time += dt;
+    times.push_back(time);
+    waypoints[i].pose.translation() = pos_traj.value(time);
+    waypoints[i].pose.linear() = Matrix3<double>(rot_traj.orientation(time));
+    if (i + 1 != num_fine) {
+      waypoints[i].pos_tol = via_points_pos_tolerance;
+      waypoints[i].rot_tol = via_points_rot_tolerance;
+    }
+    waypoints[i].constrain_orientation = true;
+  }
+  // ???
+  DRAKE_DEMAND(times->size() == waypoints.size() + 1);
+  const bool planner_result =
+      planner->PlanSequentialTrajectory(waypoints, q_current, ik_res);
+  drake::log()->debug("q initial: {}", q_current.transpose());
+  if (!ik_res->q_sol.empty()) {
+    drake::log()->debug("q final: {}", ik_res->q_sol.back().transpose());
+  }
+  drake::log()->debug("result: {}", planner_result);
+  return planner_result;
+}
+
 }  // namespace pick_and_place
 }  // namespace kuka_iiwa_arm
 }  // namespace examples

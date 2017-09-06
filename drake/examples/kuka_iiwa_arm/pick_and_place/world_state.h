@@ -75,6 +75,8 @@ class WorldState {
 
   const RigidBodyTree<double>& get_iiwa() const { return *iiwa_; }
 
+  Isometry3<double>& mutable_object_pose() { return obj_pose_; }
+
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
  private:

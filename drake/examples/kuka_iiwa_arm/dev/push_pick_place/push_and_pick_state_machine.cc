@@ -54,7 +54,7 @@ PushAndPickStateMachine::PushAndPickStateMachine(bool loop)
 PushAndPickStateMachine::~PushAndPickStateMachine() {}
 
 void PushAndPickStateMachine::Update(
-    const WorldState& env_state,
+    const WorldState& env_state_in,
     const IiwaPublishCallback& iiwa_callback,
     const WsgPublishCallback& wsg_callback,
     manipulation::planner::ConstraintRelaxingIk* planner) {
@@ -64,6 +64,31 @@ void PushAndPickStateMachine::Update(
   stopped_plan.num_states = 0;
 
   const RigidBodyTree<double>& iiwa = planner->get_robot();
+
+  // Permit modification from perception.
+  WorldState env_state = env_state_in;
+
+  const double scan_dist = 0.5;  // m
+  const double scan_theta_start = -M_PI / 4;  // rad
+  const double scan_theta_end = M_PI / 4;  // rad
+  const int scan_waypoints = 10;
+  // Center position of table-top relative to world.
+  const Vector3<double> P_WTc(0, 0, 0);
+  // Emitting position of arc scan (Ao) relative to table-top center (Tc).
+  const Vector3<double> P_TcAo(0, 0, 0);
+
+  // Pose of arc scan (Ai) relative to world (W).
+  auto GetScanPose = [=](double theta) {
+    DRAKE_ASSERT(theta >= scan_theta_start && theta <= scan_theta_stop);
+    Vector3d P_WAo = P_WTc + P_TcAo;
+    Vector3d P_AoAi(0, -scan_dist * cos(theta), scan_dist * sin(theta));
+    Vector3d P_WAi = P_WAo + P_AoAi;
+    Isometry3d X_WAi;
+    X_WAi.setIdentity();
+    X_WAi.translation() = P_WAo + P_AoAi;
+    X_WAi.linear() = RotY(M_PI / 2) * RotZ(theta);
+    return X_WAi;
+  };
 
   switch (state_) {
     // Opens the gripper.
@@ -85,12 +110,76 @@ void PushAndPickStateMachine::Update(
                            object_pose.angle());
 
         //if(env_state.get_object_pose().linear())
-        state_ = kApproachPreSidewaysYPush;
+        state_ = kScanApproach;
+            //kApproachPreSidewaysYPush;
             //kApproachPreSidewaysPick;
             //kApproachPreSidewaysYPush;
             //kApproachPrePushRotate;
         wsg_act_.Reset();
       }
+      break;
+    }
+
+    case kScanApproach: {
+      if (!iiwa_move_.ActionStarted()) {
+        log()->info("kScanApproach");
+        // Schedule scan from a specified position.
+        // Move by max velocity???
+
+        // TODO(eric.cousineau): Not a fan of starting from initial config by
+        // using IK given current pose...
+
+        double t = 2;
+        bool res = PlanSequenceMotion(
+            env_state.get_iiwa_q(), 2, t,
+            {env_state.get_iiwa_end_effector_pose(),
+                GetScanPose(scan_theta_start)},
+            loose_pos_tol_, loose_rot_tol_,
+            planner, &ik_res, &times);
+
+        iiwa_move_.MoveJoints(env_state, iiwa,
+                              times, ik_res.q_sol,
+                              &plan);
+      }
+
+      if (iiwa_move_.ActionFinished()) {
+        state_ = kScanSweep;
+        iiwa_move_.Reset();
+      }
+      break;
+    }
+    case kScanSweep: {
+      if (!iiwa_move_.ActionStarted()) {
+        log()->info("kScanSweep");
+        const double t = 2;
+        vector<Isometry3d> scan_poses(scan_waypoints);
+        for (int i = 0; i < scan_waypoints; ++i) {
+          const double theta =
+              scan_theta_start + (scan_theta_end - scan_theta_start) *
+                  i / (scan_waypoints - 1);
+          scan_poses[i] = GetScanPose(theta);
+        }
+
+        bool res = PlanSequenceMotion(
+            env_state.get_iiwa_q(), 2, t,
+            scan_poses,
+            loose_pos_tol_, loose_rot_tol_,
+              planner, &ik_res, &times);
+
+          iiwa_move_.MoveJoints(env_state, iiwa,
+                                times, ik_res.q_sol,
+                                &plan);
+      }
+
+      if (iiwa_move_.ActionFinished()) {
+        state_ = kScanFinishAndProcess;
+        iiwa_move_.Reset();
+      }
+      break;
+    }
+    case kScanFinishAndProcess: {
+      log()->info("kScanFinishAndProcess");
+      state_ = kApproachPreSidewaysYPush;
       break;
     }
 
