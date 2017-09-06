@@ -37,6 +37,8 @@ DEFINE_double(dt, 7.5e-4, "Integration step size");
 DEFINE_double(realtime_rate, 0.5, "Rate at which to run the simulation, "
 "relative to realtime");
 DEFINE_bool(with_camera, true, "Attach an Asus Xtion to the gripper.");
+DEFINE_bool(with_perception, true, "Add perception state machine to get book "
+                                   "position");
 
 /*
 For running:
@@ -52,7 +54,7 @@ namespace drake {
 namespace examples {
 namespace kuka_iiwa_arm {
 namespace push_and_pick {
-namespace {
+// namespace {
 using manipulation::schunk_wsg::SchunkWsgController;
 using manipulation::schunk_wsg::SchunkWsgStatusSender;
 using systems::RigidBodyPlant;
@@ -180,7 +182,7 @@ std::unique_ptr<systems::RigidBodyPlant<double>> BuildCombinedPlant(
 }
 
 
-int DoMain(void) {
+int DoMain(PerceptionBase* perception = nullptr) {
   lcm::DrakeLcm lcm;
   systems::DiagramBuilder<double> builder;
   ModelInstanceInfo<double> iiwa_instance, wsg_instance, book_instance,
@@ -273,6 +275,17 @@ int DoMain(void) {
         camera->get_input_port_state());
   }
 
+  // Add perception, if enabled.
+  if (perception) {
+    builder.AddSystem(std::unique_ptr<PerceptionBase>(perception));
+    builder.Connect(
+        camera->get_output_port_depth_image(),
+        perception->get_input_port_depth_image());
+    builder.Connect(
+        camera->get_output_port_depth_pose(),
+        perception->get_input_port_depth_pose());
+  }
+
   auto sys = builder.Build();
   Simulator<double> simulator(*sys);
   simulator.Initialize();
@@ -304,7 +317,7 @@ int DoMain(void) {
   return 0;
 }
 
-}  // namespace
+// }  // namespace
 }  // namespace push_and_pick
 }  // namespace kuka_iiwa_arm
 }  // namespace examples

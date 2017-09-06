@@ -84,6 +84,16 @@ const Matrix3<double> kDesiredGraspObjectOrientation(
     (Matrix3<double>::Identity()));
 } // namespace
 
+struct PushAndPickStateMachine::PerceptionData {
+  PerceptionData() {
+    X_OE_.setIdentity();
+  }
+
+  Isometry3<double> X_OE;
+  ImageDepth32F depth_image;
+  Isometry3d X_WD;
+};
+
 PushAndPickStateMachine::PushAndPickStateMachine(bool loop)
     : next_place_location_(0),
       loop_(loop),
@@ -95,6 +105,7 @@ PushAndPickStateMachine::PushAndPickStateMachine(bool loop)
       tight_rot_tol_(0.05),
       loose_pos_tol_(0.05, 0.05, 0.05),
       loose_rot_tol_(0.5) {
+  perception_data_.reset(new PerceptionData());
 }
 
 PushAndPickStateMachine::~PushAndPickStateMachine() {}
@@ -113,6 +124,13 @@ void PushAndPickStateMachine::Update(
 
   // Permit modification from perception.
   WorldState env_state = env_state_in;
+  env_state.mutable_object_pose() *= perception_data_->X_OE;
+
+  // Publish location of actual and erroneous object pose.
+  PublishFrames({
+    "X_WO", env_state_in.get_object_pose(),
+    "X_WOe", env_state.get_object_pose()
+    });
 
   const double scan_dist = 0.6;  // m
   const double scan_theta_start = -M_PI / 6;  // rad

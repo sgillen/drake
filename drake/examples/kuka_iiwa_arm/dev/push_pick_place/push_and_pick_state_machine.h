@@ -84,6 +84,10 @@ class PushAndPickStateMachine {
               manipulation::planner::ConstraintRelaxingIk* planner);
 
 
+  // Read image.
+  void ReadImage(const ImageDepth32F& depth,
+                 const Eigen::Isometry3d& X_WD);
+
   PushAndPickState state() const { return state_; }
 
  private:
@@ -112,6 +116,10 @@ class PushAndPickStateMachine {
 
   Vector3<double> loose_pos_tol_;
   double loose_rot_tol_;
+
+  // Error between object and estimated pose.
+  struct PerceptionData;
+  std::unique_ptr<PerceptionData> perception_data_;
 };
 
 }  // namespace push_and_pick

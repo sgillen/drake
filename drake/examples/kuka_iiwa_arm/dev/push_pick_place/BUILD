@@ -72,6 +72,20 @@ drake_cc_binary(
     ],
 )
 
+drake_cc_library(
+    name = "perception_base",
+    srcs = [
+        "perception_base.cc",
+    ],
+    hdrs = [
+        "perception_base.h",
+    ],
+    deps = [
+        "//drake/systems/framework",
+        "//drake/manipulation/sensors:xtion",
+    ],
+)
+
 drake_cc_binary(
     name = "push_and_pick_demo",
     srcs = ["push_and_pick_demo.cc"],
@@ -81,6 +95,7 @@ drake_cc_binary(
         "//drake/manipulation/models/wsg_50_description:models",
     ],
     deps = [
+        ":perception_base",
         ":push_and_pick_state_machine",
         "//drake/common:find_resource",
         "//drake/common:text_logging_gflags",
