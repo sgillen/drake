@@ -79,6 +79,7 @@ class RgbdCamera : public LeafSystem<double> {
   /// @param[in] camera_info The input camera info which is used for conversion.
   ///
   /// @param[out] point_cloud The pointer of output point cloud.
+  // TODO(eric.cousineau): Move this to camera_info or elsewhere.
   static void ConvertDepthImageToPointCloud(const ImageDepth32F& depth_image,
                                             const CameraInfo& camera_info,
                                             Eigen::Matrix3Xf* point_cloud);

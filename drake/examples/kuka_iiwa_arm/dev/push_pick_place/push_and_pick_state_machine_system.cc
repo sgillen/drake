@@ -7,10 +7,14 @@
 #include "robotlocomotion/robot_plan_t.hpp"
 
 #include "drake/examples/kuka_iiwa_arm/dev/push_pick_place/push_and_pick_state_machine.h"
+#include "drake/systems/rendering/pose_vector.h"
 
 using bot_core::robot_state_t;
 
 namespace drake {
+
+using systems::rendering::PoseVector;
+
 namespace examples {
 namespace kuka_iiwa_arm {
 namespace {
@@ -67,6 +71,11 @@ PushAndPickStateMachineSystem::PushAndPickStateMachineSystem(
   input_port_box_state_ = this->DeclareAbstractInputPort().get_index();
   input_port_wsg_status_ = this->DeclareAbstractInputPort().get_index();
 
+  input_port_depth_image_ = this->DeclareAbstractInputPort().get_index();
+  input_port_depth_frame_ =
+      this->DeclareInputPort(
+          kVectorValued, PoseVector<double>::kSize).get_index();
+
   output_port_iiwa_plan_ =
       this->DeclareAbstractOutputPort(
               MakeDefaultIiwaPlan(),
@@ -85,9 +94,8 @@ PushAndPickStateMachineSystem::PushAndPickStateMachineSystem(
 std::unique_ptr<systems::AbstractValues>
 PushAndPickStateMachineSystem::AllocateAbstractState() const {
   std::vector<std::unique_ptr<systems::AbstractValue>> abstract_vals;
-  abstract_vals.push_back(std::unique_ptr<systems::AbstractValue>(
-      new systems::Value<InternalState>(
-          InternalState(iiwa_model_path_, end_effector_name_))));
+  abstract_vals.push_back(systems::AbstractValue::Make(
+          InternalState(iiwa_model_path_, end_effector_name_)));
   return std::make_unique<systems::AbstractValues>(std::move(abstract_vals));
 }
 
@@ -133,13 +141,22 @@ void PushAndPickStateMachineSystem::DoCalcUnrestrictedUpdate(
   const robot_state_t& box_state =
       this->EvalAbstractInput(context, input_port_box_state_)
           ->GetValue<robot_state_t>();
-  const lcmt_schunk_wsg_status& wsg_status =
-      this->EvalAbstractInput(context, input_port_wsg_status_)
-          ->GetValue<lcmt_schunk_wsg_status>();
+  const ImageDepth32F& depth_image =
+      this->EvalAbstractInput(context, input_port_depth_image_)
+          ->GetValue<ImageDepth32F>();
+  const PoseVector<double>& depth_frame =
+      this->EvalVectorInput<PoseVector>(context, input_port_depth_frame_);
 
   internal_state.world_state.HandleIiwaStatus(iiwa_state);
   internal_state.world_state.HandleWsgStatus(wsg_status);
   internal_state.world_state.HandleObjectStatus(box_state);
+
+  // TODO(eric.cousineau): Embed frame name into camera, and use timestamp from
+  // LCM.
+  internal_state.state_machine.ReadImage(
+      internal_state.world_state.get_iiwa_time(),
+      depth_image,
+      depth_frame);
 
   PushAndPickStateMachine::IiwaPublishCallback iiwa_callback =
       ([&](const robotlocomotion::robot_plan_t* plan) {

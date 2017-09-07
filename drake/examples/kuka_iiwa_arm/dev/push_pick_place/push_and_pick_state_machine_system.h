@@ -118,6 +118,8 @@ class PushAndPickStateMachineSystem : public systems::LeafSystem<double> {
   int input_port_iiwa_state_{-1};
   int input_port_box_state_{-1};
   int input_port_wsg_status_{-1};
+  int input_port_depth_image_{-1};
+  int input_port_depth_frame_{-1};
   // Output ports.
   int output_port_iiwa_plan_{-1};
   int output_port_wsg_command_{-1};

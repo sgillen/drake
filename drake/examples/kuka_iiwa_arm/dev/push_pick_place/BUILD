@@ -43,6 +43,9 @@ drake_cc_library(
         "//drake/multibody:rigid_body_tree",
         "//drake/multibody/parsers",
         "//drake/systems/framework:leaf_system",
+        "//drake/systems/sensors:image",
+        "//drake/systems/sensors:rgbd_camera",
+        "//drake/systems/rendering:pose_vector",
     ],
 )
 
@@ -74,15 +77,13 @@ drake_cc_binary(
 
 drake_cc_library(
     name = "perception_base",
-    srcs = [
-        "perception_base.cc",
-    ],
     hdrs = [
         "perception_base.h",
     ],
     deps = [
-        "//drake/systems/framework",
-        "//drake/manipulation/sensors:xtion",
+        "//drake/common",
+        "//drake/systems/sensors:camera_info",
+        "//drake/systems/sensors:image",
     ],
 )
 

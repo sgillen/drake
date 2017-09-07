@@ -85,7 +85,7 @@ class PushAndPickStateMachine {
 
 
   // Read image.
-  void ReadImage(const ImageDepth32F& depth,
+  void ReadImage(const systems::sensors::ImageDepth32F& depth,
                  const Eigen::Isometry3d& X_WD);
 
   PushAndPickState state() const { return state_; }

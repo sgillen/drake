@@ -10,12 +10,18 @@
 #include "drake/lcm/drake_lcm.h"
 #include "drake/lcmtypes/drake/lcmt_viewer_draw.hpp"
 
+#include "drake/systems/sensors/image.h"
+
 using Eigen::Vector3d;
 using Eigen::Isometry3d;
 using Eigen::VectorXd;
 using Eigen::Matrix3d;
 
 namespace drake {
+
+using systems::sensors::ImageRgb8U;
+using systems::sensors::ImageDepth32F;
+
 namespace examples {
 namespace kuka_iiwa_arm {
 namespace push_and_pick {
@@ -86,10 +92,15 @@ const Matrix3<double> kDesiredGraspObjectOrientation(
 
 struct PushAndPickStateMachine::PerceptionData {
   PerceptionData() {
-    X_OE_.setIdentity();
+    X_OE.setIdentity();
+    X_WD.setIdentity();
+    sensor_time = -1;
   }
 
   Isometry3<double> X_OE;
+
+  // Sensor readings.
+  double sensor_time;
   ImageDepth32F depth_image;
   Isometry3d X_WD;
 };
@@ -110,6 +121,15 @@ PushAndPickStateMachine::PushAndPickStateMachine(bool loop)
 
 PushAndPickStateMachine::~PushAndPickStateMachine() {}
 
+void PushAndPickStateMachine::ReadImage(
+    const double time,
+    const systems::sensors::ImageDepth32F& depth,
+    const Eigen::Isometry3d& X_WD) {
+  perception_data_->sensor_time = time;
+  perception_data_->depth_image = depth;
+  perception_data_->X_WD = X_WD;
+}
+
 void PushAndPickStateMachine::Update(
     const WorldState& env_state_in,
     const IiwaPublishCallback& iiwa_callback,
@@ -124,13 +144,8 @@ void PushAndPickStateMachine::Update(
 
   // Permit modification from perception.
   WorldState env_state = env_state_in;
-  env_state.mutable_object_pose() *= perception_data_->X_OE;
-
-  // Publish location of actual and erroneous object pose.
-  PublishFrames({
-    "X_WO", env_state_in.get_object_pose(),
-    "X_WOe", env_state.get_object_pose()
-    });
+  env_state.mutable_object_pose().matrix() *=
+      perception_data_->X_OE.matrix();
 
   const double scan_dist = 0.6;  // m
   const double scan_theta_start = -M_PI / 6;  // rad
@@ -170,6 +185,7 @@ void PushAndPickStateMachine::Update(
     X_WGi.translation() = X_WAi.translation();
     return X_WGi;
   };
+
   // Hack.
   lcm::DrakeLcm lcm;
 
