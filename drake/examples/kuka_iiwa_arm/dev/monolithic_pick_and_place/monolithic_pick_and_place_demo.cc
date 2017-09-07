@@ -154,7 +154,7 @@ std::unique_ptr<systems::RigidBodyPlant<double>> BuildCombinedPlant(
   *wsg_instance = tree_builder->get_model_info_for_instance(wsg_id);
 
   if (pcamera) {
-    // Attach Xtion (X) to WSG's end effector (G).
+    // Attach Xtion (X) to WSG's body (G).
     Eigen::Isometry3d X_GX;
     X_GX.setIdentity();
     // clang-format off
