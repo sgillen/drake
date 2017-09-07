@@ -14,6 +14,8 @@
 #include "drake/lcmt_schunk_wsg_command.hpp"
 #include "drake/manipulation/planner/constraint_relaxing_ik.h"
 
+#include "drake/examples/kuka_iiwa_arm/dev/push_and_pick/perception_base.h"
+
 namespace drake {
 namespace examples {
 namespace kuka_iiwa_arm {
@@ -70,7 +72,7 @@ class PushAndPickStateMachine {
   /// is true, the state machine will loop through the pick and place
   /// locations, otherwise it will remain in the kDone state once
   /// complete.
-  PushAndPickStateMachine(bool loop);
+  PushAndPickStateMachine(bool loop, PerceptionBase* perception);
   ~PushAndPickStateMachine();
 
   /// Update the state machine based on the state of the world in @p
@@ -85,7 +87,8 @@ class PushAndPickStateMachine {
 
 
   // Read image.
-  void ReadImage(const systems::sensors::ImageDepth32F& depth,
+  void ReadImage(const double time,
+                 const systems::sensors::ImageDepth32F& depth,
                  const Eigen::Isometry3d& X_WD);
 
   PushAndPickState state() const { return state_; }

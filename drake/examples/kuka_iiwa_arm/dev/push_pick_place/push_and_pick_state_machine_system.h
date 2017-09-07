@@ -36,7 +36,8 @@ class PushAndPickStateMachineSystem : public systems::LeafSystem<double> {
       const std::string& iiwa_model_path,
       const std::string& end_effector_name,
       const Isometry3<double>& iiwa_base,
-      const double period_sec = 0.01);
+      const double period_sec = 0.01,
+      std::unique_ptr<Perception> perception = nullptr);
 
   std::unique_ptr<systems::AbstractValues> AllocateAbstractState()
   const override;
@@ -130,6 +131,8 @@ class PushAndPickStateMachineSystem : public systems::LeafSystem<double> {
 
   const std::unique_ptr<
       manipulation::planner::ConstraintRelaxingIk> planner_{nullptr};
+
+  std::unique_ptr<PerceptionBase> perception_;
 };
 
 

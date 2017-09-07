@@ -91,18 +91,49 @@ const Matrix3<double> kDesiredGraspObjectOrientation(
 } // namespace
 
 struct PushAndPickStateMachine::PerceptionData {
-  PerceptionData() {
-    X_OE.setIdentity();
+  PerceptionData(PerceptionBase* perception_in) {
+    DRAKE_DEMAND(perception != nullptr);
+    perception = perception_in;
+    X_OOe.setIdentity();
     X_WD.setIdentity();
     sensor_time = -1;
+    prev_sensor_time = -1;
   }
 
-  Isometry3<double> X_OE;
+  bool Update() {
+    if (sensor_time > prev_sensor_time) {
+      log()->info("Update image");
+      perception->Update(
+          sensor_time,
+          depth_image,
+          X_WD);
+      prev_sensor_time = sensor_time;
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  void Process(const Isometry3d& X_WO) {
+    log()->info("Processing perception");
+    X_WOe = perception->EstimatePose();
+
+    // Store pose from estimated (Oe, with error) to actual (O).
+    X_OOe = X_WO.inverse() * X_OOe;
+  }
+
+  PerceptionBase* perception;
+  Isometry3<double> X_OOe;
+
+  Isometry3<double> X_WOe;
 
   // Sensor readings.
   double sensor_time;
   ImageDepth32F depth_image;
   Isometry3d X_WD;
+
+  // Actual updates (for discretization).
+  double prev_sensor_time;
 };
 
 PushAndPickStateMachine::PushAndPickStateMachine(bool loop)
@@ -121,10 +152,12 @@ PushAndPickStateMachine::PushAndPickStateMachine(bool loop)
 
 PushAndPickStateMachine::~PushAndPickStateMachine() {}
 
+// -> ReadCamera
 void PushAndPickStateMachine::ReadImage(
     const double time,
     const systems::sensors::ImageDepth32F& depth,
     const Eigen::Isometry3d& X_WD) {
+  // Store it.
   perception_data_->sensor_time = time;
   perception_data_->depth_image = depth;
   perception_data_->X_WD = X_WD;
@@ -287,6 +320,9 @@ void PushAndPickStateMachine::Update(
         iiwa_callback(&plan);
       }
 
+      // For each step, record each new image.
+      perception_data_->Update();
+
       if (iiwa_move_.ActionFinished(env_state)) {
         state_ = kScanFinishAndProcess;
         iiwa_move_.Reset();
@@ -295,6 +331,10 @@ void PushAndPickStateMachine::Update(
     }
     case kScanFinishAndProcess: {
       log()->info("kScanFinishAndProcess");
+
+      // Process the collected data.
+      perception_data_->Process();
+
       state_ = kApproachPreSidewaysYPush;
       break;
     }

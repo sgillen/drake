@@ -250,7 +250,7 @@ int DoMain(PerceptionBase* perception = nullptr) {
   auto state_machine =
       builder.template AddSystem<PushAndPickStateMachineSystem>(
           FindResourceOrThrow(kIiwaUrdf), kIiwaEndEffectorName,
-          iiwa_base);
+          iiwa_base, perception);
 
   // TODO(eric.cousineau): Replace this with an estimate from Jiaji's box
   // estimator.
@@ -277,13 +277,12 @@ int DoMain(PerceptionBase* perception = nullptr) {
 
   // Add perception, if enabled.
   if (perception) {
-    builder.AddSystem(std::unique_ptr<PerceptionBase>(perception));
     builder.Connect(
         camera->get_output_port_depth_image(),
-        perception->get_input_port_depth_image());
+        state_machine->get_input_port_depth_image());
     builder.Connect(
         camera->get_output_port_depth_pose(),
-        perception->get_input_port_depth_pose());
+        state_machine->get_input_port_depth_frame());
   }
 
   auto sys = builder.Build();

@@ -43,9 +43,10 @@ namespace push_and_pick {
 
 struct PushAndPickStateMachineSystem::InternalState {
   InternalState(const std::string& iiwa_model_path,
-                const std::string& end_effector_name)
+                const std::string& end_effector_name,
+                PerceptionBase* perception)
       : world_state(iiwa_model_path, end_effector_name),
-        state_machine(false),
+        state_machine(false, perception),
         last_iiwa_plan(MakeDefaultIiwaPlan()),
         last_wsg_command(MakeDefaultWsgCommand()) {}
 
@@ -61,20 +62,24 @@ PushAndPickStateMachineSystem::PushAndPickStateMachineSystem(
     const std::string& iiwa_model_path,
     const std::string& end_effector_name,
     const Isometry3<double>& iiwa_base,
-    const double period_sec)
+    const double period_sec,
+    std::unique_ptr<Perception> perception)
     : iiwa_model_path_(iiwa_model_path),
       end_effector_name_(end_effector_name),
       iiwa_base_(iiwa_base),
       planner_(std::make_unique<ConstraintRelaxingIk>(
-          iiwa_model_path_, end_effector_name_, iiwa_base_)) {
+          iiwa_model_path_, end_effector_name_, iiwa_base_)),
+      perception_(std::move(perception)) {
   input_port_iiwa_state_ = this->DeclareAbstractInputPort().get_index();
   input_port_box_state_ = this->DeclareAbstractInputPort().get_index();
   input_port_wsg_status_ = this->DeclareAbstractInputPort().get_index();
 
-  input_port_depth_image_ = this->DeclareAbstractInputPort().get_index();
-  input_port_depth_frame_ =
-      this->DeclareInputPort(
-          kVectorValued, PoseVector<double>::kSize).get_index();
+  if (perception_) {
+    input_port_depth_image_ = this->DeclareAbstractInputPort().get_index();
+    input_port_depth_frame_ =
+        this->DeclareInputPort(
+            kVectorValued, PoseVector<double>::kSize).get_index();
+  }
 
   output_port_iiwa_plan_ =
       this->DeclareAbstractOutputPort(
@@ -95,7 +100,8 @@ std::unique_ptr<systems::AbstractValues>
 PushAndPickStateMachineSystem::AllocateAbstractState() const {
   std::vector<std::unique_ptr<systems::AbstractValue>> abstract_vals;
   abstract_vals.push_back(systems::AbstractValue::Make(
-          InternalState(iiwa_model_path_, end_effector_name_)));
+          InternalState(iiwa_model_path_, end_effector_name_,
+                        perception_.get())));
   return std::make_unique<systems::AbstractValues>(std::move(abstract_vals));
 }
 
@@ -104,7 +110,8 @@ void PushAndPickStateMachineSystem::SetDefaultState(
     systems::State<double>* state) const {
   InternalState& internal_state =
       state->get_mutable_abstract_state<InternalState>(kStateIndex);
-  internal_state = InternalState(iiwa_model_path_, end_effector_name_);
+  internal_state = InternalState(iiwa_model_path_, end_effector_name_,
+                                 perception_.get());
 }
 
 void PushAndPickStateMachineSystem::CalcIiwaPlan(
@@ -141,22 +148,25 @@ void PushAndPickStateMachineSystem::DoCalcUnrestrictedUpdate(
   const robot_state_t& box_state =
       this->EvalAbstractInput(context, input_port_box_state_)
           ->GetValue<robot_state_t>();
-  const ImageDepth32F& depth_image =
-      this->EvalAbstractInput(context, input_port_depth_image_)
-          ->GetValue<ImageDepth32F>();
-  const PoseVector<double>& depth_frame =
-      this->EvalVectorInput<PoseVector>(context, input_port_depth_frame_);
 
   internal_state.world_state.HandleIiwaStatus(iiwa_state);
   internal_state.world_state.HandleWsgStatus(wsg_status);
   internal_state.world_state.HandleObjectStatus(box_state);
 
-  // TODO(eric.cousineau): Embed frame name into camera, and use timestamp from
-  // LCM.
-  internal_state.state_machine.ReadImage(
-      internal_state.world_state.get_iiwa_time(),
-      depth_image,
-      depth_frame);
+  if (perception_) {
+    const ImageDepth32F& depth_image =
+    this->EvalAbstractInput(context, input_port_depth_image_)
+        ->GetValue<ImageDepth32F>();
+    const PoseVector<double>& depth_frame =
+        this->EvalVectorInput<PoseVector>(context, input_port_depth_frame_);
+
+    // TODO(eric.cousineau): Embed frame name into camera, and use timestamp from
+    // LCM.
+    internal_state.state_machine.ReadImage(
+        internal_state.world_state.get_iiwa_time(),
+        depth_image,
+        depth_frame);
+  }
 
   PushAndPickStateMachine::IiwaPublishCallback iiwa_callback =
       ([&](const robotlocomotion::robot_plan_t* plan) {
