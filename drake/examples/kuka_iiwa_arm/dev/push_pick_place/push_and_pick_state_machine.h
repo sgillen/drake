@@ -14,7 +14,7 @@
 #include "drake/lcmt_schunk_wsg_command.hpp"
 #include "drake/manipulation/planner/constraint_relaxing_ik.h"
 
-#include "drake/examples/kuka_iiwa_arm/dev/push_and_pick/perception_base.h"
+#include "drake/examples/kuka_iiwa_arm/dev/push_pick_place/perception_base.h"
 
 namespace drake {
 namespace examples {
@@ -122,7 +122,7 @@ class PushAndPickStateMachine {
 
   // Error between object and estimated pose.
   struct PerceptionData;
-  std::unique_ptr<PerceptionData> perception_data_;
+  std::shared_ptr<PerceptionData> perception_data_;
 };
 
 }  // namespace push_and_pick

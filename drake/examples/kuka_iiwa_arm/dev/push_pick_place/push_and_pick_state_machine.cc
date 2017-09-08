@@ -92,12 +92,10 @@ const Matrix3<double> kDesiredGraspObjectOrientation(
 
 struct PushAndPickStateMachine::PerceptionData {
   PerceptionData(PerceptionBase* perception_in) {
-    DRAKE_DEMAND(perception != nullptr);
+    DRAKE_DEMAND(perception_in != nullptr);
     perception = perception_in;
     X_OOe.setIdentity();
     X_WD.setIdentity();
-    sensor_time = -1;
-    prev_sensor_time = -1;
   }
 
   bool Update() {
@@ -122,21 +120,23 @@ struct PushAndPickStateMachine::PerceptionData {
     X_OOe = X_WO.inverse() * X_WOe;
   }
 
-  PerceptionBase* perception;
+  PerceptionBase* perception{};
   Isometry3<double> X_OOe;
 
   Isometry3<double> X_WOe;
 
   // Sensor readings.
-  double sensor_time;
+  double sensor_time{-1};
   ImageDepth32F depth_image;
   Isometry3d X_WD;
 
   // Actual updates (for discretization).
-  double prev_sensor_time;
+  double prev_sensor_time{-1};
 };
 
-PushAndPickStateMachine::PushAndPickStateMachine(bool loop)
+PushAndPickStateMachine::PushAndPickStateMachine(
+    bool loop,
+    PerceptionBase* perception)
     : next_place_location_(0),
       loop_(loop),
       state_(kOpenGripper),
@@ -147,7 +147,7 @@ PushAndPickStateMachine::PushAndPickStateMachine(bool loop)
       tight_rot_tol_(0.05),
       loose_pos_tol_(0.05, 0.05, 0.05),
       loose_rot_tol_(0.5) {
-  perception_data_.reset(new PerceptionData());
+  perception_data_.reset(new PerceptionData(perception));
 }
 
 PushAndPickStateMachine::~PushAndPickStateMachine() {}
@@ -334,7 +334,8 @@ void PushAndPickStateMachine::Update(
       log()->info("kScanFinishAndProcess");
 
       // Process the collected data.
-      perception_data_->Process();
+      const Isometry3d X_WO = env_state_in.get_object_pose();
+      perception_data_->Process(X_WO);
 
       state_ = kApproachPreSidewaysYPush;
       break;

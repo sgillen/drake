@@ -14,6 +14,7 @@
 #include "drake/lcmt_schunk_wsg_command.hpp"
 #include "drake/manipulation/planner/constraint_relaxing_ik.h"
 #include "drake/systems/framework/system_symbolic_inspector.h"
+#include "drake/examples/kuka_iiwa_arm/dev/push_pick_place/perception_base.h"
 
 namespace drake {
 namespace examples {
@@ -37,7 +38,7 @@ class PushAndPickStateMachineSystem : public systems::LeafSystem<double> {
       const std::string& end_effector_name,
       const Isometry3<double>& iiwa_base,
       const double period_sec = 0.01,
-      std::unique_ptr<Perception> perception = nullptr);
+      std::unique_ptr<PerceptionBase> perception = nullptr);
 
   std::unique_ptr<systems::AbstractValues> AllocateAbstractState()
   const override;

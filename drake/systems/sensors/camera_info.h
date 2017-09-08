@@ -57,7 +57,7 @@ namespace sensors {
 // needed.
 class CameraInfo {
  public:
-  DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(CameraInfo)
+  // DRAKE_DEFAULT_COPY_AND_MOVE_AND_ASSIGN(CameraInfo)
 
   /// Constructor that directly sets the image size, center, and focal lengths.
   ///

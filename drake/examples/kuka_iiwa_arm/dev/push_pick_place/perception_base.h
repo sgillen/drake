@@ -14,6 +14,8 @@ class PerceptionBase {
   PerceptionBase(systems::sensors::CameraInfo camera_info)
       : camera_info_(camera_info) {}
 
+  virtual ~PerceptionBase() {}
+
   virtual void Update(
     double time,
     const systems::sensors::ImageDepth32F& depth_image,
@@ -21,7 +23,7 @@ class PerceptionBase {
 
   virtual Eigen::Isometry3d EstimatePose() = 0;
 
-  const CameraInfo& camera_info() const {
+  const systems::sensors::CameraInfo& camera_info() const {
     return camera_info_;
   }
 
