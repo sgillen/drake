@@ -18,6 +18,7 @@ using systems::sensors::ImageDepth32F;
 using systems::sensors::ImageLabel16I;
 using systems::sensors::ImageRgba8U;
 using systems::sensors::ImageToLcmImageArrayT;
+using systems::sensors::CameraInfo;
 using systems::sensors::RgbdCamera;
 using systems::sensors::RgbdCameraDiscrete;
 
@@ -44,6 +45,17 @@ Eigen::Isometry3d get_X_XB() {
 }
 
 }  // namespace
+
+// @ref https://www.asus.com/us/3D-Sensor/Xtion_PRO_LIVE/specifications/
+const double kWidth = 640;
+const double kHeight = 480;
+const double kFovY = M_PI_4;
+const double kDepthRangeNear = 0.8;
+const double kDepthRangeFar = 3.5;
+
+CameraInfo Xtion::GetCameraIntrinsics() {
+  return CameraInfo(kWidth, kHeight, kFovY);
+}
 
 Xtion::Xtion(WorldSimTreeBuilder<double>* tree_builder,
              RigidBody<double>* parent, const Eigen::Isometry3d& X_PX)
@@ -80,16 +92,11 @@ void Xtion::Build(lcm::DrakeLcm* lcm, bool add_lcm_publisher,
   const int kStateSize =
       tree_->get_num_positions() + tree_->get_num_velocities();
 
-  // @ref https://www.asus.com/us/3D-Sensor/Xtion_PRO_LIVE/specifications/
-  const double fov_y = M_PI_4;
-  const double depth_range_near = 0.8;
-  const double depth_range_far = 3.5;
-
   auto* camera = builder.AddSystem<RgbdCameraDiscrete>(
       std::make_unique<RgbdCamera>(
           name_, *tree_, *sensor_frame_,
-          depth_range_near, depth_range_far,
-          fov_y),
+          kDepthRangeNear, kDepthRangeFar,
+          kFovY),
       period_);
 
   // TODO(eric.cousineau): See if there is a better way to connect an input

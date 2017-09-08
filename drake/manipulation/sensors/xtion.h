@@ -10,6 +10,7 @@
 #include "drake/manipulation/util/world_sim_tree_builder.h"
 #include "drake/multibody/rigid_body_plant/rigid_body_plant.h"
 #include "drake/systems/framework/diagram_builder.h"
+#include "drake/systems/sensors/camera_info.h"
 #include "drake/systems/sensors/rgbd_camera.h"
 
 namespace drake {
@@ -92,6 +93,8 @@ class Xtion : public systems::Diagram<double> {
 
   /// @return Instance id in the tree to which this camera was added.
   int instance_id() const { return instance_id_; }
+
+  static systems::sensors::CameraInfo GetCameraIntrinsics();
 
  private:
   std::string name_{"xtion"};
