@@ -305,12 +305,12 @@ int DoMain(std::unique_ptr<PerceptionBase> perception_in) {
   // Set initial condition for IIWA.
   const int num_iiwa_positions = 7;
   Eigen::VectorXd q_iiwa_ic(num_iiwa_positions);
-  // q_iiwa_ic.setConstant(0);
+  // q_iiwa_ic.setConstant(1);
   q_iiwa_ic <<
       0.126102, 0.954726, 0.435008 -0.603665 -0.851466, 1.79639, 0.295588;
-  const int num_wsg_positions = 1;
-  Eigen::VectorXd q_wsg_ic(num_wsg_positions);
-  q_wsg_ic << 0.1;
+  // const int num_wsg_positions = 1;
+  // Eigen::VectorXd q_wsg_ic(num_wsg_positions);
+  // q_wsg_ic << 0.1;
 
   systems::Context<double>& full_plant_context =
       sys->GetMutableSubsystemContext(
@@ -325,14 +325,15 @@ int DoMain(std::unique_ptr<PerceptionBase> perception_in) {
   const auto& tree = plant->get_plant().get_rigid_body_tree();
   const auto* first_iiwa_body =
       tree.FindModelInstanceBodies(iiwa_instance.instance_id).at(0);
-  const auto* first_wsg_body =
-      tree.FindModelInstanceBodies(wsg_instance.instance_id).at(0);
+  // const auto* first_wsg_body =
+  //     tree.FindModelInstanceBodies(wsg_instance.instance_id).at(0);
   int iiwa_pos_start =
       first_iiwa_body->get_position_start_index();
-  int wsg_pos_start =
-      first_wsg_body->get_position_start_index();
+  // int wsg_pos_start =
+  //     first_wsg_body->get_position_start_index();
   plant_state.segment(iiwa_pos_start, num_iiwa_positions) << q_iiwa_ic;
-  plant_state.segment(wsg_pos_start, num_wsg_positions) << q_wsg_ic;
+  // // Causes memory issues???
+  // plant_state.segment(wsg_pos_start, num_wsg_positions) << q_wsg_ic;
 
   // Set initial condition for plan.
   auto& plan_source_context = sys->GetMutableSubsystemContext(

@@ -251,7 +251,7 @@ void PushAndPickStateMachine::Update(
                            object_pose.angle());
 
         //if(env_state.get_object_pose().linear())
-        state_ = kScanApproach;
+        state_ = kScanSweep; //kScanApproach;
             //kApproachPreSidewaysYPush;
             //kApproachPreSidewaysPick;
             //kApproachPreSidewaysYPush;
@@ -304,7 +304,7 @@ void PushAndPickStateMachine::Update(
         print_state = true;
 
         log()->info("kScanSweep");
-        const double t = 1;
+        const double t = 0.2;
         std::vector<Isometry3d> scan_poses(scan_waypoints);
         std::vector<std::pair<string, Isometry3d>> frames;
         for (int i = 0; i < scan_waypoints; ++i) {
