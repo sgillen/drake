@@ -25,6 +25,18 @@ drake_cc_library(
 )
 
 drake_cc_library(
+    name = "perception_base",
+    hdrs = [
+        "perception_base.h",
+    ],
+    deps = [
+        "//drake/common",
+        "//drake/systems/sensors:camera_info",
+        "//drake/systems/sensors:image",
+    ],
+)
+
+drake_cc_library(
     name = "push_and_pick_state_machine",
     srcs = [
         "push_and_pick_state_machine.cc",
@@ -35,6 +47,7 @@ drake_cc_library(
         "push_and_pick_state_machine_system.h",
     ],
     deps = [
+        ":perception_base",
         ":push_and_pick_utils",
         "//drake/lcm",
         "//drake/lcmtypes:viewer",
@@ -72,18 +85,6 @@ drake_cc_binary(
         "@com_github_gflags_gflags//:gflags",
         "@lcmtypes_bot2_core",
         "@lcmtypes_robotlocomotion",
-    ],
-)
-
-drake_cc_library(
-    name = "perception_base",
-    hdrs = [
-        "perception_base.h",
-    ],
-    deps = [
-        "//drake/common",
-        "//drake/systems/sensors:camera_info",
-        "//drake/systems/sensors:image",
     ],
 )
 

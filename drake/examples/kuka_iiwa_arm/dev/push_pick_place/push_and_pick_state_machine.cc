@@ -119,7 +119,7 @@ struct PushAndPickStateMachine::PerceptionData {
     X_WOe = perception->EstimatePose();
 
     // Store pose from estimated (Oe, with error) to actual (O).
-    X_OOe = X_WO.inverse() * X_OOe;
+    X_OOe = X_WO.inverse() * X_WOe;
   }
 
   PerceptionBase* perception;
@@ -175,10 +175,11 @@ void PushAndPickStateMachine::Update(
 
   const RigidBodyTree<double>& iiwa = planner->get_robot();
 
-  // Permit modification from perception.
+  // Permit modification from perception
+  // (make it return X_WOe rather than X_WO).
   WorldState env_state = env_state_in;
   env_state.mutable_object_pose().matrix() *=
-      perception_data_->X_OE.matrix();
+      perception_data_->X_OOe.matrix();
 
   const double scan_dist = 0.6;  // m
   const double scan_theta_start = -M_PI / 6;  // rad
