@@ -139,7 +139,7 @@ PushAndPickStateMachine::PushAndPickStateMachine(
     PerceptionBase* perception)
     : next_place_location_(0),
       loop_(loop),
-      state_(kOpenGripper),
+      state_(kScanSweep), // kOpenGripper),
     // Position and rotation tolerances.  These were hand-tuned by
     // adjusting to tighter bounds until IK stopped reliably giving
     // results.
@@ -197,7 +197,8 @@ void PushAndPickStateMachine::Update(
   // (Estimated from using measurement panel.)
   const Vector3<double> P_WTc(0.47442, -0.79625, 0.76600);
   // Emitting position of arc scan (Ao) relative to table-top center (Tc).
-  const Vector3<double> P_TcAo(0, 0, 0);
+  const Vector3<double> P_TcAo(-0.1, 0.2, 0);
+    //0, 0, 0);
 
   // Orientation adjustment from A to gripper (G).
   Matrix3<double> R_GA;
@@ -251,7 +252,7 @@ void PushAndPickStateMachine::Update(
                            object_pose.angle());
 
         //if(env_state.get_object_pose().linear())
-        state_ = kScanSweep; //kScanApproach;
+        state_ = kScanApproach;
             //kApproachPreSidewaysYPush;
             //kApproachPreSidewaysPick;
             //kApproachPreSidewaysYPush;

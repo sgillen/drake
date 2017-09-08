@@ -50,8 +50,8 @@ Eigen::Isometry3d get_X_XB() {
 const double kWidth = 640;
 const double kHeight = 480;
 const double kFovY = M_PI_4;
-const double kDepthRangeNear = 0.8;
-const double kDepthRangeFar = 3.5;
+const double kDepthRangeNear = 0.01; //0.8;
+const double kDepthRangeFar = 5; //3.5;
 
 CameraInfo Xtion::GetCameraIntrinsics() {
   return CameraInfo(kWidth, kHeight, kFovY);
