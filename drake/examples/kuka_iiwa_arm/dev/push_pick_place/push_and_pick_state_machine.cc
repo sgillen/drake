@@ -191,8 +191,8 @@ void PushAndPickStateMachine::Update(
   const double scan_theta_start = -M_PI / 6;  // rad
   // TODO(eric.cousineau): Figure out how to connect the trajectories, or use
   // the full ik traj stuff.
-  const double scan_theta_end = 0; //M_PI / 6;  // rad
-  const int scan_waypoints = 5;
+  const double scan_theta_end = -M_PI / 12; //M_PI / 6;  // rad
+  const int scan_waypoints = 3;
   // Center position of table-top relative to world.
   // (Estimated from using measurement panel.)
   const Vector3<double> P_WTc(0.47442, -0.79625, 0.76600);

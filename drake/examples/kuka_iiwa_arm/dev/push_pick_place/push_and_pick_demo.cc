@@ -305,9 +305,9 @@ int DoMain(std::unique_ptr<PerceptionBase> perception_in) {
   // Set initial condition for IIWA.
   const int num_iiwa_positions = 7;
   Eigen::VectorXd q_iiwa_ic(num_iiwa_positions);
-  // q_iiwa_ic.setConstant(1);
+  q_iiwa_ic.setConstant(1);
   q_iiwa_ic <<
-      0.126102, 0.954726, 0.435008 -0.603665 -0.851466, 1.79639, 0.295588;
+      0.126102, 0.954726, 0.435008, -0.603665, -0.851466, 1.79639, 0.295588;
   // const int num_wsg_positions = 1;
   // Eigen::VectorXd q_wsg_ic(num_wsg_positions);
   // q_wsg_ic << 0.1;
