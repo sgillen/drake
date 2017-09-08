@@ -1,9 +1,5 @@
 #include <memory>
 
-#include <gflags/gflags.h>
-
-#include "drake/common/text_logging_gflags.h"
-
 namespace drake {
 namespace examples {
 namespace kuka_iiwa_arm {

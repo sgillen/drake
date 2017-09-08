@@ -1,5 +1,7 @@
 #include "drake/examples/kuka_iiwa_arm/dev/push_pick_place/push_and_pick_demo.h"
 
+#include <gflags/gflags.h>
+
 #include <memory>
 #include <string>
 #include <vector>
