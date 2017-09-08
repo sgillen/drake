@@ -147,7 +147,9 @@ PushAndPickStateMachine::PushAndPickStateMachine(
       tight_rot_tol_(0.05),
       loose_pos_tol_(0.05, 0.05, 0.05),
       loose_rot_tol_(0.5) {
-  perception_data_.reset(new PerceptionData(perception));
+  if (perception) {
+    perception_data_.reset(new PerceptionData(perception));
+  }
 }
 
 PushAndPickStateMachine::~PushAndPickStateMachine() {}
@@ -158,9 +160,11 @@ void PushAndPickStateMachine::ReadImage(
     const systems::sensors::ImageDepth32F& depth,
     const Eigen::Isometry3d& X_WD) {
   // Store it.
-  perception_data_->sensor_time = time;
-  perception_data_->depth_image = depth;
-  perception_data_->X_WD = X_WD;
+  if (perception_data_) {
+    perception_data_->sensor_time = time;
+    perception_data_->depth_image = depth;
+    perception_data_->X_WD = X_WD;
+  }
 }
 
 void PushAndPickStateMachine::Update(
@@ -178,8 +182,10 @@ void PushAndPickStateMachine::Update(
   // Permit modification from perception
   // (make it return X_WOe rather than X_WO).
   WorldState env_state = env_state_in;
-  env_state.mutable_object_pose().matrix() *=
-      perception_data_->X_OOe.matrix();
+  if (perception_data_) {
+    env_state.mutable_object_pose().matrix() *=
+        perception_data_->X_OOe.matrix();
+  }
 
   const double scan_dist = 0.6;  // m
   const double scan_theta_start = -M_PI / 6;  // rad
@@ -222,6 +228,8 @@ void PushAndPickStateMachine::Update(
 
   // Hack.
   lcm::DrakeLcm lcm;
+
+  bool print_state = false;
 
   switch (state_) {
     // Opens the gripper.
@@ -293,6 +301,8 @@ void PushAndPickStateMachine::Update(
     }
     case kScanSweep: {
       if (!iiwa_move_.ActionStarted()) {
+        print_state = true;
+
         log()->info("kScanSweep");
         const double t = 1;
         std::vector<Isometry3d> scan_poses(scan_waypoints);
@@ -322,9 +332,13 @@ void PushAndPickStateMachine::Update(
       }
 
       // For each step, record each new image.
-      perception_data_->Update();
+      if (perception_data_) {
+        perception_data_->Update();
+      }
 
       if (iiwa_move_.ActionFinished(env_state)) {
+        print_state = true;
+
         state_ = kScanFinishAndProcess;
         iiwa_move_.Reset();
       }
@@ -335,7 +349,9 @@ void PushAndPickStateMachine::Update(
 
       // Process the collected data.
       const Isometry3d X_WO = env_state_in.get_object_pose();
-      perception_data_->Process(X_WO);
+      if (perception_data_) {
+        perception_data_->Process(X_WO);
+      }
 
       state_ = kApproachPreSidewaysYPush;
       break;
@@ -896,6 +912,11 @@ void PushAndPickStateMachine::Update(
     case kDone: {
       break;
     }
+  }
+
+  if (print_state) {
+    log()->info("q_iiwa: [\n  {}\n]", env_state.get_iiwa_q().transpose());
+    log()->info("q_wsg: [\n  {}\n]", env_state.get_wsg_q());
   }
 }
 

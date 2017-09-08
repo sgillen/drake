@@ -11,7 +11,8 @@ namespace drake {
 namespace manipulation {
 namespace util {
 
-template<typename T> struct ModelInstanceInfo {
+template <typename T>
+struct ModelInstanceInfo {
   std::string model_path;
   int instance_id;
   std::shared_ptr<RigidBodyFrame<T>> world_offset;

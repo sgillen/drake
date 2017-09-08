@@ -39,8 +39,6 @@ DEFINE_double(dt, 7.5e-4, "Integration step size");
 DEFINE_double(realtime_rate, 0.5, "Rate at which to run the simulation, "
 "relative to realtime");
 DEFINE_bool(with_camera, true, "Attach an Asus Xtion to the gripper.");
-DEFINE_bool(with_perception, true, "Add perception state machine to get book "
-                                   "position");
 
 /*
 For running:
@@ -201,7 +199,10 @@ int DoMain(std::unique_ptr<PerceptionBase> perception_in) {
           FLAGS_with_camera ? &camera : nullptr,
           &camera_instance);
 
-  std::vector<ModelInstanceInfo<double>> ee_fixed_info = {camera_instance};
+  std::vector<ModelInstanceInfo<double>> ee_fixed_info;
+  if (camera) {
+    ee_fixed_info.push_back(camera_instance);
+  }
   auto plant =
       builder.AddSystem<IiwaAndWsgPlantWithStateEstimator<double>>(
       std::move(model_ptr), iiwa_instance, wsg_instance, book_instance,
@@ -283,6 +284,7 @@ int DoMain(std::unique_ptr<PerceptionBase> perception_in) {
 
   // Add perception, if enabled.
   if (perception) {
+    DRAKE_DEMAND(camera != nullptr);
     builder.Connect(
         camera->get_output_port_depth_image(),
         state_machine->get_input_port_depth_image());
@@ -295,16 +297,49 @@ int DoMain(std::unique_ptr<PerceptionBase> perception_in) {
   Simulator<double> simulator(*sys);
   simulator.Initialize();
   simulator.set_target_realtime_rate(FLAGS_realtime_rate);
-  simulator.reset_integrator<RungeKutta2Integrator<double>>(*sys,
-                                                            FLAGS_dt, simulator.get_mutable_context());
+  simulator.reset_integrator<RungeKutta2Integrator<double>>(
+      *sys, FLAGS_dt, simulator.get_mutable_context());
   simulator.get_mutable_integrator()->set_maximum_step_size(FLAGS_dt);
   simulator.get_mutable_integrator()->set_fixed_step_mode(true);
 
+  // Set initial condition for IIWA.
+  const int num_iiwa_positions = 7;
+  Eigen::VectorXd q_iiwa_ic(num_iiwa_positions);
+  // q_iiwa_ic.setConstant(0);
+  q_iiwa_ic <<
+      0.126102, 0.954726, 0.435008 -0.603665 -0.851466, 1.79639, 0.295588;
+  const int num_wsg_positions = 1;
+  Eigen::VectorXd q_wsg_ic(num_wsg_positions);
+  q_wsg_ic << 0.1;
+
+  systems::Context<double>& full_plant_context =
+      sys->GetMutableSubsystemContext(
+          *plant, simulator.get_mutable_context());
+  systems::Context<double>& plant_context =
+      plant->GetMutableSubsystemContext(
+          plant->get_plant(), &full_plant_context);
+  auto&& plant_state =
+      dynamic_cast<systems::BasicVector<double>*>(
+          plant_context.get_mutable_continuous_state()->get_mutable_vector())
+      ->get_mutable_value();
+  const auto& tree = plant->get_plant().get_rigid_body_tree();
+  const auto* first_iiwa_body =
+      tree.FindModelInstanceBodies(iiwa_instance.instance_id).at(0);
+  const auto* first_wsg_body =
+      tree.FindModelInstanceBodies(wsg_instance.instance_id).at(0);
+  int iiwa_pos_start =
+      first_iiwa_body->get_position_start_index();
+  int wsg_pos_start =
+      first_wsg_body->get_position_start_index();
+  plant_state.segment(iiwa_pos_start, num_iiwa_positions) << q_iiwa_ic;
+  plant_state.segment(wsg_pos_start, num_wsg_positions) << q_wsg_ic;
+
+  // Set initial condition for plan.
   auto& plan_source_context = sys->GetMutableSubsystemContext(
       *iiwa_trajectory_generator, simulator.get_mutable_context());
   iiwa_trajectory_generator->Initialize(
       plan_source_context.get_time(),
-      Eigen::VectorXd::Zero(7),
+      q_iiwa_ic,
       plan_source_context.get_mutable_state());
 
   drake::log()->info("Intended book position {}", kBookBase.transpose());
