@@ -139,7 +139,7 @@ PushAndPickStateMachine::PushAndPickStateMachine(
     PerceptionBase* perception)
     : next_place_location_(0),
       loop_(loop),
-      state_(kScanSweep), // kOpenGripper),
+      state_(/*kOpenGripper), /*/kScanSweep), // kOpenGripper),
     // Position and rotation tolerances.  These were hand-tuned by
     // adjusting to tighter bounds until IK stopped reliably giving
     // results.
@@ -187,7 +187,7 @@ void PushAndPickStateMachine::Update(
         perception_data_->X_OOe.matrix();
   }
 
-  const double scan_dist = 0.6;  // m
+  const double scan_dist = 0.65;  // m
   const double scan_theta_start = -M_PI / 6;  // rad
   // TODO(eric.cousineau): Figure out how to connect the trajectories, or use
   // the full ik traj stuff.

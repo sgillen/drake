@@ -307,7 +307,7 @@ int DoMain(std::unique_ptr<PerceptionBase> perception_in) {
   Eigen::VectorXd q_iiwa_ic(num_iiwa_positions);
   q_iiwa_ic.setConstant(1);
   q_iiwa_ic <<
-      0.400026, 0.913425, 0.47871, -0.69308, -0.793148, 1.91285, 0.6207;
+      0.489366, 0.977974, 0.454306, -0.443262, -0.834601, 2.05521, 0.528087;
       // 0.126102, 0.954726, 0.435008, -0.603665, -0.851466, 1.79639, 0.295588;
   // const int num_wsg_positions = 1;
   // Eigen::VectorXd q_wsg_ic(num_wsg_positions);
