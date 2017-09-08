@@ -1,13 +1,13 @@
+#include "drake/examples/kuka_iiwa_arm/dev/push_pick_place/push_and_pick_demo.h"
+
 #include <memory>
 #include <string>
 #include <vector>
 
-#include <gflags/gflags.h>
 #include "bot_core/robot_state_t.hpp"
 #include "robotlocomotion/robot_plan_t.hpp"
 
 #include "drake/common/find_resource.h"
-#include "drake/common/text_logging_gflags.h"
 #include "drake/examples/kuka_iiwa_arm/dev/push_pick_place/push_and_pick_state_machine_system.h"
 #include "drake/examples/kuka_iiwa_arm/iiwa_common.h"
 #include "drake/examples/kuka_iiwa_arm/iiwa_world/iiwa_wsg_diagram_factory.h"
@@ -54,7 +54,7 @@ namespace drake {
 namespace examples {
 namespace kuka_iiwa_arm {
 namespace push_and_pick {
-// namespace {
+namespace {
 using manipulation::schunk_wsg::SchunkWsgController;
 using manipulation::schunk_wsg::SchunkWsgStatusSender;
 using systems::RigidBodyPlant;
@@ -181,8 +181,11 @@ std::unique_ptr<systems::RigidBodyPlant<double>> BuildCombinedPlant(
       tree_builder->Build());
 }
 
+}  // namespace
 
-int DoMain(PerceptionBase* perception = nullptr) {
+int DoMain(std::unique_ptr<PerceptionBase> perception_in) {
+  PerceptionBase* perception = perception_in.get();
+
   lcm::DrakeLcm lcm;
   systems::DiagramBuilder<double> builder;
   ModelInstanceInfo<double> iiwa_instance, wsg_instance, book_instance,
@@ -240,17 +243,18 @@ int DoMain(PerceptionBase* perception = nullptr) {
 
   auto wsg_status_sender = builder.AddSystem<SchunkWsgStatusSender>(
       plant->get_output_port_wsg_state().size(), 0, 0);
-  builder.Connect(plant->get_output_port_wsg_state(),
-                  wsg_status_sender->get_input_port(0));
+  builder.Connect(plant->get_output_port_wsg_state(),                  wsg_status_sender->get_input_port(0));
 
   const Eigen::Vector3d robot_base = kRobotBase;//(0, 0, kTableTopZInWorld);
   Isometry3<double> iiwa_base = Isometry3<double>::Identity();
   iiwa_base.translation() = robot_base;
 
+  const double period_sec = 0.01;
+
   auto state_machine =
       builder.template AddSystem<PushAndPickStateMachineSystem>(
           FindResourceOrThrow(kIiwaUrdf), kIiwaEndEffectorName,
-          iiwa_base, perception);
+          iiwa_base, period_sec, std::move(perception_in));
 
   // TODO(eric.cousineau): Replace this with an estimate from Jiaji's box
   // estimator.
@@ -316,14 +320,7 @@ int DoMain(PerceptionBase* perception = nullptr) {
   return 0;
 }
 
-// }  // namespace
 }  // namespace push_and_pick
 }  // namespace kuka_iiwa_arm
 }  // namespace examples
 }  // namespace drake
-
-int main(int argc, char* argv[]) {
-  gflags::ParseCommandLineFlags(&argc, &argv, true);
-  drake::logging::HandleSpdlogGflags();
-  return drake::examples::kuka_iiwa_arm::push_and_pick::DoMain();
-}

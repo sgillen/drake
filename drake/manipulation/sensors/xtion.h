@@ -86,6 +86,12 @@ class Xtion : public systems::Diagram<double> {
   const systems::OutputPort<double>& get_output_port_label_image() const {
     return get_output_port(output_port_label_image_);
   }
+  const systems::OutputPort<double>& get_output_port_base_pose() const {
+    return get_output_port(output_port_base_pose_);
+  }
+  const systems::OutputPort<double>& get_output_port_depth_pose() const {
+    return get_output_port(output_port_depth_pose_);
+  }
 
   /// @return Period at which the camera captures images.
   double period() const { return period_; }
@@ -110,6 +116,8 @@ class Xtion : public systems::Diagram<double> {
   int output_port_color_image_{-1};
   int output_port_depth_image_{-1};
   int output_port_label_image_{-1};
+  int output_port_base_pose_{-1};
+  int output_port_depth_pose_{-1};
 };
 
 }  // namespace sensors

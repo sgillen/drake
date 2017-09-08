@@ -227,6 +227,9 @@ class RgbdCamera : public LeafSystem<double> {
   /// Returns the vector valued output port that contains a PoseVector.
   const OutputPort<double>& camera_base_pose_output_port() const;
 
+  /// Returns the PoseVector that represents the pose of the depth sensor.
+  const OutputPort<double>& depth_pose_output_port() const;
+
  private:
   void Init(const std::string& name);
 
@@ -239,11 +242,14 @@ class RgbdCamera : public LeafSystem<double> {
                         ImageLabel16I* label_image) const;
   void OutputPoseVector(const Context<double>& context,
                         rendering::PoseVector<double>* pose_vector) const;
+  void OutputDepthPoseVector(const Context<double>& context,
+                             rendering::PoseVector<double>* pose_vector) const;
 
   const OutputPort<double>* color_image_port_{};
   const OutputPort<double>* depth_image_port_{};
   const OutputPort<double>* label_image_port_{};
   const OutputPort<double>* camera_base_pose_port_{};
+  const OutputPort<double>* depth_pose_port_{};
 
   class Impl;
   std::unique_ptr<Impl> impl_;
@@ -295,6 +301,11 @@ class RgbdCameraDiscrete : public systems::Diagram<double> {
     return get_output_port(output_port_pose_);
   }
 
+  /// @see RgbdCamera::camera_depth_pose_output_port().
+  const systems::OutputPort<double>& depth_pose_output_port() const {
+    return get_output_port(output_port_depth_pose_);
+  }
+
  private:
   RgbdCamera* camera_{};
   double period_{};
@@ -304,6 +315,7 @@ class RgbdCameraDiscrete : public systems::Diagram<double> {
   int output_port_depth_image_{-1};
   int output_port_label_image_{-1};
   int output_port_pose_{-1};
+  int output_port_depth_pose_{-1};
 };
 
 }  // namespace sensors

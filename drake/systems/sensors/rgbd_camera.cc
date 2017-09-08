@@ -784,6 +784,9 @@ void RgbdCamera::Init(const std::string& name) {
 
   camera_base_pose_port_ = &this->DeclareVectorOutputPort(
       rendering::PoseVector<double>(), &RgbdCamera::OutputPoseVector);
+
+  depth_pose_port_ = &this->DeclareVectorOutputPort(
+      rendering::PoseVector<double>(), &RgbdCamera::OutputDepthPoseVector);
 }
 
 RgbdCamera::~RgbdCamera() {}
@@ -822,6 +825,11 @@ RgbdCamera::camera_base_pose_output_port() const {
 }
 
 const OutputPort<double>&
+RgbdCamera::depth_pose_output_port() const {
+  return *depth_pose_port_;
+}
+
+const OutputPort<double>&
 RgbdCamera::color_image_output_port() const {
   return *color_image_port_;
 }
@@ -843,6 +851,17 @@ void RgbdCamera::OutputPoseVector(
       this->EvalVectorInput(context, kPortStateInput);
 
   impl_->OutputPoseVector(*input_vector, pose_vector);
+}
+
+void RgbdCamera::OutputDepthPoseVector(
+    const Context<double>& context,
+    rendering::PoseVector<double>* pose_vector) const {
+  rendering::PoseVector<double> base_pose;
+  OutputPoseVector(context, &base_pose);
+  Eigen::Isometry3d X_WB = base_pose.get_isometry();
+  Eigen::Isometry3d X_WD = X_WB * depth_camera_optical_pose();
+  pose_vector->set_translation(Eigen::Translation3d(X_WD.translation()));
+  pose_vector->set_rotation(Eigen::Quaterniond(X_WD.linear()));
 }
 
 void RgbdCamera::OutputColorImage(const Context<double>& context,
@@ -909,9 +928,13 @@ RgbdCameraDiscrete::RgbdCameraDiscrete(std::unique_ptr<RgbdCamera> camera,
   output_port_pose_ =
       builder.ExportOutput(camera_->camera_base_pose_output_port());
 
+  output_port_depth_pose_ =
+      builder.ExportOutput(camera_->depth_pose_output_port());
+
   builder.BuildInto(this);
 }
 
 }  // namespace sensors
 }  // namespace systems
 }  // namespace drake
+

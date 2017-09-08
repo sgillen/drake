@@ -85,6 +85,16 @@ class PushAndPickStateMachineSystem : public systems::LeafSystem<double> {
     return this->get_input_port(input_port_wsg_status_);
   }
 
+  const systems::InputPortDescriptor<double>& get_input_port_depth_image()
+  const {
+    return this->get_input_port(input_port_depth_image_);
+  }
+  const systems::InputPortDescriptor<double>& get_input_port_depth_frame()
+  const {
+    return this->get_input_port(input_port_depth_frame_);
+  }
+
+
   const systems::OutputPort<double>& get_output_port_iiwa_plan()
   const {
     return this->get_output_port(output_port_iiwa_plan_);

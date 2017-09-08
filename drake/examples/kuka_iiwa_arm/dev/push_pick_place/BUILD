@@ -88,14 +88,15 @@ drake_cc_binary(
     ],
 )
 
-drake_cc_binary(
-    name = "push_and_pick_demo",
+drake_cc_library(
+    name = "push_and_pick_demo_lib",
     srcs = ["push_and_pick_demo.cc"],
+    hdrs = ["push_and_pick_demo.h"],
     data = [
         "//drake/examples/kuka_iiwa_arm:models",
         "//drake/manipulation/models/iiwa_description:models",
         "//drake/manipulation/models/wsg_50_description:models",
-    ],
+    ],    
     deps = [
         ":perception_base",
         ":push_and_pick_state_machine",
@@ -114,6 +115,16 @@ drake_cc_binary(
         "//drake/systems/analysis:simulator",
         "@com_github_gflags_gflags//:gflags",
         "@lcmtypes_bot2_core",
+    ],
+)
+
+drake_cc_binary(
+    name = "push_and_pick_demo",
+    srcs = [
+        "push_and_pick_demo_main.cc",
+    ],
+    deps = [
+        ":push_and_pick_demo_lib",
     ],
 )
 
