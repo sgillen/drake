@@ -306,6 +306,11 @@ class RgbdCameraDiscrete : public systems::Diagram<double> {
     return get_output_port(output_port_depth_pose_);
   }
 
+  /// Returns time at which last image was taken.
+  const systems::OutputPort<double>& update_time_output_port() const {
+    return get_output_port(output_port_update_time_);
+  }
+
  private:
   RgbdCamera* camera_{};
   double period_{};
@@ -316,6 +321,7 @@ class RgbdCameraDiscrete : public systems::Diagram<double> {
   int output_port_label_image_{-1};
   int output_port_pose_{-1};
   int output_port_depth_pose_{-1};
+  int output_port_update_time_{-1};
 };
 
 }  // namespace sensors

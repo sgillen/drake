@@ -894,6 +894,17 @@ constexpr float RgbdCamera::InvalidDepth::kTooClose;
 constexpr int16_t RgbdCamera::Label::kNoBody;
 constexpr int16_t RgbdCamera::Label::kFlatTerrain;
 
+class ClockSource : public LeafSystem<double> {
+ public:
+  ClockSource() {
+    auto output_time = [](const Context<double>& context,
+                          BasicVector<double>* output) {
+      output->get_mutable_value() << context.get_time();
+    };
+    this->DeclareVectorOutputPort(BasicVector<double>(1), output_time);
+  }
+};
+
 RgbdCameraDiscrete::RgbdCameraDiscrete(std::unique_ptr<RgbdCamera> camera,
                                        double period)
     : camera_(camera.get()), period_(period) {
@@ -930,6 +941,14 @@ RgbdCameraDiscrete::RgbdCameraDiscrete(std::unique_ptr<RgbdCamera> camera,
 
   output_port_depth_pose_ =
       builder.ExportOutput(camera_->depth_pose_output_port());
+
+  // Time outport.
+  int scalar_size = 1;
+  auto* zoh_clock = builder.AddSystem<ZeroOrderHold>(period_, scalar_size);
+  auto* clock = builder.AddSystem<ClockSource>();
+  builder.Connect(clock->get_output_port(0),
+                  zoh_clock->get_input_port());
+  output_port_update_time_ = builder.ExportOutput(zoh_clock->get_output_port());
 
   builder.BuildInto(this);
 }

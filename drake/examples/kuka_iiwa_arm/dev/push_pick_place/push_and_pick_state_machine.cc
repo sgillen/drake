@@ -161,6 +161,7 @@ void PushAndPickStateMachine::ReadImage(
     const Eigen::Isometry3d& X_WD) {
   // Store it.
   if (perception_data_) {
+    log()->info("ReadImage @ {} s", time);
     perception_data_->sensor_time = time;
     perception_data_->depth_image = depth;
     perception_data_->X_WD = X_WD;

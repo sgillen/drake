@@ -117,6 +117,8 @@ void Xtion::Build(lcm::DrakeLcm* lcm, bool add_lcm_publisher,
       builder.ExportOutput(camera->camera_base_pose_output_port());
   output_port_depth_pose_ =
       builder.ExportOutput(camera->depth_pose_output_port());
+  output_port_update_time_ =
+      builder.ExportOutput(camera->update_time_output_port());
 
   if (add_lcm_publisher) {
     DRAKE_DEMAND(lcm != nullptr);

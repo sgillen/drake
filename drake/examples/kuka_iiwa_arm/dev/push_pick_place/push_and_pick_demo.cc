@@ -291,6 +291,9 @@ int DoMain(std::unique_ptr<PerceptionBase> perception_in) {
     builder.Connect(
         camera->get_output_port_depth_pose(),
         state_machine->get_input_port_depth_frame());
+    builder.Connect(
+        camera->get_output_port_update_time(),
+        state_machine->get_input_port_camera_update_time());
   }
 
   auto sys = builder.Build();

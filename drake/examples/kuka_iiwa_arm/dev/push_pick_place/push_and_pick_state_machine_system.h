@@ -93,6 +93,10 @@ class PushAndPickStateMachineSystem : public systems::LeafSystem<double> {
   const {
     return this->get_input_port(input_port_depth_frame_);
   }
+  const systems::InputPortDescriptor<double>&
+  get_input_port_camera_update_time() const {
+    return this->get_input_port(input_port_camera_update_time_);
+  }
 
 
   const systems::OutputPort<double>& get_output_port_iiwa_plan()
@@ -130,8 +134,10 @@ class PushAndPickStateMachineSystem : public systems::LeafSystem<double> {
   int input_port_iiwa_state_{-1};
   int input_port_box_state_{-1};
   int input_port_wsg_status_{-1};
+  // - Camera.
   int input_port_depth_image_{-1};
   int input_port_depth_frame_{-1};
+  int input_port_camera_update_time_{-1};
   // Output ports.
   int output_port_iiwa_plan_{-1};
   int output_port_wsg_command_{-1};

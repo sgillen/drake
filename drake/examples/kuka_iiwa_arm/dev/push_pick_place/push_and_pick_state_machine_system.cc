@@ -80,6 +80,8 @@ PushAndPickStateMachineSystem::PushAndPickStateMachineSystem(
     input_port_depth_frame_ =
         this->DeclareInputPort(
             systems::kVectorValued, PoseVector<double>::kSize).get_index();
+    input_port_camera_update_time_ =
+        this->DeclareInputPort(systems::kVectorValued, 1).get_index();
   }
 
   output_port_iiwa_plan_ =
@@ -163,11 +165,14 @@ void PushAndPickStateMachineSystem::DoCalcUnrestrictedUpdate(
             ->GetValue<ImageDepth32F>();
     const PoseVector<double>& depth_frame =
         *this->EvalVectorInput<PoseVector>(context, input_port_depth_frame_);
+    const auto& depth_update_time =
+        *this->EvalVectorInput<systems::BasicVector>(
+              context, input_port_camera_update_time_);
 
-    // TODO(eric.cousineau): Embed frame name into camera, and use timestamp from
-    // LCM.
+    // TODO(eric.cousineau): Embed frame name into camera, and use timestamp
+    // from LCM.
     internal_state.state_machine.ReadImage(
-        internal_state.world_state.get_iiwa_time(),
+        depth_update_time.get_value().coeff(0),
         depth_image,
         depth_frame.get_isometry());
   }
