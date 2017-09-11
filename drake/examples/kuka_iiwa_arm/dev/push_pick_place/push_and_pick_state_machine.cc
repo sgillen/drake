@@ -187,7 +187,6 @@ void PushAndPickStateMachine::Update(
   // Hack.
   bool print_state = false;
   lcm::DrakeLcm lcm;
-  bool pub_book = false;
 
   // Permit modification from perception
   // (make it return X_WOe rather than X_WO).
@@ -195,16 +194,18 @@ void PushAndPickStateMachine::Update(
   if (perception_data_) {
     env_state.mutable_object_pose().matrix() *=
         perception_data_->X_OOe.matrix();
-    // Use boolean so other frame publishers can override...
-    // due to limitation in LCM / channel name subscription.
-    pub_book = true;
+    PublishFrames(&lcm,
+        {
+          {"actual", env_state_in.get_object_pose()},
+          {"estimated", env_state.get_object_pose()},
+        }, "_BOOK");
   }
 
   const double scan_dist = 0.65;  // m
   const double scan_theta_start = -M_PI / 6;  // rad
   // TODO(eric.cousineau): Figure out how to connect the trajectories, or use
   // the full ik traj stuff.
-  const double scan_theta_end = -M_PI / 12; //M_PI / 6;  // rad
+  const double scan_theta_end = scan_theta_start + 0.01; //M_PI / 6;  // rad
   const int scan_waypoints = 3;
   // Center position of table-top relative to world.
   // (Estimated from using measurement panel.)
@@ -283,11 +284,11 @@ void PushAndPickStateMachine::Update(
         Isometry3d X_WG0 = env_state.get_iiwa_end_effector_pose();
         Isometry3d X_WGi0 = GetGripperScanPose(scan_theta_start);
 
-        PublishFrames(&lcm, {
+        PublishFrames(&lcm,
+            {
                 {"X_WG0", X_WG0},
                 {"X_WGi[0]", X_WGi0},
             }, "_TRAJ");
-        // pub_book = false;
 
         bool res = PlanSequenceMotion(
             env_state.get_iiwa_q(), 2, t,
@@ -314,7 +315,7 @@ void PushAndPickStateMachine::Update(
         print_state = true;
 
         log()->info("kScanSweep");
-        const double t = 0.2;
+        const double t = 0.075;
         std::vector<Isometry3d> scan_poses(scan_waypoints);
         std::vector<std::pair<string, Isometry3d>> frames;
         for (int i = 0; i < scan_waypoints; ++i) {
@@ -325,6 +326,8 @@ void PushAndPickStateMachine::Update(
           frames.push_back({fmt::format("X_Gi[{}]", i),
                             scan_poses[i]});
         }
+
+        PublishFrames(&lcm, frames, "_TRAJ");
 
         bool res = PlanSequenceMotion(
             env_state.get_iiwa_q(), 2, t,
@@ -339,12 +342,6 @@ void PushAndPickStateMachine::Update(
                               &plan);
         iiwa_callback(&plan);
       }
-
-      PublishFrames(&lcm, {
-          {"traj", Eigen::Isometry3d::Identity()}
-      }, "_TRAJ");
-      std::this_thread::sleep_for(std::chrono::milliseconds(50));
-      // pub_book = false;
 
       // For each step, record each new image.
       if (perception_data_) {
@@ -933,13 +930,6 @@ void PushAndPickStateMachine::Update(
     log()->info("q_iiwa: [\n  {}\n]", env_state.get_iiwa_q().transpose());
     log()->info("q_wsg: [\n  {}\n]", env_state.get_wsg_q());
   }
-  // if (pub_book) {
-    PublishFrames(&lcm, {
-        {"book", env_state_in.get_object_pose()},
-        // {"estimated", env_state.get_object_pose()},
-    }, "_BOOK");
-    std::this_thread::sleep_for(std::chrono::milliseconds(50));
-  // }
 }
 
 }  // namespace push_and_pick

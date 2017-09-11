@@ -17,7 +17,7 @@ class FramesVisualizer(object):
         self.set_enabled(True)
 
     def _add_subscriber(self):
-        if (self._subscriber is not None):
+        if self._subscriber is not None:
             return
 
         self._subscriber = lcmUtils.addSubscriber(
@@ -25,9 +25,13 @@ class FramesVisualizer(object):
             messageClass = lcmrobotlocomotion.viewer_draw_t,
             callback = self._handle_message,
             callbackNeedsChannel = True)
+        # Workaround to ensure we do not have messages on different channels
+        # colliding.
+        # @see https://github.com/RobotLocomotion/director/issues/556
+        self._subscriber.setNotifyAllMessagesEnabled(True)
 
     def _remove_subscriber(self):
-        if (self._subscriber is None):
+        if self._subscriber is None:
             return
 
         lcmUtils.removeSubscriber(self._subscriber)
@@ -49,7 +53,6 @@ class FramesVisualizer(object):
         if not name:
             name = 'default'
 
-        print("Got frames: {} -> {}\n  {}".format(channel, name, msg.link_name))
         parent_folder = om.getOrCreateContainer(self._folder_name)
 
         new_link_names = set(msg.link_name)
@@ -58,8 +61,8 @@ class FramesVisualizer(object):
             # Removes the folder completely.
             # TODO(eric.cousineau): Consider only removing frames that are in
             # the set difference.
-            print("Frames:\n  Old: {}\n  New: {}".format(old_link_names, new_link_names))
-            om.removeFromObjectModel(om.findObjectByName(name, parent = parent_folder))
+            om.removeFromObjectModel(
+                om.findObjectByName(name, parent = parent_folder))
             self._link_name_published[name] = msg.link_name
 
         # Recreates folder.
