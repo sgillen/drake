@@ -49,6 +49,7 @@ class FramesVisualizer(object):
         if not name:
             name = 'default'
 
+        print("Got frames")
         parent_folder = om.getOrCreateContainer(self._folder_name)
 
         new_link_names = set(msg.link_name)
@@ -57,6 +58,7 @@ class FramesVisualizer(object):
             # Removes the folder completely.
             # TODO(eric.cousineau): Consider only removing frames that are in
             # the set difference.
+            print("Frames:\n  Old: {}\n  New: {}".format(old_link_names, new_link_names))
             om.removeFromObjectModel(om.findObjectByName(name, parent = parent_folder))
             self._link_name_published[name] = msg.link_name
 

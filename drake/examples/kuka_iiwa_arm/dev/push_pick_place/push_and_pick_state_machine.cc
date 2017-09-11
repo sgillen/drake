@@ -39,7 +39,8 @@ using std::pair;
 using Eigen::Quaternion;
 void PublishFrames(
     lcm::DrakeLcmInterface* lcm,
-    const vector<pair<string, Isometry3d>>& frames) {
+    const vector<pair<string, Isometry3d>>& frames,
+    const std::string& channel_suffix = "") {
   drake::lcmt_viewer_draw msg{};
   const int num_frames = frames.size();
   msg.num_links = num_frames;
@@ -63,7 +64,8 @@ void PublishFrames(
   }
   vector<uint8_t> bytes(msg.getEncodedSize());
   msg.encode(bytes.data(), 0, bytes.size());
-  lcm->Publish("DRAKE_DRAW_FRAMES", bytes.data(), bytes.size());
+  lcm->Publish("DRAKE_DRAW_FRAMES" + channel_suffix,
+               bytes.data(), bytes.size());
 }
 
 
@@ -180,12 +182,21 @@ void PushAndPickStateMachine::Update(
 
   const RigidBodyTree<double>& iiwa = planner->get_robot();
 
+  // Hack.
+  bool print_state = false;
+  lcm::DrakeLcm lcm;
+
   // Permit modification from perception
   // (make it return X_WOe rather than X_WO).
   WorldState env_state = env_state_in;
   if (perception_data_) {
     env_state.mutable_object_pose().matrix() *=
         perception_data_->X_OOe.matrix();
+
+    PublishFrames(&lcm, {
+        {"actual", env_state_in.get_object_pose()},
+        {"estimated", env_state.get_object_pose()},
+    }, "book");
   }
 
   const double scan_dist = 0.65;  // m
@@ -227,11 +238,6 @@ void PushAndPickStateMachine::Update(
     X_WGi.translation() = X_WAi.translation();
     return X_WGi;
   };
-
-  // Hack.
-  lcm::DrakeLcm lcm;
-
-  bool print_state = false;
 
   switch (state_) {
     // Opens the gripper.
@@ -279,7 +285,7 @@ void PushAndPickStateMachine::Update(
         PublishFrames(&lcm, {
             {"X_WG0", X_WG0},
             {"X_WGi[0]", X_WGi0},
-        });
+        }, "traj");
 
         bool res = PlanSequenceMotion(
             env_state.get_iiwa_q(), 2, t,
@@ -317,7 +323,7 @@ void PushAndPickStateMachine::Update(
           frames.push_back({fmt::format("X_Gi[{}]", i),
                             scan_poses[i]});
         }
-        PublishFrames(&lcm, frames);
+        PublishFrames(&lcm, frames, "traj");
 
         bool res = PlanSequenceMotion(
             env_state.get_iiwa_q(), 2, t,
