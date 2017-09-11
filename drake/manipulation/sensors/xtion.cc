@@ -96,7 +96,7 @@ void Xtion::Build(lcm::DrakeLcm* lcm, bool add_lcm_publisher,
       std::make_unique<RgbdCamera>(
           name_, *tree_, *sensor_frame_,
           kDepthRangeNear, kDepthRangeFar,
-          kFovY),
+          kFovY, false),
       period_);
 
   // TODO(eric.cousineau): See if there is a better way to connect an input

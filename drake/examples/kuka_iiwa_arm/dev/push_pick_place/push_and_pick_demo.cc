@@ -315,6 +315,13 @@ int DoMain(std::unique_ptr<PerceptionBase> perception_in) {
   // const int num_wsg_positions = 1;
   // Eigen::VectorXd q_wsg_ic(num_wsg_positions);
   // q_wsg_ic << 0.1;
+  const int num_book_positions = 7;
+  Eigen::VectorXd q_book_ic(num_book_positions);
+  Eigen::Vector3d P_WB;
+  P_WB << 0.370009, -0.65003, 0.770453;
+  // Offset position vector by the fixed frame of the book.
+  q_book_ic << P_WB - kBookBase,
+      1, 0, 0, 0;
 
   systems::Context<double>& full_plant_context =
       sys->GetMutableSubsystemContext(
@@ -327,17 +334,27 @@ int DoMain(std::unique_ptr<PerceptionBase> perception_in) {
           plant_context.get_mutable_continuous_state()->get_mutable_vector())
       ->get_mutable_value();
   const auto& tree = plant->get_plant().get_rigid_body_tree();
+  
   const auto* first_iiwa_body =
       tree.FindModelInstanceBodies(iiwa_instance.instance_id).at(0);
-  // const auto* first_wsg_body =
-  //     tree.FindModelInstanceBodies(wsg_instance.instance_id).at(0);
   int iiwa_pos_start =
       first_iiwa_body->get_position_start_index();
+  plant_state.segment(iiwa_pos_start, num_iiwa_positions) << q_iiwa_ic;
+  
+  // const auto* first_wsg_body =
+  //     tree.FindModelInstanceBodies(wsg_instance.instance_id).at(0);
   // int wsg_pos_start =
   //     first_wsg_body->get_position_start_index();
-  plant_state.segment(iiwa_pos_start, num_iiwa_positions) << q_iiwa_ic;
   // // Causes memory issues???
   // plant_state.segment(wsg_pos_start, num_wsg_positions) << q_wsg_ic;
+
+  const auto* first_book_body =
+      tree.FindModelInstanceBodies(book_instance.instance_id).at(0);
+  int book_pos_start =
+      first_book_body->get_position_start_index();
+  log()->info("Init book pos: {}",
+      plant_state.segment(book_pos_start, num_book_positions).transpose());
+  plant_state.segment(book_pos_start, num_book_positions) << q_book_ic;
 
   // Set initial condition for plan.
   auto& plan_source_context = sys->GetMutableSubsystemContext(
