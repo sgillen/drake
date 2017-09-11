@@ -196,7 +196,7 @@ void PushAndPickStateMachine::Update(
     PublishFrames(&lcm, {
         {"actual", env_state_in.get_object_pose()},
         {"estimated", env_state.get_object_pose()},
-    }, "book");
+    }, "_BOOK");
   }
 
   const double scan_dist = 0.65;  // m
@@ -285,7 +285,7 @@ void PushAndPickStateMachine::Update(
         PublishFrames(&lcm, {
             {"X_WG0", X_WG0},
             {"X_WGi[0]", X_WGi0},
-        }, "traj");
+        }, "_TRAJ");
 
         bool res = PlanSequenceMotion(
             env_state.get_iiwa_q(), 2, t,
@@ -323,7 +323,7 @@ void PushAndPickStateMachine::Update(
           frames.push_back({fmt::format("X_Gi[{}]", i),
                             scan_poses[i]});
         }
-        PublishFrames(&lcm, frames, "traj");
+        PublishFrames(&lcm, frames, "_TRAJ");
 
         bool res = PlanSequenceMotion(
             env_state.get_iiwa_q(), 2, t,
