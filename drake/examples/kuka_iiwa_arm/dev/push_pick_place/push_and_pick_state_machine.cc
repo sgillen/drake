@@ -241,8 +241,8 @@ void PushAndPickStateMachine::Update(
     return X_WGi;
   };
 
-  log()->info("Book pos: [\n  {}\n]",
-      env_state_in.get_object_pose().translation().transpose());
+  // log()->info("Book pos: [\n  {}\n]",
+  //     env_state_in.get_object_pose().translation().transpose());
 
   switch (state_) {
     // Opens the gripper.
