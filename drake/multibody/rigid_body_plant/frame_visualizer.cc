@@ -6,11 +6,12 @@ namespace systems {
 FrameVisualizer::FrameVisualizer(
     const RigidBodyTree<double>* tree,
     const std::vector<RigidBodyFrame<double>>& local_transforms,
-    drake::lcm::DrakeLcmInterface* lcm)
-    : tree_(*tree), lcm_(lcm), local_transforms_(local_transforms) {
+    drake::lcm::DrakeLcmInterface* lcm, const std::string& channel_suffix)
+    : tree_(*tree), lcm_(lcm), local_transforms_(local_transforms),
+      channel_suffix_(channel_suffix) {
   DeclareInputPort(kVectorValued,
                    tree_.get_num_positions() + tree_.get_num_velocities());
-  set_name("frame_visualzier");
+  set_name("frame_visualzier" + channel_suffix_);
 
   default_msg_.num_links = static_cast<int>(local_transforms_.size());
   default_msg_.link_name.resize(default_msg_.num_links);
@@ -54,7 +55,8 @@ void FrameVisualizer::DoPublish(
   const int length = msg.getEncodedSize();
   std::vector<uint8_t> msgbytes(length);
   msg.encode(msgbytes.data(), 0, length);
-  lcm_->Publish("DRAKE_DRAW_FRAMES", msgbytes.data(), msgbytes.size());
+  lcm_->Publish("DRAKE_DRAW_FRAMES" + channel_suffix_,
+                msgbytes.data(), msgbytes.size());
 }
 
 }  // namespace systems

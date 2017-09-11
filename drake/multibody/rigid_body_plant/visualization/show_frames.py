@@ -13,7 +13,7 @@ class FramesVisualizer(object):
         self._name = "Frame Visualizer"
         self._subscriber = None
         # Link names that were previously published.
-        self._link_name_published = []
+        self._link_name_published = {}
         self.set_enabled(True)
 
     def _add_subscriber(self):
@@ -21,9 +21,10 @@ class FramesVisualizer(object):
             return
 
         self._subscriber = lcmUtils.addSubscriber(
-            'DRAKE_DRAW_FRAMES',
+            'DRAKE_DRAW_FRAMES*',
             messageClass = lcmrobotlocomotion.viewer_draw_t,
-            callback = self._handle_message)
+            callback = self._handle_message,
+            callbackNeedsChannel = True)
 
     def _remove_subscriber(self):
         if (self._subscriber is None):
@@ -42,16 +43,25 @@ class FramesVisualizer(object):
         else:
             self._remove_subscriber()
 
-    def _handle_message(self, msg):
-        if set(self._link_name_published) != set(msg.link_name):
+    def _handle_message(self, msg, channel):
+        # Follow same setup for DrakeVisualizer.onPointCloud
+        name = channel.replace('DRAKE_DRAW_FRAMES', '').lstrip('_')
+        if not name:
+            name = 'default'
+
+        parent_folder = om.getOrCreateContainer(self._folder_name)
+
+        new_link_names = set(msg.link_name)
+        old_link_names = set(self._link_name_published.get(name, []))
+        if old_link_names != new_link_names:
             # Removes the folder completely.
             # TODO(eric.cousineau): Consider only removing frames that are in
             # the set difference.
-            om.removeFromObjectModel(om.findObjectByName(self._folder_name))
-            self._link_name_published = msg.link_name
+            om.removeFromObjectModel(om.findObjectByName(name, parent = parent_folder))
+            self._link_name_published[name] = msg.link_name
 
         # Recreates folder.
-        folder = om.getOrCreateContainer(self._folder_name)
+        folder = om.getOrCreateContainer(name, parentObj = parent_folder)
 
         for i in range(0, msg.num_links):
             name = msg.link_name[i]

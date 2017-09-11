@@ -31,10 +31,13 @@ class FrameVisualizer : public LeafSystem<double> {
    * @param lcm A pointer to the object through which LCM messages can be
    *        published. This pointer must remain valid for the duration of this
    *        object.
+   * @param channel_suffix A suffix (possibly starting with "_") that will be
+   *        used to separate this set of frames from another set.
    */
   FrameVisualizer(const RigidBodyTree<double>* tree,
                   const std::vector<RigidBodyFrame<double>>& local_transforms,
-                  drake::lcm::DrakeLcmInterface* lcm);
+                  drake::lcm::DrakeLcmInterface* lcm,
+                  const std::string& channel_suffix = "");
 
   /**
    * Sets the publishing period of this system. See
@@ -53,6 +56,7 @@ class FrameVisualizer : public LeafSystem<double> {
   const RigidBodyTree<double>& tree_;
   drake::lcm::DrakeLcmInterface* const lcm_;
   const std::vector<RigidBodyFrame<double>> local_transforms_;
+  const std::string channel_suffix_;
 
   drake::lcmt_viewer_draw default_msg_{};
 };
