@@ -49,7 +49,7 @@ class FramesVisualizer(object):
         if not name:
             name = 'default'
 
-        print("Got frames: {}".format(name))
+        print("Got frames: {} -> {}\n  {}".format(channel, name, msg.link_name))
         parent_folder = om.getOrCreateContainer(self._folder_name)
 
         new_link_names = set(msg.link_name)

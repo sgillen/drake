@@ -1,5 +1,7 @@
 #include "drake/examples/kuka_iiwa_arm/dev/push_pick_place/push_and_pick_state_machine.h"
 
+#include <chrono>
+
 #include "drake/common/drake_assert.h"
 #include "drake/common/eigen_types.h"
 #include "drake/common/text_logging.h"
@@ -285,7 +287,7 @@ void PushAndPickStateMachine::Update(
                 {"X_WG0", X_WG0},
                 {"X_WGi[0]", X_WGi0},
             }, "_TRAJ");
-        pub_book = false;
+        // pub_book = false;
 
         bool res = PlanSequenceMotion(
             env_state.get_iiwa_q(), 2, t,
@@ -323,8 +325,6 @@ void PushAndPickStateMachine::Update(
           frames.push_back({fmt::format("X_Gi[{}]", i),
                             scan_poses[i]});
         }
-        PublishFrames(&lcm, frames, "_TRAJ");
-        pub_book = false;
 
         bool res = PlanSequenceMotion(
             env_state.get_iiwa_q(), 2, t,
@@ -339,6 +339,12 @@ void PushAndPickStateMachine::Update(
                               &plan);
         iiwa_callback(&plan);
       }
+
+      PublishFrames(&lcm, {
+          {"traj", Eigen::Isometry3d::Identity()}
+      }, "_TRAJ");
+      std::this_thread::sleep_for(std::chrono::milliseconds(50));
+      // pub_book = false;
 
       // For each step, record each new image.
       if (perception_data_) {
@@ -927,12 +933,13 @@ void PushAndPickStateMachine::Update(
     log()->info("q_iiwa: [\n  {}\n]", env_state.get_iiwa_q().transpose());
     log()->info("q_wsg: [\n  {}\n]", env_state.get_wsg_q());
   }
-  if (pub_book) {
+  // if (pub_book) {
     PublishFrames(&lcm, {
-        {"actual", env_state_in.get_object_pose()},
-        {"estimated", env_state.get_object_pose()},
+        {"book", env_state_in.get_object_pose()},
+        // {"estimated", env_state.get_object_pose()},
     }, "_BOOK");
-  }
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+  // }
 }
 
 }  // namespace push_and_pick
