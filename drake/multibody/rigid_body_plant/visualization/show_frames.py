@@ -21,7 +21,7 @@ class FramesVisualizer(object):
             return
 
         self._subscriber = lcmUtils.addSubscriber(
-            'DRAKE_DRAW_FRAMES*',
+            'DRAKE_DRAW_FRAMES.*',
             messageClass = lcmrobotlocomotion.viewer_draw_t,
             callback = self._handle_message,
             callbackNeedsChannel = True)

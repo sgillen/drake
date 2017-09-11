@@ -185,6 +185,7 @@ void PushAndPickStateMachine::Update(
   // Hack.
   bool print_state = false;
   lcm::DrakeLcm lcm;
+  bool pub_book = false;
 
   // Permit modification from perception
   // (make it return X_WOe rather than X_WO).
@@ -192,11 +193,9 @@ void PushAndPickStateMachine::Update(
   if (perception_data_) {
     env_state.mutable_object_pose().matrix() *=
         perception_data_->X_OOe.matrix();
-
-    PublishFrames(&lcm, {
-        {"actual", env_state_in.get_object_pose()},
-        {"estimated", env_state.get_object_pose()},
-    }, "_BOOK");
+    // Use boolean so other frame publishers can override...
+    // due to limitation in LCM / channel name subscription.
+    pub_book = true;
   }
 
   const double scan_dist = 0.65;  // m
@@ -283,9 +282,10 @@ void PushAndPickStateMachine::Update(
         Isometry3d X_WGi0 = GetGripperScanPose(scan_theta_start);
 
         PublishFrames(&lcm, {
-            {"X_WG0", X_WG0},
-            {"X_WGi[0]", X_WGi0},
-        }, "_TRAJ");
+                {"X_WG0", X_WG0},
+                {"X_WGi[0]", X_WGi0},
+            }, "_TRAJ");
+        pub_book = false;
 
         bool res = PlanSequenceMotion(
             env_state.get_iiwa_q(), 2, t,
@@ -324,6 +324,7 @@ void PushAndPickStateMachine::Update(
                             scan_poses[i]});
         }
         PublishFrames(&lcm, frames, "_TRAJ");
+        pub_book = false;
 
         bool res = PlanSequenceMotion(
             env_state.get_iiwa_q(), 2, t,
@@ -925,6 +926,12 @@ void PushAndPickStateMachine::Update(
   if (print_state) {
     log()->info("q_iiwa: [\n  {}\n]", env_state.get_iiwa_q().transpose());
     log()->info("q_wsg: [\n  {}\n]", env_state.get_wsg_q());
+  }
+  if (pub_book) {
+    PublishFrames(&lcm, {
+        {"actual", env_state_in.get_object_pose()},
+        {"estimated", env_state.get_object_pose()},
+    }, "_BOOK");
   }
 }
 
