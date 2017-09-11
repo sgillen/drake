@@ -26,12 +26,13 @@ Argument:
 VTK_MAJOR_MINOR_VERSION = "8.0"
 
 def _vtk_cc_library(os_name, name, hdrs = None, visibility = None, deps = None,
-                    header_only = False, linkopts = []):
+                    header_only = False, linkopts = [],
+                    use_catch_all = False):
     hdr_paths = []
+    vtk_include = "include/vtk-{}".format(VTK_MAJOR_MINOR_VERSION)
 
     if hdrs:
-        includes = ["include/vtk-{}".format(VTK_MAJOR_MINOR_VERSION)]
-
+        includes = [vtk_include]
         if not visibility:
             visibility = ["//visibility:public"]
 
@@ -46,19 +47,24 @@ def _vtk_cc_library(os_name, name, hdrs = None, visibility = None, deps = None,
     if not deps:
         deps = []
 
-    srcs = []
-
-    if os_name == "mac os x":
-        srcs = ["empty.cc"]
-
-        if not header_only:
-            linkopts = linkopts + [
-                "-L/usr/local/opt/vtk@{}/lib".format(VTK_MAJOR_MINOR_VERSION),
-                "-l{}-{}".format(name, VTK_MAJOR_MINOR_VERSION),
-            ]
+    if use_catch_all:
+        includes = [vtk_include]
+        hdr_paths = """glob(["{}/**/*.h"])""".format(vtk_include)
+        srcs = """glob(["lib/lib*.so.1"])"""
     else:
-        if not header_only:
-            srcs = ["lib/lib{}-{}.so.1".format(name, VTK_MAJOR_MINOR_VERSION)]
+        srcs = []
+
+        if os_name == "mac os x":
+            srcs = ["empty.cc"]
+
+            if not header_only:
+                linkopts = linkopts + [
+                    "-L/usr/local/opt/vtk@{}/lib".format(VTK_MAJOR_MINOR_VERSION),
+                    "-l{}-{}".format(name, VTK_MAJOR_MINOR_VERSION),
+                ]
+        else:
+            if not header_only:
+                srcs = ["lib/lib{}-{}.so.1".format(name, VTK_MAJOR_MINOR_VERSION)]
 
     content = """
 cc_library(
@@ -601,6 +607,9 @@ cc_library(
                                     deps = ["@zlib"])
 
     file_content += _vtk_cc_library(repository_ctx.os.name, "vtksys")
+
+    file_content += _vtk_cc_library(repository_ctx.os.name, "catch_all",
+                                    use_catch_all = True)
 
     # Glob all files for the data dependency of drake-visualizer.
     file_content += """
