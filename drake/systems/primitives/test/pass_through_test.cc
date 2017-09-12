@@ -56,7 +56,7 @@ class PassThroughTest : public ::testing::TestWithParam<bool> {
   Eigen::Vector3d input_value_;
   std::unique_ptr<System<double>> pass_through_;
   std::unique_ptr<Context<double>> context_;
-  std::unique_ptr<SystemOutput<double>> output_;  
+  std::unique_ptr<SystemOutput<double>> output_;
 };
 
 // Tests that the output of this system equals its input.

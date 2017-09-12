@@ -37,8 +37,11 @@ ZeroOrderHold<T>::ZeroOrderHold(double period_sec,
   // Use the std::function<> overloads to work with `AbstractValue` type
   // directly and maintain type erasure.
   namespace sp = std::placeholders;
+  auto allocate_abstract_value = [&](const Context<T>&) {
+    return abstract_model_value_->Clone();
+  };
   this->DeclareAbstractOutputPort(
-      std::bind(&ZeroOrderHold::AllocateAbstractValue, this, sp::_1),
+      allocate_abstract_value,
       std::bind(&ZeroOrderHold::DoCalcAbstractOutput, this, sp::_1, sp::_2));
   this->DeclareAbstractState(model_value.Clone());
   this->DeclarePeriodicUnrestrictedUpdate(period_sec, 0.);
@@ -62,12 +65,6 @@ void ZeroOrderHold<T>::DoCalcDiscreteVariableUpdates(
   const BasicVector<T>& input_value = *this->EvalVectorInput(context, 0);
   BasicVector<T>& state_value = *discrete_state->get_mutable_vector(0);
   state_value.SetFrom(input_value);
-}
-
-template <typename T>
-std::unique_ptr<AbstractValue>
-ZeroOrderHold<T>::AllocateAbstractValue(const Context<T>&) const {
-  return abstract_model_value_->Clone();
 }
 
 template <typename T>

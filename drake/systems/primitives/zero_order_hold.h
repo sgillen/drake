@@ -64,22 +64,17 @@ class ZeroOrderHold : public LeafSystem<T> {
   // the same dimensions as this ZeroOrderHold.
   ZeroOrderHold<symbolic::Expression>* DoToSymbolic() const override;
 
-  /// Sets the output port value to the vector value that is currently
-  /// latched in the zero-order hold.
+  // Sets the output port value to the vector value that is currently
+  // latched in the zero-order hold.
   void DoCalcVectorOutput(
       const Context<T>& context,
       BasicVector<T>* output) const;
 
-  /// Latches the input port into the discrete vector-valued state.
+  // Latches the input port into the discrete vector-valued state.
   void DoCalcDiscreteVariableUpdates(
       const Context<T>& context,
       const std::vector<const DiscreteUpdateEvent<T>*>& events,
       DiscreteValues<T>* discrete_state) const override;
-
-  // Return a cloned copy of the initial abstract value. This non-templated
-  // method is used to maintain type erasure, since Value<AbstractValue> is an
-  // invalid type.
-  std::unique_ptr<AbstractValue> AllocateAbstractValue(const Context<T>&) const;
 
   // Same as `DoCalcVectorOutput`, but for abstract values.
   void DoCalcAbstractOutput(
