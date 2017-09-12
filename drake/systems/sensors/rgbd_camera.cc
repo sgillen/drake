@@ -1026,7 +1026,7 @@ RgbdCameraDiscrete::RgbdCameraDiscrete(std::unique_ptr<RgbdCamera> camera,
       builder.ExportOutput(camera_->depth_pose_output_port());
 
   // Time outport.
-  int scalar_size = 1;
+  const int scalar_size = 1;
   auto* zoh_clock = builder.AddSystem<ZOHEnabled>(period_, scalar_size);
   auto* clock = builder.AddSystem<ClockSource>();
   builder.Connect(clock->get_output_port(0),
