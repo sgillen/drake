@@ -17,5 +17,16 @@
       </material>
     </visual>
     <!-- TODO(eric.cousineau): Consider collision. -->
-   </link>
+  </link>
+
+  <!--
+  Frame representing X_XB, pose of sensor frame (B) w.r.t. base_link (X).
+  -->
+  <frame name="sensor_frame" link="base_link"
+      rpy="0 0 0" xyz="0.021 0 0.0325"/>
+  <!--
+  TODO(eric.cousineau): Once relative transforms between B, C, D can be
+  defined, add these frames in.
+  -->
+
 </robot>
