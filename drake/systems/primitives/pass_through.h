@@ -36,28 +36,62 @@ namespace systems {
 /// They are already available to link against in the containing library.
 /// @ingroup primitive_systems
 template <typename T>
-class PassThrough : public VectorSystem<T> {
+class PassThrough : public LeafSystem<T> {
  public:
   DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(PassThrough)
 
-  /// Constructs a pass thorough system (`y = u`).
+  /// Constructs a pass through system (`y = u`).
   /// @param size number of elements in the signal to be processed.
   explicit PassThrough(int size);
 
-  // TODO(eric.cousineau): Ensure that this system can also handle
-  // AbstractValue's akin to ZeroOrderHold (#6491).
+  /// Constructs a pass thorough system (`y = u`).
+  /// @param model_value A template abstract value.
+  explicit PassThrough(const AbstractValue& model_value);
+
+  virtual ~PassThrough() {}
+
+  // TODO(eric.cousineau): Possibly share single port interface with
+  // ZeroOrderHold (#6490).
+
+  /// Returns the sole input port.
+  const InputPortDescriptor<T>& get_input_port() const {
+    return LeafSystem<T>::get_input_port(0);
+  }
+
+  // Don't use the indexed get_input_port when calling this system directly.
+  void get_input_port(int) = delete;
+
+  /// Returns the sole output port.
+  const OutputPort<T>& get_output_port() const {
+    return LeafSystem<T>::get_output_port(0);
+  }
+
+  // Don't use the indexed get_output_port when calling this system directly.
+  void get_output_port(int) = delete;
 
  protected:
   /// Sets the output port to equal the input port.
   void DoCalcVectorOutput(
       const Context<T>& context,
-      const Eigen::VectorBlock<const VectorX<T>>& input,
-      const Eigen::VectorBlock<const VectorX<T>>& state,
-      Eigen::VectorBlock<VectorX<T>>* output) const override;
+      BasicVector<T>* output) const;
+
+  // Same as `DoCalcVectorOutput`, but for abstract values.
+  void DoCalcAbstractOutput(
+      const Context<T>& context,
+      AbstractValue* output) const;
+
+  // Override feedthrough detection to avoid the need for `DoToSymbolic()`.
+  optional<bool>  DoHasDirectFeedthrough(
+      int input_port, int output_port) const override;
 
   /// Returns an PassThrough<symbolic::Expression> with the same dimensions as
   /// this PassThrough.
   PassThrough<symbolic::Expression>* DoToSymbolic() const override;
+
+ private:
+  bool is_abstract() const { return abstract_model_value_ != nullptr; }
+
+  const std::unique_ptr<const AbstractValue> abstract_model_value_;
 };
 
 }  // namespace systems
