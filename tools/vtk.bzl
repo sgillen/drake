@@ -88,9 +88,11 @@ cc_library(
     srcs = {},
     hdrs = {},
     includes = {},
-    visibility = "//visibility:public",
+    visibility = ["//visibility:public"],
 )
-    """.format(name, srcs, hdr_paths, includes, linkopts)
+    """.format(name, srcs, hdr_paths, includes)
+
+    return content
 
 def _impl(repository_ctx):
     if repository_ctx.os.name == "mac os x":

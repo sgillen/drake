@@ -339,15 +339,6 @@ filegroup(
         "test/models/nothing.sdf",
         "test/models/sphere.sdf",
         "test/models/three_boxes.sdf",
-    ]),
-    visibility = ["//visibility:private"],
-)
-
-# TODO(jamiesnape): Remove the "manual" tag when Xvfb is available on CI.
-drake_cc_googletest(
-    name = "rgbd_camera_test",
-    data = [
-        ":test_models",
     ],
     visibility = ["//visibility:private"],
 )
