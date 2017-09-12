@@ -270,6 +270,7 @@ class RgbdCameraDiscrete : public systems::Diagram<double> {
 
   /// Returns reference to RgbdCamera intsance.
   const RgbdCamera& camera() const { return *camera_; }
+
   /// Returns reference to RgbdCamera intsance.
   RgbdCamera& mutable_camera() { return *camera_; }
 
@@ -317,8 +318,8 @@ class RgbdCameraDiscrete : public systems::Diagram<double> {
   }
 
  private:
-  RgbdCamera* camera_{};
-  double period_{};
+  RgbdCamera* const camera_{};
+  const double period_{};
 
   int input_port_state_{-1};
   int input_port_enabled_{-1};

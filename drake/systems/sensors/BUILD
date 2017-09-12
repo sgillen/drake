@@ -329,7 +329,7 @@ drake_cc_googletest(
 filegroup(
     name = "test_models",
     testonly = 1,
-    srcs = glob([
+    srcs = [
         "test/models/box.sdf",
         "test/models/cylinder.sdf",
         "test/models/mesh_box.sdf",
@@ -349,6 +349,17 @@ drake_cc_googletest(
     data = [
         ":test_models",
     ],
+    visibility = ["//visibility:private"],
+)
+
+# TODO(jamiesnape): Remove the "manual" tag when Xvfb is available on CI.
+drake_cc_googletest(
+    name = "rgbd_camera_test",
+    data = [
+        ":test_models",
+    ],
+    # Mitigate driver-related issues when running under `bazel test` (#7004).
+    local = 1,
     tags = ["manual"],
     deps = [
         ":rgbd_camera",
