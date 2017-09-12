@@ -36,6 +36,7 @@
 
 #include "drake/math/roll_pitch_yaw.h"
 #include "drake/systems/framework/diagram_builder.h"
+#include "drake/systems/primitives/pass_through.h"
 #include "drake/systems/primitives/zero_order_hold.h"
 #include "drake/systems/rendering/pose_vector.h"
 #include "drake/systems/sensors/camera_info.h"
@@ -905,6 +906,75 @@ class ClockSource : public LeafSystem<double> {
   }
 };
 
+template <typename T>
+class ZOHEnabled : public ZeroOrderHold<T> {
+ public:
+  typedef ZeroOrderHold<T> Base;
+
+  ZOHEnabled(double period_sec, int size)
+      : Base(period_sec, size) {
+    AddEnabler();
+  }
+
+  ZOHEnabled(double period_sec, const AbstractValue& model_value)
+      : Base(period_sec, model_value) {
+    AddEnabler();
+  }
+
+  const InputPortDescriptor<T>& enabled_input_port() const {
+    return LeafSystem<T>::get_input_port(input_port_enabled_);
+  }
+
+ protected:
+  bool DoHasDirectFeedthrough(const SystemSymbolicInspector* sparsity,
+                              int input_port, int output_port) const override {
+    DRAKE_DEMAND(input_port == 0 || input_port == 1);
+    DRAKE_DEMAND(output_port == 0);
+    return false;
+  }
+
+  void DoCalcDiscreteVariableUpdates(
+      const Context<T>& context,
+      const std::vector<const DiscreteUpdateEvent<T>*>& events,
+      DiscreteValues<T>* discrete_state) const override {
+    if (IsEnabled(context)) {
+      Base::DoCalcDiscreteVariableUpdates(
+        context, events, discrete_state);
+    }
+  }
+
+  void DoCalcUnrestrictedUpdate(
+      const Context<T>& context,
+      const std::vector<const UnrestrictedUpdateEvent<T>*>& events,
+      State<T>* state) const override {
+    if (IsEnabled(context)) {
+      Base::DoCalcUnrestrictedUpdate(
+          context, events, state);
+    }
+  }
+
+ private:
+  void AddEnabler() {
+    BasicVector<T> model_value(1);
+    input_port_enabled_ =
+        this->DeclareVectorInputPort(model_value).get_index();
+  }
+
+  bool IsEnabled(const Context<T>& context) const {
+    std::cout << "Checking" << std::endl;
+    const BasicVector<T>* input = 
+        this->EvalVectorInput(context, input_port_enabled_);
+    if (input == nullptr) {
+      // Enabled by default.
+      return true;
+    } else {
+      return input->get_value().coeffRef(0) > 0.5;
+    }
+  }
+
+  int input_port_enabled_{-1};
+};
+
 RgbdCameraDiscrete::RgbdCameraDiscrete(std::unique_ptr<RgbdCamera> camera,
                                        double period)
     : camera_(camera.get()), period_(period) {
@@ -914,25 +984,38 @@ RgbdCameraDiscrete::RgbdCameraDiscrete(std::unique_ptr<RgbdCamera> camera,
   builder.AddSystem(std::move(camera));
   input_port_state_ = builder.ExportInput(camera_->get_input_port(0));
 
+  auto* enabled = builder.AddSystem<PassThrough>(1);
+  input_port_enabled_ =
+      builder.ExportInput(enabled->get_input_port());
+  const auto& output_enabled = enabled->get_output_port();
+
+  auto setup_enable = [&](auto* zoh) {
+    builder.Connect(output_enabled,
+                    zoh->enabled_input_port());
+  };
+
   // Color image.
   Value<ImageRgba8U> image_color(kWidth, kHeight);
-  auto* zoh_color = builder.AddSystem<ZeroOrderHold>(period_, image_color);
+  auto* zoh_color = builder.AddSystem<ZOHEnabled>(period_, image_color);
   builder.Connect(camera_->color_image_output_port(),
                   zoh_color->get_input_port());
+  setup_enable(zoh_color);
   output_port_color_image_ = builder.ExportOutput(zoh_color->get_output_port());
 
   // Depth image.
   Value<ImageDepth32F> image_depth(kWidth, kHeight);
-  auto* zoh_depth = builder.AddSystem<ZeroOrderHold>(period_, image_depth);
+  auto* zoh_depth = builder.AddSystem<ZOHEnabled>(period_, image_depth);
   builder.Connect(camera_->depth_image_output_port(),
                   zoh_depth->get_input_port());
+  setup_enable(zoh_depth);
   output_port_depth_image_ = builder.ExportOutput(zoh_depth->get_output_port());
 
   // Label image.
   Value<ImageLabel16I> image_label(kWidth, kHeight);
-  auto* zoh_label = builder.AddSystem<ZeroOrderHold>(period_, image_label);
+  auto* zoh_label = builder.AddSystem<ZOHEnabled>(period_, image_label);
   builder.Connect(camera_->label_image_output_port(),
                   zoh_label->get_input_port());
+  setup_enable(zoh_label);
   output_port_label_image_ = builder.ExportOutput(zoh_label->get_output_port());
 
   // No need to place a ZOH on pose output.
@@ -944,10 +1027,11 @@ RgbdCameraDiscrete::RgbdCameraDiscrete(std::unique_ptr<RgbdCamera> camera,
 
   // Time outport.
   int scalar_size = 1;
-  auto* zoh_clock = builder.AddSystem<ZeroOrderHold>(period_, scalar_size);
+  auto* zoh_clock = builder.AddSystem<ZOHEnabled>(period_, scalar_size);
   auto* clock = builder.AddSystem<ClockSource>();
   builder.Connect(clock->get_output_port(0),
                   zoh_clock->get_input_port());
+  setup_enable(zoh_clock);
   output_port_update_time_ = builder.ExportOutput(zoh_clock->get_output_port());
 
   builder.BuildInto(this);

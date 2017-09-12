@@ -281,6 +281,11 @@ class RgbdCameraDiscrete : public systems::Diagram<double> {
     return get_input_port(input_port_state_);
   }
 
+  /// @see RgbdCamera::state_input_port().
+  const InputPortDescriptor<double>& enabled_input_port() const {
+    return get_input_port(input_port_enabled_);
+  }
+
   /// @see RgbdCamera::color_image_output_port().
   const systems::OutputPort<double>& color_image_output_port() const {
     return get_output_port(output_port_color_image_);
@@ -316,6 +321,7 @@ class RgbdCameraDiscrete : public systems::Diagram<double> {
   double period_{};
 
   int input_port_state_{-1};
+  int input_port_enabled_{-1};
   int output_port_color_image_{-1};
   int output_port_depth_image_{-1};
   int output_port_label_image_{-1};
