@@ -71,7 +71,7 @@ class PassThrough : public LeafSystem<T> {
   /// Sets the output port to equal the input port.
   void DoCalcVectorOutput(
       const Context<T>& context,
-      BasicVector<T>* output) const override;
+      BasicVector<T>* output) const;
 
   // Same as `DoCalcVectorOutput`, but for abstract values.
   void DoCalcAbstractOutput(

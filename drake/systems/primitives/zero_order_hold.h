@@ -76,7 +76,9 @@ class ZeroOrderHold : public LeafSystem<T> {
       const std::vector<const DiscreteUpdateEvent<T>*>& events,
       DiscreteValues<T>* discrete_state) const override;
 
-  // Return a cloned copy of the initial abstract value.
+  // Return a cloned copy of the initial abstract value. This non-templated
+  // method is used to maintain type erasure, since Value<AbstractValue> is an
+  // invalid type.
   std::unique_ptr<AbstractValue> AllocateAbstractValue(const Context<T>&) const;
 
   // Same as `DoCalcVectorOutput`, but for abstract values.

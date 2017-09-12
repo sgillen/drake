@@ -1,6 +1,7 @@
 #include "drake/systems/primitives/pass_through.h"
 
 #include <memory>
+#include <utility>
 
 #include <gtest/gtest.h>
 #include <unsupported/Eigen/AutoDiff>
@@ -22,6 +23,8 @@ namespace {
 // through (`Value<SimpleAbstractType>`).
 class SimpleAbstractType {
  public:
+  explicit SimpleAbstractType(int size)
+      : value_(size) {}
   explicit SimpleAbstractType(const Eigen::Vector3d& value)
       : value_(value) {}
   const Eigen::Vector3d& value() const { return value_; }
@@ -29,41 +32,48 @@ class SimpleAbstractType {
   Eigen::Vector3d value_;
 };
 
-class PassThroughTest : public ::testing::Test {
+class PassThroughTest : public ::testing::TestWithParam<bool> {
  protected:
-  void SetUp(bool is_abstract) {
-    if (is_abstract) {
-      // Value<SimpleAbstractType>(
-      pass_through_ = make_unique<PassThrough<double>>();
-      context_ = pass_through_->CreateDefaultContext();
-      output_ = pass_through_->AllocateOutput(*context_);
-      input_ = make_unique<BasicVector<double>>(3 /* size */);
+  PassThroughTest()
+      : is_abstract_(GetParam()) {}
+
+  void SetUp() override {
+    const int size = 3;
+    input_value_ << 1.0, 3.14, 2.18;
+
+    if (!is_abstract_) {
+      pass_through_ = make_unique<PassThrough<double>>(size);
     } else {
-      pass_through_ = make_unique<PassThrough<double>>(3 /* size */);
-      context_ = pass_through_->CreateDefaultContext();
-      output_ = pass_through_->AllocateOutput(*context_);
-      input_ = make_unique<BasicVector<double>>(3 /* size */);
+      pass_through_ =
+          make_unique<PassThrough<double>>(Value<SimpleAbstractType>(size));
     }
+    context_ = pass_through_->CreateDefaultContext();
+    output_ = pass_through_->AllocateOutput(*context_);
   }
 
+  const bool is_abstract_;
+
+  Eigen::Vector3d input_value_;
   std::unique_ptr<System<double>> pass_through_;
   std::unique_ptr<Context<double>> context_;
-  std::unique_ptr<SystemOutput<double>> output_;
-  std::unique_ptr<BasicVector<double>> input_;
-  std::unique_ptr<AbstractValue> abstact_input_;
+  std::unique_ptr<SystemOutput<double>> output_;  
 };
 
 // Tests that the output of this system equals its input.
-TEST_F(PassThroughTest, VectorThroughPassThroughSystem) {
+TEST_P(PassThroughTest, VectorThroughPassThroughSystem) {
   /// Checks that the number of input ports in the system and in the context
   // are consistent.
   ASSERT_EQ(1, context_->get_num_input_ports());
   ASSERT_EQ(1, pass_through_->get_num_input_ports());
-  Eigen::Vector3d input_vector(1.0, 3.14, 2.18);
-  input_->get_mutable_value() << input_vector;
 
   // Hook input of the expected size.
-  context_->FixInputPort(0, std::move(input_));
+  if (!is_abstract_) {
+    context_->FixInputPort(
+        0, std::make_unique<BasicVector<double>>(input_value_));
+  } else {
+    context_->FixInputPort(
+        0, AbstractValue::Make(SimpleAbstractType(input_value_)));
+  }
 
   pass_through_->CalcOutput(*context_, output_.get());
 
@@ -71,20 +81,33 @@ TEST_F(PassThroughTest, VectorThroughPassThroughSystem) {
   // output are consistent.
   ASSERT_EQ(1, output_->get_num_ports());
   ASSERT_EQ(1, pass_through_->get_num_output_ports());
-  const BasicVector<double>* output_vector = output_->get_vector_data(0);
-  ASSERT_NE(nullptr, output_vector);
-  EXPECT_EQ(input_vector, output_vector->get_value());
+
+  Eigen::Vector3d output;
+  if (!is_abstract_) {
+    const BasicVector<double>* output_vector = output_->get_vector_data(0);
+    ASSERT_NE(nullptr, output_vector);
+    output = output_vector->get_value();
+  } else {
+    output = output_->get_data(0)->GetValue<SimpleAbstractType>().value();
+  }
+  EXPECT_EQ(input_value_, output);
 }
 
 // Tests that PassThrough allocates no state variables in the context_.
-TEST_F(PassThroughTest, PassThroughIsStateless) {
+TEST_P(PassThroughTest, PassThroughIsStateless) {
   EXPECT_EQ(0, context_->get_continuous_state()->size());
+  EXPECT_EQ(0, context_->get_discrete_state()->size());
   EXPECT_EQ(0, context_->get_abstract_state()->size());
 }
 
-TEST_F(PassThroughTest, DirectFeedthrough) {
+// Tests that PassThrough is direct feedthrough.
+TEST_P(PassThroughTest, DirectFeedthrough) {
   EXPECT_TRUE(pass_through_->HasAnyDirectFeedthrough());
 }
+
+// Instantiate parameterized test cases for is_abstract_ = {false, true}
+INSTANTIATE_TEST_CASE_P(test, PassThroughTest,
+    ::testing::Values(false, true));
 
 }  // namespace
 }  // namespace systems

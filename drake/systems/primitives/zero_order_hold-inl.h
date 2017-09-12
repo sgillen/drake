@@ -19,10 +19,10 @@ ZeroOrderHold<T>::ZeroOrderHold(double period_sec, int size)
     : period_sec_(period_sec) {
   // TODO(david-german-tri): remove the size parameter from the constructor
   // once #3109 supporting automatic sizes is resolved.
-  BasicVector<T> dummy_value(size);
-  this->DeclareVectorInputPort(dummy_value);
+  BasicVector<T> model_value(size);
+  this->DeclareVectorInputPort(model_value);
   this->DeclareVectorOutputPort(
-      dummy_value, &ZeroOrderHold::DoCalcVectorOutput);
+      model_value, &ZeroOrderHold::DoCalcVectorOutput);
   this->DeclareDiscreteState(size);
   this->DeclarePeriodicDiscreteUpdate(period_sec);
 }
