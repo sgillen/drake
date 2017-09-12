@@ -955,20 +955,22 @@ class ZOHEnabled : public ZeroOrderHold<T> {
 
  private:
   void AddEnabler() {
-    BasicVector<T> model_value(1);
+    // Cannot have optional numeric input ports, so using AbstractValue.
+    Value<bool> model_value{};
     input_port_enabled_ =
-        this->DeclareVectorInputPort(model_value).get_index();
+        this->DeclareAbstractInputPort(model_value).get_index();
   }
 
   bool IsEnabled(const Context<T>& context) const {
     std::cout << "Checking" << std::endl;
-    const BasicVector<T>* input = 
-        this->EvalVectorInput(context, input_port_enabled_);
-    if (input == nullptr) {
+
+    const bool* enabled = 
+        this->template EvalInputValue<bool>(context, input_port_enabled_);
+    if (enabled == nullptr) {
       // Enabled by default.
       return true;
     } else {
-      return input->get_value().coeffRef(0) > 0.5;
+      return *enabled;
     }
   }
 
@@ -984,7 +986,7 @@ RgbdCameraDiscrete::RgbdCameraDiscrete(std::unique_ptr<RgbdCamera> camera,
   builder.AddSystem(std::move(camera));
   input_port_state_ = builder.ExportInput(camera_->get_input_port(0));
 
-  auto* enabled = builder.AddSystem<PassThrough>(1);
+  auto* enabled = builder.AddSystem<PassThrough>(Value<bool>());
   input_port_enabled_ =
       builder.ExportInput(enabled->get_input_port());
   const auto& output_enabled = enabled->get_output_port();

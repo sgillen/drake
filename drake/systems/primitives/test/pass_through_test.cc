@@ -17,19 +17,40 @@ namespace drake {
 namespace systems {
 namespace {
 
+// A simple type containing a vector, to simplify checking expected values for
+// a vector-valued pass through (`BasicValue`) and an abstract-valued pass
+// through (`Value<SimpleAbstractType>`).
+class SimpleAbstractType {
+ public:
+  explicit SimpleAbstractType(const Eigen::Vector3d& value)
+      : value_(value) {}
+  const Eigen::Vector3d& value() const { return value_; }
+ private:
+  Eigen::Vector3d value_;
+};
+
 class PassThroughTest : public ::testing::Test {
  protected:
-  void SetUp() override {
-    pass_through_ = make_unique<PassThrough<double>>(3 /* size */);
-    context_ = pass_through_->CreateDefaultContext();
-    output_ = pass_through_->AllocateOutput(*context_);
-    input_ = make_unique<BasicVector<double>>(3 /* size */);
+  void SetUp(bool is_abstract) {
+    if (is_abstract) {
+      // Value<SimpleAbstractType>(
+      pass_through_ = make_unique<PassThrough<double>>();
+      context_ = pass_through_->CreateDefaultContext();
+      output_ = pass_through_->AllocateOutput(*context_);
+      input_ = make_unique<BasicVector<double>>(3 /* size */);
+    } else {
+      pass_through_ = make_unique<PassThrough<double>>(3 /* size */);
+      context_ = pass_through_->CreateDefaultContext();
+      output_ = pass_through_->AllocateOutput(*context_);
+      input_ = make_unique<BasicVector<double>>(3 /* size */);
+    }
   }
 
   std::unique_ptr<System<double>> pass_through_;
   std::unique_ptr<Context<double>> context_;
   std::unique_ptr<SystemOutput<double>> output_;
   std::unique_ptr<BasicVector<double>> input_;
+  std::unique_ptr<AbstractValue> abstact_input_;
 };
 
 // Tests that the output of this system equals its input.
@@ -58,6 +79,7 @@ TEST_F(PassThroughTest, VectorThroughPassThroughSystem) {
 // Tests that PassThrough allocates no state variables in the context_.
 TEST_F(PassThroughTest, PassThroughIsStateless) {
   EXPECT_EQ(0, context_->get_continuous_state()->size());
+  EXPECT_EQ(0, context_->get_abstract_state()->size());
 }
 
 TEST_F(PassThroughTest, DirectFeedthrough) {

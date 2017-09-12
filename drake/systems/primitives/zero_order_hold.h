@@ -35,8 +35,8 @@ class ZeroOrderHold : public LeafSystem<T> {
 
   ~ZeroOrderHold() override {}
 
-  // TODO(eric.cousineau): Create a SisoSystem that is type-agnostic, and
-  // have both this and SisoVectorSystem inherit from it (#6490).
+  // TODO(eric.cousineau): Possibly share single port interface with
+  // PassThrough (#6490).
 
   /// Returns the sole input port.
   const InputPortDescriptor<T>& get_input_port() const {

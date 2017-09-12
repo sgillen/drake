@@ -17,18 +17,45 @@ template <typename T>
 PassThrough<T>::PassThrough(int size) : VectorSystem<T>(size, size) { }
 
 template <typename T>
+PassThrough<T>::PassThrough(const AbstractValue& model_value)
+    : VectorSystem<T>(size, size) { }
+
+template <typename T>
 void PassThrough<T>::DoCalcVectorOutput(
-    const Context<T>&,
-    const Eigen::VectorBlock<const VectorX<T>>& input,
-    const Eigen::VectorBlock<const VectorX<T>>& state,
-    Eigen::VectorBlock<VectorX<T>>* output) const {
-  unused(state);
+      const Context<T>& context,
+      BasicVector<T>* output) const {
+  DRAKE_ASSERT(!is_abstract());
+  const BasicVector<T>& input = *this->EvalVectorInput(context, 0);
   *output = input;
 }
 
 template <typename T>
+void PassThrough<T>::DoCalcAbstractOutput(const Context<T>& context,
+                                          AbstractValue* output) const {
+  DRAKE_ASSERT(is_abstract());
+  const AbstractValue& input =
+      *this->EvalAbstractInput(context, 0);
+  output->SetFrom(input);
+}
+
+template <typename T>
+bool PassThrough<T>::DoHasDirectFeedthrough(
+    const SystemSymbolicInspector*, int input_port, int output_port) const {
+  DRAKE_DEMAND(input_port == 0);
+  DRAKE_DEMAND(output_port == 0);
+  // By definition, a pass-through will have direct feedthrough, as the
+  // output only depends on the input.
+  return true;
+}
+
+template <typename T>
 PassThrough<symbolic::Expression>* PassThrough<T>::DoToSymbolic() const {
-  return new PassThrough<symbolic::Expression>(this->get_input_port().size());
+  if (!is_abstract()) {
+    return new PassThrough<symbolic::Expression>(this->get_input_port().size());
+  else {
+    // Return `nullptr` to enable control to reach `DoHasDirectFeedthrough`.
+    return nullptr;
+  }
 }
 
 }  // namespace systems
