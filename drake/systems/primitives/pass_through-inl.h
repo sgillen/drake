@@ -57,8 +57,8 @@ void PassThrough<T>::DoCalcAbstractOutput(const Context<T>& context,
 }
 
 template <typename T>
-bool PassThrough<T>::DoHasDirectFeedthrough(
-    const SystemSymbolicInspector*, int input_port, int output_port) const {
+optional<bool> PassThrough<T>::DoHasDirectFeedthrough(
+    int input_port, int output_port) const {
   DRAKE_DEMAND(input_port == 0);
   DRAKE_DEMAND(output_port == 0);
   // By definition, a pass-through will have direct feedthrough, as the

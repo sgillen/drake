@@ -48,6 +48,8 @@ class PassThrough : public LeafSystem<T> {
   /// @param model_value A template abstract value.
   explicit PassThrough(const AbstractValue& model_value);
 
+  virtual ~PassThrough() {}
+
   // TODO(eric.cousineau): Possibly share single port interface with
   // ZeroOrderHold (#6490).
 
@@ -79,8 +81,8 @@ class PassThrough : public LeafSystem<T> {
       AbstractValue* output) const;
 
   // Override feedthrough detection to avoid the need for `DoToSymbolic()`.
-  bool DoHasDirectFeedthrough(const SystemSymbolicInspector* sparsity,
-                              int input_port, int output_port) const override;
+  optional<bool>  DoHasDirectFeedthrough(
+      int input_port, int output_port) const override;
 
   /// Returns an PassThrough<symbolic::Expression> with the same dimensions as
   /// this PassThrough.
