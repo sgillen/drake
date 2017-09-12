@@ -176,7 +176,8 @@ void PushAndPickStateMachine::Update(
     const WorldState& env_state_in,
     const IiwaPublishCallback& iiwa_callback,
     const WsgPublishCallback& wsg_callback,
-    manipulation::planner::ConstraintRelaxingIk* planner) {
+    manipulation::planner::ConstraintRelaxingIk* planner,
+    bool* camera_needed) {
   IKResults ik_res;
   std::vector<double> times;
   robotlocomotion::robot_plan_t stopped_plan{};
@@ -317,6 +318,9 @@ void PushAndPickStateMachine::Update(
       if (!iiwa_move_.ActionStarted()) {
         print_state = true;
 
+        log()->info("Camera on");
+        *camera_needed = true;
+
         log()->info("kScanSweep");
         const double t = 0.075;
         std::vector<Isometry3d> scan_poses(scan_waypoints);
@@ -353,6 +357,9 @@ void PushAndPickStateMachine::Update(
 
       if (iiwa_move_.ActionFinished(env_state)) {
         print_state = true;
+
+        log()->info("Camera off");
+        *camera_needed = false;
 
         state_ = kScanFinishAndProcess;
         iiwa_move_.Reset();

@@ -83,7 +83,8 @@ Xtion::Xtion(WorldSimTreeBuilder<double>* tree_builder,
 }
 
 void Xtion::Build(lcm::DrakeLcm* lcm, bool add_lcm_publisher,
-                  bool add_frame_visualizer) {
+                  bool add_frame_visualizer,
+                  bool expose_enabled_port) {
   DRAKE_DEMAND(tree_);
 
   DiagramBuilder<double> builder;
@@ -97,12 +98,16 @@ void Xtion::Build(lcm::DrakeLcm* lcm, bool add_lcm_publisher,
           name_, *tree_, *sensor_frame_,
           kDepthRangeNear, kDepthRangeFar,
           kFovY, false),
-      period_);
+      period_, expose_enabled_port);
 
   // TODO(eric.cousineau): See if there is a better way to connect an input
   // to other blocks.
   auto* state_pass_through = builder.AddSystem<PassThrough>(kStateSize);
   input_port_state_ = builder.ExportInput(state_pass_through->get_input_port());
+
+  if (expose_enabled_port) {
+    input_port_enabled_ = builder.ExportInput(camera->enabled_input_port());
+  }
 
   builder.Connect(state_pass_through->get_output_port(),
                   camera->state_input_port());

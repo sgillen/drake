@@ -72,10 +72,14 @@ class Xtion : public systems::Diagram<double> {
    * @param add_frame_visualizer Adds LCM-based frame visualizer.
    */
   void Build(lcm::DrakeLcm* lcm = nullptr, bool add_lcm_publisher = false,
-             bool add_frame_visualizer = false);
+             bool add_frame_visualizer = false,
+             bool expose_enabled_port = false);
 
   const systems::InputPortDescriptor<double>& get_input_port_state() const {
     return get_input_port(input_port_state_);
+  }
+  const systems::InputPortDescriptor<double>& get_input_port_enabled() const {
+    return get_input_port(input_port_enabled_);
   }
   const systems::OutputPort<double>& get_output_port_color_image() const {
     return get_output_port(output_port_color_image_);
@@ -116,6 +120,7 @@ class Xtion : public systems::Diagram<double> {
   int instance_id_{};
 
   int input_port_state_{-1};
+  int input_port_enabled_{-1};
   int output_port_color_image_{-1};
   int output_port_depth_image_{-1};
   int output_port_label_image_{-1};

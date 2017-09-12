@@ -44,8 +44,7 @@ class PushAndPickStateMachineSystem : public systems::LeafSystem<double> {
   const override;
 
   // This kind of a system is not a direct feedthrough.
-  bool DoHasDirectFeedthrough(const systems::SystemSymbolicInspector*,
-                              int, int) const final {
+  optional<bool> DoHasDirectFeedthrough(int, int) const final {
     return false;
   }
 
@@ -109,6 +108,11 @@ class PushAndPickStateMachineSystem : public systems::LeafSystem<double> {
     return this->get_output_port(output_port_wsg_command_);
   }
 
+  const systems::OutputPort<double>& get_output_port_camera_needed()
+  const {
+    return this->get_output_port(output_port_camera_needed_);
+  }
+
   /// Return the state of the pick and place state machine.
   PushAndPickState state(
       const systems::Context<double>&) const;
@@ -127,6 +131,10 @@ class PushAndPickStateMachineSystem : public systems::LeafSystem<double> {
       const systems::Context<double>& context,
       lcmt_schunk_wsg_command* wsg_command) const;
 
+  void CalcCameraNeeded(
+      const systems::Context<double>& context,
+      bool* camera_needed) const;
+
   struct InternalState;
 
   RigidBodyTree<double> iiwa_tree_{};
@@ -141,6 +149,7 @@ class PushAndPickStateMachineSystem : public systems::LeafSystem<double> {
   // Output ports.
   int output_port_iiwa_plan_{-1};
   int output_port_wsg_command_{-1};
+  int output_port_camera_needed_{-1};
 
   std::string iiwa_model_path_;
   std::string end_effector_name_;

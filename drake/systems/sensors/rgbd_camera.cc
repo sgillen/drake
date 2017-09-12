@@ -36,6 +36,7 @@
 
 #include "drake/math/roll_pitch_yaw.h"
 #include "drake/systems/framework/diagram_builder.h"
+#include "drake/systems/primitives/constant_value_source.h"
 #include "drake/systems/primitives/pass_through.h"
 #include "drake/systems/primitives/zero_order_hold.h"
 #include "drake/systems/rendering/pose_vector.h"
@@ -926,8 +927,8 @@ class ZOHEnabled : public ZeroOrderHold<T> {
   }
 
  protected:
-  bool DoHasDirectFeedthrough(const SystemSymbolicInspector* sparsity,
-                              int input_port, int output_port) const override {
+  optional<bool> DoHasDirectFeedthrough(
+      int input_port, int output_port) const override {
     DRAKE_DEMAND(input_port == 0 || input_port == 1);
     DRAKE_DEMAND(output_port == 0);
     return false;
@@ -962,23 +963,23 @@ class ZOHEnabled : public ZeroOrderHold<T> {
   }
 
   bool IsEnabled(const Context<T>& context) const {
-    std::cout << "Checking" << std::endl;
-
     const bool* enabled = 
         this->template EvalInputValue<bool>(context, input_port_enabled_);
-    if (enabled == nullptr) {
-      // Enabled by default.
-      return true;
-    } else {
-      return *enabled;
+    // Enabled if no upstream port is connected (if not used within a diagram).
+    bool output = true;
+    if (enabled) {
+      output = *enabled;
     }
+    std::cout << "Enabled: " << output << std::endl;
+    return output;
   }
 
   int input_port_enabled_{-1};
 };
 
 RgbdCameraDiscrete::RgbdCameraDiscrete(std::unique_ptr<RgbdCamera> camera,
-                                       double period)
+                                       double period,
+                                       bool expose_enable_input)
     : camera_(camera.get()), period_(period) {
   const int kWidth = kImageWidth, kHeight = kImageHeight;
 
@@ -987,12 +988,18 @@ RgbdCameraDiscrete::RgbdCameraDiscrete(std::unique_ptr<RgbdCamera> camera,
   input_port_state_ = builder.ExportInput(camera_->get_input_port(0));
 
   auto* enabled = builder.AddSystem<PassThrough>(Value<bool>());
-  input_port_enabled_ =
-      builder.ExportInput(enabled->get_input_port());
-  const auto& output_enabled = enabled->get_output_port();
+  if (expose_enable_input) {
+    input_port_enabled_ =
+        builder.ExportInput(enabled->get_input_port());
+  } else {
+    auto* constant =
+        builder.AddSystem<ConstantValueSource>(AbstractValue::Make<bool>(true));
+    builder.Connect(constant->get_output_port(0),
+                    enabled->get_input_port());
+  }
 
   auto setup_enable = [&](auto* zoh) {
-    builder.Connect(output_enabled,
+    builder.Connect(enabled->get_output_port(),
                     zoh->enabled_input_port());
   };
 

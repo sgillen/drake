@@ -57,6 +57,7 @@ struct PushAndPickStateMachineSystem::InternalState {
   PushAndPickStateMachine state_machine;
   robotlocomotion::robot_plan_t last_iiwa_plan;
   lcmt_schunk_wsg_command last_wsg_command;
+  bool last_camera_needed{false};
 };
 
 PushAndPickStateMachineSystem::PushAndPickStateMachineSystem(
@@ -96,6 +97,12 @@ PushAndPickStateMachineSystem::PushAndPickStateMachineSystem(
               &PushAndPickStateMachineSystem::CalcWsgCommand)
           .get_index();
 
+  output_port_camera_needed_ =
+      this->DeclareAbstractOutputPort(
+          false,
+          &PushAndPickStateMachineSystem::CalcCameraNeeded)
+      .get_index();
+
   this->DeclarePeriodicUnrestrictedUpdate(period_sec, 0);
 }
 
@@ -134,6 +141,15 @@ void PushAndPickStateMachineSystem::CalcWsgCommand(
   const InternalState& internal_state =
       context.get_abstract_state<InternalState>(0);
   *wsg_command = internal_state.last_wsg_command;
+}
+
+void PushAndPickStateMachineSystem::CalcCameraNeeded(
+    const systems::Context<double>& context,
+    bool* camera_needed) const {
+  /* Call actions based on state machine logic */
+  const InternalState& internal_state =
+      context.get_abstract_state<InternalState>(0);
+  *camera_needed = internal_state.last_camera_needed;
 }
 
 void PushAndPickStateMachineSystem::DoCalcUnrestrictedUpdate(
@@ -187,7 +203,10 @@ void PushAndPickStateMachineSystem::DoCalcUnrestrictedUpdate(
         internal_state.last_wsg_command = *msg;
       });
   internal_state.state_machine.Update(
-      internal_state.world_state, iiwa_callback, wsg_callback, planner_.get());
+      internal_state.world_state,
+      iiwa_callback, wsg_callback,
+      planner_.get(),
+      &internal_state.last_camera_needed);
 }
 
 PushAndPickState PushAndPickStateMachineSystem::state(

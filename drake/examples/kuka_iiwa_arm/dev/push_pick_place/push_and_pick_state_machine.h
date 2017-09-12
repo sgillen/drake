@@ -83,7 +83,8 @@ class PushAndPickStateMachine {
   void Update(const WorldState& env_state,
               const IiwaPublishCallback& iiwa_callback,
               const WsgPublishCallback& wsg_callback,
-              manipulation::planner::ConstraintRelaxingIk* planner);
+              manipulation::planner::ConstraintRelaxingIk* planner,
+              bool *camera_needed);
 
 
   // Read image.
