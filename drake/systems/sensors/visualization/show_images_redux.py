@@ -26,6 +26,7 @@ class ImageWidget(object):
 
         self.image = vtk.vtkImageData()
         self.initialized = False
+        self.prev_shape = (0, 0, 0)
 
         # Initialize the view.
         self.view.installImageInteractor()
@@ -47,8 +48,14 @@ class ImageWidget(object):
         self.render_timer.start()
 
     def update_image(self):
-        w = 640
-        h = 480
+        t = time.time() - self.start_time
+
+        if t < 2:
+            w = 640
+            h = 480
+        else:
+            w = 3
+            h = 6
         num_components = 1
 
         image = vtk.vtkImageData()
@@ -63,7 +70,6 @@ class ImageWidget(object):
         data = vtk_to_numpy(image.GetPointData().GetScalars())
         data.shape = image.GetDimensions()
 
-        t = time.time() - self.start_time
         s = t % 1.
         data[:, :, 0] = 255. * s
 
@@ -73,31 +79,39 @@ class ImageWidget(object):
         if not self.view.isVisible():
             return
         self.update_image()
+
         if not self.initialized:
-            self.view.render()
             # Ensure it is visible.
+            self.initialized = True
             self.imageActor.SetVisibility(True)
 
+        cur_shape = self.image.GetDimensions()
+        if self.prev_shape != cur_shape:
             # Fit image to view.
-            camera = self.view.camera()
-            camera.ParallelProjectionOn()
-            camera.SetFocalPoint(0,0,0)
-            camera.SetPosition(0,0,-1)
-            camera.SetViewUp(0,-1, 0)
-            self.view.resetCamera()
             self.fit_image_to_view()
-            self.view.render()
-            
-            self.initialized = True
+            # Update.
+            self.prev_shape = cur_shape
+
         self.view.render()
 
     def fit_image_to_view(self):
+        print "Fit"
+        # Must render first.
+        self.view.render()
+
+        camera = self.view.camera()
+        camera.ParallelProjectionOn()
+        camera.SetFocalPoint(0,0,0)
+        camera.SetPosition(0,0,-1)
+        camera.SetViewUp(0,-1, 0)
+        self.view.resetCamera()
+
         imageWidth, imageHeight = self.image.GetDimensions()[:2]
         viewWidth, viewHeight = self.view.renderWindow().GetSize()
 
         aspect_ratio = float(viewWidth) / viewHeight
         parallel_scale = max(imageWidth / aspect_ratio, imageHeight) / 2.0
-        self.view.camera().SetParallelScale(parallel_scale)
+        camera.SetParallelScale(parallel_scale)
 
 class DrakeImageViewer(object):
     def __init__(self):
@@ -122,14 +136,6 @@ class DrakeImageViewer(object):
 
         self.widget.resize(*dim)
         self.widget.show()
-
-        print "Showing"
-
-        # # Add shortcuts.
-        # applogic.addShortcut(
-        #     self.widget, 'Ctrl+Q', consoleapp.ConsoleApp.quit)
-        # applogic.addShortcut(
-        #     self.widget, 'F8', consoleapp.ConsoleApp.showPythonConsole)
 
 if __name__ == "__main__":
     image_viewer = DrakeImageViewer()
