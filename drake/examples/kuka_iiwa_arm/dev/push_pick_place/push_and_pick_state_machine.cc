@@ -82,7 +82,7 @@ using pick_and_place::ComputeGraspPose;
 const Vector3<double> kDesiredSidewaysGraspPosition(0.228, -0.27, 0.77045);
 const Vector3<double> kDesiredGraspPosition(0.228, -0.243, 0.77045);
 const Vector3<double> kDesiredGraspGripperPosition(0.228 + 0.23/2,
-                                                   -0.375, //-0.356,
+                                                   -0.325, //-0.356, -0.375
                                                    0.77045);
 const Vector3<double> kLiftFromPickPosition(0.0, -0.625087, 1.7645);
 const Matrix3<double> kDesiredGraspGripperOrientation(
