@@ -34,6 +34,7 @@ class ImageWidget(object):
         self.imageActor.SetInput(self.image)
         self.imageActor.SetVisibility(False)
         self.view.renderer().AddActor(self.imageActor)
+        self.view.renderer().ResetCamera()
 
         self.view.orientationMarkerWidget().Off()
         self.view.backgroundRenderer().SetBackground(0,0,0)
@@ -47,38 +48,51 @@ class ImageWidget(object):
         self.render_timer.start()
 
     def update_image(self):
-        w = 20
-        h = 20
+        w = 3
+        h = 3
         num_components = 1
 
         image = vtk.vtkImageData()
         image.SetWholeExtent(0, w - 1, 0, h - 1, 0, 0)
         image.SetExtent(image.GetWholeExtent())
         image.SetSpacing(1., 1., 1.)
-        image.SetOrigin(0., 0., 0.)
+        image.SetOrigin(0.5, 0.5, 0.5)
         image.SetNumberOfScalarComponents(num_components)
-        image.SetScalarType(vtk.VTK_UNSIGNED_SHORT)
+        image.SetScalarType(vtk.VTK_UNSIGNED_CHAR)
         image.AllocateScalars()
 
         data = vtk_to_numpy(image.GetPointData().GetScalars())
         data.shape = image.GetDimensions()
         t = time.time() - self.start_time
-        value = (255 * (t / 1.)) % 256
-        data[:] = value
+
+        x, y = np.meshgrid(np.linspace(0., 1., w), np.linspace(0., 1., w))
+        # value = (255 * (t / 1.)) % 256
+        # data[:] = value
+        s = t % 1.
+        data[:, :, 0] = 255. * (x * s + y + (s - 1)) / 2.
 
         self.image.DeepCopy(image)
-        print("Updated: {}".format(value))
-        print("  {}".format(image.GetPointData().GetArray(0).GetValue(10)))
 
     def render(self):
         if not self.view.isVisible():
             return
         self.update_image()
-        print("Render")
         if not self.initialized:
-            self.initialized = True
+            # Fit image to view.
+            self.fit_image_to_view()
+
+            # Ensure it is visible.
             self.imageActor.SetVisibility(True)
+            self.initialized = True
         self.view.render()
+
+    def fit_image_to_view(self):
+        imageWidth, imageHeight = self.image.GetDimensions()[:2]
+        viewWidth, viewHeight = self.view.renderWindow().GetSize()
+
+        aspect_ratio = float(viewWidth) / viewHeight
+        parallel_scale = max(imageWidth / aspect_ratio, imageHeight) / 2.0
+        self.view.camera().SetParallelScale(parallel_scale)
 
 class DrakeImageViewer(object):
     def __init__(self):
