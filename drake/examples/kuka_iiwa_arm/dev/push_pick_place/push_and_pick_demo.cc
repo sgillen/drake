@@ -275,14 +275,14 @@ int DoMain(std::unique_ptr<PerceptionBase> perception_in) {
 
   // Add camera if enabled.
   if (camera) {
-    camera->Build(&lcm, true, false, true);
+    camera->Build(&lcm, false, false, false);
     builder.AddSystem(std::unique_ptr<Xtion>(camera));
     builder.Connect(
         plant->get_output_port_plant_state(),
         camera->get_input_port_state());
-    builder.Connect(
-        state_machine->get_output_port_camera_needed(),
-        camera->get_input_port_enabled());
+    // builder.Connect(
+    //     state_machine->get_output_port_camera_needed(),
+    //     camera->get_input_port_enabled());
   }
 
   // Add perception, if enabled.

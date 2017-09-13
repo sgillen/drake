@@ -143,7 +143,7 @@ PushAndPickStateMachine::PushAndPickStateMachine(
     PerceptionBase* perception)
     : next_place_location_(0),
       loop_(loop),
-      state_(/*kOpenGripper), /*/kScanSweep), // kOpenGripper),
+      state_(kOpenGripper), /*/kScanSweep), // kOpenGripper),*/
     // Position and rotation tolerances.  These were hand-tuned by
     // adjusting to tighter bounds until IK stopped reliably giving
     // results.
@@ -165,7 +165,6 @@ void PushAndPickStateMachine::ReadImage(
     const Eigen::Isometry3d& X_WD) {
   // Store it.
   if (perception_data_) {
-    log()->info("ReadImage @ {} s", time);
     perception_data_->sensor_time = time;
     perception_data_->depth_image = depth;
     perception_data_->X_WD = X_WD;
@@ -206,7 +205,7 @@ void PushAndPickStateMachine::Update(
   const double scan_theta_start = -M_PI / 6;  // rad
   // TODO(eric.cousineau): Figure out how to connect the trajectories, or use
   // the full ik traj stuff.
-  const double scan_theta_end = scan_theta_start + 0.01; //M_PI / 6;  // rad
+  const double scan_theta_end = 0; // scan_theta_start + 0.01; //M_PI / 6;  // rad
   const int scan_waypoints = 3;
   // Center position of table-top relative to world.
   // (Estimated from using measurement panel.)
@@ -322,7 +321,7 @@ void PushAndPickStateMachine::Update(
         *camera_needed = true;
 
         log()->info("kScanSweep");
-        const double t = 0.075;
+        const double t = 1;
         std::vector<Isometry3d> scan_poses(scan_waypoints);
         std::vector<std::pair<string, Isometry3d>> frames;
         for (int i = 0; i < scan_waypoints; ++i) {

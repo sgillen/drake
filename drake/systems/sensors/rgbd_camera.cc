@@ -970,7 +970,6 @@ class ZOHEnabled : public ZeroOrderHold<T> {
     if (enabled) {
       output = *enabled;
     }
-    std::cout << "Enabled: " << output << std::endl;
     return output;
   }
 
