@@ -283,7 +283,7 @@ void PushAndPickStateMachine::Update(
         // TODO(eric.cousineau): Not a fan of starting from initial config by
         // using IK given current pose...
 
-        double t = 1;
+        double t = 2;
         Isometry3d X_WG0 = env_state.get_iiwa_end_effector_pose();
         Isometry3d X_WGi0 = GetGripperScanPose(scan_theta_start);
 
