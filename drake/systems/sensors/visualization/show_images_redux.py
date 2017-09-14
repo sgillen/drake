@@ -155,9 +155,9 @@ class DrakeLcmImageViewer(object):
     def _create_deferred(self):
         # Defer creating viewer until we have a message.
         def callback(msg):
-            print("Received on '{}'. Initializing frames...".format(
-                self.channel))
             frame_names = [image.header.frame_name for image in msg.images]
+            print("Received on '{}'. Initializing frames {}".format(
+                self.channel, frame_names))
             self._init_full(frame_names)
             lcmUtils.removeSubscriber(self._sub)
         print("Deferring creation until '{}' is received".format(self.channel))
@@ -242,6 +242,12 @@ class LcmImageInfo(object):
         self.utime = 0
         self.lock = threading.Lock()
 
+    def receive_message(self, msg):
+        with self.lock:
+            print "utime: {}".format(msg.header.utime)
+            self.utime = msg.header.utime
+            self.image = decode_image_t(msg, self.image)
+
 class LcmImageRetriever(ImageRetriever):
     def __init__(self, info):
         self.info = info
@@ -250,12 +256,16 @@ class LcmImageRetriever(ImageRetriever):
     def update_image(self, image_out):
         with self.info.lock:
             cur_utime = self.info.utime
-            if self.prev_utime <= cur_utime:
+            if cur_utime == self.prev_utime:
                 return False
+            elif cur_utime < self.prev_utime:
+                if verbose:
+                    print("Time went backwards. Resetting.")
             self.prev_utime = cur_utime
             image = self.info.image
             assert(image is not None)
             image_out.DeepCopy(image)
+        return True
 
 
 class LcmImageArraySubscriber(object):
@@ -285,9 +295,7 @@ class LcmImageArraySubscriber(object):
                 continue
             index = msg_frame_names.index(frame_name)
             msg_image = msg.images[index]
-            with info.lock:
-                info.utime = image.header.utime
-                info.image = decode_image_t(msg_image, info.image)
+            info.receive_message(msg_image)
 
         if verbose:
             extra_frame_names = set(msg_frame_names) - set(self.frame_names)
@@ -304,7 +312,7 @@ class LcmImageArraySubscriber(object):
 class TestImageRetriever(ImageRetriever):
     def __init__(self):
         self.start_time = time.time()
-        self.image = create_image(640, 480, 3)
+        self.image = create_image(640, 480, 4, dtype=np.uint8)
         self.has_switched = False
 
     def update_image(self, image_out):
@@ -312,20 +320,22 @@ class TestImageRetriever(ImageRetriever):
 
         if t > 2 and not self.has_switched:
             # Try changing the size.
-            self.image = create_image(480, 640, 3)
+            self.image = create_image(480, 640, 4, dtype=np.uint8)
             self.has_switch = True
 
         data = vtk_image_to_numpy(self.image)
         w, h = data.shape[:2]
+        p = 255
         x = np.matlib.repmat(
-            np.linspace(0, 255., w).reshape(-1, 1),
+            np.linspace(0, p, w).reshape(-1, 1),
             1, h)
         T = 1
         w = 2 * math.pi / T
         s = (math.sin(w * t) + 1) / 2.
-       
+
         data[:, :, 0] = x * s
-        data[:, :, 1] = 255 - x * s
+        data[:, :, 1] = p - x * s
+        data[:, :, 3] = p * s
 
         image_out.DeepCopy(self.image)
         return True
