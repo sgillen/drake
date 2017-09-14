@@ -80,7 +80,7 @@ class ImageWidget(object):
             self.initialized = True
             self.imageActor.SetVisibility(True)
 
-        cur_shape = self.image.GetDimensions()
+        cur_shape = get_vtk_image_shape(self.image)
         if self.prev_shape != cur_shape:
             # Fit image to view.
             self.fit_image_to_view()
@@ -101,7 +101,7 @@ class ImageWidget(object):
         camera.SetViewUp(0,-1, 0)
         self.view.resetCamera()
 
-        imageWidth, imageHeight = self.image.GetDimensions()[:2]
+        imageWidth, imageHeight = get_vtk_image_shape(self.image)[:2]
         viewWidth, viewHeight = self.view.renderWindow().GetSize()
 
         aspect_ratio = float(viewWidth) / viewHeight
@@ -170,16 +170,14 @@ def create_image(w, h, num_channels = 1, dtype=np.uint8):
     image.SetExtent(image.GetWholeExtent())
     image.SetSpacing(1., 1., 1.)
     image.SetOrigin(0., 0., 0.)
-    image.SetNumberOfScalarComponents(num_channels)
     image.SetScalarType(get_vtk_array_type(dtype))
+    image.SetNumberOfScalarComponents(num_channels)
     image.AllocateScalars()
-    print("Create: np = {}".format((w, h, num_channels)))
-    print("  vtk = {}".format(image.GetDimensions()))
     return image
 
 def create_image_if_needed(w, h, num_channels, dtype, image_in):
     # If possible, use existing memory.
-    if False: # image_in is not None:
+    if image_in is not None:
         dim = (w, h, num_channels)
         attrib_out = (dim, dtype)
         data_in = vtk_image_to_numpy(image_in)
@@ -191,19 +189,25 @@ def create_image_if_needed(w, h, num_channels, dtype, image_in):
     data = vtk_image_to_numpy(image)
     return (image, data)
 
+def get_vtk_image_shape(image):
+    """
+    vtkImageData.GetDimensions() returns (w, h, 1),
+    not (w, h, GetNumberOfScalarComponents()).
+    """
+    w, h = image.GetDimensions()[:2]
+    num_channels = image.GetNumberOfScalarComponents()
+    return (w, h, num_channels)
 
 def decode_image_t(msg, image_in = None):
     """
     Decode image_t to vtkImageData, using an existing image if it is compatible.
     """
     rli = rl.image_t
-    print("\n\n")
     w = msg.width
     h = msg.height
     assert msg.compression_method == rli.COMPRESSION_METHOD_ZLIB
     pixel_desc = (msg.pixel_format, msg.channel_type)
     if pixel_desc == (rli.PIXEL_FORMAT_RGBA, rli.CHANNEL_TYPE_UINT8):
-        print("rgba")
         num_channels = 4
         dtype = np.uint8
     elif pixel_desc == (rli.PIXEL_FORMAT_DEPTH, rli.CHANNEL_TYPE_FLOAT32):
@@ -229,9 +233,7 @@ def decode_image_t(msg, image_in = None):
 
 def vtk_image_to_numpy(image):
     data = vtk_to_numpy(image.GetPointData().GetScalars())
-    print(data.shape, data.dtype)
-    print(image.GetDimensions())
-    data.shape = image.GetDimensions()
+    data.shape = get_vtk_image_shape(image)
     return data
 
 class LcmImageInfo(object):
@@ -302,7 +304,7 @@ class LcmImageArraySubscriber(object):
 class TestImageRetriever(ImageRetriever):
     def __init__(self):
         self.start_time = time.time()
-        self.image = create_image(640, 480)
+        self.image = create_image(640, 480, 3)
         self.has_switched = False
 
     def update_image(self, image_out):
@@ -310,7 +312,7 @@ class TestImageRetriever(ImageRetriever):
 
         if t > 2 and not self.has_switched:
             # Try changing the size.
-            self.image = create_image(480, 640)
+            self.image = create_image(480, 640, 3)
             self.has_switch = True
 
         data = vtk_image_to_numpy(self.image)
@@ -323,6 +325,7 @@ class TestImageRetriever(ImageRetriever):
         s = (math.sin(w * t) + 1) / 2.
        
         data[:, :, 0] = x * s
+        data[:, :, 1] = 255 - x * s
 
         image_out.DeepCopy(self.image)
         return True
