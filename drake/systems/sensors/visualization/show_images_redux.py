@@ -180,14 +180,11 @@ def create_image_if_needed(w, h, num_channels, dtype, image_in):
     if image_in is not None:
         dim = (w, h, num_channels)
         attrib_out = (dim, dtype)
-        data_in = vtk_image_to_numpy(image_in)
-        attrib_in = (data_in.shape, data_in.dtype)
+        attrib_in = get_vtk_image_attrib(image_in)
         if attrib_in == attrib_out:
-            return (image_in, data_in)
+            return image_in
     # Otherwise, create new image.
-    image = create_image(w, h, num_channels, dtype)
-    data = vtk_image_to_numpy(image)
-    return (image, data)
+    return create_image(w, h, num_channels, dtype)
 
 def get_vtk_image_shape(image):
     """
@@ -198,6 +195,13 @@ def get_vtk_image_shape(image):
     num_channels = image.GetNumberOfScalarComponents()
     return (w, h, num_channels)
 
+def get_vtk_image_attrib(image):
+    """
+    Return ((w, h, num_channels), dtype).
+    """
+    data = vtk_image_to_numpy(image)
+    return (data.shape, data.dtype)
+
 def decode_image_t(msg, image_in = None):
     """
     Decode image_t to vtkImageData, using an existing image if it is compatible.
@@ -207,12 +211,15 @@ def decode_image_t(msg, image_in = None):
     h = msg.height
     assert msg.compression_method == rli.COMPRESSION_METHOD_ZLIB
     pixel_desc = (msg.pixel_format, msg.channel_type)
+    scale = 1
     if pixel_desc == (rli.PIXEL_FORMAT_RGBA, rli.CHANNEL_TYPE_UINT8):
         num_channels = 4
         dtype = np.uint8
     elif pixel_desc == (rli.PIXEL_FORMAT_DEPTH, rli.CHANNEL_TYPE_FLOAT32):
         num_channels = 1
         dtype = np.float32
+        # TODO(eric.cousineau): Add color mapping.
+        scale = 255.
     elif pixel_desc == (rli.PIXEL_FORMAT_LABEL, rli.CHANNEL_TYPE_INT16):
         num_channels = 1
         dtype = np.int16
@@ -221,13 +228,14 @@ def decode_image_t(msg, image_in = None):
     bytes_per_pixel = np.dtype(dtype).itemsize * num_channels
     assert msg.row_stride == msg.width * bytes_per_pixel
 
-    (image, data) = create_image_if_needed(w, h, num_channels, dtype, image_in)
+    image = create_image_if_needed(w, h, num_channels, dtype, image_in)
+    data = vtk_image_to_numpy(image)
     # TODO(eric.cousineau): Consider using `data`s buffer, if possible.
     # Can decompress() somehow use an existing buffer in Python?
     data_in = np.frombuffer(zlib.decompress(msg.data), dtype=dtype)
     data_in.shape = (w, h, num_channels)
     # Copy data over.
-    data[:] = data_in[:]
+    data[:] = scale * data_in[:]
     # Return image.
     return image
 
@@ -281,7 +289,8 @@ class LcmImageArraySubscriber(object):
 
     def create_retrievers(self):
         retrievers = []
-        for info in self.infos.itervalues():
+        for frame_name in self.frame_names:
+            info = self.infos[frame_name]
             retrievers.append(LcmImageRetriever(info))
         return retrievers
 
@@ -311,8 +320,12 @@ class LcmImageArraySubscriber(object):
 
 class TestImageRetriever(ImageRetriever):
     def __init__(self):
+        self.do_color = False
         self.start_time = time.time()
-        self.image = create_image(640, 480, 4, dtype=np.uint8)
+        if self.do_color:
+            self.image = create_image(640, 480, 4, dtype=np.uint8)
+        else:
+            self.image = create_image(640, 480, 1, dtype=np.float32)
         self.has_switched = False
 
     def update_image(self, image_out):
@@ -320,25 +333,35 @@ class TestImageRetriever(ImageRetriever):
 
         if t > 2 and not self.has_switched:
             # Try changing the size.
-            self.image = create_image(480, 640, 4, dtype=np.uint8)
+            if self.do_color:
+                self.image = create_image(480, 640, 4, dtype=np.uint8)
+            else:
+                self.image = create_image(480, 640, 1, dtype=np.float32)
             self.has_switch = True
+
+        if self.do_color:
+            p = 255.
+        else:
+            p = 255.
 
         data = vtk_image_to_numpy(self.image)
         w, h = data.shape[:2]
-        p = 255
+        
         x = np.matlib.repmat(
-            np.linspace(0, p, w).reshape(-1, 1),
+            np.linspace(0, 1, w).reshape(-1, 1),
             1, h)
         T = 1
         w = 2 * math.pi / T
         s = (math.sin(w * t) + 1) / 2.
 
-        data[:, :, 0] = x * s
-        data[:, :, 1] = p - x * s
-        data[:, :, 3] = p * s
+        data[:, :, 0] = p * x * s
+        if self.do_color:
+            data[:, :, 1] = p * (1 - x * s)
+            data[:, :, 3] = p * s
 
         image_out.DeepCopy(self.image)
         return True
+
 
 if __name__ == "__main__":
     has_app = 'app' in globals()
