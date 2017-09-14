@@ -31,6 +31,8 @@ from PythonQt import QtGui
 
 verbose = True
 
+is_vtk_5 = vtk.VTK_VERSION.startswith('5.')
+
 class ImageHandler(object):
     """
     Generic handler to update an image for `ImageWidget`.
@@ -63,7 +65,10 @@ class ImageWidget(object):
         self.view.installImageInteractor()
         # Add actor.
         self.imageActor = vtk.vtkImageActor()
-        self.imageActor.SetInput(self.image)
+        if is_vtk_5:
+            self.imageActor.SetInput(self.image)
+        else:
+            self.imageActor.SetInputData(self.image)
         self.imageActor.SetVisibility(False)
         self.view.renderer().AddActor(self.imageActor)
 
@@ -183,13 +188,16 @@ class DrakeLcmImageViewer(object):
 def create_image(w, h, num_channels = 1, dtype=np.uint8):
     """ Creates a VTK image. """
     image = vtk.vtkImageData()
-    image.SetWholeExtent(0, w - 1, 0, h - 1, 0, 0)
-    image.SetExtent(image.GetWholeExtent())
+    image.SetExtent(0, w - 1, 0, h - 1, 0, 0)
     image.SetSpacing(1., 1., 1.)
     image.SetOrigin(0., 0., 0.)
-    image.SetScalarType(get_vtk_array_type(dtype))
-    image.SetNumberOfScalarComponents(num_channels)
-    image.AllocateScalars()
+    if is_vtk_5:
+        image.SetWholeExtent(image.GetExtent())
+        image.SetScalarType(get_vtk_array_type(dtype))
+        image.SetNumberOfScalarComponents(num_channels)
+        image.AllocateScalars()
+    else:
+        image.AllocateScalars(get_vtk_array_type(dtype), num_channels)
     return image
 
 def create_image_if_needed(w, h, num_channels, dtype, image_in):
