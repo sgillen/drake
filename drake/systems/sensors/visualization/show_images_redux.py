@@ -88,8 +88,8 @@ class ImageWidget(object):
 
         cur_attrib = get_vtk_image_attrib(self.image)
         if self.prev_attrib != cur_attrib:
-            if prev_attrib is None:
-                # Ensure it is visible.
+            if self.prev_attrib is None:
+                # Initialization. Ensure it is visible.
                 self.imageActor.SetVisibility(True)
             # Fit image to view.
             self.on_new_image_attrib()
@@ -310,7 +310,7 @@ class LcmImageArraySubscriber(object):
     Provides a connection between the LCM channel and 
     """
     def __init__(self, channel = kDefaultChannel,
-                 frame_names = kDefaultFrameNames):
+                 frame_names = []):
         self.channel = channel
         self.frame_names = frame_names
         self.handlers = {}
@@ -353,8 +353,8 @@ class TestImageHandler(ImageHandler):
     Provides a simple test image handler.
     This just shows an animated gradient, either in color or in grayscale.
     """
-    def __init__(self):
-        self.do_color = False
+    def __init__(self, do_color):
+        self.do_color = do_color
         self.start_time = time.time()
         if self.do_color:
             self.image = create_image(640, 480, 4, dtype=np.uint8)
@@ -406,10 +406,19 @@ if __name__ == "__main__":
         help = "Channel for LCM.")
     parser.add_argument('--frame_names', type=str, nargs='+', default=None,
         help = "By default, will populate with first set of frames. Otherwise, can be manually specified")
-    args, _ = parser.parse_known_args()
+    if has_app:
+        # TODO(eric.cousineau): See if there is a way to pass --args past
+        # `drake-visualizer.
+        argv = _argv
+    else:
+        argv = sys.argv
+    args = parser.parse_args(argv[1:])
 
     if args.test_image:
-        image_viewer = ImageArrayWidget([TestImageHandler()])
+        image_viewer = ImageArrayWidget([
+            TestImageHandler(do_color = True),
+            TestImageHandler(do_color = False),
+            ])
     else:
         image_viewer = DrakeLcmImageViewer(args.channel, args.frame_names)
 
