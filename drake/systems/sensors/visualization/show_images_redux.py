@@ -27,7 +27,7 @@ from PythonQt import QtGui
 
 verbose = True
 
-class ImageRetriever(object):
+class ImageHandler(object):
     def update_image(self, image):
         """
         This should update `image` in-place, either using `DeepCopy`, or by
@@ -39,10 +39,10 @@ class ImageRetriever(object):
 
 # This is more like director...CameraImageView than ImageWidget
 class ImageWidget(object):
-    def __init__(self, image_retriever):
+    def __init__(self, image_handler):
         self.name = 'Image View'
         self.view = PythonQt.dd.ddQVTKWidgetView()
-        self.image_retriever = image_retriever
+        self.image_handler = image_handler
 
         self.image = vtk.vtkImageData()
         self.initialized = False
@@ -70,7 +70,7 @@ class ImageWidget(object):
         if not self.view.isVisible():
             return
 
-        has_new = self.image_retriever.update_image(self.image)
+        has_new = self.image_handler.update_image(self.image)
         assert(isinstance(has_new, bool))
         if not has_new:
             return
@@ -145,11 +145,11 @@ class DrakeLcmImageViewer(object):
         self.subscriber = LcmImageArraySubscriber(
             self.channel, self.frame_names)
 
-        retrievers = self.subscriber.create_retrievers()
+        handlers = self.subscriber.get_handlers()
 
         image_widgets = []
-        for retriever in retrievers:
-            image_widgets.append(ImageWidget(retriever))
+        for handler in handlers:
+            image_widgets.append(ImageWidget(handler))
         self.array_widget = ImageArrayWidget(image_widgets)
 
     def _create_deferred(self):
@@ -244,67 +244,56 @@ def vtk_image_to_numpy(image):
     data.shape = get_vtk_image_shape(image)
     return data
 
-class LcmImageInfo(object):
+class LcmImageHandler(ImageHandler):
     def __init__(self):
         self.image = None  # vtkImageData
         self.utime = 0
+
         self.lock = threading.Lock()
+        self.prev_utime = 0
 
     def receive_message(self, msg):
         with self.lock:
-            print "utime: {}".format(msg.header.utime)
             self.utime = msg.header.utime
             self.image = decode_image_t(msg, self.image)
 
-class LcmImageRetriever(ImageRetriever):
-    def __init__(self, info):
-        self.info = info
-        self.prev_utime = 0
-
     def update_image(self, image_out):
-        with self.info.lock:
-            cur_utime = self.info.utime
-            if cur_utime == self.prev_utime:
+        with self.lock:
+            if self.utime == self.prev_utime:
                 return False
-            elif cur_utime < self.prev_utime:
+            elif self.utime < self.prev_utime:
                 if verbose:
                     print("Time went backwards. Resetting.")
-            self.prev_utime = cur_utime
-            image = self.info.image
-            assert(image is not None)
-            image_out.DeepCopy(image)
+            self.prev_utime = self.utime
+            assert(self.image is not None)
+            image_out.DeepCopy(self.image)
         return True
-
 
 class LcmImageArraySubscriber(object):
     def __init__(self, channel = kDefaultChannel,
                  frame_names = kDefaultFrameNames):
         self.channel = channel
         self.frame_names = frame_names
-        self.infos = {}
+        self.handlers = {}
         for frame_name in self.frame_names:
-            self.infos[frame_name] = LcmImageInfo()
+            self.handlers[frame_name] = LcmImageHandler()
         self.subscriber = lcmUtils.addSubscriber(
             channel, rl.image_array_t, self.on_message)
 
-    def create_retrievers(self):
-        retrievers = []
-        for frame_name in self.frame_names:
-            info = self.infos[frame_name]
-            retrievers.append(LcmImageRetriever(info))
-        return retrievers
+    def get_handlers(self):
+        return map(self.handlers.get, self.frame_names)
 
     def on_message(self, msg):
         issues = []
 
         msg_frame_names = [image.header.frame_name for image in msg.images]
-        for (frame_name, info) in self.infos.iteritems():
+        for (frame_name, handler) in self.handlers.iteritems():
             if frame_name not in msg_frame_names:
                 issues.append("Did not find '{}' in message".format(frame_name))
                 continue
             index = msg_frame_names.index(frame_name)
             msg_image = msg.images[index]
-            info.receive_message(msg_image)
+            handler.receive_message(msg_image)
 
         if verbose:
             extra_frame_names = set(msg_frame_names) - set(self.frame_names)
@@ -318,7 +307,7 @@ class LcmImageArraySubscriber(object):
                 print("  {}".format(issue))
 
 
-class TestImageRetriever(ImageRetriever):
+class TestImageHandler(ImageHandler):
     def __init__(self):
         self.do_color = False
         self.start_time = time.time()
@@ -368,7 +357,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--test_image', action='store_true',
-        help = "Use a test image retriever.")
+        help = "Use a test image handler.")
     parser.add_argument('--channel', type=str, default=kDefaultChannel)
     parser.add_argument('--frame_names', type=str, nargs='+', default=None,
         help="By default, will populate with first set of frames. Otherwise, can be manually specified")
@@ -376,7 +365,7 @@ if __name__ == "__main__":
 
     if args.test_image:
         image_viewer = ImageArrayWidget([
-            ImageWidget(TestImageRetriever())
+            ImageWidget(TestImageHandler())
             ])
     else:
         image_viewer = DrakeLcmImageViewer(args.channel, args.frame_names)
@@ -384,4 +373,3 @@ if __name__ == "__main__":
     if not has_app:
         app = consoleapp.ConsoleApp()
         app.start()
-
