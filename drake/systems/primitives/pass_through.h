@@ -42,11 +42,22 @@ class PassThrough : public LeafSystem<T> {
 
   /// Constructs a pass through system (`y = u`).
   /// @param size number of elements in the signal to be processed.
-  explicit PassThrough(int size);
+  explicit PassThrough(int size)
+      : LeafSystem<T>(SystemTypeTag<systems::PassThrough>()) {
+    Construct(size);
+  }
 
   /// Constructs a pass thorough system (`y = u`).
   /// @param model_value A template abstract value.
-  explicit PassThrough(const AbstractValue& model_value);
+  explicit PassThrough(const AbstractValue& model_value)
+      : LeafSystem<T>(SystemTypeTag<systems::PassThrough>()) {
+    Construct(model_value.Clone());
+  }
+
+  /// Scalar-type converting copy constructor.
+  /// See @ref system_scalar_conversion.
+  template <typename U>
+  explicit PassThrough(const PassThrough<U>&);
 
   virtual ~PassThrough() {}
 
@@ -81,17 +92,21 @@ class PassThrough : public LeafSystem<T> {
       AbstractValue* output) const;
 
   // Override feedthrough detection to avoid the need for `DoToSymbolic()`.
-  optional<bool>  DoHasDirectFeedthrough(
+  optional<bool> DoHasDirectFeedthrough(
       int input_port, int output_port) const override;
-
-  /// Returns an PassThrough<symbolic::Expression> with the same dimensions as
-  /// this PassThrough.
-  PassThrough<symbolic::Expression>* DoToSymbolic() const override;
 
  private:
   bool is_abstract() const { return abstract_model_value_ != nullptr; }
 
-  const std::unique_ptr<const AbstractValue> abstract_model_value_;
+  // Delegate construction to this method so that we clone properly at run-time.
+  void Construct(int size);
+  void Construct(std::unique_ptr<const AbstractValue> model_value);
+
+  template <typename U>
+  friend class PassThrough;
+
+  int vector_size_{-1};
+  std::unique_ptr<const AbstractValue> abstract_model_value_;
 };
 
 }  // namespace systems

@@ -14,7 +14,8 @@ namespace systems {
 // TODO(amcastro-tri): remove the size parameter from the constructor once
 // #3109 supporting automatic sizes is resolved.
 template <typename T>
-PassThrough<T>::PassThrough(int size) {
+void PassThrough<T>::Construct(int size) {
+  vector_size_ = size;
   BasicVector<T> model_value(size);
   this->DeclareVectorInputPort(model_value);
   this->DeclareVectorOutputPort(
@@ -22,20 +23,33 @@ PassThrough<T>::PassThrough(int size) {
 }
 
 template <typename T>
-PassThrough<T>::PassThrough(const AbstractValue& model_value)
-     : abstract_model_value_(model_value.Clone()) {
+void PassThrough<T>::Construct(
+    std::unique_ptr<const AbstractValue> model_value) {
+  abstract_model_value_ = std::move(model_value);
   // TODO(eric.cousineau): Remove value parameter from the constructor once
   // the equivalent of #3109 for abstract values is also resolved.
-  this->DeclareAbstractInputPort(model_value);
+  this->DeclareAbstractInputPort(*abstract_model_value_);
   // Use the std::function<> overloads to work with `AbstractValue` type
   // directly and maintain type erasure.
-  namespace sp = std::placeholders;
-  auto allocate_abstract_value = [&](const Context<T>&) {
+  auto allocate_abstract_value = [this](const Context<T>&) {
     return abstract_model_value_->Clone();
   };
+  namespace sp = std::placeholders;
   this->DeclareAbstractOutputPort(
       allocate_abstract_value,
       std::bind(&PassThrough::DoCalcAbstractOutput, this, sp::_1, sp::_2));
+}
+
+template <typename T>
+template <typename U>
+PassThrough<T>::PassThrough(const PassThrough<U>& other) {
+  // TODO(eric.cousineau): See if there is a better way to delegate
+  // construction.
+  if (other.is_abstract()) {
+    Construct(other.abstract_model_value_->Clone());
+  } else {
+    Construct(other.vector_size_);
+  }
 }
 
 template <typename T>
@@ -44,6 +58,7 @@ void PassThrough<T>::DoCalcVectorOutput(
       BasicVector<T>* output) const {
   DRAKE_ASSERT(!is_abstract());
   const BasicVector<T>& input = *this->EvalVectorInput(context, 0);
+  DRAKE_ASSERT(input.size() == output->size());
   output->SetFrom(input);
 }
 
@@ -62,18 +77,8 @@ optional<bool> PassThrough<T>::DoHasDirectFeedthrough(
   DRAKE_DEMAND(input_port == 0);
   DRAKE_DEMAND(output_port == 0);
   // By definition, a pass-through will have direct feedthrough, as the
-  // output only depends on the input.
+  // output depends directly on the input.
   return true;
-}
-
-template <typename T>
-PassThrough<symbolic::Expression>* PassThrough<T>::DoToSymbolic() const {
-  if (!is_abstract()) {
-    return new PassThrough<symbolic::Expression>(this->get_input_port().size());
-  } else {
-    // Return `nullptr` to enable control to reach `DoHasDirectFeedthrough`.
-    return nullptr;
-  }
 }
 
 }  // namespace systems
