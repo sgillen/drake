@@ -42,7 +42,8 @@ void PassThrough<T>::Construct(
 
 template <typename T>
 template <typename U>
-PassThrough<T>::PassThrough(const PassThrough<U>& other) {
+PassThrough<T>::PassThrough(const PassThrough<U>& other)
+    : LeafSystem<T>(SystemTypeTag<systems::PassThrough>()) {
   // TODO(eric.cousineau): See if there is a better way to delegate
   // construction.
   if (other.is_abstract()) {

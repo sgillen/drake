@@ -26,12 +26,23 @@ class ZeroOrderHold : public LeafSystem<T> {
   /// Constructs a ZeroOrderHold system with the given @p period_sec, over a
   /// vector-valued input of size @p size. The default initial value for this
   /// system will be zero.
-  ZeroOrderHold(double period_sec, int size);
+  ZeroOrderHold(double period_sec, int size)
+      : LeafSystem<T>(SystemTypeTag<systems::ZeroOrderHold>()) {
+    Construct(period_sec, size);
+  }
 
   /// Constructs a ZeroOrderHold system with the given @p period_sec, over a
   /// abstract-valued input @p model_value. The default initial value for this
   /// system will be @p model_value.
-  ZeroOrderHold(double period_sec, const AbstractValue& model_value);
+  ZeroOrderHold(double period_sec, const AbstractValue& model_value)
+      : LeafSystem<T>(SystemTypeTag<systems::ZeroOrderHold>()) {
+    Construct(period_sec, model_value.Clone());
+  }
+
+  /// Scalar-type converting copy constructor.
+  /// See @ref system_scalar_conversion.
+  template <typename U>
+  explicit ZeroOrderHold(const ZeroOrderHold<U>&);
 
   ~ZeroOrderHold() override {}
 
@@ -60,10 +71,6 @@ class ZeroOrderHold : public LeafSystem<T> {
   optional<bool> DoHasDirectFeedthrough(
       int input_port, int output_port) const override;
 
-  // System<T> override.  Returns a ZeroOrderHold<symbolic::Expression> with
-  // the same dimensions as this ZeroOrderHold.
-  ZeroOrderHold<symbolic::Expression>* DoToSymbolic() const override;
-
   // Sets the output port value to the vector value that is currently
   // latched in the zero-order hold.
   void DoCalcVectorOutput(
@@ -90,8 +97,16 @@ class ZeroOrderHold : public LeafSystem<T> {
  private:
   bool is_abstract() const { return abstract_model_value_ != nullptr; }
 
-  const double period_sec_{};
-  const std::unique_ptr<const AbstractValue> abstract_model_value_;
+  void Construct(double period_sec, int size);
+  void Construct(double period_sec,
+      std::unique_ptr<const AbstractValue> model_value);
+
+  template <typename U>
+  friend class ZeroOrderHold;
+
+  double period_sec_{};
+  int vector_size_{-1};
+  std::unique_ptr<const AbstractValue> abstract_model_value_;
 };
 
 }  // namespace systems
