@@ -47,18 +47,18 @@ void ZeroOrderHold<T>::Construct(
   this->DeclarePeriodicUnrestrictedUpdate(period_sec, 0.);
 }
 
-template <typename T>
-template <typename U>
-ZeroOrderHold<T>::ZeroOrderHold(const ZeroOrderHold<U>& other)
-    : LeafSystem<T>(SystemTypeTag<systems::ZeroOrderHold>()) {
-  // TODO(eric.cousineau): See if there is a better way to delegate
-  // construction.
-  if (other.is_abstract()) {
-    Construct(other.period_sec_, other.abstract_model_value_->Clone());
-  } else {
-    Construct(other.period_sec_, other.vector_size_);
-  }
-}
+// template <typename T>
+// template <typename U>
+// ZeroOrderHold<T>::ZeroOrderHold(const ZeroOrderHold<U>& other) {
+//     // : LeafSystem<T>(SystemTypeTag<systems::ZeroOrderHold>()) {
+//   // TODO(eric.cousineau): See if there is a better way to delegate
+//   // construction.
+//   if (other.is_abstract()) {
+//     Construct(other.period_sec_, other.abstract_model_value_->Clone());
+//   } else {
+//     Construct(other.period_sec_, other.vector_size_);
+//   }
+// }
 
 template <typename T>
 void ZeroOrderHold<T>::DoCalcVectorOutput(

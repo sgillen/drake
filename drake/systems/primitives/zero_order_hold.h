@@ -42,7 +42,16 @@ class ZeroOrderHold : public LeafSystem<T> {
   /// Scalar-type converting copy constructor.
   /// See @ref system_scalar_conversion.
   template <typename U>
-  explicit ZeroOrderHold(const ZeroOrderHold<U>&);
+  explicit ZeroOrderHold(const ZeroOrderHold<U>& other)
+      : LeafSystem<T>(SystemTypeTag<systems::ZeroOrderHold>()) {
+    // TODO(eric.cousineau): See if there is a better way to delegate
+    // construction.
+    if (other.is_abstract()) {
+      Construct(other.period_sec_, other.abstract_model_value_->Clone());
+    } else {
+      Construct(other.period_sec_, other.vector_size_);
+    }
+  }
 
   ~ZeroOrderHold() override {}
 
