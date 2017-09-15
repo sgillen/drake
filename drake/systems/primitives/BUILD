@@ -224,6 +224,14 @@ drake_cc_library(
     ],
 )
 
+cc_binary(
+    name = "zero_order_hold_link",
+    srcs = ["link_test.cc"],
+    deps = [
+        ":zero_order_hold",
+    ],
+)
+
 # === test/ ===
 
 drake_cc_library(
