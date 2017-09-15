@@ -15,37 +15,52 @@ namespace drake {
 namespace systems {
 
 template <typename T>
-void ZeroOrderHold<T>::Construct(double period_sec, int size) {
-  vector_size_ = size;
-  // TODO(david-german-tri): remove the size parameter from the constructor
-  // once #3109 supporting automatic sizes is resolved.
-  BasicVector<T> model_value(size);
-  this->DeclareVectorInputPort(model_value);
-  this->DeclareVectorOutputPort(
-      model_value, &ZeroOrderHold::DoCalcVectorOutput);
-  this->DeclareDiscreteState(size);
-  this->DeclarePeriodicDiscreteUpdate(period_sec);
+ZeroOrderHold<T>::ZeroOrderHold(
+    double period_sec, int vector_size,
+    std::unique_ptr<const AbstractValue> abstract_model_value)
+    : LeafSystem<T>(SystemTypeTag<systems::ZeroOrderHold>()),
+      period_sec_(period_sec),
+      vector_size_(vector_size),
+      abstract_model_value_(std::move(abstract_model_value)) {
+  DRAKE_ASSERT(vector_size_ == -1 || abstract_model_value_ == nullptr);
+  if (!is_abstract()) {
+    // TODO(david-german-tri): remove the size parameter from the constructor
+    // once #3109 supporting automatic sizes is resolved.
+    BasicVector<T> model_value(vector_size);
+    this->DeclareVectorInputPort(model_value);
+    this->DeclareVectorOutputPort(
+        model_value, &ZeroOrderHold::DoCalcVectorOutput);
+    this->DeclareDiscreteState(vector_size_);
+    this->DeclarePeriodicDiscreteUpdate(period_sec_);
+  } else {
+    // TODO(eric.cousineau): Remove value parameter from the constructor once
+    // the equivalent of #3109 for abstract values is also resolved.
+    this->DeclareAbstractInputPort(*abstract_model_value_);
+    // Use the std::function<> overloads to work with `AbstractValue` type
+    // directly and maintain type erasure.
+    auto allocate_abstract_value = [this](const Context<T>&) {
+      return abstract_model_value_->Clone();
+    };
+    namespace sp = std::placeholders;
+    this->DeclareAbstractOutputPort(
+        allocate_abstract_value,
+        std::bind(&ZeroOrderHold::DoCalcAbstractOutput, this, sp::_1, sp::_2));
+    this->DeclareAbstractState(abstract_model_value_->Clone());
+    this->DeclarePeriodicUnrestrictedUpdate(period_sec_, 0.);
+  }
+}
+
+inline std::unique_ptr<AbstractValue> CloneIfNotNull(
+    const std::unique_ptr<const AbstractValue>& value) {
+  return value ? value->Clone() : nullptr;
 }
 
 template <typename T>
-void ZeroOrderHold<T>::Construct(
-    double period_sec, std::unique_ptr<const AbstractValue> model_value) {
-  abstract_model_value_ = std::move(model_value);
-  // TODO(eric.cousineau): Remove value parameter from the constructor once
-  // the equivalent of #3109 for abstract values is also resolved.
-  this->DeclareAbstractInputPort(*abstract_model_value_);
-  // Use the std::function<> overloads to work with `AbstractValue` type
-  // directly and maintain type erasure.
-  auto allocate_abstract_value = [this](const Context<T>&) {
-    return abstract_model_value_->Clone();
-  };
-  namespace sp = std::placeholders;
-  this->DeclareAbstractOutputPort(
-      allocate_abstract_value,
-      std::bind(&ZeroOrderHold::DoCalcAbstractOutput, this, sp::_1, sp::_2));
-  this->DeclareAbstractState(abstract_model_value_->Clone());
-  this->DeclarePeriodicUnrestrictedUpdate(period_sec, 0.);
-}
+template <typename U>
+ZeroOrderHold<T>::ZeroOrderHold(const ZeroOrderHold<U>& other)
+    : ZeroOrderHold(other.period_sec_,
+                    other.vector_size_,
+                    CloneIfNotNull(other.abstract_model_value_)) {}
 
 template <typename T>
 void ZeroOrderHold<T>::DoCalcVectorOutput(

@@ -17,9 +17,10 @@ template <typename T>
 PassThrough<T>::PassThrough(
     int size,
     std::unique_ptr<const AbstractValue> abstract_model_value)
-    : vector_size_(size),
+    : LeafSystem<T>(SystemTypeTag<systems::PassThrough>()),
+      vector_size_(size),
       abstract_model_value_(std::move(abstract_model_value)) {
-  DRAKE_DEMAND(vector_size_ == -1 || abstract_model_value_ == nullptr);
+  DRAKE_ASSERT(vector_size_ == -1 || abstract_model_value_ == nullptr);
   if (!is_abstract()) {
     BasicVector<T> model_value(size);
     this->DeclareVectorInputPort(model_value);
@@ -42,15 +43,15 @@ PassThrough<T>::PassThrough(
 }
 
 inline std::unique_ptr<AbstractValue> CloneIfNotNull(
-    std::unique_ptr<const AbstractValue> value) {
+    const std::unique_ptr<const AbstractValue>& value) {
   return value ? value->Clone() : nullptr;
 }
 
 template <typename T>
 template <typename U>
 PassThrough<T>::PassThrough(const PassThrough<U>& other)
-    : PassThrough(other.vector_size,
-                  CloneIfNotNull(other.abstract_value_)) {}
+    : PassThrough(other.vector_size_,
+                  CloneIfNotNull(other.abstract_model_value_)) {}
 
 template <typename T>
 void PassThrough<T>::DoCalcVectorOutput(

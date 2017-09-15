@@ -27,17 +27,13 @@ class ZeroOrderHold : public LeafSystem<T> {
   /// vector-valued input of size @p size. The default initial value for this
   /// system will be zero.
   ZeroOrderHold(double period_sec, int size)
-      : LeafSystem<T>(SystemTypeTag<systems::ZeroOrderHold>()) {
-    Construct(period_sec, size);
-  }
+      : ZeroOrderHold(period_sec, size, nullptr) {}
 
   /// Constructs a ZeroOrderHold system with the given @p period_sec, over a
   /// abstract-valued input @p model_value. The default initial value for this
   /// system will be @p model_value.
   ZeroOrderHold(double period_sec, const AbstractValue& model_value)
-      : LeafSystem<T>(SystemTypeTag<systems::ZeroOrderHold>()) {
-    Construct(period_sec, model_value.Clone());
-  }
+      : ZeroOrderHold(period_sec, -1, model_value.Clone()) {}
 
   /// Scalar-type converting copy constructor.
   /// See @ref system_scalar_conversion.
@@ -97,9 +93,8 @@ class ZeroOrderHold : public LeafSystem<T> {
  private:
   bool is_abstract() const { return abstract_model_value_ != nullptr; }
 
-  void Construct(double period_sec, int size);
-  void Construct(double period_sec,
-      std::unique_ptr<const AbstractValue> model_value);
+  ZeroOrderHold(double period_sec, int size,
+                std::unique_ptr<const AbstractValue> model_value);
 
   template <typename U>
   friend class ZeroOrderHold;
@@ -108,20 +103,6 @@ class ZeroOrderHold : public LeafSystem<T> {
   int vector_size_{-1};
   std::unique_ptr<const AbstractValue> abstract_model_value_;
 };
-
-// If this is moved into the *-inl.h or *.cc file, then I get linker errors.
-template <typename T>
-template <typename U>
-ZeroOrderHold<T>::ZeroOrderHold(const ZeroOrderHold<U>& other)
-    : LeafSystem<T>(SystemTypeTag<systems::ZeroOrderHold>()) {
-  // TODO(eric.cousineau): See if there is a better way to delegate
-  // construction.
-  if (other.is_abstract()) {
-    Construct(other.period_sec_, other.abstract_model_value_->Clone());
-  } else {
-    Construct(other.period_sec_, other.vector_size_);
-  }
-}
 
 }  // namespace systems
 }  // namespace drake
