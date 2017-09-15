@@ -43,16 +43,12 @@ class PassThrough : public LeafSystem<T> {
   /// Constructs a pass through system (`y = u`).
   /// @param size number of elements in the signal to be processed.
   explicit PassThrough(int size)
-      : LeafSystem<T>(SystemTypeTag<systems::PassThrough>()) {
-    Construct(size);
-  }
+      : PassThrough(size, nullptr) {}
 
   /// Constructs a pass thorough system (`y = u`).
   /// @param model_value A template abstract value.
   explicit PassThrough(const AbstractValue& model_value)
-      : LeafSystem<T>(SystemTypeTag<systems::PassThrough>()) {
-    Construct(model_value.Clone());
-  }
+      : PassThrough(-1, model_value.Clone()) {}
 
   /// Scalar-type converting copy constructor.
   /// See @ref system_scalar_conversion.
@@ -98,15 +94,14 @@ class PassThrough : public LeafSystem<T> {
  private:
   bool is_abstract() const { return abstract_model_value_ != nullptr; }
 
-  // Delegate construction to this method so that we clone properly at run-time.
-  void Construct(int size);
-  void Construct(std::unique_ptr<const AbstractValue> model_value);
+  // Delegated constructor so that we may clone properly at run-time.
+  PassThrough(int size, std::unique_ptr<const AbstractValue> model_value);
 
   template <typename U>
   friend class PassThrough;
 
-  int vector_size_{-1};
-  std::unique_ptr<const AbstractValue> abstract_model_value_;
+  const int vector_size_{-1};
+  const std::unique_ptr<const AbstractValue> abstract_model_value_;
 };
 
 }  // namespace systems

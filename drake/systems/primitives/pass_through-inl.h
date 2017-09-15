@@ -14,44 +14,43 @@ namespace systems {
 // TODO(amcastro-tri): remove the size parameter from the constructor once
 // #3109 supporting automatic sizes is resolved.
 template <typename T>
-void PassThrough<T>::Construct(int size) {
-  vector_size_ = size;
-  BasicVector<T> model_value(size);
-  this->DeclareVectorInputPort(model_value);
-  this->DeclareVectorOutputPort(
-      model_value, &PassThrough::DoCalcVectorOutput);
+PassThrough<T>::PassThrough(
+    int size,
+    std::unique_ptr<const AbstractValue> abstract_model_value)
+    : vector_size_(size),
+      abstract_model_value_(std::move(abstract_model_value)) {
+  DRAKE_DEMAND(vector_size_ == -1 || abstract_model_value_ == nullptr);
+  if (!is_abstract()) {
+    BasicVector<T> model_value(size);
+    this->DeclareVectorInputPort(model_value);
+    this->DeclareVectorOutputPort(
+        model_value, &PassThrough::DoCalcVectorOutput);
+  } else {
+    // TODO(eric.cousineau): Remove value parameter from the constructor once
+    // the equivalent of #3109 for abstract values is also resolved.
+    this->DeclareAbstractInputPort(*abstract_model_value_);
+    // Use the std::function<> overloads to work with `AbstractValue` type
+    // directly and maintain type erasure.
+    auto allocate_abstract_value = [this](const Context<T>&) {
+      return abstract_model_value_->Clone();
+    };
+    namespace sp = std::placeholders;
+    this->DeclareAbstractOutputPort(
+        allocate_abstract_value,
+        std::bind(&PassThrough::DoCalcAbstractOutput, this, sp::_1, sp::_2));
+  }
 }
 
-template <typename T>
-void PassThrough<T>::Construct(
-    std::unique_ptr<const AbstractValue> model_value) {
-  abstract_model_value_ = std::move(model_value);
-  // TODO(eric.cousineau): Remove value parameter from the constructor once
-  // the equivalent of #3109 for abstract values is also resolved.
-  this->DeclareAbstractInputPort(*abstract_model_value_);
-  // Use the std::function<> overloads to work with `AbstractValue` type
-  // directly and maintain type erasure.
-  auto allocate_abstract_value = [this](const Context<T>&) {
-    return abstract_model_value_->Clone();
-  };
-  namespace sp = std::placeholders;
-  this->DeclareAbstractOutputPort(
-      allocate_abstract_value,
-      std::bind(&PassThrough::DoCalcAbstractOutput, this, sp::_1, sp::_2));
+inline std::unique_ptr<AbstractValue> CloneIfNotNull(
+    std::unique_ptr<const AbstractValue> value) {
+  return value ? value->Clone() : nullptr;
 }
 
 template <typename T>
 template <typename U>
 PassThrough<T>::PassThrough(const PassThrough<U>& other)
-    : LeafSystem<T>(SystemTypeTag<systems::PassThrough>()) {
-  // TODO(eric.cousineau): See if there is a better way to delegate
-  // construction.
-  if (other.is_abstract()) {
-    Construct(other.abstract_model_value_->Clone());
-  } else {
-    Construct(other.vector_size_);
-  }
-}
+    : PassThrough(other.vector_size,
+                  CloneIfNotNull(other.abstract_value_)) {}
 
 template <typename T>
 void PassThrough<T>::DoCalcVectorOutput(
