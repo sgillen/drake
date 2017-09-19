@@ -595,6 +595,16 @@ optional<T> Simulator<T>::GetCurrentWitnessTimeIsolation() const {
   //                 (i.e., modify the System to provide this value).
   const double characteristic_time = 1.0;
 
+  // Hack necessary to get around error:
+  // "error `accuracy` may be used uninitialized in this function"
+  // " [-Werror=maybe-uninitialized]"
+  #ifdef __GNUG__
+  #ifndef __clang__
+  #pragma GCC diagnostic push
+  #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+  #endif
+  #endif
+
   // Get the accuracy setting.
   const optional<double>& accuracy = get_context().get_accuracy();
 
@@ -621,6 +631,12 @@ optional<T> Simulator<T>::GetCurrentWitnessTimeIsolation() const {
   // in the context can allow.
   return max(integrator_->get_working_minimum_step_size(),
              iso_scale_factor * accuracy.value() * characteristic_time);
+
+  #ifdef __GNUG__
+  #ifndef __clang__
+  #pragma GCC diagnostic pop
+  #endif
+  #endif
 }
 
 // Isolates the first time at one or more witness functions triggered (in the
