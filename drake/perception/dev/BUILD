@@ -5,6 +5,7 @@ load(
     "//tools:drake.bzl",
     "drake_cc_googletest",
     "drake_cc_library",
+    "drake_cc_binary",
 )
 load("//tools:lint.bzl", "add_lint_tests")
 
@@ -33,6 +34,20 @@ drake_cc_library(
     deps = [
         ":neural_network",
         "//drake/systems/framework",
+    ],
+)
+
+drake_cc_library(
+    name = "point_cloud",
+    srcs = ["point_cloud.cc"],
+    hdrs = ["point_cloud.h"],
+    deps = [
+        "//drake/common",
+        "@vtk//:vtkCommonCore",
+        "@vtk//:vtkCommonDataModel",
+        "@vtk//:vtkCommonTransforms",
+        "@vtk//:vtkFiltersGeneral",
+        "@vtk//:vtkFiltersSources",
     ],
 )
 
