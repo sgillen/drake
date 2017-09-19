@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cmath>
+#include <limits>
 #include <memory>
 #include <vector>
 
@@ -57,6 +59,9 @@ class FeatureType {
   bool operator==(const FeatureType& other) const {
     return size_ == other.size_ && name_ == other.name_;
   }
+  bool operator!=(const FeatureType& other) const {
+    return !(*this == other);
+  }
  private:
   const int size_;
   const std::string name_;
@@ -64,9 +69,12 @@ class FeatureType {
 
 // Descriptor?
 const FeatureType kFeatureNone(0, "None");
+const FeatureType kFeatureInherit(-1, "Inherit");
 const FeatureType kFeaturePFH(3, "PFH");
-const FeatureType kFeatureSHOT(3, "SHOT");
-const FeatureType kFeatureFPCS(4, "FPCS");
+// TODO(eric.cousineau): Consider a way of reinterpret_cast<>ing the array
+// data (strides taken into account) to permit more semantic access to members,
+// PCL-style.
+const FeatureType kFeatureSHOT(1334, "SHOT");
 
 struct ImageCoord {
   /// x-coordinate of the pixel.
@@ -117,23 +125,30 @@ class PointCloud {
 
   /// Indicates the data the point cloud stores.
   enum Capabilities {
-    // Intersection among available capabilities.
-    kAllPossible = 0,
+    // Inherit other capabilities. May imply an intersection of all
+    // compatible features.
+    kInherit = 0,
     // Points in Cartesian space.
-    kPoints = 1 << 0,
+    kXYZ = 1 << 0,
     // Color, in RGB
     kColors = 1 << 1,
     // Normals (at each vertex).
     kNormals = 1 << 2,
+    // Curvatures
+    kCurvatures = 1 << 3,
     /// Must enable features using `EnableFeatures`. If attempting to
     /// construct a point cloud
-    kFeatures = 1 << 3,
-    kAll = kPoints | kColors | kNormals | kFeatures,
+    kFeatures = 1 << 4,
+    kAll = kXYZ | kColors | kNormals | kCurvatures | kFeatures,
     // Others: Curvature?
   };
 
   /// Geometric scalar type (e.g. for point, normals.)
   typedef float T;
+
+  /// Represents an invalid or unininitialized value.
+  static constexpr T kDefaultValue = std::numeric_limits<T>::quiet_NaN();
+  static inline bool IsInvalidValue(T value) { return isnan(value); }
 
   typedef systems::sensors::ImageTraits<systems::sensors::PixelType::kRgb8U>
           ImageTraits;
@@ -141,9 +156,10 @@ class PointCloud {
   typedef ImageTraits::ChannelType C;
   /// Number of channels.
   static constexpr int NC = ImageTraits::kNumChannels;
+  static constexpr C kDefaultColor = 0;
 
   /// Feature scalar type.
-  typedef double F;
+  typedef T F;
   /// Index type.
   typedef int Index;
   typedef std::vector<int> Indices;
@@ -157,85 +173,106 @@ class PointCloud {
    * @param feature
    */
   PointCloud(Index new_size,
-             Capabilities capabilities = kPoints,
+             Capabilities capabilities = kXYZ,
              const FeatureType& feature_type = kFeatureNone);
 
   PointCloud(const PointCloud& other,
-             Capabilities copy_capabilities = kAllPossible);
+             Capabilities copy_capabilities = kInherit,
+             const FeatureType& feature_type = kFeatureInherit);
 
-  Capabilities capabilities() const;
+  Capabilities capabilities() const { return capabilities_; }
 
-  Index size() const;
+  Index size() const { return size_; }
+
+  /// Conservative resize; will maintain existing data, and initialize new
+  /// data to their invalid values.
   void resize(Index new_size);
 
-  void AddItem();
+  /// Add `add_size` default-initialized points, starting from old size, to
+  /// new size.
+  void AddPoints(int add_size, bool skip_initialization = false);
 
-  bool has_points() const;
+  bool has_xyz() const;
   // Lifetime is only valid as long as point cloud has not been resized.
   // References' lifetimes should be MINIMAL.
-  Eigen::Ref<const Matrix3X<T>> points() const;
-  Eigen::Ref<Matrix3X<T>> mutable_points();
+  // NOTE: Not pluralizing for simplicity.
+  Eigen::Ref<const Matrix3X<T>> xyz() const;
+  Eigen::Ref<Matrix3X<T>> mutable_xyz();
   // For algorithms needing fast access, do NOT use this accessor. Use the
   // entire reference.
-  Vector3<T> point(Index i) const;
-  Eigen::Ref<Vector3<T>> mutable_point(Index i);
+  Vector3<T> xyz(Index i) const;
+  Eigen::Ref<Vector3<T>> mutable_xyz(Index i);
 
   bool has_colors() const;
   Eigen::Ref<const MatrixNX<NC, C>> colors() const;
-  Eigen::Ref<MatrixNX<NC, C>> mutable_colors() const;
+  Eigen::Ref<MatrixNX<NC, C>> mutable_colors();
 
   bool has_normals() const;
   Eigen::Ref<const Matrix3X<T>> normals() const;
-  Eigen::Ref<Matrix3X<T>> mutable_normals() const;
+  Eigen::Ref<Matrix3X<T>> mutable_normals();
 
-  const FeatureType& feature_type() const;
+  bool has_curvatures() const;
+  Eigen::Ref<const MatrixNX<1, T>> curvatures() const;
+  Eigen::Ref<MatrixNX<1, T>> mutable_curvatures();
+
+  const FeatureType& feature_type() const { return feature_type_; }
   bool has_features() const;
+  bool has_features(const FeatureType& feature_type) const;
   Eigen::Ref<const MatrixX<F>> features() const;
   Eigen::Ref<MatrixX<F>> mutable_features() const;
 
   void MergeFrom(const PointCloud& other);
 
+  /// Copy all points from another point cloud.
   void CopyFrom(
       const PointCloud& other,
-      Capabilities c = kAllPossible,
+      Capabilities c = kInherit,
       bool allow_subset = false,
       bool allow_resize = true);
 
   void CopyFrom(
       const PointCloud& other,
       const Indices& indices,
-      Capabilities c = kAllPossible,
+      Capabilities c = kInherit,
       bool allow_subset = false,
       bool allow_resize = true);
 
-  // Transform points/normals given rigid or affine transform.
-  // Note that normals will only have the linear portion applied, not the
-  // translation.
-  void TransformInPlace(const Eigen::Isometry3d& X);
-  void AffineTransformInPlace(const Eigen::Affine3d& T);
+//  // Transform points/normals given rigid or affine transform.
+//  // Note that normals will only have the linear portion applied, not the
+//  // translation.
+//  void TransformInPlace(const Eigen::Isometry3d& X);
+//  void AffineTransformInPlace(const Eigen::Affine3d& T);
 
-  /// Indicates if this point cloud has been sampled from an image, and has
-  /// not be resized since then. If so, then `image_dim()` may be used.
-  bool has_image_dim() const;
-  ImageDim image_dim() const;
+//  /// Indicates if this point cloud has been sampled from an image, and has
+//  /// not be resized since then. If so, then `image_dim()` may be used.
+//  bool has_image_dim() const;
+//  /// @throws std::exception if no image dimension is associated.
+//  ImageDim image_dim() const;
 
-  void DemandCapabilities(Capabilities expected);
+  /// Requires a given set of capabilities.
+  /// @throws std::runtime_error if this point cloud does not have these
+  /// capabilities.
+  void RequireCapabilities(Capabilities c,
+                           const FeatureType& feature_type = kFeatureInherit);
 
  private:
-  // Enable direct access to VTK pointer?
+  int size_;
+  Capabilities capabilities_;
   const FeatureType feature_type_;
-  class Internal;
-  std::unique_ptr<Internal> internal_;
+
+  class Storage;
+  std::unique_ptr<Storage> storage_;
+
+  void SetDefault(int start, int num);
 };
 
 void usage() {
-  PointCloud cloud(5, PointCloud::kPoints | PointCloud::kColors);
+  PointCloud cloud(5, PointCloud::kXYZ | PointCloud::kColors);
 
-  cloud.mutable_points().setConstant(1);
-  cloud.mutable_colors().setConstant(0.5);
-
-  // Alternative:
-  cloud.SetValues({});
+  auto points = cloud.mutable_points();
+  points.setConstant(1);
+  auto colors = cloud.mutable_colors();
+  colors.setConstant(0.5);
 
   // Add item?
   int n = 3;
