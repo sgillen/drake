@@ -19,9 +19,10 @@ using Eigen::Matrix3Xf;
 // Sub-sampling?
 // Image dimensions?
 // Enable permanent "locking" of a point cloud?
+// COW semantics?
 
 /*
-Philosophies:
+Design goals:
  - Permit modifications during lifetime, or seal after construction?
    -> This is a storage mechanism. Permit modifications.
  - Permit adding / removing features at run-time? (a la MathematicalProgram?)
@@ -73,9 +74,13 @@ const FeatureType kFeatureInherit(-1, "Inherit");
 const FeatureType kFeaturePFH(3, "PFH");
 // TODO(eric.cousineau): Consider a way of reinterpret_cast<>ing the array
 // data (strides taken into account) to permit more semantic access to members,
-// PCL-style.
+// PCL-style. Need to ensure alignments are commensurate.
 const FeatureType kFeatureSHOT(1334, "SHOT");
 
+/**
+ * Provides image coordinates, and the ability to conver to / from scalar
+ * coordinates (a la sub2ind / ind2sub in MATLAB).
+ */
 struct ImageCoord {
   /// x-coordinate of the pixel.
   int u;
@@ -134,12 +139,9 @@ class PointCloud {
     kColors = 1 << 1,
     // Normals (at each vertex).
     kNormals = 1 << 2,
-    // Curvatures
-    kCurvatures = 1 << 3,
     /// Must enable features using `EnableFeatures`. If attempting to
     /// construct a point cloud
     kFeatures = 1 << 4,
-    kAll = kXYZ | kColors | kNormals | kCurvatures | kFeatures,
     // Others: Curvature?
   };
 
@@ -194,32 +196,29 @@ class PointCloud {
 
   bool has_xyz() const;
   // Lifetime is only valid as long as point cloud has not been resized.
-  // References' lifetimes should be MINIMAL.
-  // NOTE: Not pluralizing for simplicity.
-  Eigen::Ref<const Matrix3X<T>> xyz() const;
-  Eigen::Ref<Matrix3X<T>> mutable_xyz();
+  // References' lifetimes should be minimal.
+  Eigen::Ref<const Matrix3X<T>> xyzs() const;
+  Eigen::Ref<Matrix3X<T>> mutable_xyzs();
   // For algorithms needing fast access, do NOT use this accessor. Use the
   // entire reference.
-  Vector3<T> xyz(Index i) const;
-  Eigen::Ref<Vector3<T>> mutable_xyz(Index i);
+  Vector3<T> xyz(Index i) const { return xyzs().col(i); }
+  Eigen::Ref<Vector3<T>> mutable_xyz(Index i) {
+    return mutable_xyzs().col(i);
+  }
 
   bool has_colors() const;
-  Eigen::Ref<const MatrixNX<NC, C>> colors() const;
-  Eigen::Ref<MatrixNX<NC, C>> mutable_colors();
+//  Eigen::Ref<const MatrixNX<NC, C>> colors() const;
+//  Eigen::Ref<MatrixNX<NC, C>> mutable_colors();
 
   bool has_normals() const;
-  Eigen::Ref<const Matrix3X<T>> normals() const;
-  Eigen::Ref<Matrix3X<T>> mutable_normals();
-
-  bool has_curvatures() const;
-  Eigen::Ref<const MatrixNX<1, T>> curvatures() const;
-  Eigen::Ref<MatrixNX<1, T>> mutable_curvatures();
+//  Eigen::Ref<const Matrix3X<T>> normals() const;
+//  Eigen::Ref<Matrix3X<T>> mutable_normals();
 
   const FeatureType& feature_type() const { return feature_type_; }
   bool has_features() const;
-  bool has_features(const FeatureType& feature_type) const;
-  Eigen::Ref<const MatrixX<F>> features() const;
-  Eigen::Ref<MatrixX<F>> mutable_features() const;
+//  bool has_features(const FeatureType& feature_type) const;
+//  Eigen::Ref<const MatrixX<F>> features() const;
+//  Eigen::Ref<MatrixX<F>> mutable_features() const;
 
   void MergeFrom(const PointCloud& other);
 
@@ -230,12 +229,12 @@ class PointCloud {
       bool allow_subset = false,
       bool allow_resize = true);
 
-  void CopyFrom(
-      const PointCloud& other,
-      const Indices& indices,
-      Capabilities c = kInherit,
-      bool allow_subset = false,
-      bool allow_resize = true);
+//  void CopyFrom(
+//      const PointCloud& other,
+//      const Indices& indices,
+//      Capabilities c = kInherit,
+//      bool allow_subset = false,
+//      bool allow_resize = true);
 
 //  // Transform points/normals given rigid or affine transform.
 //  // Note that normals will only have the linear portion applied, not the
@@ -265,26 +264,6 @@ class PointCloud {
 
   void SetDefault(int start, int num);
 };
-
-void usage() {
-  PointCloud cloud(5, PointCloud::kXYZ | PointCloud::kColors);
-
-  auto points = cloud.mutable_points();
-  points.setConstant(1);
-  auto colors = cloud.mutable_colors();
-  colors.setConstant(0.5);
-
-  // Add item?
-  int n = 3;
-  cloud.AddPoints(n);
-
-  // Create point cloud with just normals
-  PointCloud normals(0, PointCloud::kNormals);
-
-  filters::NormalEstimation(cloud, &normals);
-
-  // Create point cloud with points and features.
-}
 
 }  // namespace perception
 }  // namespace drake

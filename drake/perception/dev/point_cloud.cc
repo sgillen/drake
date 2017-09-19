@@ -10,6 +10,8 @@
 #include <vtkSmartPointer.h>
 #include <vtkFloatArray.h>
 
+using Eigen::Map;
+
 namespace drake {
 namespace perception {
 
@@ -36,13 +38,13 @@ std::string join(const std::vector<std::string>& elements,
 std::vector<std::string> ToStringVector(
     PointCloud::Capabilities c, const FeatureType& feature_type) {
   std::vector<std::string> out;
-#define PC_CAPABILITY(flag, suffix) if (c & PointCloud::flag) \
-    out.push_back(std::string(#flag) + suffix);
+#define PC_CAPABILITY(flag, suffix) \
+    if (c & PointCloud::flag) \
+      out.push_back(std::string(#flag) + suffix);
   PC_CAPABILITY(kXYZ, "");
   PC_CAPABILITY(kColors, "");
   PC_CAPABILITY(kNormals, "");
-  PC_CAPABILITY(kCurvatures, "");
-  PC_CAPABILITY(kFeatures, feature_type.name());
+  PC_CAPABILITY(kFeatures, "_" + feature_type.name());
 #undef PC_CAPABILITY
   return out;
 }
@@ -81,13 +83,6 @@ class PointCloud::Storage {
       normal_array->SetNumberOfTuples(cloud_->size());
       poly_data_->GetPointData()->AddArray(normal_array);
     }
-    if (cloud_->has_curvatures()) {
-      auto curvature_array = vtkSmartPointer<vtkFloatArray>::New();
-      curvature_array->SetName(kNameCurvatures.c_str());
-      curvature_array->SetNumberOfComponents(1);
-      curvature_array->SetNumberOfTuples(cloud_->size());
-      poly_data_->GetPointData()->AddArray(curvature_array);
-    }
     if (cloud_->has_features()) {
       auto feature_array = vtkSmartPointer<vtkFloatArray>::New();
       const std::string name =
@@ -99,23 +94,34 @@ class PointCloud::Storage {
     }
   }
 
+  int size() const {
+    return poly_data_->GetNumberOfPoints();
+  }
+
   // Resize to parent cloud's size.
   void resize() {
     int old_size = poly_data_->GetNumberOfPoints();
     int new_size = cloud_->size();
+
+    DRAKE_DEMAND(cloud_->capabilities() == kXYZ);
+    if (cloud_->has_xyz()) {
+      poly_data_->GetPointData()->SetNumberOfTuples(new_size);
+    }
   }
 
-  float* get_xyz_data() {
+  Eigen::Map<MatrixX<T>> xyzs() {
     auto* points = poly_data_->GetPoints();
     DRAKE_ASSERT(points);
-    return static_cast<float*>(points->GetVoidPointer(0));
+    float* raw = static_cast<float*>(points->GetVoidPointer(0));
+    Eigen::Map<MatrixX<T>> out(raw, 3, size());
+    return out;
   }
 
-  uint8_t* get_color_data() {
-    auto* colors = poly_data_->GetPointData()->GetArray(kNameColors.c_str());
-    DRAKE_ASSERT(colors);
-    return static_cast<uint8_t*>(colors->GetVoidPointer(0));
-  }
+//  uint8_t* get_color_data() {
+//    auto* colors = poly_data_->GetPointData()->GetArray(kNameColors.c_str());
+//    DRAKE_ASSERT(colors);
+//    return static_cast<uint8_t*>(colors->GetVoidPointer(0));
+//  }
 
  private:
   const PointCloud* cloud_{};
@@ -186,20 +192,20 @@ void PointCloud::SetDefault(int start, int num) {
     ref.middleCols(start, num).setConstant(value);
   };
   if (has_xyz()) {
-    set(mutable_xyz(), kDefaultValue);
+    set(mutable_xyzs(), kDefaultValue);
   }
-  if (has_colors()) {
-    set(mutable_colors(), kDefaultColor);
-  }
-  if (has_normals()) {
-    set(mutable_normals(), kDefaultValue);
-  }
-  if (has_curvatures()) {
-    set(mutable_curvatures(), kDefaultValue);
-  }
-  if (has_features()) {
-    set(mutable_features(), kDefaultValue);
-  }
+//  if (has_colors()) {
+//    set(mutable_colors(), kDefaultColor);
+//  }
+//  if (has_normals()) {
+//    set(mutable_normals(), kDefaultValue);
+//  }
+//  if (has_curvatures()) {
+//    set(mutable_curvatures(), kDefaultValue);
+//  }
+//  if (has_features()) {
+//    set(mutable_features(), kDefaultValue);
+//  }
 }
 
 void PointCloud::MergeFrom(const PointCloud& other) {
