@@ -177,6 +177,9 @@ PointCloud::PointCloud(
       feature_type_(feature_type) {
   DRAKE_DEMAND(!(capabilities & PointCloud::kInherit));
   DRAKE_DEMAND(feature_type_ != kFeatureInherit);
+  if (has_feature()) {
+    DRAKE_DEMAND(feature_type_ != kFeatureNone);
+  }
   storage_.reset(new Storage(this));
   SetDefault(0, size_);
 }
@@ -265,16 +268,16 @@ void PointCloud::AddPoints(
 }
 
 bool PointCloud::has_xyz() const {
-  return capabilities_ | kXYZ;
+  return capabilities_ & kXYZ;
 }
 bool PointCloud::has_color() const {
-  return capabilities_ | kColor;
+  return capabilities_ & kColor;
 }
 bool PointCloud::has_normal() const {
-  return capabilities_ | kNormal;
+  return capabilities_ & kNormal;
 }
 bool PointCloud::has_feature() const {
-  return capabilities_ | kFeature;
+  return capabilities_ & kFeature;
 }
 bool PointCloud::has_feature(const FeatureType& feature_type) const {
   return has_feature() && feature_type_ == feature_type;
