@@ -62,8 +62,9 @@ Eigen::Map<XprType> VtkToEigen(vtkDataArray *array) {
   // Follow suite with vtk_to_numpy.
   typedef typename XprType::Scalar T;
   T* raw = static_cast<T*>(array->GetVoidPointer(0));
-  return Eigen::Map<XprType>(raw, array->GetNumberOfComponents(),
-                             array->GetNumberOfTuples());
+  const int nrows = array->GetNumberOfComponents();
+  const int ncols = array->GetNumberOfTuples();
+  return Eigen::Map<XprType>(raw, nrows, ncols);
 }
 
 };
@@ -86,6 +87,7 @@ class PointCloud::Storage {
     if (cloud_->has_color()) {
       auto rgb_array = vtkSmartPointer<vtkUnsignedCharArray>::New();
       rgb_array->SetName(kNameColors.c_str());
+      rgb_array->SetNumberOfTuples(NC);
       rgb_array->SetNumberOfTuples(cloud_->size());
       poly_data_->GetPointData()->AddArray(rgb_array);
     }
