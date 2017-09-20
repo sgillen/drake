@@ -210,8 +210,8 @@ class PointCloud {
   }
 
   bool has_color() const;
-  Eigen::Ref<const MatrixNX<NC, C>> colors() const;
-  Eigen::Ref<MatrixNX<NC, C>> mutable_colors();
+//  Eigen::Ref<const MatrixNX<NC, C>> colors() const;
+//  Eigen::Ref<MatrixNX<NC, C>> mutable_colors();
 
   bool has_normal() const;
 //  Eigen::Ref<const Matrix3X<T>> normals() const;
