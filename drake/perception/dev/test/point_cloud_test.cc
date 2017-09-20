@@ -9,29 +9,26 @@
 
 using Eigen::Matrix4Xf;
 
-typedef Eigen::Matrix<uint8_t, 4, Eigen::Dynamic> Matrix4Xb;
-
 namespace drake {
 namespace perception {
 namespace {
 
-template <typename T, typename XprType>
-struct is_default_impl {
+typedef Eigen::Matrix<PointCloud::C, 4, Eigen::Dynamic> Matrix4XC;
+
+template <typename T>
+struct check_default {
+  template <typename XprType>
   static bool run(const XprType& xpr) {
     return xpr.array().isNaN().all();
   }
 };
 
-template <typename XprType>
-struct is_default_impl<uint8_t, XprType> {
+template <>
+struct check_default<PointCloud::C> {
+  template <typename XprType>
   static bool run(const XprType& xpr) {
     return (xpr.array() == 0).all();
   }
-};
-
-template <typename T, typename XprType>
-bool is_default(const XprType& xpr) {
-  return is_default_impl<T, XprType>::run(xpr);
 };
 
 GTEST_TEST(PointCloudTest, Basic) {
@@ -45,7 +42,7 @@ GTEST_TEST(PointCloudTest, Basic) {
     typedef typename XprType::Scalar T;
 
     // Expect the values to be default-initialized.
-    EXPECT_TRUE(is_default<T>(mutable_fields(cloud)));
+    EXPECT_TRUE(check_default<T>::run(mutable_fields(cloud)));
 
     // Set values using the mutable accessor.
     mutable_fields(cloud) = fields_expected;
@@ -62,7 +59,7 @@ GTEST_TEST(PointCloudTest, Basic) {
     int last = cloud.size();
     cloud.AddPoints(1);
     // Check default-initialized.
-    EXPECT_TRUE(is_default<T>(mutable_field(cloud, last)));
+    EXPECT_TRUE(check_default<T>::run(mutable_field(cloud, last)));
     // Ensure that we preserve the values.
     EXPECT_TRUE(
       CompareMatrices(fields_expected, fields(cloud).middleCols(0, last)));
@@ -83,7 +80,7 @@ GTEST_TEST(PointCloudTest, Basic) {
               [](PointCloud& cloud, int i) { return cloud.xyz(i); });
 
   // Colors.
-  Matrix4Xb colors_expected(4, count);
+  Matrix4XC colors_expected(4, count);
   colors_expected.transpose() <<
     1, 2, 3, 4,
     10, 20, 30, 40,
