@@ -1,5 +1,7 @@
 #include "drake/perception/dev/point_cloud.h"
 
+#include <stdexcept>
+
 #include <gtest/gtest.h>
 
 #include "drake/common/eigen_matrix_compare.h"
@@ -11,7 +13,7 @@ namespace {
 GTEST_TEST(PointCloudTest, Basic) {
   PointCloud cloud(5, PointCloud::kXYZ);
 
-  Matrix3Xd xyzs_expected(3, 5);
+  Matrix3Xf xyzs_expected(3, 5);
   xyzs_expected.transpose() <<
     1, 2, 3,
     10, 20, 30,
@@ -43,7 +45,10 @@ GTEST_TEST(PointCloudTest, Capabilities) {
   {
     PointCloud cloud(1, PointCloud::kXYZ);
     EXPECT_TRUE(cloud.HasCapabilities(PointCloud::kXYZ));
+    EXPECT_NO_THROW(cloud.RequireCapabilities(PointCloud::kXYZ));
     EXPECT_FALSE(cloud.HasCapabilities(PointCloud::kNormal));
+    EXPECT_THROW(cloud.RequireCapabilities(PointCloud::kXYZ),
+                 std::runtime_error);
   }
 
   // Check with features.
@@ -51,8 +56,13 @@ GTEST_TEST(PointCloudTest, Capabilities) {
   // Check with exact capabilities.
   {
     PointCloud cloud(1, PointCloud::kXYZ | PointCloud::kNormal);
-    EXPECT_TRUE(cloud.HasCapabilities(PointCloud::kNormal));
-    EXPECT_THROW(cloud.HasExactCapabilities(PointCloud::kNormal));
+    EXPECT_TRUE(cloud.HasExactCapabilities(
+        PointCloud::kNormal | PointCloud::kNormal));
+    EXPECT_NO_THROW(cloud.RequireExactCapabilities(
+            PointCloud::kNormal | PointCloud::kNormal));
+    EXPECT_FALSE(cloud.HasExactCapabilities(PointCloud::kNormal));
+    EXPECT_THROW(cloud.RequireExactCapabilities(PointCloud::kNormal),
+                 std::runtime_error);
   }
 }
 
