@@ -1,5 +1,6 @@
 #include "drake/perception/dev/point_cloud.h"
 
+#include <iostream>
 #include <stdexcept>
 
 #include <gtest/gtest.h>
@@ -11,17 +12,21 @@ namespace perception {
 namespace {
 
 GTEST_TEST(PointCloudTest, Basic) {
-  PointCloud cloud(5, PointCloud::kXYZ);
+  int count = 2;
+  PointCloud cloud(count, PointCloud::kXYZ);
 
-  Matrix3Xf xyzs_expected(3, 5);
+  Matrix3Xf xyzs_expected(3, count);
   xyzs_expected.transpose() <<
     1, 2, 3,
-    10, 20, 30,
-    100, 200, 300,
-    4, 5, 6,
-    40, 50, 60;
+    10, 20, 30;
+//    100, 200, 300,
+//    4, 5, 6,
+//    40, 50, 60;
 
   cloud.mutable_xyzs() = xyzs_expected;
+
+  std::cout << cloud.mutable_xyzs().transpose() << std::endl;
+  std::cout << cloud.xyzs().transpose() << std::endl;
 
   EXPECT_TRUE(
     CompareMatrices(

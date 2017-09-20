@@ -122,7 +122,7 @@ class PointCloud::Storage {
     DRAKE_DEMAND(cloud_->capabilities() == kXYZ);
     if (cloud_->has_xyz()) {
       auto* points = poly_data_->GetPoints();
-      points->SetNumberOfPoints(new_size);
+      points->Resize(new_size);
     }
   }
 
