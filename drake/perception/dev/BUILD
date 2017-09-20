@@ -58,6 +58,7 @@ drake_cc_googletest(
         ":point_cloud",
         "//drake/common:eigen_matrix_compare",
     ],
+    use_gdb_workaround_binary = True,
 )
 
 # === test/ ===

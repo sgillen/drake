@@ -172,6 +172,7 @@ def drake_cc_test(
         copts = [],
         gcc_copts = [],
         disable_in_compilation_mode_dbg = False,
+        use_gdb_workaround_binary = False,
         **kwargs):
     """Creates a rule to declare a C++ unit test.  Note that for almost all
     cases, drake_cc_googletest should be used, instead of this rule.
@@ -182,6 +183,10 @@ def drake_cc_test(
     If disable_in_compilation_mode_dbg is True, the srcs will be suppressed
     in debug-mode builds, so the test will trivially pass. This option should
     be used only rarely, and the reason should always be documented.
+
+    If use_gdb_workaround_binary is True, then it will generate this rule as a
+    cc_binary rather than a cc_test. This is used to permit CLion to attach gdb.
+    This optional should NEVER be merged into master.
     """
     if size == None:
         size = "small"
@@ -191,12 +196,22 @@ def drake_cc_test(
         # Remove the test declarations from the test in debug mode.
         # TODO(david-german-tri): Actually suppress the test rule.
         srcs = select({"//tools:debug": [], "//conditions:default": srcs})
-    native.cc_test(
-        name = name,
-        size = size,
-        srcs = srcs,
-        copts = _platform_copts(copts, gcc_copts, cc_test = 1),
-        **kwargs)
+    copts = _platform_copts(copts, gcc_copts, cc_test = 1)
+    if not use_gdb_workaround_binary:
+        native.cc_test(
+            name = name,
+            size = size,
+            srcs = srcs,
+            copts = copts,
+            **kwargs)
+    else:
+        # TODO(eric.cousineau): Scrub non-test arguments?
+        native.cc_binary(
+            name = name,
+            srcs = srcs,
+            copts = copts,
+            testonly = 1,
+            **kwargs)
 
     # Also generate the OS X debug symbol file for this test.
     native.genrule(
