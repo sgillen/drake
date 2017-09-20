@@ -155,7 +155,7 @@ class PointCloud {
 
   typedef systems::sensors::ImageTraits<systems::sensors::PixelType::kRgba8U>
           ImageTraits;
-  /// Color scalar type. Channels are assumed to be RGB only.
+  /// Color scalar type. Channels are assumed to be RGBA only.
   typedef ImageTraits::ChannelType C;
   /// Number of channels.
   static constexpr int NC = ImageTraits::kNumChannels;
@@ -210,8 +210,12 @@ class PointCloud {
   }
 
   bool has_color() const;
-//  Eigen::Ref<const MatrixNX<NC, C>> colors() const;
-//  Eigen::Ref<MatrixNX<NC, C>> mutable_colors();
+  Eigen::Ref<const MatrixNX<NC, C>> colors() const;
+  Eigen::Ref<MatrixNX<NC, C>> mutable_colors();
+  VectorN<NC, C> color(Index i) const { return colors().col(i); }
+  Eigen::Ref<VectorN<NC, C>> mutable_color(Index i) {
+    return mutable_colors().col(i);
+  };
 
   bool has_normal() const;
 //  Eigen::Ref<const Matrix3X<T>> normals() const;

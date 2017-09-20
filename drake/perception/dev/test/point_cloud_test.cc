@@ -7,6 +7,10 @@
 
 #include "drake/common/eigen_matrix_compare.h"
 
+using Eigen::Matrix4Xf;
+
+typedef Eigen::Matrix<uint8_t, 4, Eigen::Dynamic> Matrix4Xb;
+
 namespace drake {
 namespace perception {
 namespace {
@@ -14,10 +18,10 @@ namespace {
 GTEST_TEST(PointCloudTest, Basic) {
   const int count = 5;
 
-  auto CheckFields = [count](auto fields_expected,
-                         auto mutable_fields, auto fields,
-                         auto mutable_field, auto field) {
-    PointCloud cloud(count, PointCloud::kXYZ);
+  auto CheckFields = [count](auto fields_expected, PointCloud::CapabilitySet c,
+                             auto mutable_fields, auto fields,
+                             auto mutable_field, auto field) {
+    PointCloud cloud(count, c);
     // Expect the values to be default-initialized.
     EXPECT_TRUE(mutable_fields(cloud).array().isNaN().all());
 
@@ -42,6 +46,7 @@ GTEST_TEST(PointCloudTest, Basic) {
       CompareMatrices(fields_expected, fields(cloud).middleCols(0, start)));
   };
 
+  // Points.
   Matrix3Xf xyzs_expected(3, count);
   xyzs_expected.transpose() <<
     1, 2, 3,
@@ -49,11 +54,25 @@ GTEST_TEST(PointCloudTest, Basic) {
     100, 200, 300,
     4, 5, 6,
     40, 50, 60;
-  CheckFields(xyzs_expected,
+  CheckFields(xyzs_expected, PointCloud::kXYZ,
               [](PointCloud& cloud) { return cloud.mutable_xyzs(); },
               [](PointCloud& cloud) { return cloud.xyzs(); },
               [](PointCloud& cloud, int i) { return cloud.mutable_xyz(i); },
               [](PointCloud& cloud, int i) { return cloud.xyz(i); });
+
+  // Colors.
+  Matrix4Xb colors_expected(4, count);
+  colors_expected.transpose() <<
+    1, 2, 3, 4,
+    10, 20, 30, 40,
+    110, 120, 130, 140,
+    5, 6, 7, 8,
+    150, 160, 170, 180;
+  CheckFields(colors_expected, PointCloud::kColor,
+              [](PointCloud& cloud) { return cloud.mutable_colors(); },
+              [](PointCloud& cloud) { return cloud.colors(); },
+              [](PointCloud& cloud, int i) { return cloud.mutable_color(i); },
+              [](PointCloud& cloud, int i) { return cloud.color(i); });
 }
 
 GTEST_TEST(PointCloudTest, Capabilities) {
