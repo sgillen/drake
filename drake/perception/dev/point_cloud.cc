@@ -42,9 +42,9 @@ std::vector<std::string> ToStringVector(
     if (c & PointCloud::flag) \
       out.push_back(std::string(#flag) + suffix);
   PC_CAPABILITY(kXYZ, "");
-  PC_CAPABILITY(kColors, "");
-  PC_CAPABILITY(kNormals, "");
-  PC_CAPABILITY(kFeatures, "_" + feature_type.name());
+  PC_CAPABILITY(kColor, "");
+  PC_CAPABILITY(kNormal, "");
+  PC_CAPABILITY(kFeature, "_" + feature_type.name());
 #undef PC_CAPABILITY
   return out;
 }
@@ -70,20 +70,20 @@ class PointCloud::Storage {
       points->SetNumberOfPoints(cloud_->size());
       poly_data_->SetPoints(points);
     }
-    if (cloud_->has_colors()) {
+    if (cloud_->has_color()) {
       auto rgb_array = vtkSmartPointer<vtkUnsignedCharArray>::New();
       rgb_array->SetName(kNameColors.c_str());
       rgb_array->SetNumberOfTuples(cloud_->size());
       poly_data_->GetPointData()->AddArray(rgb_array);
     }
-    if (cloud_->has_normals()) {
+    if (cloud_->has_normal()) {
       auto normal_array = vtkSmartPointer<vtkFloatArray>::New();
       normal_array->SetName(kNameNormals.c_str());
       normal_array->SetNumberOfComponents(3);
       normal_array->SetNumberOfTuples(cloud_->size());
       poly_data_->GetPointData()->AddArray(normal_array);
     }
-    if (cloud_->has_features()) {
+    if (cloud_->has_feature()) {
       auto feature_array = vtkSmartPointer<vtkFloatArray>::New();
       const std::string name =
           kNameFeaturesPrefix + cloud_->feature_type().name();
@@ -111,17 +111,11 @@ class PointCloud::Storage {
 
   Eigen::Map<MatrixX<T>> xyzs() {
     auto* points = poly_data_->GetPoints();
-    DRAKE_ASSERT(points);
+    DRAKE_ASSERT(points != nullptr);
     float* raw = static_cast<float*>(points->GetVoidPointer(0));
     Eigen::Map<MatrixX<T>> out(raw, 3, size());
     return out;
   }
-
-//  uint8_t* get_color_data() {
-//    auto* colors = poly_data_->GetPointData()->GetArray(kNameColors.c_str());
-//    DRAKE_ASSERT(colors);
-//    return static_cast<uint8_t*>(colors->GetVoidPointer(0));
-//  }
 
  private:
   const PointCloud* cloud_{};
@@ -148,7 +142,7 @@ FeatureType ResolveFeatureType(const PointCloud& other,
   if (feature_type == kFeatureInherit) {
     return other.feature_type();
   } else {
-    if (in & PointCloud::kFeatures) {
+    if (in & PointCloud::kFeature) {
       DRAKE_DEMAND(feature_type == other.feature_type());
     }
     return feature_type;
@@ -194,16 +188,16 @@ void PointCloud::SetDefault(int start, int num) {
   if (has_xyz()) {
     set(mutable_xyzs(), kDefaultValue);
   }
-//  if (has_colors()) {
+//  if (has_color()) {
 //    set(mutable_colors(), kDefaultColor);
 //  }
-//  if (has_normals()) {
+//  if (has_normal()) {
 //    set(mutable_normals(), kDefaultValue);
 //  }
 //  if (has_curvatures()) {
 //    set(mutable_curvatures(), kDefaultValue);
 //  }
-//  if (has_features()) {
+//  if (has_feature()) {
 //    set(mutable_features(), kDefaultValue);
 //  }
 }
@@ -214,11 +208,27 @@ void PointCloud::MergeFrom(const PointCloud& other) {
   resize(new_size);
   CopyFrom(other);
 }
+
 void PointCloud::CopyFrom(const PointCloud& other,
                           PointCloud::Capabilities c,
                           bool allow_subset,
                           bool allow_resize) {
-
+  int old_size = size();
+  int new_size = other.size();
+  if (!allow_subset) {
+    // Ensure that this point cloud has all of the same capabilities as the
+    // other.
+    RequireCapabilities(other.capabilities(), other.feature_type());
+  }
+  if (allow_resize) {
+    resize(new_size);
+  } else if (new_size != old_size) {
+    throw std::runtime_error(
+        fmt::format("PointCloud::CopyFrom: {} != {}", new_size, old_size));
+  }
+  if (has_xyz() && other.has_xyz()) {
+    mutable_xyzs() = other.xyzs();
+  }
 }
 
 void PointCloud::AddPoints(
@@ -235,44 +245,68 @@ void PointCloud::AddPoints(
 bool PointCloud::has_xyz() const {
   return capabilities_ | kXYZ;
 }
-bool PointCloud::has_colors() const {
-  return capabilities_ | kColors;
+bool PointCloud::has_color() const {
+  return capabilities_ | kColor;
 }
-bool PointCloud::has_normals() const {
-  return capabilities_ | kNormals;
+bool PointCloud::has_normal() const {
+  return capabilities_ | kNormal;
 }
-bool PointCloud::has_curvatures() const {
-  return capabilities_ | kCurvatures;
+bool PointCloud::has_feature() const {
+  return capabilities_ | kFeature;
 }
-bool PointCloud::has_features() const {
-  return capabilities_ | kFeatures;
-}
-bool PointCloud::has_features(const FeatureType& feature_type) const {
-  return has_features() && feature_type_ == feature_type;
+bool PointCloud::has_feature(const FeatureType& feature_type) const {
+  return has_feature() && feature_type_ == feature_type;
 }
 
-Eigen::Ref<const Matrix3X<T>> PointCloud::xyz() const {
-  return Eigen::Map<const Matrix3X<T>>(storage_->get_xyz_data(),
-                                       3, size());
+Eigen::Ref<const Matrix3X<T>> PointCloud::xyzs() const {
+  return storage_->xyzs();
 }
 
-void PointCloud::RequireCapabilities(
+Eigen::Ref<Matrix3X<T>> PointCloud::mutable_xyzs() {
+  return storage_->xyzs();
+}
+
+void PointCloud::HasCapabilities(
     PointCloud::Capabilities c,
     const FeatureType& f) {
   bool good = true;
   if (capabilities() & c != c) {
     good = false;
-  } else if (c | PointCloud::kFeatures) {
+  } else if (c | PointCloud::kFeature) {
     DRAKE_DEMAND(f != kFeatureNone);
     DRAKE_DEMAND(f != kFeatureInherit);
     if (feature_type() != f) {
       good = false;
     }
   }
-  if (!good) {
+  return good;
+}
+
+void PointCloud::RequireCapabilities(
+    Capabilities c,
+    const FeatureType& f) {
+  if (!HasCapabilities(c, f)) {
     throw std::runtime_error(
         fmt::format("PointCloud does not have expected capabilities.\n"
-                    "expected {}, got {}",
+                    "Expected {}, got {}",
+                    ToString(c, f),
+                    ToString(capabilities(), feature_type())));
+  }
+}
+
+bool HasExactCapabilities(
+      Capabilities c,
+      const FeatureType& f = kFeatureNone) const {
+  return HasCapabilities(c, f) && capabilities() == c;
+}
+
+void PointCloud::RequireExactCapabilities(
+    Capabilities c,
+    const FeatureType& f) {
+  if (!HasExactCapabilities(c, f)) {
+    throw std::runtime_error(
+        fmt::format("PointCloud does not have the exact expected capabilities."
+                    "\nExpected {}, got {}",
                     ToString(c, f),
                     ToString(capabilities(), feature_type())));
   }

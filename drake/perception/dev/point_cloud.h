@@ -136,12 +136,12 @@ class PointCloud {
     // Points in Cartesian space.
     kXYZ = 1 << 0,
     // Color, in RGB
-    kColors = 1 << 1,
+    kColor = 1 << 1,
     // Normals (at each vertex).
-    kNormals = 1 << 2,
+    kNormal = 1 << 2,
     /// Must enable features using `EnableFeatures`. If attempting to
     /// construct a point cloud
-    kFeatures = 1 << 4,
+    kFeature = 1 << 4,
     // Others: Curvature?
   };
 
@@ -206,17 +206,17 @@ class PointCloud {
     return mutable_xyzs().col(i);
   }
 
-  bool has_colors() const;
+  bool has_color() const;
 //  Eigen::Ref<const MatrixNX<NC, C>> colors() const;
 //  Eigen::Ref<MatrixNX<NC, C>> mutable_colors();
 
-  bool has_normals() const;
+  bool has_normal() const;
 //  Eigen::Ref<const Matrix3X<T>> normals() const;
 //  Eigen::Ref<Matrix3X<T>> mutable_normals();
 
   const FeatureType& feature_type() const { return feature_type_; }
-  bool has_features() const;
-//  bool has_features(const FeatureType& feature_type) const;
+  bool has_feature() const;
+//  bool has_feature(const FeatureType& feature_type) const;
 //  Eigen::Ref<const MatrixX<F>> features() const;
 //  Eigen::Ref<MatrixX<F>> mutable_features() const;
 
@@ -251,8 +251,19 @@ class PointCloud {
   /// Requires a given set of capabilities.
   /// @throws std::runtime_error if this point cloud does not have these
   /// capabilities.
-  void RequireCapabilities(Capabilities c,
-                           const FeatureType& feature_type = kFeatureInherit);
+  bool HasCapabilities(
+      Capabilities c,
+      const FeatureType& feature_type = kFeatureNone) const;
+  void RequireCapabilities(
+      Capabilities c,
+      const FeatureType& feature_type = kFeatureNone) const;
+
+  bool HasExactCapabilities(
+      Capabilities c,
+      const FeatureType& feature_type = kFeatureNone) const;
+  void RequireExactCapabilities(
+      Capabilities c,
+      const FeatureType& feature_type = kFeatureNone) const;
 
  private:
   int size_;
