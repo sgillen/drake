@@ -106,7 +106,7 @@ GTEST_TEST(PointCloudTest, Basic) {
     100, 200, 300,
     4, 5, 6,
     40, 50, 60;
-  CheckFields(normals_expected, PointCloud::kXYZ,
+  CheckFields(normals_expected, PointCloud::kNormal,
               [](PointCloud& cloud) { return cloud.mutable_normals(); },
               [](PointCloud& cloud) { return cloud.normals(); },
               [](PointCloud& cloud, int i) { return cloud.mutable_normal(i); },
