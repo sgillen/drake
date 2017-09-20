@@ -148,6 +148,12 @@ GTEST_TEST(PointCloudTest, Basic) {
 }
 
 GTEST_TEST(PointCloudTest, Capabilities) {
+  // Check zero-size.
+  {
+    PointCloud cloud(0, PointCloud::kXYZ | PointCloud::kNormal);
+    EXPECT_EQ(0, cloud.size());
+  }
+
   // Check basic requirements.
   {
     PointCloud cloud(1, PointCloud::kXYZ);
@@ -180,6 +186,10 @@ GTEST_TEST(PointCloudTest, Capabilities) {
   // Check with features.
   {
     PointCloud cloud(1, PointCloud::kFeature, kFeaturePFH);
+    EXPECT_THROW(PointCloud(1, PointCloud::kFeature, kFeatureNone),
+                 std::runtime_error);
+    EXPECT_THROW(PointCloud(1, PointCloud::kXYZ, kFeaturePFH),
+                 std::runtime_error);
   }
 }
 
