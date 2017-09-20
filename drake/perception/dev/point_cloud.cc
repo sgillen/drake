@@ -110,8 +110,12 @@ class PointCloud::Storage {
   }
 
   int size() const {
-    // Er... What happens if there is no XYZ???
-    return poly_data_->GetNumberOfPoints();
+    if (cloud_->has_xyz()) {
+      return poly_data_->GetNumberOfPoints();
+    } else {
+      // Er... What happens if there is no XYZ???
+      return poly_data_->GetPointData()->GetArray(0)->GetNumberOfTuples();
+    }
   }
 
   // Resize to parent cloud's size.
@@ -119,15 +123,21 @@ class PointCloud::Storage {
 //    int old_size = poly_data_->GetNumberOfPoints();
     int new_size = cloud_->size();
 
-    DRAKE_DEMAND(cloud_->capabilities() == kXYZ);
     if (cloud_->has_xyz()) {
       GetPoints()->Resize(new_size);
       // Dunno why, but we have to propagate this size???
       GetPoints()->SetNumberOfPoints(new_size);
     }
+
     if (cloud_->has_color()) {
       GetColors()->Resize(new_size);
+      GetColors()->SetNumberOfTuples(new_size);
     }
+
+    poly_data_->GetPointData()->SetNumberOfTuples(new_size);
+
+    DRAKE_DEMAND(!cloud_->has_normal());
+    DRAKE_DEMAND(!cloud_->has_feature());
 
     CheckInvariants();
   }
@@ -152,12 +162,13 @@ class PointCloud::Storage {
 
   void CheckInvariants() const {
     int cloud_size = cloud_->size();
+    DRAKE_DEMAND(size() == cloud_->size());
     if (cloud_->has_xyz()) {
       int xyz_size = GetPoints()->GetNumberOfPoints();
       DRAKE_DEMAND(xyz_size == cloud_size);
     }
     if (cloud_->has_color()) {
-      int color_size = GetColors()->GetSize();
+      int color_size = GetColors()->GetNumberOfTuples();
       DRAKE_DEMAND(color_size == cloud_size);
     }
   }
@@ -237,7 +248,6 @@ void PointCloud::resize(PointCloud::Index new_size) {
   int old_size = size();
   size_ = new_size;
   storage_->resize();
-  DRAKE_DEMAND(storage_->size() == size_);
   if (new_size > old_size) {
     int size_diff = new_size - old_size;
     SetDefault(old_size, size_diff);

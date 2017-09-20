@@ -27,7 +27,8 @@ template <>
 struct check_default<PointCloud::C> {
   template <typename XprType>
   static bool run(const XprType& xpr) {
-    return (xpr.array() == 0).all();
+    const PointCloud::C def = PointCloud::kDefaultColor;
+    return (xpr.array() == def).all();
   }
 };
 
@@ -38,6 +39,7 @@ GTEST_TEST(PointCloudTest, Basic) {
                              auto mutable_fields, auto fields,
                              auto mutable_field, auto field) {
     PointCloud cloud(count, c);
+    EXPECT_EQ(count, cloud.size());
     typedef decltype(fields_expected) XprType;
     typedef typename XprType::Scalar T;
 
@@ -58,6 +60,7 @@ GTEST_TEST(PointCloudTest, Basic) {
     // Add item which should be default-initialized.
     int last = cloud.size();
     cloud.AddPoints(1);
+    EXPECT_EQ(count + 1, cloud.size());
     // Check default-initialized.
     EXPECT_TRUE(check_default<T>::run(mutable_field(cloud, last)));
     // Ensure that we preserve the values.
