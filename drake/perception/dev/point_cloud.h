@@ -150,7 +150,7 @@ class PointCloud {
 
   /// Represents an invalid or unininitialized value.
   static constexpr T kDefaultValue = std::numeric_limits<T>::quiet_NaN();
-  static inline bool IsInvalidValue(T value) { return isnan(value); }
+  static inline bool IsInvalidValue(T value) { return std::isnan(value); }
 
   typedef systems::sensors::ImageTraits<systems::sensors::PixelType::kRgb8U>
           ImageTraits;
@@ -216,7 +216,7 @@ class PointCloud {
 
   const FeatureType& feature_type() const { return feature_type_; }
   bool has_feature() const;
-//  bool has_feature(const FeatureType& feature_type) const;
+  bool has_feature(const FeatureType& feature_type) const;
 //  Eigen::Ref<const MatrixX<F>> features() const;
 //  Eigen::Ref<MatrixX<F>> mutable_features() const;
 
