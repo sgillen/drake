@@ -104,10 +104,10 @@ class PointCloud::Storage {
   }
 
   void CheckInvariants() const {
-    int cur_size = cloud_->size();
+    int cloud_size = cloud_->size();
     if (cloud_->has_xyz()) {
-      DRAKE_DEMAND(
-          poly_data_->GetPoints()->GetNumberOfPoints() == cur_size);
+      int xyz_size = poly_data_->GetPoints()->GetNumberOfPoints();
+      DRAKE_DEMAND(xyz_size == cloud_size);
     }
 //    if (cloud_->has_color()) {
 //
@@ -123,7 +123,11 @@ class PointCloud::Storage {
     if (cloud_->has_xyz()) {
       auto* points = poly_data_->GetPoints();
       points->Resize(new_size);
+      // Dunno why, but we have to propagate this size???
+      poly_data_->GetPoints()->SetNumberOfPoints(new_size);
     }
+
+    CheckInvariants();
   }
 
   Eigen::Map<MatrixX<T>> xyzs() {
@@ -297,7 +301,7 @@ bool PointCloud::HasCapabilities(
   bool good = true;
   if ((capabilities() & c) != c) {
     good = false;
-  } else if (c | PointCloud::kFeature) {
+  } else if (c & PointCloud::kFeature) {
     DRAKE_DEMAND(f != kFeatureNone);
     DRAKE_DEMAND(f != kFeatureInherit);
     if (feature_type() != f) {
