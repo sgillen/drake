@@ -4,24 +4,51 @@ namespace drake {
 namespace perception {
 namespace {
 
-void usage() {
-  PointCloud cloud(5, PointCloud::kXYZ | PointCloud::kColors);
+GTEST_TEST(PointCloudTest, Basic) {
+  PointCloud cloud(5, PointCloud::kXYZ);
 
-  auto xyzs = cloud.mutable_xyz();
-  points.setConstant(1);
-  auto colors = cloud.mutable_colors();
-  colors.setConstant(0.5);
+  Matrix3Xd xyzs_expected(3, 5);
+  xyzs_expected.transpose() <<
+    1, 2, 3,
+    10, 20, 30,
+    100, 200, 300,
+    4, 5, 6,
+    40, 50, 60;
 
-  // Add item?
-  int n = 3;
-  cloud.AddPoints(n);
+  cloud.mutable_xyzs() = xyzs_expected;
 
-  // Create point cloud with just normals
-  PointCloud normals(0, PointCloud::kNormals);
+  EXPECT_TRUE(
+    CompareMatrices(
+        xyzs_expected,
+        cloud.xyzs()));
 
-  filters::NormalEstimation(cloud, &normals);
+  // Add item which should be default-initialized.
+  int start = cloud.size();
+  cloud.AddPoints(1);
+  EXPECT_TRUE(
+    cloud.mutable_xyz(start).array().isNaN().all());
+  // Ensure that we preserve the values.
+  EXPECT_TRUE(
+    CompareMatrices(
+        xyzs_expected,
+        cloud.xyzs().middleCols(0, start)));
+}
 
-  // Create point cloud with points and features.
+GTEST_TEST(PointCloudTest, Capabilities) {
+  // Check basic requirements.
+  {
+    PointCloud cloud(1, PointCloud::kXYZ);
+    EXPECT_TRUE(cloud.HasCapabilities(PointCloud::kXYZ));
+    EXPECT_FALSE(cloud.HasCapabilities(PointCloud::kNormal));
+  }
+
+  // Check with features.
+
+  // Check with exact capabilities.
+  {
+    PointCloud cloud(1, PointCloud::kXYZ | PointCloud::kNormal);
+    EXPECT_TRUE(cloud.HasCapabilities(PointCloud::kNormal));
+    EXPECT_THROW(cloud.HasExactCapabilities(PointCloud::kNormal));
 }
 
 }  // namespace
