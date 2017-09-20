@@ -33,8 +33,8 @@ GTEST_TEST(PointCloudTest, Basic) {
   // Check element-by-element.
   for (int i = 0; i < count; ++i) {
     const auto xyz_expected = xyzs_expected.col(i);
-    EXPECT_TRUE(CompareMatrices(xyz_expected.col(i), cloud.xyz(i)));
-    EXPECT_TRUE(CompareMatrices(xyz_expected.col(i), cloud.mutable_xyz(i)));
+    EXPECT_TRUE(CompareMatrices(xyz_expected, cloud.xyz(i)));
+    EXPECT_TRUE(CompareMatrices(xyz_expected, cloud.mutable_xyz(i)));
   }
 
   // Add item which should be default-initialized.
