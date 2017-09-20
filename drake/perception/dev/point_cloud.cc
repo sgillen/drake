@@ -15,22 +15,20 @@ using Eigen::Map;
 namespace drake {
 namespace perception {
 
+namespace {
+
+// Convenience aliases.
 typedef PointCloud::T T;
 typedef PointCloud::F F;
 constexpr int NC = PointCloud::NC;
 typedef PointCloud::C C;
 
-namespace {
-
-template <typename T, typename... Args>
-vtkSmartPointer<T> MakeVtk(Args&&... args) {
-  return vtkSmartPointer<T>::New(std::forward<Args>(args)...);
-}
-
+// Names.
 const std::string kNameColors = "rgb8u_colors",
     kNameNormals = "normals",
     kNameFeaturesPrefix = "features_";
 
+// Utility.
 std::string join(const std::vector<std::string>& elements,
                  const std::string &d) {
   std::ostringstream os;
@@ -57,14 +55,22 @@ std::string ToString(PointCloud::CapabilitySet c, const FeatureType &f) {
   return "(" + join(ToStringVector(c, f), " | ") + ")";
 }
 
+// Simple VTK utility, following suite with `vtk_to_numpy`.
 template <typename XprType>
 Eigen::Map<XprType> VtkToEigen(vtkDataArray *array) {
-  // Follow suite with vtk_to_numpy.
   typedef typename XprType::Scalar T;
   T* raw = static_cast<T*>(array->GetVoidPointer(0));
   const int nrows = array->GetNumberOfComponents();
   const int ncols = array->GetNumberOfTuples();
   return Eigen::Map<XprType>(raw, nrows, ncols);
+}
+
+// Simple VTK utility, following suite with `vtk_to_numpy`.
+template <typename T>
+Eigen::Map<Matrix3X<T>> VtkToEigen(vtkPoints *array) {
+  T* raw = static_cast<T*>(array->GetVoidPointer(0));
+  const int ncols = array->GetNumberOfPoints();
+  return Eigen::Map<Matrix3X<T>>(raw, 3, ncols);
 }
 
 };
@@ -78,7 +84,6 @@ class PointCloud::Storage {
 
     // See vtkPCLConversions.cxx, Cxx/PolyData/CopyAllArrays
     if (cloud_->has_xyz()) {
-      // Why do they use `vtkNew`?
       auto points = vtkSmartPointer<vtkPoints>::New();
       points->SetDataTypeToFloat();
       points->SetNumberOfPoints(cloud_->size());
@@ -105,10 +110,6 @@ class PointCloud::Storage {
       feature_array->SetNumberOfTuples(cloud_->size());
       poly_data_->GetPointData()->AddArray(feature_array);
     }
-  }
-
-  std::string feature_name() const {
-    return kNameFeaturesPrefix + cloud_->feature_type().name();
   }
 
   int size() const {
@@ -151,9 +152,7 @@ class PointCloud::Storage {
 
   Eigen::Map<Matrix3X<T>> xyzs() {
     DRAKE_ASSERT(cloud_->has_xyz());
-    float* raw = static_cast<float*>(GetPoints()->GetVoidPointer(0));
-    Eigen::Map<Matrix3X<T>> out(raw, 3, size());
-    return out;
+    return VtkToEigen<T>(GetPoints());
   }
 
   Eigen::Map<MatrixNX<NC, C>> colors() {
@@ -183,6 +182,10 @@ class PointCloud::Storage {
   }
   vtkDataArray* GetFeatures() const {
     return poly_data_->GetPointData()->GetArray(feature_name().c_str());
+  }
+
+  std::string feature_name() const {
+    return kNameFeaturesPrefix + cloud_->feature_type().name();
   }
 
   void CheckInvariants() const {
