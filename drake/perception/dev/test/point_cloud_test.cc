@@ -1,5 +1,9 @@
 #include "drake/perception/dev/point_cloud.h"
 
+#include <gtest/gtest.h>
+
+#include "drake/common/eigen_matrix_compare.h"
+
 namespace drake {
 namespace perception {
 namespace {
@@ -49,6 +53,7 @@ GTEST_TEST(PointCloudTest, Capabilities) {
     PointCloud cloud(1, PointCloud::kXYZ | PointCloud::kNormal);
     EXPECT_TRUE(cloud.HasCapabilities(PointCloud::kNormal));
     EXPECT_THROW(cloud.HasExactCapabilities(PointCloud::kNormal));
+  }
 }
 
 }  // namespace

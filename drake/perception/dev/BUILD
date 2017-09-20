@@ -43,11 +43,20 @@ drake_cc_library(
     hdrs = ["point_cloud.h"],
     deps = [
         "//drake/common",
+        "//drake/systems/sensors:image",
         "@vtk//:vtkCommonCore",
         "@vtk//:vtkCommonDataModel",
         "@vtk//:vtkCommonTransforms",
         "@vtk//:vtkFiltersGeneral",
         "@vtk//:vtkFiltersSources",
+    ],
+)
+
+drake_cc_googletest(
+    name = "point_cloud_test",
+    deps = [
+        ":point_cloud",
+        "//drake/common:eigen_matrix_compare",
     ],
 )
 

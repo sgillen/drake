@@ -22,9 +22,8 @@ vtkSmartPointer<T> MakeVtk(Args&&... args) {
   return vtkSmartPointer<T>::New(std::forward<Args>(args)...);
 }
 
-const std::string kNameColors = "rgb_colors",
+const std::string kNameColors = "rgb8u_colors",
     kNameNormals = "normals",
-    kNameCurvatures = "curvatures",
     kNameFeaturesPrefix = "features_";
 
 std::string join(const std::vector<std::string>& elements,
@@ -224,7 +223,7 @@ void PointCloud::CopyFrom(const PointCloud& other,
     resize(new_size);
   } else if (new_size != old_size) {
     throw std::runtime_error(
-        fmt::format("PointCloud::CopyFrom: {} != {}", new_size, old_size));
+        fmt::format("CopyFrom: {} != {}", new_size, old_size));
   }
   if (has_xyz() && other.has_xyz()) {
     mutable_xyzs() = other.xyzs();
@@ -266,9 +265,9 @@ Eigen::Ref<Matrix3X<T>> PointCloud::mutable_xyzs() {
   return storage_->xyzs();
 }
 
-void PointCloud::HasCapabilities(
+bool PointCloud::HasCapabilities(
     PointCloud::Capabilities c,
-    const FeatureType& f) {
+    const FeatureType& f) const {
   bool good = true;
   if (capabilities() & c != c) {
     good = false;
@@ -284,7 +283,7 @@ void PointCloud::HasCapabilities(
 
 void PointCloud::RequireCapabilities(
     Capabilities c,
-    const FeatureType& f) {
+    const FeatureType& f) const {
   if (!HasCapabilities(c, f)) {
     throw std::runtime_error(
         fmt::format("PointCloud does not have expected capabilities.\n"
@@ -294,7 +293,7 @@ void PointCloud::RequireCapabilities(
   }
 }
 
-bool HasExactCapabilities(
+bool PointCloud::HasExactCapabilities(
       Capabilities c,
       const FeatureType& f = kFeatureNone) const {
   return HasCapabilities(c, f) && capabilities() == c;
@@ -302,7 +301,7 @@ bool HasExactCapabilities(
 
 void PointCloud::RequireExactCapabilities(
     Capabilities c,
-    const FeatureType& f) {
+    const FeatureType& f) const {
   if (!HasExactCapabilities(c, f)) {
     throw std::runtime_error(
         fmt::format("PointCloud does not have the exact expected capabilities."
