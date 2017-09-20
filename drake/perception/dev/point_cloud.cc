@@ -87,7 +87,7 @@ class PointCloud::Storage {
     if (cloud_->has_color()) {
       auto rgb_array = vtkSmartPointer<vtkUnsignedCharArray>::New();
       rgb_array->SetName(kNameColors.c_str());
-      rgb_array->SetNumberOfTuples(NC);
+      rgb_array->SetNumberOfComponents(NC);
       rgb_array->SetNumberOfTuples(cloud_->size());
       poly_data_->GetPointData()->AddArray(rgb_array);
     }
