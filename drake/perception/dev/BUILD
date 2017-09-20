@@ -52,13 +52,14 @@ drake_cc_library(
     ],
 )
 
-drake_cc_googletest(
+cc_test(
     name = "point_cloud_test",
+    srcs = ["test/point_cloud_test.cc"],
     deps = [
         ":point_cloud",
         "//drake/common:eigen_matrix_compare",
+        "//drake/common:drake_cc_googletest_main",
     ],
-    use_gdb_workaround_binary = True,
 )
 
 # === test/ ===
