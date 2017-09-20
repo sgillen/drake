@@ -129,7 +129,7 @@ class PointCloud {
  public:
 
   /// Indicates the data the point cloud stores.
-  enum Capabilities {
+  enum Capability : int {
     // Inherit other capabilities. May imply an intersection of all
     // compatible features.
     kInherit = 0,
@@ -141,9 +141,10 @@ class PointCloud {
     kNormal = 1 << 2,
     /// Must enable features using `EnableFeatures`. If attempting to
     /// construct a point cloud
-    kFeature = 1 << 4,
+    kFeature = 1 << 3,
     // Others: Curvature?
   };
+  typedef int CapabilitySet;
 
   /// Geometric scalar type (e.g. for point, normals.)
   typedef float T;
@@ -175,14 +176,16 @@ class PointCloud {
    * @param feature
    */
   PointCloud(Index new_size,
-             Capabilities capabilities = kXYZ,
+             CapabilitySet capabilities = kXYZ,
              const FeatureType& feature_type = kFeatureNone);
 
   PointCloud(const PointCloud& other,
-             Capabilities copy_capabilities = kInherit,
+             CapabilitySet copy_capabilities = kInherit,
              const FeatureType& feature_type = kFeatureInherit);
 
-  Capabilities capabilities() const { return capabilities_; }
+  ~PointCloud();
+
+  CapabilitySet capabilities() const { return capabilities_; }
 
   Index size() const { return size_; }
 
@@ -225,14 +228,14 @@ class PointCloud {
   /// Copy all points from another point cloud.
   void CopyFrom(
       const PointCloud& other,
-      Capabilities c = kInherit,
+      CapabilitySet c = kInherit,
       bool allow_subset = false,
       bool allow_resize = true);
 
 //  void CopyFrom(
 //      const PointCloud& other,
 //      const Indices& indices,
-//      Capabilities c = kInherit,
+//      CapabilitySet c = kInherit,
 //      bool allow_subset = false,
 //      bool allow_resize = true);
 
@@ -252,22 +255,22 @@ class PointCloud {
   /// @throws std::runtime_error if this point cloud does not have these
   /// capabilities.
   bool HasCapabilities(
-      Capabilities c,
+      CapabilitySet c,
       const FeatureType& feature_type = kFeatureNone) const;
   void RequireCapabilities(
-      Capabilities c,
+      CapabilitySet c,
       const FeatureType& feature_type = kFeatureNone) const;
 
   bool HasExactCapabilities(
-      Capabilities c,
+      CapabilitySet c,
       const FeatureType& feature_type = kFeatureNone) const;
   void RequireExactCapabilities(
-      Capabilities c,
+      CapabilitySet c,
       const FeatureType& feature_type = kFeatureNone) const;
 
  private:
   int size_;
-  Capabilities capabilities_;
+  CapabilitySet capabilities_;
   const FeatureType feature_type_;
 
   class Storage;

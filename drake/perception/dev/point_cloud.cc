@@ -15,6 +15,10 @@ using Eigen::Map;
 namespace drake {
 namespace perception {
 
+typedef PointCloud::T T;
+typedef PointCloud::F F;
+typedef PointCloud::C C;
+
 namespace {
 
 template <typename T, typename... Args>
@@ -35,7 +39,7 @@ std::string join(const std::vector<std::string>& elements,
 }
 
 std::vector<std::string> ToStringVector(
-    PointCloud::Capabilities c, const FeatureType& feature_type) {
+    PointCloud::CapabilitySet c, const FeatureType& feature_type) {
   std::vector<std::string> out;
 #define PC_CAPABILITY(flag, suffix) \
     if (c & PointCloud::flag) \
@@ -48,7 +52,7 @@ std::vector<std::string> ToStringVector(
   return out;
 }
 
-std::string ToString(PointCloud::Capabilities c, const FeatureType &f) {
+std::string ToString(PointCloud::CapabilitySet c, const FeatureType &f) {
   return "(" + join(ToStringVector(c, f), " | ") + ")";
 }
 
@@ -99,7 +103,7 @@ class PointCloud::Storage {
 
   // Resize to parent cloud's size.
   void resize() {
-    int old_size = poly_data_->GetNumberOfPoints();
+//    int old_size = poly_data_->GetNumberOfPoints();
     int new_size = cloud_->size();
 
     DRAKE_DEMAND(cloud_->capabilities() == kXYZ);
@@ -123,8 +127,8 @@ class PointCloud::Storage {
 
 namespace {
 
-PointCloud::Capabilities ResolveCapabilities(const PointCloud& other,
-                         PointCloud::Capabilities in) {
+PointCloud::CapabilitySet ResolveCapabilities(const PointCloud& other,
+                         PointCloud::CapabilitySet in) {
   if (in == PointCloud::kInherit) {
     return other.capabilities();
   } else {
@@ -136,7 +140,7 @@ PointCloud::Capabilities ResolveCapabilities(const PointCloud& other,
 // If another feature is used, and we wish to copy the other's features,
 // ensure they are compatible.
 FeatureType ResolveFeatureType(const PointCloud& other,
-                               PointCloud::Capabilities in,
+                               PointCloud::CapabilitySet in,
                                const FeatureType& feature_type) {
   if (feature_type == kFeatureInherit) {
     return other.feature_type();
@@ -152,7 +156,7 @@ FeatureType ResolveFeatureType(const PointCloud& other,
 
 PointCloud::PointCloud(
     PointCloud::Index new_size,
-    PointCloud::Capabilities capabilities,
+    PointCloud::CapabilitySet capabilities,
     const FeatureType& feature_type)
     : size_(new_size),
       capabilities_(capabilities),
@@ -163,11 +167,14 @@ PointCloud::PointCloud(
 }
 
 PointCloud::PointCloud(const PointCloud& other,
-                       PointCloud::Capabilities copy_capabilities,
+                       PointCloud::CapabilitySet copy_capabilities,
                        const FeatureType& feature_type)
     : PointCloud(other.size(),
                  ResolveCapabilities(other, copy_capabilities),
                  ResolveFeatureType(other, copy_capabilities, feature_type)) {}
+
+// Define destructor here to use complete definition of `Storage`.
+PointCloud::~PointCloud() {}
 
 void PointCloud::resize(PointCloud::Index new_size) {
   DRAKE_DEMAND(new_size >= 0);
@@ -209,7 +216,7 @@ void PointCloud::MergeFrom(const PointCloud& other) {
 }
 
 void PointCloud::CopyFrom(const PointCloud& other,
-                          PointCloud::Capabilities c,
+                          PointCloud::CapabilitySet c,
                           bool allow_subset,
                           bool allow_resize) {
   int old_size = size();
@@ -266,10 +273,10 @@ Eigen::Ref<Matrix3X<T>> PointCloud::mutable_xyzs() {
 }
 
 bool PointCloud::HasCapabilities(
-    PointCloud::Capabilities c,
+    PointCloud::CapabilitySet c,
     const FeatureType& f) const {
   bool good = true;
-  if (capabilities() & c != c) {
+  if ((capabilities() & c) != c) {
     good = false;
   } else if (c | PointCloud::kFeature) {
     DRAKE_DEMAND(f != kFeatureNone);
@@ -282,7 +289,7 @@ bool PointCloud::HasCapabilities(
 }
 
 void PointCloud::RequireCapabilities(
-    Capabilities c,
+    CapabilitySet c,
     const FeatureType& f) const {
   if (!HasCapabilities(c, f)) {
     throw std::runtime_error(
@@ -294,13 +301,13 @@ void PointCloud::RequireCapabilities(
 }
 
 bool PointCloud::HasExactCapabilities(
-      Capabilities c,
-      const FeatureType& f = kFeatureNone) const {
+      CapabilitySet c,
+      const FeatureType& f) const {
   return HasCapabilities(c, f) && capabilities() == c;
 }
 
 void PointCloud::RequireExactCapabilities(
-    Capabilities c,
+    CapabilitySet c,
     const FeatureType& f) const {
   if (!HasExactCapabilities(c, f)) {
     throw std::runtime_error(
