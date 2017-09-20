@@ -149,11 +149,11 @@ class PointCloud {
   /// Geometric scalar type (e.g. for point, normals.)
   typedef float T;
 
-  /// Represents an invalid or unininitialized value.
+  /// Represents an invalid or uninitialized value.
   static constexpr T kDefaultValue = std::numeric_limits<T>::quiet_NaN();
   static inline bool IsInvalidValue(T value) { return std::isnan(value); }
 
-  typedef systems::sensors::ImageTraits<systems::sensors::PixelType::kRgb8U>
+  typedef systems::sensors::ImageTraits<systems::sensors::PixelType::kRgba8U>
           ImageTraits;
   /// Color scalar type. Channels are assumed to be RGB only.
   typedef ImageTraits::ChannelType C;
@@ -210,8 +210,8 @@ class PointCloud {
   }
 
   bool has_color() const;
-//  Eigen::Ref<const MatrixNX<NC, C>> colors() const;
-//  Eigen::Ref<MatrixNX<NC, C>> mutable_colors();
+  Eigen::Ref<const MatrixNX<NC, C>> colors() const;
+  Eigen::Ref<MatrixNX<NC, C>> mutable_colors();
 
   bool has_normal() const;
 //  Eigen::Ref<const Matrix3X<T>> normals() const;
