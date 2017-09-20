@@ -68,6 +68,8 @@ GTEST_TEST(PointCloudTest, Basic) {
       CompareMatrices(fields_expected, fields(cloud).middleCols(0, last)));
   };
 
+  // TODO(eric.cousineau): Iterate through all field combinations.
+
   // Points.
   Matrix3Xf xyzs_expected(3, count);
   xyzs_expected.transpose() <<
@@ -95,6 +97,20 @@ GTEST_TEST(PointCloudTest, Basic) {
               [](PointCloud& cloud) { return cloud.colors(); },
               [](PointCloud& cloud, int i) { return cloud.mutable_color(i); },
               [](PointCloud& cloud, int i) { return cloud.color(i); });
+
+  // Normals.
+  Matrix3Xf normals_expected(3, count);
+  normals_expected.transpose() <<
+    1, 2, 3,
+    10, 20, 30,
+    100, 200, 300,
+    4, 5, 6,
+    40, 50, 60;
+  CheckFields(normals_expected, PointCloud::kXYZ,
+              [](PointCloud& cloud) { return cloud.mutable_normals(); },
+              [](PointCloud& cloud) { return cloud.normals(); },
+              [](PointCloud& cloud, int i) { return cloud.mutable_normal(i); },
+              [](PointCloud& cloud, int i) { return cloud.normal(i); });
 }
 
 GTEST_TEST(PointCloudTest, Capabilities) {
