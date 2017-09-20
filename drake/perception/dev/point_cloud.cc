@@ -145,6 +145,16 @@ class PointCloud::Storage {
 
 namespace {
 
+// Ensure that a capability set is complete valid (does not have extra bits).
+void ValidateCapabilities(PointCloud::CapabilitySet c) {
+  PointCloud::CapabilitySet full_mask =
+      PointCloud::kXYZ | PointCloud::kNormal | PointCloud::kColor |
+          PointCloud::kFeature;
+  if (c <= 0 || c > full_mask) {
+    throw std::runtime_error("Invalid CapabilitySet");
+  }
+}
+
 PointCloud::CapabilitySet ResolveCapabilities(const PointCloud& other,
                          PointCloud::CapabilitySet in) {
   if (in == PointCloud::kInherit) {
@@ -179,7 +189,8 @@ PointCloud::PointCloud(
     : size_(new_size),
       capabilities_(capabilities),
       feature_type_(feature_type) {
-  DRAKE_DEMAND(!(capabilities & PointCloud::kInherit));
+  ValidateCapabilities(capabilities_);
+  DRAKE_DEMAND(!(capabilities_ & PointCloud::kInherit));
   DRAKE_DEMAND(feature_type_ != kFeatureInherit);
   if (has_feature()) {
     DRAKE_DEMAND(feature_type_ != kFeatureNone);
