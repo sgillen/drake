@@ -13,12 +13,35 @@ namespace {
 
 GTEST_TEST(PointCloudTest, Basic) {
   const int count = 5;
-  PointCloud cloud(5, PointCloud::kXYZ);
 
-  // Expect the values to be default-initialized.
-  EXPECT_TRUE(cloud.xyzs().array().isNaN().all());
+  auto CheckFields = [count](auto fields_expected,
+                         auto mutable_fields, auto fields,
+                         auto mutable_field, auto field) {
+    PointCloud cloud(count, PointCloud::kXYZ);
+    // Expect the values to be default-initialized.
+    EXPECT_TRUE(mutable_fields(cloud).array().isNaN().all());
 
-  // Set values using the mutable accessor.
+    // Set values using the mutable accessor.
+    mutable_fields(cloud) = fields_expected;
+    EXPECT_TRUE(CompareMatrices(fields_expected, mutable_fields(cloud)));
+    EXPECT_TRUE(CompareMatrices(fields_expected, fields(cloud)));
+    // Check element-by-element.
+    for (int i = 0; i < count; ++i) {
+      const auto field_expected = fields_expected.col(i);
+      EXPECT_TRUE(CompareMatrices(field_expected, field(cloud, i)));
+      EXPECT_TRUE(CompareMatrices(field_expected, mutable_field(cloud, i)));
+    }
+
+    // Add item which should be default-initialized.
+    int start = cloud.size();
+    cloud.AddPoints(1);
+    // Check default-initialized.
+    EXPECT_TRUE(mutable_field(cloud, start).array().isNaN().all());
+    // Ensure that we preserve the values.
+    EXPECT_TRUE(
+      CompareMatrices(fields_expected, fields(cloud).middleCols(0, start)));
+  };
+
   Matrix3Xf xyzs_expected(3, count);
   xyzs_expected.transpose() <<
     1, 2, 3,
@@ -26,25 +49,11 @@ GTEST_TEST(PointCloudTest, Basic) {
     100, 200, 300,
     4, 5, 6,
     40, 50, 60;
-
-  cloud.mutable_xyzs() = xyzs_expected;
-  EXPECT_TRUE(CompareMatrices(xyzs_expected, cloud.mutable_xyzs()));
-  EXPECT_TRUE(CompareMatrices(xyzs_expected, cloud.xyzs()));
-  // Check element-by-element.
-  for (int i = 0; i < count; ++i) {
-    const auto xyz_expected = xyzs_expected.col(i);
-    EXPECT_TRUE(CompareMatrices(xyz_expected, cloud.xyz(i)));
-    EXPECT_TRUE(CompareMatrices(xyz_expected, cloud.mutable_xyz(i)));
-  }
-
-  // Add item which should be default-initialized.
-  int start = cloud.size();
-  cloud.AddPoints(1);
-  // Check default-initialized.
-  EXPECT_TRUE(cloud.mutable_xyz(start).array().isNaN().all());
-  // Ensure that we preserve the values.
-  EXPECT_TRUE(
-    CompareMatrices(xyzs_expected, cloud.xyzs().middleCols(0, start)));
+  CheckFields(xyzs_expected,
+              [](PointCloud& cloud) { return cloud.mutable_xyzs(); },
+              [](PointCloud& cloud) { return cloud.xyzs(); },
+              [](PointCloud& cloud, int i) { return cloud.mutable_xyz(i); },
+              [](PointCloud& cloud, int i) { return cloud.xyz(i); });
 }
 
 GTEST_TEST(PointCloudTest, Capabilities) {
