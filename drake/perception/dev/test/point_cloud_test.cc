@@ -71,6 +71,13 @@ GTEST_TEST(PointCloudTest, Capabilities) {
     EXPECT_THROW(cloud.RequireExactCapabilities(PointCloud::kNormal),
                  std::runtime_error);
   }
+
+  // Check invalid capabilities.
+  {
+    EXPECT_THROW(PointCloud(1, 0), std::runtime_error);
+    EXPECT_THROW(PointCloud(1, 100), std::runtime_error);
+    EXPECT_THROW(PointCloud(1, -100), std::runtime_error);
+  }
 }
 
 }  // namespace
