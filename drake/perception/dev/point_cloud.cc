@@ -253,11 +253,19 @@ PointCloud::PointCloud(
       capabilities_(capabilities),
       feature_type_(feature_type) {
   ValidateCapabilities(capabilities_);
-  DRAKE_DEMAND(!(capabilities_ & PointCloud::kInherit));
-  DRAKE_DEMAND(feature_type_ != kFeatureInherit);
+  if (capabilities_ & PointCloud::kInherit)
+    throw std::runtime_error("Cannot construct a PointCloud with kInherit");
+  if (feature_type == kFeatureInherit)
+    throw std::runtime_error(
+        "Cannot construct a PointCloud with kFeatureInherit");
   if (has_feature()) {
-    DRAKE_DEMAND(feature_type_ != kFeatureNone);
+    if (feature_type_ == kFeatureNone)
+      throw std::runtime_error("Cannot specify kFeatureNone with kFeature");
   }
+  else if (feature_type != kFeatureNone)
+    throw std::runtime_error(
+        "Must specify kFeatureNone if kFeature is not present");
+
   storage_.reset(new Storage(this));
   SetDefault(0, size_);
 }
