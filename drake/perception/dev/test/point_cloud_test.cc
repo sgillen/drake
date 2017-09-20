@@ -15,6 +15,25 @@ namespace drake {
 namespace perception {
 namespace {
 
+template <typename T, typename XprType>
+struct is_default_impl {
+  static bool run(const XprType& xpr) {
+    return xpr.array().isNaN().all();
+  }
+};
+
+template <typename XprType>
+struct is_default_impl<uint8_t, XprType> {
+  static bool run(const XprType& xpr) {
+    return (xpr.array() == 0).all();
+  }
+};
+
+template <typename T, typename XprType>
+bool is_default(const XprType& xpr) {
+  return is_default_impl<T, XprType>::run(xpr);
+};
+
 GTEST_TEST(PointCloudTest, Basic) {
   const int count = 5;
 
@@ -22,8 +41,11 @@ GTEST_TEST(PointCloudTest, Basic) {
                              auto mutable_fields, auto fields,
                              auto mutable_field, auto field) {
     PointCloud cloud(count, c);
+    typedef decltype(fields_expected) XprType;
+    typedef typename XprType::Scalar T;
+
     // Expect the values to be default-initialized.
-    EXPECT_TRUE(mutable_fields(cloud).array().isNaN().all());
+    EXPECT_TRUE(is_default<T>(mutable_fields(cloud)));
 
     // Set values using the mutable accessor.
     mutable_fields(cloud) = fields_expected;
@@ -37,13 +59,13 @@ GTEST_TEST(PointCloudTest, Basic) {
     }
 
     // Add item which should be default-initialized.
-    int start = cloud.size();
+    int last = cloud.size();
     cloud.AddPoints(1);
     // Check default-initialized.
-    EXPECT_TRUE(mutable_field(cloud, start).array().isNaN().all());
+    EXPECT_TRUE(is_default<T>(mutable_field(cloud, last)));
     // Ensure that we preserve the values.
     EXPECT_TRUE(
-      CompareMatrices(fields_expected, fields(cloud).middleCols(0, start)));
+      CompareMatrices(fields_expected, fields(cloud).middleCols(0, last)));
   };
 
   // Points.
