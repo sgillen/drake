@@ -218,8 +218,12 @@ class PointCloud {
   };
 
   bool has_normal() const;
-//  Eigen::Ref<const Matrix3X<T>> normals() const;
-//  Eigen::Ref<Matrix3X<T>> mutable_normals();
+  Eigen::Ref<const Matrix3X<T>> normals() const;
+  Eigen::Ref<Matrix3X<T>> mutable_normals();
+  Vector3<T> normal(Index i) const { return normals().col(i); }
+  Eigen::Ref<Vector3<T>> mutable_normal(Index i) {
+    return mutable_normals().col(i);
+  }
 
   const FeatureType& feature_type() const { return feature_type_; }
   bool has_feature() const;
