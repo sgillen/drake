@@ -9,6 +9,11 @@
 
 using Eigen::Matrix4Xf;
 
+using ::testing::AssertionResult;
+using ::testing::AssertionSuccess;
+using ::testing::AssertionFailure;
+
+
 namespace drake {
 namespace perception {
 namespace {
@@ -16,19 +21,31 @@ namespace {
 typedef Eigen::Matrix<PointCloud::C, 4, Eigen::Dynamic> Matrix4XC;
 
 template <typename T>
-struct check_default {
+struct check_helper {
   template <typename XprType>
-  static bool run(const XprType& xpr) {
+  static bool is_default(const XprType& xpr) {
     return xpr.array().isNaN().all();
+  }
+
+  template <typename XprTypeA, typename XprTypeB>
+  static AssertionResult compare(const XprTypeA& a, const XprTypeB& b) {
+    return CompareMatrices(a, b);
   }
 };
 
 template <>
-struct check_default<PointCloud::C> {
+struct check_helper<PointCloud::C> {
   template <typename XprType>
-  static bool run(const XprType& xpr) {
+  static bool is_default(const XprType& xpr) {
     const PointCloud::C def = PointCloud::kDefaultColor;
     return (xpr.array() == def).all();
+  }
+
+  template <typename XprTypeA, typename XprTypeB>
+  static AssertionResult compare(const XprTypeA& a, const XprTypeB& b) {
+    // Do not use `CompareMatrices`, as it is not geared for unsigned values.
+    return (a.array() == b.array()).all() ?
+           AssertionSuccess() : AssertionFailure();
   }
 };
 
@@ -44,8 +61,13 @@ GTEST_TEST(PointCloudTest, Basic) {
     typedef decltype(fields_expected) XprType;
     typedef typename XprType::Scalar T;
 
+    // Shim normal comparison to use unsigned-type friendly comparators.
+    auto CompareMatrices = [](const auto& a, const auto& b) {
+      return check_helper<T>::compare(a, b);
+    };
+
     // Expect the values to be default-initialized.
-    EXPECT_TRUE(check_default<T>::run(mutable_fields(cloud)));
+    EXPECT_TRUE(check_helper<T>::is_default(mutable_fields(cloud)));
 
     // Set values using the mutable accessor.
     mutable_fields(cloud) = fields_expected;
@@ -63,7 +85,7 @@ GTEST_TEST(PointCloudTest, Basic) {
     cloud.AddPoints(1);
     EXPECT_EQ(count + 1, cloud.size());
     // Check default-initialized.
-    EXPECT_TRUE(check_default<T>::run(field(cloud, last)));
+    EXPECT_TRUE(check_helper<T>::is_default(field(cloud, last)));
     // Ensure that we preserve the values.
     EXPECT_TRUE(
         CompareMatrices(fields_expected, fields(cloud).middleCols(0, last)));
@@ -84,7 +106,7 @@ GTEST_TEST(PointCloudTest, Basic) {
         CompareMatrices(fields_expected.middleCols(0, small_size),
                         fields(cloud).middleCols(0, small_size)));
     EXPECT_TRUE(
-        check_default<T>::run(
+        check_helper<T>::is_default(
             fields(cloud).middleCols(small_size, large_size - small_size)));
   };
 
