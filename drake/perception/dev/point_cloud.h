@@ -191,7 +191,7 @@ class PointCloud {
 
   /// Conservative resize; will maintain existing data, and initialize new
   /// data to their invalid values.
-  void resize(Index new_size);
+  void Resize(Index new_size);
 
   /// Add `add_size` default-initialized points, starting from old size, to
   /// new size.
@@ -228,8 +228,12 @@ class PointCloud {
   const FeatureType& feature_type() const { return feature_type_; }
   bool has_feature() const;
   bool has_feature(const FeatureType& feature_type) const;
-//  Eigen::Ref<const MatrixX<F>> features() const;
-//  Eigen::Ref<MatrixX<F>> mutable_features() const;
+  Eigen::Ref<const MatrixX<F>> features() const;
+  Eigen::Ref<MatrixX<F>> mutable_features();
+  Vector3<T> feature(Index i) const { return features().col(i); }
+  Eigen::Ref<VectorX<T>> mutable_feature(Index i) {
+    return mutable_features().col(i);
+  }
 
   void MergeFrom(const PointCloud& other);
 

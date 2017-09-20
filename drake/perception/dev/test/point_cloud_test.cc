@@ -36,9 +36,10 @@ GTEST_TEST(PointCloudTest, Basic) {
   const int count = 5;
 
   auto CheckFields = [count](auto fields_expected, PointCloud::CapabilitySet c,
+                             const FeatureType& feature_type,
                              auto mutable_fields, auto fields,
                              auto mutable_field, auto field) {
-    PointCloud cloud(count, c);
+    PointCloud cloud(count, c, feature_type);
     EXPECT_EQ(count, cloud.size());
     typedef decltype(fields_expected) XprType;
     typedef typename XprType::Scalar T;
@@ -62,10 +63,29 @@ GTEST_TEST(PointCloudTest, Basic) {
     cloud.AddPoints(1);
     EXPECT_EQ(count + 1, cloud.size());
     // Check default-initialized.
-    EXPECT_TRUE(check_default<T>::run(mutable_field(cloud, last)));
+    EXPECT_TRUE(check_default<T>::run(field(cloud, last)));
     // Ensure that we preserve the values.
     EXPECT_TRUE(
-      CompareMatrices(fields_expected, fields(cloud).middleCols(0, last)));
+        CompareMatrices(fields_expected, fields(cloud).middleCols(0, last)));
+
+    // Resize to a size smaller.
+    int small_size = 3;
+    cloud.Resize(small_size);
+    EXPECT_EQ(small_size, cloud.size());
+    EXPECT_TRUE(
+        CompareMatrices(fields_expected.middleCols(0, small_size),
+                        fields(cloud)));
+
+    // Resize to a size larger.
+    int large_size = 6;
+    cloud.Resize(large_size);
+    EXPECT_EQ(large_size, cloud.size());
+    EXPECT_TRUE(
+        CompareMatrices(fields_expected.middleCols(0, small_size),
+                        fields(cloud).middleCols(0, small_size)));
+    EXPECT_TRUE(
+        check_default<T>::run(
+            fields(cloud).middleCols(small_size, large_size - small_size)));
   };
 
   // TODO(eric.cousineau): Iterate through all field combinations.
@@ -78,7 +98,7 @@ GTEST_TEST(PointCloudTest, Basic) {
     100, 200, 300,
     4, 5, 6,
     40, 50, 60;
-  CheckFields(xyzs_expected, PointCloud::kXYZ,
+  CheckFields(xyzs_expected, PointCloud::kXYZ, kFeatureNone,
               [](PointCloud& cloud) { return cloud.mutable_xyzs(); },
               [](PointCloud& cloud) { return cloud.xyzs(); },
               [](PointCloud& cloud, int i) { return cloud.mutable_xyz(i); },
@@ -92,7 +112,7 @@ GTEST_TEST(PointCloudTest, Basic) {
     110, 120, 130, 140,
     5, 6, 7, 8,
     150, 160, 170, 180;
-  CheckFields(colors_expected, PointCloud::kColor,
+  CheckFields(colors_expected, PointCloud::kColor, kFeatureNone,
               [](PointCloud& cloud) { return cloud.mutable_colors(); },
               [](PointCloud& cloud) { return cloud.colors(); },
               [](PointCloud& cloud, int i) { return cloud.mutable_color(i); },
@@ -106,11 +126,25 @@ GTEST_TEST(PointCloudTest, Basic) {
     100, 200, 300,
     4, 5, 6,
     40, 50, 60;
-  CheckFields(normals_expected, PointCloud::kNormal,
+  CheckFields(normals_expected, PointCloud::kNormal, kFeatureNone,
               [](PointCloud& cloud) { return cloud.mutable_normals(); },
               [](PointCloud& cloud) { return cloud.normals(); },
               [](PointCloud& cloud, int i) { return cloud.mutable_normal(i); },
               [](PointCloud& cloud, int i) { return cloud.normal(i); });
+
+  // Features (PFH).
+  Matrix3Xf features_expected(3, count);
+  features_expected.transpose() <<
+    1, 2, 3,
+    10, 20, 30,
+    100, 200, 300,
+    4, 5, 6,
+    40, 50, 60;
+  CheckFields(features_expected, PointCloud::kFeature, kFeaturePFH,
+              [](PointCloud& cloud) { return cloud.mutable_features(); },
+              [](PointCloud& cloud) { return cloud.features(); },
+              [](PointCloud& cloud, int i) { return cloud.mutable_feature(i); },
+              [](PointCloud& cloud, int i) { return cloud.feature(i); });
 }
 
 GTEST_TEST(PointCloudTest, Capabilities) {
@@ -123,8 +157,6 @@ GTEST_TEST(PointCloudTest, Capabilities) {
     EXPECT_THROW(cloud.RequireCapabilities(PointCloud::kNormal),
                  std::runtime_error);
   }
-
-  // Check with features.
 
   // Check with exact capabilities.
   {
@@ -143,6 +175,11 @@ GTEST_TEST(PointCloudTest, Capabilities) {
     EXPECT_THROW(PointCloud(1, 0), std::runtime_error);
     EXPECT_THROW(PointCloud(1, 100), std::runtime_error);
     EXPECT_THROW(PointCloud(1, -100), std::runtime_error);
+  }
+
+  // Check with features.
+  {
+    PointCloud cloud(1, PointCloud::kFeature, kFeaturePFH);
   }
 }
 

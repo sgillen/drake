@@ -139,10 +139,12 @@ class PointCloud::Storage {
       GetNormals()->Resize(new_size);
       GetNormals()->SetNumberOfTuples(new_size);
     }
+    if (cloud_->has_feature()) {
+      GetFeatures()->Resize(new_size);
+      GetFeatures()->SetNumberOfTuples(new_size);
+    }
 
     poly_data_->GetPointData()->SetNumberOfTuples(new_size);
-
-    DRAKE_DEMAND(!cloud_->has_feature());
 
     CheckInvariants();
   }
@@ -164,6 +166,11 @@ class PointCloud::Storage {
     return VtkToEigen<Matrix3X<T>>(GetNormals());
   }
 
+  Eigen::Map<MatrixX<T>> features() {
+    DRAKE_ASSERT(cloud_->has_feature());
+    return VtkToEigen<MatrixX<T>>(GetFeatures());
+  }
+
  private:
   vtkPoints* GetPoints() const {
     return poly_data_->GetPoints();
@@ -173,6 +180,9 @@ class PointCloud::Storage {
   }
   vtkDataArray* GetNormals() const {
     return poly_data_->GetPointData()->GetArray(kNameNormals.c_str());
+  }
+  vtkDataArray* GetFeatures() const {
+    return poly_data_->GetPointData()->GetArray(feature_name().c_str());
   }
 
   void CheckInvariants() const {
@@ -262,7 +272,7 @@ PointCloud::PointCloud(const PointCloud& other,
 // Define destructor here to use complete definition of `Storage`.
 PointCloud::~PointCloud() {}
 
-void PointCloud::resize(PointCloud::Index new_size) {
+void PointCloud::Resize(PointCloud::Index new_size) {
   DRAKE_DEMAND(new_size >= 0);
   int old_size = size();
   size_ = new_size;
@@ -286,18 +296,15 @@ void PointCloud::SetDefault(int start, int num) {
   if (has_normal()) {
     set(mutable_normals(), kDefaultValue);
   }
-//  if (has_curvatures()) {
-//    set(mutable_curvatures(), kDefaultValue);
-//  }
-//  if (has_feature()) {
-//    set(mutable_features(), kDefaultValue);
-//  }
+  if (has_feature()) {
+    set(mutable_features(), kDefaultValue);
+  }
 }
 
 void PointCloud::MergeFrom(const PointCloud& other) {
   int old_size = size();
   int new_size = old_size + other.size();
-  resize(new_size);
+  Resize(new_size);
   CopyFrom(other);
 }
 
@@ -305,15 +312,17 @@ void PointCloud::CopyFrom(const PointCloud& other,
                           PointCloud::CapabilitySet c,
                           bool allow_subset,
                           bool allow_resize) {
+  // TODO(eric.cousineau): Actually USE `c`!
   int old_size = size();
   int new_size = other.size();
   if (!allow_subset) {
     // Ensure that this point cloud has all of the same capabilities as the
     // other.
     RequireCapabilities(other.capabilities(), other.feature_type());
+  } else {
   }
   if (allow_resize) {
-    resize(new_size);
+    Resize(new_size);
   } else if (new_size != old_size) {
     throw std::runtime_error(
         fmt::format("CopyFrom: {} != {}", new_size, old_size));
@@ -327,6 +336,11 @@ void PointCloud::CopyFrom(const PointCloud& other,
   if (has_normal() && other.has_normal()) {
     mutable_normals() = other.normals();
   }
+  if (has_feature() && other.has_feature()) {
+    // Ensure that we have the correct feature.
+    DRAKE_DEMAND(feature_type() == other.feature_type());
+    mutable_features() = other.features();
+  }
 }
 
 void PointCloud::AddPoints(
@@ -334,7 +348,7 @@ void PointCloud::AddPoints(
     bool skip_initialization) {
   int old_size = size();
   int new_size = old_size + add_size;
-  resize(new_size);
+  Resize(new_size);
   if (!skip_initialization) {
     SetDefault(old_size, add_size);
   }
@@ -376,7 +390,12 @@ bool PointCloud::has_feature() const {
 bool PointCloud::has_feature(const FeatureType& feature_type) const {
   return has_feature() && feature_type_ == feature_type;
 }
-
+Eigen::Ref<const MatrixX<F>> PointCloud::features() const {
+  return storage_->features();
+}
+Eigen::Ref<MatrixX<F>> PointCloud::mutable_features() {
+  return storage_->features();
+}
 
 bool PointCloud::HasCapabilities(
     PointCloud::CapabilitySet c,
