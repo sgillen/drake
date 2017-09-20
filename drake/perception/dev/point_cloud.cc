@@ -88,17 +88,30 @@ class PointCloud::Storage {
     }
     if (cloud_->has_feature()) {
       auto feature_array = vtkSmartPointer<vtkFloatArray>::New();
-      const std::string name =
-          kNameFeaturesPrefix + cloud_->feature_type().name();
-      feature_array->SetName(name.c_str());
+      feature_array->SetName(feature_name().c_str());
       feature_array->SetNumberOfComponents(cloud_->feature_type().size());
       feature_array->SetNumberOfTuples(cloud_->size());
       poly_data_->GetPointData()->AddArray(feature_array);
     }
   }
 
+  std::string feature_name() const {
+    return kNameFeaturesPrefix + cloud_->feature_type().name();
+  }
+
   int size() const {
     return poly_data_->GetNumberOfPoints();
+  }
+
+  void CheckInvariants() const {
+    int cur_size = cloud_->size();
+    if (cloud_->has_xyz()) {
+      DRAKE_DEMAND(
+          poly_data_->GetPoints()->GetNumberOfPoints() == cur_size);
+    }
+//    if (cloud_->has_color()) {
+//
+//    }
   }
 
   // Resize to parent cloud's size.
@@ -108,7 +121,8 @@ class PointCloud::Storage {
 
     DRAKE_DEMAND(cloud_->capabilities() == kXYZ);
     if (cloud_->has_xyz()) {
-      poly_data_->GetPointData()->SetNumberOfTuples(new_size);
+      auto* points = poly_data_->GetPoints();
+      points->SetNumberOfPoints(new_size);
     }
   }
 
@@ -164,6 +178,7 @@ PointCloud::PointCloud(
   DRAKE_DEMAND(!(capabilities & PointCloud::kInherit));
   DRAKE_DEMAND(feature_type_ != kFeatureInherit);
   storage_.reset(new Storage(this));
+  SetDefault(0, size_);
 }
 
 PointCloud::PointCloud(const PointCloud& other,
@@ -181,6 +196,7 @@ void PointCloud::resize(PointCloud::Index new_size) {
   int old_size = size();
   size_ = new_size;
   storage_->resize();
+  DRAKE_DEMAND(storage_->size() == size_);
   if (new_size > old_size) {
     int size_diff = new_size - old_size;
     SetDefault(old_size, size_diff);
