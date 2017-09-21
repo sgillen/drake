@@ -40,7 +40,6 @@ Permit a subset-to-superset (indexing) of features?
  e.g. PointCloud(Point)  -->  PointCloud(Point + Normal)
 
 Allow "RequireCapabilities" to be user-visible, for common error checking.
-
 */
 
 
@@ -142,7 +141,6 @@ class PointCloud {
     /// Must enable features using `EnableFeatures`. If attempting to
     /// construct a point cloud
     kFeature = 1 << 3,
-    // Others: Curvature?
   };
   typedef int CapabilitySet;
 
@@ -227,7 +225,7 @@ class PointCloud {
 
   const FeatureType& feature_type() const { return feature_type_; }
   bool has_features() const;
-  bool has_feature(const FeatureType& feature_type) const;
+  bool has_features(const FeatureType& feature_type) const;
   Eigen::Ref<const MatrixX<F>> features() const;
   Eigen::Ref<MatrixX<F>> mutable_features();
   Vector3<T> feature(Index i) const { return features().col(i); }
@@ -264,11 +262,11 @@ class PointCloud {
 //  ImageDim image_dim() const;
 
   /// Requires a given set of capabilities.
-  /// @throws std::runtime_error if this point cloud does not have these
-  /// capabilities.
   bool HasCapabilities(
       CapabilitySet c,
       const FeatureType& feature_type = kFeatureNone) const;
+  /// @throws std::runtime_error if this point cloud does not have these
+  /// capabilities.
   void RequireCapabilities(
       CapabilitySet c,
       const FeatureType& feature_type = kFeatureNone) const;
@@ -282,14 +280,21 @@ class PointCloud {
 
  private:
   int size_;
+
   CapabilitySet capabilities_;
+  // Feature type stored (if `has_features()` is true).
   const FeatureType feature_type_;
 
+  // Provides PIMPL encapsulation of storage mechanism.
   class Storage;
   std::unique_ptr<Storage> storage_;
 
   void SetDefault(int start, int num);
 };
+
+/// Returns a human-friendly representation of the capabilities of a given
+/// point cloud.
+std::string ToString(PointCloud::CapabilitySet c, const FeatureType &f);
 
 }  // namespace perception
 }  // namespace drake
