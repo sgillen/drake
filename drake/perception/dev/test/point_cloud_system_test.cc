@@ -14,13 +14,17 @@ namespace perception {
 
 void DownSample(const PointCloud& in, PointCloud* out, double radius) {
   auto clean = vtkSmartPointer<vtkCleanPolyData>::New();
-  clean->SetToleranceIsAbsolute(true);
+//  clean->SetToleranceIsAbsolute(true);
   clean->SetTolerance(radius);
   vtkPolyData* in_poly = internal::GetVtkView(in);
   vtkPolyData* out_poly = internal::GetVtkView(*out);
   clean->SetInputData(in_poly);
   clean->SetOutput(out_poly);
   clean->Update();
+  using namespace std;
+  cout << "Points In: " << in_poly->GetNumberOfPoints() << endl;
+  cout << "Points: " << out_poly->GetNumberOfPoints() << endl;
+  cout << "Points: " << clean->GetOutput()->GetNumberOfPoints() << endl;
   internal::SyncVtkView(out_poly, out);
 }
 
