@@ -92,7 +92,7 @@ GTEST_TEST(PointCloudTest, Basic) {
 
     // Resize to a size smaller.
     int small_size = 3;
-    cloud.Resize(small_size);
+    cloud.resize(small_size);
     EXPECT_EQ(small_size, cloud.size());
     EXPECT_TRUE(
         CompareMatrices(fields_expected.middleCols(0, small_size),
@@ -100,7 +100,7 @@ GTEST_TEST(PointCloudTest, Basic) {
 
     // Resize to a size larger.
     int large_size = 6;
-    cloud.Resize(large_size);
+    cloud.resize(large_size);
     EXPECT_EQ(large_size, cloud.size());
     EXPECT_TRUE(
         CompareMatrices(fields_expected.middleCols(0, small_size),

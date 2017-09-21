@@ -26,7 +26,7 @@ typedef PointCloud::C C;
 // Names.
 const std::string kNameColors = "rgb8u_colors",
     kNameNormals = "normals",
-    kNameFeaturesPrefix = "features_";
+    kNameFeatures = "features";
 
 // Utility.
 std::string join(const std::vector<std::string>& elements,
@@ -77,70 +77,67 @@ Eigen::Map<Matrix3X<T>> VtkToEigen(vtkPoints *array) {
 
 class PointCloud::Storage {
  public:
-  Storage(const PointCloud* cloud)
-      : cloud_(cloud) {
+  Storage(int new_size, CapabilitySet& c, const FeatureType& f)
+      : capabilities_(c) {
     // Allocate VTK point cloud.
     poly_data_ = vtkSmartPointer<vtkPolyData>::New();
-
-    // See vtkPCLConversions.cxx, Cxx/PolyData/CopyAllArrays
-    if (cloud_->has_xyz()) {
+    // TODO(eric.cousineau): Cache these results if it improves results.
+    // @ref vtkPCLConversions.cxx, Cxx/PolyData/CopyAllArrays
+    if (capabilities_ & kXYZ) {
       auto points = vtkSmartPointer<vtkPoints>::New();
       points->SetDataTypeToFloat();
-      points->SetNumberOfPoints(cloud_->size());
+      points->SetNumberOfPoints(new_size);
       poly_data_->SetPoints(points);
     }
-    if (cloud_->has_color()) {
-      auto rgb_array = vtkSmartPointer<vtkUnsignedCharArray>::New();
-      rgb_array->SetName(kNameColors.c_str());
-      rgb_array->SetNumberOfComponents(NC);
-      rgb_array->SetNumberOfTuples(cloud_->size());
-      poly_data_->GetPointData()->AddArray(rgb_array);
+    if (capabilities_ & kColor) {
+      auto color_array = vtkSmartPointer<vtkUnsignedCharArray>::New();
+      color_array->SetName(kNameColors.c_str());
+      color_array->SetNumberOfComponents(NC);
+      color_array->SetNumberOfTuples(new_size);
+      poly_data_->GetPointData()->AddArray(color_array);
     }
-    if (cloud_->has_normal()) {
+    if (capabilities_ & kNormal) {
       auto normal_array = vtkSmartPointer<vtkFloatArray>::New();
       normal_array->SetName(kNameNormals.c_str());
       normal_array->SetNumberOfComponents(3);
-      normal_array->SetNumberOfTuples(cloud_->size());
+      normal_array->SetNumberOfTuples(new_size);
       poly_data_->GetPointData()->AddArray(normal_array);
     }
-    if (cloud_->has_feature()) {
+    if (capabilities_ & kFeature) {
       auto feature_array = vtkSmartPointer<vtkFloatArray>::New();
-      feature_array->SetName(feature_name().c_str());
-      feature_array->SetNumberOfComponents(cloud_->feature_type().size());
-      feature_array->SetNumberOfTuples(cloud_->size());
+      feature_array->SetName(kNameFeatures.c_str());
+      feature_array->SetNumberOfComponents(f.size());
+      feature_array->SetNumberOfTuples(new_size);
       poly_data_->GetPointData()->AddArray(feature_array);
     }
   }
 
   int size() const {
-    if (cloud_->has_xyz()) {
+    // TODO(eric.cousineau): See if there is a more elegant way of
+    // supporting non-XYZ point clouds (like PCL's PointCloud<Normal>).
+    if (capabilities_ & kXYZ) {
       return poly_data_->GetNumberOfPoints();
     } else {
-      // TODO(eric.cousineau): See if there is a more elegant way of
-      // supporting non-XYZ point clouds (like PCL's PointCloud<Normal>).
       return poly_data_->GetPointData()->GetArray(0)->GetNumberOfTuples();
     }
   }
 
   // Resize to parent cloud's size.
-  void resize() {
-//    int old_size = poly_data_->GetNumberOfPoints();
-    int new_size = cloud_->size();
-
-    if (cloud_->has_xyz()) {
+  void resize(int new_size) {
+    if (capabilities_ & kXYZ) {
       GetPoints()->Resize(new_size);
       // Dunno why, but we have to propagate this size???
       GetPoints()->SetNumberOfPoints(new_size);
     }
-    if (cloud_->has_color()) {
+    if (capabilities_ & kColor) {
       GetColors()->Resize(new_size);
       GetColors()->SetNumberOfTuples(new_size);
     }
-    if (cloud_->has_normal()) {
+    if (capabilities_ & kNormal) {
       GetNormals()->Resize(new_size);
       GetNormals()->SetNumberOfTuples(new_size);
     }
-    if (cloud_->has_feature()) {
+    if (capabilities_ & kFeature) {
       GetFeatures()->Resize(new_size);
       GetFeatures()->SetNumberOfTuples(new_size);
     }
@@ -151,22 +148,18 @@ class PointCloud::Storage {
   }
 
   Eigen::Map<Matrix3X<T>> xyzs() {
-    DRAKE_ASSERT(cloud_->has_xyz());
     return VtkToEigen<T>(GetPoints());
   }
 
   Eigen::Map<MatrixNX<NC, C>> colors() {
-    DRAKE_ASSERT(cloud_->has_color());
     return VtkToEigen<MatrixNX<NC, C>>(GetColors());
   }
 
   Eigen::Map<Matrix3X<T>> normals() {
-    DRAKE_ASSERT(cloud_->has_normal());
     return VtkToEigen<Matrix3X<T>>(GetNormals());
   }
 
   Eigen::Map<MatrixX<T>> features() {
-    DRAKE_ASSERT(cloud_->has_feature());
     return VtkToEigen<MatrixX<T>>(GetFeatures());
   }
 
@@ -181,31 +174,29 @@ class PointCloud::Storage {
     return poly_data_->GetPointData()->GetArray(kNameNormals.c_str());
   }
   vtkDataArray* GetFeatures() const {
-    return poly_data_->GetPointData()->GetArray(feature_name().c_str());
-  }
-
-  std::string feature_name() const {
-    return kNameFeaturesPrefix + cloud_->feature_type().name();
+    return poly_data_->GetPointData()->GetArray(kNameFeatures.c_str());
   }
 
   void CheckInvariants() const {
-    int cloud_size = cloud_->size();
-    DRAKE_DEMAND(size() == cloud_->size());
-    if (cloud_->has_xyz()) {
-      int xyz_size = GetPoints()->GetNumberOfPoints();
-      DRAKE_DEMAND(xyz_size == cloud_size);
+    if (capabilities_ & kXYZ) {
+      const int xyz_size = GetPoints()->GetNumberOfPoints();
+      DRAKE_DEMAND(xyz_size == size());
     }
-    if (cloud_->has_color()) {
-      int color_size = GetColors()->GetNumberOfTuples();
-      DRAKE_DEMAND(color_size == cloud_size);
+    if (capabilities_ & kColor) {
+      const int color_size = GetColors()->GetNumberOfTuples();
+      DRAKE_DEMAND(color_size == size());
     }
-    if (cloud_->has_normal()) {
-      int normal_size = GetNormals()->GetNumberOfTuples();
-      DRAKE_DEMAND(normal_size == cloud_size);
+    if (capabilities_ & kNormal) {
+      const int normal_size = GetNormals()->GetNumberOfTuples();
+      DRAKE_DEMAND(normal_size == size());
+    }
+    if (capabilities_ & kFeature) {
+      const int feature_size = GetFeatures()->GetNumberOfTuples();
+      DRAKE_DEMAND(feature_size == size());
     }
   }
 
-  const PointCloud* cloud_{};
+  const CapabilitySet capabilities_;
   vtkSmartPointer<vtkPolyData> poly_data_;
 };
 
@@ -261,7 +252,7 @@ PointCloud::PointCloud(
   if (feature_type == kFeatureInherit)
     throw std::runtime_error(
         "Cannot construct a PointCloud with kFeatureInherit");
-  if (has_feature()) {
+  if (has_features()) {
     if (feature_type_ == kFeatureNone)
       throw std::runtime_error("Cannot specify kFeatureNone with kFeature");
   }
@@ -269,7 +260,7 @@ PointCloud::PointCloud(
     throw std::runtime_error(
         "Must specify kFeatureNone if kFeature is not present");
 
-  storage_.reset(new Storage(this));
+  storage_.reset(new Storage(new_size, capabilities, feature_type));
   SetDefault(0, size_);
 }
 
@@ -283,11 +274,12 @@ PointCloud::PointCloud(const PointCloud& other,
 // Define destructor here to use complete definition of `Storage`.
 PointCloud::~PointCloud() {}
 
-void PointCloud::Resize(PointCloud::Index new_size) {
+void PointCloud::resize(PointCloud::Index new_size) {
   DRAKE_DEMAND(new_size >= 0);
   int old_size = size();
   size_ = new_size;
-  storage_->resize();
+  storage_->resize(new_size);
+  DRAKE_DEMAND(storage_->size() == new_size);
   if (new_size > old_size) {
     int size_diff = new_size - old_size;
     SetDefault(old_size, size_diff);
@@ -298,16 +290,16 @@ void PointCloud::SetDefault(int start, int num) {
   auto set = [=](auto ref, auto value) {
     ref.middleCols(start, num).setConstant(value);
   };
-  if (has_xyz()) {
+  if (has_xyzs()) {
     set(mutable_xyzs(), kDefaultValue);
   }
-  if (has_color()) {
+  if (has_colors()) {
     set(mutable_colors(), kDefaultColor);
   }
-  if (has_normal()) {
+  if (has_normals()) {
     set(mutable_normals(), kDefaultValue);
   }
-  if (has_feature()) {
+  if (has_features()) {
     set(mutable_features(), kDefaultValue);
   }
 }
@@ -315,7 +307,7 @@ void PointCloud::SetDefault(int start, int num) {
 void PointCloud::MergeFrom(const PointCloud& other) {
   int old_size = size();
   int new_size = old_size + other.size();
-  Resize(new_size);
+  resize(new_size);
   CopyFrom(other);
 }
 
@@ -331,23 +323,24 @@ void PointCloud::CopyFrom(const PointCloud& other,
     // other.
     RequireCapabilities(other.capabilities(), other.feature_type());
   } else {
+    // TODO(eric.cousineau): Fill this in.
   }
   if (allow_resize) {
-    Resize(new_size);
+    resize(new_size);
   } else if (new_size != old_size) {
     throw std::runtime_error(
         fmt::format("CopyFrom: {} != {}", new_size, old_size));
   }
-  if (has_xyz() && other.has_xyz()) {
+  if (has_xyzs() && other.has_xyzs()) {
     mutable_xyzs() = other.xyzs();
   }
-  if (has_color() && other.has_color()) {
+  if (has_colors() && other.has_colors()) {
     mutable_colors() = other.colors();
   }
-  if (has_normal() && other.has_normal()) {
+  if (has_normals() && other.has_normals()) {
     mutable_normals() = other.normals();
   }
-  if (has_feature() && other.has_feature()) {
+  if (has_features() && other.has_features()) {
     // Ensure that we have the correct feature.
     DRAKE_DEMAND(feature_type() == other.feature_type());
     mutable_features() = other.features();
@@ -359,52 +352,60 @@ void PointCloud::AddPoints(
     bool skip_initialization) {
   int old_size = size();
   int new_size = old_size + add_size;
-  Resize(new_size);
+  resize(new_size);
   if (!skip_initialization) {
     SetDefault(old_size, add_size);
   }
 }
 
-bool PointCloud::has_xyz() const {
+bool PointCloud::has_xyzs() const {
   return capabilities_ & kXYZ;
 }
 Eigen::Ref<const Matrix3X<T>> PointCloud::xyzs() const {
+  DRAKE_DEMAND(has_xyzs());
   return storage_->xyzs();
 }
 Eigen::Ref<Matrix3X<T>> PointCloud::mutable_xyzs() {
+  DRAKE_DEMAND(has_xyzs());
   return storage_->xyzs();
 }
 
-bool PointCloud::has_color() const {
+bool PointCloud::has_colors() const {
   return capabilities_ & kColor;
 }
 Eigen::Ref<const MatrixNX<NC, C>> PointCloud::colors() const {
+  DRAKE_DEMAND(has_colors());
   return storage_->colors();
 }
 Eigen::Ref<MatrixNX<NC, C>> PointCloud::mutable_colors() {
+  DRAKE_DEMAND(has_colors());
   return storage_->colors();
 }
 
-bool PointCloud::has_normal() const {
+bool PointCloud::has_normals() const {
   return capabilities_ & kNormal;
 }
 Eigen::Ref<const Matrix3X<T>> PointCloud::normals() const {
+  DRAKE_DEMAND(has_normals());
   return storage_->normals();
 }
 Eigen::Ref<Matrix3X<T>> PointCloud::mutable_normals() {
+  DRAKE_DEMAND(has_normals());
   return storage_->normals();
 }
 
-bool PointCloud::has_feature() const {
+bool PointCloud::has_features() const {
   return capabilities_ & kFeature;
 }
 bool PointCloud::has_feature(const FeatureType& feature_type) const {
-  return has_feature() && feature_type_ == feature_type;
+  return has_features() && feature_type_ == feature_type;
 }
 Eigen::Ref<const MatrixX<F>> PointCloud::features() const {
+  DRAKE_DEMAND(has_features());
   return storage_->features();
 }
 Eigen::Ref<MatrixX<F>> PointCloud::mutable_features() {
+  DRAKE_DEMAND(has_features());
   return storage_->features();
 }
 

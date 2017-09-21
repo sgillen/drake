@@ -191,13 +191,13 @@ class PointCloud {
 
   /// Conservative resize; will maintain existing data, and initialize new
   /// data to their invalid values.
-  void Resize(Index new_size);
+  void resize(Index new_size);
 
   /// Add `add_size` default-initialized points, starting from old size, to
   /// new size.
   void AddPoints(int add_size, bool skip_initialization = false);
 
-  bool has_xyz() const;
+  bool has_xyzs() const;
   // Lifetime is only valid as long as point cloud has not been resized.
   // References' lifetimes should be minimal.
   Eigen::Ref<const Matrix3X<T>> xyzs() const;
@@ -209,7 +209,7 @@ class PointCloud {
     return mutable_xyzs().col(i);
   }
 
-  bool has_color() const;
+  bool has_colors() const;
   Eigen::Ref<const MatrixNX<NC, C>> colors() const;
   Eigen::Ref<MatrixNX<NC, C>> mutable_colors();
   VectorN<NC, C> color(Index i) const { return colors().col(i); }
@@ -217,7 +217,7 @@ class PointCloud {
     return mutable_colors().col(i);
   };
 
-  bool has_normal() const;
+  bool has_normals() const;
   Eigen::Ref<const Matrix3X<T>> normals() const;
   Eigen::Ref<Matrix3X<T>> mutable_normals();
   Vector3<T> normal(Index i) const { return normals().col(i); }
@@ -226,7 +226,7 @@ class PointCloud {
   }
 
   const FeatureType& feature_type() const { return feature_type_; }
-  bool has_feature() const;
+  bool has_features() const;
   bool has_feature(const FeatureType& feature_type) const;
   Eigen::Ref<const MatrixX<F>> features() const;
   Eigen::Ref<MatrixX<F>> mutable_features();
