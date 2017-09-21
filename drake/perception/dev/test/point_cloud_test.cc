@@ -170,6 +170,11 @@ GTEST_TEST(PointCloudTest, Basic) {
 }
 
 GTEST_TEST(PointCloudTest, Capabilities) {
+  // Check human-friendly formatting.
+  EXPECT_EQ("(kXYZ | kNormal | kFeature::PFH)",
+            ToString(PointCloud::kXYZ | PointCloud::kNormal |
+                     PointCloud::kFeature, kFeaturePFH));
+
   // Check zero-size.
   {
     PointCloud cloud(0, PointCloud::kXYZ | PointCloud::kNormal);
@@ -208,6 +213,16 @@ GTEST_TEST(PointCloudTest, Capabilities) {
   // Check with features.
   {
     PointCloud cloud(1, PointCloud::kFeature, kFeaturePFH);
+    EXPECT_TRUE(cloud.has_features());
+    EXPECT_TRUE(cloud.has_features(kFeaturePFH));
+    EXPECT_FALSE(cloud.has_features(kFeatureSHOT));
+
+    // Negative tests for `has_features`.
+    PointCloud simple_cloud(1, PointCloud::kXYZ);
+    EXPECT_FALSE(simple_cloud.has_features());
+    EXPECT_FALSE(simple_cloud.has_features(kFeaturePFH));
+
+    // Negative tests for construction.
     EXPECT_THROW(PointCloud(1, PointCloud::kFeature, kFeatureNone),
                  std::runtime_error);
     EXPECT_THROW(PointCloud(1, PointCloud::kXYZ, kFeaturePFH),

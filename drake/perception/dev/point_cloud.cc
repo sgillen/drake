@@ -32,8 +32,11 @@ const std::string kNameColors = "rgb8u_colors",
 std::string join(const std::vector<std::string>& elements,
                  const std::string &d) {
   std::ostringstream os;
-  std::copy(elements.begin(), elements.end(),
-            std::ostream_iterator<std::string>(os, d.c_str()));
+  for (size_t i = 0; i < elements.size(); ++i) {
+    os << elements[i];
+    if (i + 1 < elements.size())
+      os << d;
+  }
   return os.str();
 }
 
@@ -46,13 +49,9 @@ std::vector<std::string> ToStringVector(
   PC_CAPABILITY(kXYZ, "");
   PC_CAPABILITY(kColor, "");
   PC_CAPABILITY(kNormal, "");
-  PC_CAPABILITY(kFeature, "_" + feature_type.name());
+  PC_CAPABILITY(kFeature, "::" + feature_type.name());
 #undef PC_CAPABILITY
   return out;
-}
-
-std::string ToString(PointCloud::CapabilitySet c, const FeatureType &f) {
-  return "(" + join(ToStringVector(c, f), " | ") + ")";
 }
 
 // Simple VTK utility, following suite with `vtk_to_numpy`.
@@ -81,7 +80,8 @@ class PointCloud::Storage {
       : capabilities_(c) {
     // Allocate VTK point cloud.
     poly_data_ = vtkSmartPointer<vtkPolyData>::New();
-    // TODO(eric.cousineau): Cache these results if it improves results.
+    // TODO(eric.cousineau): Cache these results if it improves performance.
+    // (Access to VTK array, store Eigen::Map in an EigenPtr, etc.)
     // @ref vtkPCLConversions.cxx, Cxx/PolyData/CopyAllArrays
     if (capabilities_ & kXYZ) {
       auto points = vtkSmartPointer<vtkPoints>::New();
@@ -118,6 +118,7 @@ class PointCloud::Storage {
     if (capabilities_ & kXYZ) {
       return poly_data_->GetNumberOfPoints();
     } else {
+      DRAKE_DEMAND(poly_data_->GetPointData()->GetNumberOfArrays() > 0);
       return poly_data_->GetPointData()->GetArray(0)->GetNumberOfTuples();
     }
   }
@@ -238,6 +239,10 @@ FeatureType ResolveFeatureType(const PointCloud& other,
 }
 
 }  // namespace
+
+std::string ToString(PointCloud::CapabilitySet c, const FeatureType& f) {
+  return "(" + join(ToStringVector(c, f), " | ") + ")";
+}
 
 PointCloud::PointCloud(
     PointCloud::Index new_size,
@@ -397,7 +402,7 @@ Eigen::Ref<Matrix3X<T>> PointCloud::mutable_normals() {
 bool PointCloud::has_features() const {
   return capabilities_ & kFeature;
 }
-bool PointCloud::has_feature(const FeatureType& feature_type) const {
+bool PointCloud::has_features(const FeatureType& feature_type) const {
   return has_features() && feature_type_ == feature_type;
 }
 Eigen::Ref<const MatrixX<F>> PointCloud::features() const {
