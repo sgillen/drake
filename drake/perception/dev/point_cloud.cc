@@ -164,6 +164,15 @@ class PointCloud::Storage {
     return VtkToEigen<MatrixX<T>>(GetFeatures());
   }
 
+  vtkPolyData* GetData() {
+    return poly_data_;
+  }
+
+  // Update to what's stored in `poly_data_`.
+  void Sync() {
+    CheckInvariants();
+  }
+
  private:
   vtkPoints* GetPoints() const {
     return poly_data_->GetPoints();
@@ -460,6 +469,38 @@ void PointCloud::RequireExactCapabilities(
   }
 }
 
+void PointCloud::SyncStorage() {
+  storage_->Sync();
+  if (storage_->size() != size()) {
+    // Ensure we resize.
+    size_ = storage_->size();
+  }
+}
+
+class PointCloud::InternalAccess {
+ public:
+  static vtkPolyData* GetData(const PointCloud& cloud) {
+    return cloud.storage_->GetData();
+  }
+  static void SyncStorage(PointCloud* cloud) {
+    cloud->SyncStorage();
+  }
+};
+
+namespace internal {
+
+vtkPolyData* GetVtkView(const PointCloud& in) {
+  // TODO(eric.cousineau): Consider "locking" the point cloud.
+  return PointCloud::InternalAccess::GetData(in);
+}
+
+void SyncVtkView(vtkPolyData* in, PointCloud* out) {
+  vtkPolyData* orig = GetVtkView(*out);
+  DRAKE_DEMAND(in == orig);
+  PointCloud::InternalAccess::SyncStorage(out);
+}
+
+}  // namespace internal
 }  // namespace perception
 
 }  // namespace drake

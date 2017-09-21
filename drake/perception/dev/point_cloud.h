@@ -9,6 +9,10 @@
 
 #include "drake/common/eigen_types.h"
 #include "drake/systems/sensors/image.h"
+#include "include/vtk-8.0/vtkPolyData.h"
+
+// TODO(eric.cousineau): Move to point_cloud_vtk.h
+class vtkPolyData;
 
 namespace drake {
 namespace perception {
@@ -235,6 +239,8 @@ class PointCloud {
 
   void MergeFrom(const PointCloud& other);
 
+  // TODO(eric.cousineau): Consider locking...
+
   /// Copy all points from another point cloud.
   void CopyFrom(
       const PointCloud& other,
@@ -249,38 +255,46 @@ class PointCloud {
 //      bool allow_subset = false,
 //      bool allow_resize = true);
 
-//  // Transform points/normals given rigid or affine transform.
-//  // Note that normals will only have the linear portion applied, not the
-//  // translation.
-//  void TransformInPlace(const Eigen::Isometry3d& X);
-//  void AffineTransformInPlace(const Eigen::Affine3d& T);
-
 //  /// Indicates if this point cloud has been sampled from an image, and has
 //  /// not be resized since then. If so, then `image_dim()` may be used.
 //  bool has_image_dim() const;
 //  /// @throws std::exception if no image dimension is associated.
 //  ImageDim image_dim() const;
 
-  /// Requires a given set of capabilities.
+  /// Returns if a point cloud has a given set of capabilities.
+  /// @pre If `kFeature` is not present in `c`, then `feature_type` must be
+  /// `kFeatureNone`. Otherwise, `feature_type` must be a valid feature.
   bool HasCapabilities(
       CapabilitySet c,
       const FeatureType& feature_type = kFeatureNone) const;
+
+  /// Requires a given set of capabilities.
+  /// @see HasCapabilities for preconditions.
   /// @throws std::runtime_error if this point cloud does not have these
   /// capabilities.
   void RequireCapabilities(
       CapabilitySet c,
       const FeatureType& feature_type = kFeatureNone) const;
 
+  /// Returns if a point cloud has exactly a given set of capabilities.
+  /// @see HasCapabilities for preconditions.
   bool HasExactCapabilities(
       CapabilitySet c,
       const FeatureType& feature_type = kFeatureNone) const;
+
+  /// Requires the exact given set of capabilities.
+  /// @see HasCapabilities for preconditions.
+  /// @throws std::runtime_error if this point cloud does not have exactly
+  /// these capabilities.
   void RequireExactCapabilities(
       CapabilitySet c,
       const FeatureType& feature_type = kFeatureNone) const;
 
+  class InternalAccess;
  private:
   int size_;
 
+  // Represents which capabilities are enabled for this point cloud.
   CapabilitySet capabilities_;
   // Feature type stored (if `has_features()` is true).
   const FeatureType feature_type_;
@@ -289,12 +303,22 @@ class PointCloud {
   class Storage;
   std::unique_ptr<Storage> storage_;
 
+  friend class InternalAccess;
+
   void SetDefault(int start, int num);
+  void SyncStorage();
 };
 
 /// Returns a human-friendly representation of the capabilities of a given
 /// point cloud.
 std::string ToString(PointCloud::CapabilitySet c, const FeatureType &f);
+
+namespace internal {
+
+vtkPolyData* GetVtkView(const PointCloud& in);
+void SyncVtkView(vtkPolyData *in, PointCloud* out);
+
+}  // namespace internal
 
 }  // namespace perception
 }  // namespace drake
