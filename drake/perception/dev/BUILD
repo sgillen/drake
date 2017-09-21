@@ -62,6 +62,18 @@ cc_test(
     ],
 )
 
+cc_test(
+    name = "point_cloud_system_test",
+    srcs = ["test/point_cloud_system_test.cc"],
+    deps = [
+        ":point_cloud",
+        "//drake/systems/framework",
+        "//drake/common:eigen_matrix_compare",
+        "//drake/common:drake_cc_googletest_main",
+        "@vtk//:vtkFiltersGeneral",
+    ],
+)
+
 # === test/ ===
 
 drake_cc_googletest(
