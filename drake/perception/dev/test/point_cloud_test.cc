@@ -7,6 +7,7 @@
 
 #include "drake/common/eigen_matrix_compare.h"
 
+using Eigen::Matrix3Xf;
 using Eigen::Matrix4Xf;
 
 using ::testing::AssertionResult;
@@ -18,31 +19,30 @@ namespace drake {
 namespace perception {
 namespace {
 
-typedef Eigen::Matrix<PointCloud::C, 4, Eigen::Dynamic> Matrix4XC;
+typedef Eigen::Matrix<uint8_t, 4, Eigen::Dynamic> Matrix4XU;
 
 template <typename T>
 struct check_helper {
   template <typename XprType>
-  static bool is_default(const XprType& xpr) {
+  static bool IsDefault(const XprType& xpr) {
     return xpr.array().isNaN().all();
   }
 
   template <typename XprTypeA, typename XprTypeB>
-  static AssertionResult compare(const XprTypeA& a, const XprTypeB& b) {
+  static AssertionResult Compare(const XprTypeA& a, const XprTypeB& b) {
     return CompareMatrices(a, b);
   }
 };
 
 template <>
-struct check_helper<PointCloud::C> {
+struct check_helper<uint8_t> {
   template <typename XprType>
-  static bool is_default(const XprType& xpr) {
-    const PointCloud::C def = PointCloud::kDefaultColor;
-    return (xpr.array() == def).all();
+  static bool IsDefault(const XprType& xpr) {
+    return (xpr.array() == PointCloud::kDefaultColor).all();
   }
 
   template <typename XprTypeA, typename XprTypeB>
-  static AssertionResult compare(const XprTypeA& a, const XprTypeB& b) {
+  static AssertionResult Compare(const XprTypeA& a, const XprTypeB& b) {
     // Do not use `CompareMatrices`, as it is not geared for unsigned values.
     return (a.array() == b.array()).all() ?
            AssertionSuccess() : AssertionFailure();
@@ -63,11 +63,11 @@ GTEST_TEST(PointCloudTest, Basic) {
 
     // Shim normal comparison to use unsigned-type friendly comparators.
     auto CompareMatrices = [](const auto& a, const auto& b) {
-      return check_helper<T>::compare(a, b);
+      return check_helper<T>::Compare(a, b);
     };
 
     // Expect the values to be default-initialized.
-    EXPECT_TRUE(check_helper<T>::is_default(mutable_fields(cloud)));
+    EXPECT_TRUE(check_helper<T>::IsDefault(mutable_fields(cloud)));
 
     // Set values using the mutable accessor.
     mutable_fields(cloud) = fields_expected;
@@ -85,7 +85,7 @@ GTEST_TEST(PointCloudTest, Basic) {
     cloud.AddPoints(1);
     EXPECT_EQ(count + 1, cloud.size());
     // Check default-initialized.
-    EXPECT_TRUE(check_helper<T>::is_default(field(cloud, last)));
+    EXPECT_TRUE(check_helper<T>::IsDefault(field(cloud, last)));
     // Ensure that we preserve the values.
     EXPECT_TRUE(
         CompareMatrices(fields_expected, fields(cloud).middleCols(0, last)));
@@ -106,7 +106,7 @@ GTEST_TEST(PointCloudTest, Basic) {
         CompareMatrices(fields_expected.middleCols(0, small_size),
                         fields(cloud).middleCols(0, small_size)));
     EXPECT_TRUE(
-        check_helper<T>::is_default(
+        check_helper<T>::IsDefault(
             fields(cloud).middleCols(small_size, large_size - small_size)));
   };
 
@@ -127,7 +127,7 @@ GTEST_TEST(PointCloudTest, Basic) {
               [](PointCloud& cloud, int i) { return cloud.xyz(i); });
 
   // Colors.
-  Matrix4XC colors_expected(4, count);
+  Matrix4XU colors_expected(4, count);
   colors_expected.transpose() <<
     1, 2, 3, 4,
     10, 20, 30, 40,
@@ -154,7 +154,7 @@ GTEST_TEST(PointCloudTest, Basic) {
               [](PointCloud& cloud, int i) { return cloud.mutable_normal(i); },
               [](PointCloud& cloud, int i) { return cloud.normal(i); });
 
-  // Features (PFH).
+  // Features (Curvature).
   Matrix3Xf features_expected(3, count);
   features_expected.transpose() <<
     1, 2, 3,
@@ -162,7 +162,7 @@ GTEST_TEST(PointCloudTest, Basic) {
     100, 200, 300,
     4, 5, 6,
     40, 50, 60;
-  CheckFields(features_expected, PointCloud::kFeature, kFeaturePFH,
+  CheckFields(features_expected, PointCloud::kFeature, kFeatureCurvature,
               [](PointCloud& cloud) { return cloud.mutable_features(); },
               [](PointCloud& cloud) { return cloud.features(); },
               [](PointCloud& cloud, int i) { return cloud.mutable_feature(i); },
@@ -171,9 +171,9 @@ GTEST_TEST(PointCloudTest, Basic) {
 
 GTEST_TEST(PointCloudTest, Capabilities) {
   // Check human-friendly formatting.
-  EXPECT_EQ("(kXYZ | kNormal | kFeature::PFH)",
+  EXPECT_EQ("(kXYZ | kNormal | kFeature::Curvature)",
             ToString(PointCloud::kXYZ | PointCloud::kNormal |
-                     PointCloud::kFeature, kFeaturePFH));
+                     PointCloud::kFeature, kFeatureCurvature));
 
   // Check zero-size.
   {
@@ -212,20 +212,20 @@ GTEST_TEST(PointCloudTest, Capabilities) {
 
   // Check with features.
   {
-    PointCloud cloud(1, PointCloud::kFeature, kFeaturePFH);
+    PointCloud cloud(1, PointCloud::kFeature, kFeatureCurvature);
     EXPECT_TRUE(cloud.has_features());
-    EXPECT_TRUE(cloud.has_features(kFeaturePFH));
-    EXPECT_FALSE(cloud.has_features(kFeatureSHOT));
+    EXPECT_TRUE(cloud.has_features(kFeatureCurvature));
+    EXPECT_FALSE(cloud.has_features(kFeaturePFH));
 
     // Negative tests for `has_features`.
     PointCloud simple_cloud(1, PointCloud::kXYZ);
     EXPECT_FALSE(simple_cloud.has_features());
-    EXPECT_FALSE(simple_cloud.has_features(kFeaturePFH));
+    EXPECT_FALSE(simple_cloud.has_features(kFeatureCurvature));
 
     // Negative tests for construction.
     EXPECT_THROW(PointCloud(1, PointCloud::kFeature, kFeatureNone),
                  std::runtime_error);
-    EXPECT_THROW(PointCloud(1, PointCloud::kXYZ, kFeaturePFH),
+    EXPECT_THROW(PointCloud(1, PointCloud::kXYZ, kFeatureCurvature),
                  std::runtime_error);
   }
 }

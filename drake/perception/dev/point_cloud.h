@@ -17,7 +17,6 @@ namespace perception {
 
 /**
  * Describes a feature with a name and the feature's size.
- *
  * @note This is defined as follows to enable an open set of features, but
  * ensure that features are appropriately matched.
  */
@@ -28,10 +27,10 @@ class FeatureType {
       name_(name) {}
   inline int size() const { return size_; }
   inline const std::string& name() const { return name_; }
-  bool operator==(const FeatureType& other) const {
+  inline bool operator==(const FeatureType& other) const {
     return size_ == other.size_ && name_ == other.name_;
   }
-  bool operator!=(const FeatureType& other) const {
+  inline bool operator!=(const FeatureType& other) const {
     return !(*this == other);
   }
  private:
@@ -39,14 +38,20 @@ class FeatureType {
   const std::string name_;
 };
 
-// Descriptor?
+/// No feature.
 const FeatureType kFeatureNone(0, "None");
+/// Inherited feature.
 const FeatureType kFeatureInherit(-1, "Inherit");
+/// Curvature.
+const FeatureType kFeatureCurvature(1, "Curvature");
+/// Point-feature-histogram feature.
 const FeatureType kFeaturePFH(3, "PFH");
+
 // TODO(eric.cousineau): Consider a way of reinterpret_cast<>ing the array
-// data (strides taken into account) to permit more semantic access to members,
-// PCL-style. Need to ensure alignments are commensurate.
-const FeatureType kFeatureSHOT(1334, "SHOT");
+// data to permit more semantic access to members, PCL-style.
+// Need to ensure alignments are commensurate. Will only work with
+// homogeneous data (possibly with heterogeneous data, if strides can be
+// used).
 
 /**
  * Implements a point cloud (with continuous storage).
@@ -83,22 +88,21 @@ class PointCloud {
 
   /// Indicates the data the point cloud stores.
   enum Capability : int {
-    // Inherit other capabilities. May imply an intersection of all
-    // compatible features.
+    /// Inherit other capabilities. May imply an intersection of all
+    /// compatible features.
     kInherit = 0,
-    // Points in Cartesian space.
+    /// XYZ point in Cartesian space.
     kXYZ = 1 << 0,
-    // Color, in RGB
+    /// Color, in RGBA.
     kColor = 1 << 1,
-    // Normals (at each vertex).
+    /// Normals (at each vertex).
     kNormal = 1 << 2,
-    /// Must enable features using `EnableFeatures`. If attempting to
-    /// construct a point cloud
+    /// Features, whose type (and structure) is specified by `FeatureType`.
     kFeature = 1 << 3,
   };
   typedef int CapabilitySet;
 
-  /// Geometric scalar type (e.g. for point, normals.)
+  /// Geometric scalar type (for xyz, normal, etc).
   typedef float T;
 
   /// Represents an invalid or uninitialized value.
