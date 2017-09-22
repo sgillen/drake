@@ -1,6 +1,6 @@
 #include "point_cloud.h"
 
-#include <iterator>
+#include <sstream>
 
 #include <fmt/format.h>
 
@@ -18,7 +18,7 @@ typedef PointCloud::F F;
 constexpr int NC = PointCloud::NC;
 typedef PointCloud::C C;
 
-// Utility.
+// Utility for `ToString`.
 std::string join(const std::vector<std::string>& elements,
                  const std::string &d) {
   std::ostringstream os;
@@ -30,23 +30,25 @@ std::string join(const std::vector<std::string>& elements,
   return os.str();
 }
 
+// Convert a PointCloud's set of capabilities to a string vector (for use
+// with `ToString`).
 std::vector<std::string> ToStringVector(
     PointCloud::CapabilitySet c, const FeatureType& feature_type) {
   std::vector<std::string> out;
-#define PC_CAPABILITY(flag, suffix) \
-    if (c & PointCloud::flag) \
-      out.push_back(std::string(#flag) + suffix);
-  PC_CAPABILITY(kXYZ, "");
-  PC_CAPABILITY(kColor, "");
-  PC_CAPABILITY(kNormal, "");
-  PC_CAPABILITY(kFeature, "::" + feature_type.name());
-#undef PC_CAPABILITY
+  if (c & PointCloud::kXYZ)
+    out.push_back("kXYZ");
+  if (c & PointCloud::kColor)
+      out.push_back("kColor");
+  if (c & PointCloud::kNormal)
+      out.push_back("kNormal");
+  if (c & PointCloud::kFeature)
+      out.push_back("kFeature::" + feature_type.name());
   return out;
 }
 
 };
 
-// Provides encapsulated storage
+// Provides encapsulated storage for a `PointCloud`.
 class PointCloud::Storage {
  public:
   Storage(int new_size, CapabilitySet& c, const FeatureType&)
@@ -54,49 +56,27 @@ class PointCloud::Storage {
     resize(new_size);
   }
 
+  // Returns size of the storage.
   int size() const { return size_; }
 
   // Resize to parent cloud's size.
   void resize(int new_size) {
     size_ = new_size;
-    if (capabilities_ & kXYZ) {
+    if (capabilities_ & kXYZ)
       xyzs_.conservativeResize(NoChange, new_size);
-    }
-    if (capabilities_ & kColor) {
+    if (capabilities_ & kColor)
       colors_.conservativeResize(NoChange, new_size);
-    }
-    if (capabilities_ & kNormal) {
+    if (capabilities_ & kNormal)
       normals_.conservativeResize(NoChange, new_size);
-    }
-    if (capabilities_ & kFeature) {
+    if (capabilities_ & kFeature)
       features_.conservativeResize(NoChange, new_size);
-    }
-
     CheckInvariants();
   }
 
-  Eigen::Map<Matrix3X<T>> xyzs() {
-    return xyzs_;
-  }
-
-  Eigen::Map<MatrixNX<NC, C>> colors() {
-    return colors_;
-  }
-
-  Eigen::Map<Matrix3X<T>> normals() {
-    return normals_;
-  }
-
-  Eigen::Map<MatrixX<T>> features() {
-    return features_;
-  }
-
-  // Synchronize contents if this storage structure was changed independent of
-  // the owning `PointCloud`.
-  void Sync() {
-    // Ensure that
-    CheckInvariants();
-  }
+  Eigen::Map<Matrix3X<T>> xyzs() { return xyzs_; }
+  Eigen::Map<MatrixNX<NC, C>> colors() { return colors_; }
+  Eigen::Map<Matrix3X<T>> normals() { return normals_; }
+  Eigen::Map<MatrixX<T>> features() { return features_; }
 
  private:
   void CheckInvariants() const {
@@ -227,13 +207,13 @@ PointCloud::PointCloud(const PointCloud& other,
 // Define destructor here to use complete definition of `Storage`.
 PointCloud::~PointCloud() {}
 
-void PointCloud::resize(PointCloud::Index new_size) {
+void PointCloud::resize(PointCloud::Index new_size, bool skip_initialization) {
   DRAKE_DEMAND(new_size >= 0);
   int old_size = size();
   size_ = new_size;
   storage_->resize(new_size);
   DRAKE_DEMAND(storage_->size() == new_size);
-  if (new_size > old_size) {
+  if (new_size > old_size && !skip_initialization) {
     int size_diff = new_size - old_size;
     SetDefault(old_size, size_diff);
   }
@@ -258,13 +238,6 @@ void PointCloud::SetDefault(int start, int num) {
   if (has_features()) {
     set(mutable_features(), kDefaultValue);
   }
-}
-
-void PointCloud::MergeFrom(const PointCloud& other) {
-  int old_size = size();
-  int new_size = old_size + other.size();
-  resize(new_size);
-  SetFrom(other);
 }
 
 void PointCloud::SetFrom(const PointCloud& other,
@@ -296,12 +269,9 @@ void PointCloud::SetFrom(const PointCloud& other,
 void PointCloud::AddPoints(
     int add_size,
     bool skip_initialization) {
-  int old_size = size();
-  int new_size = old_size + add_size;
-  resize(new_size);
-  if (!skip_initialization) {
-    SetDefault(old_size, add_size);
-  }
+  DRAKE_DEMAND(add_size >= 0);
+  const int new_size = size() + add_size;
+  resize(new_size, skip_initialization);
 }
 
 void PointCloud::AddPoints(const PointCloud& other, CapabilitySet c) {
@@ -441,6 +411,4 @@ ImageDimensions PointCloud::image_dimensions() const {
 }
 
 }  // namespace perception
-
 }  // namespace drake
-

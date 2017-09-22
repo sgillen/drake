@@ -88,7 +88,7 @@ class ImageDimensions {
 };
 
 /**
- * Implements a point cloud (with dense storage).
+ * Implements a point cloud (with continuous storage).
  *
  * This is a mix between the philosophy of PCL (templated interface to
  * provide a compile-time open set, run-time closed set) and VTK (non-templated
@@ -108,6 +108,11 @@ class ImageDimensions {
  * avoid complications with PCL, where "dense" that the point cloud
  * corresponds to a depth image, and is indexed accordingly (densely along
  * a grid).
+ *
+ * @note The accessors / mutators for the point fields of this class returns
+ * references to the original Eigen matrices. This implies that they are
+ * invalidated whenever memory is reallocated for the values. Given this,
+ * minimize the lifetime of these references to be as short as possible.
  */
 class PointCloud {
  public:
@@ -172,15 +177,28 @@ class PointCloud {
   // TODO(eric.cousineau): Consider locking the point cloud or COW to permit
   // shallow copies.
 
-  /// Returns the capabilities provided by this point cloud.
+  /**
+   * Returns the capabilities provided by this point cloud.
+   */
   CapabilitySet capabilities() const { return capabilities_; }
 
-  /// Returns the number of points in this point cloud.
+  /**
+   * Returns the number of points in this point cloud.
+   */
   Index size() const { return size_; }
 
-  /// Conservative resize; will maintain existing data, and initialize new
-  /// data to their invalid values.
-  void resize(Index new_size);
+  /**
+   * Conservative resize; will maintain existing data, and initialize new
+   * data to their invalid values.
+   * @param new_size
+   *    The new size of the value. If less than the present `size()`, then
+   *    the values will be truncated. If greater than the present `size()`,
+   *    then the new values will be uninitalized if `skip_initialize` is not
+   *    true.
+   * @param skip_initialize
+   *    Do not default-initialize new values.
+   */
+  void resize(Index new_size, bool skip_initialize = false);
 
   /// Indicates if this point cloud has been sampled from an image, and has
   /// not been resized since then. If so, then `image_dimensions()` may be used.
@@ -188,12 +206,13 @@ class PointCloud {
 
   /// Sets the image dimensions associated with this point cloud.
   void set_image_dimensions(const ImageDimensions& dim);
+
+  /// Gets the image dimensions associated with this point cloud.
   /// @throws std::exception if no image dimension is associated.
   ImageDimensions image_dimensions() const;
 
+  /// Returns if this point cloud provides XYZ points.
   bool has_xyzs() const;
-  // Lifetime is only valid as long as point cloud has not been resized.
-  // References' lifetimes should be minimal.
   Eigen::Ref<const Matrix3X<T>> xyzs() const;
   Eigen::Ref<Matrix3X<T>> mutable_xyzs();
   // For algorithms needing fast access, do NOT use this accessor. Use the
