@@ -144,10 +144,12 @@ using is_copyable_unique_ptr_compatible =
 // TODO(SeanCurtis-TRI): Consider extending this to add the Deleter as well.
 template <typename T>
 class copyable_unique_ptr : public std::unique_ptr<T> {
-  static_assert(is_copyable_unique_ptr_compatible<T>::value,
-                "copyable_unique_ptr can only be used with a 'copyable' class"
-                    ", requiring either a public copy constructor or a valid "
-                    "clone method of the form: `unique_ptr<T> Clone() const`.");
+  inline static void check() {
+    static_assert(is_copyable_unique_ptr_compatible<T>::value,
+                  "copyable_unique_ptr can only be used with a 'copyable' class"
+                      ", requiring either a public copy constructor or a valid "
+                      "clone method of the form: `unique_ptr<T> Clone() const`.");
+  }
 
  public:
   /** @name                    Constructors **/

@@ -42,7 +42,8 @@ drake_cc_library(
     srcs = ["point_cloud.cc"],
     hdrs = ["point_cloud.h"],
     deps = [
-        "//drake/common",
+        "//drake/common:copyable_unique_ptr",
+        "//drake/common:essential",
         "//drake/systems/sensors:image",
     ],
 )
@@ -52,8 +53,8 @@ cc_test(
     srcs = ["test/point_cloud_test.cc"],
     deps = [
         ":point_cloud",
-        "//drake/common:eigen_matrix_compare",
-        "//drake/common:drake_cc_googletest_main",
+        "//drake/common/test_utilities:eigen_matrix_compare",
+        "//drake/common/test_utilities:drake_cc_googletest_main",
     ],
 )
 
