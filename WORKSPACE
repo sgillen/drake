@@ -459,8 +459,3 @@ load("//tools:drake_visualizer.bzl", "drake_visualizer_repository")
 drake_visualizer_repository(
     name = "drake_visualizer",
 )
-
-load("//tools:pcl.bzl", "pcl_repository")
-pcl_repository(
-    name = "pcl",
-)

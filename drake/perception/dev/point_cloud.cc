@@ -4,12 +4,6 @@
 
 #include <fmt/format.h>
 
-#include <vtkNew.h>
-#include <vtkPolyData.h>
-#include <vtkPointData.h>
-#include <vtkSmartPointer.h>
-#include <vtkFloatArray.h>
-
 using Eigen::Map;
 using Eigen::NoChange;
 
@@ -169,6 +163,29 @@ FeatureType ResolveFeatureType(const PointCloud& other,
   }
 }
 
+// Implements the rules set forth in `SetFrom`.
+// @pre Valid point clouds `a` and `b`.
+// @post The returned capabilities will be valid for both point clouds. If
+//   `c` enables features, then the feature type will be shared by both point
+//   clouds.
+PointCloud::CapabilitySet ResolveCapabilities(
+    const PointCloud& a,
+    const PointCloud& b,
+    PointCloud::CapabilitySet c) {
+  if (c == PointCloud::kInherit) {
+    // If we do not permit a subset, expect the exact same capabilities.
+    a.RequireExactCapabilities(b.capabilities(), b.feature_type());
+    return a.capabilities();
+  } else {
+    FeatureType f = kFeatureNone;
+    if (c & PointCloud::kFeature)
+      f = a.feature_type();
+    a.RequireCapabilities(c, f);
+    b.RequireCapabilities(c, f);
+    return c;
+  }
+}
+
 }  // namespace
 
 std::string ToString(PointCloud::CapabilitySet c, const FeatureType& f) {
@@ -220,6 +237,9 @@ void PointCloud::resize(PointCloud::Index new_size) {
     int size_diff = new_size - old_size;
     SetDefault(old_size, size_diff);
   }
+  if (new_size != old_size && has_image_dimensions()) {
+    image_dimensions_ = nullopt;
+  }
 }
 
 void PointCloud::SetDefault(int start, int num) {
@@ -244,41 +264,31 @@ void PointCloud::MergeFrom(const PointCloud& other) {
   int old_size = size();
   int new_size = old_size + other.size();
   resize(new_size);
-  CopyFrom(other);
+  SetFrom(other);
 }
 
-void PointCloud::CopyFrom(const PointCloud& other,
-                          PointCloud::CapabilitySet c,
-                          bool allow_subset,
-                          bool allow_resize) {
-  // TODO(eric.cousineau): Actually USE `c`!
+void PointCloud::SetFrom(const PointCloud& other,
+                         PointCloud::CapabilitySet c,
+                         bool allow_resize) {
   int old_size = size();
   int new_size = other.size();
-  if (!allow_subset) {
-    // Ensure that this point cloud has all of the same capabilities as the
-    // other.
-    RequireCapabilities(other.capabilities(), other.feature_type());
-  } else {
-    // TODO(eric.cousineau): Fill this in.
-  }
   if (allow_resize) {
     resize(new_size);
   } else if (new_size != old_size) {
     throw std::runtime_error(
         fmt::format("CopyFrom: {} != {}", new_size, old_size));
   }
-  if (has_xyzs() && other.has_xyzs()) {
+  CapabilitySet c_final = ResolveCapabilities(*this, other, c);
+  if (c_final & kXYZ) {
     mutable_xyzs() = other.xyzs();
   }
-  if (has_colors() && other.has_colors()) {
+  if (c_final & kColor) {
     mutable_colors() = other.colors();
   }
-  if (has_normals() && other.has_normals()) {
+  if (c_final & kNormal) {
     mutable_normals() = other.normals();
   }
-  if (has_features() && other.has_features()) {
-    // Ensure that we have the correct feature.
-    DRAKE_DEMAND(feature_type() == other.feature_type());
+  if (c_final & kFeature) {
     mutable_features() = other.features();
   }
 }
@@ -291,6 +301,29 @@ void PointCloud::AddPoints(
   resize(new_size);
   if (!skip_initialization) {
     SetDefault(old_size, add_size);
+  }
+}
+
+void PointCloud::AddPoints(const PointCloud& other, CapabilitySet c) {
+  int old_size = size();
+  int new_size = old_size + other.size();
+  resize(new_size);
+  c = ResolveCapabilities(*this, other, c);
+  // Get the block corresponding to the newly allocated values.
+  auto fresh_block = [=](auto value) {
+    return value.middleCols(old_size, other.size());
+  };
+  if (c & kXYZ) {
+    fresh_block(mutable_xyzs()) = other.xyzs();
+  }
+  if (c & kNormal) {
+    fresh_block(mutable_normals()) = other.normals();
+  }
+  if (c & kColor) {
+    fresh_block(mutable_colors()) = other.colors();
+  }
+  if (c & kFeature) {
+    fresh_block(mutable_features()) = other.features();
   }
 }
 
@@ -351,11 +384,15 @@ bool PointCloud::HasCapabilities(
   bool good = true;
   if ((capabilities() & c) != c) {
     good = false;
-  } else if (c & PointCloud::kFeature) {
-    DRAKE_DEMAND(f != kFeatureNone);
-    DRAKE_DEMAND(f != kFeatureInherit);
-    if (feature_type() != f) {
-      good = false;
+  } else {
+    if (c & PointCloud::kFeature) {
+      DRAKE_DEMAND(f != kFeatureNone);
+      DRAKE_DEMAND(f != kFeatureInherit);
+      if (feature_type() != f) {
+        good = false;
+      }
+    } else {
+      DRAKE_DEMAND(f == kFeatureNone);
     }
   }
   return good;
@@ -389,6 +426,18 @@ void PointCloud::RequireExactCapabilities(
                     ToString(c, f),
                     ToString(capabilities(), feature_type())));
   }
+}
+
+bool PointCloud::has_image_dimensions() const {
+  return static_cast<bool>(image_dimensions_);
+}
+void PointCloud::set_image_dimensions(const ImageDimensions& dim) {
+  DRAKE_DEMAND(dim.size() == size());
+  image_dimensions_ = dim;
+}
+ImageDimensions PointCloud::image_dimensions() const {
+  DRAKE_DEMAND(has_image_dimensions());
+  return *image_dimensions_;
 }
 
 }  // namespace perception

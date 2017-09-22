@@ -3,49 +3,17 @@
 #include <cmath>
 #include <limits>
 #include <memory>
+#include <string>
 #include <vector>
 
 #include <Eigen/Dense>
 
 #include "drake/common/eigen_types.h"
 #include "drake/systems/sensors/image.h"
-#include "include/vtk-8.0/vtkPolyData.h"
-
-// TODO(eric.cousineau): Move to point_cloud_vtk.h
-class vtkPolyData;
+#include "drake/common/drake_optional.h"
 
 namespace drake {
 namespace perception {
-
-using Eigen::Matrix3Xd;
-using Eigen::Matrix3Xf;
-
-// Sub-sampling?
-// Image dimensions?
-// Enable permanent "locking" of a point cloud?
-// COW semantics?
-
-/*
-Design goals:
- - Permit modifications during lifetime, or seal after construction?
-   -> This is a storage mechanism. Permit modifications.
- - Permit adding / removing features at run-time? (a la MathematicalProgram?)
-   -> That may get complicated.
- - Permit constructing point cloud from data straight away?
-   -> Seems like that would be very painful to implement.
- - Permit accessing all items through one index.
-    -> Would be painful (a la PCL).
- - Consider storing everything together?
-
-Indexing:
- - How to handle synchronized indexing?
-
-Permit a subset-to-superset (indexing) of features?
- e.g. PointCloud(Point)  -->  PointCloud(Point + Normal)
-
-Allow "RequireCapabilities" to be user-visible, for common error checking.
-*/
-
 
 /**
  * Describes a feature with a name and the feature's size.
@@ -81,16 +49,19 @@ const FeatureType kFeaturePFH(3, "PFH");
 const FeatureType kFeatureSHOT(1334, "SHOT");
 
 /**
- * Provides image coordinates, and the ability to conver to / from scalar
- * coordinates (a la sub2ind / ind2sub in MATLAB).
+ * Provides image coordinates.
  */
 struct ImageCoord {
   /// x-coordinate of the pixel.
-  int u;
+  int u{};
   /// y-coordinate of the pixel.
-  int v;
+  int v{};
 };
 
+/**
+ * Provides image dimensions and the ability to conver to / from scalar
+ * coordinates (similar to `sub2ind` / `ind2sub` in MATLAB).
+ */
 class ImageDimensions {
  public:
   ImageDimensions(int width, int height)
@@ -117,11 +88,21 @@ class ImageDimensions {
 };
 
 /**
- * Implements a contiguous point cloud.
+ * Implements a point cloud (with dense storage).
  *
  * This is a mix between the philosophy of PCL (templated interface to
  * provide a compile-time open set, run-time closed set) and VTK (non-templated
  * interface to provide a very free form run-time open set).
+ * You may construct one PointCloud which will contain different sets of
+ * data, but you cannot change the contained data types after construction.
+ * However, you can mutate the data contained within the structure and resize
+ * the structure.
+ *
+ * This point cloud class provides:
+ *  - xyz - Cartesian XYZ coordinates (float[3]).
+ *  - color - RGBA (uint8_t[4]). See ImageRgba8U.
+ *  - normals - Normals in Cartesian space (float[3]).
+ *  - features - An open-set of features (PFH, SHOT, etc) (float[X]).
  *
  * @note "contiguous" here means contiguous in memory. This was chosen to
  * avoid complications with PCL, where "dense" that the point cloud
@@ -130,6 +111,7 @@ class ImageDimensions {
  */
 class PointCloud {
  public:
+  DRAKE_DEFAULT_COPY_AND_MOVE_AND_ASSIGN(PointCloud)
 
   /// Indicates the data the point cloud stores.
   enum Capability : int {
@@ -187,17 +169,27 @@ class PointCloud {
 
   ~PointCloud();
 
+  // TODO(eric.cousineau): Consider locking the point cloud or COW to permit
+  // shallow copies.
+
+  /// Returns the capabilities provided by this point cloud.
   CapabilitySet capabilities() const { return capabilities_; }
 
+  /// Returns the number of points in this point cloud.
   Index size() const { return size_; }
 
   /// Conservative resize; will maintain existing data, and initialize new
   /// data to their invalid values.
   void resize(Index new_size);
 
-  /// Add `add_size` default-initialized points, starting from old size, to
-  /// new size.
-  void AddPoints(int add_size, bool skip_initialization = false);
+  /// Indicates if this point cloud has been sampled from an image, and has
+  /// not been resized since then. If so, then `image_dimensions()` may be used.
+  bool has_image_dimensions() const;
+
+  /// Sets the image dimensions associated with this point cloud.
+  void set_image_dimensions(const ImageDimensions& dim);
+  /// @throws std::exception if no image dimension is associated.
+  ImageDimensions image_dimensions() const;
 
   bool has_xyzs() const;
   // Lifetime is only valid as long as point cloud has not been resized.
@@ -237,29 +229,42 @@ class PointCloud {
     return mutable_features().col(i);
   }
 
-  void MergeFrom(const PointCloud& other);
-
-  // TODO(eric.cousineau): Consider locking...
-
-  /// Copy all points from another point cloud.
-  void CopyFrom(
+  /**
+   * Copy all points from another point cloud.
+   * @param other
+   *    Other point cloud.
+   * @param c
+   *    Capabilities to copy. If this is `kInherit`, then both clouds
+   *    must have the exact same capabilities. Otherwise, both clouds
+   *    must support the capabilities indicated by `c`.
+   * @param allow_resize
+   *    Permit resizing to the other cloud's size.
+   */
+  void SetFrom(
       const PointCloud& other,
       CapabilitySet c = kInherit,
-      bool allow_subset = false,
       bool allow_resize = true);
 
-//  void CopyFrom(
-//      const PointCloud& other,
-//      const Indices& indices,
-//      CapabilitySet c = kInherit,
-//      bool allow_subset = false,
-//      bool allow_resize = true);
+  // TODO(eric.cousineau): Add indexed version.
 
-  /// Indicates if this point cloud has been sampled from an image, and has
-  /// not been resized since then. If so, then `image_dim()` may be used.
-  bool has_image_dim() const;
-  /// @throws std::exception if no image dimension is associated.
-  ImageDimensions image_dim() const;
+  /**
+   * Adds `add_size` default-initialized points.
+   * @param new_size
+   *    Number of points to add.
+   * @param skip_initialization
+   *    Do not require that the new values be initialized.
+   */
+  void AddPoints(int add_size, bool skip_initialization = false);
+
+  /**
+   * Adds another point cloud to this cloud.
+   * @param other
+   *    Other point cloud.
+   * @param c
+   *    Capabilities to copy.
+   *    @see SetFrom for how this functions.
+   */
+  void AddPoints(const PointCloud& other, CapabilitySet c = kInherit);
 
   /// Returns if a point cloud has a given set of capabilities.
   /// @pre If `kFeature` is not present in `c`, then `feature_type` must be
@@ -292,6 +297,7 @@ class PointCloud {
 
  private:
   int size_;
+  optional<ImageDimensions> image_dimensions_;
 
   // Represents which capabilities are enabled for this point cloud.
   CapabilitySet capabilities_;
