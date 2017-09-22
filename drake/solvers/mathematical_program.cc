@@ -15,6 +15,7 @@
 
 #include "drake/common/eigen_types.h"
 #include "drake/common/symbolic.h"
+#include "drake/common/text_logging.h"
 #include "drake/math/matrix_util.h"
 #include "drake/solvers/equality_constrained_qp_solver.h"
 #include "drake/solvers/gurobi_solver.h"
@@ -616,6 +617,7 @@ SolutionResult MathematicalProgram::Solve() {
 
   if (is_satisfied(required_capabilities_, kLinearSystemSolverCapabilities) &&
       linear_system_solver_->available()) {
+    drake::log()->info("solver: linear_system_solver_");
     // TODO(ggould-tri) Also allow quadratic objectives whose matrix is
     // Identity: This is the objective function the solver uses anyway when
     // underconstrainted, and is fairly common in real-world problems.
@@ -623,27 +625,34 @@ SolutionResult MathematicalProgram::Solve() {
   } else if (is_satisfied(required_capabilities_,
                           kEqualityConstrainedQPCapabilities) &&
              equality_constrained_qp_solver_->available()) {
+    drake::log()->info("solver: equality_constrained_qp_solver_");
     return equality_constrained_qp_solver_->Solve(*this);
   } else if (is_satisfied(required_capabilities_, kMosekCapabilities) &&
              mosek_solver_->available()) {
+    drake::log()->info("solver: mosek_solver_");
     // TODO(hongkai.dai@tri.global): based on my limited experience, Mosek is
     // faster than Gurobi for convex optimization problem. But we should run
     // a more thorough comparison.
     return mosek_solver_->Solve(*this);
   } else if (is_satisfied(required_capabilities_, kGurobiCapabilities) &&
              gurobi_solver_->available()) {
+    drake::log()->info("solver: gurobi_solver_");
     return gurobi_solver_->Solve(*this);
   } else if (is_satisfied(required_capabilities_, kMobyLcpCapabilities) &&
              moby_lcp_solver_->available()) {
+    drake::log()->info("solver: moby_lcp_solver_");
     return moby_lcp_solver_->Solve(*this);
   } else if (is_satisfied(required_capabilities_, kSnoptCapabilities) &&
              snopt_solver_->available()) {
+    drake::log()->info("solver: snopt_solver_");
     return snopt_solver_->Solve(*this);
   } else if (is_satisfied(required_capabilities_, kGenericSolverCapabilities) &&
              ipopt_solver_->available()) {
+    drake::log()->info("solver: ipopt_solver_");
     return ipopt_solver_->Solve(*this);
   } else if (is_satisfied(required_capabilities_, kGenericSolverCapabilities) &&
              nlopt_solver_->available()) {
+    drake::log()->info("solver: nlopt_solver_");
     return nlopt_solver_->Solve(*this);
   } else {
     throw runtime_error(
