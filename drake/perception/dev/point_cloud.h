@@ -8,9 +8,10 @@
 
 #include <Eigen/Dense>
 
-#include "drake/common/eigen_types.h"
-#include "drake/systems/sensors/image.h"
+#include "drake/common/copyable_unique_ptr.h"
 #include "drake/common/drake_optional.h"
+#include "drake/common/eigen_types.h"
+#include "drake/systems/sensors/pixel_types.h"
 
 namespace drake {
 namespace perception {
@@ -342,7 +343,7 @@ class PointCloud {
   // be `kFeatureNone`).
   FeatureType feature_type_;
   // Storage used for the point cloud.
-  std::unique_ptr<Storage> storage_;
+  copyable_unique_ptr<Storage> storage_;
 };
 
 /// Returns a human-friendly representation of a capability and feature set.
