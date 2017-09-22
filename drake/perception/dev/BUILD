@@ -44,11 +44,6 @@ drake_cc_library(
     deps = [
         "//drake/common",
         "//drake/systems/sensors:image",
-        "@vtk//:vtkCommonCore",
-        "@vtk//:vtkCommonDataModel",
-        "@vtk//:vtkCommonTransforms",
-        "@vtk//:vtkFiltersGeneral",
-        "@vtk//:vtkFiltersSources",
     ],
 )
 
@@ -59,6 +54,17 @@ cc_test(
         ":point_cloud",
         "//drake/common:eigen_matrix_compare",
         "//drake/common:drake_cc_googletest_main",
+    ],
+)
+
+drake_cc_library(
+    name = "point_cloud_vtk",
+    deps = [
+        "@vtk//:vtkCommonCore",
+        "@vtk//:vtkCommonDataModel",
+        "@vtk//:vtkCommonTransforms",
+        "@vtk//:vtkFiltersGeneral",
+        "@vtk//:vtkFiltersSources",
     ],
 )
 

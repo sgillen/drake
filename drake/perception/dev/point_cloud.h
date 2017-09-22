@@ -91,9 +91,9 @@ struct ImageCoord {
   int v;
 };
 
-class ImageDim {
+class ImageDimensions {
  public:
-  ImageDim(int width, int height)
+  ImageDimensions(int width, int height)
       : width_(width), height_(height) {
     DRAKE_DEMAND(width_ > 0 && height_ > 0);
   }
@@ -255,11 +255,11 @@ class PointCloud {
 //      bool allow_subset = false,
 //      bool allow_resize = true);
 
-//  /// Indicates if this point cloud has been sampled from an image, and has
-//  /// not be resized since then. If so, then `image_dim()` may be used.
-//  bool has_image_dim() const;
-//  /// @throws std::exception if no image dimension is associated.
-//  ImageDim image_dim() const;
+  /// Indicates if this point cloud has been sampled from an image, and has
+  /// not been resized since then. If so, then `image_dim()` may be used.
+  bool has_image_dim() const;
+  /// @throws std::exception if no image dimension is associated.
+  ImageDimensions image_dim() const;
 
   /// Returns if a point cloud has a given set of capabilities.
   /// @pre If `kFeature` is not present in `c`, then `feature_type` must be
@@ -290,7 +290,6 @@ class PointCloud {
       CapabilitySet c,
       const FeatureType& feature_type = kFeatureNone) const;
 
-  class InternalAccess;
  private:
   int size_;
 
@@ -303,22 +302,12 @@ class PointCloud {
   class Storage;
   std::unique_ptr<Storage> storage_;
 
-  friend class InternalAccess;
-
   void SetDefault(int start, int num);
-  void SyncStorage();
 };
 
 /// Returns a human-friendly representation of the capabilities of a given
 /// point cloud.
 std::string ToString(PointCloud::CapabilitySet c, const FeatureType &f);
-
-namespace internal {
-
-vtkPolyData* GetVtkView(const PointCloud& in);
-void SyncVtkView(vtkPolyData *in, PointCloud* out);
-
-}  // namespace internal
 
 }  // namespace perception
 }  // namespace drake

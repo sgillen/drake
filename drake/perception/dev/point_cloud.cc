@@ -11,6 +11,7 @@
 #include <vtkFloatArray.h>
 
 using Eigen::Map;
+using Eigen::NoChange;
 
 namespace drake {
 namespace perception {
@@ -22,11 +23,6 @@ typedef PointCloud::T T;
 typedef PointCloud::F F;
 constexpr int NC = PointCloud::NC;
 typedef PointCloud::C C;
-
-// Names.
-const std::string kNameColors = "rgb8u_colors",
-    kNameNormals = "normals",
-    kNameFeatures = "features";
 
 // Utility.
 std::string join(const std::vector<std::string>& elements,
@@ -54,160 +50,86 @@ std::vector<std::string> ToStringVector(
   return out;
 }
 
-// Simple VTK utility, following suite with `vtk_to_numpy`.
-template <typename XprType>
-Eigen::Map<XprType> VtkToEigen(vtkDataArray *array) {
-  typedef typename XprType::Scalar T;
-  T* raw = static_cast<T*>(array->GetVoidPointer(0));
-  const int nrows = array->GetNumberOfComponents();
-  const int ncols = array->GetNumberOfTuples();
-  return Eigen::Map<XprType>(raw, nrows, ncols);
-}
-
-// Simple VTK utility, following suite with `vtk_to_numpy`.
-template <typename T>
-Eigen::Map<Matrix3X<T>> VtkToEigen(vtkPoints *array) {
-  T* raw = static_cast<T*>(array->GetVoidPointer(0));
-  const int ncols = array->GetNumberOfPoints();
-  return Eigen::Map<Matrix3X<T>>(raw, 3, ncols);
-}
-
 };
 
+// Provides encapsulated storage
 class PointCloud::Storage {
  public:
-  Storage(int new_size, CapabilitySet& c, const FeatureType& f)
+  Storage(int new_size, CapabilitySet& c, const FeatureType&)
       : capabilities_(c) {
-    // Allocate VTK point cloud.
-    poly_data_ = vtkSmartPointer<vtkPolyData>::New();
-    // TODO(eric.cousineau): Cache these results if it improves performance.
-    // (Access to VTK array, store Eigen::Map in an EigenPtr, etc.)
-    // @ref vtkPCLConversions.cxx, Cxx/PolyData/CopyAllArrays
-    if (capabilities_ & kXYZ) {
-      auto points = vtkSmartPointer<vtkPoints>::New();
-      points->SetDataTypeToFloat();
-      points->SetNumberOfPoints(new_size);
-      poly_data_->SetPoints(points);
-    }
-    if (capabilities_ & kColor) {
-      auto color_array = vtkSmartPointer<vtkUnsignedCharArray>::New();
-      color_array->SetName(kNameColors.c_str());
-      color_array->SetNumberOfComponents(NC);
-      color_array->SetNumberOfTuples(new_size);
-      poly_data_->GetPointData()->AddArray(color_array);
-    }
-    if (capabilities_ & kNormal) {
-      auto normal_array = vtkSmartPointer<vtkFloatArray>::New();
-      normal_array->SetName(kNameNormals.c_str());
-      normal_array->SetNumberOfComponents(3);
-      normal_array->SetNumberOfTuples(new_size);
-      poly_data_->GetPointData()->AddArray(normal_array);
-    }
-    if (capabilities_ & kFeature) {
-      auto feature_array = vtkSmartPointer<vtkFloatArray>::New();
-      feature_array->SetName(kNameFeatures.c_str());
-      feature_array->SetNumberOfComponents(f.size());
-      feature_array->SetNumberOfTuples(new_size);
-      poly_data_->GetPointData()->AddArray(feature_array);
-    }
+    resize(new_size);
   }
 
-  int size() const {
-    // TODO(eric.cousineau): See if there is a more elegant way of
-    // supporting non-XYZ point clouds (like PCL's PointCloud<Normal>).
-    if (capabilities_ & kXYZ) {
-      return poly_data_->GetNumberOfPoints();
-    } else {
-      DRAKE_DEMAND(poly_data_->GetPointData()->GetNumberOfArrays() > 0);
-      return poly_data_->GetPointData()->GetArray(0)->GetNumberOfTuples();
-    }
-  }
+  int size() const { return size_; }
 
   // Resize to parent cloud's size.
   void resize(int new_size) {
+    size_ = new_size;
     if (capabilities_ & kXYZ) {
-      GetPoints()->Resize(new_size);
-      // Dunno why, but we have to propagate this size???
-      GetPoints()->SetNumberOfPoints(new_size);
+      xyzs_.conservativeResize(NoChange, new_size);
     }
     if (capabilities_ & kColor) {
-      GetColors()->Resize(new_size);
-      GetColors()->SetNumberOfTuples(new_size);
+      colors_.conservativeResize(NoChange, new_size);
     }
     if (capabilities_ & kNormal) {
-      GetNormals()->Resize(new_size);
-      GetNormals()->SetNumberOfTuples(new_size);
+      normals_.conservativeResize(NoChange, new_size);
     }
     if (capabilities_ & kFeature) {
-      GetFeatures()->Resize(new_size);
-      GetFeatures()->SetNumberOfTuples(new_size);
+      features_.conservativeResize(NoChange, new_size);
     }
-
-    poly_data_->GetPointData()->SetNumberOfTuples(new_size);
 
     CheckInvariants();
   }
 
   Eigen::Map<Matrix3X<T>> xyzs() {
-    return VtkToEigen<T>(GetPoints());
+    return xyzs_;
   }
 
   Eigen::Map<MatrixNX<NC, C>> colors() {
-    return VtkToEigen<MatrixNX<NC, C>>(GetColors());
+    return colors_;
   }
 
   Eigen::Map<Matrix3X<T>> normals() {
-    return VtkToEigen<Matrix3X<T>>(GetNormals());
+    return normals_;
   }
 
   Eigen::Map<MatrixX<T>> features() {
-    return VtkToEigen<MatrixX<T>>(GetFeatures());
+    return features_;
   }
 
-  vtkPolyData* GetData() {
-    return poly_data_;
-  }
-
-  // Update to what's stored in `poly_data_`.
+  // Synchronize contents if this storage structure was changed independent of
+  // the owning `PointCloud`.
   void Sync() {
+    // Ensure that
     CheckInvariants();
   }
 
  private:
-  vtkPoints* GetPoints() const {
-    return poly_data_->GetPoints();
-  }
-  vtkDataArray* GetColors() const {
-    return poly_data_->GetPointData()->GetArray(kNameColors.c_str());
-  }
-  vtkDataArray* GetNormals() const {
-    return poly_data_->GetPointData()->GetArray(kNameNormals.c_str());
-  }
-  vtkDataArray* GetFeatures() const {
-    return poly_data_->GetPointData()->GetArray(kNameFeatures.c_str());
-  }
-
   void CheckInvariants() const {
     if (capabilities_ & kXYZ) {
-      const int xyz_size = GetPoints()->GetNumberOfPoints();
+      const int xyz_size = xyzs_.cols();
       DRAKE_DEMAND(xyz_size == size());
     }
     if (capabilities_ & kColor) {
-      const int color_size = GetColors()->GetNumberOfTuples();
+      const int color_size = colors_.cols();
       DRAKE_DEMAND(color_size == size());
     }
     if (capabilities_ & kNormal) {
-      const int normal_size = GetNormals()->GetNumberOfTuples();
+      const int normal_size = normals_.cols();
       DRAKE_DEMAND(normal_size == size());
     }
     if (capabilities_ & kFeature) {
-      const int feature_size = GetFeatures()->GetNumberOfTuples();
+      const int feature_size = features_.cols();
       DRAKE_DEMAND(feature_size == size());
     }
   }
 
   const CapabilitySet capabilities_;
-  vtkSmartPointer<vtkPolyData> poly_data_;
+  int size_{};
+  Matrix3X<T> xyzs_;
+  MatrixNX<NC, C> colors_;
+  Matrix3X<T> normals_;
+  MatrixX<T> features_;
 };
 
 namespace {
@@ -469,38 +391,6 @@ void PointCloud::RequireExactCapabilities(
   }
 }
 
-void PointCloud::SyncStorage() {
-  storage_->Sync();
-  if (storage_->size() != size()) {
-    // Ensure we resize.
-    size_ = storage_->size();
-  }
-}
-
-class PointCloud::InternalAccess {
- public:
-  static vtkPolyData* GetData(const PointCloud& cloud) {
-    return cloud.storage_->GetData();
-  }
-  static void SyncStorage(PointCloud* cloud) {
-    cloud->SyncStorage();
-  }
-};
-
-namespace internal {
-
-vtkPolyData* GetVtkView(const PointCloud& in) {
-  // TODO(eric.cousineau): Consider "locking" the point cloud.
-  return PointCloud::InternalAccess::GetData(in);
-}
-
-void SyncVtkView(vtkPolyData* in, PointCloud* out) {
-  vtkPolyData* orig = GetVtkView(*out);
-  DRAKE_DEMAND(in == orig);
-  PointCloud::InternalAccess::SyncStorage(out);
-}
-
-}  // namespace internal
 }  // namespace perception
 
 }  // namespace drake
