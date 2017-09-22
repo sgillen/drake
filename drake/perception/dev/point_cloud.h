@@ -49,45 +49,6 @@ const FeatureType kFeaturePFH(3, "PFH");
 const FeatureType kFeatureSHOT(1334, "SHOT");
 
 /**
- * Provides image coordinates.
- */
-struct ImageCoord {
-  /// x-coordinate of the pixel.
-  int u{};
-  /// y-coordinate of the pixel.
-  int v{};
-};
-
-/**
- * Provides image dimensions and the ability to conver to / from scalar
- * coordinates (similar to `sub2ind` / `ind2sub` in MATLAB).
- */
-class ImageDimensions {
- public:
-  ImageDimensions(int width, int height)
-      : width_(width), height_(height) {
-    DRAKE_DEMAND(width_ > 0 && height_ > 0);
-  }
-  inline int size() const {
-    return width_ * height_;
-  }
-  inline int GetIndex(ImageCoord coord) const {
-    DRAKE_ASSERT(coord.u >= 0 && coord.u < width_);
-    DRAKE_ASSERT(coord.v >= 0 && coord.v < height_);
-    return width_ * coord.v + coord.u;
-  }
-  inline ImageCoord GetCoord(int index) const {
-    DRAKE_ASSERT(index >= 0);
-    DRAKE_ASSERT(index < size());
-    ImageCoord coord{index % width_, index / width_};
-    return coord;
-  }
- private:
-  int width_;
-  int height_;
-};
-
-/**
  * Implements a point cloud (with continuous storage).
  *
  * This is a mix between the philosophy of PCL (templated interface to
@@ -113,6 +74,8 @@ class ImageDimensions {
  * references to the original Eigen matrices. This implies that they are
  * invalidated whenever memory is reallocated for the values. Given this,
  * minimize the lifetime of these references to be as short as possible.
+ * Additionally, algorithms wanting fast access to values should avoid the
+ * single point accessors (e.g. `xyz(i), color(i)`).
  */
 class PointCloud {
  public:
@@ -200,50 +163,91 @@ class PointCloud {
    */
   void resize(Index new_size, bool skip_initialize = false);
 
-  /// Indicates if this point cloud has been sampled from an image, and has
-  /// not been resized since then. If so, then `image_dimensions()` may be used.
-  bool has_image_dimensions() const;
 
-  /// Sets the image dimensions associated with this point cloud.
-  void set_image_dimensions(const ImageDimensions& dim);
-
-  /// Gets the image dimensions associated with this point cloud.
-  /// @throws std::exception if no image dimension is associated.
-  ImageDimensions image_dimensions() const;
-
-  /// Returns if this point cloud provides XYZ points.
+  /// Returns if this cloud provides XYZ points.
   bool has_xyzs() const;
+
+  /// Returns access to XYZ points.
+  /// This method aborts if this cloud does not provide XYZ points.
   Eigen::Ref<const Matrix3X<T>> xyzs() const;
+
+  /// Returns mutable access to XYZ points.
+  /// This method aborts if this cloud does not provide XYZ points.
   Eigen::Ref<Matrix3X<T>> mutable_xyzs();
-  // For algorithms needing fast access, do NOT use this accessor. Use the
-  // entire reference.
+
+  /// Returns access to a XYZ point.
+  /// This method aborts if this cloud does not provide XYZ points.
   Vector3<T> xyz(Index i) const { return xyzs().col(i); }
+
+  /// Returns mutable access to a XYZ point.
+  /// This method aborts if this cloud does not provide XYZ points.
   Eigen::Ref<Vector3<T>> mutable_xyz(Index i) {
     return mutable_xyzs().col(i);
   }
 
+  /// Returns if this cloud provides color points.
   bool has_colors() const;
+
+  /// Returns access to color points.
+  /// This method aborts if this cloud does not provide color points.
   Eigen::Ref<const MatrixNX<NC, C>> colors() const;
+
+  /// Returns mutable access to color points.
+  /// This method aborts if this cloud does not provide color points.
   Eigen::Ref<MatrixNX<NC, C>> mutable_colors();
+
+  /// Returns access to a color point.
+  /// This method aborts if this cloud does not provide color points.
   VectorN<NC, C> color(Index i) const { return colors().col(i); }
+
+  /// Returns mutable access to a color point.
+  /// This method aborts if this cloud does not provide color points.
   Eigen::Ref<VectorN<NC, C>> mutable_color(Index i) {
     return mutable_colors().col(i);
   };
 
+
+  /// Returns if this cloud provides normal points.
   bool has_normals() const;
+
+  /// Returns access to normal points.
+  /// This method aborts if this cloud does not provide normal points.
   Eigen::Ref<const Matrix3X<T>> normals() const;
+
+  /// Returns mutable access to normal points.
+  /// This method aborts if this cloud does not provide normal points.
   Eigen::Ref<Matrix3X<T>> mutable_normals();
+
+  /// Returns access to a normal point.
+  /// This method aborts if this cloud does not provide normal points.
   Vector3<T> normal(Index i) const { return normals().col(i); }
+
+  /// Returns mutable access to a normal point.
+  /// This method aborts if this cloud does not provide normal points.
   Eigen::Ref<Vector3<T>> mutable_normal(Index i) {
     return mutable_normals().col(i);
   }
 
-  const FeatureType& feature_type() const { return feature_type_; }
+
+  /// Returns if this point cloud provides feature points.
   bool has_features() const;
+  const FeatureType& feature_type() const { return feature_type_; }
   bool has_features(const FeatureType& feature_type) const;
+
+  /// Returns access to feature points.
+  /// This method aborts if this point cloud does not provide feature points.
   Eigen::Ref<const MatrixX<F>> features() const;
+
+  /// Returns mutable access to feature points.
+  /// This method aborts if this point cloud does not provide feature points.
   Eigen::Ref<MatrixX<F>> mutable_features();
+
+  /// Returns access to a feature point.
+  /// This method aborts if this cloud does not provide feature points.
   Vector3<T> feature(Index i) const { return features().col(i); }
+
+  /// Returns mutable access to a feature point.
+  /// This method aborts if this cloud does not provide feature points.
   Eigen::Ref<VectorX<T>> mutable_feature(Index i) {
     return mutable_features().col(i);
   }
@@ -315,23 +319,23 @@ class PointCloud {
       const FeatureType& feature_type = kFeatureNone) const;
 
  private:
-  int size_;
-  optional<ImageDimensions> image_dimensions_;
-
-  // Represents which capabilities are enabled for this point cloud.
-  CapabilitySet capabilities_;
-  // Feature type stored (if `has_features()` is true).
-  const FeatureType feature_type_;
+  void SetDefault(int start, int num);
 
   // Provides PIMPL encapsulation of storage mechanism.
   class Storage;
-  std::unique_ptr<Storage> storage_;
 
-  void SetDefault(int start, int num);
+  // Size of the point cloud.
+  int size_;
+  // Represents which capabilities are enabled for this point cloud.
+  CapabilitySet capabilities_;
+  // Feature type stored (if `has_features()` is true; otherwise this should
+  // be `kFeatureNone`).
+  const FeatureType feature_type_;
+  // Storage used for the point cloud.
+  std::unique_ptr<Storage> storage_;
 };
 
-/// Returns a human-friendly representation of the capabilities of a given
-/// point cloud.
+/// Returns a human-friendly representation of a capability and feature set.
 std::string ToString(PointCloud::CapabilitySet c, const FeatureType &f);
 
 }  // namespace perception

@@ -398,17 +398,5 @@ void PointCloud::RequireExactCapabilities(
   }
 }
 
-bool PointCloud::has_image_dimensions() const {
-  return static_cast<bool>(image_dimensions_);
-}
-void PointCloud::set_image_dimensions(const ImageDimensions& dim) {
-  DRAKE_DEMAND(dim.size() == size());
-  image_dimensions_ = dim;
-}
-ImageDimensions PointCloud::image_dimensions() const {
-  DRAKE_DEMAND(has_image_dimensions());
-  return *image_dimensions_;
-}
-
 }  // namespace perception
 }  // namespace drake
