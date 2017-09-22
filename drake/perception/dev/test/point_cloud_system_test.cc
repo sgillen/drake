@@ -57,7 +57,6 @@ GTEST_TEST(PointCloudSystemTest, DownsampleTest) {
   EXPECT_EQ(xyzs_expected, out.xyzs());
 }
 
-//
 //// Perform radial downsampling of a point cloud.
 //class PointCloudDownsample : public LeafSystem<double> {
 // public:
@@ -74,5 +73,5 @@ GTEST_TEST(PointCloudSystemTest, DownsampleTest) {
 //  PointCloudDownsample sys;
 //}
 
-};  // namespace perception
+}  // namespace perception
 }  // namespace drake
