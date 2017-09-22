@@ -823,6 +823,15 @@ drake_cc_googletest(
 )
 
 drake_cc_googletest(
+    name = "mosek_solver_negative_test",
+    # Explicitly do not use `LOCAL` so that the test does not have the
+    # environment set up.
+    deps = [
+        ":mosek_solver",
+    ],
+)
+
+drake_cc_googletest(
     name = "nonlinear_program_test",
     srcs = [
         "test/nonlinear_program_test.cc",
