@@ -35,14 +35,14 @@ std::string join(const std::vector<std::string>& elements,
 std::vector<std::string> ToStringVector(
     PointCloud::CapabilitySet c, const FeatureType& feature_type) {
   std::vector<std::string> out;
-  if (c & PointCloud::kXYZ)
-    out.push_back("kXYZ");
-  if (c & PointCloud::kColor)
-      out.push_back("kColor");
-  if (c & PointCloud::kNormal)
-      out.push_back("kNormal");
-  if (c & PointCloud::kFeature)
-      out.push_back("kFeature::" + feature_type.name());
+  if (c & PointCloud::kXYZs)
+    out.push_back("kXYZs");
+  if (c & PointCloud::kColors)
+      out.push_back("kColors");
+  if (c & PointCloud::kNormals)
+      out.push_back("kNormals");
+  if (c & PointCloud::kFeatures)
+      out.push_back("kFeatures::" + feature_type.name());
   return out;
 }
 
@@ -62,13 +62,13 @@ class PointCloud::Storage {
   // Resize to parent cloud's size.
   void resize(int new_size) {
     size_ = new_size;
-    if (capabilities_ & kXYZ)
+    if (capabilities_ & kXYZs)
       xyzs_.conservativeResize(NoChange, new_size);
-    if (capabilities_ & kColor)
+    if (capabilities_ & kColors)
       colors_.conservativeResize(NoChange, new_size);
-    if (capabilities_ & kNormal)
+    if (capabilities_ & kNormals)
       normals_.conservativeResize(NoChange, new_size);
-    if (capabilities_ & kFeature)
+    if (capabilities_ & kFeatures)
       features_.conservativeResize(NoChange, new_size);
     CheckInvariants();
   }
@@ -80,19 +80,19 @@ class PointCloud::Storage {
 
  private:
   void CheckInvariants() const {
-    if (capabilities_ & kXYZ) {
+    if (capabilities_ & kXYZs) {
       const int xyz_size = xyzs_.cols();
       DRAKE_DEMAND(xyz_size == size());
     }
-    if (capabilities_ & kColor) {
+    if (capabilities_ & kColors) {
       const int color_size = colors_.cols();
       DRAKE_DEMAND(color_size == size());
     }
-    if (capabilities_ & kNormal) {
+    if (capabilities_ & kNormals) {
       const int normal_size = normals_.cols();
       DRAKE_DEMAND(normal_size == size());
     }
-    if (capabilities_ & kFeature) {
+    if (capabilities_ & kFeatures) {
       const int feature_size = features_.cols();
       DRAKE_DEMAND(feature_size == size());
     }
@@ -111,19 +111,19 @@ namespace {
 // Ensure that a capability set is complete valid (does not have extra bits).
 void ValidateCapabilities(PointCloud::CapabilitySet c) {
   PointCloud::CapabilitySet full_mask =
-      PointCloud::kXYZ | PointCloud::kNormal | PointCloud::kColor |
-          PointCloud::kFeature;
+      PointCloud::kXYZs | PointCloud::kNormals | PointCloud::kColors |
+          PointCloud::kFeatures;
   if (c <= 0 || c > full_mask) {
     throw std::runtime_error("Invalid CapabilitySet");
   }
 }
 
-PointCloud::CapabilitySet ResolveCapabilities(const PointCloud& other,
-                         PointCloud::CapabilitySet in) {
-  if (in == PointCloud::kInherit) {
+PointCloud::CapabilitySet ResolveCapabilities(
+    const PointCloud& other, PointCloud::CapabilitySet capabilities) {
+  if (capabilities == PointCloud::kInherit) {
     return other.capabilities();
   } else {
-    return in;
+    return capabilities;
   }
 }
 
@@ -131,12 +131,12 @@ PointCloud::CapabilitySet ResolveCapabilities(const PointCloud& other,
 // If another feature is used, and we wish to copy the other's features,
 // ensure they are compatible.
 FeatureType ResolveFeatureType(const PointCloud& other,
-                               PointCloud::CapabilitySet in,
+                               PointCloud::CapabilitySet capabilities,
                                const FeatureType& feature_type) {
   if (feature_type == kFeatureInherit) {
     return other.feature_type();
   } else {
-    if (in & PointCloud::kFeature) {
+    if (capabilities & PointCloud::kFeatures) {
       DRAKE_DEMAND(feature_type == other.feature_type());
     }
     return feature_type;
@@ -151,18 +151,18 @@ FeatureType ResolveFeatureType(const PointCloud& other,
 PointCloud::CapabilitySet ResolveCapabilities(
     const PointCloud& a,
     const PointCloud& b,
-    PointCloud::CapabilitySet c) {
-  if (c == PointCloud::kInherit) {
+    PointCloud::CapabilitySet capabilities) {
+  if (capabilities == PointCloud::kInherit) {
     // If we do not permit a subset, expect the exact same capabilities.
     a.RequireExactCapabilities(b.capabilities(), b.feature_type());
     return a.capabilities();
   } else {
     FeatureType f = kFeatureNone;
-    if (c & PointCloud::kFeature)
+    if (capabilities & PointCloud::kFeatures)
       f = a.feature_type();
-    a.RequireCapabilities(c, f);
-    b.RequireCapabilities(c, f);
-    return c;
+    a.RequireCapabilities(capabilities, f);
+    b.RequireCapabilities(capabilities, f);
+    return capabilities;
   }
 }
 
@@ -187,11 +187,11 @@ PointCloud::PointCloud(
         "Cannot construct a PointCloud with kFeatureInherit");
   if (has_features()) {
     if (feature_type_ == kFeatureNone)
-      throw std::runtime_error("Cannot specify kFeatureNone with kFeature");
+      throw std::runtime_error("Cannot specify kFeatureNone with kFeatures");
   }
   else if (feature_type != kFeatureNone)
     throw std::runtime_error(
-        "Must specify kFeatureNone if kFeature is not present");
+        "Must specify kFeatureNone if kFeatures is not present");
 
   storage_.reset(new Storage(new_size, capabilities, feature_type));
   SetDefault(0, size_);
@@ -216,9 +216,6 @@ void PointCloud::resize(PointCloud::Index new_size, bool skip_initialization) {
   if (new_size > old_size && !skip_initialization) {
     int size_diff = new_size - old_size;
     SetDefault(old_size, size_diff);
-  }
-  if (new_size != old_size && has_image_dimensions()) {
-    image_dimensions_ = nullopt;
   }
 }
 
@@ -252,16 +249,16 @@ void PointCloud::SetFrom(const PointCloud& other,
         fmt::format("CopyFrom: {} != {}", new_size, old_size));
   }
   CapabilitySet c_final = ResolveCapabilities(*this, other, c);
-  if (c_final & kXYZ) {
+  if (c_final & kXYZs) {
     mutable_xyzs() = other.xyzs();
   }
-  if (c_final & kColor) {
+  if (c_final & kColors) {
     mutable_colors() = other.colors();
   }
-  if (c_final & kNormal) {
+  if (c_final & kNormals) {
     mutable_normals() = other.normals();
   }
-  if (c_final & kFeature) {
+  if (c_final & kFeatures) {
     mutable_features() = other.features();
   }
 }
@@ -283,22 +280,22 @@ void PointCloud::AddPoints(const PointCloud& other, CapabilitySet c) {
   auto fresh_block = [=](auto value) {
     return value.middleCols(old_size, other.size());
   };
-  if (c & kXYZ) {
+  if (c & kXYZs) {
     fresh_block(mutable_xyzs()) = other.xyzs();
   }
-  if (c & kNormal) {
+  if (c & kNormals) {
     fresh_block(mutable_normals()) = other.normals();
   }
-  if (c & kColor) {
+  if (c & kColors) {
     fresh_block(mutable_colors()) = other.colors();
   }
-  if (c & kFeature) {
+  if (c & kFeatures) {
     fresh_block(mutable_features()) = other.features();
   }
 }
 
 bool PointCloud::has_xyzs() const {
-  return capabilities_ & kXYZ;
+  return capabilities_ & kXYZs;
 }
 Eigen::Ref<const Matrix3X<T>> PointCloud::xyzs() const {
   DRAKE_DEMAND(has_xyzs());
@@ -310,7 +307,7 @@ Eigen::Ref<Matrix3X<T>> PointCloud::mutable_xyzs() {
 }
 
 bool PointCloud::has_colors() const {
-  return capabilities_ & kColor;
+  return capabilities_ & kColors;
 }
 Eigen::Ref<const MatrixNX<NC, C>> PointCloud::colors() const {
   DRAKE_DEMAND(has_colors());
@@ -322,7 +319,7 @@ Eigen::Ref<MatrixNX<NC, C>> PointCloud::mutable_colors() {
 }
 
 bool PointCloud::has_normals() const {
-  return capabilities_ & kNormal;
+  return capabilities_ & kNormals;
 }
 Eigen::Ref<const Matrix3X<T>> PointCloud::normals() const {
   DRAKE_DEMAND(has_normals());
@@ -334,7 +331,7 @@ Eigen::Ref<Matrix3X<T>> PointCloud::mutable_normals() {
 }
 
 bool PointCloud::has_features() const {
-  return capabilities_ & kFeature;
+  return capabilities_ & kFeatures;
 }
 bool PointCloud::has_features(const FeatureType& feature_type) const {
   return has_features() && feature_type_ == feature_type;
@@ -355,7 +352,7 @@ bool PointCloud::HasCapabilities(
   if ((capabilities() & c) != c) {
     good = false;
   } else {
-    if (c & PointCloud::kFeature) {
+    if (c & PointCloud::kFeatures) {
       DRAKE_DEMAND(f != kFeatureNone);
       DRAKE_DEMAND(f != kFeatureInherit);
       if (feature_type() != f) {

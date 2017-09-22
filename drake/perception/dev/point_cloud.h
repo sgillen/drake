@@ -47,14 +47,10 @@ const FeatureType kFeatureCurvature(1, "Curvature");
 /// Point-feature-histogram feature.
 const FeatureType kFeaturePFH(3, "PFH");
 
-// TODO(eric.cousineau): Consider a way of reinterpret_cast<>ing the array
-// data to permit more semantic access to members, PCL-style.
-// Need to ensure alignments are commensurate. Will only work with
-// homogeneous data (possibly with heterogeneous data, if strides can be
-// used).
-
 /**
- * Implements a point cloud (with continuous storage).
+ * Implements a point cloud (with contiguous storage), whose main goal is to
+ * offer a convenient, synchronized interface to commonly used capabilities and
+ * data types applicable for basic 3D perception.
  *
  * This is a mix between the philosophy of PCL (templated interface to
  * provide a compile-time open set, run-time closed set) and VTK (non-templated
@@ -67,13 +63,16 @@ const FeatureType kFeaturePFH(3, "PFH");
  * This point cloud class provides:
  *  - xyz - Cartesian XYZ coordinates (float[3]).
  *  - color - RGBA (uint8_t[4]). See ImageRgba8U.
- *  - normals - Normals in Cartesian space (float[3]).
- *  - features - An open-set of features (PFH, SHOT, etc) (float[X]).
+ *  - normal - Normals in Cartesian space (float[3]).
+ *  - feature - An open-set of features (PFH, SHOT, etc) (float[X]).
+ *
+ * @note "point" in this case means an entry in the point cloud, not solely
+ * an XYZ point.
  *
  * @note "contiguous" here means contiguous in memory. This was chosen to
- * avoid complications with PCL, where "dense" that the point cloud
- * corresponds to a depth image, and is indexed accordingly (densely along
- * a grid).
+ * avoid complications with PCL, where "dense" implies that the point cloud
+ * corresponds to a depth image, and is indexed accordingly (a grid with
+ * column-major storage).
  *
  * @note The accessors / mutators for the point fields of this class returns
  * references to the original Eigen matrices. This implies that they are
@@ -92,13 +91,13 @@ class PointCloud {
     /// compatible features.
     kInherit = 0,
     /// XYZ point in Cartesian space.
-    kXYZ = 1 << 0,
-    /// Color, in RGBA.
-    kColor = 1 << 1,
-    /// Normals (at each vertex).
-    kNormal = 1 << 2,
+    kXYZs = 1 << 0,
+    /// Colors, in RGBA.
+    kColors = 1 << 1,
+    /// Normals.
+    kNormals = 1 << 2,
     /// Features, whose type (and structure) is specified by `FeatureType`.
-    kFeature = 1 << 3,
+    kFeatures = 1 << 3,
   };
   typedef int CapabilitySet;
 
@@ -132,7 +131,7 @@ class PointCloud {
    * @param feature
    */
   PointCloud(Index new_size,
-             CapabilitySet capabilities = kXYZ,
+             CapabilitySet capabilities = kXYZs,
              const FeatureType& feature_type = kFeatureNone);
 
   PointCloud(const PointCloud& other,
@@ -235,8 +234,12 @@ class PointCloud {
 
   /// Returns if this point cloud provides feature points.
   bool has_features() const;
-  const FeatureType& feature_type() const { return feature_type_; }
+
+  /// Returns if the point cloud provides a specific feature.
   bool has_features(const FeatureType& feature_type) const;
+
+  /// Returns the feature type.
+  const FeatureType& feature_type() const { return feature_type_; }
 
   /// Returns access to feature points.
   /// This method aborts if this point cloud does not provide feature points.
@@ -341,6 +344,12 @@ class PointCloud {
 
 /// Returns a human-friendly representation of a capability and feature set.
 std::string ToString(PointCloud::CapabilitySet c, const FeatureType &f);
+
+// TODO(eric.cousineau): Consider a way of reinterpret_cast<>ing the array
+// data to permit more semantic access to members, PCL-style.
+// Need to ensure alignments are commensurate. Will only work with
+// homogeneous data (possibly with heterogeneous data, if strides can be
+// used).
 
 }  // namespace perception
 }  // namespace drake
