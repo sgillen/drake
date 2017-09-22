@@ -22,9 +22,12 @@ namespace perception {
  */
 class FeatureType {
  public:
+  DRAKE_DEFAULT_COPY_AND_MOVE_AND_ASSIGN(FeatureType)
+
   FeatureType(int size, const std::string& name)
     : size_(size),
       name_(name) {}
+
   inline int size() const { return size_; }
   inline const std::string& name() const { return name_; }
   inline bool operator==(const FeatureType& other) const {
@@ -34,8 +37,8 @@ class FeatureType {
     return !(*this == other);
   }
  private:
-  const int size_;
-  const std::string name_;
+  int size_;
+  std::string name_;
 };
 
 /// No feature.
@@ -337,7 +340,7 @@ class PointCloud {
   CapabilitySet capabilities_;
   // Feature type stored (if `has_features()` is true; otherwise this should
   // be `kFeatureNone`).
-  const FeatureType feature_type_;
+  FeatureType feature_type_;
   // Storage used for the point cloud.
   std::unique_ptr<Storage> storage_;
 };

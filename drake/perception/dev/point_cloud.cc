@@ -73,10 +73,10 @@ class PointCloud::Storage {
     CheckInvariants();
   }
 
-  Eigen::Map<Matrix3X<T>> xyzs() { return xyzs_; }
-  Eigen::Map<MatrixNX<NC, C>> colors() { return colors_; }
-  Eigen::Map<Matrix3X<T>> normals() { return normals_; }
-  Eigen::Map<MatrixX<T>> features() { return features_; }
+  Eigen::Ref<Matrix3X<T>> xyzs() { return xyzs_; }
+  Eigen::Ref<MatrixNX<NC, C>> colors() { return colors_; }
+  Eigen::Ref<Matrix3X<T>> normals() { return normals_; }
+  Eigen::Ref<MatrixX<T>> features() { return features_; }
 
  private:
   void CheckInvariants() const {
@@ -157,9 +157,8 @@ PointCloud::CapabilitySet ResolveCapabilities(
     a.RequireExactCapabilities(b.capabilities(), b.feature_type());
     return a.capabilities();
   } else {
-    FeatureType f = kFeatureNone;
-    if (capabilities & PointCloud::kFeatures)
-      f = a.feature_type();
+    FeatureType f = (capabilities & PointCloud::kFeatures) ? a.feature_type()
+                                                           : kFeatureNone;
     a.RequireCapabilities(capabilities, f);
     b.RequireCapabilities(capabilities, f);
     return capabilities;
