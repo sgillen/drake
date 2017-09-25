@@ -1,4 +1,4 @@
-#include "drake/examples/QPInverseDynamicsForHumanoids/plan_eval/dev/humanoid_manipulation_plan.h"
+#include "drake/systems/controllers/plan_eval/dev/humanoid_manipulation_plan.h"
 
 #include <string>
 #include <unordered_map>
@@ -10,8 +10,9 @@
 #include "drake/systems/controllers/setpoint.h"
 
 namespace drake {
-namespace examples {
-namespace qp_inverse_dynamics {
+namespace systems {
+namespace controllers {
+namespace plan_eval {
 
 using systems::controllers::qp_inverse_dynamics::ParamSet;
 using systems::controllers::qp_inverse_dynamics::QpInput;
@@ -228,6 +229,7 @@ bool HumanoidManipulationPlan<T>::IsRigidBodyTreeAliasGroupsCompatible(
 
 template class HumanoidManipulationPlan<double>;
 
-}  // namespace qp_inverse_dynamics
-}  // namespace examples
+}  // namespace plan_eval
+}  // namespace controllers
+}  // namespace systems
 }  // namespace drake

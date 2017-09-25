@@ -7,11 +7,12 @@
 
 #include "robotlocomotion/robot_plan_t.hpp"
 
-#include "drake/examples/QPInverseDynamicsForHumanoids/plan_eval/dev/humanoid_manipulation_plan.h"
+#include "drake/systems/controllers/plan_eval/dev/humanoid_manipulation_plan.h"
 
 namespace drake {
-namespace examples {
-namespace qp_inverse_dynamics {
+namespace systems {
+namespace controllers {
+namespace plan_eval {
 
 using systems::controllers::qp_inverse_dynamics::QpInput;
 using systems::controllers::qp_inverse_dynamics::RobotKinematicState;
@@ -76,6 +77,7 @@ void HumanoidPlanEvalSystem::Initialize(
                      &qp_input);
 }
 
-}  // namespace qp_inverse_dynamics
-}  // namespace examples
+}  // namespace plan_eval
+}  // namespace controllers
+}  // namespace systems
 }  // namespace drake

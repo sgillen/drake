@@ -1,25 +1,24 @@
-#include "drake/examples/QPInverseDynamicsForHumanoids/system/joint_level_controller_system.h"
+#include "drake/systems/controllers/qp_inverse_dynamics/qp_output_translator_system.h"
 
 #include "drake/systems/controllers/qp_inverse_dynamics/qp_inverse_dynamics_common.h"
 
 namespace drake {
-namespace examples {
+namespace systems {
+namespace controllers {
 namespace qp_inverse_dynamics {
 
-using systems::controllers::qp_inverse_dynamics::QpOutput;
-
-JointLevelControllerBaseSystem::JointLevelControllerBaseSystem(
+QpOutputTranslatorSystem::QpOutputTranslatorSystem(
     const RigidBodyTree<double>& robot)
     : robot_(robot) {
   input_port_index_qp_output_ = DeclareAbstractInputPort().get_index();
   output_port_index_torque_ =
       DeclareVectorOutputPort(
           systems::BasicVector<double>(robot_.get_num_actuators()),
-          &JointLevelControllerBaseSystem::CalcActuationTorques)
+          &QpOutputTranslatorSystem::CalcActuationTorques)
           .get_index();
 }
 
-void JointLevelControllerBaseSystem::CalcActuationTorques(
+void QpOutputTranslatorSystem::CalcActuationTorques(
     const systems::Context<double>& context,
     systems::BasicVector<double>* output) const {
   // Input:
@@ -37,5 +36,6 @@ void JointLevelControllerBaseSystem::CalcActuationTorques(
 }
 
 }  // namespace qp_inverse_dynamics
-}  // namespace examples
+}  // namespace controllers
+}  // namespace systems
 }  // namespace drake

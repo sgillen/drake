@@ -2,16 +2,17 @@
 
 #include "drake/common/find_resource.h"
 #include "drake/common/test_utilities/eigen_matrix_compare.h"
-#include "drake/examples/QPInverseDynamicsForHumanoids/plan_eval/manipulator_move_end_effector_plan.h"
-#include "drake/examples/QPInverseDynamicsForHumanoids/plan_eval/test/test_common.h"
 #include "drake/lcmt_manipulator_plan_move_end_effector.hpp"
 #include "drake/multibody/joints/floating_base_types.h"
 #include "drake/multibody/parsers/urdf_parser.h"
+#include "drake/systems/controllers/plan_eval/manipulator_move_end_effector_plan.h"
+#include "drake/systems/controllers/plan_eval/test/test_common.h"
 #include "drake/util/lcmUtil.h"
 
 namespace drake {
-namespace examples {
-namespace qp_inverse_dynamics {
+namespace systems {
+namespace controllers {
+namespace plan_eval {
 namespace {
 
 using systems::controllers::qp_inverse_dynamics::ConstraintType;
@@ -296,6 +297,7 @@ TEST_F(ManipPlanTest, TestClone) {
   TestGenericClone();
 }
 
-}  // namespace qp_inverse_dynamics
-}  // namespace examples
+}  // namespace plan_eval
+}  // namespace controllers
+}  // namespace systems
 }  // namespace drake

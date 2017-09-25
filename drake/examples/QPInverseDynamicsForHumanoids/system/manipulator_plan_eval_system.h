@@ -6,12 +6,13 @@
 #include <vector>
 
 #include "drake/common/drake_copyable.h"
-#include "drake/examples/QPInverseDynamicsForHumanoids/system/plan_eval_base_system.h"
+#include "drake/systems/controllers/plan_eval/plan_eval_base_system.h"
 #include "drake/lcmt_plan_eval_debug_info.hpp"
 
 namespace drake {
-namespace examples {
-namespace qp_inverse_dynamics {
+namespace systems {
+namespace controllers {
+namespace plan_eval {
 
 /**
  * This class extends PlanEvalBaseSystem. It generates QpInput to track
@@ -89,6 +90,7 @@ class ManipulatorPlanEvalSystem : public PlanEvalBaseSystem {
   int abs_state_index_debug_{};
 };
 
-}  // namespace qp_inverse_dynamics
-}  // namespace examples
+}  // namespace plan_eval
+}  // namespace controllers
+}  // namespace systems
 }  // namespace drake

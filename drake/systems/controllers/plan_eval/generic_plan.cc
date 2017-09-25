@@ -1,12 +1,13 @@
-#include "drake/examples/QPInverseDynamicsForHumanoids/plan_eval/generic_plan.h"
+#include "drake/systems/controllers/plan_eval/generic_plan.h"
 
 #include <vector>
 
 #include "drake/systems/controllers/setpoint.h"
 
 namespace drake {
-namespace examples {
-namespace qp_inverse_dynamics {
+namespace systems {
+namespace controllers {
+namespace plan_eval {
 
 template <typename T>
 std::unique_ptr<GenericPlan<T>> GenericPlan<T>::Clone() const {
@@ -110,6 +111,7 @@ void GenericPlan<T>::UpdateQpInput(
 
 template class GenericPlan<double>;
 
-}  // namespace qp_inverse_dynamics
-}  // namespace examples
+}  // namespace plan_eval
+}  // namespace controllers
+}  // namespace systems
 }  // namespace drake

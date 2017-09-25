@@ -9,12 +9,12 @@
 #include "robotlocomotion/robot_plan_t.hpp"
 
 #include "drake/examples/QPInverseDynamicsForHumanoids/system/atlas_joint_level_controller_system.h"
-#include "drake/examples/QPInverseDynamicsForHumanoids/system/humanoid_plan_eval_system.h"
 #include "drake/examples/QPInverseDynamicsForHumanoids/system/humanoid_status_translator_system.h"
 #include "drake/lcm/drake_lcm.h"
 #include "drake/multibody/joints/floating_base_types.h"
 #include "drake/multibody/parsers/urdf_parser.h"
 #include "drake/systems/controllers/qp_inverse_dynamics/qp_inverse_dynamics_system.h"
+#include "drake/systems/controllers/plan_eval/humanoid_plan_eval_system.h"
 #include "drake/systems/framework/diagram.h"
 #include "drake/systems/framework/diagram_builder.h"
 #include "drake/systems/lcm/lcm_publisher_system.h"
@@ -25,6 +25,7 @@ namespace examples {
 namespace qp_inverse_dynamics {
 
 using systems::controllers::qp_inverse_dynamics::QpInverseDynamicsSystem;
+using systems::controllers::plan_eval::HumanoidPlanEvalSystem;
 
 /**
  * A controller for humanoid balancing built on top of HumanoidPlanEvalSystem

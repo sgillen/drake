@@ -2,11 +2,12 @@
 
 #include <string>
 
-#include "drake/examples/QPInverseDynamicsForHumanoids/plan_eval/generic_plan.h"
+#include "drake/systems/controllers/plan_eval/generic_plan.h"
 
 namespace drake {
-namespace examples {
-namespace qp_inverse_dynamics {
+namespace systems {
+namespace controllers {
+namespace plan_eval {
 
 /**
  * A concrete plan that sets up a Cartesian tracking objective for the end
@@ -79,6 +80,7 @@ class ManipulatorMoveEndEffectorPlan : public GenericPlan<T> {
       systems::controllers::qp_inverse_dynamics::QpInput*) const override {}
 };
 
-}  // namespace qp_inverse_dynamics
-}  // namespace examples
+}  // namespace plan_eval
+}  // namespace controllers
+}  // namespace systems
 }  // namespace drake

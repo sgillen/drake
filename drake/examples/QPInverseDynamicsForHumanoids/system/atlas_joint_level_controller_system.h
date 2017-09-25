@@ -5,17 +5,17 @@
 #include "bot_core/atlas_command_t.hpp"
 
 #include "drake/common/drake_copyable.h"
-#include "drake/examples/QPInverseDynamicsForHumanoids/system/joint_level_controller_system.h"
+#include "drake/systems/controllers/qp_inverse_dynamics/qp_output_translator_system.h"
 
 namespace drake {
 namespace examples {
 namespace qp_inverse_dynamics {
 
 /**
- * A class that extends JointLevelControllerBaseSystem to output an additional
+ * A class that extends QpOutputTranslatorSystem to output an additional
  * bot_core::atlas_command_t.
  */
-class AtlasJointLevelControllerSystem : public JointLevelControllerBaseSystem {
+class AtlasJointLevelControllerSystem : public systems::controllers::qp_inverse_dynamics::QpOutputTranslatorSystem {
  public:
   DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(AtlasJointLevelControllerSystem)
 

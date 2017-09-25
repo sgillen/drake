@@ -1,4 +1,4 @@
-#include "drake/examples/QPInverseDynamicsForHumanoids/plan_eval/manipulator_move_end_effector_plan.h"
+#include "drake/systems/controllers/plan_eval/manipulator_move_end_effector_plan.h"
 
 #include <vector>
 
@@ -7,8 +7,9 @@
 #include "drake/util/lcmUtil.h"
 
 namespace drake {
-namespace examples {
-namespace qp_inverse_dynamics {
+namespace systems {
+namespace controllers {
+namespace plan_eval {
 
 using systems::controllers::qp_inverse_dynamics::ParamSet;
 using systems::controllers::qp_inverse_dynamics::RobotKinematicState;
@@ -95,6 +96,7 @@ GenericPlan<T>* ManipulatorMoveEndEffectorPlan<T>::CloneGenericPlanDerived()
 
 template class ManipulatorMoveEndEffectorPlan<double>;
 
-}  // namespace qp_inverse_dynamics
-}  // namespace examples
+}  // namespace plan_eval
+}  // namespace controllers
+}  // namespace systems
 }  // namespace drake

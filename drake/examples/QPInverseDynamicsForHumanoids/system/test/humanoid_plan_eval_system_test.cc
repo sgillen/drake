@@ -1,4 +1,4 @@
-#include "drake/examples/QPInverseDynamicsForHumanoids/system/humanoid_plan_eval_system.h"
+#include "drake/QPInverseDynamicsForHumanoids/system/humanoid_plan_eval_system.h"
 
 #include <gtest/gtest.h>
 #include "robotlocomotion/robot_plan_t.hpp"

@@ -11,8 +11,9 @@
 #include "drake/systems/framework/leaf_system.h"
 
 namespace drake {
-namespace examples {
-namespace qp_inverse_dynamics {
+namespace systems {
+namespace controllers {
+namespace plan_eval {
 
 /**
  * A base class that outputs QpInput for the qp inverse dynamics controller.
@@ -138,6 +139,7 @@ class PlanEvalBaseSystem : public systems::LeafSystem<double> {
   int abs_state_index_qp_input_{-1};
 };
 
-}  // namespace qp_inverse_dynamics
-}  // namespace examples
+}  // namespace plan_eval
+}  // namespace controllers
+}  // namespace systems
 }  // namespace drake

@@ -2,13 +2,14 @@
 
 #include <string>
 
-#include "drake/examples/QPInverseDynamicsForHumanoids/plan_eval/generic_plan.h"
 #include "drake/manipulation/util/robot_state_msg_translator.h"
+#include "drake/systems/controllers/plan_eval/generic_plan.h"
 #include "drake/systems/controllers/zmp_planner.h"
 
 namespace drake {
-namespace examples {
-namespace qp_inverse_dynamics {
+namespace systems {
+namespace controllers {
+namespace plan_eval {
 
 /**
  * A baseline manipulation plan interpretor for a humanoid robot. The plan
@@ -161,6 +162,7 @@ class HumanoidManipulationPlan : public GenericPlan<T> {
   int64_t last_handle_plan_time_{-1};
 };
 
-}  // namespace qp_inverse_dynamics
-}  // namespace examples
+}  // namespace plan_eval
+}  // namespace controllers
+}  // namespace systems
 }  // namespace drake

@@ -13,7 +13,7 @@ namespace qp_inverse_dynamics {
 
 AtlasJointLevelControllerSystem::AtlasJointLevelControllerSystem(
     const RigidBodyTree<double>& robot)
-    : JointLevelControllerBaseSystem(robot) {
+    : QpOutputTranslatorSystem(robot) {
   output_port_index_atlas_cmd_ =
       DeclareAbstractOutputPort(&AtlasJointLevelControllerSystem::OutputCommand)
           .get_index();

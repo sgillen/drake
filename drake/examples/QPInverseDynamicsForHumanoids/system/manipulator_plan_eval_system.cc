@@ -8,8 +8,9 @@
 #include "drake/systems/controllers/setpoint.h"
 
 namespace drake {
-namespace examples {
-namespace qp_inverse_dynamics {
+namespace systems {
+namespace controllers {
+namespace plan_eval {
 
 using systems::controllers::qp_inverse_dynamics::RobotKinematicState;
 using systems::controllers::qp_inverse_dynamics::QpInput;
@@ -123,6 +124,7 @@ void ManipulatorPlanEvalSystem::DoExtendedCalcUnrestrictedUpdate(
   }
 }
 
-}  // namespace qp_inverse_dynamics
-}  // namespace examples
+}  // namespace plan_eval
+}  // namespace controllers
+}  // namespace systems
 }  // namespace drake

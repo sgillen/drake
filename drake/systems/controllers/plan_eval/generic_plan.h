@@ -15,8 +15,9 @@
 #include "drake/systems/framework/value.h"
 
 namespace drake {
-namespace examples {
-namespace qp_inverse_dynamics {
+namespace systems {
+namespace controllers {
+namespace plan_eval {
 
 /**
  * ContactState is intended to represent a set of bodies that are in contact.
@@ -349,6 +350,7 @@ class GenericPlan {
       body_trajectories_;
 };
 
-}  // namespace qp_inverse_dynamics
-}  // namespace examples
+}  // namespace plan_eval
+}  // namespace controllers
+}  // namespace systems
 }  // namespace drake

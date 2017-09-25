@@ -7,7 +7,8 @@
 #include "drake/systems/framework/leaf_system.h"
 
 namespace drake {
-namespace examples {
+namespace systems {
+namespace controllers {
 namespace qp_inverse_dynamics {
 
 /**
@@ -16,16 +17,16 @@ namespace qp_inverse_dynamics {
  * need to implement DoCalcExtendedOutput() to generate additional custom
  * outputs.
  */
-class JointLevelControllerBaseSystem : public systems::LeafSystem<double> {
+class QpOutputTranslatorSystem : public systems::LeafSystem<double> {
  public:
-  DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(JointLevelControllerBaseSystem)
+  DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(QpOutputTranslatorSystem)
 
   /**
    * @param robot A reference to the RigidBodyTree within the plant that is
    * being controlled. The lifespan of this reference must exceed that of this
    * class's instance. @p robot should only contain a single model instance.
    */
-  explicit JointLevelControllerBaseSystem(const RigidBodyTree<double>& robot);
+  explicit QpOutputTranslatorSystem(const RigidBodyTree<double>& robot);
 
   /**
    * Returns the input port for QpOutput.
@@ -64,19 +65,7 @@ class JointLevelControllerBaseSystem : public systems::LeafSystem<double> {
   int output_port_index_torque_{0};
 };
 
-/**
- * Translates a QpOutput to a vector of torque commands in the actuator order
- * within the RigidBodyTree.
- */
-class TrivialJointLevelControllerSystem
-    : public JointLevelControllerBaseSystem {
- public:
-  DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(TrivialJointLevelControllerSystem);
-
-  explicit TrivialJointLevelControllerSystem(const RigidBodyTree<double>& robot)
-      : JointLevelControllerBaseSystem(robot) {}
-};
-
 }  // namespace qp_inverse_dynamics
-}  // namespace examples
+}  // namespace controllers
+}  // namespace systems
 }  // namespace drake

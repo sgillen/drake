@@ -1,4 +1,4 @@
-#include "drake/examples/QPInverseDynamicsForHumanoids/system/plan_eval_base_system.h"
+#include "drake/systems/controllers/plan_eval/plan_eval_base_system.h"
 
 #include <memory>
 #include <string>
@@ -8,8 +8,9 @@
 #include "drake/systems/controllers/setpoint.h"
 
 namespace drake {
-namespace examples {
-namespace qp_inverse_dynamics {
+namespace systems {
+namespace controllers {
+namespace plan_eval {
 
 using systems::controllers::qp_inverse_dynamics::GetDofNames;
 using systems::controllers::qp_inverse_dynamics::QpInput;
@@ -47,6 +48,7 @@ void PlanEvalBaseSystem::CopyOutQpInput(const systems::Context<double>& context,
   *qp_input = context.get_abstract_state<QpInput>(abs_state_index_qp_input_);
 }
 
-}  // namespace qp_inverse_dynamics
-}  // namespace examples
+}  // namespace plan_eval
+}  // namespace controllers
+}  // namespace systems
 }  // namespace drake

@@ -5,14 +5,15 @@
 
 #include <gtest/gtest.h>
 
-#include "drake/examples/QPInverseDynamicsForHumanoids/plan_eval/generic_plan.h"
 #include "drake/multibody/joints/floating_base_types.h"
 #include "drake/multibody/parsers/urdf_parser.h"
+#include "drake/systems/controllers/plan_eval/generic_plan.h"
 #include "drake/systems/controllers/setpoint.h"
 
 namespace drake {
-namespace examples {
-namespace qp_inverse_dynamics {
+namespace systems {
+namespace controllers {
+namespace plan_eval {
 
 constexpr double kSmallTolerance = 1e-12;
 
@@ -130,6 +131,7 @@ class GenericPlanTest : public ::testing::Test {
   std::unique_ptr<GenericPlan<double>> dut_{nullptr};
 };
 
-}  // namespace qp_inverse_dynamics
-}  // namespace examples
+}  // namespace plan_eval
+}  // namespace controllers
+}  // namespace systems
 }  // namespace drake

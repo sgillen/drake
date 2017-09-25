@@ -7,14 +7,10 @@ load(
     "drake_cc_googletest",
     "drake_cc_library",
 )
+load("//tools:gurobi.bzl", "gurobi_test_tags")
 load("//tools:lint.bzl", "add_lint_tests")
 
-package(
-    default_visibility = [
-        "//drake/examples/QPInverseDynamicsForHumanoids:__subpackages__",
-        "//drake/examples/kuka_iiwa_arm:__subpackages__",
-    ],
-)
+package(default_visibility = ["//visibility:public"])
 
 drake_cc_library(
     name = "generic_plan",
@@ -47,6 +43,17 @@ drake_cc_library(
         "//drake/common:unused",
         "//drake/lcmtypes:manipulator_plan_move_end_effector",
         "//drake/util:lcm_util",
+    ],
+)
+
+drake_cc_library(
+    name = "test_common",
+    hdrs = [
+        "test/test_common.h",
+    ],
+    deps = [
+        "//drake/multibody:rigid_body_tree_alias_groups",
+        "//drake/systems/controllers/qp_inverse_dynamics:param_parser",
     ],
 )
 
@@ -105,6 +112,18 @@ drake_cc_binary(
     ],
 )
 
+drake_cc_library(
+    name = "plan_eval_base_system",
+    srcs = ["plan_eval_base_system.cc"],
+    hdrs = ["plan_eval_base_system.h"],
+    deps = [
+        "//drake/multibody:rigid_body_tree_alias_groups",
+        "//drake/systems/controllers:setpoint",
+        "//drake/systems/controllers/qp_inverse_dynamics:param_parser",
+        "//drake/systems/framework:leaf_system",
+    ],
+)
+
 # === test/ ===
 
 drake_cc_googletest(
@@ -121,17 +140,6 @@ drake_cc_googletest(
         "//drake/common/test_utilities:eigen_matrix_compare",
         "//drake/multibody:rigid_body_tree",
         "//drake/multibody/parsers",
-    ],
-)
-
-drake_cc_library(
-    name = "test_common",
-    hdrs = [
-        "test/test_common.h",
-    ],
-    deps = [
-        "//drake/multibody:rigid_body_tree_alias_groups",
-        "//drake/systems/controllers/qp_inverse_dynamics:param_parser",
     ],
 )
 

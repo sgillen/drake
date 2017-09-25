@@ -5,12 +5,13 @@
 #include <vector>
 
 #include "drake/common/drake_copyable.h"
-#include "drake/examples/QPInverseDynamicsForHumanoids/system/plan_eval_base_system.h"
+#include "drake/systems/controllers/plan_eval/plan_eval_base_system.h"
 #include "drake/systems/controllers/qp_inverse_dynamics/robot_kinematic_state.h"
 
 namespace drake {
-namespace examples {
-namespace qp_inverse_dynamics {
+namespace systems {
+namespace controllers {
+namespace plan_eval {
 
 /**
  * This class extends PlanEvalBaseSystem to interpret plans for humanoid robots.
@@ -72,6 +73,7 @@ class HumanoidPlanEvalSystem : public PlanEvalBaseSystem {
   int input_port_index_manip_plan_msg_{};
 };
 
-}  // namespace qp_inverse_dynamics
-}  // namespace examples
+}  // namespace plan_eval
+}  // namespace controllers
+}  // namespace systems
 }  // namespace drake

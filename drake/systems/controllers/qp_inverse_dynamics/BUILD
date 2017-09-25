@@ -94,6 +94,18 @@ drake_cc_library(
     ],
 )
 
+drake_cc_library(
+    name = "qp_output_translator_system",
+    srcs = ["qp_output_translator_system.cc"],
+    hdrs = ["qp_output_translator_system.h"],
+    deps = [
+        "//drake/multibody:rigid_body_tree",
+        "//drake/systems/controllers/qp_inverse_dynamics",
+        "//drake/systems/framework:leaf_system",
+        "@lcmtypes_bot2_core",
+    ],
+)
+
 # === test/ ===
 
 drake_cc_googletest(
@@ -164,6 +176,21 @@ drake_cc_googletest(
         "//drake/systems/controllers/qp_inverse_dynamics:param_parser",
         "//drake/systems/framework",
         "//drake/systems/primitives:constant_value_source",
+    ],
+)
+
+drake_cc_googletest(
+    name = "qp_output_translator_system_test",
+    srcs = ["test/qp_output_translator_system_test.cc"],
+    data = [
+        "//drake/examples/valkyrie:models",
+    ],
+    deps = [
+        ":qp_output_translator_system",
+        "//drake/common:find_resource",
+        "//drake/common/test_utilities:eigen_matrix_compare",
+        "//drake/multibody/parsers",
+        "//drake/systems/framework",
     ],
 )
 
