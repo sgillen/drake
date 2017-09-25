@@ -20,8 +20,8 @@ namespace perception {
 namespace pc_flags {
 
 /// Indicates the data the point cloud stores.
-enum Capability : int {
-  /// Inherit other capabilities. May imply an intersection of all
+enum Field : int {
+  /// Inherit other fields. May imply an intersection of all
   /// compatible extras.
   kInherit = 0,
   /// XYZ point in Cartesian space.
@@ -33,7 +33,7 @@ enum Capability : int {
   /// Extras, whose type (and structure) is specified by `ExtraType`.
   kExtras = 1 << 3,
 };
-typedef int CapabilitySet;
+typedef int Fields;
 
 /// Describes a extra with a name and the extra's size.
 /// @note This is defined as follows to enable an open set of extras, but
@@ -74,14 +74,14 @@ const ExtraType kExtraCurvature(1, "Curvature");
 /// Point-extra-histogram extra.
 const ExtraType kExtraPFH(3, "PFH");
 
-/// Returns a human-friendly representation of a capability and extra set.
-std::string ToString(CapabilitySet c, const ExtraType &f);
+/// Returns a human-friendly representation of a field and extra set.
+std::string ToString(Fields c, const ExtraType &f);
 
 }  // namespace pc_flags
 
 
 /// Implements a point cloud (with contiguous storage), whose main goal is to
-/// offer a convenient, synchronized interface to commonly used capabilities and
+/// offer a convenient, synchronized interface to commonly used fields and
 /// data types applicable for basic 3D perception.
 ///
 /// This is a mix between the philosophy of PCL (templated interface to
@@ -96,7 +96,7 @@ std::string ToString(CapabilitySet c, const ExtraType &f);
 ///  - point - An entry in a point cloud (not exclusively an XYZ point).
 ///  - feature - Geometric information of a point.
 ///  - descriptor - Non-geometric information of a point.
-///  - capability - A feature or descriptor described by the point cloud.
+///  - field - A feature or descriptor described by the point cloud.
 ///  - extra - Runtime-definable information (feature or descriptor) for a
 ///  point.
 ///
@@ -104,7 +104,7 @@ std::string ToString(CapabilitySet c, const ExtraType &f);
 ///  - xyz - Cartesian XYZ coordinates (float[3]).
 ///  - normal - Normals in Cartesian space (float[3]).
 ///  - color - RGBA (uint8_t[4]). See ImageRgba8U.
-///  - extra - An open-set of capabilities (PFH, SHOT, etc) (float[X]).
+///  - extra - An open-set of fields (PFH, SHOT, etc) (float[X]).
 ///
 /// @note "contiguous" here means contiguous in memory. This was chosen to
 /// avoid complications with PCL, where "dense" implies that the point cloud
@@ -141,24 +141,24 @@ class PointCloud {
   typedef std::vector<int> Indices;
 
   /// Constructs a point cloud of a given `new_size`, with the prescribed
-  /// `capabilities`. If `kExtras` is one of the capabilities, then
+  /// `fields`. If `kExtras` is one of the fields, then
   /// `extra` should included and should not be `kNone`.
   /// @param new_size
   ///   Size of the point cloud after construction.
-  /// @param capabilities
-  ///   Capabilities (fields) that the point cloud contains.
+  /// @param fields
+  ///   Fields (fields) that the point cloud contains.
   /// @param extra
   PointCloud(Index new_size,
-             pc_flags::CapabilitySet capabilities = pc_flags::kXYZs,
+             pc_flags::Fields fields = pc_flags::kXYZs,
              const pc_flags::ExtraType& extra_type = pc_flags::kExtraNone);
 
   PointCloud(const PointCloud& other)
       : PointCloud(other, pc_flags::kInherit) {}
 
-  // Do not define a default argument for `copy_capabilities` so that this is
+  // Do not define a default argument for `copy_fields` so that this is
   // not ambiguous w.r.t. the copy constructor.
   PointCloud(const PointCloud& other,
-             pc_flags::CapabilitySet copy_capabilities,
+             pc_flags::Fields copy_fields,
              const pc_flags::ExtraType& extra_type = pc_flags::kExtraInherit);
 
   PointCloud& operator=(const PointCloud& other);
@@ -169,9 +169,9 @@ class PointCloud {
   // shallow copies.
 
   /**
-   * Returns the capabilities provided by this point cloud.
+   * Returns the fields provided by this point cloud.
    */
-  pc_flags::CapabilitySet capabilities() const { return capabilities_; }
+  pc_flags::Fields fields() const { return fields_; }
 
   /**
    * Returns the number of points in this point cloud.
@@ -303,15 +303,15 @@ class PointCloud {
    * @param other
    *    Other point cloud.
    * @param c
-   *    Capabilities to copy. If this is `kInherit`, then both clouds
-   *    must have the exact same capabilities. Otherwise, both clouds
-   *    must support the capabilities indicated by `c`.
+   *    Fields to copy. If this is `kInherit`, then both clouds
+   *    must have the exact same fields. Otherwise, both clouds
+   *    must support the fields indicated by `c`.
    * @param allow_resize
    *    Permit resizing to the other cloud's size.
    */
   void SetFrom(
       const PointCloud& other,
-      pc_flags::CapabilitySet c = pc_flags::kInherit,
+      pc_flags::Fields c = pc_flags::kInherit,
       bool allow_resize = true);
 
   // TODO(eric.cousineau): Add indexed version.
@@ -330,41 +330,41 @@ class PointCloud {
    * @param other
    *    Other point cloud.
    * @param c
-   *    Capabilities to copy.
+   *    Fields to copy.
    *    @see SetFrom for how this functions.
    */
-  void AddPoints(const PointCloud& other, pc_flags::CapabilitySet c = pc_flags::kInherit);
+  void AddPoints(const PointCloud& other, pc_flags::Fields c = pc_flags::kInherit);
 
-  /// @name Capabilities
+  /// @name Fields
   /// @{
 
-  /// Returns if a point cloud has a given set of capabilities.
+  /// Returns if a point cloud has a given set of fields.
   /// @pre If `kExtra` is not present in `c`, then `extra_type` must be
   /// `kExtraNone`. Otherwise, `extra_type` must be a valid extra.
-  bool HasCapabilities(
-      pc_flags::CapabilitySet capability_set,
+  bool HasFields(
+      pc_flags::Fields field_set,
       const pc_flags::ExtraType& extra_type = pc_flags::kExtraNone) const;
 
-  /// Requires a given set of capabilities.
-  /// @see HasCapabilities for preconditions.
+  /// Requires a given set of fields.
+  /// @see HasFields for preconditions.
   /// @throws std::runtime_error if this point cloud does not have these
-  /// capabilities.
-  void RequireCapabilities(
-      pc_flags::CapabilitySet capability_set,
+  /// fields.
+  void RequireFields(
+      pc_flags::Fields field_set,
       const pc_flags::ExtraType& extra_type = pc_flags::kExtraNone) const;
 
-  /// Returns if a point cloud has exactly a given set of capabilities.
-  /// @see HasCapabilities for preconditions.
-  bool HasExactCapabilities(
-      pc_flags::CapabilitySet capability_set,
+  /// Returns if a point cloud has exactly a given set of fields.
+  /// @see HasFields for preconditions.
+  bool HasExactFields(
+      pc_flags::Fields field_set,
       const pc_flags::ExtraType& extra_type = pc_flags::kExtraNone) const;
 
-  /// Requires the exact given set of capabilities.
-  /// @see HasCapabilities for preconditions.
+  /// Requires the exact given set of fields.
+  /// @see HasFields for preconditions.
   /// @throws std::runtime_error if this point cloud does not have exactly
-  /// these capabilities.
-  void RequireExactCapabilities(
-      pc_flags::CapabilitySet capability_set,
+  /// these fields.
+  void RequireExactFields(
+      pc_flags::Fields field_set,
       const pc_flags::ExtraType& extra_type = pc_flags::kExtraNone) const;
 
   /// @}
@@ -377,8 +377,8 @@ class PointCloud {
 
   // Size of the point cloud.
   int size_;
-  // Represents which capabilities are enabled for this point cloud.
-  const pc_flags::CapabilitySet capabilities_{};
+  // Represents which fields are enabled for this point cloud.
+  const pc_flags::Fields fields_{};
   // Extra type stored (if `has_extras()` is true; otherwise this should
   // be `kExtraNone`).
   const pc_flags::ExtraType extra_type_{pc_flags::kExtraNone};

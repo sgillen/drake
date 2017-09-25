@@ -55,7 +55,7 @@ struct check_helper<uint8_t> {
 GTEST_TEST(PointCloudTest, Basic) {
   const int count = 5;
 
-  auto CheckFields = [count](auto fields_expected, pc_flags::CapabilitySet c,
+  auto CheckFields = [count](auto fields_expected, pc_flags::Fields c,
                              const pc_flags::ExtraType& extra_type,
                              auto mutable_fields, auto fields,
                              auto mutable_field, auto field) {
@@ -115,7 +115,7 @@ GTEST_TEST(PointCloudTest, Basic) {
             fields(cloud).middleCols(small_size, large_size - small_size)));
   };
 
-  // TODO(eric.cousineau): Iterate through the combinatorics of capabilities.
+  // TODO(eric.cousineau): Iterate through the combinatorics of fields.
 
   // Points.
   Matrix3Xf xyzs_expected(3, count);
@@ -174,7 +174,7 @@ GTEST_TEST(PointCloudTest, Basic) {
               [](PointCloud& cloud, int i) { return cloud.extra(i); });
 }
 
-GTEST_TEST(PointCloudTest, Capabilities) {
+GTEST_TEST(PointCloudTest, Fields) {
   // Check human-friendly formatting.
   EXPECT_EQ(
       "(kXYZs | kNormals | kExtras::Curvature)",
@@ -190,26 +190,26 @@ GTEST_TEST(PointCloudTest, Capabilities) {
   // Check basic requirements.
   {
     PointCloud cloud(1, pc_flags::kXYZs);
-    EXPECT_TRUE(cloud.HasCapabilities(pc_flags::kXYZs));
-    EXPECT_NO_THROW(cloud.RequireCapabilities(pc_flags::kXYZs));
-    EXPECT_FALSE(cloud.HasCapabilities(pc_flags::kNormals));
-    EXPECT_THROW(cloud.RequireCapabilities(pc_flags::kNormals),
+    EXPECT_TRUE(cloud.HasFields(pc_flags::kXYZs));
+    EXPECT_NO_THROW(cloud.RequireFields(pc_flags::kXYZs));
+    EXPECT_FALSE(cloud.HasFields(pc_flags::kNormals));
+    EXPECT_THROW(cloud.RequireFields(pc_flags::kNormals),
                  std::runtime_error);
   }
 
-  // Check with exact capabilities.
+  // Check with exact fields.
   {
     PointCloud cloud(1, pc_flags::kXYZs | pc_flags::kNormals);
-    EXPECT_TRUE(cloud.HasExactCapabilities(
+    EXPECT_TRUE(cloud.HasExactFields(
         pc_flags::kXYZs | pc_flags::kNormals));
-    EXPECT_NO_THROW(cloud.RequireExactCapabilities(
+    EXPECT_NO_THROW(cloud.RequireExactFields(
             pc_flags::kXYZs | pc_flags::kNormals));
-    EXPECT_FALSE(cloud.HasExactCapabilities(pc_flags::kNormals));
-    EXPECT_THROW(cloud.RequireExactCapabilities(pc_flags::kNormals),
+    EXPECT_FALSE(cloud.HasExactFields(pc_flags::kNormals));
+    EXPECT_THROW(cloud.RequireExactFields(pc_flags::kNormals),
                  std::runtime_error);
   }
 
-  // Check invalid capabilities.
+  // Check invalid fields.
   {
     EXPECT_THROW(PointCloud(1, 0), std::runtime_error);
     EXPECT_THROW(PointCloud(1, 100), std::runtime_error);
