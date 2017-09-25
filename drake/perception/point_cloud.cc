@@ -214,7 +214,9 @@ PointCloud::PointCloud(const PointCloud& other,
                        const pc_flags::ExtraType& extra_type)
     : PointCloud(other.size(),
                  ResolveFields(other, copy_fields),
-                 ResolveExtraType(other, copy_fields, extra_type)) {}
+                 ResolveExtraType(other, copy_fields, extra_type)) {
+  SetFrom(other);
+}
 
 PointCloud& PointCloud::operator=(const PointCloud& other) {
   SetFrom(other);

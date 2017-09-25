@@ -146,15 +146,23 @@ class PointCloud {
   /// @param new_size
   ///   Size of the point cloud after construction.
   /// @param fields
-  ///   Fields (fields) that the point cloud contains.
+  ///   Fields that the point cloud contains.
   /// @param extra
+  ///   Extra field types. @see ExtraType
   PointCloud(Index new_size,
              pc_flags::Fields fields = pc_flags::kXYZs,
              const pc_flags::ExtraType& extra_type = pc_flags::kExtraNone);
 
+  /// Copies another point cloud's fields and data.
   PointCloud(const PointCloud& other)
       : PointCloud(other, pc_flags::kInherit) {}
 
+  /// Copies another point cloud's fields and data.
+  /// @param copy_fields
+  ///   Fields to copy. If this is `kInherit`, then `other`s fields will be
+  ///   copied.
+  /// @param extra_type
+  ///   Extra type to copy. Must
   // Do not define a default argument for `copy_fields` so that this is
   // not ambiguous w.r.t. the copy constructor.
   PointCloud(const PointCloud& other,
