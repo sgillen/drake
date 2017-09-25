@@ -18,7 +18,22 @@ namespace perception {
 
 namespace point_cloud_flags {
 
-}
+/// Indicates the data the point cloud stores.
+enum Capability : int {
+  /// Inherit other capabilities. May imply an intersection of all
+  /// compatible extras.
+  kInherit = 0,
+  /// XYZ point in Cartesian space.
+  kXYZs = 1 << 0,
+  /// Colors, in RGBA.
+  kColors = 1 << 1,
+  /// Normals.
+  kNormals = 1 << 2,
+  /// Extras, whose type (and structure) is specified by `ExtraType`.
+  kExtras = 1 << 3,
+};
+typedef int CapabilitySet;
+
 /**
  * Describes a extra with a name and the extra's size.
  * @note This is defined as follows to enable an open set of extras, but
@@ -59,6 +74,13 @@ const ExtraType kExtraInherit(-1, "Inherit");
 const ExtraType kExtraCurvature(1, "Curvature");
 /// Point-extra-histogram extra.
 const ExtraType kExtraPFH(3, "PFH");
+
+/// Returns a human-friendly representation of a capability and extra set.
+std::string ToString(CapabilitySet c, const ExtraType &f);
+
+}  // namespace point_cloud_flags
+
+namespace pcf = point_cloud_flags;
 
 /**
  * Implements a point cloud (with contiguous storage), whose main goal is to
@@ -101,22 +123,6 @@ const ExtraType kExtraPFH(3, "PFH");
  */
 class PointCloud {
  public:
-  /// Indicates the data the point cloud stores.
-  enum Capability : int {
-    /// Inherit other capabilities. May imply an intersection of all
-    /// compatible extras.
-    kInherit = 0,
-    /// XYZ point in Cartesian space.
-    kXYZs = 1 << 0,
-    /// Colors, in RGBA.
-    kColors = 1 << 1,
-    /// Normals.
-    kNormals = 1 << 2,
-    /// Extras, whose type (and structure) is specified by `ExtraType`.
-    kExtras = 1 << 3,
-  };
-  typedef int CapabilitySet;
-
   /// Geometric scalar type (for xyz, normal, etc).
   typedef float T;
 
@@ -147,17 +153,17 @@ class PointCloud {
    * @param extra
    */
   PointCloud(Index new_size,
-             CapabilitySet capabilities = kXYZs,
-             const ExtraType& extra_type = kExtraNone);
+             pcf::CapabilitySet capabilities = pcf::kXYZs,
+             const pcf::ExtraType& extra_type = pcf::kExtraNone);
 
   PointCloud(const PointCloud& other)
-      : PointCloud(other, kInherit) {}
+      : PointCloud(other, pcf::kInherit) {}
 
   // Do not define a default argument for `copy_capabilities` so that this is
   // not ambiguous w.r.t. the copy constructor.
   PointCloud(const PointCloud& other,
-             CapabilitySet copy_capabilities,
-             const ExtraType& extra_type = kExtraInherit);
+             pcf::CapabilitySet copy_capabilities,
+             const pcf::ExtraType& extra_type = pcf::kExtraInherit);
 
   PointCloud& operator=(const PointCloud& other);
 
@@ -169,7 +175,7 @@ class PointCloud {
   /**
    * Returns the capabilities provided by this point cloud.
    */
-  CapabilitySet capabilities() const { return capabilities_; }
+  pcf::CapabilitySet capabilities() const { return capabilities_; }
 
   /**
    * Returns the number of points in this point cloud.
@@ -270,10 +276,10 @@ class PointCloud {
   bool has_extras() const;
 
   /// Returns if the point cloud provides a specific extra.
-  bool has_extras(const ExtraType& extra_type) const;
+  bool has_extras(const pcf::ExtraType& extra_type) const;
 
   /// Returns the extra type.
-  const ExtraType& extra_type() const { return extra_type_; }
+  const pcf::ExtraType& extra_type() const { return extra_type_; }
 
   /// Returns access to extra points.
   /// This method aborts if this point cloud does not provide extra points.
@@ -308,7 +314,7 @@ class PointCloud {
    */
   void SetFrom(
       const PointCloud& other,
-      CapabilitySet c = kInherit,
+      pcf::CapabilitySet c = pcf::kInherit,
       bool allow_resize = true);
 
   // TODO(eric.cousineau): Add indexed version.
@@ -330,7 +336,7 @@ class PointCloud {
    *    Capabilities to copy.
    *    @see SetFrom for how this functions.
    */
-  void AddPoints(const PointCloud& other, CapabilitySet c = kInherit);
+  void AddPoints(const PointCloud& other, pcf::CapabilitySet c = pcf::kInherit);
 
   /// @name Capabilities
   /// @{
@@ -339,30 +345,30 @@ class PointCloud {
   /// @pre If `kExtra` is not present in `c`, then `extra_type` must be
   /// `kExtraNone`. Otherwise, `extra_type` must be a valid extra.
   bool HasCapabilities(
-      CapabilitySet capability_set,
-      const ExtraType& extra_type = kExtraNone) const;
+      pcf::CapabilitySet capability_set,
+      const pcf::ExtraType& extra_type = pcf::kExtraNone) const;
 
   /// Requires a given set of capabilities.
   /// @see HasCapabilities for preconditions.
   /// @throws std::runtime_error if this point cloud does not have these
   /// capabilities.
   void RequireCapabilities(
-      CapabilitySet capability_set,
-      const ExtraType& extra_type = kExtraNone) const;
+      pcf::CapabilitySet capability_set,
+      const pcf::ExtraType& extra_type = pcf::kExtraNone) const;
 
   /// Returns if a point cloud has exactly a given set of capabilities.
   /// @see HasCapabilities for preconditions.
   bool HasExactCapabilities(
-      CapabilitySet capability_set,
-      const ExtraType& extra_type = kExtraNone) const;
+      pcf::CapabilitySet capability_set,
+      const pcf::ExtraType& extra_type = pcf::kExtraNone) const;
 
   /// Requires the exact given set of capabilities.
   /// @see HasCapabilities for preconditions.
   /// @throws std::runtime_error if this point cloud does not have exactly
   /// these capabilities.
   void RequireExactCapabilities(
-      CapabilitySet capability_set,
-      const ExtraType& extra_type = kExtraNone) const;
+      pcf::CapabilitySet capability_set,
+      const pcf::ExtraType& extra_type = pcf::kExtraNone) const;
 
   /// @}
 
@@ -375,19 +381,17 @@ class PointCloud {
   // Size of the point cloud.
   int size_;
   // Represents which capabilities are enabled for this point cloud.
-  const CapabilitySet capabilities_{};
+  const pcf::CapabilitySet capabilities_{};
   // Extra type stored (if `has_extras()` is true; otherwise this should
   // be `kExtraNone`).
-  const ExtraType extra_type_{kExtraNone};
+  const pcf::ExtraType extra_type_{pcf::kExtraNone};
   // Storage used for the point cloud.
   std::unique_ptr<Storage> storage_;
 };
 
-/// Returns a human-friendly representation of a capability and extra set.
-std::string ToString(PointCloud::CapabilitySet c, const ExtraType &f);
-
 // TODO(eric.cousineau): Consider a way of reinterpret_cast<>ing the array
-// data to permit more semantic access to members, PCL-style.
+// data to permit more semantic access to members, PCL-style
+// (e.g. the reverse of PointCloud<>::getMatrixXfMap())
 // Need to ensure alignments are commensurate. Will only work with
 // homogeneous data (possibly with heterogeneous data, if strides can be
 // used).
