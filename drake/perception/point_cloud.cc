@@ -14,7 +14,7 @@ namespace {
 
 // Convenience aliases.
 typedef PointCloud::T T;
-typedef PointCloud::F F;
+typedef PointCloud::E F;
 constexpr int NC = PointCloud::NC;
 typedef PointCloud::C C;
 
@@ -353,11 +353,11 @@ bool PointCloud::has_extras() const {
 bool PointCloud::has_extras(const pc_flags::ExtraType& extra_type) const {
   return has_extras() && extra_type_ == extra_type;
 }
-Eigen::Ref<const MatrixX<F>> PointCloud::extras() const {
+Eigen::Ref<const MatrixX<E>> PointCloud::extras() const {
   DRAKE_DEMAND(has_extras());
   return storage_->extras();
 }
-Eigen::Ref<MatrixX<F>> PointCloud::mutable_extras() {
+Eigen::Ref<MatrixX<E>> PointCloud::mutable_extras() {
   DRAKE_DEMAND(has_extras());
   return storage_->extras();
 }

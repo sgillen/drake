@@ -35,11 +35,9 @@ enum Capability : int {
 };
 typedef int CapabilitySet;
 
-/**
- * Describes a extra with a name and the extra's size.
- * @note This is defined as follows to enable an open set of extras, but
- * ensure that extras are appropriately matched.
- */
+/// Describes a extra with a name and the extra's size.
+/// @note This is defined as follows to enable an open set of extras, but
+/// ensure that extras are appropriately matched.
 class ExtraType {
  public:
   ExtraType(int size, const std::string& name)
@@ -82,48 +80,46 @@ std::string ToString(CapabilitySet c, const ExtraType &f);
 }  // namespace pc_flags
 
 
-/**
- * Implements a point cloud (with contiguous storage), whose main goal is to
- * offer a convenient, synchronized interface to commonly used capabilities and
- * data types applicable for basic 3D perception.
- *
- * This is a mix between the philosophy of PCL (templated interface to
- * provide a compile-time open set, run-time closed set) and VTK (non-templated
- * interface to provide a very free form run-time open set).
- * You may construct one PointCloud which will contain different sets of
- * data, but you cannot change the contained data types after construction.
- * However, you can mutate the data contained within the structure and resize
- * the structure.
- *
- * Definitions:
- *  - point - An entry in a point cloud (not exclusively an XYZ point).
- *  - feature - Geometric information of a point.
- *  - descriptor - Non-geometric information of a point.
- *  - capability - A feature or descriptor described by the point cloud.
- *  - extra - Runtime-definable information (feature or descriptor) for a
- *  point.
- *
- * This point cloud class provides:
- *  - xyz - Cartesian XYZ coordinates (float[3]).
- *  - normal - Normals in Cartesian space (float[3]).
- *  - color - RGBA (uint8_t[4]). See ImageRgba8U.
- *  - extra - An open-set of capabilities (PFH, SHOT, etc) (float[X]).
- *
- * @note "contiguous" here means contiguous in memory. This was chosen to
- * avoid complications with PCL, where "dense" implies that the point cloud
- * corresponds to a depth image, and is indexed accordingly (a grid with
- * column-major storage).
- *
- * @note The accessors / mutators for the point fields of this class returns
- * references to the original Eigen matrices. This implies that they are
- * invalidated whenever memory is reallocated for the values. Given this,
- * minimize the lifetime of these references to be as short as possible.
- * Additionally, algorithms wanting fast access to values should avoid the
- * single point accessors (e.g. `xyz(i), color(i)`).
- */
+/// Implements a point cloud (with contiguous storage), whose main goal is to
+/// offer a convenient, synchronized interface to commonly used capabilities and
+/// data types applicable for basic 3D perception.
+///
+/// This is a mix between the philosophy of PCL (templated interface to
+/// provide a compile-time open set, run-time closed set) and VTK (non-templated
+/// interface to provide a very free form run-time open set).
+/// You may construct one PointCloud which will contain different sets of
+/// data, but you cannot change the contained data types after construction.
+/// However, you can mutate the data contained within the structure and resize
+/// the structure.
+///
+/// Definitions:
+///  - point - An entry in a point cloud (not exclusively an XYZ point).
+///  - feature - Geometric information of a point.
+///  - descriptor - Non-geometric information of a point.
+///  - capability - A feature or descriptor described by the point cloud.
+///  - extra - Runtime-definable information (feature or descriptor) for a
+///  point.
+///
+/// This point cloud class provides:
+///  - xyz - Cartesian XYZ coordinates (float[3]).
+///  - normal - Normals in Cartesian space (float[3]).
+///  - color - RGBA (uint8_t[4]). See ImageRgba8U.
+///  - extra - An open-set of capabilities (PFH, SHOT, etc) (float[X]).
+///
+/// @note "contiguous" here means contiguous in memory. This was chosen to
+/// avoid complications with PCL, where "dense" implies that the point cloud
+/// corresponds to a depth image, and is indexed accordingly (a grid with
+/// column-major storage).
+///
+/// @note The accessors / mutators for the point fields of this class returns
+/// references to the original Eigen matrices. This implies that they are
+/// invalidated whenever memory is reallocated for the values. Given this,
+/// minimize the lifetime of these references to be as short as possible.
+/// Additionally, algorithms wanting fast access to values should avoid the
+/// single point accessors (e.g. `xyz(i)`, `color(i)`).
 class PointCloud {
  public:
-  /// Geometric scalar type (for xyz, normal, etc).
+  /// Geometric scalar type.
   typedef float T;
 
   /// Represents an invalid or uninitialized value.
@@ -139,19 +135,19 @@ class PointCloud {
   static constexpr C kDefaultColor = 0;
 
   /// Extra scalar type.
-  typedef T F;
+  typedef T E;
   /// Index type.
   typedef int Index;
   typedef std::vector<int> Indices;
 
-  /**
-   * Constructs a point cloud of a given `new_size`, with the prescribed
-   * `capabilities`. If `kExtras` is one of the capabilities, then
-   * `extra` should included and should not be `kNone`.
-   * @param new_size
-   * @param capabilities
-   * @param extra
-   */
+  /// Constructs a point cloud of a given `new_size`, with the prescribed
+  /// `capabilities`. If `kExtras` is one of the capabilities, then
+  /// `extra` should included and should not be `kNone`.
+  /// @param new_size
+  ///   Size of the point cloud after construction.
+  /// @param capabilities
+  ///   Capabilities (fields) that the point cloud contains.
+  /// @param extra
   PointCloud(Index new_size,
              pc_flags::CapabilitySet capabilities = pc_flags::kXYZs,
              const pc_flags::ExtraType& extra_type = pc_flags::kExtraNone);
@@ -284,11 +280,11 @@ class PointCloud {
 
   /// Returns access to extra points.
   /// This method aborts if this point cloud does not provide extra points.
-  Eigen::Ref<const MatrixX<F>> extras() const;
+  Eigen::Ref<const MatrixX<E>> extras() const;
 
   /// Returns mutable access to extra points.
   /// This method aborts if this point cloud does not provide extra points.
-  Eigen::Ref<MatrixX<F>> mutable_extras();
+  Eigen::Ref<MatrixX<E>> mutable_extras();
 
   /// Returns access to a extra point.
   /// This method aborts if this cloud does not provide extra points.
