@@ -53,7 +53,7 @@ GTEST_TEST(PointCloudTest, Basic) {
   const int count = 5;
 
   auto CheckFields = [count](auto fields_expected, PointCloud::CapabilitySet c,
-                             const FeatureType& feature_type,
+                             const ExtraType& feature_type,
                              auto mutable_fields, auto fields,
                              auto mutable_field, auto field) {
     PointCloud cloud(count, c, feature_type);
@@ -120,7 +120,7 @@ GTEST_TEST(PointCloudTest, Basic) {
     100, 200, 300,
     4, 5, 6,
     40, 50, 60;
-  CheckFields(xyzs_expected, PointCloud::kXYZs, kFeatureNone,
+  CheckFields(xyzs_expected, PointCloud::kXYZs, kExtraNone,
               [](PointCloud& cloud) { return cloud.mutable_xyzs(); },
               [](PointCloud& cloud) { return cloud.xyzs(); },
               [](PointCloud& cloud, int i) { return cloud.mutable_xyz(i); },
@@ -134,7 +134,7 @@ GTEST_TEST(PointCloudTest, Basic) {
     110, 120, 130, 140,
     5, 6, 7, 8,
     150, 160, 170, 180;
-  CheckFields(colors_expected, PointCloud::kColors, kFeatureNone,
+  CheckFields(colors_expected, PointCloud::kColors, kExtraNone,
               [](PointCloud& cloud) { return cloud.mutable_colors(); },
               [](PointCloud& cloud) { return cloud.colors(); },
               [](PointCloud& cloud, int i) { return cloud.mutable_color(i); },
@@ -148,7 +148,7 @@ GTEST_TEST(PointCloudTest, Basic) {
     100, 200, 300,
     4, 5, 6,
     40, 50, 60;
-  CheckFields(normals_expected, PointCloud::kNormals, kFeatureNone,
+  CheckFields(normals_expected, PointCloud::kNormals, kExtraNone,
               [](PointCloud& cloud) { return cloud.mutable_normals(); },
               [](PointCloud& cloud) { return cloud.normals(); },
               [](PointCloud& cloud, int i) { return cloud.mutable_normal(i); },
@@ -162,18 +162,18 @@ GTEST_TEST(PointCloudTest, Basic) {
     100, 200, 300,
     4, 5, 6,
     40, 50, 60;
-  CheckFields(features_expected, PointCloud::kFeatures, kFeaturePFH,
-              [](PointCloud& cloud) { return cloud.mutable_features(); },
-              [](PointCloud& cloud) { return cloud.features(); },
-              [](PointCloud& cloud, int i) { return cloud.mutable_feature(i); },
-              [](PointCloud& cloud, int i) { return cloud.feature(i); });
+  CheckFields(features_expected, PointCloud::kFeatures, kExtraPFH,
+              [](PointCloud& cloud) { return cloud.mutable_extras(); },
+              [](PointCloud& cloud) { return cloud.extras(); },
+              [](PointCloud& cloud, int i) { return cloud.mutable_extra(i); },
+              [](PointCloud& cloud, int i) { return cloud.extra(i); });
 }
 
 GTEST_TEST(PointCloudTest, Capabilities) {
   // Check human-friendly formatting.
   EXPECT_EQ("(kXYZs | kNormals | kFeatures::Curvature)",
             ToString(PointCloud::kXYZs | PointCloud::kNormals |
-                     PointCloud::kFeatures, kFeatureCurvature));
+                     PointCloud::kFeatures, kExtraCurvature));
 
   // Check zero-size.
   {
@@ -210,22 +210,22 @@ GTEST_TEST(PointCloudTest, Capabilities) {
     EXPECT_THROW(PointCloud(1, -100), std::runtime_error);
   }
 
-  // Check with features.
+  // Check with extras.
   {
-    PointCloud cloud(1, PointCloud::kFeatures, kFeatureCurvature);
-    EXPECT_TRUE(cloud.has_features());
-    EXPECT_TRUE(cloud.has_features(kFeatureCurvature));
-    EXPECT_FALSE(cloud.has_features(kFeaturePFH));
+    PointCloud cloud(1, PointCloud::kFeatures, kExtraCurvature);
+    EXPECT_TRUE(cloud.has_extras());
+    EXPECT_TRUE(cloud.has_extras(kExtraCurvature));
+    EXPECT_FALSE(cloud.has_extras(kExtraPFH));
 
-    // Negative tests for `has_features`.
+    // Negative tests for `has_extras`.
     PointCloud simple_cloud(1, PointCloud::kXYZs);
-    EXPECT_FALSE(simple_cloud.has_features());
-    EXPECT_FALSE(simple_cloud.has_features(kFeatureCurvature));
+    EXPECT_FALSE(simple_cloud.has_extras());
+    EXPECT_FALSE(simple_cloud.has_extras(kExtraCurvature));
 
     // Negative tests for construction.
-    EXPECT_THROW(PointCloud(1, PointCloud::kFeatures, kFeatureNone),
+    EXPECT_THROW(PointCloud(1, PointCloud::kFeatures, kExtraNone),
                  std::runtime_error);
-    EXPECT_THROW(PointCloud(1, PointCloud::kXYZs, kFeatureCurvature),
+    EXPECT_THROW(PointCloud(1, PointCloud::kXYZs, kExtraCurvature),
                  std::runtime_error);
   }
 }

@@ -21,20 +21,20 @@ namespace perception {
  * @note This is defined as follows to enable an open set of features, but
  * ensure that features are appropriately matched.
  */
-class FeatureType {
+class ExtraType {
  public:
-  DRAKE_DEFAULT_COPY_AND_MOVE_AND_ASSIGN(FeatureType)
+  DRAKE_DEFAULT_COPY_AND_MOVE_AND_ASSIGN(ExtraType)
 
-  FeatureType(int size, const std::string& name)
+  ExtraType(int size, const std::string& name)
     : size_(size),
       name_(name) {}
 
   inline int size() const { return size_; }
   inline const std::string& name() const { return name_; }
-  inline bool operator==(const FeatureType& other) const {
+  inline bool operator==(const ExtraType& other) const {
     return size_ == other.size_ && name_ == other.name_;
   }
-  inline bool operator!=(const FeatureType& other) const {
+  inline bool operator!=(const ExtraType& other) const {
     return !(*this == other);
   }
  private:
@@ -43,13 +43,13 @@ class FeatureType {
 };
 
 /// No feature.
-const FeatureType kFeatureNone(0, "None");
+const ExtraType kExtraNone(0, "None");
 /// Inherited feature.
-const FeatureType kFeatureInherit(-1, "Inherit");
+const ExtraType kExtraInherit(-1, "Inherit");
 /// Curvature.
-const FeatureType kFeatureCurvature(1, "Curvature");
+const ExtraType kExtraCurvature(1, "Curvature");
 /// Point-feature-histogram feature.
-const FeatureType kFeaturePFH(3, "PFH");
+const ExtraType kExtraPFH(3, "PFH");
 
 /**
  * Implements a point cloud (with contiguous storage), whose main goal is to
@@ -64,14 +64,19 @@ const FeatureType kFeaturePFH(3, "PFH");
  * However, you can mutate the data contained within the structure and resize
  * the structure.
  *
+ * Definitions:
+ *  - point - An entry in a point cloud (not exclusively an XYZ point).
+ *  - feature - Geometric information of a point.
+ *  - descriptor - Non-geometric information of a point.
+ *  - capability - A feature or descriptor described by the point cloud.
+ *  - extra - Runtime-definable information (feature or descriptor) for a
+ *  point.
+ *
  * This point cloud class provides:
  *  - xyz - Cartesian XYZ coordinates (float[3]).
- *  - color - RGBA (uint8_t[4]). See ImageRgba8U.
  *  - normal - Normals in Cartesian space (float[3]).
- *  - feature - An open-set of features (PFH, SHOT, etc) (float[X]).
- *
- * @note "point" in this case means an entry in the point cloud, not solely
- * an XYZ point.
+ *  - color - RGBA (uint8_t[4]). See ImageRgba8U.
+ *  - extra - An open-set of capabilities (PFH, SHOT, etc) (float[X]).
  *
  * @note "contiguous" here means contiguous in memory. This was chosen to
  * avoid complications with PCL, where "dense" implies that the point cloud
@@ -136,11 +141,11 @@ class PointCloud {
    */
   PointCloud(Index new_size,
              CapabilitySet capabilities = kXYZs,
-             const FeatureType& feature_type = kFeatureNone);
+             const ExtraType& feature_type = kExtraNone);
 
   PointCloud(const PointCloud& other,
              CapabilitySet copy_capabilities = kInherit,
-             const FeatureType& feature_type = kFeatureInherit);
+             const ExtraType& feature_type = kExtraInherit);
 
   ~PointCloud();
 
@@ -237,30 +242,30 @@ class PointCloud {
 
 
   /// Returns if this point cloud provides feature points.
-  bool has_features() const;
+  bool has_extras() const;
 
   /// Returns if the point cloud provides a specific feature.
-  bool has_features(const FeatureType& feature_type) const;
+  bool has_extras(const ExtraType& extra_type) const;
 
   /// Returns the feature type.
-  const FeatureType& feature_type() const { return feature_type_; }
+  const ExtraType& extra_type() const { return extra_type_; }
 
   /// Returns access to feature points.
   /// This method aborts if this point cloud does not provide feature points.
-  Eigen::Ref<const MatrixX<F>> features() const;
+  Eigen::Ref<const MatrixX<F>> extras() const;
 
   /// Returns mutable access to feature points.
   /// This method aborts if this point cloud does not provide feature points.
-  Eigen::Ref<MatrixX<F>> mutable_features();
+  Eigen::Ref<MatrixX<F>> mutable_extras();
 
   /// Returns access to a feature point.
   /// This method aborts if this cloud does not provide feature points.
-  Vector3<T> feature(Index i) const { return features().col(i); }
+  Vector3<T> extra(Index i) const { return extras().col(i); }
 
   /// Returns mutable access to a feature point.
   /// This method aborts if this cloud does not provide feature points.
-  Eigen::Ref<VectorX<T>> mutable_feature(Index i) {
-    return mutable_features().col(i);
+  Eigen::Ref<VectorX<T>> mutable_extra(Index i) {
+    return mutable_extras().col(i);
   }
 
   /**
@@ -305,7 +310,7 @@ class PointCloud {
   /// `kFeatureNone`. Otherwise, `feature_type` must be a valid feature.
   bool HasCapabilities(
       CapabilitySet c,
-      const FeatureType& feature_type = kFeatureNone) const;
+      const ExtraType& feature_type = kExtraNone) const;
 
   /// Requires a given set of capabilities.
   /// @see HasCapabilities for preconditions.
@@ -313,13 +318,13 @@ class PointCloud {
   /// capabilities.
   void RequireCapabilities(
       CapabilitySet c,
-      const FeatureType& feature_type = kFeatureNone) const;
+      const ExtraType& feature_type = kExtraNone) const;
 
   /// Returns if a point cloud has exactly a given set of capabilities.
   /// @see HasCapabilities for preconditions.
   bool HasExactCapabilities(
       CapabilitySet c,
-      const FeatureType& feature_type = kFeatureNone) const;
+      const ExtraType& feature_type = kExtraNone) const;
 
   /// Requires the exact given set of capabilities.
   /// @see HasCapabilities for preconditions.
@@ -327,7 +332,7 @@ class PointCloud {
   /// these capabilities.
   void RequireExactCapabilities(
       CapabilitySet c,
-      const FeatureType& feature_type = kFeatureNone) const;
+      const ExtraType& feature_type = kExtraNone) const;
 
  private:
   void SetDefault(int start, int num);
@@ -339,15 +344,15 @@ class PointCloud {
   int size_;
   // Represents which capabilities are enabled for this point cloud.
   CapabilitySet capabilities_;
-  // Feature type stored (if `has_features()` is true; otherwise this should
-  // be `kFeatureNone`).
-  FeatureType feature_type_;
+  // Feature type stored (if `has_extras()` is true; otherwise this should
+  // be `kExtraNone`).
+  ExtraType extra_type_;
   // Storage used for the point cloud.
   copyable_unique_ptr<Storage> storage_;
 };
 
 /// Returns a human-friendly representation of a capability and feature set.
-std::string ToString(PointCloud::CapabilitySet c, const FeatureType &f);
+std::string ToString(PointCloud::CapabilitySet c, const ExtraType &f);
 
 // TODO(eric.cousineau): Consider a way of reinterpret_cast<>ing the array
 // data to permit more semantic access to members, PCL-style.

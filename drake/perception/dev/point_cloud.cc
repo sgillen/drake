@@ -33,7 +33,7 @@ std::string join(const std::vector<std::string>& elements,
 // Convert a PointCloud's set of capabilities to a string vector (for use
 // with `ToString`).
 std::vector<std::string> ToStringVector(
-    PointCloud::CapabilitySet c, const FeatureType& feature_type) {
+    PointCloud::CapabilitySet c, const ExtraType& feature_type) {
   std::vector<std::string> out;
   if (c & PointCloud::kXYZs)
     out.push_back("kXYZs");
@@ -53,7 +53,7 @@ class PointCloud::Storage {
  public:
   DRAKE_DEFAULT_COPY_AND_MOVE_AND_ASSIGN(Storage)
 
-  Storage(int new_size, CapabilitySet& c, const FeatureType&)
+  Storage(int new_size, CapabilitySet& c, const ExtraType&)
       : capabilities_(c) {
     resize(new_size);
   }
@@ -129,17 +129,17 @@ PointCloud::CapabilitySet ResolveCapabilities(
   }
 }
 
-// If kFeatureInherit is used, then we take on the other's type is used.
-// If another feature is used, and we wish to copy the other's features,
+// If kExtraInherit is used, then we take on the other's type is used.
+// If another extra is used, and we wish to copy the other's extras,
 // ensure they are compatible.
-FeatureType ResolveFeatureType(const PointCloud& other,
+ExtraType ResolveFeatureType(const PointCloud& other,
                                PointCloud::CapabilitySet capabilities,
-                               const FeatureType& feature_type) {
-  if (feature_type == kFeatureInherit) {
-    return other.feature_type();
+                               const ExtraType& feature_type) {
+  if (feature_type == kExtraInherit) {
+    return other.extra_type();
   } else {
     if (capabilities & PointCloud::kFeatures) {
-      DRAKE_DEMAND(feature_type == other.feature_type());
+      DRAKE_DEMAND(feature_type == other.extra_type());
     }
     return feature_type;
   }
@@ -148,7 +148,7 @@ FeatureType ResolveFeatureType(const PointCloud& other,
 // Implements the rules set forth in `SetFrom`.
 // @pre Valid point clouds `a` and `b`.
 // @post The returned capabilities will be valid for both point clouds. If
-//   `c` enables features, then the feature type will be shared by both point
+//   `c` enables extras, then the extra type will be shared by both point
 //   clouds.
 PointCloud::CapabilitySet ResolveCapabilities(
     const PointCloud& a,
@@ -156,11 +156,11 @@ PointCloud::CapabilitySet ResolveCapabilities(
     PointCloud::CapabilitySet capabilities) {
   if (capabilities == PointCloud::kInherit) {
     // If we do not permit a subset, expect the exact same capabilities.
-    a.RequireExactCapabilities(b.capabilities(), b.feature_type());
+    a.RequireExactCapabilities(b.capabilities(), b.extra_type());
     return a.capabilities();
   } else {
-    FeatureType f = (capabilities & PointCloud::kFeatures) ? a.feature_type()
-                                                           : kFeatureNone;
+    ExtraType f = (capabilities & PointCloud::kFeatures) ? a.extra_type()
+                                                           : kExtraNone;
     a.RequireCapabilities(capabilities, f);
     b.RequireCapabilities(capabilities, f);
     return capabilities;
@@ -169,30 +169,30 @@ PointCloud::CapabilitySet ResolveCapabilities(
 
 }  // namespace
 
-std::string ToString(PointCloud::CapabilitySet c, const FeatureType& f) {
+std::string ToString(PointCloud::CapabilitySet c, const ExtraType& f) {
   return "(" + join(ToStringVector(c, f), " | ") + ")";
 }
 
 PointCloud::PointCloud(
     PointCloud::Index new_size,
     PointCloud::CapabilitySet capabilities,
-    const FeatureType& feature_type)
+    const ExtraType& feature_type)
     : size_(new_size),
       capabilities_(capabilities),
-      feature_type_(feature_type) {
+      extra_type_(feature_type) {
   ValidateCapabilities(capabilities_);
   if (capabilities_ & PointCloud::kInherit)
     throw std::runtime_error("Cannot construct a PointCloud with kInherit");
-  if (feature_type == kFeatureInherit)
+  if (feature_type == kExtraInherit)
     throw std::runtime_error(
-        "Cannot construct a PointCloud with kFeatureInherit");
-  if (has_features()) {
-    if (feature_type_ == kFeatureNone)
-      throw std::runtime_error("Cannot specify kFeatureNone with kFeatures");
+        "Cannot construct a PointCloud with kExtraInherit");
+  if (has_extras()) {
+    if (extra_type_ == kExtraNone)
+      throw std::runtime_error("Cannot specify kExtraNone with kFeatures");
   }
-  else if (feature_type != kFeatureNone)
+  else if (feature_type != kExtraNone)
     throw std::runtime_error(
-        "Must specify kFeatureNone if kFeatures is not present");
+        "Must specify kExtraNone if kFeatures is not present");
 
   storage_.reset(new Storage(new_size, capabilities, feature_type));
   SetDefault(0, size_);
@@ -200,7 +200,7 @@ PointCloud::PointCloud(
 
 PointCloud::PointCloud(const PointCloud& other,
                        PointCloud::CapabilitySet copy_capabilities,
-                       const FeatureType& feature_type)
+                       const ExtraType& feature_type)
     : PointCloud(other.size(),
                  ResolveCapabilities(other, copy_capabilities),
                  ResolveFeatureType(other, copy_capabilities, feature_type)) {}
@@ -233,8 +233,8 @@ void PointCloud::SetDefault(int start, int num) {
   if (has_normals()) {
     set(mutable_normals(), kDefaultValue);
   }
-  if (has_features()) {
-    set(mutable_features(), kDefaultValue);
+  if (has_extras()) {
+    set(mutable_extras(), kDefaultValue);
   }
 }
 
@@ -260,7 +260,7 @@ void PointCloud::SetFrom(const PointCloud& other,
     mutable_normals() = other.normals();
   }
   if (c_final & kFeatures) {
-    mutable_features() = other.features();
+    mutable_extras() = other.extras();
   }
 }
 
@@ -291,7 +291,7 @@ void PointCloud::AddPoints(const PointCloud& other, CapabilitySet c) {
     fresh_block(mutable_colors()) = other.colors();
   }
   if (c & kFeatures) {
-    fresh_block(mutable_features()) = other.features();
+    fresh_block(mutable_extras()) = other.extras();
   }
 }
 
@@ -331,36 +331,36 @@ Eigen::Ref<Matrix3X<T>> PointCloud::mutable_normals() {
   return storage_->normals();
 }
 
-bool PointCloud::has_features() const {
+bool PointCloud::has_extras() const {
   return capabilities_ & kFeatures;
 }
-bool PointCloud::has_features(const FeatureType& feature_type) const {
-  return has_features() && feature_type_ == feature_type;
+bool PointCloud::has_extras(const ExtraType& feature_type) const {
+  return has_extras() && extra_type_ == feature_type;
 }
-Eigen::Ref<const MatrixX<F>> PointCloud::features() const {
-  DRAKE_DEMAND(has_features());
+Eigen::Ref<const MatrixX<F>> PointCloud::extras() const {
+  DRAKE_DEMAND(has_extras());
   return storage_->features();
 }
-Eigen::Ref<MatrixX<F>> PointCloud::mutable_features() {
-  DRAKE_DEMAND(has_features());
+Eigen::Ref<MatrixX<F>> PointCloud::mutable_extras() {
+  DRAKE_DEMAND(has_extras());
   return storage_->features();
 }
 
 bool PointCloud::HasCapabilities(
     PointCloud::CapabilitySet c,
-    const FeatureType& f) const {
+    const ExtraType& f) const {
   bool good = true;
   if ((capabilities() & c) != c) {
     good = false;
   } else {
     if (c & PointCloud::kFeatures) {
-      DRAKE_DEMAND(f != kFeatureNone);
-      DRAKE_DEMAND(f != kFeatureInherit);
-      if (feature_type() != f) {
+      DRAKE_DEMAND(f != kExtraNone);
+      DRAKE_DEMAND(f != kExtraInherit);
+      if (extra_type() != f) {
         good = false;
       }
     } else {
-      DRAKE_DEMAND(f == kFeatureNone);
+      DRAKE_DEMAND(f == kExtraNone);
     }
   }
   return good;
@@ -368,31 +368,31 @@ bool PointCloud::HasCapabilities(
 
 void PointCloud::RequireCapabilities(
     CapabilitySet c,
-    const FeatureType& f) const {
+    const ExtraType& f) const {
   if (!HasCapabilities(c, f)) {
     throw std::runtime_error(
         fmt::format("PointCloud does not have expected capabilities.\n"
                     "Expected {}, got {}",
                     ToString(c, f),
-                    ToString(capabilities(), feature_type())));
+                    ToString(capabilities(), extra_type())));
   }
 }
 
 bool PointCloud::HasExactCapabilities(
       CapabilitySet c,
-      const FeatureType& f) const {
+      const ExtraType& f) const {
   return HasCapabilities(c, f) && capabilities() == c;
 }
 
 void PointCloud::RequireExactCapabilities(
     CapabilitySet c,
-    const FeatureType& f) const {
+    const ExtraType& f) const {
   if (!HasExactCapabilities(c, f)) {
     throw std::runtime_error(
         fmt::format("PointCloud does not have the exact expected capabilities."
                     "\nExpected {}, got {}",
                     ToString(c, f),
-                    ToString(capabilities(), feature_type())));
+                    ToString(capabilities(), extra_type())));
   }
 }
 
