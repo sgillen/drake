@@ -122,10 +122,6 @@ class PointCloud final {
   /// Geometric scalar type.
   typedef float T;
 
-  /// Represents an invalid or uninitialized value.
-  static constexpr T kDefaultValue = std::numeric_limits<T>::quiet_NaN();
-  static inline bool IsInvalidValue(T value) { return std::isnan(value); }
-
   typedef systems::sensors::ImageTraits<systems::sensors::PixelType::kRgba8U>
           ImageTraits;
   /// Color scalar type. Channels are assumed to be RGBA only.
@@ -137,8 +133,9 @@ class PointCloud final {
   /// Extra scalar type.
   typedef T E;
 
-  /// Index type.
-  typedef int Index;
+  /// Represents an invalid or uninitialized value.
+  static constexpr T kDefaultValue = std::numeric_limits<T>::quiet_NaN();
+  static inline bool IsInvalidValue(T value) { return std::isnan(value); }
 
   /// Constructs a point cloud of a given `new_size`, with the prescribed
   /// `fields`. If `kExtras` is one of the fields, then
@@ -149,7 +146,7 @@ class PointCloud final {
   ///   Fields that the point cloud contains.
   /// @param extra
   ///   Extra field types. @see ExtraType
-  PointCloud(Index new_size,
+  PointCloud(int new_size,
              pc_flags::Fields fields = pc_flags::kXYZs,
              const pc_flags::ExtraType& extra_type = pc_flags::kExtraNone);
 
@@ -180,7 +177,7 @@ class PointCloud final {
   pc_flags::Fields fields() const { return fields_; }
 
   /// Returns the number of points in this point cloud.
-  Index size() const { return size_; }
+  int size() const { return size_; }
 
   /// Conservative resize; will maintain existing data, and initialize new
   /// data to their invalid values.
@@ -191,7 +188,7 @@ class PointCloud final {
   ///    true.
   /// @param skip_initialize
   ///    Do not default-initialize new values.
-  void resize(Index new_size, bool skip_initialize = false);
+  void resize(int new_size, bool skip_initialize = false);
 
 
   /// @name Features (Geometric)
@@ -210,11 +207,11 @@ class PointCloud final {
 
   /// Returns access to a XYZ point.
   /// This method aborts if this cloud does not provide XYZ points.
-  Vector3<T> xyz(Index i) const { return xyzs().col(i); }
+  Vector3<T> xyz(int i) const { return xyzs().col(i); }
 
   /// Returns mutable access to a XYZ point.
   /// This method aborts if this cloud does not provide XYZ points.
-  Eigen::Ref<Vector3<T>> mutable_xyz(Index i) {
+  Eigen::Ref<Vector3<T>> mutable_xyz(int i) {
     return mutable_xyzs().col(i);
   }
 
@@ -232,11 +229,11 @@ class PointCloud final {
 
   /// Returns access to a normal point.
   /// This method aborts if this cloud does not provide normal points.
-  Vector3<T> normal(Index i) const { return normals().col(i); }
+  Vector3<T> normal(int i) const { return normals().col(i); }
 
   /// Returns mutable access to a normal point.
   /// This method aborts if this cloud does not provide normal points.
-  Eigen::Ref<Vector3<T>> mutable_normal(Index i) {
+  Eigen::Ref<Vector3<T>> mutable_normal(int i) {
     return mutable_normals().col(i);
   }
 
@@ -258,11 +255,11 @@ class PointCloud final {
 
   /// Returns access to a color point.
   /// This method aborts if this cloud does not provide color points.
-  VectorN<NC, C> color(Index i) const { return colors().col(i); }
+  VectorN<NC, C> color(int i) const { return colors().col(i); }
 
   /// Returns mutable access to a color point.
   /// This method aborts if this cloud does not provide color points.
-  Eigen::Ref<VectorN<NC, C>> mutable_color(Index i) {
+  Eigen::Ref<VectorN<NC, C>> mutable_color(int i) {
     return mutable_colors().col(i);
   };
 
@@ -290,11 +287,11 @@ class PointCloud final {
 
   /// Returns access to a extra point.
   /// This method aborts if this cloud does not provide extra points.
-  Vector3<T> extra(Index i) const { return extras().col(i); }
+  Vector3<T> extra(int i) const { return extras().col(i); }
 
   /// Returns mutable access to a extra point.
   /// This method aborts if this cloud does not provide extra points.
-  Eigen::Ref<VectorX<T>> mutable_extra(Index i) {
+  Eigen::Ref<VectorX<T>> mutable_extra(int i) {
     return mutable_extras().col(i);
   }
 
@@ -332,7 +329,7 @@ class PointCloud final {
   /// @param c
   ///    Fields to copy.
   ///    @see SetFrom for how this functions.
-  void AddPoints(const PointCloud& other, pc_flags::Fields c = pc_flags::kInherit);
+  void AddFrom(const PointCloud& other, pc_flags::Fields c = pc_flags::kInherit);
 
   /// @}
 

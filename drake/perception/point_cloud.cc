@@ -187,7 +187,7 @@ pc_flags::Fields ResolveFields(
 }  // namespace
 
 PointCloud::PointCloud(
-    PointCloud::Index new_size,
+    PointCloud::int new_size,
     pc_flags::Fields fields,
     const pc_flags::ExtraType& extra_type)
     : size_(new_size),
@@ -228,7 +228,7 @@ PointCloud& PointCloud::operator=(const PointCloud& other) {
 // Define destructor here to use complete definition of `Storage`.
 PointCloud::~PointCloud() {}
 
-void PointCloud::resize(PointCloud::Index new_size, bool skip_initialization) {
+void PointCloud::resize(PointCloud::int new_size, bool skip_initialization) {
   DRAKE_DEMAND(new_size >= 0);
   int old_size = size();
   size_ = new_size;
