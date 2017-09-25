@@ -17,9 +17,9 @@ namespace drake {
 namespace perception {
 
 /**
- * Describes a feature with a name and the feature's size.
- * @note This is defined as follows to enable an open set of features, but
- * ensure that features are appropriately matched.
+ * Describes a extra with a name and the extra's size.
+ * @note This is defined as follows to enable an open set of extras, but
+ * ensure that extras are appropriately matched.
  */
 class ExtraType {
  public:
@@ -42,13 +42,13 @@ class ExtraType {
   std::string name_;
 };
 
-/// No feature.
+/// No extra.
 const ExtraType kExtraNone(0, "None");
-/// Inherited feature.
+/// Inherited extra.
 const ExtraType kExtraInherit(-1, "Inherit");
 /// Curvature.
 const ExtraType kExtraCurvature(1, "Curvature");
-/// Point-feature-histogram feature.
+/// Point-extra-histogram extra.
 const ExtraType kExtraPFH(3, "PFH");
 
 /**
@@ -97,7 +97,7 @@ class PointCloud {
   /// Indicates the data the point cloud stores.
   enum Capability : int {
     /// Inherit other capabilities. May imply an intersection of all
-    /// compatible features.
+    /// compatible extras.
     kInherit = 0,
     /// XYZ point in Cartesian space.
     kXYZs = 1 << 0,
@@ -105,8 +105,8 @@ class PointCloud {
     kColors = 1 << 1,
     /// Normals.
     kNormals = 1 << 2,
-    /// Features, whose type (and structure) is specified by `FeatureType`.
-    kFeatures = 1 << 3,
+    /// Extras, whose type (and structure) is specified by `ExtraType`.
+    kExtras = 1 << 3,
   };
   typedef int CapabilitySet;
 
@@ -125,7 +125,7 @@ class PointCloud {
   static constexpr int NC = ImageTraits::kNumChannels;
   static constexpr C kDefaultColor = 0;
 
-  /// Feature scalar type.
+  /// Extra scalar type.
   typedef T F;
   /// Index type.
   typedef int Index;
@@ -133,19 +133,19 @@ class PointCloud {
 
   /**
    * Constructs a point cloud of a given `new_size`, with the prescribed
-   * `capabilities`. If `kFeatures` is one of the capabilities, then
-   * `feature` should included and should not be `kNone`.
+   * `capabilities`. If `kExtras` is one of the capabilities, then
+   * `extra` should included and should not be `kNone`.
    * @param new_size
    * @param capabilities
-   * @param feature
+   * @param extra
    */
   PointCloud(Index new_size,
              CapabilitySet capabilities = kXYZs,
-             const ExtraType& feature_type = kExtraNone);
+             const ExtraType& extra_type = kExtraNone);
 
   PointCloud(const PointCloud& other,
              CapabilitySet copy_capabilities = kInherit,
-             const ExtraType& feature_type = kExtraInherit);
+             const ExtraType& extra_type = kExtraInherit);
 
   ~PointCloud();
 
@@ -241,29 +241,29 @@ class PointCloud {
   }
 
 
-  /// Returns if this point cloud provides feature points.
+  /// Returns if this point cloud provides extra points.
   bool has_extras() const;
 
-  /// Returns if the point cloud provides a specific feature.
+  /// Returns if the point cloud provides a specific extra.
   bool has_extras(const ExtraType& extra_type) const;
 
-  /// Returns the feature type.
+  /// Returns the extra type.
   const ExtraType& extra_type() const { return extra_type_; }
 
-  /// Returns access to feature points.
-  /// This method aborts if this point cloud does not provide feature points.
+  /// Returns access to extra points.
+  /// This method aborts if this point cloud does not provide extra points.
   Eigen::Ref<const MatrixX<F>> extras() const;
 
-  /// Returns mutable access to feature points.
-  /// This method aborts if this point cloud does not provide feature points.
+  /// Returns mutable access to extra points.
+  /// This method aborts if this point cloud does not provide extra points.
   Eigen::Ref<MatrixX<F>> mutable_extras();
 
-  /// Returns access to a feature point.
-  /// This method aborts if this cloud does not provide feature points.
+  /// Returns access to a extra point.
+  /// This method aborts if this cloud does not provide extra points.
   Vector3<T> extra(Index i) const { return extras().col(i); }
 
-  /// Returns mutable access to a feature point.
-  /// This method aborts if this cloud does not provide feature points.
+  /// Returns mutable access to a extra point.
+  /// This method aborts if this cloud does not provide extra points.
   Eigen::Ref<VectorX<T>> mutable_extra(Index i) {
     return mutable_extras().col(i);
   }
@@ -306,11 +306,11 @@ class PointCloud {
   void AddPoints(const PointCloud& other, CapabilitySet c = kInherit);
 
   /// Returns if a point cloud has a given set of capabilities.
-  /// @pre If `kFeature` is not present in `c`, then `feature_type` must be
-  /// `kFeatureNone`. Otherwise, `feature_type` must be a valid feature.
+  /// @pre If `kExtra` is not present in `c`, then `extra_type` must be
+  /// `kExtraNone`. Otherwise, `extra_type` must be a valid extra.
   bool HasCapabilities(
       CapabilitySet c,
-      const ExtraType& feature_type = kExtraNone) const;
+      const ExtraType& extra_type = kExtraNone) const;
 
   /// Requires a given set of capabilities.
   /// @see HasCapabilities for preconditions.
@@ -318,13 +318,13 @@ class PointCloud {
   /// capabilities.
   void RequireCapabilities(
       CapabilitySet c,
-      const ExtraType& feature_type = kExtraNone) const;
+      const ExtraType& extra_type = kExtraNone) const;
 
   /// Returns if a point cloud has exactly a given set of capabilities.
   /// @see HasCapabilities for preconditions.
   bool HasExactCapabilities(
       CapabilitySet c,
-      const ExtraType& feature_type = kExtraNone) const;
+      const ExtraType& extra_type = kExtraNone) const;
 
   /// Requires the exact given set of capabilities.
   /// @see HasCapabilities for preconditions.
@@ -332,7 +332,7 @@ class PointCloud {
   /// these capabilities.
   void RequireExactCapabilities(
       CapabilitySet c,
-      const ExtraType& feature_type = kExtraNone) const;
+      const ExtraType& extra_type = kExtraNone) const;
 
  private:
   void SetDefault(int start, int num);
@@ -344,14 +344,14 @@ class PointCloud {
   int size_;
   // Represents which capabilities are enabled for this point cloud.
   CapabilitySet capabilities_;
-  // Feature type stored (if `has_extras()` is true; otherwise this should
+  // Extra type stored (if `has_extras()` is true; otherwise this should
   // be `kExtraNone`).
   ExtraType extra_type_;
   // Storage used for the point cloud.
   copyable_unique_ptr<Storage> storage_;
 };
 
-/// Returns a human-friendly representation of a capability and feature set.
+/// Returns a human-friendly representation of a capability and extra set.
 std::string ToString(PointCloud::CapabilitySet c, const ExtraType &f);
 
 // TODO(eric.cousineau): Consider a way of reinterpret_cast<>ing the array

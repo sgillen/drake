@@ -33,7 +33,7 @@ std::string join(const std::vector<std::string>& elements,
 // Convert a PointCloud's set of capabilities to a string vector (for use
 // with `ToString`).
 std::vector<std::string> ToStringVector(
-    PointCloud::CapabilitySet c, const ExtraType& feature_type) {
+    PointCloud::CapabilitySet c, const ExtraType& extra_type) {
   std::vector<std::string> out;
   if (c & PointCloud::kXYZs)
     out.push_back("kXYZs");
@@ -41,8 +41,8 @@ std::vector<std::string> ToStringVector(
       out.push_back("kColors");
   if (c & PointCloud::kNormals)
       out.push_back("kNormals");
-  if (c & PointCloud::kFeatures)
-      out.push_back("kFeatures::" + feature_type.name());
+  if (c & PointCloud::kExtras)
+      out.push_back("kExtras::" + extra_type.name());
   return out;
 }
 
@@ -70,15 +70,15 @@ class PointCloud::Storage {
       colors_.conservativeResize(NoChange, new_size);
     if (capabilities_ & kNormals)
       normals_.conservativeResize(NoChange, new_size);
-    if (capabilities_ & kFeatures)
-      features_.conservativeResize(NoChange, new_size);
+    if (capabilities_ & kExtras)
+      extras_.conservativeResize(NoChange, new_size);
     CheckInvariants();
   }
 
   Eigen::Ref<Matrix3X<T>> xyzs() { return xyzs_; }
   Eigen::Ref<MatrixNX<NC, C>> colors() { return colors_; }
   Eigen::Ref<Matrix3X<T>> normals() { return normals_; }
-  Eigen::Ref<MatrixX<T>> features() { return features_; }
+  Eigen::Ref<MatrixX<T>> extras() { return extras_; }
 
  private:
   void CheckInvariants() const {
@@ -94,9 +94,9 @@ class PointCloud::Storage {
       const int normal_size = normals_.cols();
       DRAKE_DEMAND(normal_size == size());
     }
-    if (capabilities_ & kFeatures) {
-      const int feature_size = features_.cols();
-      DRAKE_DEMAND(feature_size == size());
+    if (capabilities_ & kExtras) {
+      const int extra_size = extras_.cols();
+      DRAKE_DEMAND(extra_size == size());
     }
   }
 
@@ -105,7 +105,7 @@ class PointCloud::Storage {
   Matrix3X<T> xyzs_;
   MatrixNX<NC, C> colors_;
   Matrix3X<T> normals_;
-  MatrixX<T> features_;
+  MatrixX<T> extras_;
 };
 
 namespace {
@@ -114,7 +114,7 @@ namespace {
 void ValidateCapabilities(PointCloud::CapabilitySet c) {
   PointCloud::CapabilitySet full_mask =
       PointCloud::kXYZs | PointCloud::kNormals | PointCloud::kColors |
-          PointCloud::kFeatures;
+          PointCloud::kExtras;
   if (c <= 0 || c > full_mask) {
     throw std::runtime_error("Invalid CapabilitySet");
   }
@@ -132,16 +132,16 @@ PointCloud::CapabilitySet ResolveCapabilities(
 // If kExtraInherit is used, then we take on the other's type is used.
 // If another extra is used, and we wish to copy the other's extras,
 // ensure they are compatible.
-ExtraType ResolveFeatureType(const PointCloud& other,
+ExtraType ResolveExtraType(const PointCloud& other,
                                PointCloud::CapabilitySet capabilities,
-                               const ExtraType& feature_type) {
-  if (feature_type == kExtraInherit) {
+                               const ExtraType& extra_type) {
+  if (extra_type == kExtraInherit) {
     return other.extra_type();
   } else {
-    if (capabilities & PointCloud::kFeatures) {
-      DRAKE_DEMAND(feature_type == other.extra_type());
+    if (capabilities & PointCloud::kExtras) {
+      DRAKE_DEMAND(extra_type == other.extra_type());
     }
-    return feature_type;
+    return extra_type;
   }
 }
 
@@ -159,7 +159,7 @@ PointCloud::CapabilitySet ResolveCapabilities(
     a.RequireExactCapabilities(b.capabilities(), b.extra_type());
     return a.capabilities();
   } else {
-    ExtraType f = (capabilities & PointCloud::kFeatures) ? a.extra_type()
+    ExtraType f = (capabilities & PointCloud::kExtras) ? a.extra_type()
                                                            : kExtraNone;
     a.RequireCapabilities(capabilities, f);
     b.RequireCapabilities(capabilities, f);
@@ -176,34 +176,34 @@ std::string ToString(PointCloud::CapabilitySet c, const ExtraType& f) {
 PointCloud::PointCloud(
     PointCloud::Index new_size,
     PointCloud::CapabilitySet capabilities,
-    const ExtraType& feature_type)
+    const ExtraType& extra_type)
     : size_(new_size),
       capabilities_(capabilities),
-      extra_type_(feature_type) {
+      extra_type_(extra_type) {
   ValidateCapabilities(capabilities_);
   if (capabilities_ & PointCloud::kInherit)
     throw std::runtime_error("Cannot construct a PointCloud with kInherit");
-  if (feature_type == kExtraInherit)
+  if (extra_type == kExtraInherit)
     throw std::runtime_error(
         "Cannot construct a PointCloud with kExtraInherit");
   if (has_extras()) {
     if (extra_type_ == kExtraNone)
-      throw std::runtime_error("Cannot specify kExtraNone with kFeatures");
+      throw std::runtime_error("Cannot specify kExtraNone with kExtras");
   }
-  else if (feature_type != kExtraNone)
+  else if (extra_type != kExtraNone)
     throw std::runtime_error(
-        "Must specify kExtraNone if kFeatures is not present");
+        "Must specify kExtraNone if kExtras is not present");
 
-  storage_.reset(new Storage(new_size, capabilities, feature_type));
+  storage_.reset(new Storage(new_size, capabilities, extra_type));
   SetDefault(0, size_);
 }
 
 PointCloud::PointCloud(const PointCloud& other,
                        PointCloud::CapabilitySet copy_capabilities,
-                       const ExtraType& feature_type)
+                       const ExtraType& extra_type)
     : PointCloud(other.size(),
                  ResolveCapabilities(other, copy_capabilities),
-                 ResolveFeatureType(other, copy_capabilities, feature_type)) {}
+                 ResolveExtraType(other, copy_capabilities, extra_type)) {}
 
 // Define destructor here to use complete definition of `Storage`.
 PointCloud::~PointCloud() {}
@@ -259,7 +259,7 @@ void PointCloud::SetFrom(const PointCloud& other,
   if (c_final & kNormals) {
     mutable_normals() = other.normals();
   }
-  if (c_final & kFeatures) {
+  if (c_final & kExtras) {
     mutable_extras() = other.extras();
   }
 }
@@ -290,7 +290,7 @@ void PointCloud::AddPoints(const PointCloud& other, CapabilitySet c) {
   if (c & kColors) {
     fresh_block(mutable_colors()) = other.colors();
   }
-  if (c & kFeatures) {
+  if (c & kExtras) {
     fresh_block(mutable_extras()) = other.extras();
   }
 }
@@ -332,18 +332,18 @@ Eigen::Ref<Matrix3X<T>> PointCloud::mutable_normals() {
 }
 
 bool PointCloud::has_extras() const {
-  return capabilities_ & kFeatures;
+  return capabilities_ & kExtras;
 }
-bool PointCloud::has_extras(const ExtraType& feature_type) const {
-  return has_extras() && extra_type_ == feature_type;
+bool PointCloud::has_extras(const ExtraType& extra_type) const {
+  return has_extras() && extra_type_ == extra_type;
 }
 Eigen::Ref<const MatrixX<F>> PointCloud::extras() const {
   DRAKE_DEMAND(has_extras());
-  return storage_->features();
+  return storage_->extras();
 }
 Eigen::Ref<MatrixX<F>> PointCloud::mutable_extras() {
   DRAKE_DEMAND(has_extras());
-  return storage_->features();
+  return storage_->extras();
 }
 
 bool PointCloud::HasCapabilities(
@@ -353,7 +353,7 @@ bool PointCloud::HasCapabilities(
   if ((capabilities() & c) != c) {
     good = false;
   } else {
-    if (c & PointCloud::kFeatures) {
+    if (c & PointCloud::kExtras) {
       DRAKE_DEMAND(f != kExtraNone);
       DRAKE_DEMAND(f != kExtraInherit);
       if (extra_type() != f) {

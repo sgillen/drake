@@ -53,10 +53,10 @@ GTEST_TEST(PointCloudTest, Basic) {
   const int count = 5;
 
   auto CheckFields = [count](auto fields_expected, PointCloud::CapabilitySet c,
-                             const ExtraType& feature_type,
+                             const ExtraType& extra_type,
                              auto mutable_fields, auto fields,
                              auto mutable_field, auto field) {
-    PointCloud cloud(count, c, feature_type);
+    PointCloud cloud(count, c, extra_type);
     EXPECT_EQ(count, cloud.size());
     typedef decltype(fields_expected) XprType;
     typedef typename XprType::Scalar T;
@@ -154,15 +154,15 @@ GTEST_TEST(PointCloudTest, Basic) {
               [](PointCloud& cloud, int i) { return cloud.mutable_normal(i); },
               [](PointCloud& cloud, int i) { return cloud.normal(i); });
 
-  // Features (Curvature).
-  Matrix3Xf features_expected(3, count);
-  features_expected.transpose() <<
+  // Extras (Curvature).
+  Matrix3Xf extras_expected(3, count);
+  extras_expected.transpose() <<
     1, 2, 3,
     10, 20, 30,
     100, 200, 300,
     4, 5, 6,
     40, 50, 60;
-  CheckFields(features_expected, PointCloud::kFeatures, kExtraPFH,
+  CheckFields(extras_expected, PointCloud::kExtras, kExtraPFH,
               [](PointCloud& cloud) { return cloud.mutable_extras(); },
               [](PointCloud& cloud) { return cloud.extras(); },
               [](PointCloud& cloud, int i) { return cloud.mutable_extra(i); },
@@ -171,9 +171,9 @@ GTEST_TEST(PointCloudTest, Basic) {
 
 GTEST_TEST(PointCloudTest, Capabilities) {
   // Check human-friendly formatting.
-  EXPECT_EQ("(kXYZs | kNormals | kFeatures::Curvature)",
+  EXPECT_EQ("(kXYZs | kNormals | kExtras::Curvature)",
             ToString(PointCloud::kXYZs | PointCloud::kNormals |
-                     PointCloud::kFeatures, kExtraCurvature));
+                     PointCloud::kExtras, kExtraCurvature));
 
   // Check zero-size.
   {
@@ -212,7 +212,7 @@ GTEST_TEST(PointCloudTest, Capabilities) {
 
   // Check with extras.
   {
-    PointCloud cloud(1, PointCloud::kFeatures, kExtraCurvature);
+    PointCloud cloud(1, PointCloud::kExtras, kExtraCurvature);
     EXPECT_TRUE(cloud.has_extras());
     EXPECT_TRUE(cloud.has_extras(kExtraCurvature));
     EXPECT_FALSE(cloud.has_extras(kExtraPFH));
@@ -223,7 +223,7 @@ GTEST_TEST(PointCloudTest, Capabilities) {
     EXPECT_FALSE(simple_cloud.has_extras(kExtraCurvature));
 
     // Negative tests for construction.
-    EXPECT_THROW(PointCloud(1, PointCloud::kFeatures, kExtraNone),
+    EXPECT_THROW(PointCloud(1, PointCloud::kExtras, kExtraNone),
                  std::runtime_error);
     EXPECT_THROW(PointCloud(1, PointCloud::kXYZs, kExtraCurvature),
                  std::runtime_error);
