@@ -38,7 +38,8 @@ template <>
 struct check_helper<uint8_t> {
   template <typename XprType>
   static bool IsDefault(const XprType& xpr) {
-    return (xpr.array() == PointCloud::kDefaultColor).all();
+    const uint8_t check = PointCloud::kDefaultColor;
+    return (xpr.array() == check).all();
   }
 
   template <typename XprTypeA, typename XprTypeB>

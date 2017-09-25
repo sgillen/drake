@@ -205,6 +205,11 @@ PointCloud::PointCloud(const PointCloud& other,
                  ResolveCapabilities(other, copy_capabilities),
                  ResolveExtraType(other, copy_capabilities, extra_type)) {}
 
+PointCloud& PointCloud::operator=(const PointCloud& other) {
+  SetFrom(other);
+  return *this;
+}
+
 // Define destructor here to use complete definition of `Storage`.
 PointCloud::~PointCloud() {}
 

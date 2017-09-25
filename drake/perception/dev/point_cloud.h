@@ -23,11 +23,17 @@ namespace perception {
  */
 class ExtraType {
  public:
-  DRAKE_DEFAULT_COPY_AND_MOVE_AND_ASSIGN(ExtraType)
-
   ExtraType(int size, const std::string& name)
-    : size_(size),
-      name_(name) {}
+      : size_(size),
+        name_(name) {}
+
+  ExtraType(const ExtraType& other)
+      : ExtraType(other.size(), other.name()) {}
+
+  // Strictly enforce immutable semantics.
+  ExtraType(const ExtraType&&) = delete;
+  ExtraType& operator=(const ExtraType&) = delete;
+  ExtraType& operator=(ExtraType&&) = delete;
 
   inline int size() const { return size_; }
   inline const std::string& name() const { return name_; }
@@ -38,8 +44,8 @@ class ExtraType {
     return !(*this == other);
   }
  private:
-  int size_;
-  std::string name_;
+  const int size_{};
+  const std::string name_;
 };
 
 /// No extra.
@@ -92,8 +98,6 @@ const ExtraType kExtraPFH(3, "PFH");
  */
 class PointCloud {
  public:
-  DRAKE_DEFAULT_COPY_AND_MOVE_AND_ASSIGN(PointCloud)
-
   /// Indicates the data the point cloud stores.
   enum Capability : int {
     /// Inherit other capabilities. May imply an intersection of all
@@ -143,9 +147,16 @@ class PointCloud {
              CapabilitySet capabilities = kXYZs,
              const ExtraType& extra_type = kExtraNone);
 
+  PointCloud(const PointCloud& other)
+      : PointCloud(other, kInherit) {}
+
+  // Do not define a default argument for `copy_capabilities` so that this is
+  // not ambiguous w.r.t. the copy constructor.
   PointCloud(const PointCloud& other,
-             CapabilitySet copy_capabilities = kInherit,
+             CapabilitySet copy_capabilities,
              const ExtraType& extra_type = kExtraInherit);
+
+  PointCloud& operator=(const PointCloud& other);
 
   ~PointCloud();
 
@@ -343,12 +354,12 @@ class PointCloud {
   // Size of the point cloud.
   int size_;
   // Represents which capabilities are enabled for this point cloud.
-  CapabilitySet capabilities_;
+  const CapabilitySet capabilities_{};
   // Extra type stored (if `has_extras()` is true; otherwise this should
   // be `kExtraNone`).
-  ExtraType extra_type_;
+  const ExtraType extra_type_{kExtraNone};
   // Storage used for the point cloud.
-  copyable_unique_ptr<Storage> storage_;
+  std::unique_ptr<Storage> storage_;
 };
 
 /// Returns a human-friendly representation of a capability and extra set.
