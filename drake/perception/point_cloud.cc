@@ -37,10 +37,10 @@ std::vector<std::string> ToStringVector(
   std::vector<std::string> out;
   if (c & pc_flags::kXYZs)
     out.push_back("kXYZs");
-  if (c & pc_flags::kColors)
-      out.push_back("kColors");
   if (c & pc_flags::kNormals)
       out.push_back("kNormals");
+  if (c & pc_flags::kColors)
+      out.push_back("kColors");
   if (c & pc_flags::kExtras)
       out.push_back("kExtras::" + extra_type.name());
   return out;
@@ -66,10 +66,11 @@ class PointCloud::Storage {
  public:
   DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(Storage)
 
-  Storage(int new_size, pc_flags::Fields& c, const pc_flags::ExtraType& e)
-      : fields_(c) {
+  Storage(int new_size, pc_flags::Fields fields,
+          const pc_flags::ExtraType& extra_type)
+      : fields_(fields) {
     // Ensure that we incorporate the size of the extras.
-    extras_.resize(e.size(), 0);
+    extras_.resize(extra_type.size(), 0);
     // Resize as normal.
     resize(new_size);
   }
@@ -82,18 +83,18 @@ class PointCloud::Storage {
     size_ = new_size;
     if (fields_ & pc_flags::kXYZs)
       xyzs_.conservativeResize(NoChange, new_size);
-    if (fields_ & pc_flags::kColors)
-      colors_.conservativeResize(NoChange, new_size);
     if (fields_ & pc_flags::kNormals)
       normals_.conservativeResize(NoChange, new_size);
+    if (fields_ & pc_flags::kColors)
+      colors_.conservativeResize(NoChange, new_size);
     if (fields_ & pc_flags::kExtras)
       extras_.conservativeResize(NoChange, new_size);
     CheckInvariants();
   }
 
   Eigen::Ref<Matrix3X<T>> xyzs() { return xyzs_; }
-  Eigen::Ref<MatrixNX<NC, C>> colors() { return colors_; }
   Eigen::Ref<Matrix3X<T>> normals() { return normals_; }
+  Eigen::Ref<MatrixNX<NC, C>> colors() { return colors_; }
   Eigen::Ref<MatrixX<T>> extras() { return extras_; }
 
  private:
@@ -102,13 +103,13 @@ class PointCloud::Storage {
       const int xyz_size = xyzs_.cols();
       DRAKE_DEMAND(xyz_size == size());
     }
-    if (fields_ & pc_flags::kColors) {
-      const int color_size = colors_.cols();
-      DRAKE_DEMAND(color_size == size());
-    }
     if (fields_ & pc_flags::kNormals) {
       const int normal_size = normals_.cols();
       DRAKE_DEMAND(normal_size == size());
+    }
+    if (fields_ & pc_flags::kColors) {
+      const int color_size = colors_.cols();
+      DRAKE_DEMAND(color_size == size());
     }
     if (fields_ & pc_flags::kExtras) {
       const int extra_size = extras_.cols();
@@ -119,8 +120,8 @@ class PointCloud::Storage {
   const pc_flags::Fields fields_;
   int size_{};
   Matrix3X<T> xyzs_;
-  MatrixNX<NC, C> colors_;
   Matrix3X<T> normals_;
+  MatrixNX<NC, C> colors_;
   MatrixX<T> extras_;
 };
 
@@ -129,7 +130,8 @@ namespace {
 // Ensure that a field set is complete valid (does not have extra bits).
 void ValidateFields(pc_flags::Fields c) {
   pc_flags::Fields full_mask =
-      pc_flags::kXYZs | pc_flags::kNormals | pc_flags::kColors | pc_flags::kExtras;
+      pc_flags::kXYZs | pc_flags::kNormals | pc_flags::kColors |
+          pc_flags::kExtras;
   if (c <= 0 || c > full_mask) {
     throw std::runtime_error("Invalid Fields");
   }
@@ -174,10 +176,10 @@ pc_flags::Fields ResolveFields(
     a.RequireExactFields(b.fields(), b.extra_type());
     return a.fields();
   } else {
-    pc_flags::ExtraType f = (fields & pc_flags::kExtras) ? a.extra_type()
-                                                     : pc_flags::kExtraNone;
-    a.RequireFields(fields, f);
-    b.RequireFields(fields, f);
+    pc_flags::ExtraType extra_resolved =
+        (fields & pc_flags::kExtras) ? a.extra_type() : pc_flags::kExtraNone;
+    a.RequireFields(fields, extra_resolved);
+    b.RequireFields(fields, extra_resolved);
     return fields;
   }
 }
@@ -205,7 +207,7 @@ PointCloud::PointCloud(
     throw std::runtime_error(
         "Must specify kExtraNone if kExtras is not present");
 
-  storage_.reset(new Storage(new_size, fields, extra_type));
+  storage_.reset(new Storage(size_, fields_, extra_type_));
   SetDefault(0, size_);
 }
 
@@ -245,11 +247,11 @@ void PointCloud::SetDefault(int start, int num) {
   if (has_xyzs()) {
     set(mutable_xyzs(), kDefaultValue);
   }
-  if (has_colors()) {
-    set(mutable_colors(), kDefaultColor);
-  }
   if (has_normals()) {
     set(mutable_normals(), kDefaultValue);
+  }
+  if (has_colors()) {
+    set(mutable_colors(), kDefaultColor);
   }
   if (has_extras()) {
     set(mutable_extras(), kDefaultValue);
@@ -267,17 +269,17 @@ void PointCloud::SetFrom(const PointCloud& other,
     throw std::runtime_error(
         fmt::format("CopyFrom: {} != {}", new_size, old_size));
   }
-  pc_flags::Fields c_final = ResolveFields(*this, other, c);
-  if (c_final & pc_flags::kXYZs) {
+  pc_flags::Fields c_resolved = ResolveFields(*this, other, c);
+  if (c_resolved & pc_flags::kXYZs) {
     mutable_xyzs() = other.xyzs();
   }
-  if (c_final & pc_flags::kColors) {
-    mutable_colors() = other.colors();
-  }
-  if (c_final & pc_flags::kNormals) {
+  if (c_resolved & pc_flags::kNormals) {
     mutable_normals() = other.normals();
   }
-  if (c_final & pc_flags::kExtras) {
+  if (c_resolved & pc_flags::kColors) {
+    mutable_colors() = other.colors();
+  }
+  if (c_resolved & pc_flags::kExtras) {
     mutable_extras() = other.extras();
   }
 }
@@ -294,21 +296,21 @@ void PointCloud::AddPoints(const PointCloud& other, pc_flags::Fields c) {
   int old_size = size();
   int new_size = old_size + other.size();
   resize(new_size);
-  c = ResolveFields(*this, other, c);
+  const pc_flags::Fields c_resolved = ResolveFields(*this, other, c);
   // Get the block corresponding to the newly allocated values.
   auto fresh_block = [=](auto value) {
     return value.middleCols(old_size, other.size());
   };
-  if (c & pc_flags::kXYZs) {
+  if (c_resolved & pc_flags::kXYZs) {
     fresh_block(mutable_xyzs()) = other.xyzs();
   }
-  if (c & pc_flags::kNormals) {
+  if (c_resolved & pc_flags::kNormals) {
     fresh_block(mutable_normals()) = other.normals();
   }
-  if (c & pc_flags::kColors) {
+  if (c_resolved & pc_flags::kColors) {
     fresh_block(mutable_colors()) = other.colors();
   }
-  if (c & pc_flags::kExtras) {
+  if (c_resolved & pc_flags::kExtras) {
     fresh_block(mutable_extras()) = other.extras();
   }
 }

@@ -26,10 +26,10 @@ enum Field : int {
   kInherit = 0,
   /// XYZ point in Cartesian space.
   kXYZs = 1 << 0,
-  /// Colors, in RGBA.
-  kColors = 1 << 1,
   /// Normals.
-  kNormals = 1 << 2,
+  kNormals = 1 << 1,
+  /// Colors, in RGBA.
+  kColors = 1 << 2,
   /// Extras, whose type (and structure) is specified by `ExtraType`.
   kExtras = 1 << 3,
 };
@@ -38,7 +38,7 @@ typedef int Fields;
 /// Describes a extra with a name and the extra's size.
 /// @note This is defined as follows to enable an open set of extras, but
 /// ensure that extras are appropriately matched.
-class ExtraType {
+class ExtraType final {
  public:
   ExtraType(int size, const std::string& name)
       : size_(size),
@@ -117,7 +117,7 @@ std::string ToString(Fields c, const ExtraType &f);
 /// minimize the lifetime of these references to be as short as possible.
 /// Additionally, algorithms wanting fast access to values should avoid the
 /// single point accessors (e.g. `xyz(i)`, `color(i)`).
-class PointCloud {
+class PointCloud final {
  public:
   /// Geometric scalar type.
   typedef float T;
@@ -136,9 +136,9 @@ class PointCloud {
 
   /// Extra scalar type.
   typedef T E;
+
   /// Index type.
   typedef int Index;
-  typedef std::vector<int> Indices;
 
   /// Constructs a point cloud of a given `new_size`, with the prescribed
   /// `fields`. If `kExtras` is one of the fields, then
@@ -176,27 +176,21 @@ class PointCloud {
   // TODO(eric.cousineau): Consider locking the point cloud or COW to permit
   // shallow copies.
 
-  /**
-   * Returns the fields provided by this point cloud.
-   */
+  /// Returns the fields provided by this point cloud.
   pc_flags::Fields fields() const { return fields_; }
 
-  /**
-   * Returns the number of points in this point cloud.
-   */
+  /// Returns the number of points in this point cloud.
   Index size() const { return size_; }
 
-  /**
-   * Conservative resize; will maintain existing data, and initialize new
-   * data to their invalid values.
-   * @param new_size
-   *    The new size of the value. If less than the present `size()`, then
-   *    the values will be truncated. If greater than the present `size()`,
-   *    then the new values will be uninitalized if `skip_initialize` is not
-   *    true.
-   * @param skip_initialize
-   *    Do not default-initialize new values.
-   */
+  /// Conservative resize; will maintain existing data, and initialize new
+  /// data to their invalid values.
+  /// @param new_size
+  ///    The new size of the value. If less than the present `size()`, then
+  ///    the values will be truncated. If greater than the present `size()`,
+  ///    then the new values will be uninitalized if `skip_initialize` is not
+  ///    true.
+  /// @param skip_initialize
+  ///    Do not default-initialize new values.
   void resize(Index new_size, bool skip_initialize = false);
 
 
@@ -306,17 +300,18 @@ class PointCloud {
 
   /// @}
 
-  /**
-   * Copy all points from another point cloud.
-   * @param other
-   *    Other point cloud.
-   * @param c
-   *    Fields to copy. If this is `kInherit`, then both clouds
-   *    must have the exact same fields. Otherwise, both clouds
-   *    must support the fields indicated by `c`.
-   * @param allow_resize
-   *    Permit resizing to the other cloud's size.
-   */
+  /// @name Container Manipulation
+  /// @{
+
+  /// Copy all points from another point cloud.
+  /// @param other
+  ///    Other point cloud.
+  /// @param c
+  ///    Fields to copy. If this is `kInherit`, then both clouds
+  ///    must have the exact same fields. Otherwise, both clouds
+  ///    must support the fields indicated by `c`.
+  /// @param allow_resize
+  ///    Permit resizing to the other cloud's size.
   void SetFrom(
       const PointCloud& other,
       pc_flags::Fields c = pc_flags::kInherit,
@@ -324,24 +319,22 @@ class PointCloud {
 
   // TODO(eric.cousineau): Add indexed version.
 
-  /**
-   * Adds `add_size` default-initialized points.
-   * @param new_size
-   *    Number of points to add.
-   * @param skip_initialization
-   *    Do not require that the new values be initialized.
-   */
+  /// Adds `add_size` default-initialized points.
+  /// @param new_size
+  ///    Number of points to add.
+  /// @param skip_initialization
+  ///    Do not require that the new values be initialized.
   void AddPoints(int add_size, bool skip_initialization = false);
 
-  /**
-   * Adds another point cloud to this cloud.
-   * @param other
-   *    Other point cloud.
-   * @param c
-   *    Fields to copy.
-   *    @see SetFrom for how this functions.
-   */
+  /// Adds another point cloud to this cloud.
+  /// @param other
+  ///    Other point cloud.
+  /// @param c
+  ///    Fields to copy.
+  ///    @see SetFrom for how this functions.
   void AddPoints(const PointCloud& other, pc_flags::Fields c = pc_flags::kInherit);
+
+  /// @}
 
   /// @name Fields
   /// @{
@@ -383,12 +376,12 @@ class PointCloud {
   // Provides PIMPL encapsulation of storage mechanism.
   class Storage;
 
-  // Size of the point cloud.
+  // Represents the size of the point cloud.
   int size_;
   // Represents which fields are enabled for this point cloud.
   const pc_flags::Fields fields_{};
-  // Extra type stored (if `has_extras()` is true; otherwise this should
-  // be `kExtraNone`).
+  // Extra type stored
+  // @note If `has_extras()` is false, this should be `kExtraNone`.
   const pc_flags::ExtraType extra_type_{pc_flags::kExtraNone};
   // Storage used for the point cloud.
   std::unique_ptr<Storage> storage_;
