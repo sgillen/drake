@@ -51,10 +51,13 @@ std::vector<std::string> ToStringVector(
 // Provides encapsulated storage for a `PointCloud`.
 class PointCloud::Storage {
  public:
-  DRAKE_DEFAULT_COPY_AND_MOVE_AND_ASSIGN(Storage)
+  DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(Storage)
 
-  Storage(int new_size, CapabilitySet& c, const ExtraType&)
+  Storage(int new_size, CapabilitySet& c, const ExtraType& e)
       : capabilities_(c) {
+    // Ensure that we incorporate the size of the extras.
+    extras_.resize(e.size(), 0);
+    // Resize as normal.
     resize(new_size);
   }
 
@@ -100,7 +103,7 @@ class PointCloud::Storage {
     }
   }
 
-  CapabilitySet capabilities_;
+  const CapabilitySet capabilities_;
   int size_{};
   Matrix3X<T> xyzs_;
   MatrixNX<NC, C> colors_;

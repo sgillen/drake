@@ -72,8 +72,10 @@ GTEST_TEST(PointCloudTest, Basic) {
 
     // Set values using the mutable accessor.
     mutable_fields(cloud) = fields_expected;
+
     EXPECT_TRUE(CompareMatrices(fields_expected, mutable_fields(cloud)));
     EXPECT_TRUE(CompareMatrices(fields_expected, fields(cloud)));
+
     // Check element-by-element.
     for (int i = 0; i < count; ++i) {
       const auto field_expected = fields_expected.col(i);
@@ -111,7 +113,7 @@ GTEST_TEST(PointCloudTest, Basic) {
             fields(cloud).middleCols(small_size, large_size - small_size)));
   };
 
-  // TODO(eric.cousineau): Iterate through all field combinations.
+  // TODO(eric.cousineau): Iterate through individual capabilities.
 
   // Points.
   Matrix3Xf xyzs_expected(3, count);
@@ -155,7 +157,7 @@ GTEST_TEST(PointCloudTest, Basic) {
               [](PointCloud& cloud, int i) { return cloud.mutable_normal(i); },
               [](PointCloud& cloud, int i) { return cloud.normal(i); });
 
-  // Extras (Curvature).
+  // Extras (PFH).
   Matrix3Xf extras_expected(3, count);
   extras_expected.transpose() <<
     1, 2, 3,
