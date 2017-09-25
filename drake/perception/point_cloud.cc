@@ -292,25 +292,26 @@ void PointCloud::AddPoints(
   resize(new_size, skip_initialization);
 }
 
-void PointCloud::AddFrom(const PointCloud& other, pc_flags::Fields c) {
+void PointCloud::AddFrom(const PointCloud& other, pc_flags::Fields fields_in) {
   int old_size = size();
   int new_size = old_size + other.size();
   resize(new_size);
-  const pc_flags::Fields c_resolved = ResolveFields(*this, other, c);
+  const pc_flags::Fields fields_resolved =
+      ResolveFields(*this, other, fields_in);
   // Get the block corresponding to the newly allocated values.
   auto fresh_block = [=](auto value) {
     return value.middleCols(old_size, other.size());
   };
-  if (c_resolved & pc_flags::kXYZs) {
+  if (fields_resolved & pc_flags::kXYZs) {
     fresh_block(mutable_xyzs()) = other.xyzs();
   }
-  if (c_resolved & pc_flags::kNormals) {
+  if (fields_resolved & pc_flags::kNormals) {
     fresh_block(mutable_normals()) = other.normals();
   }
-  if (c_resolved & pc_flags::kColors) {
+  if (fields_resolved & pc_flags::kColors) {
     fresh_block(mutable_colors()) = other.colors();
   }
-  if (c_resolved & pc_flags::kExtras) {
+  if (fields_resolved & pc_flags::kExtras) {
     fresh_block(mutable_extras()) = other.extras();
   }
 }

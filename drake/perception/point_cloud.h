@@ -331,10 +331,10 @@ class PointCloud final {
   /// Adds another point cloud to this cloud.
   /// @param other
   ///    Other point cloud.
-  /// @param c
+  /// @param fields_in
   ///    Fields to copy.
   ///    @see SetFrom for how this functions.
-  void AddFrom(const PointCloud& other, pc_flags::Fields c = pc_flags::kInherit);
+  void AddFrom(const PointCloud& other, pc_flags::Fields fields_in = pc_flags::kInherit);
 
   /// @}
 
