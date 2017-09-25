@@ -20,12 +20,12 @@ typedef PointCloud::C C;
 
 // Utility for `ToString`.
 std::string join(const std::vector<std::string>& elements,
-                 const std::string &d) {
+                 const std::string &delim) {
   std::ostringstream os;
   for (size_t i = 0; i < elements.size(); ++i) {
     os << elements[i];
     if (i + 1 < elements.size())
-      os << d;
+      os << delim;
   }
   return os.str();
 }
@@ -33,15 +33,15 @@ std::string join(const std::vector<std::string>& elements,
 // Convert a PointCloud's set of fields to a string vector (for use
 // with `ToString`).
 std::vector<std::string> ToStringVector(
-    pc_flags::Fields c, const pc_flags::ExtraType& extra_type) {
+    pc_flags::Fields fields, const pc_flags::ExtraType& extra_type) {
   std::vector<std::string> out;
-  if (c & pc_flags::kXYZs)
+  if (fields & pc_flags::kXYZs)
     out.push_back("kXYZs");
-  if (c & pc_flags::kNormals)
+  if (fields & pc_flags::kNormals)
       out.push_back("kNormals");
-  if (c & pc_flags::kColors)
+  if (fields & pc_flags::kColors)
       out.push_back("kColors");
-  if (c & pc_flags::kExtras)
+  if (fields & pc_flags::kExtras)
       out.push_back("kExtras::" + extra_type.name());
   return out;
 }
@@ -50,8 +50,8 @@ std::vector<std::string> ToStringVector(
 
 namespace pc_flags {
 
-std::string ToString(Fields c, const ExtraType& f) {
-  return "(" + join(ToStringVector(c, f), " | ") + ")";
+std::string ToString(Fields fields, const ExtraType& extra_type) {
+  return "(" + join(ToStringVector(fields, extra_type), " | ") + ")";
 }
 
 }  // namespace pc_flags
@@ -187,7 +187,7 @@ pc_flags::Fields ResolveFields(
 }  // namespace
 
 PointCloud::PointCloud(
-    PointCloud::int new_size,
+    int new_size,
     pc_flags::Fields fields,
     const pc_flags::ExtraType& extra_type)
     : size_(new_size),
@@ -228,7 +228,7 @@ PointCloud& PointCloud::operator=(const PointCloud& other) {
 // Define destructor here to use complete definition of `Storage`.
 PointCloud::~PointCloud() {}
 
-void PointCloud::resize(PointCloud::int new_size, bool skip_initialization) {
+void PointCloud::resize(int new_size, bool skip_initialization) {
   DRAKE_DEMAND(new_size >= 0);
   int old_size = size();
   size_ = new_size;
@@ -259,7 +259,7 @@ void PointCloud::SetDefault(int start, int num) {
 }
 
 void PointCloud::SetFrom(const PointCloud& other,
-                         pc_flags::Fields c,
+                         pc_flags::Fields fields_in,
                          bool allow_resize) {
   int old_size = size();
   int new_size = other.size();
@@ -269,7 +269,7 @@ void PointCloud::SetFrom(const PointCloud& other,
     throw std::runtime_error(
         fmt::format("CopyFrom: {} != {}", new_size, old_size));
   }
-  pc_flags::Fields c_resolved = ResolveFields(*this, other, c);
+  pc_flags::Fields c_resolved = ResolveFields(*this, other, fields_in);
   if (c_resolved & pc_flags::kXYZs) {
     mutable_xyzs() = other.xyzs();
   }
@@ -292,7 +292,7 @@ void PointCloud::AddPoints(
   resize(new_size, skip_initialization);
 }
 
-void PointCloud::AddPoints(const PointCloud& other, pc_flags::Fields c) {
+void PointCloud::AddFrom(const PointCloud& other, pc_flags::Fields c) {
   int old_size = size();
   int new_size = old_size + other.size();
   resize(new_size);
@@ -367,51 +367,51 @@ Eigen::Ref<MatrixX<E>> PointCloud::mutable_extras() {
 }
 
 bool PointCloud::HasFields(
-    pc_flags::Fields c,
-    const pc_flags::ExtraType& f) const {
+    pc_flags::Fields fields_in,
+    const pc_flags::ExtraType& extra_type_in) const {
   bool good = true;
-  if ((fields() & c) != c) {
+  if ((fields() & fields_in) != fields_in) {
     good = false;
   } else {
-    if (c & pc_flags::kExtras) {
-      DRAKE_DEMAND(f != pc_flags::kExtraNone);
-      DRAKE_DEMAND(f != pc_flags::kExtraInherit);
-      if (extra_type() != f) {
+    if (fields_in & pc_flags::kExtras) {
+      DRAKE_DEMAND(extra_type_in != pc_flags::kExtraNone);
+      DRAKE_DEMAND(extra_type_in != pc_flags::kExtraInherit);
+      if (extra_type() != extra_type_in) {
         good = false;
       }
     } else {
-      DRAKE_DEMAND(f == pc_flags::kExtraNone);
+      DRAKE_DEMAND(extra_type_in == pc_flags::kExtraNone);
     }
   }
   return good;
 }
 
 void PointCloud::RequireFields(
-    pc_flags::Fields c,
-    const pc_flags::ExtraType& f) const {
-  if (!HasFields(c, f)) {
+    pc_flags::Fields fields_in,
+    const pc_flags::ExtraType& extra_type_in) const {
+  if (!HasFields(fields_in, extra_type_in)) {
     throw std::runtime_error(
         fmt::format("PointCloud does not have expected fields.\n"
                     "Expected {}, got {}",
-                    pc_flags::ToString(c, f),
+                    pc_flags::ToString(fields_in, extra_type_in),
                     pc_flags::ToString(fields(), extra_type())));
   }
 }
 
 bool PointCloud::HasExactFields(
-    pc_flags::Fields c,
-    const pc_flags::ExtraType& f) const {
-  return HasFields(c, f) && fields() == c;
+    pc_flags::Fields fields_in,
+    const pc_flags::ExtraType& extra_type_in) const {
+  return HasFields(fields_in, extra_type_in) && fields() == fields_in;
 }
 
 void PointCloud::RequireExactFields(
-    pc_flags::Fields c,
-    const pc_flags::ExtraType& f) const {
-  if (!HasExactFields(c, f)) {
+    pc_flags::Fields fields_in,
+    const pc_flags::ExtraType& extra_type_in) const {
+  if (!HasExactFields(fields_in, extra_type_in)) {
     throw std::runtime_error(
         fmt::format("PointCloud does not have the exact expected fields."
                     "\nExpected {}, got {}",
-                    pc_flags::ToString(c, f),
+                    pc_flags::ToString(fields_in, extra_type_in),
                     pc_flags::ToString(fields(), extra_type())));
   }
 }

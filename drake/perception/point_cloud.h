@@ -35,9 +35,14 @@ enum Field : int {
 };
 typedef int Fields;
 
-/// Describes a extra with a name and the extra's size.
+/// Describes an extra field with a name and the extra's size.
+///
 /// @note This is defined as follows to enable an open set of extras, but
-/// ensure that extras are appropriately matched.
+/// ensure that these extra types are appropriately matched.
+/// As `PointCloud` evolves and more algorithms are mapped into Drake,
+/// promoting an extra field to a proper field should be considered if (a) it
+/// is used frequently enough AND (b) if it is often used in conjunction
+/// with other fields.
 class ExtraType final {
  public:
   ExtraType(int size, const std::string& name)
@@ -75,7 +80,7 @@ const ExtraType kExtraCurvature(1, "Curvature");
 const ExtraType kExtraPFH(3, "PFH");
 
 /// Returns a human-friendly representation of a field and extra set.
-std::string ToString(Fields c, const ExtraType &f);
+std::string ToString(Fields fields, const ExtraType &extra_type);
 
 }  // namespace pc_flags
 
@@ -265,7 +270,7 @@ class PointCloud final {
 
   /// @}
 
-  /// @name Extras (features and/or descriptors)
+  /// @name Extras (Features and/or Descriptors)
   /// @{
 
   /// Returns if this point cloud provides extra points.
@@ -303,15 +308,15 @@ class PointCloud final {
   /// Copy all points from another point cloud.
   /// @param other
   ///    Other point cloud.
-  /// @param c
-  ///    Fields to copy. If this is `kInherit`, then both clouds
-  ///    must have the exact same fields. Otherwise, both clouds
-  ///    must support the fields indicated by `c`.
+  /// @param fields_in
+  ///    Fields to copy. If this is `kInherit`, then both clouds must have the
+  ///    exact same fields. Otherwise, both clouds must support the fields
+  ///    indicated by `c`.
   /// @param allow_resize
   ///    Permit resizing to the other cloud's size.
   void SetFrom(
       const PointCloud& other,
-      pc_flags::Fields c = pc_flags::kInherit,
+      pc_flags::Fields fields_in = pc_flags::kInherit,
       bool allow_resize = true);
 
   // TODO(eric.cousineau): Add indexed version.
@@ -340,22 +345,22 @@ class PointCloud final {
   /// @pre If `kExtra` is not present in `c`, then `extra_type` must be
   /// `kExtraNone`. Otherwise, `extra_type` must be a valid extra.
   bool HasFields(
-      pc_flags::Fields field_set,
-      const pc_flags::ExtraType& extra_type = pc_flags::kExtraNone) const;
+      pc_flags::Fields fields_in,
+      const pc_flags::ExtraType& extra_type_in = pc_flags::kExtraNone) const;
 
   /// Requires a given set of fields.
   /// @see HasFields for preconditions.
   /// @throws std::runtime_error if this point cloud does not have these
   /// fields.
   void RequireFields(
-      pc_flags::Fields field_set,
-      const pc_flags::ExtraType& extra_type = pc_flags::kExtraNone) const;
+      pc_flags::Fields fields_in,
+      const pc_flags::ExtraType& extra_type_in = pc_flags::kExtraNone) const;
 
   /// Returns if a point cloud has exactly a given set of fields.
   /// @see HasFields for preconditions.
   bool HasExactFields(
-      pc_flags::Fields field_set,
-      const pc_flags::ExtraType& extra_type = pc_flags::kExtraNone) const;
+      pc_flags::Fields fields_in,
+      const pc_flags::ExtraType& extra_type_in = pc_flags::kExtraNone) const;
 
   /// Requires the exact given set of fields.
   /// @see HasFields for preconditions.
@@ -377,16 +382,16 @@ class PointCloud final {
   int size_;
   // Represents which fields are enabled for this point cloud.
   const pc_flags::Fields fields_{};
-  // Extra type stored
+  // Represents extra type stored.
   // @note If `has_extras()` is false, this should be `kExtraNone`.
   const pc_flags::ExtraType extra_type_{pc_flags::kExtraNone};
-  // Storage used for the point cloud.
+  // Owns storage used for the point cloud.
   std::unique_ptr<Storage> storage_;
 };
 
 // TODO(eric.cousineau): Consider a way of reinterpret_cast<>ing the array
 // data to permit more semantic access to members, PCL-style
-// (e.g. the reverse of PointCloud<>::getMatrixXfMap())
+// (e.g. point.x, point.r, etc: the reverse of PointCloud<>::getMatrixXfMap()).
 // Need to ensure alignments are commensurate. Will only work with
 // homogeneous data (possibly with heterogeneous data, if strides can be
 // used).
