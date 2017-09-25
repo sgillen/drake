@@ -55,8 +55,8 @@ struct check_helper<uint8_t> {
 GTEST_TEST(PointCloudTest, Basic) {
   const int count = 5;
 
-  auto CheckFields = [count](auto fields_expected, pcf::CapabilitySet c,
-                             const pcf::ExtraType& extra_type,
+  auto CheckFields = [count](auto fields_expected, pc_flags::CapabilitySet c,
+                             const pc_flags::ExtraType& extra_type,
                              auto mutable_fields, auto fields,
                              auto mutable_field, auto field) {
     PointCloud cloud(count, c, extra_type);
@@ -125,7 +125,7 @@ GTEST_TEST(PointCloudTest, Basic) {
     100, 200, 300,
     4, 5, 6,
     40, 50, 60;
-  CheckFields(xyzs_expected, pcf::kXYZs, pcf::kExtraNone,
+  CheckFields(xyzs_expected, pc_flags::kXYZs, pc_flags::kExtraNone,
               [](PointCloud& cloud) { return cloud.mutable_xyzs(); },
               [](PointCloud& cloud) { return cloud.xyzs(); },
               [](PointCloud& cloud, int i) { return cloud.mutable_xyz(i); },
@@ -139,7 +139,7 @@ GTEST_TEST(PointCloudTest, Basic) {
     100, 200, 300,
     4, 5, 6,
     40, 50, 60;
-  CheckFields(normals_expected, pcf::kNormals, pcf::kExtraNone,
+  CheckFields(normals_expected, pc_flags::kNormals, pc_flags::kExtraNone,
               [](PointCloud& cloud) { return cloud.mutable_normals(); },
               [](PointCloud& cloud) { return cloud.normals(); },
               [](PointCloud& cloud, int i) { return cloud.mutable_normal(i); },
@@ -153,7 +153,7 @@ GTEST_TEST(PointCloudTest, Basic) {
     110, 120, 130, 140,
     5, 6, 7, 8,
     150, 160, 170, 180;
-  CheckFields(colors_expected, pcf::kColors, pcf::kExtraNone,
+  CheckFields(colors_expected, pc_flags::kColors, pc_flags::kExtraNone,
               [](PointCloud& cloud) { return cloud.mutable_colors(); },
               [](PointCloud& cloud) { return cloud.colors(); },
               [](PointCloud& cloud, int i) { return cloud.mutable_color(i); },
@@ -167,7 +167,7 @@ GTEST_TEST(PointCloudTest, Basic) {
     100, 200, 300,
     4, 5, 6,
     40, 50, 60;
-  CheckFields(extras_expected, pcf::kExtras, pcf::kExtraPFH,
+  CheckFields(extras_expected, pc_flags::kExtras, pc_flags::kExtraPFH,
               [](PointCloud& cloud) { return cloud.mutable_extras(); },
               [](PointCloud& cloud) { return cloud.extras(); },
               [](PointCloud& cloud, int i) { return cloud.mutable_extra(i); },
@@ -178,34 +178,34 @@ GTEST_TEST(PointCloudTest, Capabilities) {
   // Check human-friendly formatting.
   EXPECT_EQ(
       "(kXYZs | kNormals | kExtras::Curvature)",
-            ToString(pcf::kXYZs | pcf::kNormals | pcf::kExtras,
-                     pcf::kExtraCurvature));
+            ToString(pc_flags::kXYZs | pc_flags::kNormals | pc_flags::kExtras,
+                     pc_flags::kExtraCurvature));
 
   // Check zero-size.
   {
-    PointCloud cloud(0, pcf::kXYZs | pcf::kNormals);
+    PointCloud cloud(0, pc_flags::kXYZs | pc_flags::kNormals);
     EXPECT_EQ(0, cloud.size());
   }
 
   // Check basic requirements.
   {
-    PointCloud cloud(1, pcf::kXYZs);
-    EXPECT_TRUE(cloud.HasCapabilities(pcf::kXYZs));
-    EXPECT_NO_THROW(cloud.RequireCapabilities(pcf::kXYZs));
-    EXPECT_FALSE(cloud.HasCapabilities(pcf::kNormals));
-    EXPECT_THROW(cloud.RequireCapabilities(pcf::kNormals),
+    PointCloud cloud(1, pc_flags::kXYZs);
+    EXPECT_TRUE(cloud.HasCapabilities(pc_flags::kXYZs));
+    EXPECT_NO_THROW(cloud.RequireCapabilities(pc_flags::kXYZs));
+    EXPECT_FALSE(cloud.HasCapabilities(pc_flags::kNormals));
+    EXPECT_THROW(cloud.RequireCapabilities(pc_flags::kNormals),
                  std::runtime_error);
   }
 
   // Check with exact capabilities.
   {
-    PointCloud cloud(1, pcf::kXYZs | pcf::kNormals);
+    PointCloud cloud(1, pc_flags::kXYZs | pc_flags::kNormals);
     EXPECT_TRUE(cloud.HasExactCapabilities(
-        pcf::kXYZs | pcf::kNormals));
+        pc_flags::kXYZs | pc_flags::kNormals));
     EXPECT_NO_THROW(cloud.RequireExactCapabilities(
-            pcf::kXYZs | pcf::kNormals));
-    EXPECT_FALSE(cloud.HasExactCapabilities(pcf::kNormals));
-    EXPECT_THROW(cloud.RequireExactCapabilities(pcf::kNormals),
+            pc_flags::kXYZs | pc_flags::kNormals));
+    EXPECT_FALSE(cloud.HasExactCapabilities(pc_flags::kNormals));
+    EXPECT_THROW(cloud.RequireExactCapabilities(pc_flags::kNormals),
                  std::runtime_error);
   }
 
@@ -218,20 +218,20 @@ GTEST_TEST(PointCloudTest, Capabilities) {
 
   // Check with extras.
   {
-    PointCloud cloud(1, pcf::kExtras, pcf::kExtraCurvature);
+    PointCloud cloud(1, pc_flags::kExtras, pc_flags::kExtraCurvature);
     EXPECT_TRUE(cloud.has_extras());
-    EXPECT_TRUE(cloud.has_extras(pcf::kExtraCurvature));
-    EXPECT_FALSE(cloud.has_extras(pcf::kExtraPFH));
+    EXPECT_TRUE(cloud.has_extras(pc_flags::kExtraCurvature));
+    EXPECT_FALSE(cloud.has_extras(pc_flags::kExtraPFH));
 
     // Negative tests for `has_extras`.
-    PointCloud simple_cloud(1, pcf::kXYZs);
+    PointCloud simple_cloud(1, pc_flags::kXYZs);
     EXPECT_FALSE(simple_cloud.has_extras());
-    EXPECT_FALSE(simple_cloud.has_extras(pcf::kExtraCurvature));
+    EXPECT_FALSE(simple_cloud.has_extras(pc_flags::kExtraCurvature));
 
     // Negative tests for construction.
-    EXPECT_THROW(PointCloud(1, pcf::kExtras, pcf::kExtraNone),
+    EXPECT_THROW(PointCloud(1, pc_flags::kExtras, pc_flags::kExtraNone),
                  std::runtime_error);
-    EXPECT_THROW(PointCloud(1, pcf::kXYZs, pcf::kExtraCurvature),
+    EXPECT_THROW(PointCloud(1, pc_flags::kXYZs, pc_flags::kExtraCurvature),
                  std::runtime_error);
   }
 }

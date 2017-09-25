@@ -33,28 +33,28 @@ std::string join(const std::vector<std::string>& elements,
 // Convert a PointCloud's set of capabilities to a string vector (for use
 // with `ToString`).
 std::vector<std::string> ToStringVector(
-    pcf::CapabilitySet c, const pcf::ExtraType& extra_type) {
+    pc_flags::CapabilitySet c, const pc_flags::ExtraType& extra_type) {
   std::vector<std::string> out;
-  if (c & pcf::kXYZs)
+  if (c & pc_flags::kXYZs)
     out.push_back("kXYZs");
-  if (c & pcf::kColors)
+  if (c & pc_flags::kColors)
       out.push_back("kColors");
-  if (c & pcf::kNormals)
+  if (c & pc_flags::kNormals)
       out.push_back("kNormals");
-  if (c & pcf::kExtras)
+  if (c & pc_flags::kExtras)
       out.push_back("kExtras::" + extra_type.name());
   return out;
 }
 
 }  // namespace
 
-namespace point_cloud_flags {
+namespace pc_flags {
 
 std::string ToString(CapabilitySet c, const ExtraType& f) {
   return "(" + join(ToStringVector(c, f), " | ") + ")";
 }
 
-}  // namespace point_cloud_flags
+}  // namespace pc_flags
 
 
 /*
@@ -66,7 +66,7 @@ class PointCloud::Storage {
  public:
   DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(Storage)
 
-  Storage(int new_size, pcf::CapabilitySet& c, const pcf::ExtraType& e)
+  Storage(int new_size, pc_flags::CapabilitySet& c, const pc_flags::ExtraType& e)
       : capabilities_(c) {
     // Ensure that we incorporate the size of the extras.
     extras_.resize(e.size(), 0);
@@ -80,13 +80,13 @@ class PointCloud::Storage {
   // Resize to parent cloud's size.
   void resize(int new_size) {
     size_ = new_size;
-    if (capabilities_ & pcf::kXYZs)
+    if (capabilities_ & pc_flags::kXYZs)
       xyzs_.conservativeResize(NoChange, new_size);
-    if (capabilities_ & pcf::kColors)
+    if (capabilities_ & pc_flags::kColors)
       colors_.conservativeResize(NoChange, new_size);
-    if (capabilities_ & pcf::kNormals)
+    if (capabilities_ & pc_flags::kNormals)
       normals_.conservativeResize(NoChange, new_size);
-    if (capabilities_ & pcf::kExtras)
+    if (capabilities_ & pc_flags::kExtras)
       extras_.conservativeResize(NoChange, new_size);
     CheckInvariants();
   }
@@ -98,25 +98,25 @@ class PointCloud::Storage {
 
  private:
   void CheckInvariants() const {
-    if (capabilities_ & pcf::kXYZs) {
+    if (capabilities_ & pc_flags::kXYZs) {
       const int xyz_size = xyzs_.cols();
       DRAKE_DEMAND(xyz_size == size());
     }
-    if (capabilities_ & pcf::kColors) {
+    if (capabilities_ & pc_flags::kColors) {
       const int color_size = colors_.cols();
       DRAKE_DEMAND(color_size == size());
     }
-    if (capabilities_ & pcf::kNormals) {
+    if (capabilities_ & pc_flags::kNormals) {
       const int normal_size = normals_.cols();
       DRAKE_DEMAND(normal_size == size());
     }
-    if (capabilities_ & pcf::kExtras) {
+    if (capabilities_ & pc_flags::kExtras) {
       const int extra_size = extras_.cols();
       DRAKE_DEMAND(extra_size == size());
     }
   }
 
-  const pcf::CapabilitySet capabilities_;
+  const pc_flags::CapabilitySet capabilities_;
   int size_{};
   Matrix3X<T> xyzs_;
   MatrixNX<NC, C> colors_;
@@ -127,17 +127,17 @@ class PointCloud::Storage {
 namespace {
 
 // Ensure that a capability set is complete valid (does not have extra bits).
-void ValidateCapabilities(pcf::CapabilitySet c) {
-  pcf::CapabilitySet full_mask =
-      pcf::kXYZs | pcf::kNormals | pcf::kColors | pcf::kExtras;
+void ValidateCapabilities(pc_flags::CapabilitySet c) {
+  pc_flags::CapabilitySet full_mask =
+      pc_flags::kXYZs | pc_flags::kNormals | pc_flags::kColors | pc_flags::kExtras;
   if (c <= 0 || c > full_mask) {
     throw std::runtime_error("Invalid CapabilitySet");
   }
 }
 
-pcf::CapabilitySet ResolveCapabilities(
-    const PointCloud& other, pcf::CapabilitySet capabilities) {
-  if (capabilities == pcf::kInherit) {
+pc_flags::CapabilitySet ResolveCapabilities(
+    const PointCloud& other, pc_flags::CapabilitySet capabilities) {
+  if (capabilities == pc_flags::kInherit) {
     return other.capabilities();
   } else {
     return capabilities;
@@ -147,13 +147,13 @@ pcf::CapabilitySet ResolveCapabilities(
 // If kExtraInherit is used, then we take on the other's type is used.
 // If another extra is used, and we wish to copy the other's extras,
 // ensure they are compatible.
-pcf::ExtraType ResolveExtraType(const PointCloud& other,
-                               pcf::CapabilitySet capabilities,
-                               const pcf::ExtraType& extra_type) {
-  if (extra_type == pcf::kExtraInherit) {
+pc_flags::ExtraType ResolveExtraType(const PointCloud& other,
+                               pc_flags::CapabilitySet capabilities,
+                               const pc_flags::ExtraType& extra_type) {
+  if (extra_type == pc_flags::kExtraInherit) {
     return other.extra_type();
   } else {
-    if (capabilities & pcf::kExtras) {
+    if (capabilities & pc_flags::kExtras) {
       DRAKE_DEMAND(extra_type == other.extra_type());
     }
     return extra_type;
@@ -165,17 +165,17 @@ pcf::ExtraType ResolveExtraType(const PointCloud& other,
 // @post The returned capabilities will be valid for both point clouds. If
 //   `c` enables extras, then the extra type will be shared by both point
 //   clouds.
-pcf::CapabilitySet ResolveCapabilities(
+pc_flags::CapabilitySet ResolveCapabilities(
     const PointCloud& a,
     const PointCloud& b,
-    pcf::CapabilitySet capabilities) {
-  if (capabilities == pcf::kInherit) {
+    pc_flags::CapabilitySet capabilities) {
+  if (capabilities == pc_flags::kInherit) {
     // If we do not permit a subset, expect the exact same capabilities.
     a.RequireExactCapabilities(b.capabilities(), b.extra_type());
     return a.capabilities();
   } else {
-    pcf::ExtraType f = (capabilities & pcf::kExtras) ? a.extra_type()
-                                                     : pcf::kExtraNone;
+    pc_flags::ExtraType f = (capabilities & pc_flags::kExtras) ? a.extra_type()
+                                                     : pc_flags::kExtraNone;
     a.RequireCapabilities(capabilities, f);
     b.RequireCapabilities(capabilities, f);
     return capabilities;
@@ -186,22 +186,22 @@ pcf::CapabilitySet ResolveCapabilities(
 
 PointCloud::PointCloud(
     PointCloud::Index new_size,
-    pcf::CapabilitySet capabilities,
-    const pcf::ExtraType& extra_type)
+    pc_flags::CapabilitySet capabilities,
+    const pc_flags::ExtraType& extra_type)
     : size_(new_size),
       capabilities_(capabilities),
       extra_type_(extra_type) {
   ValidateCapabilities(capabilities_);
-  if (capabilities_ & pcf::kInherit)
+  if (capabilities_ & pc_flags::kInherit)
     throw std::runtime_error("Cannot construct a PointCloud with kInherit");
-  if (extra_type == pcf::kExtraInherit)
+  if (extra_type == pc_flags::kExtraInherit)
     throw std::runtime_error(
         "Cannot construct a PointCloud with kExtraInherit");
   if (has_extras()) {
-    if (extra_type_ == pcf::kExtraNone)
+    if (extra_type_ == pc_flags::kExtraNone)
       throw std::runtime_error("Cannot specify kExtraNone with kExtras");
   }
-  else if (extra_type != pcf::kExtraNone)
+  else if (extra_type != pc_flags::kExtraNone)
     throw std::runtime_error(
         "Must specify kExtraNone if kExtras is not present");
 
@@ -210,8 +210,8 @@ PointCloud::PointCloud(
 }
 
 PointCloud::PointCloud(const PointCloud& other,
-                       pcf::CapabilitySet copy_capabilities,
-                       const pcf::ExtraType& extra_type)
+                       pc_flags::CapabilitySet copy_capabilities,
+                       const pc_flags::ExtraType& extra_type)
     : PointCloud(other.size(),
                  ResolveCapabilities(other, copy_capabilities),
                  ResolveExtraType(other, copy_capabilities, extra_type)) {}
@@ -255,7 +255,7 @@ void PointCloud::SetDefault(int start, int num) {
 }
 
 void PointCloud::SetFrom(const PointCloud& other,
-                         pcf::CapabilitySet c,
+                         pc_flags::CapabilitySet c,
                          bool allow_resize) {
   int old_size = size();
   int new_size = other.size();
@@ -265,17 +265,17 @@ void PointCloud::SetFrom(const PointCloud& other,
     throw std::runtime_error(
         fmt::format("CopyFrom: {} != {}", new_size, old_size));
   }
-  pcf::CapabilitySet c_final = ResolveCapabilities(*this, other, c);
-  if (c_final & pcf::kXYZs) {
+  pc_flags::CapabilitySet c_final = ResolveCapabilities(*this, other, c);
+  if (c_final & pc_flags::kXYZs) {
     mutable_xyzs() = other.xyzs();
   }
-  if (c_final & pcf::kColors) {
+  if (c_final & pc_flags::kColors) {
     mutable_colors() = other.colors();
   }
-  if (c_final & pcf::kNormals) {
+  if (c_final & pc_flags::kNormals) {
     mutable_normals() = other.normals();
   }
-  if (c_final & pcf::kExtras) {
+  if (c_final & pc_flags::kExtras) {
     mutable_extras() = other.extras();
   }
 }
@@ -288,7 +288,7 @@ void PointCloud::AddPoints(
   resize(new_size, skip_initialization);
 }
 
-void PointCloud::AddPoints(const PointCloud& other, pcf::CapabilitySet c) {
+void PointCloud::AddPoints(const PointCloud& other, pc_flags::CapabilitySet c) {
   int old_size = size();
   int new_size = old_size + other.size();
   resize(new_size);
@@ -297,22 +297,22 @@ void PointCloud::AddPoints(const PointCloud& other, pcf::CapabilitySet c) {
   auto fresh_block = [=](auto value) {
     return value.middleCols(old_size, other.size());
   };
-  if (c & pcf::kXYZs) {
+  if (c & pc_flags::kXYZs) {
     fresh_block(mutable_xyzs()) = other.xyzs();
   }
-  if (c & pcf::kNormals) {
+  if (c & pc_flags::kNormals) {
     fresh_block(mutable_normals()) = other.normals();
   }
-  if (c & pcf::kColors) {
+  if (c & pc_flags::kColors) {
     fresh_block(mutable_colors()) = other.colors();
   }
-  if (c & pcf::kExtras) {
+  if (c & pc_flags::kExtras) {
     fresh_block(mutable_extras()) = other.extras();
   }
 }
 
 bool PointCloud::has_xyzs() const {
-  return capabilities_ & pcf::kXYZs;
+  return capabilities_ & pc_flags::kXYZs;
 }
 Eigen::Ref<const Matrix3X<T>> PointCloud::xyzs() const {
   DRAKE_DEMAND(has_xyzs());
@@ -324,7 +324,7 @@ Eigen::Ref<Matrix3X<T>> PointCloud::mutable_xyzs() {
 }
 
 bool PointCloud::has_normals() const {
-  return capabilities_ & pcf::kNormals;
+  return capabilities_ & pc_flags::kNormals;
 }
 Eigen::Ref<const Matrix3X<T>> PointCloud::normals() const {
   DRAKE_DEMAND(has_normals());
@@ -336,7 +336,7 @@ Eigen::Ref<Matrix3X<T>> PointCloud::mutable_normals() {
 }
 
 bool PointCloud::has_colors() const {
-  return capabilities_ & pcf::kColors;
+  return capabilities_ & pc_flags::kColors;
 }
 Eigen::Ref<const MatrixNX<NC, C>> PointCloud::colors() const {
   DRAKE_DEMAND(has_colors());
@@ -348,9 +348,9 @@ Eigen::Ref<MatrixNX<NC, C>> PointCloud::mutable_colors() {
 }
 
 bool PointCloud::has_extras() const {
-  return capabilities_ & pcf::kExtras;
+  return capabilities_ & pc_flags::kExtras;
 }
-bool PointCloud::has_extras(const pcf::ExtraType& extra_type) const {
+bool PointCloud::has_extras(const pc_flags::ExtraType& extra_type) const {
   return has_extras() && extra_type_ == extra_type;
 }
 Eigen::Ref<const MatrixX<F>> PointCloud::extras() const {
@@ -363,52 +363,52 @@ Eigen::Ref<MatrixX<F>> PointCloud::mutable_extras() {
 }
 
 bool PointCloud::HasCapabilities(
-    pcf::CapabilitySet c,
-    const pcf::ExtraType& f) const {
+    pc_flags::CapabilitySet c,
+    const pc_flags::ExtraType& f) const {
   bool good = true;
   if ((capabilities() & c) != c) {
     good = false;
   } else {
-    if (c & pcf::kExtras) {
-      DRAKE_DEMAND(f != pcf::kExtraNone);
-      DRAKE_DEMAND(f != pcf::kExtraInherit);
+    if (c & pc_flags::kExtras) {
+      DRAKE_DEMAND(f != pc_flags::kExtraNone);
+      DRAKE_DEMAND(f != pc_flags::kExtraInherit);
       if (extra_type() != f) {
         good = false;
       }
     } else {
-      DRAKE_DEMAND(f == pcf::kExtraNone);
+      DRAKE_DEMAND(f == pc_flags::kExtraNone);
     }
   }
   return good;
 }
 
 void PointCloud::RequireCapabilities(
-    pcf::CapabilitySet c,
-    const pcf::ExtraType& f) const {
+    pc_flags::CapabilitySet c,
+    const pc_flags::ExtraType& f) const {
   if (!HasCapabilities(c, f)) {
     throw std::runtime_error(
         fmt::format("PointCloud does not have expected capabilities.\n"
                     "Expected {}, got {}",
-                    pcf::ToString(c, f),
-                    pcf::ToString(capabilities(), extra_type())));
+                    pc_flags::ToString(c, f),
+                    pc_flags::ToString(capabilities(), extra_type())));
   }
 }
 
 bool PointCloud::HasExactCapabilities(
-    pcf::CapabilitySet c,
-    const pcf::ExtraType& f) const {
+    pc_flags::CapabilitySet c,
+    const pc_flags::ExtraType& f) const {
   return HasCapabilities(c, f) && capabilities() == c;
 }
 
 void PointCloud::RequireExactCapabilities(
-    pcf::CapabilitySet c,
-    const pcf::ExtraType& f) const {
+    pc_flags::CapabilitySet c,
+    const pc_flags::ExtraType& f) const {
   if (!HasExactCapabilities(c, f)) {
     throw std::runtime_error(
         fmt::format("PointCloud does not have the exact expected capabilities."
                     "\nExpected {}, got {}",
-                    pcf::ToString(c, f),
-                    pcf::ToString(capabilities(), extra_type())));
+                    pc_flags::ToString(c, f),
+                    pc_flags::ToString(capabilities(), extra_type())));
   }
 }
 
