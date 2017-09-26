@@ -17,7 +17,8 @@ namespace qp_inverse_dynamics {
 
 using systems::controllers::qp_inverse_dynamics::QpInverseDynamicsSystem;
 using systems::controllers::qp_inverse_dynamics::QpOutputTranslatorSystem;
-using systems::controllers::qp_inverse_dynamics::RobotKinematicStateTranslatorSystem;
+using systems::controllers::qp_inverse_dynamics::
+    RobotKinematicStateTranslatorSystem;
 
 ManipulatorMoveJointController::ManipulatorMoveJointController(
     const std::string& model_path, const std::string& alias_group_path,
@@ -36,8 +37,7 @@ ManipulatorMoveJointController::ManipulatorMoveJointController(
 
   // Converts raw state to humanoid status.
   RobotKinematicStateTranslatorSystem<double>* rs_wrapper =
-      builder.AddSystem<RobotKinematicStateTranslatorSystem<double>>(
-          &robot);
+      builder.AddSystem<RobotKinematicStateTranslatorSystem<double>>(&robot);
   rs_wrapper->set_name("rs_wrapper");
   // Converts qp output to raw torque.
   QpOutputTranslatorSystem* joint_level_controller =

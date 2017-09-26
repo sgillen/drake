@@ -16,93 +16,9 @@ namespace examples {
 namespace humanoid_controller {
 
 /**
- * An abstract base class for systems that translate various types of state
- * into HumanoidStatus.
- */
-class HumanoidStatusTranslatorSystem : public systems::LeafSystem<double> {
- public:
-  DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(HumanoidStatusTranslatorSystem)
-
-  /**
-   * Constructor.
-   * @param robot Pointer to a RigidBodyTree. The lifespan of @p robot must
-   * be longer than this object.
-   * @param alias_group_path Path to the alias groups file. Used to construct
-   * HumanoidStatus.
-   */
-  HumanoidStatusTranslatorSystem(const RigidBodyTree<double>* robot,
-                                 const std::string& alias_group_path);
-
-  /**
-   * Returns the output port for HumanoidStatus.
-   */
-  const systems::OutputPort<double>& get_output_port_humanoid_status() const {
-    return get_output_port(output_port_index_humanoid_status_);
-  }
-
- protected:
-  const systems::controllers::qp_inverse_dynamics::RobotKinematicState<double>&
-  get_default_output() const {
-    return *default_output_;
-  }
-
-  /**
-   * Derived classes should use this to record the output port index.
-   */
-  void set_output_port_index_humanoid_status(systems::OutputPortIndex index) {
-    output_port_index_humanoid_status_ = index;
-  }
-
-  const RigidBodyTree<double>& get_robot() const { return robot_; }
-
- private:
-  const RigidBodyTree<double>& robot_;
-  std::unique_ptr<
-      systems::controllers::qp_inverse_dynamics::RobotKinematicState<double>>
-      default_output_;
-
-  int output_port_index_humanoid_status_{0};
-};
-
-/**
- * Translates a state vector to HumanoidStatus.
- */
-class StateToHumanoidStatusSystem : public HumanoidStatusTranslatorSystem {
- public:
-  DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(StateToHumanoidStatusSystem)
-
-  /**
-   * Constructor.
-   * @param robot Pointer to a RigidBodyTree. The lifespan of @p robot must
-   * be longer than this object.
-   * @param alias_group_path Path to the alias groups file. Used to construct
-   * HumanoidStatus.
-   */
-  StateToHumanoidStatusSystem(const RigidBodyTree<double>* robot,
-                              const std::string& alias_group_path);
-
-  /**
-   * Returns the input port for a state vector.
-   */
-  const systems::InputPortDescriptor<double>& get_input_port_state() const {
-    return get_input_port(input_port_index_state_);
-  }
-
- private:
-  // This is the calculator for the output port.
-  void CalcHumanoidStatus(
-      const systems::Context<double>& context,
-      systems::controllers::qp_inverse_dynamics::RobotKinematicState<double>*
-          output) const;
-
-  int input_port_index_state_{0};
-};
-
-/**
  * Translates a bot_core::robot_state_t message to HumanoidStatus.
  */
-class RobotStateMsgToHumanoidStatusSystem
-    : public HumanoidStatusTranslatorSystem {
+class RobotStateMsgToHumanoidStatusSystem : public systems::LeafSystem<double> {
  public:
   DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(RobotStateMsgToHumanoidStatusSystem)
 
@@ -118,20 +34,26 @@ class RobotStateMsgToHumanoidStatusSystem
   /**
    * Returns input port for bot_core::robot_state_t.
    */
-  inline const systems::InputPortDescriptor<double>&
-  get_input_port_robot_state_msg() const {
-    return get_input_port(input_port_index_lcm_msg_);
+  const systems::InputPortDescriptor<double>& get_input_port() const {
+    return System<double>::get_input_port(0);
+  }
+
+  /**
+   * Returns the output port for HumanoidStatus.
+   */
+  const systems::OutputPort<double>& get_output_port() const {
+    return System<double>::get_output_port(0);
   }
 
  private:
   // This is the calculator for the output port.
   void CalcHumanoidStatus(
       const systems::Context<double>& context,
-      systems::controllers::qp_inverse_dynamics::RobotKinematicState<double>*
-          output) const;
+      HumanoidStatus* output) const;
 
+  const RigidBodyTree<double>& robot_;
   const manipulation::RobotStateLcmMessageTranslator translator_;
-  int input_port_index_lcm_msg_{0};
+  std::unique_ptr<HumanoidStatus> default_output_;
 };
 
 }  // namespace humanoid_controller

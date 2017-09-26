@@ -35,7 +35,8 @@ ManipulatorMoveJointPlanEvalSystem::ManipulatorMoveJointPlanEvalSystem(
       DeclareInputPort(systems::kVectorValued, kAccDim).get_index();
 
   output_port_index_debug_info_ =
-      DeclareAbstractOutputPort(&ManipulatorMoveJointPlanEvalSystem::OutputDebugInfo)
+      DeclareAbstractOutputPort(
+          &ManipulatorMoveJointPlanEvalSystem::OutputDebugInfo)
           .get_index();
   set_name("ManipulatorMoveJointPlanEvalSystem");
 
@@ -47,7 +48,8 @@ ManipulatorMoveJointPlanEvalSystem::ManipulatorMoveJointPlanEvalSystem(
           lcmt_plan_eval_debug_info()));
 }
 
-void ManipulatorMoveJointPlanEvalSystem::Initialize(systems::State<double>* state) {
+void ManipulatorMoveJointPlanEvalSystem::Initialize(
+    systems::State<double>* state) {
   VectorSetpoint<double>& plan =
       get_mutable_abstract_value<VectorSetpoint<double>>(state,
                                                          abs_state_index_plan_);

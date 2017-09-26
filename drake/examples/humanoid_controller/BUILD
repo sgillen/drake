@@ -93,8 +93,8 @@ drake_cc_library(
 )
 
 drake_cc_library(
-    name = "humanoid_controller_system",
-    hdrs = ["humanoid_controller_system.h"],
+    name = "humanoid_controller",
+    hdrs = ["humanoid_controller.h"],
     deps = [
         ":atlas_command_translator_system",
         ":humanoid_plan_eval_system",
@@ -139,7 +139,7 @@ drake_cc_binary(
     ],
     tags = gurobi_test_tags(),
     deps = [
-        ":humanoid_controller_system",
+        ":humanoid_controller",
         "//drake/common:find_resource",
         "//drake/examples/valkyrie:valkyrie_constants",
         "//drake/systems/lcm:lcm_driven_loop",

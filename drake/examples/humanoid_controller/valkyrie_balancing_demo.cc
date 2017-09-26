@@ -1,5 +1,5 @@
 #include "drake/common/find_resource.h"
-#include "drake/examples/humanoid_controller/humanoid_controller_system.h"
+#include "drake/examples/humanoid_controller/humanoid_controller.h"
 #include "drake/examples/valkyrie/valkyrie_constants.h"
 #include "drake/manipulation/util/robot_state_msg_translator.h"
 #include "drake/systems/lcm/lcm_driven_loop.h"
@@ -25,7 +25,7 @@ void controller_loop() {
       "config/valkyrie.id_controller_config");
 
   drake::lcm::DrakeLcm lcm;
-  HumanoidControllerSystem valkyrie_controller(kModelFileName, kControlConfigPath,
+  HumanoidController valkyrie_controller(kModelFileName, kControlConfigPath,
                                          kAliasGroupPath, &lcm);
   HumanoidPlanEvalSystem* plan_eval =
       valkyrie_controller.get_mutable_plan_eval();

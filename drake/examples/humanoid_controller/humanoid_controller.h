@@ -32,9 +32,9 @@ using systems::controllers::qp_inverse_dynamics::QpInverseDynamicsSystem;
  * output ports.  The state and plan inputs and control outputs are sent
  * through LCM messages directly.
  */
-class HumanoidControllerSystem : public systems::Diagram<double> {
+class HumanoidController : public systems::Diagram<double> {
  public:
-  HumanoidControllerSystem(const std::string& model_path,
+  HumanoidController(const std::string& model_path,
                      const std::string& control_config_path,
                      const std::string& alias_group_path, lcm::DrakeLcm* lcm) {
     systems::DiagramBuilder<double> builder;
@@ -77,14 +77,14 @@ class HumanoidControllerSystem : public systems::Diagram<double> {
 
     // lcm -> rs
     builder.Connect(robot_state_subscriber_->get_output_port(0),
-                    msg_to_humanoid_status->get_input_port_robot_state_msg());
+                    msg_to_humanoid_status->get_input_port());
     // rs + plan -> qp_input
-    builder.Connect(msg_to_humanoid_status->get_output_port_humanoid_status(),
+    builder.Connect(msg_to_humanoid_status->get_output_port(),
                     plan_eval_->get_input_port_kinematic_state());
     builder.Connect(plan_subscriber->get_output_port(0),
                     plan_eval_->get_input_port_manip_plan_msg());
     // rs + qp_input -> qp_output
-    builder.Connect(msg_to_humanoid_status->get_output_port_humanoid_status(),
+    builder.Connect(msg_to_humanoid_status->get_output_port(),
                     qp_con->get_input_port_kinematic_state());
     builder.Connect(plan_eval_->get_output_port_qp_input(),
                     qp_con->get_input_port_qp_input());

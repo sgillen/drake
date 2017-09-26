@@ -81,13 +81,12 @@ class BodyOfInterest {
  * some measured contact force / torque information, joint torque, etc.
  * It also stores robot specific constants.
  */
-class HumanoidStatus
+class HumanoidStatus final
     : public systems::controllers::qp_inverse_dynamics::RobotKinematicState<
           double> {
- protected:
+ public:
   DRAKE_DEFAULT_COPY_AND_MOVE_AND_ASSIGN(HumanoidStatus)
 
- public:
   /// Position offset from the foot frame to the sole frame.
   static const Vector3<double> kFootToSoleOffset;
   /// Position Offset from the foot frame to force torque sensor in the foot

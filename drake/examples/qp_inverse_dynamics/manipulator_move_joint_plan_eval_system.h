@@ -6,8 +6,8 @@
 #include <vector>
 
 #include "drake/common/drake_copyable.h"
-#include "drake/systems/controllers/plan_eval/plan_eval_base_system.h"
 #include "drake/lcmt_plan_eval_debug_info.hpp"
+#include "drake/systems/controllers/plan_eval/plan_eval_base_system.h"
 
 namespace drake {
 namespace examples {
@@ -26,7 +26,8 @@ namespace qp_inverse_dynamics {
  * This system assumes that |q| = |v|, and model being controlled contains no
  * floating base joints.
  */
-class ManipulatorMoveJointPlanEvalSystem : public systems::controllers::plan_eval::PlanEvalBaseSystem {
+class ManipulatorMoveJointPlanEvalSystem
+    : public systems::controllers::plan_eval::PlanEvalBaseSystem {
  public:
   DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(ManipulatorMoveJointPlanEvalSystem)
 
@@ -41,8 +42,9 @@ class ManipulatorMoveJointPlanEvalSystem : public systems::controllers::plan_eva
    * @param dt Time step
    */
   ManipulatorMoveJointPlanEvalSystem(const RigidBodyTree<double>* robot,
-                            const std::string& alias_groups_file_name,
-                            const std::string& param_file_name, double dt);
+                                     const std::string& alias_groups_file_name,
+                                     const std::string& param_file_name,
+                                     double dt);
 
   /**
    * Initializes the plan and gains. Must be called before execution.
