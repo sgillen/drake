@@ -6,6 +6,8 @@ namespace drake {
 namespace examples {
 namespace humanoid_controller {
 
+using systems::controllers::qp_inverse_dynamics::RobotKinematicState;
+
 RobotStateMsgToHumanoidStatusSystem::RobotStateMsgToHumanoidStatusSystem(
     const RigidBodyTree<double>* robot, const std::string& alias_group_path)
     : robot_(*robot), translator_(*robot) {
@@ -15,13 +17,14 @@ RobotStateMsgToHumanoidStatusSystem::RobotStateMsgToHumanoidStatusSystem(
 
   DeclareAbstractInputPort();
   DeclareAbstractOutputPort<RobotStateMsgToHumanoidStatusSystem,
-                            HumanoidStatus>(
+                            RobotKinematicState<double>>(
       *default_output_,
       &RobotStateMsgToHumanoidStatusSystem::CalcHumanoidStatus);
 }
 
 void RobotStateMsgToHumanoidStatusSystem::CalcHumanoidStatus(
-    const systems::Context<double>& context, HumanoidStatus* output) const {
+    const systems::Context<double>& context,
+    RobotKinematicState<double>* output) const {
   const bot_core::robot_state_t* msg =
       EvalInputValue<bot_core::robot_state_t>(context, 0);
 
@@ -44,7 +47,9 @@ void RobotStateMsgToHumanoidStatusSystem::CalcHumanoidStatus(
   r_foot_wrench[1] = msg->force_torque.r_foot_torque_y;
   r_foot_wrench[5] = msg->force_torque.r_foot_force_z;
 
-  output->Update(time, pos, vel, joint_torque, l_foot_wrench, r_foot_wrench);
+  HumanoidStatus* status = dynamic_cast<HumanoidStatus*>(output);
+  DRAKE_DEMAND(status != nullptr);
+  status->Update(time, pos, vel, joint_torque, l_foot_wrench, r_foot_wrench);
 }
 
 }  // namespace humanoid_controller

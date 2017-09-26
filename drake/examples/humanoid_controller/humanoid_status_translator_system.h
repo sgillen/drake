@@ -47,8 +47,10 @@ class RobotStateMsgToHumanoidStatusSystem : public systems::LeafSystem<double> {
 
  private:
   // This is the calculator for the output port.
-  void CalcHumanoidStatus(const systems::Context<double>& context,
-                          HumanoidStatus* output) const;
+  void CalcHumanoidStatus(
+      const systems::Context<double>& context,
+      systems::controllers::qp_inverse_dynamics::RobotKinematicState<double>*
+          output) const;
 
   const RigidBodyTree<double>& robot_;
   const manipulation::RobotStateLcmMessageTranslator translator_;

@@ -20,7 +20,7 @@ namespace examples {
 namespace humanoid_controller {
 namespace {
 
-void send_manip_message() {
+void send_manip_message(double right_shoulder_pitch_offset) {
   RigidBodyTree<double> robot;
   drake::parsers::urdf::AddModelInstanceFromUrdfFileToWorld(
       "drake/examples/valkyrie/urdf/urdf/"
@@ -55,7 +55,8 @@ void send_manip_message() {
   msg.plan.resize(msg.num_states);
   msg.plan_info.resize(msg.num_states, 1);
 
-  q[10] -= 0.5;  // right shoulder pitch
+  // right shoulder pitch
+  q[10] += right_shoulder_pitch_offset;
   translator.InitializeMessage(&(msg.plan[0]));
   translator.EncodeMessageKinematics(q, v, &(msg.plan[0]));
   msg.plan[0].utime = 1e6;
@@ -71,7 +72,12 @@ void send_manip_message() {
 }  // namespace examples
 }  // namespace drake
 
-int main() {
-  drake::examples::humanoid_controller::send_manip_message();
+int main(int argc, char** argv) {
+  double right_shoulder_pitch_offset = 0;
+  if (argc == 2) {
+    right_shoulder_pitch_offset = std::atof(argv[1]);
+  }
+  drake::examples::humanoid_controller::send_manip_message(
+      right_shoulder_pitch_offset);
   return 0;
 }
