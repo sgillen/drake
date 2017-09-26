@@ -9,22 +9,22 @@
 
 namespace drake {
 namespace examples {
-namespace qp_inverse_dynamics {
+namespace humanoid_controller {
 
 /**
  * A class that extends QpOutputTranslatorSystem to output an additional
  * bot_core::atlas_command_t.
  */
-class AtlasJointLevelControllerSystem : public systems::controllers::qp_inverse_dynamics::QpOutputTranslatorSystem {
+class AtlasCommandTranslatorSystem : public systems::controllers::qp_inverse_dynamics::QpOutputTranslatorSystem {
  public:
-  DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(AtlasJointLevelControllerSystem)
+  DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(AtlasCommandTranslatorSystem)
 
   /**
    * @param robot A reference to the RigidBodyTree within the plant that is
    * being controlled. The lifespan of this reference must exceed that of this
    * class's instance. @p robot should only contain a single model instance.
    */
-  explicit AtlasJointLevelControllerSystem(const RigidBodyTree<double>& robot);
+  explicit AtlasCommandTranslatorSystem(const RigidBodyTree<double>& robot);
 
   /**
    * Returns the output port for bot_core::atlas_command_t.
@@ -56,6 +56,6 @@ class AtlasJointLevelControllerSystem : public systems::controllers::qp_inverse_
   VectorX<double> ff_const_;
 };
 
-}  // namespace qp_inverse_dynamics
+}  // namespace humanoid_controller
 }  // namespace examples
 }  // namespace drake

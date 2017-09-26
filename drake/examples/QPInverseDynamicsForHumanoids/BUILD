@@ -25,41 +25,7 @@ exports_files(
     ["config/iiwa.id_controller_config"],
 )
 
-drake_cc_library(
-    name = "humanoid_status",
-    srcs = ["humanoid_status.cc"],
-    hdrs = ["humanoid_status.h"],
-    deps = [
-        "//drake/common:essential",
-        "//drake/multibody:rigid_body_tree",
-        "//drake/multibody:rigid_body_tree_alias_groups",
-        "//drake/systems/controllers/qp_inverse_dynamics:robot_kinematic_state",  # noqa
-        "//drake/systems/robotInterfaces:side",
-    ],
-)
-
 # === test/ ===
 
-drake_cc_googletest(
-    name = "valkyrie_balancing_test",
-    size = "medium",
-    srcs = ["test/valkyrie_balancing_test.cc"],
-    data = [
-        "config/valkyrie.alias_groups",
-        "config/valkyrie.id_controller_config",
-        "//drake/examples/valkyrie:models",
-    ],
-    tags = gurobi_test_tags(),
-    deps = [
-        ":humanoid_status",
-        "//drake/common:find_resource",
-        "//drake/common/test_utilities:eigen_matrix_compare",
-        "//drake/examples/valkyrie:valkyrie_constants",
-        "//drake/multibody/parsers",
-        "//drake/systems/controllers:setpoint",
-        "//drake/systems/controllers/qp_inverse_dynamics",
-        "//drake/systems/controllers/qp_inverse_dynamics:param_parser",
-    ],
-)
 
 add_lint_tests()

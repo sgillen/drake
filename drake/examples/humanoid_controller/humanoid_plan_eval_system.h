@@ -9,9 +9,8 @@
 #include "drake/systems/controllers/qp_inverse_dynamics/robot_kinematic_state.h"
 
 namespace drake {
-namespace systems {
-namespace controllers {
-namespace plan_eval {
+namespace examples {
+namespace humanoid_controller {
 
 /**
  * This class extends PlanEvalBaseSystem to interpret plans for humanoid robots.
@@ -25,7 +24,7 @@ namespace plan_eval {
  * @see HumanoidManipulationPlan for more details.
  * TODO(siyuan) add a walking plan.
  */
-class HumanoidPlanEvalSystem : public PlanEvalBaseSystem {
+class HumanoidPlanEvalSystem : public systems::controllers::plan_eval::PlanEvalBaseSystem {
  public:
   DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(HumanoidPlanEvalSystem)
 
@@ -73,7 +72,6 @@ class HumanoidPlanEvalSystem : public PlanEvalBaseSystem {
   int input_port_index_manip_plan_msg_{};
 };
 
-}  // namespace plan_eval
-}  // namespace controllers
-}  // namespace systems
+}  // namespace humanoid_controller
+}  // namespace examples
 }  // namespace drake

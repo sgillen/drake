@@ -1,10 +1,10 @@
-#include "drake/examples/QPInverseDynamicsForHumanoids/system/humanoid_status_translator_system.h"
+#include "drake/examples/humanoid_controller/humanoid_status_translator_system.h"
 
-#include "drake/examples/QPInverseDynamicsForHumanoids/humanoid_status.h"
+#include "drake/examples/humanoid_controller/humanoid_status.h"
 
 namespace drake {
 namespace examples {
-namespace qp_inverse_dynamics {
+namespace humanoid_controller {
 
 using systems::controllers::qp_inverse_dynamics::RobotKinematicState;
 
@@ -94,6 +94,6 @@ void RobotStateMsgToHumanoidStatusSystem::CalcHumanoidStatus(
                           r_foot_wrench);
 }
 
-}  // namespace qp_inverse_dynamics
+}  // namespace humanoid_controller
 }  // namespace examples
 }  // namespace drake

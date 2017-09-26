@@ -11,28 +11,6 @@ load("//tools:gurobi.bzl", "gurobi_test_tags")
 load("//tools:lint.bzl", "add_lint_tests")
 
 drake_cc_library(
-    name = "humanoid_status_translator_system",
-    srcs = ["humanoid_status_translator_system.cc"],
-    hdrs = ["humanoid_status_translator_system.h"],
-    deps = [
-        "//drake/examples/QPInverseDynamicsForHumanoids:humanoid_status",
-        "//drake/manipulation/util:robot_state_msg_translator",
-        "//drake/multibody:rigid_body_tree",
-        "//drake/systems/controllers/qp_inverse_dynamics:lcm_utils",
-        "//drake/systems/framework:leaf_system",
-    ],
-)
-
-drake_cc_library(
-    name = "atlas_joint_level_controller_system",
-    srcs = ["atlas_joint_level_controller_system.cc"],
-    hdrs = ["atlas_joint_level_controller_system.h"],
-    deps = [
-        "//drake/systems/controllers/qp_inverse_dynamics:qp_output_translator_system",  # noqa
-    ],
-)
-
-drake_cc_library(
     name = "manipulator_plan_eval_system",
     srcs = ["manipulator_plan_eval_system.cc"],
     hdrs = ["manipulator_plan_eval_system.h"],
@@ -54,51 +32,6 @@ drake_cc_library(
         "//drake/systems/controllers/qp_inverse_dynamics:qp_inverse_dynamics_system",  # noqa
         "//drake/systems/controllers/qp_inverse_dynamics:qp_output_translator_system",  # noqa
         "//drake/systems/framework",
-    ],
-)
-
-drake_cc_library(
-    name = "valkyrie_controller",
-    hdrs = ["valkyrie_controller.h"],
-    deps = [
-        ":atlas_joint_level_controller_system",
-        ":humanoid_plan_eval_system",
-        ":humanoid_status_translator_system",
-        "//drake/lcm",
-        "//drake/multibody/parsers",
-        "//drake/systems/controllers/qp_inverse_dynamics:qp_inverse_dynamics_system",  # noqa
-        "//drake/systems/framework",
-        "//drake/systems/lcm",
-        "@lcmtypes_bot2_core",
-    ],
-)
-
-drake_cc_library(
-    name = "humanoid_plan_eval_system",
-    srcs = ["humanoid_plan_eval_system.cc"],
-    hdrs = ["humanoid_plan_eval_system.h"],
-    deps = [
-        "//drake/systems/controllers/plan_eval:humanoid_manipulation_plan",
-        "//drake/systems/controllers/plan_eval:plan_eval_base_system",
-    ],
-)
-
-drake_cc_binary(
-    name = "valkyrie_balancing_controller_system",
-    srcs = [
-        "valkyrie_balancing_controller_system.cc",
-    ],
-    data = [
-        "//drake/examples/QPInverseDynamicsForHumanoids:config/valkyrie.alias_groups",  # noqa
-        "//drake/examples/QPInverseDynamicsForHumanoids:config/valkyrie.id_controller_config",  # noqa
-        "//drake/examples/valkyrie:models",
-    ],
-    tags = gurobi_test_tags(),
-    deps = [
-        ":valkyrie_controller",
-        "//drake/common:find_resource",
-        "//drake/examples/valkyrie:valkyrie_constants",
-        "//drake/systems/lcm:lcm_driven_loop",
     ],
 )
 
@@ -138,28 +71,37 @@ drake_cc_googletest(
     ],
 )
 
-drake_cc_googletest(
-    name = "humanoid_plan_eval_test",
-    srcs = ["test/humanoid_plan_eval_system_test.cc"],
-    data = [
-        "//drake/examples/QPInverseDynamicsForHumanoids:config/valkyrie.alias_groups",  # noqa
-        "//drake/examples/QPInverseDynamicsForHumanoids:config/valkyrie.id_controller_config",  # noqa
-        "//drake/examples/valkyrie:models",
-    ],
-    tags = gurobi_test_tags(),
-    deps = [
-        ":humanoid_plan_eval_system",
-        "//drake/common:find_resource",
-        "//drake/common/test_utilities:eigen_matrix_compare",
-        "//drake/examples/valkyrie:valkyrie_constants",
-        "//drake/multibody/parsers",
-        "//drake/systems/analysis:simulator",
-        "//drake/systems/controllers:setpoint",
-        "//drake/systems/controllers/qp_inverse_dynamics:param_parser",  # noqa
-        "//drake/systems/controllers/qp_inverse_dynamics:qp_inverse_dynamics_system",  # noqa
-        "//drake/systems/framework",
-        "//drake/systems/primitives:constant_value_source",
-    ],
-)
+#drake_cc_library(
+#    name = "manipulator_plans",
+#    srcs = [
+#        "manipulator_move_end_effector_plan.cc",
+#    ],
+#    hdrs = [
+#        "manipulator_move_end_effector_plan.h",
+#    ],
+#    deps = [
+#        ":generic_plan",
+#        "//drake/common:unused",
+#        "//drake/lcmtypes:manipulator_plan_move_end_effector",
+#        "//drake/util:lcm_util",
+#    ],
+#)
+
+#drake_cc_googletest(
+#    name = "manipulator_plan_test",
+#    data = [
+#        "//drake/examples/QPInverseDynamicsForHumanoids:config/iiwa.alias_groups",  # noqa
+#        "//drake/examples/QPInverseDynamicsForHumanoids:config/iiwa.id_controller_config",  # noqa
+#        "//drake/manipulation/models/iiwa_description:models",
+#    ],
+#    deps = [
+#        ":manipulator_plans",
+#        ":test_common",
+#        "//drake/common:find_resource",
+#        "//drake/common/test_utilities:eigen_matrix_compare",
+#        "//drake/multibody:rigid_body_tree",
+#        "//drake/multibody/parsers",
+#    ],
+#)
 
 add_lint_tests()

@@ -1,4 +1,4 @@
-#include "drake/examples/QPInverseDynamicsForHumanoids/system/atlas_joint_level_controller_system.h"
+#include "drake/examples/humanoid_controller/atlas_command_translator_system.h"
 
 #include <memory>
 
@@ -9,13 +9,13 @@
 
 namespace drake {
 namespace examples {
-namespace qp_inverse_dynamics {
+namespace humanoid_controller {
 
-AtlasJointLevelControllerSystem::AtlasJointLevelControllerSystem(
+AtlasCommandTranslatorSystem::AtlasCommandTranslatorSystem(
     const RigidBodyTree<double>& robot)
     : QpOutputTranslatorSystem(robot) {
   output_port_index_atlas_cmd_ =
-      DeclareAbstractOutputPort(&AtlasJointLevelControllerSystem::OutputCommand)
+      DeclareAbstractOutputPort(&AtlasCommandTranslatorSystem::OutputCommand)
           .get_index();
 
   // TODO(siyuan.feng): Load gains from some config.
@@ -31,7 +31,7 @@ AtlasJointLevelControllerSystem::AtlasJointLevelControllerSystem(
   ff_const_ = VectorX<double>::Zero(act_size);
 }
 
-void AtlasJointLevelControllerSystem::OutputCommand(
+void AtlasCommandTranslatorSystem::OutputCommand(
     const systems::Context<double>& context,
     bot_core::atlas_command_t* output) const {
   // Gets a mutable reference to bot_core::atlas_command_t from output.
@@ -77,6 +77,6 @@ void AtlasJointLevelControllerSystem::OutputCommand(
   msg.desired_controller_period_ms = 0;
 }
 
-}  // namespace qp_inverse_dynamics
+}  // namespace humanoid_controller
 }  // namespace examples
 }  // namespace drake

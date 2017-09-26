@@ -1,11 +1,11 @@
-#include "drake/QPInverseDynamicsForHumanoids/system/humanoid_plan_eval_system.h"
+#include "drake/examples/humanoid_controller/humanoid_plan_eval_system.h"
 
 #include <gtest/gtest.h>
 #include "robotlocomotion/robot_plan_t.hpp"
 
 #include "drake/common/find_resource.h"
 #include "drake/common/test_utilities/eigen_matrix_compare.h"
-#include "drake/examples/QPInverseDynamicsForHumanoids/humanoid_status.h"
+#include "drake/examples/humanoid_controller/humanoid_status.h"
 #include "drake/examples/valkyrie/valkyrie_constants.h"
 #include "drake/multibody/joints/floating_base_types.h"
 #include "drake/multibody/parsers/urdf_parser.h"
@@ -16,7 +16,7 @@
 
 namespace drake {
 namespace examples {
-namespace qp_inverse_dynamics {
+namespace humanoid_controller {
 namespace {
 
 using systems::controllers::qp_inverse_dynamics::ConstraintType;
@@ -43,11 +43,11 @@ class HumanoidPlanEvalAndQpInverseDynamicsTest : public ::testing::Test {
         "valkyrie_A_sim_drake_one_neck_dof_wide_ankle_rom.urdf");
 
     const std::string kAliasGroupsPath = FindResourceOrThrow(
-        "drake/examples/QPInverseDynamicsForHumanoids/"
+        "drake/examples/humanoid_controller/"
         "config/valkyrie.alias_groups");
 
     const std::string kControlConfigPath = FindResourceOrThrow(
-        "drake/examples/QPInverseDynamicsForHumanoids/"
+        "drake/examples/humanoid_controller/"
         "config/valkyrie.id_controller_config");
 
     RigidBodyTree<double> robot;
@@ -229,6 +229,6 @@ TEST_F(HumanoidPlanEvalAndQpInverseDynamicsTest, CentroidalMomentum) {
 }
 
 }  // namespace
-}  // namespace qp_inverse_dynamics
+}  // namespace humanoid_controller
 }  // namespace examples
 }  // namespace drake

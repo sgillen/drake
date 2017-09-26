@@ -14,7 +14,7 @@
 
 namespace drake {
 namespace examples {
-namespace qp_inverse_dynamics {
+namespace humanoid_controller {
 
 /**
  * An object that holds important kinematic properties.
@@ -237,6 +237,6 @@ class HumanoidStatus
 
 std::ostream& operator<<(std::ostream& out, const HumanoidStatus& robot_status);
 
-}  // namespace qp_inverse_dynamics
+}  // namespace humanoid_controller
 }  // namespace examples
 }  // namespace drake

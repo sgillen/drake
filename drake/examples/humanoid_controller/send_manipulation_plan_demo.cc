@@ -16,6 +16,8 @@
 using std::default_random_engine;
 
 namespace drake {
+namespace examples {
+namespace humanoid_controller {
 namespace {
 
 void send_manip_message() {
@@ -65,9 +67,11 @@ void send_manip_message() {
 }
 
 }  // namespace
+}  // namespace humanoid_controller
+}  // namespace examples
 }  // namespace drake
 
 int main() {
-  drake::send_manip_message();
+  drake::examples::humanoid_controller::send_manip_message();
   return 0;
 }

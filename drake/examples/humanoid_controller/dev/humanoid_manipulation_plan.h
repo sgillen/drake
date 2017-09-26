@@ -7,9 +7,8 @@
 #include "drake/systems/controllers/zmp_planner.h"
 
 namespace drake {
-namespace systems {
-namespace controllers {
-namespace plan_eval {
+namespace examples {
+namespace humanoid_controller {
 
 /**
  * A baseline manipulation plan interpretor for a humanoid robot. The plan
@@ -21,7 +20,7 @@ namespace plan_eval {
  */
 // TODO(siyuan): make quaternion floating joint work.
 template <typename T>
-class HumanoidManipulationPlan : public GenericPlan<T> {
+class HumanoidManipulationPlan : public systems::controllers::plan_eval::GenericPlan<T> {
  protected:
   DRAKE_DEFAULT_COPY_AND_MOVE_AND_ASSIGN(HumanoidManipulationPlan)
 
@@ -148,7 +147,7 @@ class HumanoidManipulationPlan : public GenericPlan<T> {
     }
   }
 
-  GenericPlan<T>* CloneGenericPlanDerived() const override {
+  systems::controllers::plan_eval::GenericPlan<T>* CloneGenericPlanDerived() const override {
     return new HumanoidManipulationPlan<T>(*this);
   }
 
@@ -162,7 +161,6 @@ class HumanoidManipulationPlan : public GenericPlan<T> {
   int64_t last_handle_plan_time_{-1};
 };
 
-}  // namespace plan_eval
-}  // namespace controllers
-}  // namespace systems
+}  // namespace humanoid_controller
+}  // namespace examples
 }  // namespace drake

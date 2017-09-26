@@ -1,4 +1,4 @@
-#include "drake/systems/controllers/plan_eval/dev/humanoid_manipulation_plan.h"
+#include "drake/examples/humanoid_controller/dev/humanoid_manipulation_plan.h"
 
 #include <string>
 #include <unordered_map>
@@ -10,10 +10,10 @@
 #include "drake/systems/controllers/setpoint.h"
 
 namespace drake {
-namespace systems {
-namespace controllers {
-namespace plan_eval {
+namespace examples {
+namespace humanoid_controller {
 
+using systems::controllers::plan_eval::ContactState;
 using systems::controllers::qp_inverse_dynamics::ParamSet;
 using systems::controllers::qp_inverse_dynamics::QpInput;
 using systems::controllers::qp_inverse_dynamics::RobotKinematicState;
@@ -229,7 +229,6 @@ bool HumanoidManipulationPlan<T>::IsRigidBodyTreeAliasGroupsCompatible(
 
 template class HumanoidManipulationPlan<double>;
 
-}  // namespace plan_eval
-}  // namespace controllers
-}  // namespace systems
+}  // namespace humanoid_controller
+}  // namespace examples
 }  // namespace drake

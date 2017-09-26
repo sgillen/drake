@@ -1,12 +1,12 @@
 #include "drake/common/find_resource.h"
-#include "drake/examples/QPInverseDynamicsForHumanoids/system/valkyrie_controller.h"
+#include "drake/examples/humanoid_controller/humanoid_controller_system.h"
 #include "drake/examples/valkyrie/valkyrie_constants.h"
 #include "drake/manipulation/util/robot_state_msg_translator.h"
 #include "drake/systems/lcm/lcm_driven_loop.h"
 
 namespace drake {
 namespace examples {
-namespace qp_inverse_dynamics {
+namespace humanoid_controller {
 
 // This is an example qp based inverse dynamics controller loop for Valkyrie
 // built from the Systems blocks.
@@ -18,14 +18,14 @@ void controller_loop() {
       "drake/examples/valkyrie/urdf/urdf/"
       "valkyrie_A_sim_drake_one_neck_dof_wide_ankle_rom.urdf");
   const std::string kAliasGroupPath = FindResourceOrThrow(
-      "drake/examples/QPInverseDynamicsForHumanoids/"
+      "drake/examples/humanoid_controller/"
       "config/valkyrie.alias_groups");
   const std::string kControlConfigPath = FindResourceOrThrow(
-      "drake/examples/QPInverseDynamicsForHumanoids/"
+      "drake/examples/humanoid_controller/"
       "config/valkyrie.id_controller_config");
 
   drake::lcm::DrakeLcm lcm;
-  ValkyrieController valkyrie_controller(kModelFileName, kControlConfigPath,
+  HumanoidControllerSystem valkyrie_controller(kModelFileName, kControlConfigPath,
                                          kAliasGroupPath, &lcm);
   HumanoidPlanEvalSystem* plan_eval =
       valkyrie_controller.get_mutable_plan_eval();
@@ -72,8 +72,8 @@ void controller_loop() {
   loop.RunToSecondsAssumingInitialized();
 }
 
-}  // end namespace qp_inverse_dynamics
-}  // end namespace examples
+}  // namespace humanoid_controller
+}  // namespace examples
 }  // end namespace drake
 
-int main() { drake::examples::qp_inverse_dynamics::controller_loop(); }
+int main() { drake::examples::humanoid_controller::controller_loop(); }

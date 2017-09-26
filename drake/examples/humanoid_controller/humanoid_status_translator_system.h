@@ -5,7 +5,7 @@
 #include <utility>
 
 #include "drake/common/drake_copyable.h"
-#include "drake/examples/QPInverseDynamicsForHumanoids/humanoid_status.h"
+#include "drake/examples/humanoid_controller/humanoid_status.h"
 #include "drake/manipulation/util/robot_state_msg_translator.h"
 #include "drake/multibody/rigid_body_tree.h"
 #include "drake/systems/controllers/qp_inverse_dynamics/robot_kinematic_state.h"
@@ -13,7 +13,7 @@
 
 namespace drake {
 namespace examples {
-namespace qp_inverse_dynamics {
+namespace humanoid_controller {
 
 /**
  * An abstract base class for systems that translate various types of state
@@ -134,6 +134,6 @@ class RobotStateMsgToHumanoidStatusSystem
   int input_port_index_lcm_msg_{0};
 };
 
-}  // namespace qp_inverse_dynamics
+}  // namespace humanoid_controller
 }  // namespace examples
 }  // namespace drake

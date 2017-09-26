@@ -8,13 +8,13 @@
 #include "bot_core/robot_state_t.hpp"
 #include "robotlocomotion/robot_plan_t.hpp"
 
-#include "drake/examples/QPInverseDynamicsForHumanoids/system/atlas_joint_level_controller_system.h"
-#include "drake/examples/QPInverseDynamicsForHumanoids/system/humanoid_status_translator_system.h"
+#include "drake/examples/humanoid_controller/atlas_command_translator_system.h"
+#include "drake/examples/humanoid_controller/humanoid_plan_eval_system.h"
+#include "drake/examples/humanoid_controller/humanoid_status_translator_system.h"
 #include "drake/lcm/drake_lcm.h"
 #include "drake/multibody/joints/floating_base_types.h"
 #include "drake/multibody/parsers/urdf_parser.h"
 #include "drake/systems/controllers/qp_inverse_dynamics/qp_inverse_dynamics_system.h"
-#include "drake/systems/controllers/plan_eval/humanoid_plan_eval_system.h"
 #include "drake/systems/framework/diagram.h"
 #include "drake/systems/framework/diagram_builder.h"
 #include "drake/systems/lcm/lcm_publisher_system.h"
@@ -22,10 +22,9 @@
 
 namespace drake {
 namespace examples {
-namespace qp_inverse_dynamics {
+namespace humanoid_controller {
 
 using systems::controllers::qp_inverse_dynamics::QpInverseDynamicsSystem;
-using systems::controllers::plan_eval::HumanoidPlanEvalSystem;
 
 /**
  * A controller for humanoid balancing built on top of HumanoidPlanEvalSystem
@@ -33,9 +32,9 @@ using systems::controllers::plan_eval::HumanoidPlanEvalSystem;
  * output ports.  The state and plan inputs and control outputs are sent
  * through LCM messages directly.
  */
-class ValkyrieController : public systems::Diagram<double> {
+class HumanoidControllerSystem : public systems::Diagram<double> {
  public:
-  ValkyrieController(const std::string& model_path,
+  HumanoidControllerSystem(const std::string& model_path,
                      const std::string& control_config_path,
                      const std::string& alias_group_path, lcm::DrakeLcm* lcm) {
     systems::DiagramBuilder<double> builder;
@@ -57,8 +56,8 @@ class ValkyrieController : public systems::Diagram<double> {
         std::make_unique<QpInverseDynamicsSystem>(robot_.get(), kControlDt));
     qp_con->set_name("qp_con");
 
-    AtlasJointLevelControllerSystem* joint_con =
-        builder.AddSystem<AtlasJointLevelControllerSystem>(*robot_);
+    AtlasCommandTranslatorSystem* joint_con =
+        builder.AddSystem<AtlasCommandTranslatorSystem>(*robot_);
     joint_con->set_name("joint_con");
 
     robot_state_subscriber_ = builder.AddSystem(
@@ -117,6 +116,6 @@ class ValkyrieController : public systems::Diagram<double> {
   std::unique_ptr<RigidBodyTree<double>> robot_{nullptr};
 };
 
-}  // end namespace qp_inverse_dynamics
-}  // end namespace examples
+}  // namespace humanoid_controller
+}  // namespace examples
 }  // end namespace drake

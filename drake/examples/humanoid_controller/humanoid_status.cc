@@ -1,4 +1,4 @@
-#include "drake/examples/QPInverseDynamicsForHumanoids/humanoid_status.h"
+#include "drake/examples/humanoid_controller/humanoid_status.h"
 
 #include <iostream>
 
@@ -6,7 +6,7 @@
 
 namespace drake {
 namespace examples {
-namespace qp_inverse_dynamics {
+namespace humanoid_controller {
 
 // TODO(siyuan.feng): These are hard coded for Valkyrie, and they should be
 // included in the model file or loaded from a separate config file.
@@ -169,6 +169,6 @@ std::ostream& operator<<(std::ostream& out,
   return out;
 }
 
-}  // namespace qp_inverse_dynamics
+}  // namespace humanoid_controller
 }  // namespace examples
 }  // namespace drake
