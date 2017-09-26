@@ -1,8 +1,8 @@
 /**
  * @brief This is a demo program that sends a full body manipulation plan
- * encoded as a robotlocomotion::robot_plan_t to ValkyrieController. Upon
- * receiving the plan, the Valkyrie robot should return to the nominal
- * configuration except the right shoulder pitch joint.
+ * encoded as a robotlocomotion::robot_plan_t to ValkyrieController. The plan
+ * has most of the joints set to the nominal configuration except the right
+ * shoulder joint, which can be commanded from a single command line argument.
  */
 #include "lcm/lcm-cpp.hpp"
 #include "robotlocomotion/robot_plan_t.hpp"

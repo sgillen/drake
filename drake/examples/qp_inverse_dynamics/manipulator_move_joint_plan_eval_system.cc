@@ -22,8 +22,9 @@ ManipulatorMoveJointPlanEvalSystem::ManipulatorMoveJointPlanEvalSystem(
     : PlanEvalBaseSystem(robot, alias_groups_file_name, param_file_name, dt) {
   DRAKE_DEMAND(get_robot().get_num_velocities() ==
                get_robot().get_num_positions());
-  for (const auto& body : robot->bodies) {
-    DRAKE_DEMAND(!body->getJoint().is_floating());
+  // Skips the first body(world), which doesn't have a joint.
+  for (size_t i = 1; i < robot->bodies.size(); i++) {
+    DRAKE_DEMAND(!robot->bodies[i]->getJoint().is_floating());
   }
   const int kStateDim =
       get_robot().get_num_positions() + get_robot().get_num_velocities();

@@ -1,14 +1,17 @@
 #pragma once
 
 #include "drake/multibody/rigid_body_tree.h"
-#include "drake/systems/framework/leaf_system.h"
 #include "drake/systems/controllers/qp_inverse_dynamics/robot_kinematic_state.h"
+#include "drake/systems/framework/leaf_system.h"
 
 namespace drake {
 namespace systems {
 namespace controllers {
 namespace qp_inverse_dynamics {
 
+/**
+ * A simple translator class from a state vector to RobotKinematicState.
+ */
 template <typename T>
 class RobotKinematicStateTranslatorSystem : public LeafSystem<T> {
  public:
@@ -19,14 +22,13 @@ class RobotKinematicStateTranslatorSystem : public LeafSystem<T> {
    * @param robot Pointer to a RigidBodyTree. The lifespan of @p robot must
    * be longer than this object.
    */
-  RobotKinematicStateTranslatorSystem(const RigidBodyTree<T>* robot)
+  explicit RobotKinematicStateTranslatorSystem(const RigidBodyTree<T>* robot)
       : robot_(*robot), default_output_(robot) {
     const int kDim = robot->get_num_positions() + robot->get_num_velocities();
     this->template DeclareInputPort(systems::kVectorValued, kDim).get_index();
-    this->template DeclareAbstractOutputPort<RobotKinematicStateTranslatorSystem,
-      RobotKinematicState<T>>(
-          default_output_,
-          &RobotKinematicStateTranslatorSystem::Translate);
+    this->template DeclareAbstractOutputPort<
+        RobotKinematicStateTranslatorSystem, RobotKinematicState<T>>(
+        default_output_, &RobotKinematicStateTranslatorSystem::Translate);
   }
 
   /**
@@ -55,8 +57,8 @@ class RobotKinematicStateTranslatorSystem : public LeafSystem<T> {
 
     const int kPosDim = get_robot().get_num_positions();
     const int kVelDim = get_robot().get_num_velocities();
-    output->UpdateKinematics(context.get_time(),
-        x.head(kPosDim), x.tail(kVelDim));
+    output->UpdateKinematics(context.get_time(), x.head(kPosDim),
+                             x.tail(kVelDim));
   }
 
   const RigidBodyTree<T>& robot_;
