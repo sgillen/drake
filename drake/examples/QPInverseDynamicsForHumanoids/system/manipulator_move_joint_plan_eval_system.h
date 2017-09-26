@@ -15,15 +15,25 @@ namespace controllers {
 namespace plan_eval {
 
 /**
- * This class extends PlanEvalBaseSystem. It generates QpInput to track
- * desired instantaneous position, velocity and acceleration in joint space.
+ * This class extends PlanEvalBaseSystem. It outputs a QpInput that contains
+ * a single generalized acceleration objective to track the nominal
+ * instantaneous generalized position, velocity and acceleration.
+ * Assuming no external contacts, the control law is:
+ * <pre>
+ *   vd_output = Kp(q* - q) + Kd(v* - v) + vd*,
+ * </pre>
+ * where Kp and Kd are the position and velocity gains, and q*, v*, and vd* are
+ * the nominal generalized position, velocity and acceleration.
+ * This system assumes that |q| = |v|, and model being controlled contains no
+ * floating base joints.
  */
-class ManipulatorPlanEvalSystem : public PlanEvalBaseSystem {
+class ManipulatorMoveJointPlanEvalSystem : public PlanEvalBaseSystem {
  public:
-  DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(ManipulatorPlanEvalSystem)
+  DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(ManipulatorMoveJointPlanEvalSystem)
 
   /**
-   * Constructor.
+   * Constructor. Aborts if @p robot has unequal number of generalized positions
+   * and velocities or contains any floating base joint.
    * @param robot Pointer to a RigidBodyTree, whose life span must be longer
    * than this instance.
    * @param alias_groups_file_name Path to the alias groups file that describes
@@ -31,7 +41,7 @@ class ManipulatorPlanEvalSystem : public PlanEvalBaseSystem {
    * @param param_file_name Path to the config file for the controller.
    * @param dt Time step
    */
-  ManipulatorPlanEvalSystem(const RigidBodyTree<double>* robot,
+  ManipulatorMoveJointPlanEvalSystem(const RigidBodyTree<double>* robot,
                             const std::string& alias_groups_file_name,
                             const std::string& param_file_name, double dt);
 

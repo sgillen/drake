@@ -1,4 +1,4 @@
-#include "drake/examples/QPInverseDynamicsForHumanoids/system/manipulator_plan_eval_system.h"
+#include "drake/systems/controllers/plan_eval/manipulator_move_joint_plan_eval_system.h"
 
 #include <vector>
 
@@ -16,13 +16,16 @@ using systems::controllers::qp_inverse_dynamics::RobotKinematicState;
 using systems::controllers::qp_inverse_dynamics::QpInput;
 using systems::controllers::VectorSetpoint;
 
-ManipulatorPlanEvalSystem::ManipulatorPlanEvalSystem(
+ManipulatorMoveJointPlanEvalSystem::ManipulatorMoveJointPlanEvalSystem(
     const RigidBodyTree<double>* robot,
     const std::string& alias_groups_file_name,
     const std::string& param_file_name, double dt)
     : PlanEvalBaseSystem(robot, alias_groups_file_name, param_file_name, dt) {
   DRAKE_DEMAND(get_robot().get_num_velocities() ==
                get_robot().get_num_positions());
+  for (const auto& body : robot->bodies) {
+    DRAKE_DEMAND(!body->getJoint().is_floating());
+  }
   const int kStateDim =
       get_robot().get_num_positions() + get_robot().get_num_velocities();
   const int kAccDim = get_robot().get_num_velocities();
@@ -33,9 +36,9 @@ ManipulatorPlanEvalSystem::ManipulatorPlanEvalSystem(
       DeclareInputPort(systems::kVectorValued, kAccDim).get_index();
 
   output_port_index_debug_info_ =
-      DeclareAbstractOutputPort(&ManipulatorPlanEvalSystem::OutputDebugInfo)
+      DeclareAbstractOutputPort(&ManipulatorMoveJointPlanEvalSystem::OutputDebugInfo)
           .get_index();
-  set_name("ManipulatorPlanEvalSystem");
+  set_name("ManipulatorMoveJointPlanEvalSystem");
 
   abs_state_index_plan_ =
       DeclareAbstractState(systems::AbstractValue::Make<VectorSetpoint<double>>(
@@ -45,7 +48,7 @@ ManipulatorPlanEvalSystem::ManipulatorPlanEvalSystem(
           lcmt_plan_eval_debug_info()));
 }
 
-void ManipulatorPlanEvalSystem::Initialize(systems::State<double>* state) {
+void ManipulatorMoveJointPlanEvalSystem::Initialize(systems::State<double>* state) {
   VectorSetpoint<double>& plan =
       get_mutable_abstract_value<VectorSetpoint<double>>(state,
                                                          abs_state_index_plan_);
@@ -60,7 +63,7 @@ void ManipulatorPlanEvalSystem::Initialize(systems::State<double>* state) {
                                         get_alias_groups());
 }
 
-void ManipulatorPlanEvalSystem::OutputDebugInfo(
+void ManipulatorMoveJointPlanEvalSystem::OutputDebugInfo(
     const systems::Context<double>& context,
     lcmt_plan_eval_debug_info* output) const {
   // Copies additional debugging info from abstract state to output.
@@ -69,7 +72,7 @@ void ManipulatorPlanEvalSystem::OutputDebugInfo(
       abs_state_index_debug_);
 }
 
-void ManipulatorPlanEvalSystem::DoExtendedCalcUnrestrictedUpdate(
+void ManipulatorMoveJointPlanEvalSystem::DoExtendedCalcUnrestrictedUpdate(
     const systems::Context<double>& context,
     systems::State<double>* state) const {
   // Gets the plan from abstract state.

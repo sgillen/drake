@@ -149,6 +149,21 @@ drake_cc_binary(
 # === test/ ===
 
 drake_cc_googletest(
+    name = "atlas_command_translator_system_test",
+    srcs = ["test/atlas_command_translator_system_test.cc"],
+    data = [
+        "//drake/examples/valkyrie:models",
+    ],
+    deps = [
+        ":atlas_command_translator_system",
+        "//drake/common:find_resource",
+        "//drake/common/test_utilities:eigen_matrix_compare",
+        "//drake/multibody/parsers",
+        "//drake/systems/framework",
+    ],
+)
+
+drake_cc_googletest(
     name = "humanoid_plan_eval_system_test",
     srcs = ["test/humanoid_plan_eval_system_test.cc"],
     data = [
