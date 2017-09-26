@@ -24,7 +24,8 @@ namespace humanoid_controller {
  * @see HumanoidManipulationPlan for more details.
  * TODO(siyuan) add a walking plan.
  */
-class HumanoidPlanEvalSystem : public systems::controllers::plan_eval::PlanEvalBaseSystem {
+class HumanoidPlanEvalSystem
+    : public systems::controllers::plan_eval::PlanEvalBaseSystem {
  public:
   DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(HumanoidPlanEvalSystem)
 
@@ -47,10 +48,9 @@ class HumanoidPlanEvalSystem : public systems::controllers::plan_eval::PlanEvalB
    * @param current_status Current robot status.
    * @param state State
    */
-  void Initialize(
-      const systems::controllers::qp_inverse_dynamics::RobotKinematicState<
-          double>& current_status,
-      systems::State<double>* state) const;
+  void Initialize(const systems::controllers::qp_inverse_dynamics::
+                      RobotKinematicState<double>& current_status,
+                  systems::State<double>* state) const;
 
   /**
    * Returns input port of type robotlocomotion::robot_plan_t message that

@@ -20,7 +20,8 @@ namespace humanoid_controller {
  */
 // TODO(siyuan): make quaternion floating joint work.
 template <typename T>
-class HumanoidManipulationPlan : public systems::controllers::plan_eval::GenericPlan<T> {
+class HumanoidManipulationPlan
+    : public systems::controllers::plan_eval::GenericPlan<T> {
  protected:
   DRAKE_DEFAULT_COPY_AND_MOVE_AND_ASSIGN(HumanoidManipulationPlan)
 
@@ -147,7 +148,8 @@ class HumanoidManipulationPlan : public systems::controllers::plan_eval::Generic
     }
   }
 
-  systems::controllers::plan_eval::GenericPlan<T>* CloneGenericPlanDerived() const override {
+  systems::controllers::plan_eval::GenericPlan<T>* CloneGenericPlanDerived()
+      const override {
     return new HumanoidManipulationPlan<T>(*this);
   }
 

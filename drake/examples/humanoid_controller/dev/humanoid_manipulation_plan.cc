@@ -20,8 +20,7 @@ using systems::controllers::qp_inverse_dynamics::RobotKinematicState;
 
 template <typename T>
 void HumanoidManipulationPlan<T>::InitializeGenericPlanDerived(
-    const RobotKinematicState<T>& robot_status,
-    const ParamSet& paramset,
+    const RobotKinematicState<T>& robot_status, const ParamSet& paramset,
     const RigidBodyTreeAliasGroups<T>& alias_groups) {
   unused(paramset);
 
@@ -66,10 +65,8 @@ void HumanoidManipulationPlan<T>::InitializeGenericPlanDerived(
 
 template <typename T>
 void HumanoidManipulationPlan<T>::UpdateQpInputGenericPlanDerived(
-    const RobotKinematicState<T>& robot_status,
-    const ParamSet& paramset,
-    const RigidBodyTreeAliasGroups<T>& alias_groups,
-    QpInput* qp_input) const {
+    const RobotKinematicState<T>& robot_status, const ParamSet& paramset,
+    const RigidBodyTreeAliasGroups<T>& alias_groups, QpInput* qp_input) const {
   unused(paramset, alias_groups);
 
   // Generates CoM acceleration.
@@ -91,8 +88,7 @@ void HumanoidManipulationPlan<T>::UpdateQpInputGenericPlanDerived(
 
 template <typename T>
 void HumanoidManipulationPlan<T>::HandlePlanGenericPlanDerived(
-    const RobotKinematicState<T>& robot_status,
-    const ParamSet& paramset,
+    const RobotKinematicState<T>& robot_status, const ParamSet& paramset,
     const RigidBodyTreeAliasGroups<T>& alias_groups,
     const systems::AbstractValue& plan) {
   unused(paramset);

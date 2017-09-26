@@ -15,7 +15,9 @@ namespace humanoid_controller {
  * A class that extends QpOutputTranslatorSystem to output an additional
  * bot_core::atlas_command_t.
  */
-class AtlasCommandTranslatorSystem : public systems::controllers::qp_inverse_dynamics::QpOutputTranslatorSystem {
+class AtlasCommandTranslatorSystem
+    : public systems::controllers::qp_inverse_dynamics::
+          QpOutputTranslatorSystem {
  public:
   DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(AtlasCommandTranslatorSystem)
 
@@ -29,16 +31,14 @@ class AtlasCommandTranslatorSystem : public systems::controllers::qp_inverse_dyn
   /**
    * Returns the output port for bot_core::atlas_command_t.
    */
-  const systems::OutputPort<double>&
-  get_output_port_atlas_command() const {
+  const systems::OutputPort<double>& get_output_port_atlas_command() const {
     return get_output_port(output_port_index_atlas_cmd_);
   }
 
  private:
   // Generates an additional bot_core::atlas_command_t output.
-  void OutputCommand(
-      const systems::Context<double>& context,
-      bot_core::atlas_command_t* output) const;
+  void OutputCommand(const systems::Context<double>& context,
+                     bot_core::atlas_command_t* output) const;
 
   int output_port_index_atlas_cmd_{0};
 

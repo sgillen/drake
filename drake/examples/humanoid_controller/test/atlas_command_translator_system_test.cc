@@ -1,4 +1,5 @@
 #include "drake/examples/humanoid_controller/atlas_command_translator_system.h"
+
 #include <memory>
 
 #include <gtest/gtest.h>

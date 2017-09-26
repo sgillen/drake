@@ -16,15 +16,14 @@ RobotStateMsgToHumanoidStatusSystem::RobotStateMsgToHumanoidStatusSystem(
   DeclareAbstractInputPort();
   DeclareAbstractOutputPort<RobotStateMsgToHumanoidStatusSystem,
                             HumanoidStatus>(
-                            *default_output_,
-                            &RobotStateMsgToHumanoidStatusSystem::CalcHumanoidStatus);
+      *default_output_,
+      &RobotStateMsgToHumanoidStatusSystem::CalcHumanoidStatus);
 }
 
 void RobotStateMsgToHumanoidStatusSystem::CalcHumanoidStatus(
-    const systems::Context<double>& context,
-    HumanoidStatus* output) const {
-  const bot_core::robot_state_t* msg = EvalInputValue<bot_core::robot_state_t>(
-      context, 0);
+    const systems::Context<double>& context, HumanoidStatus* output) const {
+  const bot_core::robot_state_t* msg =
+      EvalInputValue<bot_core::robot_state_t>(context, 0);
 
   VectorX<double> pos(robot_.get_num_positions());
   VectorX<double> vel(robot_.get_num_velocities());
@@ -45,8 +44,7 @@ void RobotStateMsgToHumanoidStatusSystem::CalcHumanoidStatus(
   r_foot_wrench[1] = msg->force_torque.r_foot_torque_y;
   r_foot_wrench[5] = msg->force_torque.r_foot_force_z;
 
-  output->Update(time, pos, vel, joint_torque, l_foot_wrench,
-                 r_foot_wrench);
+  output->Update(time, pos, vel, joint_torque, l_foot_wrench, r_foot_wrench);
 }
 
 }  // namespace humanoid_controller
