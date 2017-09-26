@@ -8,6 +8,14 @@ load("@protobuf//:protobuf.bzl", "cc_proto_library")
 
 package(default_visibility = ["//visibility:public"])
 
+exports_files(
+    ["test/iiwa.alias_groups"],
+)
+
+exports_files(
+    ["test/iiwa.id_controller_config"],
+)
+
 cc_proto_library(
     name = "id_controller_config",
     srcs = [
@@ -191,6 +199,27 @@ drake_cc_googletest(
         "//drake/common/test_utilities:eigen_matrix_compare",
         "//drake/multibody/parsers",
         "//drake/systems/framework",
+    ],
+)
+
+drake_cc_googletest(
+    name = "valkyrie_balancing_test",
+    size = "medium",
+    srcs = ["test/valkyrie_balancing_test.cc"],
+    data = [
+        "test/valkyrie.alias_groups",
+        "test/valkyrie.id_controller_config",
+        "//drake/examples/valkyrie:models",
+    ],
+    tags = gurobi_test_tags(),
+    deps = [
+        "//drake/common:find_resource",
+        "//drake/common/test_utilities:eigen_matrix_compare",
+        "//drake/examples/valkyrie:valkyrie_constants",
+        "//drake/multibody/parsers",
+        "//drake/systems/controllers:setpoint",
+        "//drake/systems/controllers/qp_inverse_dynamics",
+        "//drake/systems/controllers/qp_inverse_dynamics:param_parser",
     ],
 )
 

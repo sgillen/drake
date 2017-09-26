@@ -58,9 +58,9 @@ drake_cc_library(
 drake_cc_googletest(
     name = "generic_plan_test",
     data = [
-        "//drake/examples/QPInverseDynamicsForHumanoids:config/iiwa.alias_groups",  # noqa
-        "//drake/examples/QPInverseDynamicsForHumanoids:config/iiwa.id_controller_config",  # noqa
         "//drake/manipulation/models/iiwa_description:models",
+        "//drake/systems/controllers/qp_inverse_dynamics:test/iiwa.alias_groups",  # noqa
+        "//drake/systems/controllers/qp_inverse_dynamics:test/iiwa.id_controller_config",  # noqa
     ],
     deps = [
         ":generic_plan",

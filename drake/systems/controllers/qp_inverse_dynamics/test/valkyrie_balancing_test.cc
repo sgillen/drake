@@ -3,7 +3,6 @@
 #include "drake/common/find_resource.h"
 #include "drake/common/test_utilities/eigen_matrix_compare.h"
 #include "drake/common/text_logging.h"
-#include "drake/examples/humanoid_controller/humanoid_status.h"
 #include "drake/examples/valkyrie/valkyrie_constants.h"
 #include "drake/multibody/joints/floating_base_types.h"
 #include "drake/multibody/parsers/urdf_parser.h"
@@ -12,16 +11,25 @@
 #include "drake/systems/controllers/setpoint.h"
 
 namespace drake {
-namespace examples {
-namespace humanoid_controller {
+namespace systems {
+namespace controllers {
+namespace qp_inverse_dynamics {
 namespace {
 
-using systems::controllers::qp_inverse_dynamics::ParamSet;
-using systems::controllers::qp_inverse_dynamics::QpInput;
-using systems::controllers::qp_inverse_dynamics::QpOutput;
-using systems::controllers::qp_inverse_dynamics::QpInverseDynamics;
-using systems::controllers::CartesianSetpoint;
-using systems::controllers::VectorSetpoint;
+using examples::valkyrie::kRPYValkyrieDof;
+using examples::valkyrie::RPYValkyrieFixedPointState;
+
+Isometry3<double> ComputeBodyPose(const RobotKinematicState<double>& status,
+    const RigidBody<double>& body) {
+  const RigidBodyTree<double>& robot = status.get_robot();
+  return robot.CalcBodyPoseInWorldFrame(status.get_cache(), body);
+}
+
+Vector6<double> ComputeBodyVelocity(const RobotKinematicState<double>& status,
+    const RigidBody<double>& body) {
+  const RigidBodyTree<double>& robot = status.get_robot();
+  return robot.CalcBodySpatialVelocityInWorldFrame(status.get_cache(), body);
+}
 
 // In this test, the Valkyrie robot is initialized to a nominal configuration
 // with zero velocities, and the qp controller is set up to track this
@@ -38,11 +46,11 @@ GTEST_TEST(testQPInverseDynamicsController, testBalancingStanding) {
       "drake/examples/valkyrie/urdf/urdf/"
       "valkyrie_A_sim_drake_one_neck_dof_wide_ankle_rom.urdf");
   std::string alias_groups_config = FindResourceOrThrow(
-      "drake/examples/humanoid_controller/"
-      "config/valkyrie.alias_groups");
+      "drake/systems/controllers/qp_inverse_dynamics/test/"
+      "valkyrie.alias_groups");
   std::string controller_config = FindResourceOrThrow(
-      "drake/examples/humanoid_controller/"
-      "config/valkyrie.id_controller_config");
+      "drake/systems/controllers/qp_inverse_dynamics/test/"
+      "valkyrie.id_controller_config");
 
   RigidBodyTree<double> robot;
   parsers::urdf::AddModelInstanceFromUrdfFileToWorld(
@@ -56,7 +64,12 @@ GTEST_TEST(testQPInverseDynamicsController, testBalancingStanding) {
   ParamSet paramset;
   paramset.LoadFromFile(controller_config, alias_groups);
 
-  HumanoidStatus robot_status(&robot, alias_groups);
+  RobotKinematicState<double> robot_status(&robot);
+
+  const RigidBody<double>& pelvis = *alias_groups.get_body("pelvis");
+  const RigidBody<double>& torso = *alias_groups.get_body("torso");
+  const RigidBody<double>& left_foot = *alias_groups.get_body("left_foot");
+  const RigidBody<double>& right_foot = *alias_groups.get_body("right_foot");
 
   QpInverseDynamics con;
   QpInput input = paramset.MakeQpInput({"feet"},            /* contacts */
@@ -66,15 +79,12 @@ GTEST_TEST(testQPInverseDynamicsController, testBalancingStanding) {
       systems::controllers::qp_inverse_dynamics::GetDofNames(robot));
 
   // Set up initial condition.
-  DRAKE_DEMAND(valkyrie::kRPYValkyrieDof == robot.get_num_positions());
-  VectorX<double> q =
-      valkyrie::RPYValkyrieFixedPointState().head(valkyrie::kRPYValkyrieDof);
+  DRAKE_DEMAND(kRPYValkyrieDof == robot.get_num_positions());
+  VectorX<double> q = RPYValkyrieFixedPointState().head(kRPYValkyrieDof);
   VectorX<double> v = VectorX<double>::Zero(robot.get_num_velocities());
   VectorX<double> q_ini = q;
 
-  robot_status.Update(0, q, v,
-                      VectorX<double>::Zero(robot.get_num_actuators()),
-                      Vector6<double>::Zero(), Vector6<double>::Zero());
+  robot_status.UpdateKinematics(0, q, v);
 
   // Set up a tracking problem.
   // Gains
@@ -83,10 +93,8 @@ GTEST_TEST(testQPInverseDynamicsController, testBalancingStanding) {
   Vector6<double> Kp_pelvis, Kp_torso, Kd_pelvis, Kd_torso, Kp_centroidal,
       Kd_centroidal;
 
-  paramset.LookupDesiredBodyMotionGains(*alias_groups.get_body("pelvis"),
-                                        &Kp_pelvis, &Kd_pelvis);
-  paramset.LookupDesiredBodyMotionGains(*alias_groups.get_body("torso"),
-                                        &Kp_torso, &Kd_torso);
+  paramset.LookupDesiredBodyMotionGains(pelvis, &Kp_pelvis, &Kd_pelvis);
+  paramset.LookupDesiredBodyMotionGains(torso, &Kp_torso, &Kd_torso);
   paramset.LookupDesiredDofMotionGains(&Kp_q, &Kd_q);
   paramset.LookupDesiredCentroidalMomentumDotGains(&Kp_centroidal,
                                                    &Kd_centroidal);
@@ -98,18 +106,20 @@ GTEST_TEST(testQPInverseDynamicsController, testBalancingStanding) {
   VectorSetpoint<double> joint_PDff(q, VectorX<double>::Zero(q.size()),
                                     VectorX<double>::Zero(q.size()), Kp_q,
                                     Kd_q);
+  auto pelvis_pose = ComputeBodyPose(robot_status, pelvis);
+  auto pelvis_vel = ComputeBodyVelocity(robot_status, pelvis);
   CartesianSetpoint<double> pelvis_PDff(
-      robot_status.pelvis().pose(), Vector6<double>::Zero(),
+      pelvis_pose, Vector6<double>::Zero(),
       Vector6<double>::Zero(), Kp_pelvis, Kd_pelvis);
+  auto torso_pose = ComputeBodyPose(robot_status, torso);
+  auto torso_vel = ComputeBodyVelocity(robot_status, torso);
   CartesianSetpoint<double> torso_PDff(
-      robot_status.torso().pose(), Vector6<double>::Zero(),
+      torso_pose, Vector6<double>::Zero(),
       Vector6<double>::Zero(), Kp_torso, Kd_torso);
 
   // Perturb initial condition.
   v[alias_groups.get_velocity_group("back_x").front()] += 1;
-  robot_status.Update(0, q, v,
-                      VectorX<double>::Zero(robot.get_num_actuators()),
-                      Vector6<double>::Zero(), Vector6<double>::Zero());
+  robot_status.UpdateKinematics(0, q, v);
 
   // dt = 3e-3 is picked arbitrarily, with Gurobi, this one control call takes
   // roughly 3ms.
@@ -117,22 +127,21 @@ GTEST_TEST(testQPInverseDynamicsController, testBalancingStanding) {
   double time = 0;
 
   // Feet should be stationary.
-  EXPECT_TRUE(robot_status.foot(Side::LEFT).velocity().norm() < 1e-10);
-  EXPECT_TRUE(robot_status.foot(Side::RIGHT).velocity().norm() < 1e-10);
+  auto left_foot_vel = ComputeBodyVelocity(robot_status, left_foot);
+  auto right_foot_vel = ComputeBodyVelocity(robot_status, right_foot);
+  EXPECT_TRUE(left_foot_vel.norm() < 1e-10);
+  EXPECT_TRUE(right_foot_vel.norm() < 1e-10);
 
   int tick_ctr = 0;
-  const std::string& pelvis_body_name =
-      alias_groups.get_body("pelvis")->get_name();
-  const std::string& torso_body_name =
-      alias_groups.get_body("torso")->get_name();
+  const std::string& pelvis_body_name = pelvis.get_name();
+  const std::string& torso_body_name = torso.get_name();
   while (time < 4) {
     // Update desired accelerations.
     input.mutable_desired_body_motions().at(pelvis_body_name).mutable_values() =
-        pelvis_PDff.ComputeTargetAcceleration(robot_status.pelvis().pose(),
-                                              robot_status.pelvis().velocity());
+        pelvis_PDff.ComputeTargetAcceleration(pelvis_pose, pelvis_vel);
     input.mutable_desired_body_motions().at(torso_body_name).mutable_values() =
-        torso_PDff.ComputeTargetAcceleration(robot_status.torso().pose(),
-                                             robot_status.torso().velocity());
+        torso_PDff.ComputeTargetAcceleration(torso_pose, torso_vel);
+
     input.mutable_desired_dof_motions().mutable_values() =
         joint_PDff.ComputeTargetAcceleration(robot_status.get_cache().getQ(),
                                              robot_status.get_cache().getV());
@@ -157,9 +166,14 @@ GTEST_TEST(testQPInverseDynamicsController, testBalancingStanding) {
     v += output.vd() * dt;
     time += dt;
 
-    robot_status.Update(time, q, v,
-                        VectorX<double>::Zero(robot.get_num_actuators()),
-                        Vector6<double>::Zero(), Vector6<double>::Zero());
+    robot_status.UpdateKinematics(time, q, v);
+    pelvis_pose = ComputeBodyPose(robot_status, pelvis);
+    pelvis_vel = ComputeBodyVelocity(robot_status, pelvis);
+    torso_pose = ComputeBodyPose(robot_status, torso);
+    torso_vel = ComputeBodyVelocity(robot_status, torso);
+    left_foot_vel = ComputeBodyVelocity(robot_status, left_foot);
+    right_foot_vel = ComputeBodyVelocity(robot_status, right_foot);
+
     tick_ctr++;
   }
 
@@ -168,8 +182,8 @@ GTEST_TEST(testQPInverseDynamicsController, testBalancingStanding) {
   // they should have no velocity after simulation.
   // Thus, the tolerances on feet velocities are smaller than those for the
   // generalized position and velocity.
-  EXPECT_TRUE(robot_status.foot(Side::LEFT).velocity().norm() < 1e-6);
-  EXPECT_TRUE(robot_status.foot(Side::RIGHT).velocity().norm() < 1e-6);
+  EXPECT_TRUE(left_foot_vel.norm() < 1e-8);
+  EXPECT_TRUE(right_foot_vel.norm() < 1e-8);
   EXPECT_TRUE(drake::CompareMatrices(q, q_ini, 1e-3,
                                      drake::MatrixCompareType::absolute));
   EXPECT_TRUE(drake::CompareMatrices(
@@ -178,6 +192,7 @@ GTEST_TEST(testQPInverseDynamicsController, testBalancingStanding) {
 }
 
 }  // namespace
-}  // namespace humanoid_controller
-}  // namespace examples
+}  // namespace qp_inverse_dynamics
+}  // namespace controllers
+}  // namespace systems
 }  // namespace drake

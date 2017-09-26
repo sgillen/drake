@@ -93,12 +93,12 @@ class DummyPlanTest : public GenericPlanTest {
         "iiwa14_polytope_collision.urdf");
 
     const std::string kAliasGroupsPath = FindResourceOrThrow(
-        "drake/examples/QPInverseDynamicsForHumanoids/"
-        "config/iiwa.alias_groups");
+        "drake/systems/controllers/qp_inverse_dynamics/"
+        "test/iiwa.alias_groups");
 
     const std::string kControlConfigPath = FindResourceOrThrow(
-        "drake/examples/QPInverseDynamicsForHumanoids/"
-        "config/iiwa.id_controller_config");
+        "drake/systems/controllers/qp_inverse_dynamics/"
+        "test/iiwa.id_controller_config");
 
     std::default_random_engine generator(123);
     AllocateResources(kModelPath, kAliasGroupsPath, kControlConfigPath);

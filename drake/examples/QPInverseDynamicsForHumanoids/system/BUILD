@@ -15,8 +15,8 @@ drake_cc_library(
     srcs = ["manipulator_plan_eval_system.cc"],
     hdrs = ["manipulator_plan_eval_system.h"],
     deps = [
-        "//drake/systems/controllers/plan_eval:plan_eval_base_system",
         "//drake/lcmtypes:plan_eval_debug_info",
+        "//drake/systems/controllers/plan_eval:plan_eval_base_system",
     ],
 )
 

@@ -59,9 +59,9 @@ drake_cc_library(
         "dev/humanoid_manipulation_plan.h",
     ],
     deps = [
-        "//drake/systems/controllers/plan_eval:generic_plan",
         "//drake/manipulation/util:robot_state_msg_translator",
         "//drake/systems/controllers:zmp_planner",
+        "//drake/systems/controllers/plan_eval:generic_plan",
         "//drake/systems/controllers/qp_inverse_dynamics:lcm_utils",
         "//drake/util",
         "@lcmtypes_bot2_core",
@@ -158,8 +158,8 @@ drake_cc_googletest(
     ],
     tags = gurobi_test_tags(),
     deps = [
-        ":humanoid_status",
         ":humanoid_plan_eval_system",
+        ":humanoid_status",
         "//drake/common:find_resource",
         "//drake/common/test_utilities:eigen_matrix_compare",
         "//drake/examples/valkyrie:valkyrie_constants",
@@ -173,25 +173,4 @@ drake_cc_googletest(
     ],
 )
 
-drake_cc_googletest(
-    name = "valkyrie_balancing_test",
-    size = "medium",
-    srcs = ["test/valkyrie_balancing_test.cc"],
-    data = [
-        "config/valkyrie.alias_groups",
-        "config/valkyrie.id_controller_config",
-        "//drake/examples/valkyrie:models",
-    ],
-    tags = gurobi_test_tags(),
-    deps = [
-        ":humanoid_status",
-        "//drake/common:find_resource",
-        "//drake/common/test_utilities:eigen_matrix_compare",
-        "//drake/examples/valkyrie:valkyrie_constants",
-        "//drake/multibody/parsers",
-        "//drake/systems/controllers:setpoint",
-        "//drake/systems/controllers/qp_inverse_dynamics",
-        "//drake/systems/controllers/qp_inverse_dynamics:param_parser",
-    ],
-)
-
+add_lint_tests()
