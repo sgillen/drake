@@ -1,4 +1,4 @@
-#include "drake/systems/controllers/plan_eval/manipulator_move_joint_plan_eval_system.h"
+#include "drake/examples/qp_inverse_dynamics/manipulator_move_joint_plan_eval_system.h"
 
 #include <vector>
 
@@ -8,9 +8,8 @@
 #include "drake/systems/controllers/setpoint.h"
 
 namespace drake {
-namespace systems {
-namespace controllers {
-namespace plan_eval {
+namespace examples {
+namespace qp_inverse_dynamics {
 
 using systems::controllers::qp_inverse_dynamics::RobotKinematicState;
 using systems::controllers::qp_inverse_dynamics::QpInput;
@@ -127,7 +126,6 @@ void ManipulatorMoveJointPlanEvalSystem::DoExtendedCalcUnrestrictedUpdate(
   }
 }
 
-}  // namespace plan_eval
-}  // namespace controllers
-}  // namespace systems
+}  // namespace qp_inverse_dynamics
+}  // namespace examples
 }  // namespace drake

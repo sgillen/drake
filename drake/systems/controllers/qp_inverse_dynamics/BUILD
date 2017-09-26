@@ -114,6 +114,17 @@ drake_cc_library(
     ],
 )
 
+drake_cc_library(
+    name = "robot_kinematic_state_translator_system",
+    srcs = ["robot_kinematic_state_translator_system.cc"],
+    hdrs = ["robot_kinematic_state_translator_system.h"],
+    deps = [
+        ":robot_kinematic_state",
+        "//drake/multibody:rigid_body_tree",
+        "//drake/systems/framework:leaf_system",
+    ],
+)
+
 # === test/ ===
 
 drake_cc_googletest(

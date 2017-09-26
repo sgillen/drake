@@ -10,9 +10,8 @@
 #include "drake/lcmt_plan_eval_debug_info.hpp"
 
 namespace drake {
-namespace systems {
-namespace controllers {
-namespace plan_eval {
+namespace examples {
+namespace qp_inverse_dynamics {
 
 /**
  * This class extends PlanEvalBaseSystem. It outputs a QpInput that contains
@@ -27,7 +26,7 @@ namespace plan_eval {
  * This system assumes that |q| = |v|, and model being controlled contains no
  * floating base joints.
  */
-class ManipulatorMoveJointPlanEvalSystem : public PlanEvalBaseSystem {
+class ManipulatorMoveJointPlanEvalSystem : public systems::controllers::plan_eval::PlanEvalBaseSystem {
  public:
   DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(ManipulatorMoveJointPlanEvalSystem)
 
@@ -100,7 +99,6 @@ class ManipulatorMoveJointPlanEvalSystem : public PlanEvalBaseSystem {
   int abs_state_index_debug_{};
 };
 
-}  // namespace plan_eval
-}  // namespace controllers
-}  // namespace systems
+}  // namespace qp_inverse_dynamics
+}  // namespace examples
 }  // namespace drake

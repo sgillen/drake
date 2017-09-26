@@ -5,7 +5,7 @@
 #include <utility>
 #include <vector>
 
-#include "drake/examples/QPInverseDynamicsForHumanoids/system/manipulator_plan_eval_system.h"
+#include "drake/examples/qp_inverse_dynamics/manipulator_move_joint_plan_eval_system.h"
 #include "drake/systems/controllers/state_feedback_controller_interface.h"
 #include "drake/systems/framework/diagram.h"
 
@@ -31,7 +31,7 @@ namespace qp_inverse_dynamics {
  * tracking in Cartesian space, freeze if unexpected is sensed can be
  * implemented by different plan eval modules.
  */
-class ManipulatorInverseDynamicsController
+class ManipulatorMoveJointController
     : public systems::controllers::StateFeedbackControllerInterface<double>,
       public systems::Diagram<double> {
  public:
@@ -46,7 +46,7 @@ class ManipulatorInverseDynamicsController
    * @param dt Time step
    * @param world_offset RigidBodyFrame X_WB, where B is the base of the robot.
    */
-  ManipulatorInverseDynamicsController(
+  ManipulatorMoveJointController(
       const std::string& model_path, const std::string& alias_group_path,
       const std::string& controller_config_path, double dt,
       std::shared_ptr<RigidBodyFrame<double>> world_offset = nullptr);
@@ -152,7 +152,7 @@ class ManipulatorInverseDynamicsController
 
  private:
   std::unique_ptr<RigidBodyTree<double>> robot_for_control_{nullptr};
-  ManipulatorPlanEvalSystem* plan_eval_{nullptr};
+  ManipulatorMoveJointPlanEvalSystem* plan_eval_{nullptr};
   int input_port_index_estimated_state_{};
   int input_port_index_desired_state_{};
   int input_port_index_desired_acceleration_{};

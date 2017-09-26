@@ -1,10 +1,9 @@
-#include "drake/examples/QPInverseDynamicsForHumanoids/system/manipulator_inverse_dynamics_controller.h"
+#include "drake/examples/qp_inverse_dynamics/manipulator_move_joint_controller.h"
 
 #include <gtest/gtest.h>
 
 #include "drake/common/find_resource.h"
 #include "drake/common/test_utilities/eigen_matrix_compare.h"
-#include "drake/examples/QPInverseDynamicsForHumanoids/humanoid_status.h"
 #include "drake/multibody/joints/floating_base_types.h"
 #include "drake/multibody/parsers/urdf_parser.h"
 #include "drake/systems/controllers/inverse_dynamics_controller.h"
@@ -22,11 +21,11 @@ using systems::controllers::qp_inverse_dynamics::ConstraintType;
 using systems::controllers::qp_inverse_dynamics::ParamSet;
 using systems::controllers::qp_inverse_dynamics::QpInput;
 
-// Builds a test diagram that gives a ManipulatorInverseDynamicsController and
+// Builds a test diagram that gives a ManipulatorMoveJointController and
 // a systems::InverseDynamicsController the exact same inputs (estimated state,
 // desired state and desired acceleration), and expects their outputs (torque)
 // to be the same assuming the computed torques are within the torque limits.
-class ManipulatorInverseDynamicsControllerTest : public ::testing::Test {
+class ManipulatorMoveJointControllerTest : public ::testing::Test {
  protected:
   void SetUp() override {
     const std::string kModelPath = FindResourceOrThrow(
@@ -34,12 +33,12 @@ class ManipulatorInverseDynamicsControllerTest : public ::testing::Test {
         "iiwa14_polytope_collision.urdf");
 
     const std::string kAliasGroupsPath = FindResourceOrThrow(
-        "drake/examples/QPInverseDynamicsForHumanoids/"
-        "config/iiwa.alias_groups");
+        "drake/systems/controllers/qp_inverse_dynamics/test/"
+        "iiwa.alias_groups");
 
     const std::string kControlConfigPath = FindResourceOrThrow(
-        "drake/examples/QPInverseDynamicsForHumanoids/"
-        "config/iiwa.id_controller_config");
+        "drake/systems/controllers/qp_inverse_dynamics/test/"
+        "iiwa.id_controller_config");
 
     auto robot = std::make_unique<RigidBodyTree<double>>();
     parsers::urdf::AddModelInstanceFromUrdfFileToWorld(
@@ -66,7 +65,7 @@ class ManipulatorInverseDynamicsControllerTest : public ::testing::Test {
     // Makes a diagram for testing.
     systems::DiagramBuilder<double> builder;
     auto qp_id_controller =
-        builder.AddSystem<ManipulatorInverseDynamicsController>(
+        builder.AddSystem<ManipulatorMoveJointController>(
             kModelPath, kAliasGroupsPath, kControlConfigPath, 0.02);
     qp_id_controller->set_name("qp_id_controller");
     params_ = &qp_id_controller->get_paramset();
@@ -137,13 +136,13 @@ class ManipulatorInverseDynamicsControllerTest : public ::testing::Test {
     std::unique_ptr<systems::State<double>> state = context_->CloneState();
 
     // Generates QpInput from the plan eval block within
-    // ManipulatorInverseDynamicsController.
+    // ManipulatorMoveJointController.
     diagram_->CalcUnrestrictedUpdate(
         *context_, events->get_unrestricted_update_events(), state.get());
     context_->get_mutable_state()->CopyFrom(*state);
 
     // Generates QpOuput from the inverse dynamics block within
-    // ManipulatorInverseDynamicsController.
+    // ManipulatorMoveJointController.
     diagram_->CalcUnrestrictedUpdate(
          *context_, events->get_unrestricted_update_events(), state.get());
     context_->get_mutable_state()->CopyFrom(*state);
@@ -173,7 +172,7 @@ class ManipulatorInverseDynamicsControllerTest : public ::testing::Test {
 // Tests QpInput from the plan eval component. The desired generalized
 // acceleration should equal to expected_vd_d_, and various modes and weights
 // should be specified by params_ loaded from kControlConfigPath.
-TEST_F(ManipulatorInverseDynamicsControllerTest, PlanEvalTest) {
+TEST_F(ManipulatorMoveJointControllerTest, PlanEvalTest) {
   const QpInput& qp_input =
       output_->get_data(plan_eval_output_index_)->GetValue<QpInput>();
 
@@ -211,9 +210,9 @@ TEST_F(ManipulatorInverseDynamicsControllerTest, PlanEvalTest) {
   }
 }
 
-// The torque outputs from ManipulatorInverseDynamicsController and
+// The torque outputs from ManipulatorMoveJointController and
 // systems::InverseDynamicsController should be the same for this simple case.
-TEST_F(ManipulatorInverseDynamicsControllerTest,
+TEST_F(ManipulatorMoveJointControllerTest,
        CompareWithBasicInverseDyanmics) {
   EXPECT_EQ(context_->get_time(), 0);
   VectorX<double> qp_output =

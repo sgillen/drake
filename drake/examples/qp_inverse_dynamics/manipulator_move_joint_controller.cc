@@ -1,14 +1,14 @@
-#include "drake/examples/QPInverseDynamicsForHumanoids/system/manipulator_inverse_dynamics_controller.h"
+#include "drake/examples/qp_inverse_dynamics/manipulator_move_joint_controller.h"
 
 #include <memory>
 #include <string>
 #include <utility>
 #include <vector>
 
-#include "drake/examples/QPInverseDynamicsForHumanoids/system/humanoid_status_translator_system.h"
-#include "drake/examples/QPInverseDynamicsForHumanoids/system/joint_level_controller_system.h"
 #include "drake/multibody/parsers/urdf_parser.h"
 #include "drake/systems/controllers/qp_inverse_dynamics/qp_inverse_dynamics_system.h"
+#include "drake/systems/controllers/qp_inverse_dynamics/qp_output_translator_system.h"
+#include "drake/systems/controllers/qp_inverse_dynamics/robot_kinematic_state_translator_system.h"
 #include "drake/systems/framework/diagram_builder.h"
 
 namespace drake {
@@ -16,8 +16,10 @@ namespace examples {
 namespace qp_inverse_dynamics {
 
 using systems::controllers::qp_inverse_dynamics::QpInverseDynamicsSystem;
+using systems::controllers::qp_inverse_dynamics::QpOutputTranslatorSystem;
+using systems::controllers::qp_inverse_dynamics::RobotKinematicStateTranslatorSystem;
 
-ManipulatorInverseDynamicsController::ManipulatorInverseDynamicsController(
+ManipulatorMoveJointController::ManipulatorMoveJointController(
     const std::string& model_path, const std::string& alias_group_path,
     const std::string& controller_config_path, double dt,
     std::shared_ptr<RigidBodyFrame<double>> world_offset) {
@@ -28,20 +30,21 @@ ManipulatorInverseDynamicsController::ManipulatorInverseDynamicsController(
 
   const RigidBodyTree<double>& robot = *robot_for_control_;
 
-  this->set_name("ManipulatorInverseDynamicsController");
+  this->set_name("ManipulatorMoveJointController");
 
   systems::DiagramBuilder<double> builder;
 
   // Converts raw state to humanoid status.
-  StateToHumanoidStatusSystem* rs_wrapper =
-      builder.AddSystem<StateToHumanoidStatusSystem>(&robot, alias_group_path);
+  RobotKinematicStateTranslatorSystem<double>* rs_wrapper =
+      builder.AddSystem<RobotKinematicStateTranslatorSystem<double>>(
+          &robot);
   rs_wrapper->set_name("rs_wrapper");
   // Converts qp output to raw torque.
-  TrivialJointLevelControllerSystem* joint_level_controller =
-      builder.AddSystem<TrivialJointLevelControllerSystem>(robot);
+  QpOutputTranslatorSystem* joint_level_controller =
+      builder.AddSystem<QpOutputTranslatorSystem>(robot);
   joint_level_controller->set_name("joint_level_controller");
   // Generates qp_input from desired q and v vd.
-  plan_eval_ = builder.AddSystem<ManipulatorPlanEvalSystem>(
+  plan_eval_ = builder.AddSystem<ManipulatorMoveJointPlanEvalSystem>(
       &robot, alias_group_path, controller_config_path, dt);
   plan_eval_->set_name("plan_eval");
   // Inverse dynamics controller
@@ -50,11 +53,11 @@ ManipulatorInverseDynamicsController::ManipulatorInverseDynamicsController(
   id_controller->set_name("id_controller");
 
   // Connects state translator to plan eval.
-  builder.Connect(rs_wrapper->get_output_port_humanoid_status(),
+  builder.Connect(rs_wrapper->get_output_port(),
                   plan_eval_->get_input_port_kinematic_state());
 
   // Connects state translator to inverse dynamics.
-  builder.Connect(rs_wrapper->get_output_port_humanoid_status(),
+  builder.Connect(rs_wrapper->get_output_port(),
                   id_controller->get_input_port_kinematic_state());
 
   // Connects plan eval to inverse dynamics.
@@ -67,7 +70,7 @@ ManipulatorInverseDynamicsController::ManipulatorInverseDynamicsController(
 
   // Exposes raw estimated state input.
   input_port_index_estimated_state_ =
-      builder.ExportInput(rs_wrapper->get_input_port_state());
+      builder.ExportInput(rs_wrapper->get_input_port());
 
   // Exposes desired q + vd input.
   input_port_index_desired_state_ =
@@ -100,7 +103,7 @@ ManipulatorInverseDynamicsController::ManipulatorInverseDynamicsController(
   builder.BuildInto(this);
 }
 
-void ManipulatorInverseDynamicsController::Initialize(
+void ManipulatorMoveJointController::Initialize(
     systems::Context<double>* context) {
   systems::Context<double>& plan_eval_context =
       GetMutableSubsystemContext(*plan_eval_, context);
