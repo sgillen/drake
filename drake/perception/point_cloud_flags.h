@@ -1,7 +1,9 @@
 #pragma once
 
+#include <iostream>
 #include <stdexcept>
 #include <string>
+#include "drake/common/drake_assert.h"
 
 namespace drake {
 namespace perception {
@@ -57,43 +59,48 @@ class DescriptorType final {
 
 /// No descriptor.
 const DescriptorType kDescriptorNone(0, "None");
-/// Inherited descriptor.
-const DescriptorType kDescriptorInherit(0, "Inherit");
 /// Curvature.
 const DescriptorType kDescriptorCurvature(1, "Curvature");
 /// Point-feature-histogram.
 const DescriptorType kDescriptorFPFH(33, "FPFH");
 
-/// Returns a human-friendly representation of a field and descriptor set.
-std::string ToString(Fields fields, const DescriptorType& descriptor_type);
-
-
 /**
- * Allows combination of these two field types (FieldType and DescriptorType).
+ * Allows combination of `BaseField` and `DescriptorType` for a `PointCloud`.
+ *
+ * This provides the mechanism to use basic bit-mask operators (| &) to
+ * convey intersection and unions.
  */
+// TODO(eric.cousineau): Consider construction from std::vector<Fields> instead?
 class Fields {
  public:
   Fields(BaseFieldT fields)
-      : fields_(fields) {}
+      : fields_(fields) {
+    DRAKE_ASSERT(fields >= 0 && fields < (kXYZs << 1));
+  }
 
   Fields(const DescriptorType& descriptor_type)
       : descriptor_type_(descriptor_type) {}
+
+  BaseFieldT fields() const { return fields_; }
 
   bool has_fields() const {
     return fields_ != kNone;
   }
 
+  const DescriptorType& descriptor_type() const { return descriptor_type_; }
+
   bool has_descriptor() const {
     return descriptor_type_ != kDescriptorNone;
   }
 
-  Fields& operator|=(const Fields& other) {
-    fields_ = static_cast<BaseFieldT>(fields_ | other.fields_);
+  /// Provides union.
+  Fields& operator|=(const Fields& rhs) {
+    fields_ = fields_ | rhs.fields_;
     if (has_descriptor())
       throw std::runtime_error(
           "Cannot have multiple Descriptor flags. "
-          "Can only add flags iff (flags.b() == kDescriptorNone).");
-    descriptor_type_ = other.descriptor_type_;
+          "Can only add flags iff (!rhs.has_descriptor()).");
+    descriptor_type_ = rhs.descriptor_type_;
     return *this;
   }
 
@@ -101,9 +108,18 @@ class Fields {
     return Fields(*this) |= rhs;
   }
 
+
+  Fields& operator&=(const Fields& rhs) {
+    fields_ &= rhs.fields_;
+    if (descriptor_type_ != rhs.descriptor_type_) {
+      descriptor_type_ = kDescriptorNone;
+    }
+    return *this;
+  }
+
   /// Provides intersection.
   Fields operator&(const Fields& rhs) const {
-
+    return Fields(*this) &= rhs;
   }
 
   operator bool() const {
@@ -114,10 +130,28 @@ class Fields {
     return fields_ == rhs.fields_ && descriptor_type_ == rhs.descriptor_type_;
   }
 
+  friend std::ostream& operator<<(std::ostream& os, const Fields& rhs);
+
+  bool operator!=(const Fields& rhs) const {
+    return !(*this == rhs);
+  }
+
  private:
+  // TODO(eric.cousineau): Use `optional` to avoid the need for `none` objects?
   BaseFieldT fields_{kNone};
   DescriptorType descriptor_type_{kDescriptorNone};
 };
+
+// Make | compatible for BaseField + Descriptor. Do not use implicit conversion
+// because it becomes ambiguous.
+Fields operator|(const BaseFieldT& lhs, const DescriptorType& rhs) {
+  return Fields(lhs) | Fields(rhs);
+}
+
+// Make | compatible for Descriptor + BaseField.
+Fields operator|(const DescriptorType& lhs, const BaseFieldT& rhs) {
+  return Fields(lhs) | Fields(rhs);
+}
 
 }  // namespace pc_flags
 

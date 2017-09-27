@@ -79,11 +79,7 @@ class PointCloud final {
   ///   Size of the point cloud after construction.
   /// @param fields
   ///   Fields that the point cloud contains.
-  /// @param descriptor
-  ///   Descriptor field types. @see DescriptorType
-  PointCloud(int new_size, pc_flags::Fields fields = pc_flags::kXYZs,
-             const pc_flags::DescriptorType& descriptor_type =
-                 pc_flags::kDescriptorNone);
+  PointCloud(int new_size, pc_flags::Fields fields = pc_flags::kXYZs);
 
   /// Copies another point cloud's fields and data.
   PointCloud(const PointCloud& other)
@@ -93,13 +89,9 @@ class PointCloud final {
   /// @param copy_fields
   ///   Fields to copy. If this is `kInherit`, then `other`s fields will be
   ///   copied.
-  /// @param descriptor_type
-  ///   Descriptor type to copy. Must
   // Do not define a default argument for `copy_fields` so that this is
   // not ambiguous w.r.t. the copy constructor.
-  PointCloud(const PointCloud& other, pc_flags::Fields copy_fields,
-             const pc_flags::DescriptorType& descriptor_type =
-                 pc_flags::kDescriptorInherit);
+  PointCloud(const PointCloud& other, pc_flags::Fields copy_fields);
 
   PointCloud& operator=(const PointCloud& other);
 
@@ -163,7 +155,7 @@ class PointCloud final {
 
   /// Returns the descriptor type.
   const pc_flags::DescriptorType& descriptor_type() const {
-    return descriptor_type_;
+    return fields_.descriptor_type();
   }
 
   /// Returns access to descriptor values.
@@ -218,34 +210,23 @@ class PointCloud final {
   /// @{
 
   /// Returns if a point cloud has a given set of fields.
-  /// @pre If `kDescriptor` is not present in `fields_in`, then
-  ///   `descriptor_type` must be `kDescriptorNone`. Otherwise,
-  ///   `descriptor_type` must be a valid /// descriptor.
-  bool HasFields(pc_flags::Fields fields_in,
-                 const pc_flags::DescriptorType& descriptor_type_in =
-                     pc_flags::kDescriptorNone) const;
+  bool HasFields(pc_flags::Fields fields_in) const;
 
   /// Requires a given set of fields.
   /// @see HasFields for preconditions.
   /// @throws std::runtime_error if this point cloud does not have these
   /// fields.
-  void RequireFields(pc_flags::Fields fields_in,
-                     const pc_flags::DescriptorType& descriptor_type_in =
-                         pc_flags::kDescriptorNone) const;
+  void RequireFields(pc_flags::Fields fields_in) const;
 
   /// Returns if a point cloud has exactly a given set of fields.
   /// @see HasFields for preconditions.
-  bool HasExactFields(pc_flags::Fields fields_in,
-                      const pc_flags::DescriptorType& descriptor_type_in =
-                          pc_flags::kDescriptorNone) const;
+  bool HasExactFields(pc_flags::Fields fields_in) const;
 
   /// Requires the exact given set of fields.
   /// @see HasFields for preconditions.
   /// @throws std::runtime_error if this point cloud does not have exactly
   /// these fields.
-  void RequireExactFields(pc_flags::Fields field_set,
-                          const pc_flags::DescriptorType& descriptor_type =
-                              pc_flags::kDescriptorNone) const;
+  void RequireExactFields(pc_flags::Fields field_set) const;
 
   /// @}
 
@@ -265,9 +246,6 @@ class PointCloud final {
   int size_;
   // Represents which fields are enabled for this point cloud.
   const pc_flags::Fields fields_{};
-  // Represents descriptor type stored.
-  // @note If `has_descriptors()` is false, this should be `kDescriptorNone`.
-  const pc_flags::DescriptorType descriptor_type_{pc_flags::kDescriptorNone};
   // Owns storage used for the point cloud.
   std::unique_ptr<Storage> storage_;
 };

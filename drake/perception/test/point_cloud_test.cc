@@ -38,10 +38,9 @@ GTEST_TEST(PointCloudTest, Basic) {
   const int count = 5;
 
   auto CheckFields = [count](auto values_expected, pc_flags::Fields fields,
-                             const pc_flags::DescriptorType& descriptor_type,
                              auto get_mutable_values, auto get_values,
                              auto get_mutable_value, auto get_value) {
-    PointCloud cloud(count, fields, descriptor_type);
+    PointCloud cloud(count, fields);
     EXPECT_EQ(count, cloud.size());
     typedef decltype(values_expected) XprType;
     typedef typename XprType::Scalar T;
@@ -108,7 +107,7 @@ GTEST_TEST(PointCloudTest, Basic) {
     100, 200, 300,
     4, 5, 6,
     40, 50, 60;
-  CheckFields(xyzs_expected, pc_flags::kXYZs, pc_flags::kDescriptorNone,
+  CheckFields(xyzs_expected, pc_flags::kXYZs,
               [](PointCloud& cloud) { return cloud.mutable_xyzs(); },
               [](PointCloud& cloud) { return cloud.xyzs(); },
               [](PointCloud& cloud, int i) { return cloud.mutable_xyz(i); },
@@ -118,8 +117,7 @@ GTEST_TEST(PointCloudTest, Basic) {
   Eigen::RowVectorXf descriptors_expected(count);
   descriptors_expected <<
     1, 2, 3, 4, 5;
-  CheckFields(descriptors_expected, pc_flags::kDescriptors,
-              pc_flags::kDescriptorCurvature,
+  CheckFields(descriptors_expected, pc_flags::kDescriptorCurvature,
               [](PointCloud& cloud) { return cloud.mutable_descriptors(); },
               [](PointCloud& cloud) { return cloud.descriptors(); },
               [](PointCloud& cloud, int i) {
@@ -130,10 +128,11 @@ GTEST_TEST(PointCloudTest, Basic) {
 
 GTEST_TEST(PointCloudTest, Fields) {
   // Check human-friendly formatting.
-  EXPECT_EQ(
-      "(kXYZs | kDescriptors::Curvature)",
-            ToString(pc_flags::kXYZs | pc_flags::kDescriptors,
-                     pc_flags::kDescriptorCurvature));
+  {
+    std::ostringstream os;
+    os << (pc_flags::kXYZs | pc_flags::kDescriptorCurvature);
+    EXPECT_EQ("(kXYZs | kDescriptors::Curvature)", os.str());
+  }
 
   // Check zero-size.
   {
@@ -147,21 +146,18 @@ GTEST_TEST(PointCloudTest, Fields) {
     EXPECT_TRUE(cloud.has_xyzs());
     EXPECT_TRUE(cloud.HasFields(pc_flags::kXYZs));
     EXPECT_NO_THROW(cloud.RequireFields(pc_flags::kXYZs));
-    EXPECT_FALSE(cloud.HasFields(pc_flags::kDescriptors));
-    EXPECT_THROW(cloud.RequireFields(pc_flags::kDescriptors),
+    EXPECT_FALSE(cloud.HasFields(pc_flags::kDescriptorFPFH));
+    EXPECT_THROW(cloud.RequireFields(pc_flags::kDescriptorFPFH),
                  std::runtime_error);
   }
 
   // Check with exact fields.
   {
-    PointCloud cloud(1, pc_flags::kXYZs | pc_flags::kDescriptors,
-                     pc_flags::kDescriptorCurvature);
+    PointCloud cloud(1, pc_flags::kXYZs | pc_flags::kDescriptorCurvature);
     EXPECT_TRUE(cloud.HasExactFields(
-        pc_flags::kXYZs | pc_flags::kDescriptors,
-        pc_flags::kDescriptorCurvature));
+        pc_flags::kXYZs | pc_flags::kDescriptorCurvature));
     EXPECT_NO_THROW(cloud.RequireExactFields(
-        pc_flags::kXYZs | pc_flags::kDescriptors,
-        pc_flags::kDescriptorCurvature));
+        pc_flags::kXYZs | pc_flags::kDescriptorCurvature));
     EXPECT_FALSE(cloud.HasExactFields(pc_flags::kXYZs));
     EXPECT_THROW(cloud.RequireExactFields(pc_flags::kXYZs),
                  std::runtime_error);
@@ -176,7 +172,7 @@ GTEST_TEST(PointCloudTest, Fields) {
 
   // Check with descriptors.
   {
-    PointCloud cloud(1, pc_flags::kDescriptors, pc_flags::kDescriptorCurvature);
+    PointCloud cloud(1, pc_flags::kDescriptorCurvature);
     EXPECT_FALSE(cloud.has_xyzs());
     EXPECT_TRUE(cloud.has_descriptors());
     EXPECT_TRUE(cloud.has_descriptors(pc_flags::kDescriptorCurvature));
@@ -188,11 +184,9 @@ GTEST_TEST(PointCloudTest, Fields) {
     EXPECT_FALSE(simple_cloud.has_descriptors(pc_flags::kDescriptorCurvature));
 
     // Negative tests for construction.
-    EXPECT_THROW(PointCloud(1, pc_flags::kDescriptors,
-                            pc_flags::kDescriptorNone),
-                 std::runtime_error);
-    EXPECT_THROW(PointCloud(1, pc_flags::kXYZs,
-                            pc_flags::kDescriptorCurvature),
+    EXPECT_THROW(PointCloud(1, pc_flags::kNone),
+                     std::runtime_error);
+    EXPECT_THROW(PointCloud(1, pc_flags::kDescriptorNone),
                  std::runtime_error);
   }
 }

@@ -29,11 +29,10 @@ class PointCloud::Storage {
  public:
   DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(Storage)
 
-  Storage(int new_size, pc_flags::Fields fields,
-          const pc_flags::DescriptorType& descriptor_type)
+  Storage(int new_size, pc_flags::Fields fields)
       : fields_(fields) {
     // Ensure that we incorporate the size of the descriptors.
-    descriptors_.resize(descriptor_type.size(), 0);
+    descriptors_.resize(fields_.descriptor_type().size(), 0);
     // Resize as normal.
     resize(new_size);
   }
@@ -46,7 +45,7 @@ class PointCloud::Storage {
     size_ = new_size;
     if (fields_ & pc_flags::kXYZs)
       xyzs_.conservativeResize(NoChange, new_size);
-    if (fields_ & pc_flags::kDescriptors)
+    if (fields_.has_descriptor())
       descriptors_.conservativeResize(NoChange, new_size);
     CheckInvariants();
   }
@@ -60,7 +59,7 @@ class PointCloud::Storage {
       const int xyz_size = xyzs_.cols();
       DRAKE_DEMAND(xyz_size == size());
     }
-    if (fields_ & pc_flags::kDescriptors) {
+    if (fields_.has_descriptor()) {
       const int descriptor_size = descriptors_.cols();
       DRAKE_DEMAND(descriptor_size == size());
     }
@@ -74,17 +73,8 @@ class PointCloud::Storage {
 
 namespace {
 
-// Ensure that a field set is complete valid (does not have descriptor bits).
-void ValidateFields(pc_flags::Fields fields) {
-  pc_flags::Fields full_mask = pc_flags::kXYZs | pc_flags::kDescriptors;
-  if (fields <= 0 || fields > full_mask) {
-    throw std::runtime_error("Invalid Fields");
-  }
-}
-
 pc_flags::Fields ResolveFields(
     const PointCloud& other, pc_flags::Fields fields) {
-  ValidateFields(fields);
   if (fields == pc_flags::kInherit) {
     return other.fields();
   } else {
@@ -92,42 +82,20 @@ pc_flags::Fields ResolveFields(
   }
 }
 
-// If kDescriptorInherit is used, then we take on the other's type is used.
-// If another descriptor is used, and we wish to copy the other's descriptors,
-// ensure they are compatible.
-pc_flags::DescriptorType ResolveDescriptorType(
-    const PointCloud& other, pc_flags::Fields fields,
-    const pc_flags::DescriptorType& descriptor_type) {
-  if (descriptor_type == pc_flags::kDescriptorInherit) {
-    return other.descriptor_type();
-  } else {
-    if (fields & pc_flags::kDescriptors) {
-      DRAKE_DEMAND(descriptor_type == other.descriptor_type());
-    }
-    return descriptor_type;
-  }
-}
-
 // Implements the rules set forth in `SetFrom`.
 // @pre Valid point clouds `a` and `b`.
-// @post The returned fields will be valid for both point clouds. If
-//   `fields` enables descriptors, then the descriptor type will be shared by
-//   both point clouds.
+// @post The returned fields will be valid for both point clouds.
 pc_flags::Fields ResolvePointCloudPairFields(
     const PointCloud& a,
     const PointCloud& b,
     pc_flags::Fields fields) {
-  ValidateFields(fields);
   if (fields == pc_flags::kInherit) {
     // If we do not permit a subset, expect the exact same fields.
-    a.RequireExactFields(b.fields(), b.descriptor_type());
+    a.RequireExactFields(b.fields());
     return a.fields();
   } else {
-    pc_flags::DescriptorType descriptor_resolved =
-        (fields & pc_flags::kDescriptors) ? a.descriptor_type()
-                                          : pc_flags::kDescriptorNone;
-    a.RequireFields(fields, descriptor_resolved);
-    b.RequireFields(fields, descriptor_resolved);
+    a.RequireFields(fields);
+    b.RequireFields(fields);
     return fields;
   }
 }
@@ -136,37 +104,20 @@ pc_flags::Fields ResolvePointCloudPairFields(
 
 PointCloud::PointCloud(
     int new_size,
-    pc_flags::Fields fields,
-    const pc_flags::DescriptorType& descriptor_type)
+    pc_flags::Fields fields)
     : size_(new_size),
-      fields_(fields),
-      descriptor_type_(descriptor_type) {
-  ValidateFields(fields_);
-
+      fields_(fields) {
+  if (fields_ == pc_flags::kNone)
+    throw std::runtime_error("Cannot construct a PointCloud without fields");
   if (fields_ & pc_flags::kInherit)
     throw std::runtime_error("Cannot construct a PointCloud with kInherit");
-  if (descriptor_type == pc_flags::kDescriptorInherit)
-    throw std::runtime_error(
-        "Cannot construct a PointCloud with kDescriptorInherit");
-  if (has_descriptors()) {
-    if (descriptor_type_ == pc_flags::kDescriptorNone)
-      throw std::runtime_error(
-          "Cannot specify kDescriptorNone with kDescriptors");
-  } else if (descriptor_type != pc_flags::kDescriptorNone) {
-    throw std::runtime_error(
-        "Must specify kDescriptorNone if kDescriptors is not present");
-  }
-
-  storage_.reset(new Storage(size_, fields_, descriptor_type_));
+  storage_.reset(new Storage(size_, fields_));
   SetDefault(0, size_);
 }
 
 PointCloud::PointCloud(const PointCloud& other,
-                       pc_flags::Fields copy_fields,
-                       const pc_flags::DescriptorType& descriptor_type)
-    : PointCloud(other.size(),
-                 ResolveFields(other, copy_fields),
-                 ResolveDescriptorType(other, copy_fields, descriptor_type)) {
+                       pc_flags::Fields copy_fields)
+    : PointCloud(other.size(), ResolveFields(other, copy_fields)) {
   SetFrom(other);
 }
 
@@ -218,7 +169,7 @@ void PointCloud::SetFrom(const PointCloud& other,
   if (fields_resolved & pc_flags::kXYZs) {
     mutable_xyzs() = other.xyzs();
   }
-  if (fields_resolved & pc_flags::kDescriptors) {
+  if (fields_resolved.has_descriptor()) {
     mutable_descriptors() = other.descriptors();
   }
 }
@@ -244,11 +195,11 @@ Eigen::Ref<Matrix3X<T>> PointCloud::mutable_xyzs() {
 }
 
 bool PointCloud::has_descriptors() const {
-  return fields_ & pc_flags::kDescriptors;
+  return fields_.has_descriptor();
 }
 bool PointCloud::has_descriptors(
     const pc_flags::DescriptorType& descriptor_type) const {
-  return has_descriptors() && descriptor_type_ == descriptor_type;
+  return fields_ & descriptor_type;
 }
 Eigen::Ref<const MatrixX<D>> PointCloud::descriptors() const {
   DRAKE_DEMAND(has_descriptors());
@@ -260,53 +211,35 @@ Eigen::Ref<MatrixX<D>> PointCloud::mutable_descriptors() {
 }
 
 bool PointCloud::HasFields(
-    pc_flags::Fields fields_in,
-    const pc_flags::DescriptorType& descriptor_type_in) const {
-  ValidateFields(fields_in);
+    pc_flags::Fields fields_in) const {
   bool good = true;
-  if ((fields() & fields_in) != fields_in) {
-    good = false;
-  } else {
-    if (fields_in & pc_flags::kDescriptors) {
-      DRAKE_DEMAND(descriptor_type_in != pc_flags::kDescriptorNone);
-      DRAKE_DEMAND(descriptor_type_in != pc_flags::kDescriptorInherit);
-      if (descriptor_type() != descriptor_type_in) {
-        good = false;
-      }
-    } else {
-      DRAKE_DEMAND(descriptor_type_in == pc_flags::kDescriptorNone);
-    }
-  }
-  return good;
+  DRAKE_DEMAND(!(fields_in & pc_flags::kInherit));
+  // Expect that we have at least `fields_in`.
+  return ((fields() & fields_in) == fields_in);
 }
 
 void PointCloud::RequireFields(
-    pc_flags::Fields fields_in,
-    const pc_flags::DescriptorType& descriptor_type_in) const {
-  if (!HasFields(fields_in, descriptor_type_in)) {
+    pc_flags::Fields fields_in) const {
+  if (!HasFields(fields_in)) {
     throw std::runtime_error(
         fmt::format("PointCloud does not have expected fields.\n"
                     "Expected {}, got {}",
-                    pc_flags::ToString(fields_in, descriptor_type_in),
-                    pc_flags::ToString(fields(), descriptor_type())));
+                    fields_in, fields()));
   }
 }
 
 bool PointCloud::HasExactFields(
-    pc_flags::Fields fields_in,
-    const pc_flags::DescriptorType& descriptor_type_in) const {
-  return HasFields(fields_in, descriptor_type_in) && fields() == fields_in;
+    pc_flags::Fields fields_in) const {
+  return HasFields(fields_in) && fields() == fields_in;
 }
 
 void PointCloud::RequireExactFields(
-    pc_flags::Fields fields_in,
-    const pc_flags::DescriptorType& descriptor_type_in) const {
-  if (!HasExactFields(fields_in, descriptor_type_in)) {
+    pc_flags::Fields fields_in) const {
+  if (!HasExactFields(fields_in)) {
     throw std::runtime_error(
         fmt::format("PointCloud does not have the exact expected fields."
                     "\nExpected {}, got {}",
-                    pc_flags::ToString(fields_in, descriptor_type_in),
-                    pc_flags::ToString(fields(), descriptor_type())));
+                    fields_in, fields()));
   }
 }
 

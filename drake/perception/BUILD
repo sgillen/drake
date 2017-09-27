@@ -11,17 +11,29 @@ load("//tools:lint.bzl", "add_lint_tests")
 package(default_visibility = ["//visibility:public"])
 
 drake_cc_library(
-    name = "point_cloud",
-    srcs = [
-        "point_cloud.cc",
-        "point_cloud_flags.cc",
-    ],
-    hdrs = [
-        "point_cloud.h",
-        "point_cloud_flags.h",
-    ],
+    name = "point_cloud_flags",
+    srcs = ["point_cloud_flags.cc"],
+    hdrs = ["point_cloud_flags.h"],
     deps = [
         "//drake/common:essential",
+    ],
+)
+
+drake_cc_library(
+    name = "point_cloud",
+    srcs = ["point_cloud.cc"],
+    hdrs = ["point_cloud.h"],
+    deps = [
+        ":point_cloud_flags",
+        "//drake/common:essential",
+    ],
+)
+
+drake_cc_googletest(
+    name = "point_cloud_flags_test",
+    srcs = ["test/point_cloud_flags_test.cc"],
+    deps = [
+        ":point_cloud_flags",
     ],
 )
 
