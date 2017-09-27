@@ -3,7 +3,9 @@
 #include <iostream>
 #include <stdexcept>
 #include <string>
+
 #include "drake/common/drake_assert.h"
+#include "drake/common/drake_copyable.h"
 
 namespace drake {
 namespace perception {
@@ -72,12 +74,16 @@ const DescriptorType kDescriptorFPFH(33, "kDescriptorFPFH");
  */
 class Fields {
  public:
+  DRAKE_DEFAULT_COPY_AND_MOVE_AND_ASSIGN(Fields)
+
+  // NOLINTNEXTLINE(runtime/explicit): This conversion is desirable.
   Fields(BaseFieldT base_fields)
       : base_fields_(base_fields) {
     if (base_fields < 0 || base_fields >= (kXYZs << 1))
       throw std::runtime_error("Invalid BaseField specified.");
   }
 
+  // NOLINTNEXTLINE(runtime/explicit): This conversion is desirable.
   Fields(const DescriptorType& descriptor_type)
       : descriptor_type_(descriptor_type) {}
 
@@ -132,7 +138,8 @@ class Fields {
   }
 
   bool operator==(const Fields& rhs) const {
-    return base_fields_ == rhs.base_fields_ && descriptor_type_ == rhs.descriptor_type_;
+    return (base_fields_ == rhs.base_fields_
+            && descriptor_type_ == rhs.descriptor_type_);
   }
 
   friend std::ostream& operator<<(std::ostream& os, const Fields& rhs);

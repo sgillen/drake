@@ -38,5 +38,5 @@ std::ostream& operator<<(std::ostream& os, const Fields& fields) {
 
 }  // namespace pc_flags
 
-}  // namespace drake
 }  // namespace perception
+}  // namespace drake

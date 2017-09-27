@@ -79,7 +79,7 @@ class PointCloud final {
   ///   Size of the point cloud after construction.
   /// @param fields
   ///   Fields that the point cloud contains.
-  PointCloud(int new_size, pc_flags::Fields fields = pc_flags::kXYZs);
+  explicit PointCloud(int new_size, pc_flags::Fields fields = pc_flags::kXYZs);
 
   /// Copies another point cloud's fields and data.
   PointCloud(const PointCloud& other)
