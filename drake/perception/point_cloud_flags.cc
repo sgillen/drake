@@ -26,12 +26,14 @@ namespace pc_flags {
 
 std::ostream& operator<<(std::ostream& os, const Fields& fields) {
   std::vector<std::string> values;
-  if (fields & pc_flags::kXYZs)
+  if (fields.has(pc_flags::kXYZs))
     values.push_back("kXYZs");
   if (fields.has_descriptor()) {
-    values.push_back("kDescriptor" + fields.descriptor_type().name());
+    values.push_back(fields.descriptor_type().name());
   }
-  return os << "(" << join(os, values, " | ") << ")";
+  os << "(";
+  join(os, values, " | ");
+  return os << ")";
 }
 
 }  // namespace pc_flags

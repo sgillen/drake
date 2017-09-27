@@ -13,7 +13,7 @@ namespace pc_flags {
 
 typedef int BaseFieldT;
 /// Indicates the data the point cloud stores.
-enum BaseField : BaseFieldT {
+enum BaseField : int {
   kNone = 0,
   /// Inherit other fields. May imply an intersection of all
   /// compatible descriptors.
@@ -58,11 +58,11 @@ class DescriptorType final {
 };
 
 /// No descriptor.
-const DescriptorType kDescriptorNone(0, "None");
+const DescriptorType kDescriptorNone(0, "kDescriptorNone");
 /// Curvature.
-const DescriptorType kDescriptorCurvature(1, "Curvature");
+const DescriptorType kDescriptorCurvature(1, "kDescriptorCurvature");
 /// Point-feature-histogram.
-const DescriptorType kDescriptorFPFH(33, "FPFH");
+const DescriptorType kDescriptorFPFH(33, "kDescriptorFPFH");
 
 /**
  * Allows combination of `BaseField` and `DescriptorType` for a `PointCloud`.
@@ -108,7 +108,6 @@ class Fields {
     return Fields(*this) |= rhs;
   }
 
-
   Fields& operator&=(const Fields& rhs) {
     fields_ &= rhs.fields_;
     if (descriptor_type_ != rhs.descriptor_type_) {
@@ -122,8 +121,14 @@ class Fields {
     return Fields(*this) &= rhs;
   }
 
-  operator bool() const {
-    return fields_ != kNone || descriptor_type_ != kDescriptorNone;
+  bool has_any() const {
+    return has_fields() || has_descriptor();
+  }
+
+  // NOTE: Cannot use operator bool() as this creates conflicts when
+  // attempting to use other flags.
+  bool has(const Fields& rhs) const {
+    return (*this & rhs) == rhs;
   }
 
   bool operator==(const Fields& rhs) const {
@@ -144,12 +149,12 @@ class Fields {
 
 // Make | compatible for BaseField + Descriptor. Do not use implicit conversion
 // because it becomes ambiguous.
-Fields operator|(const BaseFieldT& lhs, const DescriptorType& rhs) {
+inline Fields operator|(const BaseFieldT& lhs, const DescriptorType& rhs) {
   return Fields(lhs) | Fields(rhs);
 }
 
 // Make | compatible for Descriptor + BaseField.
-Fields operator|(const DescriptorType& lhs, const BaseFieldT& rhs) {
+inline Fields operator|(const DescriptorType& lhs, const BaseFieldT& rhs) {
   return Fields(lhs) | Fields(rhs);
 }
 
