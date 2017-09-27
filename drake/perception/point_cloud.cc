@@ -108,9 +108,9 @@ class PointCloud::Storage {
 namespace {
 
 // Ensure that a field set is complete valid (does not have descriptor bits).
-void ValidateFields(pc_flags::Fields c) {
+void ValidateFields(pc_flags::Fields fields) {
   pc_flags::Fields full_mask = pc_flags::kXYZs | pc_flags::kDescriptors;
-  if (c <= 0 || c > full_mask) {
+  if (fields <= 0 || fields > full_mask) {
     throw std::runtime_error("Invalid Fields");
   }
 }
@@ -146,7 +146,7 @@ pc_flags::DescriptorType ResolveDescriptorType(
 // @post The returned fields will be valid for both point clouds. If
 //   `fields` enables descriptors, then the descriptor type will be shared by
 //   both point clouds.
-pc_flags::Fields ResolveFields(
+pc_flags::Fields ResolvePointCloudPairFields(
     const PointCloud& a,
     const PointCloud& b,
     pc_flags::Fields fields) {
@@ -244,18 +244,19 @@ void PointCloud::SetFrom(const PointCloud& other,
     resize(new_size);
   } else if (new_size != old_size) {
     throw std::runtime_error(
-        fmt::format("CopyFrom: {} != {}", new_size, old_size));
+        fmt::format("SetFrom: {} != {}", new_size, old_size));
   }
-  pc_flags::Fields c_resolved = ResolveFields(*this, other, fields_in);
-  if (c_resolved & pc_flags::kXYZs) {
+  pc_flags::Fields fields_resolved =
+      ResolvePointCloudPairFields(*this, other, fields_in);
+  if (fields_resolved & pc_flags::kXYZs) {
     mutable_xyzs() = other.xyzs();
   }
-  if (c_resolved & pc_flags::kDescriptors) {
+  if (fields_resolved & pc_flags::kDescriptors) {
     mutable_descriptors() = other.descriptors();
   }
 }
 
-void PointCloud::AddPoints(
+void PointCloud::Expand(
     int add_size,
     bool skip_initialization) {
   DRAKE_DEMAND(add_size >= 0);
@@ -294,7 +295,7 @@ Eigen::Ref<MatrixX<D>> PointCloud::mutable_descriptors() {
 bool PointCloud::HasFields(
     pc_flags::Fields fields_in,
     const pc_flags::DescriptorType& descriptor_type_in) const {
-  ValidateFields(fields_);
+  ValidateFields(fields_in);
   bool good = true;
   if ((fields() & fields_in) != fields_in) {
     good = false;

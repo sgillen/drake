@@ -69,7 +69,7 @@ GTEST_TEST(PointCloudTest, Basic) {
 
     // Add item which should be default-initialized.
     int last = cloud.size();
-    cloud.AddPoints(1);
+    cloud.Expand(1);
     EXPECT_EQ(count + 1, cloud.size());
     // Check default-initialized.
     EXPECT_TRUE(check_helper<T>::IsDefault(get_value(cloud, last)));
@@ -144,6 +144,7 @@ GTEST_TEST(PointCloudTest, Fields) {
   // Check basic requirements.
   {
     PointCloud cloud(1, pc_flags::kXYZs);
+    EXPECT_TRUE(cloud.has_xyzs());
     EXPECT_TRUE(cloud.HasFields(pc_flags::kXYZs));
     EXPECT_NO_THROW(cloud.RequireFields(pc_flags::kXYZs));
     EXPECT_FALSE(cloud.HasFields(pc_flags::kDescriptors));
@@ -176,6 +177,7 @@ GTEST_TEST(PointCloudTest, Fields) {
   // Check with descriptors.
   {
     PointCloud cloud(1, pc_flags::kDescriptors, pc_flags::kDescriptorCurvature);
+    EXPECT_FALSE(cloud.has_xyzs());
     EXPECT_TRUE(cloud.has_descriptors());
     EXPECT_TRUE(cloud.has_descriptors(pc_flags::kDescriptorCurvature));
     EXPECT_FALSE(cloud.has_descriptors(pc_flags::kDescriptorFPFH));

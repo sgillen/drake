@@ -275,7 +275,7 @@ class PointCloud final {
   ///    Number of points to add.
   /// @param skip_initialization
   ///    Do not require that the new values be initialized.
-  void AddPoints(int add_size, bool skip_initialization = false);
+  void Expand(int add_size, bool skip_initialization = false);
 
   /// @}
 
