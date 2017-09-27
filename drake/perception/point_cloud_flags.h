@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stdexcept>
 #include <string>
 
 namespace drake {
@@ -8,17 +9,16 @@ namespace perception {
 /// Point cloud flags.
 namespace pc_flags {
 
+typedef int BaseFieldT;
 /// Indicates the data the point cloud stores.
-enum Field : int {
+enum BaseField : BaseFieldT {
+  kNone = 0,
   /// Inherit other fields. May imply an intersection of all
   /// compatible descriptors.
-  kInherit = 0,
+  kInherit = 1 << 0,
   /// XYZ point in Cartesian space.
-  kXYZs = 1 << 0,
-  /// Descriptors, whose type (and structure) is specified by `DescriptorType`.
-  kDescriptors = 1 << 3,
+  kXYZs = 1 << 1,
 };
-typedef int Fields;
 
 /// Describes an descriptor field with a name and the descriptor's size.
 ///
@@ -34,13 +34,12 @@ class DescriptorType final {
       : size_(size),
         name_(name) {}
 
-  DescriptorType(const DescriptorType& other)
-      : DescriptorType(other.size(), other.name()) {}
+  DescriptorType(const DescriptorType&) = default;
 
-  // Strictly enforce immutable semantics.
-  DescriptorType(const DescriptorType&&) = delete;
-  DescriptorType& operator=(const DescriptorType&) = delete;
-  DescriptorType& operator=(DescriptorType&&) = delete;
+  // Set up defaults.
+  DescriptorType(DescriptorType&&) = delete;
+  DescriptorType& operator=(const DescriptorType&) = default;
+  DescriptorType& operator=(DescriptorType&&) = default;
 
   inline int size() const { return size_; }
   inline const std::string& name() const { return name_; }
@@ -52,8 +51,8 @@ class DescriptorType final {
   }
 
  private:
-  const int size_{};
-  const std::string name_;
+  int size_{};
+  std::string name_;
 };
 
 /// No descriptor.
@@ -67,6 +66,58 @@ const DescriptorType kDescriptorFPFH(33, "FPFH");
 
 /// Returns a human-friendly representation of a field and descriptor set.
 std::string ToString(Fields fields, const DescriptorType& descriptor_type);
+
+
+/**
+ * Allows combination of these two field types (FieldType and DescriptorType).
+ */
+class Fields {
+ public:
+  Fields(BaseFieldT fields)
+      : fields_(fields) {}
+
+  Fields(const DescriptorType& descriptor_type)
+      : descriptor_type_(descriptor_type) {}
+
+  bool has_fields() const {
+    return fields_ != kNone;
+  }
+
+  bool has_descriptor() const {
+    return descriptor_type_ != kDescriptorNone;
+  }
+
+  Fields& operator|=(const Fields& other) {
+    fields_ = static_cast<BaseFieldT>(fields_ | other.fields_);
+    if (has_descriptor())
+      throw std::runtime_error(
+          "Cannot have multiple Descriptor flags. "
+          "Can only add flags iff (flags.b() == kDescriptorNone).");
+    descriptor_type_ = other.descriptor_type_;
+    return *this;
+  }
+
+  Fields operator|(const Fields& rhs) const {
+    return Fields(*this) |= rhs;
+  }
+
+  /// Provides intersection.
+  Fields operator&(const Fields& rhs) const {
+
+  }
+
+  operator bool() const {
+    return fields_ != kNone || descriptor_type_ != kDescriptorNone;
+  }
+
+  bool operator==(const Fields& rhs) const {
+    return fields_ == rhs.fields_ && descriptor_type_ == rhs.descriptor_type_;
+  }
+
+ private:
+  BaseFieldT fields_{kNone};
+  DescriptorType descriptor_type_{kDescriptorNone};
+};
 
 }  // namespace pc_flags
 
