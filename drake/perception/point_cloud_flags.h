@@ -67,24 +67,24 @@ const DescriptorType kDescriptorFPFH(33, "kDescriptorFPFH");
 /**
  * Allows combination of `BaseField` and `DescriptorType` for a `PointCloud`.
  *
- * This provides the mechanism to use basic bit-mask operators (| &) to
- * convey intersection and unions.
+ * This provides the mechanism to use basic union bit-mask operators (|) to
+ * convey a combination of fields.
  */
-// TODO(eric.cousineau): Consider construction from std::vector<Fields> instead?
 class Fields {
  public:
-  Fields(BaseFieldT fields)
-      : fields_(fields) {
-    DRAKE_ASSERT(fields >= 0 && fields < (kXYZs << 1));
+  Fields(BaseFieldT base_fields)
+      : base_fields_(base_fields) {
+    if (base_fields < 0 || base_fields >= (kXYZs << 1))
+      throw std::runtime_error("Invalid BaseField specified.");
   }
 
   Fields(const DescriptorType& descriptor_type)
       : descriptor_type_(descriptor_type) {}
 
-  BaseFieldT fields() const { return fields_; }
+  BaseFieldT base_fields() const { return base_fields_; }
 
-  bool has_fields() const {
-    return fields_ != kNone;
+  bool has_base_fields() const {
+    return base_fields_ != kNone;
   }
 
   const DescriptorType& descriptor_type() const { return descriptor_type_; }
@@ -95,7 +95,7 @@ class Fields {
 
   /// Provides union.
   Fields& operator|=(const Fields& rhs) {
-    fields_ = fields_ | rhs.fields_;
+    base_fields_ = base_fields_ | rhs.base_fields_;
     if (has_descriptor())
       throw std::runtime_error(
           "Cannot have multiple Descriptor flags. "
@@ -109,7 +109,7 @@ class Fields {
   }
 
   Fields& operator&=(const Fields& rhs) {
-    fields_ &= rhs.fields_;
+    base_fields_ &= rhs.base_fields_;
     if (descriptor_type_ != rhs.descriptor_type_) {
       descriptor_type_ = kDescriptorNone;
     }
@@ -122,7 +122,7 @@ class Fields {
   }
 
   bool has_any() const {
-    return has_fields() || has_descriptor();
+    return has_base_fields() || has_descriptor();
   }
 
   // NOTE: Cannot use operator bool() as this creates conflicts when
@@ -132,7 +132,7 @@ class Fields {
   }
 
   bool operator==(const Fields& rhs) const {
-    return fields_ == rhs.fields_ && descriptor_type_ == rhs.descriptor_type_;
+    return base_fields_ == rhs.base_fields_ && descriptor_type_ == rhs.descriptor_type_;
   }
 
   friend std::ostream& operator<<(std::ostream& os, const Fields& rhs);
@@ -143,7 +143,7 @@ class Fields {
 
  private:
   // TODO(eric.cousineau): Use `optional` to avoid the need for `none` objects?
-  BaseFieldT fields_{kNone};
+  BaseFieldT base_fields_{kNone};
   DescriptorType descriptor_type_{kDescriptorNone};
 };
 

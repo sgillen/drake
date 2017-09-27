@@ -1,8 +1,7 @@
 #include "drake/perception/point_cloud.h"
 
-#include <sstream>
-
 #include <fmt/format.h>
+#include <fmt/ostream.h>
 
 #include "drake/common/drake_assert.h"
 
@@ -43,7 +42,7 @@ class PointCloud::Storage {
   // Resize to parent cloud's size.
   void resize(int new_size) {
     size_ = new_size;
-    if (fields_ & pc_flags::kXYZs)
+    if (fields_.has(pc_flags::kXYZs))
       xyzs_.conservativeResize(NoChange, new_size);
     if (fields_.has_descriptor())
       descriptors_.conservativeResize(NoChange, new_size);
@@ -55,7 +54,7 @@ class PointCloud::Storage {
 
  private:
   void CheckInvariants() const {
-    if (fields_ & pc_flags::kXYZs) {
+    if (fields_.has(pc_flags::kXYZs)) {
       const int xyz_size = xyzs_.cols();
       DRAKE_DEMAND(xyz_size == size());
     }
@@ -109,7 +108,7 @@ PointCloud::PointCloud(
       fields_(fields) {
   if (fields_ == pc_flags::kNone)
     throw std::runtime_error("Cannot construct a PointCloud without fields");
-  if (fields_ & pc_flags::kInherit)
+  if (fields_.has(pc_flags::kInherit))
     throw std::runtime_error("Cannot construct a PointCloud with kInherit");
   storage_.reset(new Storage(size_, fields_));
   SetDefault(0, size_);
@@ -166,7 +165,7 @@ void PointCloud::SetFrom(const PointCloud& other,
   }
   pc_flags::Fields fields_resolved =
       ResolvePointCloudPairFields(*this, other, fields_in);
-  if (fields_resolved & pc_flags::kXYZs) {
+  if (fields_resolved.has(pc_flags::kXYZs)) {
     mutable_xyzs() = other.xyzs();
   }
   if (fields_resolved.has_descriptor()) {
@@ -183,7 +182,7 @@ void PointCloud::Expand(
 }
 
 bool PointCloud::has_xyzs() const {
-  return fields_ & pc_flags::kXYZs;
+  return fields_.has(pc_flags::kXYZs);
 }
 Eigen::Ref<const Matrix3X<T>> PointCloud::xyzs() const {
   DRAKE_DEMAND(has_xyzs());
@@ -199,7 +198,7 @@ bool PointCloud::has_descriptors() const {
 }
 bool PointCloud::has_descriptors(
     const pc_flags::DescriptorType& descriptor_type) const {
-  return fields_ & descriptor_type;
+  return fields_.has(descriptor_type);
 }
 Eigen::Ref<const MatrixX<D>> PointCloud::descriptors() const {
   DRAKE_DEMAND(has_descriptors());
@@ -212,10 +211,8 @@ Eigen::Ref<MatrixX<D>> PointCloud::mutable_descriptors() {
 
 bool PointCloud::HasFields(
     pc_flags::Fields fields_in) const {
-  bool good = true;
-  DRAKE_DEMAND(!(fields_in & pc_flags::kInherit));
-  // Expect that we have at least `fields_in`.
-  return ((fields() & fields_in) == fields_in);
+  DRAKE_DEMAND(!fields_in.has(pc_flags::kInherit));
+  return fields_.has(fields_in);
 }
 
 void PointCloud::RequireFields(
@@ -230,7 +227,7 @@ void PointCloud::RequireFields(
 
 bool PointCloud::HasExactFields(
     pc_flags::Fields fields_in) const {
-  return HasFields(fields_in) && fields() == fields_in;
+  return fields() == fields_in;
 }
 
 void PointCloud::RequireExactFields(

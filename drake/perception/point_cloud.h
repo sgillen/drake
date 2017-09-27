@@ -245,7 +245,7 @@ class PointCloud final {
   // Represents the size of the point cloud.
   int size_;
   // Represents which fields are enabled for this point cloud.
-  const pc_flags::Fields fields_{};
+  const pc_flags::Fields fields_{pc_flags::kXYZs};
   // Owns storage used for the point cloud.
   std::unique_ptr<Storage> storage_;
 };

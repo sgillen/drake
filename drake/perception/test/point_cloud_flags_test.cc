@@ -33,6 +33,10 @@ GTEST_TEST(PointCloudFlagsTest, Basic) {
   // Check implicit conversion.
   EXPECT_EQ(pcf::Fields(pcf::kXYZs), pcf::kXYZs);
   EXPECT_EQ(pcf::Fields(pcf::kNone), pcf::Fields(pcf::kDescriptorNone));
+
+  // Check negatives.
+  EXPECT_THROW(pcf::Fields(-100), std::runtime_error);
+  EXPECT_THROW(pcf::Fields(100), std::runtime_error);
 }
 
 }  // namespace

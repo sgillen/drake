@@ -127,13 +127,6 @@ GTEST_TEST(PointCloudTest, Basic) {
 }
 
 GTEST_TEST(PointCloudTest, Fields) {
-  // Check human-friendly formatting.
-  {
-    std::ostringstream os;
-    os << (pc_flags::kXYZs | pc_flags::kDescriptorCurvature);
-    EXPECT_EQ("(kXYZs | kDescriptors::Curvature)", os.str());
-  }
-
   // Check zero-size.
   {
     PointCloud cloud(0, pc_flags::kXYZs);
