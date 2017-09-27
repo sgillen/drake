@@ -12,8 +12,14 @@ package(default_visibility = ["//visibility:public"])
 
 drake_cc_library(
     name = "point_cloud",
-    srcs = ["point_cloud.cc"],
-    hdrs = ["point_cloud.h"],
+    srcs = [
+        "point_cloud.cc",
+        "point_cloud_flags.cc",
+    ],
+    hdrs = [
+        "point_cloud.h",
+        "point_cloud_flags.h",
+    ],
     deps = [
         "//drake/common:essential",
     ],
