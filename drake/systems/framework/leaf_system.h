@@ -665,6 +665,15 @@ class LeafSystem : public System<T> {
     event.add_to_composite(&per_step_events_);
   }
 
+  /// Declares a per-step publish event for things such as visualization and
+  /// simulation signal logging.
+  // TODO(eric.cousineau): This seems to be simulation specific, honestly.
+  // What affect would this have on an LCM-driven loop?
+  void DeclarePerStepPublish() {
+    PublishEvent<T> event(Event<T>::TriggerType::kPerStep);
+    this->DeclarePerStepEvent(event);
+  }
+
   /// Declares that this System should reserve continuous state with
   /// @p num_state_variables state variables, which have no second-order
   /// structure. Has no effect if AllocateContinuousState is overridden.
