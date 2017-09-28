@@ -17,8 +17,12 @@ class MySpringMassSystem : public SpringMassSystem<T> {
   DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(MySpringMassSystem)
 
   // Pass through to SpringMassSystem, except add update rate
-  MySpringMassSystem(double stiffness, double mass, double update_rate)
+  MySpringMassSystem(double stiffness, double mass, double update_rate,
+                     bool per_step_publish = true)
       : SpringMassSystem<T>(stiffness, mass, false /*no input force*/) {
+    if (per_step_publish) {
+      this->DeclarePerStepPublish();
+    }
     if (update_rate > 0.0) {
       this->DeclarePeriodicDiscreteUpdate(1.0 / update_rate);
     }
@@ -39,7 +43,7 @@ class MySpringMassSystem : public SpringMassSystem<T> {
   }
 
  private:
-  // Publish t q u to standard output.
+  // Increments publish count.
   void DoPublish(const Context<T>&,
                  const std::vector<const systems::PublishEvent<T>*>&)
       const override {

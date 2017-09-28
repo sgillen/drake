@@ -808,21 +808,25 @@ GTEST_TEST(SimulatorTest, RealtimeRate) {
   EXPECT_TRUE(simulator.get_actual_realtime_rate() <= 5.1);
 }
 
-// Tests that if publishing every timestep is disabled, publish only happens
-// on initialization.
-GTEST_TEST(SimulatorTest, DisablePublishEveryTimestep) {
-  analysis_test::MySpringMassSystem<double> spring_mass(1., 1., 0.);
-  Simulator<double> simulator(spring_mass);  // Use default Context.
-  simulator.set_publish_every_time_step(false);
+// Tests the behavior of the simulator publishing every timestep if
+// the simulator opt
+GTEST_TEST(SimulatorTest, PublishEveryTimestep) {
+  for (bool per_step_publish : {false, true}) {
+    // Ensure that the spring-mass system does not publish each time step.
+    analysis_test::MySpringMassSystem<double> spring_mass(1., 1., 0., false);
+    Simulator<double> simulator(spring_mass);  // Use default Context.
 
-  simulator.get_mutable_context()->set_time(0.);
-  simulator.Initialize();
-  // Publish should happen on initialization.
-  EXPECT_EQ(1, simulator.get_num_publishes());
+    simulator.get_mutable_context()->set_time(0.);
 
-  // Simulate for 1 simulated second.  Publish should not happen.
-  simulator.StepTo(1.);
-  EXPECT_EQ(1, simulator.get_num_publishes());
+    simulator.set_publish_every_time_step(per_step_publish);
+    simulator.Initialize();
+    // Publish should happen on initialization.
+    EXPECT_EQ(1, simulator.get_num_publishes());
+
+    // Simulate for 1 simulated second.  Publish should not happen.
+    simulator.StepTo(1.);
+    EXPECT_EQ(per_step_publish ? 16 : 1, simulator.get_num_publishes());
+  }
 }
 
 // Repeat the previous test but now the continuous steps are interrupted
