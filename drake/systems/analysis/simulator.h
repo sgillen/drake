@@ -164,24 +164,10 @@ class Simulator {
   /// @see set_target_realtime_rate()
   double get_actual_realtime_rate() const;
 
-  /// Sets whether the simulation should invoke Publish on the System under
-  /// simulation during every time step. If enabled, Publish will be invoked
-  /// after discrete updates and before continuous integration. Regardless of
-  /// whether publishing every time step is enabled, Publish will be invoked at
-  /// Simulator initialize time, and as System<T>::CalcNextUpdateTime requests.
-  void set_publish_every_time_step(bool publish) {
-    publish_every_time_step_ = publish;
-  }
-
   /// Sets whether the simulation should invoke Publish in Initialize().
   void set_publish_at_initialization(bool publish) {
     publish_at_initialization_ = publish;
   }
-
-  /// Returns true if the simulation should invoke Publish on the System under
-  /// simulation every time step.  By default, returns true.
-  // TODO(sherm1, edrumwri): Consider making this false by default.
-  bool get_publish_every_time_step() const { return publish_every_time_step_; }
 
   /// Returns a const reference to the internally-maintained Context holding the
   /// most recent step in the trajectory. This is suitable for publishing or
@@ -349,8 +335,6 @@ class Simulator {
 
   // Slow down to this rate if possible (user settable).
   double target_realtime_rate_{0.};
-
-  bool publish_every_time_step_{false};
 
   // TODO(eric.cousineau): Should a PerStep event publish at initialization?
   bool publish_at_initialization_{true};
@@ -538,13 +522,6 @@ void Simulator<T>::StepTo(const T& boundary_time) {
     HandleDiscreteUpdate(merged_events->get_discrete_update_events());
     // Do any publishes last.
     HandlePublish(merged_events->get_publish_events());
-
-    // TODO(siyuan): transfer per step publish entirely to individual systems.
-    // Allow System a chance to produce some output.
-    if (get_publish_every_time_step()) {
-      system_.Publish(*context_);
-      ++num_publishes_;
-    }
 
     // How far can we go before we have to take a sampling break?
     const T next_sample_time =

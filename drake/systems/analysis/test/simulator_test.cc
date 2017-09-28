@@ -131,7 +131,6 @@ GTEST_TEST(SimulatorTest, DiagramWitness) {
   Context<double>* context = simulator.get_mutable_context();
   simulator.reset_integrator<RungeKutta2Integrator<double>>(system, dt,
                                                             context);
-  simulator.set_publish_every_time_step(false);
 
   context->set_time(0);
   simulator.StepTo(1);
@@ -206,7 +205,6 @@ class TwoWitnessStatelessSystem : public LeafSystem<double> {
 // Disables non-witness based publishing for witness function testing.
 void DisableDefaultPublishing(Simulator<double>* s) {
   s->set_publish_at_initialization(false);
-  s->set_publish_every_time_step(false);
 }
 
 // Initializes the Simulator's integrator to fixed step mode for witness
@@ -650,9 +648,6 @@ GTEST_TEST(SimulatorTest, MiscAPI) {
   analysis_test::MySpringMassSystem<double> spring_mass(1., 1., 0.);
   Simulator<double> simulator(spring_mass);  // Use default Context.
 
-  // Default publish behavior should not publish at every time step.
-  EXPECT_FALSE(simulator.get_publish_every_time_step());
-
   // Default realtime rate should be zero.
   EXPECT_TRUE(simulator.get_target_realtime_rate() == 0.);
 
@@ -808,32 +803,28 @@ GTEST_TEST(SimulatorTest, RealtimeRate) {
   EXPECT_TRUE(simulator.get_actual_realtime_rate() <= 5.1);
 }
 
-// Tests the behavior of the simulator publishing every timestep
-// with the combinations of `simulator_per_step_publish = {false, true}` x
-// `spring_mass_per_step_publish = {false, true}`.
-GTEST_TEST(SimulatorTest, PublishEveryTimestep) {
-  for (bool simulator_per_step_publish : {false, true}) {
-    for (bool spring_mass_per_step_publish : {false, true}) {
-      // Ensure that the spring-mass system does not publish each time step.
-      analysis_test::MySpringMassSystem<double> spring_mass(
-          1., 1., 0., spring_mass_per_step_publish);
-      Simulator<double> simulator(spring_mass);  // Use default Context.
+// Tests the behavior of publishing every timestep being disabled and enabled
+// for a system.
+GTEST_TEST(SimulatorTest, PerStepPublish) {
+  for (bool spring_mass_per_step_publish : {false, true}) {
+    // Ensure that the spring-mass system does not publish each time step.
+    analysis_test::MySpringMassSystem<double> spring_mass(
+        1., 1., 0., spring_mass_per_step_publish);
+    Simulator<double> simulator(spring_mass);  // Use default Context.
 
-      simulator.get_mutable_context()->set_time(0.);
+    simulator.get_mutable_context()->set_time(0.);
 
-      simulator.set_publish_every_time_step(simulator_per_step_publish);
-      simulator.Initialize();
-      // Publish should happen on initialization.
-      EXPECT_EQ(1, simulator.get_num_publishes());
+    simulator.Initialize();
+    // Publish should happen on initialization.
+    EXPECT_EQ(1, simulator.get_num_publishes());
 
-      // Simulate for 1 simulated second.  Publish should not happen.
-      simulator.StepTo(1.);
-      int num_publishes_expected = 1;
-      if (simulator_per_step_publish || spring_mass_per_step_publish) {
-        num_publishes_expected = 16;
-      }
-      EXPECT_EQ(num_publishes_expected, simulator.get_num_publishes());
+    // Simulate for 1 simulated second.  Publish should not happen.
+    simulator.StepTo(1.);
+    int num_publishes_expected = 1;
+    if (spring_mass_per_step_publish) {
+      num_publishes_expected = 16;
     }
+    EXPECT_EQ(num_publishes_expected, simulator.get_num_publishes());
   }
 }
 
@@ -1150,7 +1141,6 @@ GTEST_TEST(SimulatorTest, DiscreteUpdateAndPublish) {
   });
 
   Simulator<double> simulator(system);
-  simulator.set_publish_every_time_step(false);
   simulator.StepTo(0.5);
   EXPECT_EQ(500, num_disc_updates);
   // Publication occurs at 400Hz, and also at initialization.
@@ -1181,7 +1171,6 @@ GTEST_TEST(SimulatorTest, UpdateThenPublishThenIntegrate) {
       });
 
   // Run a simulation.
-  simulator.set_publish_every_time_step(true);
   simulator.StepTo(0.5);
 
   // Check that all the update events precede all the publish events, and all
@@ -1491,7 +1480,6 @@ GTEST_TEST(SimulatorTest, PerStepAction) {
   // Disables all simulator induced publish events, so that all publish calls
   // are intiated by sys.
   sim.set_publish_at_initialization(false);
-  sim.set_publish_every_time_step(false);
   sim.Initialize();
   sim.StepTo(0.1);
 
