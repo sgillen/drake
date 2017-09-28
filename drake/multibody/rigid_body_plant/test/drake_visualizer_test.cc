@@ -511,7 +511,6 @@ GTEST_TEST(DrakeVisualizerTests, TestPublishPeriod) {
 
   // Prepares to integrate.
   drake::systems::Simulator<double> simulator(dut, std::move(context));
-  simulator.set_publish_every_time_step(false);
   PublishLoadRobotModelMessageHelper(dut, simulator.get_mutable_context());
   simulator.Initialize();
 
