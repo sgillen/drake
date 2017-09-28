@@ -370,6 +370,7 @@ void AutomotiveSimulator<T>::AddPublisher(const MaliputRailcar<T>& system,
       std::to_string(vehicle_number) + "_MALIPUT_RAILCAR_STATE";
   auto publisher =  builder_->template AddSystem<LcmPublisherSystem>(
       channel, translator, lcm_.get());
+  publisher->set_per_step_publish();
   builder_->Connect(system.state_output(), publisher->get_input_port(0));
 }
 
@@ -382,6 +383,7 @@ void AutomotiveSimulator<T>::AddPublisher(const SimpleCar<T>& system,
       std::to_string(vehicle_number) + "_SIMPLE_CAR_STATE";
   auto publisher = builder_->template AddSystem<LcmPublisherSystem>(
       channel, translator, lcm_.get());
+  publisher->set_per_step_publish();
   builder_->Connect(system.state_output(), publisher->get_input_port(0));
 }
 
@@ -394,6 +396,7 @@ void AutomotiveSimulator<T>::AddPublisher(const TrajectoryCar<T>& system,
       std::to_string(vehicle_number) + "_SIMPLE_CAR_STATE";
   auto publisher = builder_->template AddSystem<LcmPublisherSystem>(
       channel, translator, lcm_.get());
+  publisher->set_per_step_publish();
   builder_->Connect(system.raw_pose_output(), publisher->get_input_port(0));
 }
 
