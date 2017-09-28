@@ -472,6 +472,7 @@ void AutomotiveSimulator<T>::Build() {
   lcm_publisher_ = builder_->AddSystem(
       LcmPublisherSystem::Make<lcmt_viewer_draw>("DRAKE_VIEWER_DRAW",
                                                  lcm_.get()));
+  lcm_publisher_->set_per_step_publish();
   builder_->Connect(
       bundle_to_draw_->get_output_port(0),
       lcm_publisher_->get_input_port(0));
