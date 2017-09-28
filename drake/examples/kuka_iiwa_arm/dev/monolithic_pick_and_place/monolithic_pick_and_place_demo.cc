@@ -42,6 +42,7 @@ DEFINE_double(realtime_rate, 0.0, "Rate at which to run the simulation, "
 DEFINE_bool(quick, false, "Run only a brief simulation and return success "
     "without executing the entire task");
 DEFINE_bool(with_camera, false, "Attach an Asus Xtion to the gripper.");
+DEFINE_bool(with_camera_lcm, false, "If the Xtion is present, publish to LCM.");
 
 using robotlocomotion::robot_plan_t;
 
@@ -328,7 +329,7 @@ int DoMain(void) {
 
   // Add camera if enabled.
   if (camera) {
-    camera->Build(&lcm, true, true);
+    camera->Build(&lcm, FLAGS_with_camera_lcm, false);
     builder.AddSystem(std::unique_ptr<Xtion>(camera));
     builder.Connect(
         plant->get_output_port_plant_state(),
@@ -354,7 +355,7 @@ int DoMain(void) {
   // Step the simulator in some small increment.  Between steps, check
   // to see if the state machine thinks we're done, and if so that the
   // object is near the target.
-  const double simulation_step = 0.1;
+  const double simulation_step = 0.5;
   while (state_machine->state(
              sys->GetSubsystemContext(*state_machine,
                                       simulator.get_context()))

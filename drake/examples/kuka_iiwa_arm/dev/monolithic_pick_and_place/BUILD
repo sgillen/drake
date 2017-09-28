@@ -155,7 +155,7 @@ pick_and_place_test(
 pick_and_place_test(
     name = "pick_and_place_camera",
     args = [
-        "--quick",
+        # "--quick",
         "--with_camera",
     ],
     tags = [
