@@ -182,7 +182,6 @@ int main() {
       *diagram, std::move(context));
 
   simulator->set_publish_at_initialization(true);
-  simulator->set_publish_every_time_step(false);
   simulator->Initialize();
   simulator->StepTo(FLAGS_duration);
 

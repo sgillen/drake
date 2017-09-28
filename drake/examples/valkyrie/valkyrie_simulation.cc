@@ -26,7 +26,6 @@ int main() {
   // largest value that appears to give stable results.
   simulator.reset_integrator<systems::SemiExplicitEulerIntegrator<double>>(
       diagram, 3e-4, context);
-  simulator.set_publish_every_time_step(false);
 
   // Set initial state.
   auto plant = diagram.get_mutable_plant();
