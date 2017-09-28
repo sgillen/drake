@@ -18,19 +18,26 @@ const int kPortIndex = 0;
 
 DrakeVisualizer::DrakeVisualizer(const RigidBodyTree<double>& tree,
                                  drake::lcm::DrakeLcmInterface* lcm,
-                                 bool enable_playback)
+                                 bool enable_playback,
+                                 bool per_step_publish)
     : lcm_(lcm),
       load_message_(multibody::CreateLoadRobotMessage<double>(tree)),
-      draw_message_translator_(tree) {
+      draw_message_translator_(tree),
+      per_step_publish_(per_step_publish) {
   set_name("drake_visualizer");
   const int vector_size =
       tree.get_num_positions() + tree.get_num_velocities();
+  if (per_step_publish_) {
+    this->DeclarePerStepPublish();
+  }
   DeclareInputPort(kVectorValued, vector_size);
   this->DeclareDiscreteState(1);
   if (enable_playback) log_.reset(new SignalLog<double>(vector_size));
 }
 
 void DrakeVisualizer::set_publish_period(double period) {
+  // Only one publishing mechanism should be set.
+  DRAKE_DEMAND(!per_step_publish_);
   LeafSystem<double>::DeclarePeriodicPublish(period);
 }
 

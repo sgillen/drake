@@ -110,6 +110,12 @@ class LcmPublisherSystem : public LeafSystem<double> {
   void set_publish_period(double period);
 
   /**
+   * Sets the system to publish per-step.
+   * @see LeafSystem::DeclarePerStepPublish
+   */
+  void set_per_step_publish();
+
+  /**
    * Takes the VectorBase from the input port of the context and publishes
    * it onto an LCM channel.
    */
