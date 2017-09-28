@@ -42,6 +42,8 @@
 #include "drake/systems/sensors/image.h"
 #include "drake/systems/sensors/vtk_util.h"
 
+#include "drake/common/scoped_timer.h"
+
 #if VTK_MAJOR_VERSION >= 6
 VTK_AUTOINIT_DECLARE(vtkRenderingOpenGL2)
 #endif
@@ -204,10 +206,19 @@ void PerformVTKUpdate(
     const vtkNew<vtkRenderWindow>& window,
     const vtkNew<vtkWindowToImageFilter>& filter,
     const vtkNew<vtkImageExport>& exporter) {
-  window->Render();
-  filter->Modified();
-  filter->Update();
-  exporter->Update();
+  {
+    SCOPED_TIMER(window);
+    window->Render();
+  }
+  {
+    SCOPED_TIMER(filter);
+    filter->Modified();
+    filter->Update();
+  }
+  {
+    SCOPED_TIMER(exporter);
+    exporter->Update();
+  }
 }
 
 }  // namespace

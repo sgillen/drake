@@ -10,6 +10,8 @@
 
 #include "drake/systems/sensors/image.h"
 
+#include "drake/common/scoped_timer.h"
+
 using std::string;
 using robotlocomotion::image_t;
 using robotlocomotion::image_array_t;
@@ -23,6 +25,7 @@ const int64_t kSecToMillisec = 1000000;
 
 template <PixelType kPixelType>
 void Compress(const Image<kPixelType>& image, image_t* msg) {
+  SCOPED_TIMER(compress);
   msg->compression_method = image_t::COMPRESSION_METHOD_ZLIB;
 
   const int source_size = image.width() * image.height() * image.kPixelSize;
@@ -110,6 +113,8 @@ void ImageToLcmImageArrayT::CalcImageArray(
   msg->num_images = 0;
   msg->images.clear();
 
+  std::cout << "LCM: " << context.get_time() << std::endl;
+
   const AbstractValue* color_image_value =
       this->EvalAbstractInput(context, color_image_input_port_index_);
 
@@ -120,6 +125,7 @@ void ImageToLcmImageArrayT::CalcImageArray(
       this->EvalAbstractInput(context, label_image_input_port_index_);
 
   if (color_image_value) {
+    SCOPED_TIMER(color);
     const ImageRgba8U& color_image =
         color_image_value->GetValue<ImageRgba8U>();
 
@@ -133,6 +139,7 @@ void ImageToLcmImageArrayT::CalcImageArray(
   }
 
   if (depth_image_value) {
+    SCOPED_TIMER(depth);
     const ImageDepth32F& depth_image =
         depth_image_value->GetValue<ImageDepth32F>();
     image_t depth_image_msg;
@@ -145,6 +152,7 @@ void ImageToLcmImageArrayT::CalcImageArray(
   }
 
   if (label_image_value) {
+    SCOPED_TIMER(label);
     const ImageLabel16I& label_image =
         label_image_value->GetValue<ImageLabel16I>();
 

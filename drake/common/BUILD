@@ -46,6 +46,11 @@ drake_cc_library(
     # - text_logging_gflags
 )
 
+drake_cc_library(
+    name = "scoped_timer",
+    hdrs = ["scoped_timer.h"],
+)
+
 # A library of things that EVERYONE should want and MUST EAT.
 # Be appropriately hesitant when adding new things here.
 drake_cc_library(
@@ -69,6 +74,7 @@ drake_cc_library(
         "text_logging.h",
     ],
     deps = [
+        ":scoped_timer",
         "//drake/thirdParty:stx",
         "@eigen",
         "@spdlog",
