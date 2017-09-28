@@ -82,6 +82,10 @@ void LcmPublisherSystem::set_publish_period(double period) {
   LeafSystem<double>::DeclarePeriodicPublish(period);
 }
 
+void LcmPublisherSystem::set_per_step_publish() {
+  LeafSystem<double>::DeclarePerStepPublish();
+}
+
 void LcmPublisherSystem::DoPublish(const Context<double>& context,
                const std::vector<const systems::PublishEvent<double>*>&) const {
   SPDLOG_TRACE(drake::log(), "Publishing LCM {} message", channel_);

@@ -500,7 +500,7 @@ GTEST_TEST(DrakeVisualizerTests, TestPublishPeriod) {
   drake::lcm::DrakeMockLcm lcm;
 
   // Instantiates the "device under test".
-  DrakeVisualizer dut(*tree, &lcm);
+  DrakeVisualizer dut(*tree, &lcm, false, false);
   dut.set_publish_period(kPublishPeriod);
   unique_ptr<Context<double>> context = dut.AllocateContext();
 

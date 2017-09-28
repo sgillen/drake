@@ -75,7 +75,8 @@ class DrakeVisualizer : public LeafSystem<double> {
    */
   DrakeVisualizer(const RigidBodyTree<double>& tree,
                   drake::lcm::DrakeLcmInterface* lcm,
-                  bool enable_playback = false);
+                  bool enable_playback = false,
+                  bool per_step_publish = true);
 
   /**
    * Sets the publishing period of this system. See
@@ -166,6 +167,9 @@ class DrakeVisualizer : public LeafSystem<double> {
 
   // The (optional) log used for recording and playback.
   std::unique_ptr<SignalLog<double>> log_{nullptr};
+
+  // If this visualizer will publish per time step.
+  const bool per_step_publish_{true};
 };
 
 }  // namespace systems
