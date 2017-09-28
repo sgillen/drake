@@ -50,6 +50,8 @@ class TestSystem : public LeafSystem<T> {
 
   void AddPublish(double period) { this->DeclarePeriodicPublish(period); }
 
+  void AddPerStepPublish() { this->DeclarePerStepPublish(); }
+
   template <typename EventType>
   void AddPerStepEvent() {
     EventType event(Event<T>::TriggerType::kPerStep);
@@ -344,7 +346,7 @@ TEST_F(LeafSystemTest, DeclareTypedContinuousState) {
 TEST_F(LeafSystemTest, DeclarePerStepEvents) {
   std::unique_ptr<Context<double>> context = system_.CreateDefaultContext();
 
-  system_.AddPerStepEvent<PublishEvent<double>>();
+  system_.AddPerStepPublish();
   system_.AddPerStepEvent<DiscreteUpdateEvent<double>>();
   system_.AddPerStepEvent<UnrestrictedUpdateEvent<double>>();
 
