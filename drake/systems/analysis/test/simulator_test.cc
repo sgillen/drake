@@ -650,6 +650,9 @@ GTEST_TEST(SimulatorTest, MiscAPI) {
   analysis_test::MySpringMassSystem<double> spring_mass(1., 1., 0.);
   Simulator<double> simulator(spring_mass);  // Use default Context.
 
+  // Default publish behavior should not publish at every time step.
+  EXPECT_FALSE(simulator.get_publish_every_time_step());
+
   // Default realtime rate should be zero.
   EXPECT_TRUE(simulator.get_target_realtime_rate() == 0.);
 
