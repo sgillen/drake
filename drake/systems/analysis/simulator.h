@@ -350,8 +350,9 @@ class Simulator {
   // Slow down to this rate if possible (user settable).
   double target_realtime_rate_{0.};
 
-  bool publish_every_time_step_{true};
+  bool publish_every_time_step_{false};
 
+  // TODO(eric.cousineau): Should a PerStep event publish at initialization?
   bool publish_at_initialization_{true};
 
   // These are recorded at initialization or statistics reset.
