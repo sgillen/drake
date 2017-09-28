@@ -14,4 +14,5 @@ def pick_and_place_test(args = None, size = "small", srcs = None, tags = [],
             "//tools:debug": ["--quick"],
             "//conditions:default": [],
         })
-    native.sh_test(args = args, size = size, srcs = srcs, tags = tags, **kwargs)
+    native.sh_test(args = args, size = size, srcs = srcs, tags = tags,
+                   **kwargs)
