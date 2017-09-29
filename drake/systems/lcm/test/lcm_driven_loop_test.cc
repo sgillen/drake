@@ -96,10 +96,6 @@ GTEST_TEST(LcmDrivenLoopTest, TestLoop) {
   // Makes the lcm driven loop.
   lcm::LcmDrivenLoop dut(*sys, *sub, nullptr, &lcm,
       std::make_unique<MilliSecTimeStampMessageToSeconds>());
-  // This ensures that dut calls sys->Publish() every time it handles a
-  // message, which triggers the logger to save its input (message time stamp)
-  // to the log.
-  dut.set_publish_on_every_received_message(true);
 
   // Starts the publishing thread.
   std::thread pub_thread(&publish);

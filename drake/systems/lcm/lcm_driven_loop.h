@@ -146,16 +146,6 @@ class LcmDrivenLoop {
       double stop_time = std::numeric_limits<double>::infinity());
 
   /**
-   * Sets a flag that forces Publish() at the very beginning of the message
-   * handling loop as well as inside the loop. To achieve "publish whenever
-   * a new message has been handled", the user needs to make sure that no
-   * subsystems have declared period publish, and @p flag is true.
-   */
-  void set_publish_on_every_received_message(bool flag) {
-    publish_on_every_received_message_ = flag;
-  }
-
-  /**
    * Returns a mutable pointer to the context.
    */
   Context<double>* get_mutable_context() {
@@ -181,9 +171,6 @@ class LcmDrivenLoop {
 
   // Extracts time in seconds from received lcm messages.
   std::unique_ptr<LcmMessageToTimeInterface> time_converter_;
-
-  // If true, explicitly calls system_.Publish() after every step in the loop.
-  bool publish_on_every_received_message_{true};
 
   // Reusing the simulator to manage event handling and state progression.
   std::unique_ptr<Simulator<double>> stepper_;
