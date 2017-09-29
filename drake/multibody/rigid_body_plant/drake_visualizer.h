@@ -79,10 +79,16 @@ class DrakeVisualizer : public LeafSystem<double> {
 
   /**
    * Sets the publishing period of this system. See
-   * LeafSystem::DeclarePublishPeriodSec() for details about the semantics of
+   * LeafSystem::DeclarePeriodicPublish() for details about the semantics of
    * parameter `period`.
    */
   void set_publish_period(double period);
+
+  /**
+   * Sets the system to publish per-step.
+   * @see LeafSystem::DeclarePerStepPublish
+   */
+  void set_per_step_publish();
 
   // TODO(SeanCurtis-TRI): Optional features:
   //    1. Specify number of loops (<= 0 --> infinite looping)
@@ -177,7 +183,7 @@ class DrakeVisualizer : public LeafSystem<double> {
   // The (optional) log used for recording and playback.
   std::unique_ptr<SignalLog<double>> log_{nullptr};
 
-  // If this visualizer already has a publish event.
+  // If a publish event has been declared.
   bool has_publish_event_{false};
 };
 

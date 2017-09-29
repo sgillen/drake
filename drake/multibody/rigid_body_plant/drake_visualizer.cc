@@ -31,16 +31,20 @@ DrakeVisualizer::DrakeVisualizer(const RigidBodyTree<double>& tree,
 }
 
 void DrakeVisualizer::set_publish_period(double period) {
-  // Only one publishing mechanism should be set.
   DRAKE_DEMAND(!has_publish_event_);
   has_publish_event_ = true;
   LeafSystem<double>::DeclarePeriodicPublish(period);
 }
 
+void DrakeVisualizer::set_per_step_publish() {
+  DRAKE_DEMAND(!has_publish_event_);
+  has_publish_event_ = true;
+  LeafSystem<double>::DeclarePerStepPublish();
+}
+
 void DrakeVisualizer::FinishResourceInitialization() {
   if (!has_publish_event_) {
-    this->DeclarePerStepPublish();
-    has_publish_event_ = true;
+    set_per_step_publish();
   }
 }
 

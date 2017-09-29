@@ -79,11 +79,25 @@ const std::string& LcmPublisherSystem::get_channel_name() const {
 }
 
 void LcmPublisherSystem::set_publish_period(double period) {
+  DRAKE_DEMAND(!has_publish_event_);
+  has_publish_event_ = true;
   LeafSystem<double>::DeclarePeriodicPublish(period);
 }
 
 void LcmPublisherSystem::set_per_step_publish() {
+  DRAKE_DEMAND(!has_publish_event_);
+  has_publish_event_ = true;
   LeafSystem<double>::DeclarePerStepPublish();
+}
+
+void LcmPublisherSystem::FinishResourceInitialization() {
+  if (!has_publish_event_) {
+    set_per_step_publish();
+  }
+}
+
+void LcmPublisherSystem::CheckResourceInitialization() const {
+  DRAKE_DEMAND(has_publish_event_);
 }
 
 void LcmPublisherSystem::DoPublish(const Context<double>& context,

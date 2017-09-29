@@ -107,7 +107,7 @@ class LcmPublisherSystem : public LeafSystem<double> {
 
   /**
    * Sets the publishing period of this system. See
-   * LeafSystem::DeclarePublishPeriodSec() for details about the semantics of
+   * LeafSystem::DeclarePeriodicPublish() for details about the semantics of
    * parameter `period`.
    */
   void set_publish_period(double period);
@@ -117,6 +117,16 @@ class LcmPublisherSystem : public LeafSystem<double> {
    * @see LeafSystem::DeclarePerStepPublish
    */
   void set_per_step_publish();
+
+  /**
+   * Registers a per-step publish event if periodic publishing has not been set.
+   */
+  void FinishResourceInitialization() override;
+
+  /**
+   * Ensures that a publish event has been set.
+   */
+  void CheckResourceInitialization() const override;
 
   /**
    * Takes the VectorBase from the input port of the context and publishes
@@ -157,6 +167,9 @@ class LcmPublisherSystem : public LeafSystem<double> {
   // A const pointer to an LCM subsystem. Note that while the pointer is const,
   // the LCM subsystem is not const.
   drake::lcm::DrakeLcmInterface* const lcm_{};
+
+  // If a publish event has been declared.
+  bool has_publish_event_{false};
 };
 
 }  // namespace lcm
