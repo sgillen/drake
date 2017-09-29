@@ -451,6 +451,12 @@ class Diagram : public System<T>,
     return std::move(output);
   }
 
+  void CheckResourceInitialization() const final {
+    for (const auto& system : registered_systems_) {
+      system->CheckResourceInitialization();
+    }
+  }
+
   /// @cond
   // The three methods below are hidden from doxygen, as described in
   // documentation for their corresponding methods in System.
@@ -1421,9 +1427,11 @@ class Diagram : public System<T>,
     output_port_ids_ = std::move(blueprint->output_port_ids);
     registered_systems_ = std::move(blueprint->systems);
 
-    // Generate a map from the System pointer to its index in the registered
+    // First, finish resource initialization for a given system. Then,
+    // generate a map from the System pointer to its index in the registered
     // order.
     for (int i = 0; i < num_subsystems(); ++i) {
+      registered_systems_[i]->FinishResourceInitialization();
       system_index_map_[registered_systems_[i].get()] = i;
       registered_systems_[i]->set_parent(this);
     }

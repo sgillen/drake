@@ -298,6 +298,24 @@ class System {
     return false;
   }
 
+  /// Triggers before a system's structure is fully defined. This may be
+  /// overridden for declaring default events, such as a per-step publish
+  /// event, if no other publish event has been specified.
+  /// @note This is called via Diagram::Initialize() by default. If a system of
+  /// interest is added *directly* to an analysis mechanism, this method should
+  /// be called to reap its benefits.
+  /// @note This should only be called once.
+  virtual void FinishResourceInitialization() {}
+
+  /// Triggers when a system is to added to an analysis mechanism. This may be
+  /// overridden to check and ensure that the expected resources have been
+  /// initialized.
+  /// As an example, this may check if a system has a periodic or per-step
+  /// publish event, and either emit a warning or throw an error if one does not
+  /// exist.
+  // @note An example call site is Simulator::Simulator().
+  virtual void CheckResourceInitialization() const {}
+
   //@}
 
   //----------------------------------------------------------------------------

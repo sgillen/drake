@@ -379,6 +379,9 @@ Simulator<T>::Simulator(const System<T>& system,
   const double initial_step_size = 1e-4;
   const double default_accuracy = 1e-4;
 
+  // Ensure the system has the resources that it may desire.
+  system_.CheckResourceInitialization();
+
   // Create a context if necessary.
   if (!context_) context_ = system_.CreateDefaultContext();
 
