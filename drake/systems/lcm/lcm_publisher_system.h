@@ -105,6 +105,8 @@ class LcmPublisherSystem : public LeafSystem<double> {
   /// Returns the default name for a system that publishes @p channel.
   static std::string make_name(const std::string& channel);
 
+  // TODO(eric.cousineau): Consider making the functionality common with
+  // `DrakeVisualizer` part of class such as `PublishingSink`.
   /**
    * Sets the publishing period of this system. See
    * LeafSystem::DeclarePeriodicPublish() for details about the semantics of

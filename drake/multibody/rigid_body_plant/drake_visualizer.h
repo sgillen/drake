@@ -77,6 +77,8 @@ class DrakeVisualizer : public LeafSystem<double> {
                   drake::lcm::DrakeLcmInterface* lcm,
                   bool enable_playback = false);
 
+  // TODO(eric.cousineau): Consider making the functionality common with
+  // `LcmPublisherSystem` part of class such as `PublishingSink`.
   /**
    * Sets the publishing period of this system. See
    * LeafSystem::DeclarePeriodicPublish() for details about the semantics of
