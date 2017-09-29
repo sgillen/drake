@@ -19,7 +19,7 @@ namespace systems {
 /// (e.g. after a simulation) via a handful of accessor methods.
 /// This class essentially holds a large Eigen matrix for data storage, where
 /// each column corresponds to a data point. This system saves a data point and
-/// the context time whenever its Publish() method is called.
+/// the context time as a per-step publish event.
 ///
 /// @tparam T The vector element type, which must be a valid Eigen scalar.
 ///

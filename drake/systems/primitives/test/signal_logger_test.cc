@@ -43,12 +43,13 @@ GTEST_TEST(TestSignalLogger, LinearSystemTest) {
   simulator.get_mutable_integrator()->set_target_accuracy(1e-4);
 
   simulator.Initialize();
-  // The Simulator internally calls Publish(), which triggers data logging.
+  // The SignalLogger registers a per-step publish event, which triggers data
+  // logging.
   simulator.StepTo(3);
 
   // Gets the time stamps when each data point is saved.
   const auto& t = logger->sample_times();
-  EXPECT_EQ(t.size(), simulator.get_num_publishes());
+  EXPECT_EQ(t.size(), simulator.get_num_steps_taken() + 1);
 
   // Gets the logged data.
   const auto& x = logger->data();
