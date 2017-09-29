@@ -222,7 +222,6 @@ int DoMain() {
 
   builder.Connect(model->get_output_port_iiwa_robot_state_msg(),
                   iiwa_state_pub->get_input_port(0));
-  iiwa_state_pub->set_publish_period(kIiwaLcmStatusPeriod);
 
   auto box_state_pub = builder.AddSystem(
       systems::lcm::LcmPublisherSystem::Make<bot_core::robot_state_t>(
@@ -232,7 +231,6 @@ int DoMain() {
 
   builder.Connect(model->get_output_port_box_robot_state_msg(),
                   box_state_pub->get_input_port(0));
-  box_state_pub->set_publish_period(kIiwaLcmStatusPeriod);
 
   auto sys = builder.Build();
   Simulator<double> simulator(*sys);
