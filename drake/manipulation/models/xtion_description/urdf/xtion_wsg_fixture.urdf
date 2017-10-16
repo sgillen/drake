@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<robot name="xtion_wsg_fixture">
+  <!--
+  Placement of Xtion base (X) on the WSG gripper body (G), providing X_GX.
+  RPY value corresponds to axes {Y, X, -Z}.
+  -->
+  <frame name="xtion_wsg_fixture" link="world"
+      rpy="3.14159265358979 0 1.5707963267949" xyz="0 -0.015 -0.025"/>
+</robot>
