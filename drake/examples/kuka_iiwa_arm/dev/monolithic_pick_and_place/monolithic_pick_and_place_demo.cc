@@ -156,21 +156,16 @@ std::unique_ptr<systems::RigidBodyPlant<double>> BuildCombinedPlant(
 
   if (pcamera) {
     // Attach Xtion (X) to WSG's body (G).
-    Eigen::Isometry3d X_GX;
-    X_GX.setIdentity();
-    // clang-format off
-    X_GX.linear() <<
-        0, 1, 0,
-        1, 0, 0,
-        0, 0, -1;
-    // clang-format on
-    X_GX.translation() << 0, -0.015, -0.025;
-    auto wsg_body = tree_builder->mutable_tree().FindBody("body", "", wsg_id);
-    std::shared_ptr<RigidBodyFrame<double>> xtion_fixture =
-        std::make_shared<RigidBodyFrame<double>>("xtion_fixture",
-                                                 wsg_body, X_GX);
-    tree_builder->mutable_tree().addFrame(xtion_fixture);
-    *pcamera = new Xtion("xtion", tree_builder.get(), xtion_fixture);
+    tree_builder->StoreModel(
+        "xtion_wsg_fixture",
+        "drake/manipulation/models/xtion_description/urdf/xtion_wsg_fixture.urdf");
+    int fixture_id = tree_builder->AddModelInstanceToFrame(
+        "xtion_wsg_fixture", tree_builder->tree().findFrame("body", wsg_id),
+        drake::multibody::joints::kFixed);
+    std::shared_ptr<RigidBodyFrame<double>> xtion_wsg_fixture =
+        tree_builder->tree().findFrame("xtion_wsg_fixture", fixture_id);
+    tree_builder->mutable_tree().addFrame(xtion_wsg_fixture);
+    *pcamera = new Xtion("xtion", tree_builder.get(), xtion_wsg_fixture);
   }
 
   return std::make_unique<systems::RigidBodyPlant<double>>(
