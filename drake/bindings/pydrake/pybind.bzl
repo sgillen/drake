@@ -2,7 +2,7 @@
 
 load("//tools:drake.bzl", "drake_cc_binary", "drake_py_library")
 
-is_devel = False
+is_devel = True
 DEFAULT_IMPORT = "//bindings"
 SO_FMT = '_{}.so'
 
@@ -46,7 +46,7 @@ def drake_pybind_library(name,
         elif src.endswith('.py'):
             py_srcs.append(src)
         else:
-            error("Invalid file suffix: %s" % src)
+            fail("Invalid file suffix: %s" % src)
 
     # TODO(eric.cousineau): Is there a way to check a dependency's target type?
 
@@ -99,8 +99,8 @@ def drake_pybind_library(name,
     # Add Python library.
     drake_py_library(
         name = py_name,
-        data = cc_so,
+        data = [cc_so],
         srcs = py_srcs,
         deps = py_deps,
-        imports = py_imports,
+        imports = [py_imports],
     )
