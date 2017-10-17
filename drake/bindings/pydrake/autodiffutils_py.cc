@@ -18,6 +18,10 @@ using drake::AutoDiffXd;
  * python. This just forces an evaluation and conversion to AutoDiffXd which
  * would normally happen automatically in C++.
  */
+// TODO(eric.cousineau): If pybind11 does not already have it, teach it to be
+// expression-aware.
+// TODO(eric.cousineau): See if this is still necessary given Soonho's recent
+// changes to the AutoDiff setup.
 template <typename Derived>
 AutoDiffXd eval(const Eigen::AutoDiffScalar<Derived>& x) {
   return AutoDiffXd(x.value(), x.derivatives());
