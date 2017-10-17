@@ -19,6 +19,9 @@ drake_pybind_cc_binary(
     srcs = [
         "pybind11/pydrake_common.cc",
     ],
+    deps_devel = [
+        "//drake/common",
+    ],
 )
 
 drake_pybind_cc_binary(
@@ -26,6 +29,9 @@ drake_pybind_cc_binary(
     srcs = [
         "pybind11/pydrake_autodiff_types.h",
         "pybind11/pydrake_autodiffutils.cc",
+    ],
+    deps_devel = [
+        "//drake/common:autodiff",
     ],
 )
 
@@ -35,12 +41,21 @@ drake_pybind_cc_binary(
         "pybind11/pydrake_autodiff_types.h",
         "pybind11/pydrake_rbtree.cc",
     ],
+    deps_devel = [
+    ],
 )
 
 drake_pybind_cc_binary(
     name = "python/pydrake/parsers.so",
     srcs = [
         "pybind11/pydrake_parsers.cc",
+    ],
+)
+
+drake_pybind_cc_binary(
+    name = "python/pydrake/systems/_pydrake_systems_framework.so",
+    srcs = [
+        "pybind11/pydrake_systems_framework.cc",
     ],
 )
 
@@ -116,6 +131,8 @@ drake_py_library(
         "python/pydrake/common.py",
         "python/pydrake/forwarddiff.py",
         "python/pydrake/rbtree.py",
+        "python/pydrake/systems/__init__.py",
+        "python/pydrake/systems/framework.py",
         "python/pydrake/solvers/__init__.py",
         "python/pydrake/solvers/ik.py",
         "python/pydrake/solvers/mathematicalprogram.py",
