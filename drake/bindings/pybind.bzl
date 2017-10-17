@@ -1,8 +1,22 @@
 # -*- python -*-
 
-load("//tools:drake.bzl", "drake_cc_binary")
+load("//tools:drake.bzl", "drake_cc_binary", "drake_py_library")
 
-def drake_pybind_cc_binary(name, srcs = [], copts = [], is_devel = False, deps_devel = [], **kwargs):
+is_devel = False
+DEFAULT_IMPORT = "//bindings"
+SO_FMT = '_{}.so'
+
+def drake_pybind_so(target):
+    pieces = target.split(':')
+    assert len(pieces) == 2
+    return pieces[0] + ':' + SO_FMT.format(pieces[1])
+
+def drake_pybind_library(name,
+                         srcs = [],
+                         cc_deps = [], copts = [],
+                         py_deps = [],
+                         py_imports = DEFAULT_IMPORT,
+                         **kwargs):
     """Declare a pybind11 shared library with the given name and srcs.  The
     libdrake.so library and its headers are already automatically depended-on
     by this rule.
@@ -19,9 +33,22 @@ def drake_pybind_cc_binary(name, srcs = [], copts = [], is_devel = False, deps_d
     # _pybind_foo.so files, which breaks C++ global variables.  All object code
     # must come in through libdrake.so.  (Conceivably a header-only library
     # could be allowed in deps, but we can fix that when we need it.)
+    cc_srcs = []
+    py_srcs = []
+
     for key in ["deps", "linkshared", "linkstatic"]:
         if key in kwargs:
             fail("%s cannot be set by the caller" % key)
+
+    for src in srcs:
+        if src.endswith('.h') or src.endswith('.cc'):
+            cc_srcs.append(src)
+        elif src.endswith('.py'):
+            py_srcs.append(src)
+        else:
+            error("Invalid file suffix: %s" % src)
+
+    # TODO(eric.cousineau): Is there a way to check a dependency's target type?
 
     # These copts are per pybind11 deficiencies.
     copts_pybind11 = [
@@ -30,14 +57,19 @@ def drake_pybind_cc_binary(name, srcs = [], copts = [], is_devel = False, deps_d
         "-Wno-unknown-warning-option",
     ]
 
+    cc_so = SO_FMT.format(name)
+    py_name = name
+
     if not is_devel:
         drake_cc_binary(
-            name = name,
+            name = cc_so,
             # This is how you tell Bazel to link in a shared library.
-            srcs = srcs + ["//drake:libdrake.so"],
+            srcs = cc_srcs + ["//drake:libdrake.so"],
             copts = copts_pybind11 + copts,
             # This is how you tell Bazel to create a shared library.
             linkshared = 1,
+            # TODO(eric.cousineau): I believe the upstream linking will be static, but not
+            # yet sure...
             linkstatic = 0,
             # For all pydrake_foo.so, always link to Drake and pybind11.
             deps = [
@@ -54,12 +86,21 @@ def drake_pybind_cc_binary(name, srcs = [], copts = [], is_devel = False, deps_d
         )
     else:
         drake_cc_binary(
-            name = name,
-            srcs = srcs,
-            deps_devel = deps + [
+            name = cc_so,
+            copts = copts_pybind11 + copts,
+            srcs = cc_srcs,
+            deps = cc_deps + [
                 "@pybind11",
             ],
             linkshared = 1,
             linkstatic = 0,
             **kwargs
         )
+    # Add Python library.
+    drake_py_library(
+        name = py_name,
+        data = cc_so,
+        srcs = py_srcs,
+        deps = py_deps,
+        imports = py_imports,
+    )
