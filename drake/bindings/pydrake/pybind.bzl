@@ -6,10 +6,10 @@ is_devel = False
 DEFAULT_IMPORT = "//bindings"
 SO_FMT = '_{}.so'
 
-def drake_pybind_so(target):
-    pieces = target.split(':')
-    assert len(pieces) == 2
-    return pieces[0] + ':' + SO_FMT.format(pieces[1])
+# def drake_pybind_so(target):
+#     pieces = target.split(':')
+#     assert len(pieces) == 2
+#     return pieces[0] + ':' + SO_FMT.format(pieces[1])
 
 def drake_pybind_library(name,
                          srcs = [],

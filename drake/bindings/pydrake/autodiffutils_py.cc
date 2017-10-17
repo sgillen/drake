@@ -23,8 +23,8 @@ AutoDiffXd eval(const Eigen::AutoDiffScalar<Derived>& x) {
   return AutoDiffXd(x.value(), x.derivatives());
 }
 
-PYBIND11_PLUGIN(_pydrake_autodiffutils) {
-  py::module m("_pydrake_autodiffutils", "Bindings for Eigen AutoDiff Scalars");
+PYBIND11_PLUGIN(_autodiffutils_py) {
+  py::module m("_autodiffutils_py", "Bindings for Eigen AutoDiff Scalars");
 
   py::class_<AutoDiffXd>(m, "AutoDiffXd")
     .def("__init__",

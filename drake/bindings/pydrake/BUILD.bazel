@@ -55,7 +55,7 @@ drake_py_library(
         ":common_py",
         ":autodiffutils_py",
     ],
-    imports = ["."],
+    # imports = ["."],
     visibility = ["//visibility:public"],
 )
 
