@@ -13,9 +13,9 @@ SO_FMT = '_{}.so'
 #     return pieces[0] + ':' + SO_FMT.format(pieces[1])
 
 def drake_pybind_library(name,
-                         srcs = [],
+                         cc_srcs = [],
                          cc_deps = [], copts = [],
-                         py_deps = [],
+                         py_srcs = [], py_deps = [],
                          py_imports = DEFAULT_IMPORT,
                          **kwargs):
     """Declare a pybind11 shared library with the given name and srcs.  The
@@ -34,20 +34,9 @@ def drake_pybind_library(name,
     # _pybind_foo.so files, which breaks C++ global variables.  All object code
     # must come in through libdrake.so.  (Conceivably a header-only library
     # could be allowed in deps, but we can fix that when we need it.)
-    cc_srcs = []
-    py_srcs = []
-
     for key in ["deps", "linkshared", "linkstatic"]:
         if key in kwargs:
             fail("%s cannot be set by the caller" % key)
-
-    for src in srcs:
-        if src.endswith('.h') or src.endswith('.cc'):
-            cc_srcs.append(src)
-        elif src.endswith('.py'):
-            py_srcs.append(src)
-        else:
-            fail("Invalid file suffix: %s" % src)
 
     # TODO(eric.cousineau): Is there a way to check a dependency's target type?
 

@@ -139,7 +139,7 @@ def drake_cc_library(
         deps = None,
         copts = [],
         gcc_copts = [],
-        linkstatic = 1,
+        linkstatic = 0,
         **kwargs):
     """Creates a rule to declare a C++ library.
 
