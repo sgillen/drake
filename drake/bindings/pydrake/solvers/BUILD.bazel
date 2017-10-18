@@ -28,9 +28,11 @@ drake_py_library(
 
 drake_pybind_library(
     name = "mathematicalprogram_py",
-    cc_deps = [
+    cc_devel_deps = [
         "//drake/solvers:mathematical_program",
         "//drake/solvers:solver_type_converter",
+    ],
+    cc_deps = [
         "//drake/bindings/pydrake:symbolic_types",
     ],
     cc_srcs = ["mathematicalprogram_py.cc"],
