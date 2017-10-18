@@ -113,7 +113,8 @@ def _install_action(
 
 #------------------------------------------------------------------------------
 def _install_actions(ctx, file_labels, dests, strip_prefixes = [],
-                     excluded_files = [], rename = {}, warn_foreign = True):
+                     excluded_files = [], rename = {}, warn_foreign = True,
+                     transitive_sources = []):
     """Compute install actions for files.
 
     This takes a list of labels (targets or files) and computes the install
@@ -143,19 +144,22 @@ def _install_actions(ctx, file_labels, dests, strip_prefixes = [],
 
     # Iterate over files. We expect a list of labels, which will have a 'files'
     # attribute that is a list of file artifacts. Thus this two-level loop.
+    all_files = depset()
     for f in file_labels:
-        for a in f.files:
-            # TODO(mwoehlke-kitware) refactor this to separate computing the
-            # original relative path and the path with prefix(es) stripped,
-            # then use the original relative path for both exclusions and
-            # renaming.
-            if _output_path(ctx, a, warn_foreign = False) in excluded_files:
-                continue
+        all_files += f.files
+    all_files += transitive_sources
+    for a in all_files:
+        # TODO(mwoehlke-kitware) refactor this to separate computing the
+        # original relative path and the path with prefix(es) stripped,
+        # then use the original relative path for both exclusions and
+        # renaming.
+        if _output_path(ctx, a, warn_foreign = False) in excluded_files:
+            continue
 
-            actions.append(
-                _install_action(ctx, a, dests, strip_prefixes,
-                                rename, warn_foreign)
-            )
+        actions.append(
+            _install_action(ctx, a, dests, strip_prefixes,
+                            rename, warn_foreign)
+        )
 
     return actions
 
@@ -228,7 +232,8 @@ def _install_java_actions(ctx, target):
 def _install_py_actions(ctx, target):
     return _install_actions(ctx, [target], ctx.attr.py_dest,
                             ctx.attr.py_strip_prefix,
-                            rename = ctx.attr.rename)
+                            rename = ctx.attr.rename,
+                            transitive_sources = target.py.transitive_sources)
 
 #------------------------------------------------------------------------------
 # Compute install actions for a script or an executable.

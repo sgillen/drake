@@ -2,15 +2,15 @@
 
 load("//tools:drake.bzl", "drake_cc_binary", "drake_py_library")
 
-is_devel = True
+is_devel = False
 # TODO: Figure out how to get a relative path here...
 DEFAULT_IMPORT = [".."]
 SO_FMT = '_{}.so'
 
-# def drake_pybind_so(target):
-#     pieces = target.split(':')
-#     assert len(pieces) == 2
-#     return pieces[0] + ':' + SO_FMT.format(pieces[1])
+# TODO(eric.cousineau): Make a `PybindProvider`, so that we can do a
+# better job of tracking transitives, and can do a better job of figuring out what
+# our sources, dependencies, etc., actually are.
+# Right now, we lose all of this information and have to duplicate it...
 
 def drake_pybind_library(name,
                          cc_srcs = [],

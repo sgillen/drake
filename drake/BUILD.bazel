@@ -83,7 +83,7 @@ cc_library(
 # here which dependencies are coming from the WORKSPACE in the form of *.so.
 cc_library(
     name = "drake_shared_library",
-    visibility = ["//drake/bindings:__pkg__"],
+    visibility = ["//drake/bindings:__subpackages__"],
     deps = [
         ":gurobi_deps",
         ":libdrake_headers",
