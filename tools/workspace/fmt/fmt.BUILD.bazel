@@ -6,12 +6,17 @@ load(
     "install",
     "install_cmake_config",
 )
+load(
+    "@drake//tools:drake.bzl",
+    "drake_shared_cc_library",
+    "drake_shared_cc_library_install_targets",
+)
 
 package(
     default_visibility = ["//visibility:public"],
 )
 
-cc_library(
+drake_shared_cc_library(
     name = "fmt",
     srcs = glob(["fmt/*.cc"]),
     hdrs = glob(["fmt/*.h"]),
@@ -28,7 +33,7 @@ install_cmake_config(package = "fmt")  # Creates rule :install_cmake_config.
 
 install(
     name = "install",
-    targets = [":fmt"],
+    targets = drake_shared_cc_library_install_targets("fmt"),
     hdr_dest = "include/fmt",
     hdr_strip_prefix = ["fmt"],
     guess_hdrs = "PACKAGE",

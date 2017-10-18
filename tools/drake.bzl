@@ -317,3 +317,44 @@ def drake_py_test(
     native.py_test(
         name = name,
         **kwargs)
+
+def drake_shared_cc_library(
+        name,
+        binary_name = None,
+        hdrs = None,
+        srcs = None,
+        deps = [],
+        includes = None,
+        so_fmt = "lib{}.so",
+        **kwargs):
+    """Creates a rule to declare C++ library for external and internal consumption"""
+    # Create header-only library.
+    hdr_lib = name + "__header_only"
+    so_lib = so_fmt.format(name)
+
+    native.cc_library(
+        name = hdr_lib,
+        hdrs = hdrs,
+    )
+
+    # Create binary.
+    native.cc_binary(
+        name = so_lib,
+        srcs = srcs,
+        deps = deps + [hdr_lib],
+        linkshared = 1,
+        **kwargs)
+
+    # Create internally-consumable external. Make sure this links statically, and use
+    # the *.so to enforce ODR safety.
+    native.cc_library(
+        name = name,
+        srcs = [
+            so_lib,
+        ],
+        deps = deps + [hdr_lib],
+        linkstatic = 1,
+        **kwargs)
+
+def drake_shared_cc_library_install_targets(name, so_fmt = "lib{}.so", prefix = ":"):
+    return [prefix + name + "__header_only", prefix + so_fmt.format(name)]
