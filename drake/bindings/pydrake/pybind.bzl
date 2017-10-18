@@ -15,6 +15,9 @@ SO_FMT = '_{}.so'
 # is header-only and if it's under `//bindings`, then we should consider it a necessary
 # dependency.
 
+# TODO(eric.cousineau): Discard `is_devel` once #7294 is satisfied, and is sufficiently
+# convenient for developers.
+
 def drake_pybind_library(name,
                          cc_srcs = [],
                          cc_deps = [], cc_devel_deps = [], copts = [],
@@ -89,6 +92,7 @@ def drake_pybind_library(name,
             linkstatic = 0,
             **kwargs
         )
+
     # Add Python library.
     drake_py_library(
         name = py_name,
@@ -97,3 +101,6 @@ def drake_pybind_library(name,
         deps = py_deps,
         imports = py_imports,
     )
+
+    # TODO: Expose *.so as an installable target, preferrably with some sort transitive_libs
+    # setup.
