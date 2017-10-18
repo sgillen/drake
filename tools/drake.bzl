@@ -324,24 +324,20 @@ def drake_shared_cc_library(
         hdrs = None,
         srcs = None,
         deps = [],
-        includes = None,
         so_fmt = "lib{}.so",
         **kwargs):
-    """Creates a rule to declare C++ library for external and internal consumption"""
-    # Create header-only library.
-    hdr_lib = name + "__header_only"
-    so_lib = so_fmt.format(name)
+    """Creates a rule to declare C++ library for external and internal consumption
 
-    native.cc_library(
-        name = hdr_lib,
-        hdrs = hdrs,
-    )
+    @see https://github.com/bazelbuild/bazel/issues/492
+    """
+    # Create header-only library.
+    so_lib = so_fmt.format(name)
 
     # Create binary.
     native.cc_binary(
         name = so_lib,
-        srcs = srcs,
-        deps = deps + [hdr_lib],
+        srcs = srcs + hdrs,
+        deps = deps,
         linkshared = 1,
         **kwargs)
 
@@ -349,12 +345,13 @@ def drake_shared_cc_library(
     # the *.so to enforce ODR safety.
     native.cc_library(
         name = name,
+        hdrs = hdrs,
         srcs = [
             so_lib,
         ],
-        deps = deps + [hdr_lib],
+        deps = deps,
         linkstatic = 1,
         **kwargs)
 
 def drake_shared_cc_library_install_targets(name, so_fmt = "lib{}.so", prefix = ":"):
-    return [prefix + name + "__header_only", prefix + so_fmt.format(name)]
+    return [prefix + so_fmt.format(name)]
