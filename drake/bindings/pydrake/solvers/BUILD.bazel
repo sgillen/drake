@@ -20,6 +20,9 @@ py_imports = ['../..']
 drake_py_library(
     name = "module_py",
     srcs = ["__init__.py"],
+    deps = [
+        "//drake/bindings/pydrake:common_py",
+    ],
     imports = py_imports,
 )
 
@@ -27,7 +30,8 @@ drake_pybind_library(
     name = "mathematicalprogram_py",
     cc_deps = [
         "//drake/solvers:mathematical_program",
-        "//drake/bindings/pydrake:autodiff_types",
+        "//drake/solvers:solver_type_converter",
+        "//drake/bindings/pydrake:symbolic_types",
     ],
     cc_srcs = ["mathematicalprogram_py.cc"],
     py_srcs = [
@@ -35,6 +39,7 @@ drake_pybind_library(
     ],
     py_deps = [
         ":module_py",
+        "//drake/bindings/pydrake:symbolic_py",
     ],
     py_imports = py_imports,
 )
