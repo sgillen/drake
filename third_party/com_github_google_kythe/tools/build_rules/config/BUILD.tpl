@@ -9,4 +9,5 @@ cc_library(
     defines = ["%{defines}"],
     includes = ["%{includes}"],
     linkopts = ["%{linkopts}"],
+    linkstatic = 1,
 )
