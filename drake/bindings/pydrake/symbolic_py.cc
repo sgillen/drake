@@ -12,7 +12,7 @@ PYBIND11_PLUGIN(_symbolic_py) {
   using drake::symbolic::Formula;
   using drake::symbolic::pow;
 
-  py::module m("_pydrake_symbolic",
+  py::module m("_symbolic_py",
                "Symbolic variables, expressions, and formulae");
 
   py::class_<Variable>(m, "Variable")
