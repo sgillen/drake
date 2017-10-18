@@ -1,1 +1,7 @@
-#
+
+load("@drake//tools:install.bzl", "install")
+
+install(
+    name = "install",
+    deps = ["//drake/bindings/pydrake:install"],
+)
