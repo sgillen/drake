@@ -52,6 +52,7 @@ cc_library(
     includes = ["include"],
     linkopts = ["-lz"],
     visibility = ["//visibility:public"],
+    linkstatic = 1,
 )
 """
 
