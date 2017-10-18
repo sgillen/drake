@@ -70,6 +70,7 @@ cc_library(
     linkopts = {},
     visibility = {},
     deps = {},
+    linkstatic = 1,
 )
     """.format(name, srcs, hdr_paths, includes, linkopts, visibility, deps)
 
