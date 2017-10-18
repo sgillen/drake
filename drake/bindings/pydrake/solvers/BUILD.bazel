@@ -27,6 +27,7 @@ drake_pybind_library(
     name = "mathematicalprogram_py",
     cc_deps = [
         "//drake/solvers:mathematical_program",
+        "//drake/bindings/pydrake:autodiff_types",
     ],
     cc_srcs = ["mathematicalprogram_py.cc"],
     py_srcs = [
