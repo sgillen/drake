@@ -15,7 +15,7 @@ package(default_visibility = ["//visibility:public"])
 
 # Location of //bindings relative to this package.
 # This tells `py_library` how to structure the Python imports.
-py_imports = '..'
+py_imports = ['..']
 
 drake_pybind_library(
     name = "common_py",

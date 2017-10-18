@@ -4,7 +4,7 @@ load("//tools:drake.bzl", "drake_cc_binary", "drake_py_library")
 
 is_devel = True
 # TODO: Figure out how to get a relative path here...
-DEFAULT_IMPORT = ".."
+DEFAULT_IMPORT = [".."]
 SO_FMT = '_{}.so'
 
 # def drake_pybind_so(target):
@@ -92,5 +92,5 @@ def drake_pybind_library(name,
         data = [cc_so],
         srcs = py_srcs,
         deps = py_deps,
-        imports = [py_imports],
+        imports = py_imports,
     )
