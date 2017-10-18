@@ -58,11 +58,31 @@ drake_pybind_library(
     py_imports = py_imports,
 )
 
+drake_pybind_library(
+    name = "symbolic_py",
+    cc_deps = [
+        "//drake/common",
+    ],
+    cc_srcs = [
+        "symbolic_py.cc",
+        "symbolic_py_types.h",
+    ],
+    py_srcs = [
+        "symbolic.py",
+    ],
+    py_deps = [
+        ":common_py",
+    ],
+    py_imports = py_imports,
+)
+
 drake_py_library(
     name = "pydrake",
     deps = [
         ":common_py",
         ":autodiffutils_py",
+        ":symbolic_py",
+        ":solvers",
     ],
     visibility = ["//visibility:public"],
 )
