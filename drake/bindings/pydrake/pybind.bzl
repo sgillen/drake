@@ -11,10 +11,13 @@ SO_FMT = '_{}.so'
 # better job of tracking transitives, and can do a better job of figuring out what
 # our sources, dependencies, etc., actually are.
 # Right now, we lose all of this information and have to duplicate it...
+# This can also simplify the sorting of `cc_deps` and `cc_devel_deps`; if a dependency
+# is header-only and if it's under `//bindings`, then we should consider it a necessary
+# dependency.
 
 def drake_pybind_library(name,
                          cc_srcs = [],
-                         cc_deps = [], copts = [],
+                         cc_deps = [], cc_devel_deps = [], copts = [],
                          py_srcs = [], py_deps = [],
                          py_imports = DEFAULT_IMPORT,
                          **kwargs):
@@ -62,7 +65,7 @@ def drake_pybind_library(name,
             # yet sure...
             linkstatic = 0,
             # For all pydrake_foo.so, always link to Drake and pybind11.
-            deps = [
+            deps = cc_deps + [
                 # Even though "libdrake.so" appears in srcs above, we have to list
                 # :drake_shared_library here in order to get its headers onto the
                 # include path, and its prerequisite *.so's onto LD_LIBRARY_PATH.
@@ -79,7 +82,7 @@ def drake_pybind_library(name,
             name = cc_so,
             copts = copts_pybind11 + copts,
             srcs = cc_srcs,
-            deps = cc_deps + [
+            deps = cc_deps + cc_devel_deps + [
                 "@pybind11",
             ],
             linkshared = 1,

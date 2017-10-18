@@ -28,7 +28,7 @@ py_shared_libraries = []
 
 drake_pybind_library(
     name = "common_py",
-    cc_deps = [
+    cc_devel_deps = [
         "//drake/common",
     ],
     cc_srcs = ["common_py.cc"],
@@ -61,8 +61,10 @@ drake_cc_library(
 drake_pybind_library(
     name = "autodiffutils_py",
     cc_deps = [
-        "//drake/common:autodiff",
         ":autodiff_types",
+    ],
+    cc_devel_deps = [
+        "//drake/common:autodiff",
     ],
     cc_srcs = [
         "autodiffutils_py.cc",
@@ -93,6 +95,8 @@ drake_pybind_library(
     ],
     cc_deps = [
         ":symbolic_types",
+    ],
+    cc_devel_deps = [
         "//drake/common",
     ],
     py_srcs = [
