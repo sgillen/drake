@@ -6,8 +6,6 @@ from platform import python_version_tuple
 # to get assertion configuration done as early as possible.
 from . import common
 
-from . import rbtree
-
 from .pydrake_path import getDrakePath
 
 # Adding searchable path as inferred by pydrake. This assumes that the python

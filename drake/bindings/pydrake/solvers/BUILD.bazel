@@ -1,0 +1,65 @@
+# -*- python -*-
+# This file contains rules for Bazel; see drake/doc/bazel.rst.
+
+load("//tools/workspace/gurobi:gurobi.bzl", "gurobi_test_tags")
+load("@drake//tools:install.bzl", "install")
+load(
+    "//tools:drake.bzl",
+    "drake_py_library",
+    "drake_py_test",
+)
+load("//tools/lint:lint.bzl", "add_lint_tests")
+load("//drake/bindings/pydrake:pybind.bzl", "drake_pybind_library")
+
+package(default_visibility = ["//visibility:public"])
+
+# Location of //bindings relative to this package.
+# This tells `py_library` how to structure the Python imports.
+py_imports = ['../..']
+
+drake_py_library(
+    name = "module_py",
+    srcs = ["__init__.py"],
+    deps = [
+        "//drake/bindings/pydrake:common_py",
+    ],
+    imports = py_imports,
+)
+
+drake_pybind_library(
+    name = "mathematicalprogram_py",
+    cc_devel_deps = [
+        "//drake/solvers:mathematical_program",
+        "//drake/solvers:solver_type_converter",
+    ],
+    cc_deps = [
+        "//drake/bindings/pydrake:symbolic_types",
+    ],
+    cc_srcs = ["mathematicalprogram_py.cc"],
+    py_srcs = [
+        "mathematicalprogram.py",
+    ],
+    py_deps = [
+        ":module_py",
+        "//drake/bindings/pydrake:symbolic_py",
+    ],
+    py_imports = py_imports,
+)
+
+drake_py_library(
+    name = "solvers",
+    deps = [
+        ":mathematicalprogram_py",
+    ],
+)
+
+drake_py_test(
+    name = "mathematicalprogram_test",
+    size = "small",
+    srcs = ["test/testMathematicalProgram.py"],
+    tags = gurobi_test_tags(),
+    main = "test/testMathematicalProgram.py",
+    deps = [":mathematicalprogram_py"],
+)
+
+add_lint_tests()

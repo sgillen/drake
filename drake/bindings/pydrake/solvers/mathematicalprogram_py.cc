@@ -5,7 +5,7 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
-#include "drake/bindings/pybind11/pydrake_symbolic_types.h"
+#include "drake/bindings/pydrake/symbolic_types_py.h"
 #include "drake/solvers/mathematical_program.h"
 #include "drake/solvers/solver_type_converter.h"
 
@@ -79,8 +79,8 @@ auto RegisterBinding(py::handle* pscope,
 
 }  // namespace
 
-PYBIND11_PLUGIN(_pydrake_mathematicalprogram) {
-  py::module m("_pydrake_mathematicalprogram",
+PYBIND11_PLUGIN(_mathematicalprogram_py) {
+  py::module m("_mathematicalprogram_py",
                "Drake MathematicalProgram Bindings");
 
   py::object variable = (py::object)

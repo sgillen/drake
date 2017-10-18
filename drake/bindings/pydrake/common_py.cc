@@ -18,8 +18,8 @@ void trigger_an_assertion_failure() {
 }
 }  // namespace
 
-PYBIND11_PLUGIN(_pydrake_common) {
-  py::module m("_pydrake_common", "Bindings for //drake/common:common");
+PYBIND11_PLUGIN(_common_py) {
+  py::module m("_common_py", "Bindings for //drake/common:common");
 
   // Turn DRAKE_ASSERT and DRAKE_DEMAND exceptions into native SystemExit.
   // Admittedly, it's unusual for a python library like pydrake to raise

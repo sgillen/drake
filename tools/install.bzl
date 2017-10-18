@@ -118,7 +118,8 @@ def _install_action(
 
 #------------------------------------------------------------------------------
 def _install_actions(ctx, file_labels, dests, strip_prefixes = [],
-                     excluded_files = [], rename = {}, warn_foreign = True):
+                     excluded_files = [], rename = {}, warn_foreign = True,
+                     extra_files = []):
     """Compute install actions for files.
 
     This takes a list of labels (targets or files) and computes the install
@@ -148,19 +149,22 @@ def _install_actions(ctx, file_labels, dests, strip_prefixes = [],
 
     # Iterate over files. We expect a list of labels, which will have a 'files'
     # attribute that is a list of file artifacts. Thus this two-level loop.
+    all_files = depset()
     for f in file_labels:
-        for a in f.files:
-            # TODO(mwoehlke-kitware) refactor this to separate computing the
-            # original relative path and the path with prefix(es) stripped,
-            # then use the original relative path for both exclusions and
-            # renaming.
-            if _output_path(ctx, a, warn_foreign = False) in excluded_files:
-                continue
+        all_files += f.files
+    all_files += extra_files
+    for a in all_files:
+        # TODO(mwoehlke-kitware) refactor this to separate computing the
+        # original relative path and the path with prefix(es) stripped,
+        # then use the original relative path for both exclusions and
+        # renaming.
+        if _output_path(ctx, a, warn_foreign = False) in excluded_files:
+            continue
 
-            actions.append(
-                _install_action(ctx, a, dests, strip_prefixes,
-                                rename, warn_foreign)
-            )
+        actions.append(
+            _install_action(ctx, a, dests, strip_prefixes,
+                            rename, warn_foreign)
+        )
 
     return actions
 
@@ -230,10 +234,11 @@ def _install_java_actions(ctx, target):
 #------------------------------------------------------------------------------
 # Compute install actions for a py_library or py_binary.
 # TODO(jamiesnape): Install native shared libraries that the target may use.
-def _install_py_actions(ctx, target):
+def _install_py_actions(ctx, target, extra_files):
     return _install_actions(ctx, [target], ctx.attr.py_dest,
                             ctx.attr.py_strip_prefix,
-                            rename = ctx.attr.rename)
+                            rename = ctx.attr.rename,
+                            extra_files = extra_files)
 
 #------------------------------------------------------------------------------
 # Compute install actions for a script or an executable.
@@ -285,6 +290,11 @@ def _java_launcher_code(action):
     return "create_java_launcher(%r, %r, %r)" % (action.dst, action.classpath,
                                                  action.main_class)
 
+# Compute set difference a - b
+# @see https://docs.bazel.build/versions/master/skylark/depsets.html#description-and-operations
+def _setdiff(a, b):
+    return [item for item in a if item not in b]
+
 #END internal helpers
 #==============================================================================
 #BEGIN rules
@@ -299,6 +309,12 @@ def _install_impl(ctx):
     for d in ctx.attr.deps:
         actions += d[InstallInfo].install_actions
         rename.update(d[InstallInfo].rename)
+
+    use_transitive_sources = ctx.attr.use_transitive_sources
+    supported_transitive_sources = ["py"]
+    unsupported_transitive_sources = _setdiff(use_transitive_sources, supported_transitive_sources)
+    if len(unsupported_transitive_sources) > 0:
+        fail("Unsupported `use_transitive_sources` options: {}".format(unsupported_transitive_sources))
 
     # Generate actions for data, docs and includes.
     actions += _install_actions(ctx, ctx.attr.docs, ctx.attr.doc_dest,
@@ -318,7 +334,10 @@ def _install_impl(ctx):
         elif hasattr(t, "java"):
             actions += _install_java_actions(ctx, t)
         elif hasattr(t, "py"):
-            actions += _install_py_actions(ctx, t)
+            extra_files = []
+            if "py" in use_transitive_sources:
+                extra_files = t.py.transitive_sources
+            actions += _install_py_actions(ctx, t, extra_files)
         elif MainClassInfo in t:
             actions += _install_java_launcher_actions(
                 ctx,
@@ -406,6 +425,7 @@ install = rule(
             cfg = "target",
             default = Label("//tools:install.py.in"),
         ),
+        "use_transitive_sources": attr.string_list(),
     },
     executable = True,
     implementation = _install_impl,

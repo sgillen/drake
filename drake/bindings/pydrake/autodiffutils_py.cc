@@ -2,7 +2,7 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
-#include "drake/bindings/pybind11/pydrake_autodiff_types.h"
+#include "drake/bindings/pydrake/autodiff_types_py.h"
 
 namespace py = pybind11;
 
@@ -18,13 +18,17 @@ using drake::AutoDiffXd;
  * python. This just forces an evaluation and conversion to AutoDiffXd which
  * would normally happen automatically in C++.
  */
+// TODO(eric.cousineau): If pybind11 does not already have it, teach it to be
+// expression-aware.
+// TODO(eric.cousineau): See if this is still necessary given Soonho's recent
+// changes to the AutoDiff setup.
 template <typename Derived>
 AutoDiffXd eval(const Eigen::AutoDiffScalar<Derived>& x) {
   return AutoDiffXd(x.value(), x.derivatives());
 }
 
-PYBIND11_PLUGIN(_pydrake_autodiffutils) {
-  py::module m("_pydrake_autodiffutils", "Bindings for Eigen AutoDiff Scalars");
+PYBIND11_PLUGIN(_autodiffutils_py) {
+  py::module m("_autodiffutils_py", "Bindings for Eigen AutoDiff Scalars");
 
   py::class_<AutoDiffXd>(m, "AutoDiffXd")
     .def("__init__",
