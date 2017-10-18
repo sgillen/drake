@@ -12,10 +12,12 @@ load(
 load("//tools/lint:lint.bzl", "add_lint_tests")
 load(":pybind.bzl", "drake_pybind_library")
 
+# TODO(eric.cousineau): Make default visibility "__subpackage__".
 package(default_visibility = ["//visibility:public"])
 
 # Location of //bindings relative to this package.
-# This tells `py_library` how to structure the Python imports.
+# This tells `py_library` how to structure the Python directories so we can
+# type "import pydrake.${module}".
 py_imports = ['..']
 
 drake_pybind_library(
