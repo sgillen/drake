@@ -148,6 +148,7 @@ install(
     library_dest = py_dest,
     visibility = ["//visibility:public"],
     deps = ["//drake:install"],
+    use_transitive_sources = True,
 )
 
 drake_py_test(

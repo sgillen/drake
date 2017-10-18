@@ -229,11 +229,15 @@ def _install_java_actions(ctx, target):
 #------------------------------------------------------------------------------
 # Compute install actions for a py_library or py_binary.
 # TODO(jamiesnape): Install native shared libraries that the target may use.
-def _install_py_actions(ctx, target):
+def _install_py_actions(ctx, target, use_transitive_sources):
+    if use_transitive_sources:
+        transitive_sources = target.py.transitive_sources
+    else:
+        transitive_sources = []
     return _install_actions(ctx, [target], ctx.attr.py_dest,
                             ctx.attr.py_strip_prefix,
                             rename = ctx.attr.rename,
-                            transitive_sources = target.py.transitive_sources)
+                            transitive_sources = transitive_sources)
 
 #------------------------------------------------------------------------------
 # Compute install actions for a script or an executable.
@@ -318,7 +322,7 @@ def _install_impl(ctx):
         elif hasattr(t, "java"):
             actions += _install_java_actions(ctx, t)
         elif hasattr(t, "py"):
-            actions += _install_py_actions(ctx, t)
+            actions += _install_py_actions(ctx, t, ctx.attr.use_transitive_sources)
         elif MainClassInfo in t:
             actions += _install_java_launcher_actions(
                 ctx,
@@ -406,6 +410,7 @@ install = rule(
             cfg = "target",
             default = Label("//tools:install.py.in"),
         ),
+        "use_transitive_sources": attr.bool(default = False),
     },
     executable = True,
     implementation = _install_impl,
