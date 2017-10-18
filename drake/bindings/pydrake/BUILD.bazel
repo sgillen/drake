@@ -102,22 +102,22 @@ drake_py_library(
         ":common_py",
         ":autodiffutils_py",
         ":symbolic_py",
-        ":solvers",
+        "//drake/bindings/pydrake/solvers",
     ],
     visibility = ["//visibility:public"],
 )
 
-# install(
-#     name = "install",
-#     targets = [
-#         ":pydrake",
-#     ] + PYDRAKE_SO_DATA,
-#     library_dest = "lib/python2.7/site-packages",
-#     library_strip_prefix = ["python"],
-#     py_strip_prefix = ["python"],
-#     visibility = ["//visibility:public"],
-#     deps = ["//drake:install"],
-# )
+install(
+    name = "install",
+    targets = [
+        ":pydrake",
+    ], #  + PYDRAKE_SO_DATA,
+    library_dest = "lib/python2.7/site-packages/pydrake",
+    # library_strip_prefix = ["python"],
+    # py_strip_prefix = ["python"],
+    visibility = ["//visibility:public"],
+    deps = ["//drake:install"],
+)
 
 drake_py_test(
     name = "common_test",

@@ -47,7 +47,7 @@ drake_pybind_library(
 drake_py_library(
     name = "solvers",
     deps = [
-        ":solvers_py",
+        ":mathematicalprogram_py",
     ],
 )
 
