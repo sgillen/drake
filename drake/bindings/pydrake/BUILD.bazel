@@ -53,9 +53,11 @@ genrule(
 drake_cc_library(
     name = "autodiff_types",
     hdrs = ["autodiff_types_py.h"],
-    deps = [
-        "//drake/common:autodiff",
-    ],
+    # NOTE: We must violate IWYU here because we do not want this dependencies leaking in
+    # at install time.
+    # deps = [
+    #     "//drake/common:autodiff",
+    # ],
 )
 
 drake_pybind_library(
@@ -83,9 +85,10 @@ py_shared_libraries.append("_autodiffutils_py.so")
 drake_cc_library(
     name = "symbolic_types",
     hdrs = ["symbolic_types_py.h"],
-    deps = [
-        "//drake/common",
-    ],
+    # @see `autodiff_types` for explanation.
+    # deps = [
+    #     "//drake/common",
+    # ],
 )
 
 drake_pybind_library(
