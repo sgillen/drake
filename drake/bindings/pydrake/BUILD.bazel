@@ -179,8 +179,30 @@ drake_py_test(
     deps = [":symbolic_py"],
 )
 
-# Ensure that our linking mechanisms do not duplicate object code.
-# Test this via symbolic.
-# TODO(eric.cousineau): Implement this!
+# Ensures that our linking mechanisms do not duplicate object code (#6465).
+drake_pybind_library(
+    name = "test/odr_test_py",
+    cc_srcs = [
+        "test/odr_test_py.cc",
+    ],
+    cc_deps = [
+        ":symbolic_types",
+    ],
+    cc_devel_deps = [
+        "//drake/common:symbolic",
+    ],
+    py_deps = [
+        ":symbolic_py",
+    ],
+    py_imports = py_imports,
+)
+
+drake_py_test(
+    name = "odr_test",
+    size = "small",
+    srcs = ["test/odr_test.py"],
+    main = "test/odr_test.py",
+    deps = [":test/odr_test_py"],
+)
 
 add_lint_tests()

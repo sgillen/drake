@@ -17,6 +17,7 @@ PYBIND11_PLUGIN(_symbolic_py) {
 
   py::class_<Variable>(m, "Variable")
     .def(py::init<const std::string&>())
+    .def("get_id", &Variable::get_id)
     .def("__repr__", &Variable::to_string)
     .def("__add__", [](const Variable& self, const Variable& other) {
       return Expression{self + other};

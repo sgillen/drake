@@ -2,6 +2,13 @@
 
 load("//tools:drake.bzl", "drake_cc_binary", "drake_py_library")
 
+load(
+    "//tools:pathutils.bzl",
+    "dirname",
+    "basename",
+    "join_paths",
+)
+
 is_devel = False
 # TODO: Figure out how to get a relative path here...
 DEFAULT_IMPORT = [".."]
@@ -53,7 +60,7 @@ def drake_pybind_library(name,
         "-Wno-unknown-warning-option",
     ]
 
-    cc_so = SO_FMT.format(name)
+    cc_so = join_paths(dirname(name), SO_FMT.format(basename(name)))
     py_name = name
 
     if not is_devel:
