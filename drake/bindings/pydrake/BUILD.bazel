@@ -20,13 +20,15 @@ package(default_visibility = ["//visibility:public"])
 # This tells `py_library` how to structure the Python directories so we can
 # type "import pydrake.${modu1e}".
 py_imports = ['..']
-# Installation location.
+# Installation location, relative to "site-packages".
 py_pkg_install = "pydrake"
 
-# Append to this as Python targets are defined.
-# @see TODO in `pybind.bzl` to actually have these dependencies better listed
-# transitively.
-py_shared_libraries = []
+# WARNING:
+# Any common headers should be shared via a HEADER ONLY library.
+# If you have common object code, then you should produce a shared object that
+# will be installed as well, and it should not be a direct `{drake_}cc_library`.
+# Instead, use something aking to `cc_shared_library()`, which will front the object
+# code as a `{drake_}cc_binary`.
 
 drake_pybind_library(
     name = "common_py",
@@ -132,7 +134,7 @@ install(
         ":autodiffutils_py_install",
         ":symbolic_py_install",
         "//drake/bindings/pydrake/solvers:install",
-        # "//drake:install"
+        "//drake:install"
     ],
     visibility = ["//visibility:public"],
 )
