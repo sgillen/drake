@@ -16,6 +16,7 @@ package(default_visibility = ["//visibility:public"])
 # Location of //bindings relative to this package.
 # This tells `py_library` how to structure the Python imports.
 py_imports = ['../..']
+py_pkg_install = "pydrake/solvers"
 
 drake_py_library(
     name = "module_py",
@@ -44,6 +45,7 @@ drake_pybind_library(
         "//drake/bindings/pydrake:symbolic_py",
     ],
     py_imports = py_imports,
+    py_pkg_install = py_pkg_install,
 )
 
 drake_py_library(
@@ -51,6 +53,17 @@ drake_py_library(
     deps = [
         ":mathematicalprogram_py",
     ],
+)
+
+install(
+    name = "install",
+    targets = [
+        ":module_py",
+    ],
+    deps = [
+        ":mathematicalprogram_py_install",
+    ],
+    visibility = ["//drake/bindings/pydrake:__subpackages__"],
 )
 
 drake_py_test(

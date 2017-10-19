@@ -2,6 +2,8 @@
 
 load("//tools:drake.bzl", "drake_cc_binary", "drake_py_library")
 
+load("@drake//tools:install.bzl", "install")
+
 load(
     "//tools:pathutils.bzl",
     "dirname",
@@ -13,6 +15,7 @@ is_devel = False
 # TODO: Figure out how to get a relative path here...
 DEFAULT_IMPORT = [".."]
 SO_FMT = '_{}.so'
+PY_VERSION = "2.7"
 
 # TODO(eric.cousineau): Make a `PybindProvider`, so that we can do a
 # better job of tracking transitives, and can do a better job of figuring out what
@@ -30,6 +33,7 @@ def drake_pybind_library(name,
                          cc_deps = [], cc_devel_deps = [], copts = [],
                          py_srcs = [], py_deps = [],
                          py_imports = DEFAULT_IMPORT,
+                         py_pkg_install = None,
                          **kwargs):
     """Declare a pybind11 shared library with the given name and srcs.  The
     libdrake.so library and its headers are already automatically depended-on
@@ -61,6 +65,7 @@ def drake_pybind_library(name,
     ]
 
     cc_so = join_paths(dirname(name), SO_FMT.format(basename(name)))
+    install_name = name + "_install"
     py_name = name
 
     if not is_devel:
@@ -109,5 +114,22 @@ def drake_pybind_library(name,
         imports = py_imports,
     )
 
-    # TODO: Expose *.so as an installable target, preferrably with some sort transitive_libs
-    # setup.
+    # Add installation.
+    if py_pkg_install:
+        py_dest = "lib/python{}/site-packages/{}".format(PY_VERSION, py_pkg_install)
+        # TODO(eric.cousineau): Somehow incorporate a warning if this is in development mode?
+        install(
+            name = install_name,
+            targets = [
+                py_name,
+                cc_so,
+            ],
+            py_dest = py_dest,
+            library_dest = py_dest,
+            visibility = ["//drake/bindings/pydrake:__subpackages__"],
+            # Should not need this.
+            # use_transitive_sources = ["py"],
+        )
+
+    # TODO(eric.cousineau): As an alternative, expose *.so as an installable target, preferrably with some sort transitive_libs
+    # setup via producers.
