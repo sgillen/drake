@@ -115,9 +115,9 @@ bitbucket_archive(
     name = "eigen",
     repository = "eigen/eigen",
     # N.B. See #5785; do your best not to have to bump this to a newer commit.
-    commit = "3.3.3",
-    sha256 = "94878cbfa27b0d0fbc64c00d4aafa137f678d5315ae62ba4aecddbd4269ae75f",  # noqa
-    strip_prefix = "eigen-eigen-67e894c6cd8f",
+    commit = "3.3.2",
+    sha256 = "a0225f16a93d0b23adf65e4cd97c2012d63eec61e2a3c3e0695414e89266ac4d",  # noqa
+    strip_prefix = "eigen-eigen-da9b4e14c255",
     build_file = "tools/workspace/eigen/eigen.BUILD.bazel",
 )
 
