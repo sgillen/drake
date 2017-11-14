@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "drake/common/proto/call_matlab.h"
+#include "drake/common/copyable_unique_ptr.h"
 
 // Minor extensions to `call_matlab` to enable calling Python.
 // N.B. This is NOT meant to replace or be similar to what pybind11 offers for
@@ -29,9 +30,29 @@ template <typename... Types>
 PythonRemoteVariable CallPython(const std::string& function_name,
                                 Types... args);
 
+template <typename ... Types>
+PythonRemoteVariable ToPythonTuple(Types... args);
+
+
+inline void DelPythonVar(const PythonRemoteVariable& var) {
+  MatlabRPC msg;
+  ToMatlabArray(var, msg.add_rhs());
+  msg.set_function_name("_client_var_del");
+  internal::PublishCallMatlab(msg);
+}
+
+inline void CreatePythonVar(const PythonRemoteVariable& /*var*/) {}
+
+template <typename T>
+PythonRemoteVariable NewPythonVariable(T value);
+
+
 class PythonRemoteVariable {
  public:
   PythonRemoteVariable();
+  ~PythonRemoteVariable() {
+    DelPythonVar(*this);
+  }
 
   int64_t unique_id() const { return unique_id_; }
 
@@ -54,28 +75,30 @@ class PythonRemoteVariable {
     return CallPython("setattr", *this, name, val);
   }
 
-  // // Follow pybind11's example:
-  // // http://pybind11.readthedocs.io/en/stable/reference.html#_CPPv2NK10object_apiixE6handle
-  // class ItemAccessor {
-  //  public:
-  //   ItemAccessor(PythonRemoteVariable obj, PythonRemoteVariable index)
-  //     : obj_(obj),
-  //       index_(index) {}
-  //   operator const PythonRemoteVariable&() const {
-  //     return obj_.getitem(index_);
-  //   }
-  //   PythonRemoteVariable operator=(const PythonRemoteVariable& value) {
-  //     obj_.setitem(index_, value);
-  //   }
-  //  private:
-  //   PythonRemoteVariable obj_;
-  //   PythonRemoteVariable index_;
-  // };
+  // Follow pybind11's example:
+  // http://pybind11.readthedocs.io/en/stable/reference.html#_CPPv2NK10object_apiixE6handle
+  class ItemAccessor {
+   public:
+    ItemAccessor(PythonRemoteVariable obj, PythonRemoteVariable index);
+    ItemAccessor(const ItemAccessor&);
+    ~ItemAccessor();
 
-  // template <typename ... Types>
-  // ItemAccessor operator()(Types ... args) const {
-  //   return ItemAccessor(*this, ToPythonTuple(args...));
-  // }
+    operator PythonRemoteVariable() const;
+    PythonRemoteVariable operator=(const PythonRemoteVariable& value);
+    template <typename T>
+    PythonRemoteVariable operator=(const T& value) {
+      return *this = NewPythonVariable(value);
+    }
+
+   private:
+    struct Impl;
+    std::unique_ptr<Impl> impl_;
+  };
+
+  template <typename ... Types>
+  ItemAccessor operator()(Types ... args) const {
+    return ItemAccessor(*this, ToPythonTuple(args...));
+  }
 
  private:
   const int64_t unique_id_{};

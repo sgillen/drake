@@ -7,41 +7,41 @@
 namespace drake {
 namespace common {
 
-GTEST_TEST(TestCallPython, DispEigenMatrix) {
-  Eigen::Matrix2d m;
-  m << 1, 2, 3, 4;
-  CallPython("print", m);
+// GTEST_TEST(TestCallPython, DispEigenMatrix) {
+//   Eigen::Matrix2d m;
+//   m << 1, 2, 3, 4;
+//   CallPython("print", m);
 
-  Eigen::Matrix<bool, 2, 2> b;
-  b << true, false, true, false;
-  CallPython("print", b);
-}
-
-// GTEST_TEST(TestCallPython, RemoteVarTest) {
-//   auto magic = CallPythonSingleOutput("magic", 5);
-//   CallPython("print", magic);
-//   CallPython("print", "element(0,0) is ");
-//   CallPython("print", magic(0, 0));
-//   CallPython("print", "element(2,1) is ");
-//   CallPython("print", magic(2, 1));
-//   CallPython("print", "elements (0:2) are");
-//   CallPython("print", magic(Eigen::Vector2d(0, 2)));
-//   CallPython("print", "row 2 is ");
-//   CallPython("print", magic(2, ToPythonSlice(":")));
-//   CallPython("print", "elements [0, 1, 2, 3, 4] are");
-//   CallPython("print", magic(Eigen::VectorXd::LinSpaced(5, 0, 4)));
-
-//   CallPython("print", "row 1 (accessed via logicals) is");
-//   CallPython("print",
-//              magic(
-//                 Eigen::Matrix<bool, 5, 1>(false, true, false, false, false),
-//                 ToPythonSlice(":")));
-
-//   CallPython("print", "Second column should now be 1,2,3,4,5: ");
-//   auto n = magic(ToPythonSlice(":"), 1) = Eigen::Vector5d(1, 2, 3, 4, 5);
-//   CallPython("print", n);
-//   CallPython("print", magic);
+//   Eigen::Matrix<bool, 2, 2> b;
+//   b << true, false, true, false;
+//   CallPython("print", b);
 // }
+
+GTEST_TEST(TestCallPython, RemoteVarTest) {
+  auto magic = CallPython("magic", 3);
+  CallPython("print", magic);
+  CallPython("print", "element(0,0) is ");
+  CallPython("print", magic(0, 0));
+  CallPython("print", "element(2,1) is ");
+  CallPython("print", magic(2, 1));
+  CallPython("print", "elements ([0, 2]) are");
+  CallPython("print", magic(Eigen::Vector2d(0, 2)));
+  CallPython("print", "row 2 is ");
+  CallPython("print", magic(2, ToPythonSlice(":")));
+  CallPython("print", "elements [0, 1, 2] are");
+  CallPython("print", magic(Eigen::VectorXd::LinSpaced(3, 0, 2)));
+
+  CallPython("print", "row 1 (accessed via logicals) is");
+  CallPython("print",
+             magic(
+                Eigen::Matrix<bool, 3, 1>(false, true, false),
+                ToPythonSlice(":")));
+
+  CallPython("print", "Second column should now be 1,2,3: ");
+  auto n = magic(ToPythonSlice(":"), 1) = Eigen::Vector3d(1, 2, 3);
+  CallPython("print", n);
+  CallPython("print", magic);
+}
 
 // GTEST_TEST(TestCallPython, SimplePlot) {
 //   int N = 100;

@@ -38,6 +38,7 @@ def make_list(*args):
 class _KwArgs(dict):
     pass
 
+
 def make_kwargs(**kwargs):
     return _KwArgs(**kwargs)
 
@@ -115,11 +116,22 @@ def run(filename):
     # Variables indexed by GUID.
     client_vars = {}
 
+    def _client_var_del(id):
+        # If a variable is created but not used, then it will not be registered.
+        if id in client_vars:
+            del client_vars[id]
+    scope_locals.update(_client_var_del=_client_var_del)
+
     print("[ Start ]")
 
     msg = MatlabRPC()
     with open(filename, 'rb') as f:
         while _read_next(f, msg):
+            # # Handle special-cases without overhead.
+            # if msg.function_name == "_client_var_del":
+            #     _client_var_del(msg)
+            #     continue
+
             # Create input arguments.
             args = msg.rhs
             nargs = len(args)
@@ -156,9 +168,10 @@ def run(filename):
             out = eval(msg.function_name + "(*_tmp_args, **_tmp_kwargs)", scope_globals, scope_locals)
 
             # Update outputs.
-            assert len(msg.lhs) == 1
-            out_id = msg.lhs[0]
-            client_vars[out_id] = out
+            if len(msg.lhs) > 0:
+                assert len(msg.lhs) == 1
+                out_id = msg.lhs[0]
+                client_vars[out_id] = out
 
     print("[ Done ]")
 
