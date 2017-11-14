@@ -52,6 +52,11 @@ void ToMatlabArray(
 void ToMatlabArray(const Eigen::Ref<const Eigen::MatrixXd>& mat,
                    MatlabArray* matlab_array);
 
+void ToMatlabArray(int scalar, MatlabArray* matlab_array);
+
+void ToMatlabArray(const Eigen::Ref<const Eigen::MatrixXi>& mat,
+                   MatlabArray* matlab_array);
+
 void ToMatlabArray(const std::string& str, MatlabArray* matlab_array);
 
 // Helper methods for variadic template call in CallMatlab.

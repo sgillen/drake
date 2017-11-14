@@ -154,6 +154,9 @@ def run(filename):
                 elif arg.type == MatlabArray.LOGICAL:
                     dim = (arg.rows, arg.cols)
                     value = np.frombuffer(arg_raw, dtype=np.bool).reshape(dim)
+                elif arg.type == MatlabArray.INT:
+                    dim = (arg.rows, arg.cols)
+                    value = np.frombuffer(arg_raw, dtype=np.int32).reshape(dim)
                 else:
                     assert False
                 if isinstance(value, _KwArgs):

@@ -50,6 +50,9 @@ PythonRemoteVariable NewPythonVariable(T value);
 class PythonRemoteVariable {
  public:
   PythonRemoteVariable();
+
+  // TODO: Disable moving???
+
   ~PythonRemoteVariable() {
     DelPythonVar(*this);
   }

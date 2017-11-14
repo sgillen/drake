@@ -14,6 +14,7 @@ message MatlabArray
     DOUBLE = 1;
     CHAR = 2;
     LOGICAL = 3;
+    INT = 4;
   }
   optional ArrayType type = 1;
 

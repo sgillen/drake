@@ -25,11 +25,11 @@ GTEST_TEST(TestCallPython, RemoteVarTest) {
   CallPython("print", "element(2,1) is ");
   CallPython("print", magic(2, 1));
   CallPython("print", "elements ([0, 2]) are");
-  CallPython("print", magic(Eigen::Vector2d(0, 2)));
+  CallPython("print", magic(Eigen::Vector2i(0, 2)));
   CallPython("print", "row 2 is ");
   CallPython("print", magic(2, ToPythonSlice(":")));
   CallPython("print", "elements [0, 1, 2] are");
-  CallPython("print", magic(Eigen::VectorXd::LinSpaced(3, 0, 2)));
+  CallPython("print", magic(Eigen::VectorXi::LinSpaced(3, 0, 2)));
 
   CallPython("print", "row 1 (accessed via logicals) is");
   CallPython("print",
@@ -38,7 +38,7 @@ GTEST_TEST(TestCallPython, RemoteVarTest) {
                 ToPythonSlice(":")));
 
   CallPython("print", "Second column should now be 1,2,3: ");
-  auto n = magic(ToPythonSlice(":"), 1) = Eigen::Vector3d(1, 2, 3);
+  auto n = magic(ToPythonSlice(":"), 1) = Eigen::Vector3i(1, 2, 3);
   CallPython("print", n);
   CallPython("print", magic);
 }

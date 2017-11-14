@@ -55,6 +55,23 @@ void ToMatlabArray(const Eigen::Ref<const Eigen::MatrixXd>& mat,
   matlab_array->set_data(mat.data(), num_bytes);
 }
 
+void ToMatlabArray(int var, MatlabArray* matlab_array) {
+  matlab_array->set_type(MatlabArray::INT);
+  matlab_array->set_rows(1);
+  matlab_array->set_cols(1);
+  int num_bytes = sizeof(int);
+  matlab_array->set_data(&var, num_bytes);
+}
+
+void ToMatlabArray(const Eigen::Ref<const Eigen::MatrixXi>& mat,
+                   MatlabArray* matlab_array) {
+  matlab_array->set_type(MatlabArray::INT);
+  matlab_array->set_rows(mat.rows());
+  matlab_array->set_cols(mat.cols());
+  int num_bytes = sizeof(int) * mat.rows() * mat.cols();
+  matlab_array->set_data(mat.data(), num_bytes);
+}
+
 void ToMatlabArray(
     const Eigen::Ref<const Eigen::Matrix<bool, Eigen::Dynamic, Eigen::Dynamic>>&
         mat,
