@@ -39,3 +39,4 @@ def drake_py_proto_library(
         name = name,
         tags = tags + ["nolint"],
         **kwargs)
+    # TODO(eric.cousineau): Add install commands?
