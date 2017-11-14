@@ -34,11 +34,11 @@ template <typename ... Types>
 PythonRemoteVariable ToPythonTuple(Types... args);
 
 
-inline void DelPythonVar(const PythonRemoteVariable& var) {
-  MatlabRPC msg;
-  ToMatlabArray(var, msg.add_rhs());
-  msg.set_function_name("_client_var_del");
-  internal::PublishCallMatlab(msg);
+inline void DelPythonVar(const PythonRemoteVariable& /*var*/) {
+  // MatlabRPC msg;
+  // ToMatlabArray(var, msg.add_rhs());
+  // msg.set_function_name("_client_var_del");
+  // internal::PublishCallMatlab(msg);
 }
 
 inline void CreatePythonVar(const PythonRemoteVariable& /*var*/) {}

@@ -16,6 +16,8 @@ def setitem(obj, index, value):
 
 
 def getitem(obj, index):
+    print(obj)
+    print(index)
     return obj[index]
 
 
@@ -131,6 +133,8 @@ def run(filename):
             # if msg.function_name == "_client_var_del":
             #     _client_var_del(msg)
             #     continue
+
+            print(msg)
 
             # Create input arguments.
             args = msg.rhs
