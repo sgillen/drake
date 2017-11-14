@@ -48,6 +48,17 @@ drake_cc_library(
     ],
 )
 
+drake_cc_library(
+    name = "call_python",
+    testonly = 1,
+    srcs = ["call_python.cc"],
+    hdrs = ["call_python.h"],
+    deps = [
+        ":call_matlab",
+    ],
+)
+
+
 py_binary(
     name = "call_python_client",
     srcs = ["call_python_client.py"],
@@ -62,6 +73,13 @@ drake_cc_googletest(
     name = "call_matlab_test",
     deps = [
         ":call_matlab",
+    ],
+)
+
+drake_cc_googletest(
+    name = "call_python_test",
+    deps = [
+        ":call_python",
     ],
 )
 

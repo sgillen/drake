@@ -1,7 +1,5 @@
-import sys
-
-# For accessing "print" as a function.
 from __future__ import print_function
+import sys
 
 from drake.common.proto.matlab_rpc_pb2 import MatlabArray, MatlabRPC
 
@@ -13,7 +11,8 @@ from pylab import *  # See `%pylab?` in IPython.
 
 # Helpers (to keep interface as simple as possible).
 def setitem(obj, index, value):
-    return obj[index] = value
+    obj[index] = value
+    return obj[index]
 
 
 def getitem(obj, index):
@@ -86,21 +85,24 @@ def magic(N):
 def _read_next(f, msg):
     # Hacky, but this is the simpliest route right now.
     # @ref https://www.datadoghq.com/blog/engineering/protobuf-parsing-in-python/
-    from google.protobuf.internal.encoder import _DecodeVarint32
+    from google.protobuf.internal.decoder import _DecodeVarint32
 
     # Blech. Should just not use this approach...
     # Consider gRPC? Or just use pybind11 directly?
     # Assume that each write will have at least 4-bytes (including the header size bit).
-    start_size_pre = 4
-    head = f.read(start_size_pre)
-    msg_size, start_size_actual = _DecodeVarint32(head, 0)
+    peek_size = 4
+    peek = f.read(peek_size)
+    msg_size, peek_end = _DecodeVarint32(peek, 0)
+    peek_left = peek_size - peek_end
     # Read remaining and concatenate.
-    full_size = msg_size + start_size
-    remaining = f.read(full_size - start_size_actual)
-    msg_raw = head[start_size_actual:] + remaining
+    remaining = f.read(msg_size - peek_left)
+    msg_raw = peek[peek_end:] + remaining
+    print(peek_size, peek_end)
+    print(len(msg_raw))
+    print(msg_size)
     assert len(msg_raw) == msg_size
     # Now read the message.
-    msg.ReadFromString(msg_raw)
+    msg.ParseFromString(msg_raw)
     return msg_size
 
 
@@ -119,25 +121,26 @@ def run(filename):
     with open(filename, 'rb') as f:
         while _read_next(f, msg):
             # Create input arguments.
-            nargs = len(msg.rhs)
+            args = msg.rhs
+            nargs = len(args)
             inputs = []
             kwargs = None
-            for i, arg in enumerate(msg.rhs):
+            for i, arg in enumerate(args):
                 arg_raw = arg.data
                 value = None
-                if rhs.type == MatlabArray.REMOTE_VARIABLE_REFERENCE:
+                if arg.type == MatlabArray.REMOTE_VARIABLE_REFERENCE:
                     id = np.frombuffer(arg_raw, dtype=np.uint64).reshape(1)[0]
                     if id not in client_vars:
                         raise RuntimeError("Unknown local variable. Dropping message.")
                     value = client_vars[id]
-                elif rhs.type == MatlabArray.DOUBLE:
-                    dim = (rhs.rows(), rhs.cols())
+                elif arg.type == MatlabArray.DOUBLE:
+                    dim = (arg.rows, arg.cols)
                     value = np.frombuffer(arg_raw, dtype=np.double).reshape(dim)
-                elif rhs.type == MatlabArray.CHAR:
-                    assert rhs.rows() == 1
+                elif arg.type == MatlabArray.CHAR:
+                    assert arg.rows == 1
                     value = str(arg_raw)
-                elif rhs.type == MatlabArray.LOGICAL:
-                    dim = (rhs.rows(), rhs.cols())
+                elif arg.type == MatlabArray.LOGICAL:
+                    dim = (arg.rows, arg.cols)
                     value = np.frombuffer(arg_raw, dtype=np.bool).reshape(dim)
                 else:
                     assert False
@@ -162,9 +165,9 @@ def run(filename):
 
 if __name__ == "__main__":
     filename = "/tmp/matlab_rpc"
-    if len(sys.argv) == 1:
-        filename = args[0]
-    elif len(sys.argv) > 1:
+    if len(sys.argv) == 2:
+        filename = sys.argv[1]
+    elif len(sys.argv) > 2:
         raise RuntimeError("usage: call_python_client.py [FILENAME]")
 
     run(filename)

@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 
-#include "drake/common/call_matlab.h"
+#include "drake/common/proto/call_matlab.h"
 
 // Minor extensions to `call_matlab` to enable calling Python.
 // N.B. This is NOT meant to replace or be similar to what pybind11 offers for
@@ -45,28 +45,37 @@ class PythonRemoteVariable {
     return CallPython("setitem", *this, index, val);
   }
 
-  // Follow pybind11's example:
-  // http://pybind11.readthedocs.io/en/stable/reference.html#_CPPv2NK10object_apiixE6handle
-  class ItemAccessor {
-   public:
-    ItemAccessor(PythonRemoteVariable obj, PythonRemoteVariable index)
-      : obj_(obj),
-        index_(index) {}
-    operator const PythonRemoteVariable&() const {
-      return obj_.getitem(index_);
-    }
-    PythonRemoteVariable operator=(const PythonRemoteVariable& value) {
-      obj_.setitem(index_, value);
-    }
-   private:
-    PythonRemoteVariable obj_;
-    PythonRemoteVariable index_;
-  };
-
-  template <typename ... Types>
-  ItemAccessor operator()(Types ... args) const {
-    return ItemAccessor(*this, ToPythonTuple(args...));
+  PythonRemoteVariable getattr(const std::string& name) const {
+    return CallPython("getattr", *this, name);
   }
+
+  template <typename T>
+  PythonRemoteVariable setattr(const std::string& name, T val) const {
+    return CallPython("setattr", *this, name, val);
+  }
+
+  // // Follow pybind11's example:
+  // // http://pybind11.readthedocs.io/en/stable/reference.html#_CPPv2NK10object_apiixE6handle
+  // class ItemAccessor {
+  //  public:
+  //   ItemAccessor(PythonRemoteVariable obj, PythonRemoteVariable index)
+  //     : obj_(obj),
+  //       index_(index) {}
+  //   operator const PythonRemoteVariable&() const {
+  //     return obj_.getitem(index_);
+  //   }
+  //   PythonRemoteVariable operator=(const PythonRemoteVariable& value) {
+  //     obj_.setitem(index_, value);
+  //   }
+  //  private:
+  //   PythonRemoteVariable obj_;
+  //   PythonRemoteVariable index_;
+  // };
+
+  // template <typename ... Types>
+  // ItemAccessor operator()(Types ... args) const {
+  //   return ItemAccessor(*this, ToPythonTuple(args...));
+  // }
 
  private:
   const int64_t unique_id_{};
@@ -85,16 +94,16 @@ PythonRemoteVariable CallPython(const std::string& function_name,
 }
 
 template <typename ... Types>
-PythonRemoteVariable ToPythonTuple(Args... args) {
+PythonRemoteVariable ToPythonTuple(Types... args) {
   return CallPython("make_tuple", args...);
 }
 
 template <typename ... Types>
-PythonRemoteVariable ToPythonKwargs(Args... args) {
+PythonRemoteVariable ToPythonKwargs(Types... args) {
   return CallPython("make_kwargs", args...);
 }
 
-PythonRemoteVariable ToPythonSlice(const std::string& expr) {
+inline PythonRemoteVariable ToPythonSlice(const std::string& expr) {
   return CallPython("make_slice", expr);
 }
 
