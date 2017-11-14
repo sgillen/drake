@@ -92,14 +92,14 @@ def _read_next(f, msg):
     # Assume that each write will have at least 4-bytes (including the header size bit).
     peek_size = 4
     peek = f.read(peek_size)
+    if len(peek) == 0:
+        # We have reached the end.
+        return 0
     msg_size, peek_end = _DecodeVarint32(peek, 0)
     peek_left = peek_size - peek_end
     # Read remaining and concatenate.
     remaining = f.read(msg_size - peek_left)
     msg_raw = peek[peek_end:] + remaining
-    print(peek_size, peek_end)
-    print(len(msg_raw))
-    print(msg_size)
     assert len(msg_raw) == msg_size
     # Now read the message.
     msg.ParseFromString(msg_raw)
