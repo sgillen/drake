@@ -5,91 +5,98 @@ from threading import Thread, Lock
 
 from drake.common.proto.matlab_rpc_pb2 import MatlabArray, MatlabRPC
 
-# For plotting.
-from mpl_toolkits.mplot3d import Axes3D
-import matplotlib
-import matplotlib.pyplot as plt
-from matplotlib.pyplot import *
-from pylab import *  # See `%pylab?` in IPython.
-
-# Helpers (to keep interface as simple as possible).
-def setitem(obj, index, value):
-    obj[index] = value
-    return obj[index]
-
-
-def getitem(obj, index):
-    return obj[index]
-
-
-def pass_through(value):
-    return value
-
-
-def disp(value):
-    print(value)
-
-
-def make_tuple(*args):
-    return tuple(args)
-
-
-def make_list(*args):
-    return list(args)
-
 
 class _KwArgs(dict):
     pass
 
 
-def make_kwargs(*args):
-    assert len(args) % 2 == 0
-    keys = args[0::2]
-    values = args[1::2]
-    kwargs = dict(zip(keys, values))
-    return _KwArgs(**kwargs)
+# Helpers (to keep interface as simple as possible).
+def _get_required_helpers():
+    def setitem(obj, index, value):
+        obj[index] = value
+        return obj[index]
 
 
-def make_slice(expr):
-    def to_piece(s):
-        return s and int(s) or None
-    pieces = map(to_piece, expr.split(':'))
-    if len(pieces) == 1:
-        return slice(pieces[0], pieces[0] + 1)
-    else:
-        return slice(*pieces)
+    def getitem(obj, index):
+        return obj[index]
 
 
-def surf(x, y, Z, **kwargs):
-    fig = plt.gcf()
-    ax = fig.gca(projection='3d')
-    X, Y = np.meshgrid(x, y)
-    ax.plot_surface(X, Y, Z, **kwargs)
+    def pass_through(value):
+        return value
 
 
-def show():
-    plt.show(block=False)
+    def disp(value):
+        print(value)
 
 
-def magic(N):
-    # Simple odd-only case for magic squares.
-    # From: https://scipython.com/book/chapter-6-numpy/examples/creating-a-magic-square
-    assert N % 2 == 1
-    magic_square = np.zeros((N,N), dtype=int)
-    n = 1
-    i, j = 0, N//2
-    while n <= N**2:
-        magic_square[i, j] = n
-        n += 1
-        newi, newj = (i-1) % N, (j+1)% N
-        if magic_square[newi, newj]:
-            i += 1
+    def make_tuple(*args):
+        return tuple(args)
+
+
+    def make_list(*args):
+        return list(args)
+
+    def make_kwargs(*args):
+        assert len(args) % 2 == 0
+        keys = args[0::2]
+        values = args[1::2]
+        kwargs = dict(zip(keys, values))
+        return _KwArgs(**kwargs)
+
+
+    def make_slice(expr):
+        def to_piece(s):
+            return s and int(s) or None
+        pieces = map(to_piece, expr.split(':'))
+        if len(pieces) == 1:
+            return slice(pieces[0], pieces[0] + 1)
         else:
-            i, j = newi, newj
-    return magic_square
+            return slice(*pieces)
+
+    return locals()
 
 
 # Main functionalty.
+def _default_globals():
+    # For plotting.
+    from mpl_toolkits.mplot3d import Axes3D
+    import matplotlib
+    import matplotlib.pyplot as plt
+    import pylab  # See `%pylab?` in IPython.
+    # Enable interactivity for default globals...
+    # Where better to put this?
+    matplotlib.interactive(True)
+
+    def surf(x, y, Z, **kwargs):
+        fig = plt.gcf()
+        ax = fig.gca(projection='3d')
+        X, Y = np.meshgrid(x, y)
+        ax.plot_surface(X, Y, Z, **kwargs)
+
+
+    def show():
+        plt.show(block=False)
+
+
+    def magic(N):
+        # Simple odd-only case for magic squares.
+        # From: https://scipython.com/book/chapter-6-numpy/examples/creating-a-magic-square
+        assert N % 2 == 1
+        magic_square = np.zeros((N,N), dtype=int)
+        n = 1
+        i, j = 0, N//2
+        while n <= N**2:
+            magic_square[i, j] = n
+            n += 1
+            newi, newj = (i-1) % N, (j+1)% N
+            if magic_square[newi, newj]:
+                i += 1
+            else:
+                i, j = newi, newj
+        return magic_square
+
+    return globals() + plt.__dict__ + pylab.__dict__ + locals()
+
 
 def _read_next(f, msg):
     # Hacky, but this is the simpliest route right now.
@@ -116,15 +123,22 @@ def _read_next(f, msg):
 
 
 class CallPythonClient(object):
-    def __init__(self, filename = None, threaded = True, loop = False):
+    def __init__(self, filename = None, threaded = True, loop = False,
+                 scope_globals = None, scope_locals = None):
         if filename is None:
             self.filename = "/tmp/matlab_rpc"
         else:
             self.filename = filename
         # Scope. Give it access to everything here.
         # However, keep it's written values scoped.
-        self.scope_globals = globals()
-        self.scope_locals = {}
+        if scope_globals is None:
+            self.scope_globals = _get_required_helpers() + _default_globals()
+        else:
+            self.scope_globals = _get_required_helpers() + scope_globals
+        if scope_locals is None:
+            self.scope_locals = {}
+        else:
+            self.scope_locals = scope_locals
 
         # def _client_var_del(id):
         #     # If a variable is created but not used, then it will not be registered.
@@ -203,6 +217,9 @@ class CallPythonClient(object):
         self.client_vars[out_id] = out
 
     def _get_file(self):
+        # TODO(eric.cousineau): For IPython, the file pointer may linger, and may cause C++
+        # clients to *not* block on initial execution.
+        # Consider a more explicit cleanup mechanism?
         if self._file is None:
             self._file = open(self.filename, 'rb')
         return self._file
@@ -270,8 +287,6 @@ if __name__ == "__main__":
     parser.add_argument("--no_loop", action='store_true', help="Stop client after a C++ session closes.")
     parser.add_argument("-f", "--file", type=str, default=None)
     args = parser.parse_args(sys.argv[1:])
-
-    matplotlib.interactive(True)
 
     client = CallPythonClient(args.file, loop = not args.no_loop, threaded = not args.no_threading)
     client.run()
