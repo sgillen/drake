@@ -237,14 +237,6 @@ class CallPythonClient(object):
         # Update outputs.
         self.client_vars[out_id] = out
 
-    def _get_file(self):
-        # TODO(eric.cousineau): For IPython, the file pointer may linger, and may cause C++
-        # clients to *not* block on initial execution.
-        # Consider a more explicit cleanup mechanism?
-        if self._file is None:
-            self._file = open(self.filename, 'rb')
-        return self._file
-
     def run(self):
         if self.threaded:
             # Main thread is consumer
@@ -289,6 +281,19 @@ class CallPythonClient(object):
                 return count
         return count
 
+    def _get_file(self):
+        # TODO(eric.cousineau): For IPython, the file pointer may linger, and may cause C++
+        # clients to *not* block on initial execution.
+        # Consider a more explicit cleanup mechanism?
+        if self._file is None:
+            self._file = open(self.filename, 'rb')
+        return self._file
+
+    def _close_file(self):
+        if self._file is not None:
+            self._file.close()
+            self._file = None
+
     def _generate_messages(self):
         # Return a new incoming message.
         # Not guaranteed to be a unique instance. Should copy if needed.
@@ -297,8 +302,12 @@ class CallPythonClient(object):
             f = self._get_file()
             while _read_next(f, msg) and not self.done:
                 yield msg
+            # Close the file if we reach the end;
+            # If we don't reach the end, keep the file open (e.g. if reading a few messages).
+            self._close_file()
             if not self.loop:
                 break
+
 
 if __name__ == "__main__":
     import argparse
