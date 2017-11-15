@@ -116,8 +116,11 @@ def _read_next(f, msg):
 
 
 class CallPythonClient(object):
-    def __init__(self, filename, threaded = True, loop = False):
-        self.filename = filename
+    def __init__(self, filename = None, threaded = True, loop = False):
+        if filename is None:
+            self.filename = "/tmp/matlab_rpc"
+        else:
+            self.filename = filename
         # Scope. Give it access to everything here.
         # However, keep it's written values scoped.
         self.scope_globals = globals()
@@ -265,7 +268,7 @@ if __name__ == "__main__":
     parser.add_argument("--no_threading", action='store_true', help="Disable threaded dispatch.")
     # TODO: This does not work at present. Need to ensure that plotting happens in background thread.
     parser.add_argument("--no_loop", action='store_true', help="Stop client after a C++ session closes.")
-    parser.add_argument("-f", "--file", type=str, default="/tmp/matlab_rpc")
+    parser.add_argument("-f", "--file", type=str, default=None)
     args = parser.parse_args(sys.argv[1:])
 
     matplotlib.interactive(True)
