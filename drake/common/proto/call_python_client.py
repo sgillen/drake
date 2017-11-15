@@ -1,5 +1,6 @@
 from __future__ import print_function
 import sys
+import time
 
 from drake.common.proto.matlab_rpc_pb2 import MatlabArray, MatlabRPC
 
@@ -142,6 +143,7 @@ def run(filename):
     msg = MatlabRPC()
     with open(filename, 'rb') as f:
         while _read_next(f, msg):
+            time.sleep(0.1)
             # # Handle special-cases without overhead.
             # if msg.function_name == "_client_var_del":
             #     _client_var_del(msg)
@@ -209,5 +211,6 @@ if __name__ == "__main__":
         while True:
             run(args.file)
     if args.wait:
+        print("waiting...")
         # Block.
-        plt.show()
+        plt.show(block=True)

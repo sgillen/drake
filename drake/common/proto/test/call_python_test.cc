@@ -93,7 +93,7 @@ GTEST_TEST(TestCallPython, MeshTest) {
   CallPython("figure", 2);
   CallPython("surf", x, y, Z);
   // An alternative to "show" above (using "plt.show" directly)
-  CallPython("plt.draw");
+  // CallPython("plt.draw");
   // CallPython("plt.show", ToPythonKwargs("block", false));
 }
 
