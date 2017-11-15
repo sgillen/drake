@@ -77,10 +77,26 @@ drake_cc_googletest(
     ],
 )
 
+# Er... Can we just make this a binary, so that it is not run via "test"?
 drake_cc_googletest(
-    name = "call_python_test",
+    name = "call_python_test_impl",
+    srcs = ["test/call_python_test.cc"],
     deps = [
         ":call_python",
+    ],
+    tags = ["manual"],
+)
+
+sh_test(
+    name = "call_python_test",
+    srcs = ["test/call_python_test.sh"],
+    data = [
+        ":call_python_test_impl",
+        ":call_python_client",
+    ],
+    args = [
+        "$(location :call_python_test_impl)",
+        "$(location :call_python_client)",
     ],
 )
 
