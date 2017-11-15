@@ -137,6 +137,8 @@ class CallPythonClient(object):
 
         self.done = False
 
+        self._file = None
+
     def _to_array(self, arg, dtype):
         np_raw = np.frombuffer(arg.data, dtype=dtype)
         if arg.shape_type == MatlabArray.SCALAR:
@@ -197,6 +199,11 @@ class CallPythonClient(object):
         # Update outputs.
         self.client_vars[out_id] = out
 
+    def _get_file(self):
+        if self._file is None:
+            self._file = open(self.filename, 'rb')
+        return self._file
+
     def run(self):
         if self.threaded:
             # Main thread is consumer
@@ -227,24 +234,29 @@ class CallPythonClient(object):
                 print("Quitting")
                 self.done = True
         else:
-            self.handle_all_messages()
+            self.handle_messages()
 
-    def handle_all_messages(self):
-        # Handle all messages sent (e.g., through IPython).
+    def handle_messages(self, max_count=None):
+        """ Handle all messages sent (e.g., through IPython).
+        Returns how many messages were processed (e.g. 0 if no more messages left. """
+        count = 0
         for msg in self._generate_messages():
             self._handle_message(msg)
+            count += 1
+            if max_count is not None and count >= max_count:
+                return count
+        return count
 
     def _generate_messages(self):
         # Return a new incoming message.
         # Not guaranteed to be a unique instance. Should copy if needed.
         msg = MatlabRPC()
         while not self.done:
-            with open(self.filename, 'rb') as f:
-                while _read_next(f, msg) and not self.done:
-                    yield msg
+            f = self._get_file()
+            while _read_next(f, msg) and not self.done:
+                yield msg
             if not self.loop:
                 break
- 
 
 if __name__ == "__main__":
     import argparse
