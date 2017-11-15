@@ -108,6 +108,14 @@ sh_test(
     ],
 )
 
+py_binary(
+    name = "call_python_example_shell",
+    srcs = ["test/call_python_example_shell.py"],
+    deps = [
+        ":call_python_client_lib",
+    ],
+)
+
 drake_cc_googletest(
     name = "protobuf_test",
     data = [
