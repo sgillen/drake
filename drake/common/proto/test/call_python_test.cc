@@ -18,6 +18,12 @@ GTEST_TEST(TestCallPython, CheckKwargs) {
   CallPython("print", out);
 }
 
+GTEST_TEST(TestCallPython, SetVar) {
+  CallPython("set_var", "example_var", "Howdy");
+  CallPython("eval", "print(example_var)");
+  CallPython("eval", "print(locals().keys())");
+}
+
 GTEST_TEST(TestCallPython, DispEigenMatrix) {
   Eigen::Matrix2d m;
   m << 1, 2, 3, 4;

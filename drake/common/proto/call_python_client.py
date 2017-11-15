@@ -5,13 +5,14 @@ from threading import Thread, Lock
 
 from drake.common.proto.matlab_rpc_pb2 import MatlabArray, MatlabRPC
 
+import numpy as np
 
 class _KwArgs(dict):
     pass
 
 
 # Helpers (to keep interface as simple as possible).
-def _get_required_helpers():
+def _get_required_helpers(scope_locals):
     def setitem(obj, index, value):
         obj[index] = value
         return obj[index]
@@ -53,12 +54,21 @@ def _get_required_helpers():
         else:
             return slice(*pieces)
 
+    def set_var(var, value):
+        scope_locals[var] = value
+
     return locals()
 
+def _merge_dicts(*args):
+    out = {}
+    for arg in args:
+        out.update(arg)
+    return out
 
 # Main functionalty.
 def _default_globals():
     # For plotting.
+    import numpy as np
     from mpl_toolkits.mplot3d import Axes3D
     import matplotlib
     import matplotlib.pyplot as plt
@@ -95,7 +105,9 @@ def _default_globals():
                 i, j = newi, newj
         return magic_square
 
-    return globals() + plt.__dict__ + pylab.__dict__ + locals()
+    # Use <module>.__dict__ to simulate `from <module> import *`, since that is invalid
+    # in this scope.
+    return _merge_dicts(globals(), plt.__dict__, pylab.__dict__, locals())
 
 
 def _read_next(f, msg):
@@ -131,14 +143,14 @@ class CallPythonClient(object):
             self.filename = filename
         # Scope. Give it access to everything here.
         # However, keep it's written values scoped.
-        if scope_globals is None:
-            self.scope_globals = _get_required_helpers() + _default_globals()
-        else:
-            self.scope_globals = _get_required_helpers() + scope_globals
         if scope_locals is None:
             self.scope_locals = {}
         else:
             self.scope_locals = scope_locals
+        required_helpers = _get_required_helpers(self.scope_locals)
+        if scope_globals is None:
+            scope_globals = _default_globals()
+        self.scope_globals = _merge_dicts(required_helpers, scope_globals)
 
         # def _client_var_del(id):
         #     # If a variable is created but not used, then it will not be registered.
@@ -213,6 +225,7 @@ class CallPythonClient(object):
 
         self.scope_locals.update(_tmp_args = inputs, _tmp_kwargs = kwargs or {})
         out = eval(function_name + "(*_tmp_args, **_tmp_kwargs)", self.scope_globals, self.scope_locals)
+        self.scope_locals.update(_tmp_out = out)
         # Update outputs.
         self.client_vars[out_id] = out
 
@@ -242,6 +255,9 @@ class CallPythonClient(object):
             # Consume.
             # TODO(eric.cousineau): Trying to quit via Ctrl+C is awkward.
             try:
+                # TODO(eric.cousineau): Figure out better way to abstract this?
+                # How to optionally *not* import matplotlib?
+                import matplotlib.pyplot as plt
                 while not self.done:
                     with lock:
                         # Process all messages.
