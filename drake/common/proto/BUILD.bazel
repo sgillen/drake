@@ -59,12 +59,20 @@ drake_cc_library(
     ],
 )
 
+py_library(
+    name = "call_python_client_lib",
+    srcs = ["call_python_client.py"],
+    imports = ["."],
+    deps = [
+        ":matlab_rpc_py",
+    ],
+)
 
 py_binary(
     name = "call_python_client",
     srcs = ["call_python_client.py"],
     deps = [
-        ":matlab_rpc_py",
+        ":call_python_client_lib",
     ],
 )
 
