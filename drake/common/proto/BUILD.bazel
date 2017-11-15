@@ -60,7 +60,7 @@ drake_cc_library(
 )
 
 py_library(
-    name = "call_python_client_lib",
+    name = "call_python_client",
     srcs = ["call_python_client.py"],
     imports = ["."],
     deps = [
@@ -69,10 +69,11 @@ py_library(
 )
 
 py_binary(
-    name = "call_python_client",
+    name = "call_python_client_cli",
     srcs = ["call_python_client.py"],
+    main = "call_python_client.py",
     deps = [
-        ":call_python_client_lib",
+        ":call_python_client",
     ],
 )
 
@@ -85,9 +86,8 @@ drake_cc_googletest(
     ],
 )
 
-# Er... Can we just make this a binary, so that it is not run via "test"?
 drake_cc_googletest(
-    name = "call_python_test_impl",
+    name = "call_python_test",
     srcs = ["test/call_python_test.cc"],
     deps = [
         ":call_python",
@@ -95,24 +95,27 @@ drake_cc_googletest(
     tags = ["manual"],
 )
 
-sh_test(
-    name = "call_python_test",
-    srcs = ["test/call_python_test.sh"],
-    data = [
-        ":call_python_test_impl",
-        ":call_python_client",
-    ],
-    args = [
-        "$(location :call_python_test_impl)",
-        "$(location :call_python_client)",
-    ],
-)
-
 py_binary(
     name = "call_python_example_shell",
     srcs = ["test/call_python_example_shell.py"],
     deps = [
-        ":call_python_client_lib",
+        ":call_python_client",
+    ],
+)
+
+# This test runs the test with the different clients
+sh_test(
+    name = "call_python_full_test",
+    srcs = ["test/call_python_full_test.sh"],
+    data = [
+        ":call_python_client_cli",
+        ":call_python_example_shell",
+        ":call_python_test",
+    ],
+    args = [
+        "$(location :call_python_test)",
+        "$(location :call_python_client_cli)",
+        "$(location :call_python_example_shell)",
     ],
 )
 
