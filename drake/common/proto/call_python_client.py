@@ -200,6 +200,8 @@ class CallPythonClient(object):
             assert arg.cols == 1
             return np_raw.reshape(arg.rows)
         elif arg.shape_type is None or arg.shape_type == MatlabArray.MATRIX:
+            # TODO(eric.cousineau): Figure out how to ensure `np.frombuffer` creates
+            # a column-major array?
             return np_raw.reshape(arg.rows, arg.cols)
 
     def _execute_message(self, msg):
@@ -288,7 +290,7 @@ class CallPythonClient(object):
         except KeyboardInterrupt:
             print("Quitting")
             self._done = True
-            time.sleep(0.05)
+            # Do not sleep, as another Ctrl+C may interrupt trying to kill off the thread.
             if producer.is_alive():
                 # If this thread is still alive, then we are in '_read_next'.
                 # Even though `self._file` is None, the blocking `read()` operation is with the file.
