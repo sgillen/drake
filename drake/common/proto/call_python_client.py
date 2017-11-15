@@ -53,10 +53,11 @@ def make_slice(expr):
         return slice(*pieces)
 
 
-def surf(*args, **kwargs):
-    fig = figure()
-    ax = fig.gca(project='3d')
-    ax.plot_surface(*args, **kwargs)
+def surf(x, y, Z, **kwargs):
+    fig = plt.gcf()
+    ax = fig.gca(projection='3d')
+    X, Y = np.meshgrid(x, y)
+    ax.plot_surface(X, Y, Z, **kwargs)
 
 
 def show():
@@ -184,10 +185,20 @@ def run(filename):
 
 
 if __name__ == "__main__":
-    filename = "/tmp/matlab_rpc"
-    if len(sys.argv) == 2:
-        filename = sys.argv[1]
-    elif len(sys.argv) > 2:
-        raise RuntimeError("usage: call_python_client.py [FILENAME]")
+    import argparse
 
-    run(filename)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--wait", action='store_true', help="Use to interact with plots.")
+    # TODO: This does not work at present. Need to ensure that plotting happens in background thread.
+    parser.add_argument("--loop", action='store_true', help="Poll for commands, even after a C++ session closes. (Use to interact with plots.)")
+    parser.add_argument("-f", "--file", type=str, default="/tmp/matlab_rpc")
+    args = parser.parse_args(sys.argv[1:])
+
+    run(args.file)
+    if args.loop:
+        raise RuntimeError("Will not function as expected")
+        while True:
+            run(args.file)
+    if args.wait:
+        # Block.
+        plt.show()

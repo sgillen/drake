@@ -48,44 +48,46 @@ GTEST_TEST(TestCallPython, RemoteVarTest) {
   CallPython("print", magic);
 }
 
-// GTEST_TEST(TestCallPython, SimplePlot) {
-//   int N = 100;
+// TODO: Figure out if there is a way to make --loop work on the client.
 
-//   Eigen::VectorXd time(N), val(N);
-//   for (int i = 0; i < N; i++) {
-//     time[i] = 0.01 * i;
-//     val[i] = sin(2 * M_PI * time[i]);
-//   }
+GTEST_TEST(TestCallPython, SimplePlot) {
+  int N = 100;
 
-//   CallPython("print", "Plotting a (red) sine wave.");
-//   CallPython("figure", 1);
-//   auto h = CallPython("plot", time, val);
-//   CallPython("show");
-// }
+  Eigen::VectorXd time(N), val(N);
+  for (int i = 0; i < N; i++) {
+    time[i] = 0.01 * i;
+    val[i] = sin(2 * M_PI * time[i]);
+  }
 
-// GTEST_TEST(TestCallPython, MeshTest) {
-//   const int N = 25, M = 35;
-//   Eigen::VectorXd x(N), y(M);
-//   Eigen::MatrixXd Z(M, N);
-//   for (int i = 0; i < N; i++) {
-//     x(i) = -3.0 + 6.0 * i / (N - 1);
-//   }
-//   for (int i = 0; i < M; i++) {
-//     y(i) = -3.0 + 6.0 * i / (M - 1);
-//   }
-//   for (int i = 0; i < N; i++) {
-//     for (int j = 0; j < M; j++) {
-//       Z(j, i) = 3 * pow(1 - x(i), 2) * exp(-pow(x(i), 2) - pow(y(j) + 1, 2)) -
-//                 10 * (x(i) / 5 - pow(x(i), 3) - pow(y(j), 5)) *
-//                     exp(-pow(x(i), 2) - pow(y(j), 2)) -
-//                 1.0 / 3.0 * exp(-pow(x(i) + 1, 2) - pow(y(j), 2));
-//     }
-//   }
-//   CallPython("print", "Plotting a simple 3D surface");
-//   CallPython("figure", 2);
-//   CallPython("surf", x, y, Z);
-//   CallPython("show");
-// }
+  CallPython("print", "Plotting a sine wave.");
+  CallPython("figure", 1);
+  auto h = CallPython("plot", time, val);
+  CallPython("show");
+}
+
+GTEST_TEST(TestCallPython, MeshTest) {
+  const int N = 25, M = 35;
+  Eigen::VectorXd x(N), y(M);
+  Eigen::MatrixXd Z(M, N);
+  for (int i = 0; i < N; i++) {
+    x(i) = -3.0 + 6.0 * i / (N - 1);
+  }
+  for (int i = 0; i < M; i++) {
+    y(i) = -3.0 + 6.0 * i / (M - 1);
+  }
+  for (int i = 0; i < N; i++) {
+    for (int j = 0; j < M; j++) {
+      Z(j, i) = 3 * pow(1 - x(i), 2) * exp(-pow(x(i), 2) - pow(y(j) + 1, 2)) -
+                10 * (x(i) / 5 - pow(x(i), 3) - pow(y(j), 5)) *
+                    exp(-pow(x(i), 2) - pow(y(j), 2)) -
+                1.0 / 3.0 * exp(-pow(x(i) + 1, 2) - pow(y(j), 2));
+    }
+  }
+  CallPython("print", "Plotting a simple 3D surface");
+  CallPython("figure", 2);
+  CallPython("surf", x, y, Z);
+  CallPython("show");
+}
 
 }  // namespace common
 }  // namespace drake
