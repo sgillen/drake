@@ -66,7 +66,7 @@ def _merge_dicts(*args):
     return out
 
 # Main functionalty.
-def _default_globals():
+def default_globals():
     # For plotting.
     import numpy as np
     from mpl_toolkits.mplot3d import Axes3D
@@ -86,6 +86,10 @@ def _default_globals():
 
     def show():
         plt.show(block=False)
+
+
+    def pause(interval):
+        plt.pause(interval)
 
 
     def magic(N):
@@ -149,7 +153,7 @@ class CallPythonClient(object):
             self.scope_locals = scope_locals
         required_helpers = _get_required_helpers(self.scope_locals)
         if scope_globals is None:
-            scope_globals = _default_globals()
+            scope_globals = default_globals()
         self.scope_globals = _merge_dicts(required_helpers, scope_globals)
 
         # def _client_var_del(id):
@@ -255,9 +259,7 @@ class CallPythonClient(object):
             # Consume.
             # TODO(eric.cousineau): Trying to quit via Ctrl+C is awkward.
             try:
-                # TODO(eric.cousineau): Figure out better way to abstract this?
-                # How to optionally *not* import matplotlib?
-                import matplotlib.pyplot as plt
+                pause = self.scope_globals['pause']
                 while not self.done:
                     with lock:
                         # Process all messages.
@@ -265,7 +267,7 @@ class CallPythonClient(object):
                             self._handle_message(msg)
                         del queue[:]
                     # Spin busy for a bit.
-                    plt.pause(0.001)
+                    pause(0.001)
             except KeyboardInterrupt:
                 print("Quitting")
                 self.done = True
