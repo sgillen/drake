@@ -1,12 +1,18 @@
+#!/usr/bin/env python
+
 from __future__ import print_function
+import copy
 import sys
 import time
 from threading import Thread, Lock
-import copy
+
+import numpy as np
+# Hacky, but this is the simpliest route right now.
+# @ref https://www.datadoghq.com/blog/engineering/protobuf-parsing-in-python/
+from google.protobuf.internal.decoder import _DecodeVarint32
 
 from drake.common.proto.matlab_rpc_pb2 import MatlabArray, MatlabRPC
 
-import numpy as np
 
 class _KwArgs(dict):
     # Values meant solely for `**kwargs`.
@@ -82,7 +88,7 @@ def default_globals():
     import matplotlib
     import matplotlib.pyplot as plt
     import pylab  # See `%pylab?` in IPython.
-    # Enable interactivity for default globals...
+
     # Where better to put this?
     matplotlib.interactive(True)
 
@@ -130,10 +136,6 @@ def default_globals():
 
 
 def _read_next(f, msg):
-    # Hacky, but this is the simpliest route right now.
-    # @ref https://www.datadoghq.com/blog/engineering/protobuf-parsing-in-python/
-    from google.protobuf.internal.decoder import _DecodeVarint32
-
     # Blech. Should just not use this approach...
     # Consider gRPC? Or just use pybind11 directly?
     # Assume that each write will have at least 4-bytes (including the header size bit).
@@ -189,6 +191,7 @@ class CallPythonClient(object):
         self._file = None
 
     def _to_array(self, arg, dtype):
+        # Convert a protobuf argument to the appropriate NumPy array (or scalar).
         np_raw = np.frombuffer(arg.data, dtype=dtype)
         if arg.shape_type == MatlabArray.SCALAR:
             assert arg.cols == 1 and arg.rows == 1
