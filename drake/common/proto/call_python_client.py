@@ -111,7 +111,11 @@ def default_globals():
 
     # Use <module>.__dict__ to simulate `from <module> import *`, since that is invalid
     # in this scope.
-    return _merge_dicts(globals(), plt.__dict__, pylab.__dict__, locals())
+    return _merge_dicts(
+        globals(),
+        plt.__dict__,
+        pylab.__dict__,
+        locals())
 
 
 def _read_next(f, msg):
