@@ -9,7 +9,7 @@ if [[ ! -e /tmp/matlab_rpc ]]; then
 fi
 
 # Start Python binary in the background.
-${py_client} &
+${py_client} --no_loop &
 
 # Execute C++.
 ${cc_bin}

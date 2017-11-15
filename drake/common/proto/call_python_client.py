@@ -243,11 +243,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--no_threading", action='store_true', help="Disable threaded dispatch.")
     # TODO: This does not work at present. Need to ensure that plotting happens in background thread.
-    parser.add_argument("--loop", action='store_true', help="Poll for commands, even after a C++ session closes. (Use to interact with plots.)")
+    parser.add_argument("--no_loop", action='store_true', help="Stop client after a C++ session closes.")
     parser.add_argument("-f", "--file", type=str, default="/tmp/matlab_rpc")
     args = parser.parse_args(sys.argv[1:])
 
     matplotlib.interactive(True)
 
-    client = CallPythonClient(args.file, loop = args.loop, threaded = not args.no_threading)
+    client = CallPythonClient(args.file, loop = not args.no_loop, threaded = not args.no_threading)
     client.run()
