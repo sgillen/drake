@@ -130,6 +130,8 @@ def _read_next(f, msg):
     peek = f.read(peek_size)
     if len(peek) == 0:
         # We have reached the end.
+        # TODO(eric.cousineau): If running threaded, without looping, this will not correctly
+        # determine the end condition for the client... Why?
         return 0
     msg_size, peek_end = _DecodeVarint32(peek, 0)
     peek_left = peek_size - peek_end
@@ -335,7 +337,6 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--no_threading", action='store_true', help="Disable threaded dispatch.")
-    # TODO: This does not work at present. Need to ensure that plotting happens in background thread.
     parser.add_argument("--no_loop", action='store_true', help="Stop client after a C++ session closes.")
     parser.add_argument("-f", "--file", type=str, default=None)
     args = parser.parse_args(sys.argv[1:])
