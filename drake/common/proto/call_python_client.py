@@ -2,6 +2,7 @@ from __future__ import print_function
 import sys
 import time
 from threading import Thread, Lock
+import copy
 
 from drake.common.proto.matlab_rpc_pb2 import MatlabArray, MatlabRPC
 
@@ -240,7 +241,6 @@ class CallPythonClient(object):
         queue = []
         lock = Lock()
         def producer_loop():
-            import copy
             for msg in self._read_next_message():
                 msg_copy = copy.deepcopy(msg)
                 with lock:
@@ -261,7 +261,7 @@ class CallPythonClient(object):
                         self._execute_message(msg)
                     # Clear all messages.
                     del queue[:]
-                # Spin busy for a bit.
+                # Spin busy for a bit, let matplotlib (or whatever) flush its event queue.
                 pause(0.001)
         except KeyboardInterrupt:
             print("Quitting")
@@ -283,6 +283,7 @@ class CallPythonClient(object):
         @return (count, msgs) where `count` is how many messages were processed (e.g. 0 if no more messages left)
         and `msgs` are either the messages themselves for playback.
         and (b) the messages themselves for playback (if record==True), otherwise an empty list. """
+        assert record or execute, "Not doing anything useful?"
         count = 0
         msgs = []
         for msg in self._read_next_message():
@@ -290,13 +291,13 @@ class CallPythonClient(object):
                 self._execute_message(msg)
             count += 1
             if record:
-                msgs.append(msg)
+                msgs.append(copy.deepcopy(msg))
             if max_count is not None and count >= max_count:
                 break
         return (count, msgs)
 
     def execute_messages(self, msgs):
-        """ Play a set of recorded messages. """
+        """ Execute a set of recorded messages. """
         for msg in msgs:
             self._execute_message(msg)
 
