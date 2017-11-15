@@ -92,7 +92,8 @@ GTEST_TEST(TestCallPython, MeshTest) {
   CallPython("print", "Plotting a simple 3D surface");
   CallPython("figure", 2);
   CallPython("surf", x, y, Z);
-  CallPython("show");
+  // An alternative to "show" above (using "plt.show" directly)
+  CallPython("plt.show", ToPythonKwargs("block", false));
 }
 
 }  // namespace common
