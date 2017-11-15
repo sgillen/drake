@@ -9,6 +9,8 @@ import numpy as np
 from matplotlib.widgets import LassoSelector
 from matplotlib.path import Path
 
+import time
+
 
 class SelectFromCollection(object):
     """Select indices from a matplotlib collection using `LassoSelector`.
@@ -83,7 +85,9 @@ if __name__ == '__main__':
     selector = SelectFromCollection(ax, pts)
 
     plt.draw()
-    input('Press Enter to accept selected points')
+    # input('Press Enter to accept selected points')
+    print('Sleeping for 2s')
+    time.sleep(2)
     print("Selected points:")
     print(selector.xys[selector.ind])
     selector.disconnect()
