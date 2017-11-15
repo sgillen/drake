@@ -11,6 +11,9 @@ from pylab import *  # See `%pylab?` in IPython.
 
 # Helpers (to keep interface as simple as possible).
 def setitem(obj, index, value):
+    print(obj)
+    print(index)
+    print(value)
     obj[index] = value
     return obj[index]
 
@@ -124,6 +127,13 @@ def run(filename):
             del client_vars[id]
     scope_locals.update(_client_var_del=_client_var_del)
 
+    def get_dim(arg):
+        if arg.is_vector:
+            assert arg.cols == 1
+            return (arg.rows,)
+        else:
+            return (arg.rows, arg.cols)
+
     print("[ Start ]")
 
     msg = MatlabRPC()
@@ -150,16 +160,16 @@ def run(filename):
                         raise RuntimeError("Unknown local variable. Dropping message.")
                     value = client_vars[id]
                 elif arg.type == MatlabArray.DOUBLE:
-                    dim = (arg.rows, arg.cols)
+                    dim = get_dim(arg)
                     value = np.frombuffer(arg_raw, dtype=np.double).reshape(dim)
                 elif arg.type == MatlabArray.CHAR:
                     assert arg.rows == 1
                     value = str(arg_raw)
                 elif arg.type == MatlabArray.LOGICAL:
-                    dim = (arg.rows, arg.cols)
+                    dim = get_dim(arg)
                     value = np.frombuffer(arg_raw, dtype=np.bool).reshape(dim)
                 elif arg.type == MatlabArray.INT:
-                    dim = (arg.rows, arg.cols)
+                    dim = get_dim(arg)
                     value = np.frombuffer(arg_raw, dtype=np.int32).reshape(dim)
                 else:
                     assert False

@@ -21,6 +21,8 @@ message MatlabArray
   // Dimensions.
   optional int32 rows = 2;
   optional int32 cols = 3;
+  // Information.
+  optional int32 is_vector = 5;
 
   optional bytes data = 4;
 

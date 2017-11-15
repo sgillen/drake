@@ -46,11 +46,12 @@ void ToMatlabArray(double var, MatlabArray* matlab_array) {
   matlab_array->set_data(&var, num_bytes);
 }
 
-void ToMatlabArray(const Eigen::Ref<const Eigen::MatrixXd>& mat,
-                   MatlabArray* matlab_array) {
+void ToMatlabArrayImpl(const Eigen::Ref<const Eigen::MatrixXd>& mat,
+                   MatlabArray* matlab_array, bool is_vector) {
   matlab_array->set_type(MatlabArray::DOUBLE);
   matlab_array->set_rows(mat.rows());
   matlab_array->set_cols(mat.cols());
+  matlab_array->set_is_vector(is_vector);
   int num_bytes = sizeof(double) * mat.rows() * mat.cols();
   matlab_array->set_data(mat.data(), num_bytes);
 }
@@ -63,22 +64,24 @@ void ToMatlabArray(int var, MatlabArray* matlab_array) {
   matlab_array->set_data(&var, num_bytes);
 }
 
-void ToMatlabArray(const Eigen::Ref<const Eigen::MatrixXi>& mat,
-                   MatlabArray* matlab_array) {
+void ToMatlabArrayImpl(const Eigen::Ref<const Eigen::MatrixXi>& mat,
+                   MatlabArray* matlab_array, bool is_vector) {
   matlab_array->set_type(MatlabArray::INT);
   matlab_array->set_rows(mat.rows());
   matlab_array->set_cols(mat.cols());
+  matlab_array->set_is_vector(is_vector);
   int num_bytes = sizeof(int) * mat.rows() * mat.cols();
   matlab_array->set_data(mat.data(), num_bytes);
 }
 
-void ToMatlabArray(
+void ToMatlabArrayImpl(
     const Eigen::Ref<const Eigen::Matrix<bool, Eigen::Dynamic, Eigen::Dynamic>>&
         mat,
-    MatlabArray* matlab_array) {
+    MatlabArray* matlab_array, bool is_vector) {
   matlab_array->set_type(MatlabArray::LOGICAL);
   matlab_array->set_rows(mat.rows());
   matlab_array->set_cols(mat.cols());
+  matlab_array->set_is_vector(is_vector);
   int num_bytes = sizeof(bool) * mat.rows() * mat.cols();
   matlab_array->set_data(mat.data(), num_bytes);
 }

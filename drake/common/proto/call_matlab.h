@@ -44,20 +44,27 @@ void ToMatlabArray(const MatlabRemoteVariable& var, MatlabArray* matlab_array);
 
 void ToMatlabArray(double scalar, MatlabArray* matlab_array);
 
-void ToMatlabArray(
+void ToMatlabArrayImpl(
     const Eigen::Ref<const Eigen::Matrix<bool, Eigen::Dynamic, Eigen::Dynamic>>&
         mat,
-    MatlabArray* matlab_array);
+    MatlabArray* matlab_array, bool is_vector);
 
-void ToMatlabArray(const Eigen::Ref<const Eigen::MatrixXd>& mat,
-                   MatlabArray* matlab_array);
+void ToMatlabArrayImpl(const Eigen::Ref<const Eigen::MatrixXd>& mat,
+                   MatlabArray* matlab_array, bool is_vector);
 
 void ToMatlabArray(int scalar, MatlabArray* matlab_array);
 
-void ToMatlabArray(const Eigen::Ref<const Eigen::MatrixXi>& mat,
-                   MatlabArray* matlab_array);
+void ToMatlabArrayImpl(const Eigen::Ref<const Eigen::MatrixXi>& mat,
+                   MatlabArray* matlab_array, bool is_vector);
 
 void ToMatlabArray(const std::string& str, MatlabArray* matlab_array);
+
+template <typename Derived>
+void ToMatlabArray(const Eigen::MatrixBase<Derived>& mat,
+                   MatlabArray* matlab_array) {
+  bool is_vector = (Derived::ColsAtCompileTime == 1);
+  return ToMatlabArrayImpl(mat, matlab_array, is_vector);
+}
 
 // Helper methods for variadic template call in CallMatlab.
 namespace internal {
