@@ -116,7 +116,7 @@ def _read_next(f, msg):
 
 
 class CallPythonClient(object):
-    def __init__(self, filename, threaded = True):
+    def __init__(self, filename, threaded = True, loop = False):
         self.filename = filename
         # Scope. Give it access to everything here.
         # However, keep it's written values scoped.
@@ -133,6 +133,9 @@ class CallPythonClient(object):
         self.client_vars = {}
 
         self.threaded = threaded
+        self.loop = loop
+
+        self.done = False
 
     def _to_array(self, arg, dtype):
         np_raw = np.frombuffer(arg.data, dtype=dtype)
@@ -205,11 +208,12 @@ class CallPythonClient(object):
                     msg_copy = copy.deepcopy(msg)
                     with lock:
                         queue.append(msg_copy)
+                self.done = True
             producer = Thread(target = producer_loop)
             producer.start()
 
             # Consume.
-            while True:
+            while not self.done:
                 with lock:
                     # Process all messages.
                     for msg in queue:
@@ -225,32 +229,25 @@ class CallPythonClient(object):
         # Return a new incoming message.
         # Not guaranteed to be a unique instance. Should copy if needed.
         msg = MatlabRPC()
-        with open(self.filename, 'rb') as f:
-            while _read_next(f, msg):
-                yield msg
+        while not self.done:
+            with open(self.filename, 'rb') as f:
+                while _read_next(f, msg) and not self.done:
+                    yield msg
+            if not self.loop:
+                break
  
 
 if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--wait", action='store_true', help="Use to interact with plots.")
+    parser.add_argument("--no_threading", action='store_true', help="Disable threaded dispatch.")
     # TODO: This does not work at present. Need to ensure that plotting happens in background thread.
     parser.add_argument("--loop", action='store_true', help="Poll for commands, even after a C++ session closes. (Use to interact with plots.)")
     parser.add_argument("-f", "--file", type=str, default="/tmp/matlab_rpc")
     args = parser.parse_args(sys.argv[1:])
 
-    print(matplotlib.get_backend())
     matplotlib.interactive(True)
-    assert matplotlib.is_interactive()
 
-    client = CallPythonClient(args.file)
+    client = CallPythonClient(args.file, loop = args.loop, threaded = not args.no_threading)
     client.run()
-    if args.loop:
-        # raise RuntimeError("Will not function as expected")
-        while True:
-            client.run()
-    if args.wait:
-        print("waiting...")
-        # Block.
-        plt.show(block=True)
