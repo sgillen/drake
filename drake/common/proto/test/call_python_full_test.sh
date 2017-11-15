@@ -17,7 +17,7 @@ ${cc_bin}
 # When this is done, Python client should exit.
 wait
 
-# Do this again, but with example script to partially consume stuff.
-${py_client_example} &
-${cc_bin}
-wait
+# # Do this again, but with example script to partially consume stuff.
+# ${py_client_example} &
+# ${cc_bin}
+# wait
