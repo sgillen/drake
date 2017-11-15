@@ -39,7 +39,11 @@ class _KwArgs(dict):
     pass
 
 
-def make_kwargs(**kwargs):
+def make_kwargs(*args):
+    assert len(args) % 2 == 0
+    keys = args[0::2]
+    values = args[1::2]
+    kwargs = dict(zip(keys, values))
     return _KwArgs(**kwargs)
 
 

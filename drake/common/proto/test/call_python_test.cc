@@ -12,6 +12,12 @@ GTEST_TEST(TestCallPython, DispStr) {
   CallPython("disp", "World");
 }
 
+GTEST_TEST(TestCallPython, CheckKwargs) {
+  // Ensure that we can create dict with Kwargs (MATLAB-style of arguments).
+  auto out = CallPython("dict", ToPythonKwargs("a", 2, "b", "hello"));
+  CallPython("print", out);
+}
+
 GTEST_TEST(TestCallPython, DispEigenMatrix) {
   Eigen::Matrix2d m;
   m << 1, 2, 3, 4;
