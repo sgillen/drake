@@ -281,6 +281,20 @@ class CallPythonClient(object):
                 return count
         return count
 
+    def record_messages(self, max_count=None):
+        """ Record messages, returning them, but do not process them. """
+        msgs = []
+        for msg in self._generate_messages():
+            msg.append(msgs)
+            if max_count is not None and len(msgs) >= max_count:
+                break
+        return msgs
+
+    def play_messages(self, msgs):
+        """ Play a set of recorded messages. """
+        for msg in msgs:
+            self._handle_message(msg)
+
     def _get_file(self):
         # TODO(eric.cousineau): For IPython, the file pointer may linger, and may cause C++
         # clients to *not* block on initial execution.
