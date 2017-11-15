@@ -1,6 +1,7 @@
 from __future__ import print_function
 import sys
 import time
+from threading import Thread, Lock
 
 from drake.common.proto.matlab_rpc_pb2 import MatlabArray, MatlabRPC
 
@@ -115,7 +116,7 @@ def _read_next(f, msg):
 
 
 class CallPythonClient(object):
-    def __init__(self, filename):
+    def __init__(self, filename, threaded = True):
         self.filename = filename
         # Scope. Give it access to everything here.
         # However, keep it's written values scoped.
@@ -130,6 +131,8 @@ class CallPythonClient(object):
 
         # Variables indexed by GUID.
         self.client_vars = {}
+
+        self.threaded = threaded
 
     def _to_array(self, arg, dtype):
         np_raw = np.frombuffer(arg.data, dtype=dtype)
@@ -192,11 +195,39 @@ class CallPythonClient(object):
         self.client_vars[out_id] = out
 
     def run(self):
+        if self.threaded:
+            # Main thread is consumer
+            queue = []
+            lock = Lock()
+            def producer_loop():
+                import copy
+                for msg in self._generate_messages():
+                    msg_copy = copy.deepcopy(msg)
+                    with lock:
+                        queue.append(msg_copy)
+            producer = Thread(target = producer_loop)
+            producer.start()
+
+            # Consume.
+            while True:
+                with lock:
+                    # Process all messages.
+                    for msg in queue:
+                        self._handle_message(msg)
+                    del queue[:]
+                # Spin busy for a bit.
+                plt.pause(0.001)
+        else:
+            for msg in self._generate_messages():
+                self._handle_message(msg)
+
+    def _generate_messages(self):
+        # Return a new incoming message.
+        # Not guaranteed to be a unique instance. Should copy if needed.
         msg = MatlabRPC()
         with open(self.filename, 'rb') as f:
             while _read_next(f, msg):
-                time.sleep(0.1)
-                self._handle_message(msg)
+                yield msg
  
 
 if __name__ == "__main__":
