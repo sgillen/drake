@@ -238,6 +238,10 @@ class CallPythonClient(object):
         self.client_vars[out_id] = out
 
     def run(self):
+        """ Run the client code.
+        @note This must be run in the main thread if used for plotting.
+        @note If you wish to maintain interactivity, enable the `threaded` option.
+        """
         if self.threaded:
             # Main thread is consumer
             queue = []
