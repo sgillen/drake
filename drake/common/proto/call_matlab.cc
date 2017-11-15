@@ -40,6 +40,7 @@ void ToMatlabArray(const MatlabRemoteVariable& var, MatlabArray* matlab_array) {
 
 void ToMatlabArray(double var, MatlabArray* matlab_array) {
   matlab_array->set_type(MatlabArray::DOUBLE);
+  matlab_array->set_shape_type(MatlabArray::SCALAR);
   matlab_array->set_rows(1);
   matlab_array->set_cols(1);
   int num_bytes = sizeof(double);
@@ -51,13 +52,15 @@ void ToMatlabArrayImpl(const Eigen::Ref<const Eigen::MatrixXd>& mat,
   matlab_array->set_type(MatlabArray::DOUBLE);
   matlab_array->set_rows(mat.rows());
   matlab_array->set_cols(mat.cols());
-  matlab_array->set_is_vector(is_vector);
+  matlab_array->set_shape_type(
+      is_vector ? MatlabArray::VECTOR : MatlabArray::MATRIX);
   int num_bytes = sizeof(double) * mat.rows() * mat.cols();
   matlab_array->set_data(mat.data(), num_bytes);
 }
 
 void ToMatlabArray(int var, MatlabArray* matlab_array) {
   matlab_array->set_type(MatlabArray::INT);
+  matlab_array->set_shape_type(MatlabArray::SCALAR);
   matlab_array->set_rows(1);
   matlab_array->set_cols(1);
   int num_bytes = sizeof(int);
@@ -69,7 +72,8 @@ void ToMatlabArrayImpl(const Eigen::Ref<const Eigen::MatrixXi>& mat,
   matlab_array->set_type(MatlabArray::INT);
   matlab_array->set_rows(mat.rows());
   matlab_array->set_cols(mat.cols());
-  matlab_array->set_is_vector(is_vector);
+  matlab_array->set_shape_type(
+      is_vector ? MatlabArray::VECTOR : MatlabArray::MATRIX);
   int num_bytes = sizeof(int) * mat.rows() * mat.cols();
   matlab_array->set_data(mat.data(), num_bytes);
 }
@@ -81,7 +85,8 @@ void ToMatlabArrayImpl(
   matlab_array->set_type(MatlabArray::LOGICAL);
   matlab_array->set_rows(mat.rows());
   matlab_array->set_cols(mat.cols());
-  matlab_array->set_is_vector(is_vector);
+  matlab_array->set_shape_type(
+      is_vector ? MatlabArray::VECTOR : MatlabArray::MATRIX);
   int num_bytes = sizeof(bool) * mat.rows() * mat.cols();
   matlab_array->set_data(mat.data(), num_bytes);
 }

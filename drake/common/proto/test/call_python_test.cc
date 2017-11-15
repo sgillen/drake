@@ -7,15 +7,20 @@
 namespace drake {
 namespace common {
 
-// GTEST_TEST(TestCallPython, DispEigenMatrix) {
-//   Eigen::Matrix2d m;
-//   m << 1, 2, 3, 4;
-//   CallPython("print", m);
+GTEST_TEST(TestCallPython, DispStr) {
+  CallPython("print", "Hello");
+  CallPython("disp", "World");
+}
 
-//   Eigen::Matrix<bool, 2, 2> b;
-//   b << true, false, true, false;
-//   CallPython("print", b);
-// }
+GTEST_TEST(TestCallPython, DispEigenMatrix) {
+  Eigen::Matrix2d m;
+  m << 1, 2, 3, 4;
+  CallPython("print", m);
+
+  Eigen::Matrix<bool, 2, 2> b;
+  b << true, false, true, false;
+  CallPython("print", b);
+}
 
 GTEST_TEST(TestCallPython, RemoteVarTest) {
   auto magic = CallPython("magic", 3);
@@ -38,7 +43,7 @@ GTEST_TEST(TestCallPython, RemoteVarTest) {
                 ToPythonSlice(":")));
 
   CallPython("print", "Second column should now be 1,2,3: ");
-  auto n = magic(ToPythonSlice(":"), 1) = Eigen::Vector3i(1, 2, 3);
+  auto n = (magic(ToPythonSlice(":"), 1) = Eigen::Vector3d(1, 2, 3));
   CallPython("print", n);
   CallPython("print", magic);
 }

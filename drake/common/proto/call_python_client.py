@@ -11,16 +11,11 @@ from pylab import *  # See `%pylab?` in IPython.
 
 # Helpers (to keep interface as simple as possible).
 def setitem(obj, index, value):
-    print(obj)
-    print(index)
-    print(value)
     obj[index] = value
     return obj[index]
 
 
 def getitem(obj, index):
-    print(obj)
-    print(index)
     return obj[index]
 
 
@@ -127,14 +122,16 @@ def run(filename):
             del client_vars[id]
     scope_locals.update(_client_var_del=_client_var_del)
 
-    def get_dim(arg):
-        if arg.is_vector:
+    def reformat(arg, dtype):
+        np_raw = np.frombuffer(arg.data, dtype=dtype)
+        if arg.shape_type == MatlabArray.SCALAR:
+            assert arg.cols == 1 and arg.rows == 1
+            return np_raw[0]
+        elif arg.shape_type == MatlabArray.VECTOR:
             assert arg.cols == 1
-            return (arg.rows,)
-        else:
-            return (arg.rows, arg.cols)
-
-    print("[ Start ]")
+            return np_raw.reshape(arg.rows)
+        elif arg.shape_type is None or arg.shape_type == MatlabArray.MATRIX:
+            return np_raw.reshape(arg.rows, arg.cols)
 
     msg = MatlabRPC()
     with open(filename, 'rb') as f:
@@ -143,8 +140,6 @@ def run(filename):
             # if msg.function_name == "_client_var_del":
             #     _client_var_del(msg)
             #     continue
-
-            print(msg)
 
             # Create input arguments.
             args = msg.rhs
@@ -160,17 +155,14 @@ def run(filename):
                         raise RuntimeError("Unknown local variable. Dropping message.")
                     value = client_vars[id]
                 elif arg.type == MatlabArray.DOUBLE:
-                    dim = get_dim(arg)
-                    value = np.frombuffer(arg_raw, dtype=np.double).reshape(dim)
+                    value = reformat(arg, np.double)
                 elif arg.type == MatlabArray.CHAR:
                     assert arg.rows == 1
                     value = str(arg_raw)
                 elif arg.type == MatlabArray.LOGICAL:
-                    dim = get_dim(arg)
-                    value = np.frombuffer(arg_raw, dtype=np.bool).reshape(dim)
+                    value = reformat(arg, np.bool)
                 elif arg.type == MatlabArray.INT:
-                    dim = get_dim(arg)
-                    value = np.frombuffer(arg_raw, dtype=np.int32).reshape(dim)
+                    value = reformat(arg, np.int32)
                 else:
                     assert False
                 if isinstance(value, _KwArgs):
@@ -189,8 +181,6 @@ def run(filename):
                 assert len(msg.lhs) == 1
                 out_id = msg.lhs[0]
                 client_vars[out_id] = out
-
-    print("[ Done ]")
 
 
 if __name__ == "__main__":
