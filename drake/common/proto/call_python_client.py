@@ -213,17 +213,26 @@ class CallPythonClient(object):
             producer.start()
 
             # Consume.
-            while not self.done:
-                with lock:
-                    # Process all messages.
-                    for msg in queue:
-                        self._handle_message(msg)
-                    del queue[:]
-                # Spin busy for a bit.
-                plt.pause(0.001)
+            # TODO(eric.cousineau): Trying to quit via Ctrl+C is awkward.
+            try:
+                while not self.done:
+                    with lock:
+                        # Process all messages.
+                        for msg in queue:
+                            self._handle_message(msg)
+                        del queue[:]
+                    # Spin busy for a bit.
+                    plt.pause(0.001)
+            except KeyboardInterrupt:
+                print("Quitting")
+                self.done = True
         else:
-            for msg in self._generate_messages():
-                self._handle_message(msg)
+            self.handle_all_messages()
+
+    def handle_all_messages(self):
+        # Handle all messages sent (e.g., through IPython).
+        for msg in self._generate_messages():
+            self._handle_message(msg)
 
     def _generate_messages(self):
         # Return a new incoming message.
