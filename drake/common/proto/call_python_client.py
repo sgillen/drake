@@ -114,22 +114,24 @@ def _read_next(f, msg):
     return msg_size
 
 
-def run(filename):
-    # Scope. Give it access to everything here.
-    # However, keep it's written values scoped.
-    scope_globals = globals()
-    scope_locals = {}
+class CallPythonClient(object):
+    def __init__(self, filename):
+        self.filename = filename
+        # Scope. Give it access to everything here.
+        # However, keep it's written values scoped.
+        self.scope_globals = globals()
+        self.scope_locals = {}
 
-    # Variables indexed by GUID.
-    client_vars = {}
+        # def _client_var_del(id):
+        #     # If a variable is created but not used, then it will not be registered.
+        #     if id in client_vars:
+        #         del client_vars[id]
+        # scope_locals.update(_client_var_del=_client_var_del)
 
-    def _client_var_del(id):
-        # If a variable is created but not used, then it will not be registered.
-        if id in client_vars:
-            del client_vars[id]
-    scope_locals.update(_client_var_del=_client_var_del)
+        # Variables indexed by GUID.
+        self.client_vars = {}
 
-    def reformat(arg, dtype):
+    def _to_array(self, arg, dtype):
         np_raw = np.frombuffer(arg.data, dtype=dtype)
         if arg.shape_type == MatlabArray.SCALAR:
             assert arg.cols == 1 and arg.rows == 1
@@ -140,56 +142,62 @@ def run(filename):
         elif arg.shape_type is None or arg.shape_type == MatlabArray.MATRIX:
             return np_raw.reshape(arg.rows, arg.cols)
 
-    msg = MatlabRPC()
-    with open(filename, 'rb') as f:
-        while _read_next(f, msg):
-            time.sleep(0.1)
-            # # Handle special-cases without overhead.
-            # if msg.function_name == "_client_var_del":
-            #     _client_var_del(msg)
-            #     continue
+    def _handle_message(self, msg):
+        # # Handle special-cases without overhead.
+        # if msg.function_name == "_client_var_del":
+        #     _client_var_del(msg)
+        #     continue
 
-            # Create input arguments.
-            args = msg.rhs
-            nargs = len(args)
-            inputs = []
-            kwargs = None
-            for i, arg in enumerate(args):
-                arg_raw = arg.data
-                value = None
-                if arg.type == MatlabArray.REMOTE_VARIABLE_REFERENCE:
-                    id = np.frombuffer(arg_raw, dtype=np.uint64).reshape(1)[0]
-                    if id not in client_vars:
-                        raise RuntimeError("Unknown local variable. Dropping message.")
-                    value = client_vars[id]
-                elif arg.type == MatlabArray.DOUBLE:
-                    value = reformat(arg, np.double)
-                elif arg.type == MatlabArray.CHAR:
-                    assert arg.rows == 1
-                    value = str(arg_raw)
-                elif arg.type == MatlabArray.LOGICAL:
-                    value = reformat(arg, np.bool)
-                elif arg.type == MatlabArray.INT:
-                    value = reformat(arg, np.int32)
-                else:
-                    assert False
-                if isinstance(value, _KwArgs):
-                    assert kwargs is None
-                    kwargs = value
-                else:
-                    inputs.append(value)
+        # Create input arguments.
+        args = msg.rhs
+        nargs = len(args)
+        inputs = []
+        kwargs = None
+        for i, arg in enumerate(args):
+            arg_raw = arg.data
+            value = None
+            if arg.type == MatlabArray.REMOTE_VARIABLE_REFERENCE:
+                id = np.frombuffer(arg_raw, dtype=np.uint64).reshape(1)[0]
+                if id not in self.client_vars:
+                    raise RuntimeError("Unknown local variable. Dropping message.")
+                value = self.client_vars[id]
+            elif arg.type == MatlabArray.DOUBLE:
+                value = self._to_array(arg, np.double)
+            elif arg.type == MatlabArray.CHAR:
+                assert arg.rows == 1
+                value = str(arg_raw)
+            elif arg.type == MatlabArray.LOGICAL:
+                value = self._to_array(arg, np.bool)
+            elif arg.type == MatlabArray.INT:
+                value = self._to_array(arg, np.int32)
+            else:
+                assert False
+            if isinstance(value, _KwArgs):
+                assert kwargs is None
+                kwargs = value
+            else:
+                inputs.append(value)
 
-            # Call the function
-            # N.B. No security measures to sanitize function name.
-            scope_locals.update(_tmp_args = inputs, _tmp_kwargs = kwargs or {})
-            out = eval(msg.function_name + "(*_tmp_args, **_tmp_kwargs)", scope_globals, scope_locals)
+        # Call the function
+        # N.B. No security measures to sanitize function name.
+        function_name = msg.function_name
+        out_id = None
+        if len(msg.lhs) > 0:
+            assert len(msg.lhs) == 1
+            out_id = msg.lhs[0]
 
-            # Update outputs.
-            if len(msg.lhs) > 0:
-                assert len(msg.lhs) == 1
-                out_id = msg.lhs[0]
-                client_vars[out_id] = out
+        self.scope_locals.update(_tmp_args = inputs, _tmp_kwargs = kwargs or {})
+        out = eval(function_name + "(*_tmp_args, **_tmp_kwargs)", self.scope_globals, self.scope_locals)
+        # Update outputs.
+        self.client_vars[out_id] = out
 
+    def run(self):
+        msg = MatlabRPC()
+        with open(self.filename, 'rb') as f:
+            while _read_next(f, msg):
+                time.sleep(0.1)
+                self._handle_message(msg)
+ 
 
 if __name__ == "__main__":
     import argparse
@@ -205,11 +213,12 @@ if __name__ == "__main__":
     matplotlib.interactive(True)
     assert matplotlib.is_interactive()
 
-    run(args.file)
+    client = CallPythonClient(args.file)
+    client.run()
     if args.loop:
         # raise RuntimeError("Will not function as expected")
         while True:
-            run(args.file)
+            client.run()
     if args.wait:
         print("waiting...")
         # Block.
