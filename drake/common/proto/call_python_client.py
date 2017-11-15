@@ -134,6 +134,9 @@ def _read_next(f, msg):
         # determine the end condition for the client... Why?
         return 0
     msg_size, peek_end = _DecodeVarint32(peek, 0)
+    if msg_size == 0:
+        # We have signalled a stop from another thread.
+        return 0
     peek_left = peek_size - peek_end
     # Read remaining and concatenate.
     remaining = f.read(msg_size - peek_left)
@@ -264,7 +267,7 @@ class CallPythonClient(object):
         producer.start()
 
         # Consume.
-        # TODO(eric.cousineau): Trying to quit via Ctrl+C is awkward.
+        # TODO(eric.cousineau): Trying to quit via Ctrl+C is awkward (but kinda works).
         try:
             pause = self.scope_globals['pause']
             while not self.done:
@@ -278,6 +281,13 @@ class CallPythonClient(object):
         except KeyboardInterrupt:
             print("Quitting")
             self.done = True
+            if producer.is_alive():
+                # If this thread is still alive, then we are in '_read_next'.
+                # Even though `self._file` is None, the blocking `read()` operation is with the file.
+                # As a hack, just open the file with write-bits, and write some bits to signal a stop.
+                with open(self.filename, 'wb') as f:
+                    f.write(chr(0) * 4)
+                producer.join()
 
     def handle_messages(self, max_count=None, record=True, handle=True):
         """ Handle all messages sent (e.g., through IPython).
