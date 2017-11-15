@@ -5,6 +5,7 @@ from drake.common.proto.matlab_rpc_pb2 import MatlabArray, MatlabRPC
 
 # For plotting.
 from mpl_toolkits.mplot3d import Axes3D
+import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import *
 from pylab import *  # See `%pylab?` in IPython.
@@ -198,9 +199,13 @@ if __name__ == "__main__":
     parser.add_argument("-f", "--file", type=str, default="/tmp/matlab_rpc")
     args = parser.parse_args(sys.argv[1:])
 
+    print(matplotlib.get_backend())
+    matplotlib.interactive(True)
+    assert matplotlib.is_interactive()
+
     run(args.file)
     if args.loop:
-        raise RuntimeError("Will not function as expected")
+        # raise RuntimeError("Will not function as expected")
         while True:
             run(args.file)
     if args.wait:

@@ -68,7 +68,7 @@ GTEST_TEST(TestCallPython, SimplePlot) {
   CallPython("print", "Plotting a sine wave.");
   CallPython("figure", 1);
   auto h = CallPython("plot", time, val);
-  CallPython("show");
+  // CallPython("show");.
 }
 
 GTEST_TEST(TestCallPython, MeshTest) {
@@ -93,7 +93,8 @@ GTEST_TEST(TestCallPython, MeshTest) {
   CallPython("figure", 2);
   CallPython("surf", x, y, Z);
   // An alternative to "show" above (using "plt.show" directly)
-  CallPython("plt.show", ToPythonKwargs("block", false));
+  CallPython("plt.draw");
+  // CallPython("plt.show", ToPythonKwargs("block", false));
 }
 
 }  // namespace common
