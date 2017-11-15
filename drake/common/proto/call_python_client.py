@@ -97,12 +97,12 @@ def default_globals():
         @note This is a *necessary* function to be defined if these globals are not used! """
         plt.pause(interval)
 
-    def surf(x, y, Z, **kwargs):
+    def surf(x, y, Z, rstride=1, cstride=1, **kwargs):
         """ Plot a 3d surface. """
         fig = plt.gcf()
         ax = fig.gca(projection='3d')
         X, Y = np.meshgrid(x, y)
-        ax.plot_surface(X, Y, Z, **kwargs)
+        ax.plot_surface(X, Y, Z, rstride=rstride, cstride=cstride, **kwargs)
 
     def show():
         """ Show `matplotlib` images without blocking. """
@@ -202,7 +202,7 @@ class CallPythonClient(object):
         elif arg.shape_type is None or arg.shape_type == MatlabArray.MATRIX:
             # TODO(eric.cousineau): Figure out how to ensure `np.frombuffer` creates
             # a column-major array?
-            return np_raw.reshape(arg.rows, arg.cols)
+            return np_raw.reshape(arg.cols, arg.rows).T
 
     def _execute_message(self, msg):
         # Create input arguments.
