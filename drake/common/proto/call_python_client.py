@@ -9,31 +9,39 @@ from drake.common.proto.matlab_rpc_pb2 import MatlabArray, MatlabRPC
 import numpy as np
 
 class _KwArgs(dict):
+    # Values meant solely for `**kwargs`.
     pass
 
 
-# Helpers (to keep interface as simple as possible).
 def _get_required_helpers(scope_locals):
+    # Helpers (to keep interface as simple as possible).
+    def getitem(obj, index):
+        """ Global function for `obj[index]`. """
+        return obj[index]
+
     def setitem(obj, index, value):
+        """ Global function for `obj[index] = value`. """
         obj[index] = value
         return obj[index]
 
-    def getitem(obj, index):
-        return obj[index]
-
     def pass_through(value):
+        """ Pass-through for direct variable access. """
         return value
 
     def disp(value):
+        """ Alias for print. """
         print(value)
 
     def make_tuple(*args):
+        """ Create a tuple from an argument list. """
         return tuple(args)
 
     def make_list(*args):
+        """ Create a list from an argument list. """
         return list(args)
 
     def make_kwargs(*args):
+        """ Create a keyword argument object from an argument list. """
         assert len(args) % 2 == 0
         keys = args[0::2]
         values = args[1::2]
@@ -41,6 +49,7 @@ def _get_required_helpers(scope_locals):
         return _KwArgs(**kwargs)
 
     def make_slice(expr):
+        """ Parse a slice object from a string. """
         def to_piece(s):
             return s and int(s) or None
         pieces = map(to_piece, expr.split(':'))
@@ -49,22 +58,25 @@ def _get_required_helpers(scope_locals):
         else:
             return slice(*pieces)
 
-    def set_var(var, value):
+    def setvar(var, value):
+        """ Set a variable in the client's locals. """
         scope_locals[var] = value
 
     return locals()
 
 
 def _merge_dicts(*args):
+    # Merge a list of dict's.
     out = {}
     for arg in args:
         out.update(arg)
     return out
 
 
-# Main functionalty.
 def default_globals():
-    # For plotting.
+    """ Default globals for code that the client side can execute.
+    This is geared for convenient (not necessarily efficient) plotting,
+    using `matplotlib`. """
     import numpy as np
     from mpl_toolkits.mplot3d import Axes3D
     import matplotlib
@@ -74,21 +86,26 @@ def default_globals():
     # Where better to put this?
     matplotlib.interactive(True)
 
+    def pause(interval):
+        """ Pause for a few seconds, letting the GUI flush its event queue.
+        @note This is a *necessary* function to be defined if these globals are not used! """
+        plt.pause(interval)
+
     def surf(x, y, Z, **kwargs):
+        """ Plot a 3d surface. """
         fig = plt.gcf()
         ax = fig.gca(projection='3d')
         X, Y = np.meshgrid(x, y)
         ax.plot_surface(X, Y, Z, **kwargs)
 
     def show():
+        """ Show `matplotlib` images without blocking. """
         plt.show(block=False)
 
-    def pause(interval):
-        plt.pause(interval)
-
     def magic(N):
-        # Simple odd-only case for magic squares.
-        # From: https://scipython.com/book/chapter-6-numpy/examples/creating-a-magic-square
+        """ Simple odd-only case for magic squares.
+        @ref https://scipython.com/book/chapter-6-numpy/examples/creating-a-magic-square
+        """
         assert N % 2 == 1
         magic_square = np.zeros((N,N), dtype=int)
         n = 1
@@ -154,19 +171,21 @@ class CallPythonClient(object):
             self.scope_locals = {}
         else:
             self.scope_locals = scope_locals
+        # Define globals as (a) required helpers for C++ interface, and
+        # (b) convenience plotting functionality.
+        # N.B. The provided locals OR globals can shadow the helpers. BE CAREFUL!
         required_helpers = _get_required_helpers(self.scope_locals)
         if scope_globals is None:
             scope_globals = default_globals()
         self.scope_globals = _merge_dicts(required_helpers, scope_globals)
 
-        # Variables indexed by GUID.
-        self.client_vars = {}
-
         self.threaded = threaded
         self.loop = loop
 
-        self.done = False
+        # Variables indexed by GUID.
+        self.client_vars = {}
 
+        self._done = False
         self._file = None
 
     def _to_array(self, arg, dtype):
@@ -245,7 +264,7 @@ class CallPythonClient(object):
                 msg_copy = copy.deepcopy(msg)
                 with lock:
                     queue.append(msg_copy)
-            self.done = True
+            self._done = True
         producer = Thread(target = producer_loop)
         producer.start()
 
@@ -254,7 +273,7 @@ class CallPythonClient(object):
         # Is there a way to have `plt.pause` handle Ctrl+C differently?
         try:
             pause = self.scope_globals['pause']
-            while not self.done:
+            while not self._done:
                 with lock:
                     # Process all messages.
                     for msg in queue:
@@ -265,7 +284,7 @@ class CallPythonClient(object):
                 pause(0.001)
         except KeyboardInterrupt:
             print("Quitting")
-            self.done = True
+            self._done = True
             time.sleep(0.05)
             if producer.is_alive():
                 # If this thread is still alive, then we are in '_read_next'.
@@ -318,9 +337,9 @@ class CallPythonClient(object):
         # Return a new incoming message using a generator.
         # Not guaranteed to be a unique instance. Should copy if needed.
         msg = MatlabRPC()
-        while not self.done:
+        while not self._done:
             f = self._get_file()
-            while _read_next(f, msg) and not self.done:
+            while _read_next(f, msg) and not self._done:
                 yield msg
             # Close the file if we reach the end;
             # If we don't reach the end, keep the file open (e.g. if reading a few messages).

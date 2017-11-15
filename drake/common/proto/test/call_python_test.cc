@@ -19,7 +19,7 @@ GTEST_TEST(TestCallPython, CheckKwargs) {
 }
 
 GTEST_TEST(TestCallPython, SetVar) {
-  CallPython("set_var", "example_var", "Howdy");
+  CallPython("setvar", "example_var", "Howdy");
   CallPython("eval", "print(example_var)");
   CallPython("eval", "print(locals().keys())");
 }
@@ -74,7 +74,9 @@ GTEST_TEST(TestCallPython, SimplePlot) {
   CallPython("print", "Plotting a sine wave.");
   CallPython("figure", 1);
   auto h = CallPython("plot", time, val);
-  // CallPython("show");.
+  // Send variables.
+  CallPython("setvar", "time", time);
+  CallPython("setvar", "val", val);
 }
 
 GTEST_TEST(TestCallPython, MeshTest) {
@@ -98,9 +100,10 @@ GTEST_TEST(TestCallPython, MeshTest) {
   CallPython("print", "Plotting a simple 3D surface");
   CallPython("figure", 2);
   CallPython("surf", x, y, Z);
-  // An alternative to "show" above (using "plt.show" directly)
-  // CallPython("plt.draw");
-  // CallPython("plt.show", ToPythonKwargs("block", false));
+  // Send variables.
+  CallPython("setvar", "x", x);
+  CallPython("setvar", "y", y);
+  CallPython("setvar", "Z", Z);
 }
 
 }  // namespace common
