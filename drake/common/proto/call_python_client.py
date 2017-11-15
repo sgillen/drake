@@ -165,12 +165,6 @@ class CallPythonClient(object):
             scope_globals = default_globals()
         self.scope_globals = _merge_dicts(required_helpers, scope_globals)
 
-        # def _client_var_del(id):
-        #     # If a variable is created but not used, then it will not be registered.
-        #     if id in client_vars:
-        #         del client_vars[id]
-        # scope_locals.update(_client_var_del=_client_var_del)
-
         # Variables indexed by GUID.
         self.client_vars = {}
 
@@ -193,11 +187,6 @@ class CallPythonClient(object):
             return np_raw.reshape(arg.rows, arg.cols)
 
     def _handle_message(self, msg):
-        # # Handle special-cases without overhead.
-        # if msg.function_name == "_client_var_del":
-        #     _client_var_del(msg)
-        #     continue
-
         # Create input arguments.
         args = msg.rhs
         nargs = len(args)
@@ -237,6 +226,7 @@ class CallPythonClient(object):
             out_id = msg.lhs[0]
 
         self.scope_locals.update(_tmp_args = inputs, _tmp_kwargs = kwargs or {})
+        # N.B. No try-catch block here. Can change this if needed.
         out = eval(function_name + "(*_tmp_args, **_tmp_kwargs)", self.scope_globals, self.scope_locals)
         self.scope_locals.update(_tmp_out = out)
         # Update outputs.
@@ -268,6 +258,7 @@ class CallPythonClient(object):
 
         # Consume.
         # TODO(eric.cousineau): Trying to quit via Ctrl+C is awkward (but kinda works).
+        # Is there a way to have `plt.pause` handle Ctrl+C differently?
         try:
             pause = self.scope_globals['pause']
             while not self.done:
@@ -275,12 +266,14 @@ class CallPythonClient(object):
                     # Process all messages.
                     for msg in queue:
                         self._handle_message(msg)
+                    # Clear all messages.
                     del queue[:]
                 # Spin busy for a bit.
                 pause(0.001)
         except KeyboardInterrupt:
             print("Quitting")
             self.done = True
+            time.sleep(0.05)
             if producer.is_alive():
                 # If this thread is still alive, then we are in '_read_next'.
                 # Even though `self._file` is None, the blocking `read()` operation is with the file.
