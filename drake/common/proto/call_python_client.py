@@ -17,22 +17,17 @@ def _get_required_helpers(scope_locals):
         obj[index] = value
         return obj[index]
 
-
     def getitem(obj, index):
         return obj[index]
-
 
     def pass_through(value):
         return value
 
-
     def disp(value):
         print(value)
 
-
     def make_tuple(*args):
         return tuple(args)
-
 
     def make_list(*args):
         return list(args)
@@ -43,7 +38,6 @@ def _get_required_helpers(scope_locals):
         values = args[1::2]
         kwargs = dict(zip(keys, values))
         return _KwArgs(**kwargs)
-
 
     def make_slice(expr):
         def to_piece(s):
@@ -59,11 +53,13 @@ def _get_required_helpers(scope_locals):
 
     return locals()
 
+
 def _merge_dicts(*args):
     out = {}
     for arg in args:
         out.update(arg)
     return out
+
 
 # Main functionalty.
 def default_globals():
@@ -83,14 +79,11 @@ def default_globals():
         X, Y = np.meshgrid(x, y)
         ax.plot_surface(X, Y, Z, **kwargs)
 
-
     def show():
         plt.show(block=False)
 
-
     def pause(interval):
         plt.pause(interval)
-
 
     def magic(N):
         # Simple odd-only case for magic squares.
@@ -186,7 +179,7 @@ class CallPythonClient(object):
         elif arg.shape_type is None or arg.shape_type == MatlabArray.MATRIX:
             return np_raw.reshape(arg.rows, arg.cols)
 
-    def _handle_message(self, msg):
+    def _execute_message(self, msg):
         # Create input arguments.
         args = msg.rhs
         nargs = len(args)
@@ -248,7 +241,7 @@ class CallPythonClient(object):
         lock = Lock()
         def producer_loop():
             import copy
-            for msg in self._generate_messages():
+            for msg in self._read_next_message():
                 msg_copy = copy.deepcopy(msg)
                 with lock:
                     queue.append(msg_copy)
@@ -265,7 +258,7 @@ class CallPythonClient(object):
                 with lock:
                     # Process all messages.
                     for msg in queue:
-                        self._handle_message(msg)
+                        self._execute_message(msg)
                     # Clear all messages.
                     del queue[:]
                 # Spin busy for a bit.
@@ -282,19 +275,19 @@ class CallPythonClient(object):
                     f.write(chr(0) * 4)
                 producer.join()
 
-    def handle_messages(self, max_count=None, record=True, handle=True):
+    def handle_messages(self, max_count=None, record=True, execute=True):
         """ Handle all messages sent (e.g., through IPython).
         @param max_count Maximum number of messages to handle.
         @param record Record all messages and return them.
-        @param handle Play the given message.
+        @param execute Execute the given message upon receiving it.
         @return (count, msgs) where `count` is how many messages were processed (e.g. 0 if no more messages left)
         and `msgs` are either the messages themselves for playback.
         and (b) the messages themselves for playback (if record==True), otherwise an empty list. """
         count = 0
         msgs = []
-        for msg in self._generate_messages():
-            if handle:
-                self._handle_message(msg)
+        for msg in self._read_next_message():
+            if execute:
+                self._execute_message(msg)
             count += 1
             if record:
                 msgs.append(msg)
@@ -302,10 +295,10 @@ class CallPythonClient(object):
                 break
         return (count, msgs)
 
-    def play_messages(self, msgs):
+    def execute_messages(self, msgs):
         """ Play a set of recorded messages. """
         for msg in msgs:
-            self._handle_message(msg)
+            self._execute_message(msg)
 
     def _get_file(self):
         # TODO(eric.cousineau): For IPython, the file pointer may linger, and may cause C++
@@ -320,8 +313,8 @@ class CallPythonClient(object):
             self._file.close()
             self._file = None
 
-    def _generate_messages(self):
-        # Return a new incoming message.
+    def _read_next_message(self):
+        # Return a new incoming message using a generator.
         # Not guaranteed to be a unique instance. Should copy if needed.
         msg = MatlabRPC()
         while not self.done:
