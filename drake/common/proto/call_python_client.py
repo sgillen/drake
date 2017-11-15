@@ -243,56 +243,59 @@ class CallPythonClient(object):
         @note If you wish to maintain interactivity, enable the `threaded` option.
         """
         if self.threaded:
-            # Main thread is consumer
-            queue = []
-            lock = Lock()
-            def producer_loop():
-                import copy
-                for msg in self._generate_messages():
-                    msg_copy = copy.deepcopy(msg)
-                    with lock:
-                        queue.append(msg_copy)
-                self.done = True
-            producer = Thread(target = producer_loop)
-            producer.start()
-
-            # Consume.
-            # TODO(eric.cousineau): Trying to quit via Ctrl+C is awkward.
-            try:
-                pause = self.scope_globals['pause']
-                while not self.done:
-                    with lock:
-                        # Process all messages.
-                        for msg in queue:
-                            self._handle_message(msg)
-                        del queue[:]
-                    # Spin busy for a bit.
-                    pause(0.001)
-            except KeyboardInterrupt:
-                print("Quitting")
-                self.done = True
+            self._handle_messages_async()
         else:
             self.handle_messages()
 
-    def handle_messages(self, max_count=None):
-        """ Handle all messages sent (e.g., through IPython).
-        Returns how many messages were processed (e.g. 0 if no more messages left. """
-        count = 0
-        for msg in self._generate_messages():
-            self._handle_message(msg)
-            count += 1
-            if max_count is not None and count >= max_count:
-                return count
-        return count
+    def _handle_messages_async(self):
+        # Main thread is consumer
+        queue = []
+        lock = Lock()
+        def producer_loop():
+            import copy
+            for msg in self._generate_messages():
+                msg_copy = copy.deepcopy(msg)
+                with lock:
+                    queue.append(msg_copy)
+            self.done = True
+        producer = Thread(target = producer_loop)
+        producer.start()
 
-    def record_messages(self, max_count=None):
-        """ Record messages, returning them, but do not process them. """
+        # Consume.
+        # TODO(eric.cousineau): Trying to quit via Ctrl+C is awkward.
+        try:
+            pause = self.scope_globals['pause']
+            while not self.done:
+                with lock:
+                    # Process all messages.
+                    for msg in queue:
+                        self._handle_message(msg)
+                    del queue[:]
+                # Spin busy for a bit.
+                pause(0.001)
+        except KeyboardInterrupt:
+            print("Quitting")
+            self.done = True
+
+    def handle_messages(self, max_count=None, record=True, handle=True):
+        """ Handle all messages sent (e.g., through IPython).
+        @param max_count Maximum number of messages to handle.
+        @param record Record all messages and return them.
+        @param handle Play the given message.
+        @return (count, msgs) where `count` is how many messages were processed (e.g. 0 if no more messages left)
+        and `msgs` are either the messages themselves for playback.
+        and (b) the messages themselves for playback (if record==True), otherwise an empty list. """
+        count = 0
         msgs = []
         for msg in self._generate_messages():
-            msg.append(msgs)
-            if max_count is not None and len(msgs) >= max_count:
+            if handle:
+                self._handle_message(msg)
+            count += 1
+            if record:
+                msgs.append(msg)
+            if max_count is not None and count >= max_count:
                 break
-        return msgs
+        return (count, msgs)
 
     def play_messages(self, msgs):
         """ Play a set of recorded messages. """
