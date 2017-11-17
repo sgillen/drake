@@ -35,7 +35,6 @@
 ///
 /// See call_matlab_test.cc for some simple examples.
 
-
 namespace drake {
 namespace common {
 
@@ -44,19 +43,36 @@ namespace common {
 ///  another one of these methods.
 
 class MatlabRemoteVariable;
+
+namespace internal {
+
+void ToMatlabArrayImpl(
+    const Eigen::Ref<const Eigen::Matrix<bool, Eigen::Dynamic, Eigen::Dynamic>>&
+        mat,
+    MatlabArray* matlab_array, bool is_vector);
+
+void ToMatlabArrayImpl(const Eigen::Ref<const Eigen::MatrixXd>& mat,
+                       MatlabArray* matlab_array, bool is_vector);
+
+void ToMatlabArrayImpl(const Eigen::Ref<const Eigen::MatrixXi>& mat,
+                       MatlabArray* matlab_array, bool is_vector);
+
+}  // namespace internal
+
 void ToMatlabArray(const MatlabRemoteVariable& var, MatlabArray* matlab_array);
 
 void ToMatlabArray(double scalar, MatlabArray* matlab_array);
 
-void ToMatlabArray(
-    const Eigen::Ref<const Eigen::Matrix<bool, Eigen::Dynamic, Eigen::Dynamic>>&
-        mat,
-    MatlabArray* matlab_array);
-
-void ToMatlabArray(const Eigen::Ref<const Eigen::MatrixXd>& mat,
-                   MatlabArray* matlab_array);
+void ToMatlabArray(int scalar, MatlabArray* matlab_array);
 
 void ToMatlabArray(const std::string& str, MatlabArray* matlab_array);
+
+template <typename Derived>
+void ToMatlabArray(const Eigen::MatrixBase<Derived>& mat,
+                   MatlabArray* matlab_array) {
+  const bool is_vector = (Derived::ColsAtCompileTime == 1);
+  return internal::ToMatlabArrayImpl(mat, matlab_array, is_vector);
+}
 
 // Helper methods for variadic template call in CallMatlab.
 namespace internal {
