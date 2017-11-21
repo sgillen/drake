@@ -1,0 +1,42 @@
+
+
+PY_IMPORTS = ["drake/bindings"]
+# Installation location, relative to "{LIB_DIR}/python{PY_VER}/site-packages".
+PY_PKG_INSTALL = "pydrake/solvers"
+
+
+drake_pybind_cc_binary(
+    name = "solvers/_pydrake_ik.so",
+    srcs = [
+        "pydrake_ik.cc",
+    ],
+)
+
+drake_pybind_cc_binary(
+    name = "solvers/_pydrake_mathematicalprogram.so",
+    srcs = [
+        "pydrake_mathematicalprogram.cc",
+        "pydrake_symbolic_types.h",
+    ],
+)
+
+drake_pybind_cc_binary(
+    name = "solvers/gurobi.so",
+    srcs = [
+        "pydrake_gurobi.cc",
+    ],
+)
+
+drake_pybind_cc_binary(
+    name = "solvers/ipopt.so",
+    srcs = [
+        "pydrake_ipopt.cc",
+    ],
+)
+
+drake_pybind_cc_binary(
+    name = "solvers/mosek.so",
+    srcs = [
+        "pydrake_mosek.cc",
+    ],
+)
