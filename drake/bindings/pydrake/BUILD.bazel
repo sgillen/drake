@@ -1,6 +1,7 @@
 # -*- python -*-
 
-load("//tools:drake.bzl",
+load(
+    "//tools:drake.bzl",
     "drake_cc_library",
 )
 load(
@@ -10,9 +11,11 @@ load(
 )
 load("@drake//tools/install:install.bzl", "install")
 load("//tools/lint:lint.bzl", "add_lint_tests")
-load(":pybind.bzl",
+load(
+    ":pybind.bzl",
     "drake_pybind_library",
-    "get_drake_pybind_installs")
+    "get_drake_pybind_installs",
+)
 
 package(default_visibility = ["//drake/bindings/pydrake:__subpackages__"])
 
@@ -27,20 +30,20 @@ drake_pybind_library(
         "//drake/common",
     ],
     cc_srcs = ["common_py.cc"],
+    py_pkg_install = PY_PKG_INSTALL,
     py_srcs = [
         "__init__.py",
         "common.py",
         "path.py",
     ],
-    py_pkg_install = PY_PKG_INSTALL,
 )
 
 # TODO(eric.cousineau): Ensure that this is not installed.
 drake_cc_library(
     name = "autodiff_types",
     hdrs = ["autodiff_types_py.h"],
-    # NOTE: We must violate IWYU here because we do not want this dependencies leaking in
-    # at install time.
+    # NOTE: We must violate IWYU here because we do not want these dependencies
+    # leaking in at install time.
     # deps = [
     #     "//drake/common:autodiff",
     # ],
@@ -55,14 +58,14 @@ drake_pybind_library(
         "//drake/common:autodiff",
     ],
     cc_srcs = ["autodiffutils_py.cc"],
-    py_srcs = [
-        "autodiffutils.py",
-        "forwarddiff.py",
-    ],
     py_deps = [
         ":common_py",
     ],
     py_pkg_install = PY_PKG_INSTALL,
+    py_srcs = [
+        "autodiffutils.py",
+        "forwarddiff.py",
+    ],
 )
 
 drake_pybind_library(
@@ -74,12 +77,12 @@ drake_pybind_library(
         "//drake/multibody:rigid_body_tree",
     ],
     cc_srcs = ["rbtree_py.cc"],
-    py_srcs = ["rbtree.py"],
     py_deps = [
         ":autodiffutils_py",
         ":common_py",
     ],
     py_pkg_install = PY_PKG_INSTALL,
+    py_srcs = ["rbtree.py"],
 )
 
 drake_pybind_library(
@@ -87,8 +90,8 @@ drake_pybind_library(
     cc_devel_deps = [
         "//drake/multibody:parsers",
     ],
-    cc_srcs = ["parsers_py.cc"],
     cc_so_name = "parsers",
+    cc_srcs = ["parsers_py.cc"],
     py_deps = [
         ":common_py",
     ],
@@ -103,22 +106,23 @@ drake_cc_library(
 
 drake_pybind_library(
     name = "symbolic_py",
-    cc_devel_deps = [
-        "//drake/common:symbolic",
-    ],
     cc_deps = [
         ":symbolic_types_py",
     ],
+    cc_devel_deps = [
+        "//drake/common:symbolic",
+    ],
     cc_srcs = ["symbolic_py.cc"],
-    py_srcs = ["symbolic.py"],
     py_deps = [
         ":common_py",
     ],
     py_pkg_install = PY_PKG_INSTALL,
+    py_srcs = ["symbolic.py"],
 )
 
 install(
     name = "install",
+    visibility = ["//visibility:public"],
     deps = get_drake_pybind_installs([
         ":common_py",
         ":autodiffutils_py",
@@ -127,20 +131,19 @@ install(
         ":parsers_py",
         "//drake/bindings/pydrake/solvers",
     ]),
-    visibility = ["//visibility:public"],
 )
 
 drake_py_library(
     name = "pydrake",
+    visibility = ["//visibility:public"],
     deps = [
-        ":common_py",
         ":autodiffutils_py",
-        ":symbolic_py",
-        ":rbtree_py",
+        ":common_py",
         ":parsers_py",
+        ":rbtree_py",
+        ":symbolic_py",
         "//drake/bindings/pydrake/solvers",
     ],
-    visibility = ["//visibility:public"],
 )
 
 drake_py_test(

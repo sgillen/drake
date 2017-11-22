@@ -3,19 +3,19 @@ from __future__ import absolute_import, division, print_function
 import numpy as np
 
 from ._ik_py import (IKResults,
-                          IKoptions,
-                          InverseKin,
-                          InverseKinTraj,
-                          InverseKinPointwise,
-                          PostureConstraint,
-                          RelativePositionConstraint,
-                          WorldEulerConstraint,
-                          WorldQuatConstraint,
-                          WorldGazeDirConstraint,
-                          WorldGazeTargetConstraint,
-                          RelativeGazeDirConstraint,
-                          MinDistanceConstraint,
-                          QuasiStaticConstraint)
+                     IKoptions,
+                     InverseKin,
+                     InverseKinTraj,
+                     InverseKinPointwise,
+                     PostureConstraint,
+                     RelativePositionConstraint,
+                     WorldEulerConstraint,
+                     WorldQuatConstraint,
+                     WorldGazeDirConstraint,
+                     WorldGazeTargetConstraint,
+                     RelativeGazeDirConstraint,
+                     MinDistanceConstraint,
+                     QuasiStaticConstraint)
 
 from ._ik_py import WorldPositionConstraint as _WorldPositionConstraint
 from ._ik_py import WorldPositionInFrameConstraint as \

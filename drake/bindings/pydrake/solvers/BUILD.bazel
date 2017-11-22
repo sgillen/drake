@@ -1,4 +1,5 @@
-load("//drake/bindings/pydrake:pybind.bzl",
+load(
+    "//drake/bindings/pydrake:pybind.bzl",
     "drake_pybind_library",
     "get_drake_pybind_installs",
     "get_pybind_dest",
@@ -18,6 +19,7 @@ load("//tools/workspace/mosek:mosek.bzl", "mosek_test_tags")
 package(default_visibility = ["//drake/bindings/pydrake:__subpackages__"])
 
 PY_IMPORTS = ["drake/bindings"]
+
 PY_PKG_INSTALL = "pydrake/solvers"
 
 drake_py_library(
@@ -34,24 +36,24 @@ drake_pybind_library(
         "//drake/multibody:inverse_kinematics",
     ],
     cc_srcs = ["ik_py.cc"],
-    py_srcs = ["ik.py"],
     py_pkg_install = PY_PKG_INSTALL,
+    py_srcs = ["ik.py"],
 )
 
 drake_pybind_library(
     name = "mathematicalprogram_py",
-    cc_srcs = ["mathematicalprogram_py.cc"],
-    py_srcs = ["mathematicalprogram.py"],
-    cc_devel_deps = [
-        "//drake/solvers:mathematical_program",
-    ],
     cc_deps = [
         "//drake/bindings/pydrake:symbolic_types_py",
     ],
+    cc_devel_deps = [
+        "//drake/solvers:mathematical_program",
+    ],
+    cc_srcs = ["mathematicalprogram_py.cc"],
     py_deps = [
         "//drake/bindings/pydrake:symbolic_py",
     ],
     py_pkg_install = PY_PKG_INSTALL,
+    py_srcs = ["mathematicalprogram.py"],
 )
 
 drake_pybind_library(
@@ -59,8 +61,8 @@ drake_pybind_library(
     cc_devel_deps = [
         "//drake/solvers:gurobi_solver",
     ],
-    cc_srcs = ["gurobi_py.cc"],
     cc_so_name = "gurobi",
+    cc_srcs = ["gurobi_py.cc"],
     py_pkg_install = PY_PKG_INSTALL,
 )
 
@@ -69,8 +71,8 @@ drake_pybind_library(
     cc_devel_deps = [
         "//drake/solvers:ipopt_solver",
     ],
-    cc_srcs = ["ipopt_py.cc"],
     cc_so_name = "ipopt",
+    cc_srcs = ["ipopt_py.cc"],
     py_pkg_install = PY_PKG_INSTALL,
 )
 
@@ -79,18 +81,18 @@ drake_pybind_library(
     cc_devel_deps = [
         "//drake/solvers:mosek_solver",
     ],
-    cc_srcs = ["mosek_py.cc"],
     cc_so_name = "mosek",
+    cc_srcs = ["mosek_py.cc"],
     py_pkg_install = PY_PKG_INSTALL,
 )
 
 drake_py_library(
     name = "solvers",
     deps = [
-        ":ik_py",
-        ":mathematicalprogram_py",
         ":gurobi_py",
+        ":ik_py",
         ":ipopt_py",
+        ":mathematicalprogram_py",
         ":mosek_py",
     ],
 )

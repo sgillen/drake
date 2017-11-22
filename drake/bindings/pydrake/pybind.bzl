@@ -1,6 +1,7 @@
 # -*- python -*-
 
-load("//tools:drake.bzl",
+load(
+    "//tools:drake.bzl",
     "drake_cc_binary",
 )
 load(
@@ -48,6 +49,7 @@ def _drake_pybind_cc_binary(name, srcs = [], copts = [],
 
 # TODO: Use relative paths to figure this out...
 PY_IMPORTS_DEFAULT = [".."]
+
 PY_VERSION = "2.7"
 
 # TODO(eric.cousineau): Consider making a `PybindProvider`, to sort
@@ -64,7 +66,8 @@ def drake_pybind_library(name,
                          py_imports = PY_IMPORTS_DEFAULT,
                          py_pkg_install = None,
                          visibility = None):
-    """ Declare a pybind11 library, with C++ base code and Python interface code.
+    """ Declare a pybind11 library, with C++ base code and Python interface
+    code.
 
     @param cc_srcs
         C++ source files.
@@ -74,11 +77,12 @@ def drake_pybind_library(name,
         statically-linked libraries.
     @param cc_devel_deps (optional)
         C++ development dependencies.
-        At present, these are no-op, as `libdrake.so` (and the relevant headers) are used.
+        At present, these are no-op, as `libdrake.so` (and the relevant
+        headers) are used.
         (In the future, `cc_devel_deps` and `cc_deps` will be combined.
     @param cc_so_name (optional)
-        Shared object name. By default, this is `_${name}`, so that the C++ code
-        can be then imported in a more controlled fashion in Python.
+        Shared object name. By default, this is `_${name}`, so that the C++
+        code can be then imported in a more controlled fashion in Python.
         If overridden, this could be the public interface exposed to the user.
     @param py_srcs
         Python sources.
@@ -86,10 +90,11 @@ def drake_pybind_library(name,
         Python dependencies.
     @param py_imports
         Python import directories.
-        This tells `py_library` how to structure the Python directories so we can
-        type "import pydrake.${module}".
+        This tells `py_library` how to structure the Python directories so we
+        can type "import pydrake.${module}".
     @param py_pkg_install
-        Installation location, relative to "{LIB_DIR}/python{PY_VER}/site-packages".
+        Installation location, relative to
+        "{LIB_DIR}/python{PY_VER}/site-packages".
     """
 
     # TODO(eric.cousineau): Is there a way to check a dependency's target type?
@@ -123,7 +128,8 @@ def drake_pybind_library(name,
     # Add installation.
     if py_pkg_install:
         py_dest = get_pybind_dest(py_pkg_install)
-        # TODO(eric.cousineau): Somehow incorporate a warning if this is in development mode?
+        # TODO(eric.cousineau): Somehow incorporate a warning if this is in
+        # development mode?
         install(
             name = install_name,
             targets = [
