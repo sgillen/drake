@@ -2,7 +2,7 @@
 
 load("//tools:drake.bzl", "drake_cc_binary")
 
-def drake_pybind_cc_binary(name, srcs = [], copts = [], **kwargs):
+def _drake_pybind_cc_binary(name, srcs = [], copts = [], **kwargs):
     """Declare a pybind11 shared library with the given name and srcs.  The
     libdrake.so library and its headers are already automatically depended-on
     by this rule.
@@ -49,3 +49,100 @@ def drake_pybind_cc_binary(name, srcs = [], copts = [], **kwargs):
         ],
         **kwargs
     )
+
+PY_IMPORTS_DEFAULT = ["drake/bindings"]
+PY_VERSION = "2.7"
+
+# TODO(eric.cousineau): Consider making a `PybindProvider`, to sort
+# out dependencies, sources, etc.
+
+def drake_pybind_library(name,
+                         cc_srcs = [],
+                         cc_deps = [], cc_devel_deps = [], copts = [],
+                         cc_so_name = None,
+                         py_srcs = [], py_deps = [],
+                         py_imports = PY_IMPORTS_DEFAULT,
+                         py_pkg_install = None,
+                         **kwargs):
+    """ Declare a pybind11 library, with C++ base code and Python interface code.
+
+    @param cc_srcs
+        C++ source files.
+    @param cc_deps (optional)
+        C++ dependencies.
+        At present, these should be header only, as they will violate ODR with
+        statically-linked libraries.
+    @param cc_devel_deps (optional)
+        C++ development dependencies.
+        At present, these are no-op, as `libdrake.so` (and the relevant headers) are used.
+        (In the future, `cc_devel_deps` and `cc_deps` will be combined.
+    @param cc_so_name (optional)
+        Shared object name. By default, this is `_${name}`, so that the C++ code
+        can be then imported in a more controlled fashion in Python.
+        If overridden, this could be the public interface exposed to the user.
+    @param py_srcs
+        Python sources.
+    @param py_deps
+        Python dependencies.
+    @param py_imports
+        Python import directories.
+        This tells `py_library` how to structure the Python directories so we can
+        type "import pydrake.${module}".
+    @param py_pkg_install
+        Installation location, relative to "{LIB_DIR}/python{PY_VER}/site-packages".
+    """
+
+    # TODO(eric.cousineau): Is there a way to check a dependency's target type?
+
+    # These copts are per pybind11 deficiencies.
+    copts_pybind11 = [
+        "-Wno-#warnings",
+        "-Wno-cpp",
+        "-Wno-unknown-warning-option",
+    ]
+
+    install_name = name + "_install"
+
+    if not py_name:
+        py_name = "_" + name
+    cc_so = py_name + ".so"
+    # TODO(eric.cousineau): Ensure `cc_deps` is header-only.
+    _drake_pybind_cc_binary(
+        name = cc_so,
+        srcs = cc_srcs,
+        deps = cc_deps,
+    )
+
+    # Add Python library.
+    drake_py_library(
+        name = name,
+        data = [cc_so],
+        srcs = py_srcs,
+        deps = py_deps,
+        imports = py_imports,
+    )
+
+    # Add installation.
+    if py_pkg_install:
+        py_dest = "lib/python{}/site-packages/{}".format(PY_VERSION, py_pkg_install)
+        # TODO(eric.cousineau): Somehow incorporate a warning if this is in development mode?
+        install(
+            name = install_name,
+            targets = [
+                py_name,
+                cc_so,
+            ],
+            py_dest = py_dest,
+            library_dest = py_dest,
+        )
+
+def _get_install(target):
+    if target.contains(":"):
+        # Append suffix to target.
+        return target + "_install"
+    else:
+        # Assume that the package has an ":install" target.
+        return target + ":install"
+
+def get_drake_pybind_installs(targets):
+    return [_get_install(target) for target in targets]

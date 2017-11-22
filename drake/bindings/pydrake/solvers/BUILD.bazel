@@ -9,7 +9,6 @@ load("//tools/workspace/mosek:mosek.bzl", "mosek_test_tags")
 package(default_visibility = ["//drake/bindings/pydrake:__subpackages__"])
 
 PY_IMPORTS = ["drake/bindings"]
-# Installation location, relative to "{LIB_DIR}/python{PY_VER}/site-packages".
 PY_PKG_INSTALL = "pydrake/solvers"
 
 drake_py_library(
@@ -18,7 +17,6 @@ drake_py_library(
     deps = [
         "//drake/bindings/pydrake:common_py",
     ],
-    imports = PY_IMPORTS,
 )
 
 drake_pybind_library(
@@ -28,7 +26,6 @@ drake_pybind_library(
     ],
     cc_srcs = ["ik_py.cc"],
     py_srcs = ["ik.py"],
-    py_imports = PY_IMPORTS,
     py_pkg_install = PY_PKG_INSTALL,
 )
 
@@ -55,6 +52,7 @@ drake_pybind_library(
     cc_srcs = [
         "gurobi.cc",
     ],
+    cc_so_name = "gurobi",
 )
 
 drake_pybind_library(
@@ -65,6 +63,7 @@ drake_pybind_library(
     cc_srcs = [
         "ipopt.cc",
     ],
+    cc_so_name = "ipopt",
 )
 
 drake_pybind_library(
@@ -75,6 +74,7 @@ drake_pybind_library(
     cc_srcs = [
         "mosek.cc",
     ],
+    cc_so_name = "mosek",
 )
 
 install(

@@ -15,10 +15,6 @@ load(":pybind.bzl",
 
 package(default_visibility = ["//drake/bindings/pydrake:__subpackages__"])
 
-# This tells `py_library` how to structure the Python directories so we can
-# type "import pydrake.${modu1e}".
-PY_IMPORTS = ["drake/bindings"]
-# Installation location, relative to "{LIB_DIR}/python{PY_VER}/site-packages".
 PY_PKG_INSTALL = "pydrake"
 
 # WARNING:
@@ -34,7 +30,6 @@ drake_pybind_library(
         "__init__.py",
         "common.py",
     ],
-    py_imports = PY_IMPORTS,
     py_pkg_install = PY_PKG_INSTALL,
 )
 
@@ -65,7 +60,6 @@ drake_pybind_library(
     py_deps = [
         ":common_py",
     ],
-    py_imports = PY_IMPORTS,
     py_pkg_install = PY_PKG_INSTALL,
 )
 
@@ -83,7 +77,6 @@ drake_pybind_library(
         ":autodiffutils_py",
         ":common_py",
     ],
-    py_imports = PY_IMPORTS,
     py_pkg_install = PY_PKG_INSTALL,
 )
 
@@ -97,7 +90,6 @@ drake_pybind_library(
     py_deps = [
         ":common_py",
     ],
-    py_imports = PY_IMPORTS,
     py_pkg_install = PY_PKG_INSTALL,
 )
 
@@ -120,7 +112,6 @@ drake_pybind_library(
     py_deps = [
         ":common_py",
     ],
-    py_imports = PY_IMPORTS,
     py_pkg_install = PY_PKG_INSTALL,
 )
 
