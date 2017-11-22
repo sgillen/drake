@@ -94,13 +94,6 @@ def drake_pybind_library(name,
 
     # TODO(eric.cousineau): Is there a way to check a dependency's target type?
 
-    # These copts are per pybind11 deficiencies.
-    copts_pybind11 = [
-        "-Wno-#warnings",
-        "-Wno-cpp",
-        "-Wno-unknown-warning-option",
-    ]
-
     py_name = name
     install_name = name + "_install"
 
