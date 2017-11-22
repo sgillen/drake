@@ -51,7 +51,10 @@ PY_IMPORTS_DEFAULT = [".."]
 PY_VERSION = "2.7"
 
 # TODO(eric.cousineau): Consider making a `PybindProvider`, to sort
-# out dependencies, sources, etc.
+# out dependencies, sources, etc, and simplify installation.
+
+def get_pybind_dest(py_pkg_install):
+    return "lib/python{}/site-packages/{}".format(PY_VERSION, py_pkg_install)
 
 def drake_pybind_library(name,
                          cc_srcs = [],
@@ -98,15 +101,17 @@ def drake_pybind_library(name,
         "-Wno-unknown-warning-option",
     ]
 
+    py_name = name
     install_name = name + "_install"
 
     if not cc_so_name:
         cc_so_name = "_" + name
-    cc_so_bin = cc_so_name + ".so"
+    if not cc_so_name.endswith('.so'):
+        cc_so_name += '.so'
 
     # TODO(eric.cousineau): Ensure `cc_deps` is header-only.
     _drake_pybind_cc_binary(
-        name = cc_so_bin,
+        name = cc_so_name,
         srcs = cc_srcs,
         deps = cc_deps,
         visibility = visibility,
@@ -115,7 +120,7 @@ def drake_pybind_library(name,
     # Add Python library.
     drake_py_library(
         name = name,
-        data = [cc_so_bin],
+        data = [cc_so_name],
         srcs = py_srcs,
         deps = py_deps,
         imports = py_imports,
@@ -124,13 +129,13 @@ def drake_pybind_library(name,
 
     # Add installation.
     if py_pkg_install:
-        py_dest = "lib/python{}/site-packages/{}".format(PY_VERSION, py_pkg_install)
+        py_dest = get_pybind_dest(py_pkg_install)
         # TODO(eric.cousineau): Somehow incorporate a warning if this is in development mode?
         install(
             name = install_name,
             targets = [
+                py_name,
                 cc_so_name,
-                cc_so_bin,
             ],
             py_dest = py_dest,
             library_dest = py_dest,

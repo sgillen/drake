@@ -1,6 +1,7 @@
 load("//drake/bindings/pydrake:pybind.bzl",
     "drake_pybind_library",
     "get_drake_pybind_installs",
+    "get_pybind_dest",
 )
 load(
     "@drake//tools/skylark:drake_py.bzl",
@@ -9,6 +10,9 @@ load(
 )
 load("@drake//tools/install:install.bzl", "install")
 load("//tools/lint:lint.bzl", "add_lint_tests")
+load("//tools/workspace/mosek:mosek.bzl", "mosek_test_tags")
+load("//tools/lint:lint.bzl", "add_lint_tests")
+load("//tools/workspace/gurobi:gurobi.bzl", "gurobi_test_tags")
 load("//tools/workspace/mosek:mosek.bzl", "mosek_test_tags")
 
 package(default_visibility = ["//drake/bindings/pydrake:__subpackages__"])
@@ -47,6 +51,7 @@ drake_pybind_library(
     py_deps = [
         "//drake/bindings/pydrake:symbolic_py",
     ],
+    py_pkg_install = PY_PKG_INSTALL,
 )
 
 drake_pybind_library(
@@ -56,6 +61,7 @@ drake_pybind_library(
     ],
     cc_srcs = ["gurobi_py.cc"],
     cc_so_name = "gurobi",
+    py_pkg_install = PY_PKG_INSTALL,
 )
 
 drake_pybind_library(
@@ -65,6 +71,7 @@ drake_pybind_library(
     ],
     cc_srcs = ["ipopt_py.cc"],
     cc_so_name = "ipopt",
+    py_pkg_install = PY_PKG_INSTALL,
 )
 
 drake_pybind_library(
@@ -74,6 +81,7 @@ drake_pybind_library(
     ],
     cc_srcs = ["mosek_py.cc"],
     cc_so_name = "mosek",
+    py_pkg_install = PY_PKG_INSTALL,
 )
 
 drake_py_library(
@@ -89,13 +97,76 @@ drake_py_library(
 
 install(
     name = "install",
+    targets = [
+        ":module_py",
+    ],
+    py_dest = get_pybind_dest(PY_PKG_INSTALL),
     deps = get_drake_pybind_installs([
         ":ik_py",
         ":mathematicalprogram_py",
         ":gurobi_py",
         ":ipopt_py",
         ":mosek_py",
-    ]) + [
-        ":module_py",
-    ],
+    ]),
 )
+
+drake_py_test(
+    name = "mathematical_program_gurobi_solver_test",
+    size = "small",
+    srcs = ["test/gurobi_solver_test.py"],
+    main = "test/gurobi_solver_test.py",
+    tags = gurobi_test_tags(),
+    deps = ["//drake/bindings/pydrake"],
+)
+
+drake_py_test(
+    name = "mathematical_program_ipopt_solver_test",
+    size = "small",
+    srcs = ["test/ipopt_solver_test.py"],
+    args = select({
+        "//tools:no_ipopt": ["TestIpoptSolver.unavailable"],
+        "//conditions:default": [],
+    }),
+    main = "test/ipopt_solver_test.py",
+    deps = ["//drake/bindings/pydrake"],
+)
+
+drake_py_test(
+    name = "mathematical_program_mosek_solver_test",
+    size = "small",
+    srcs = ["test/mosek_solver_test.py"],
+    main = "test/mosek_solver_test.py",
+    tags = mosek_test_tags(),
+    deps = ["//drake/bindings/pydrake"],
+)
+
+drake_py_test(
+    name = "mathematical_program_test",
+    size = "small",
+    srcs = ["test/mathematicalprogram_test.py"],
+    main = "test/mathematicalprogram_test.py",
+    tags = gurobi_test_tags(),
+    deps = ["//drake/bindings/pydrake"],
+)
+
+drake_py_test(
+    name = "pr2ik_test",
+    size = "small",
+    srcs = ["test/pr2_ik_test.py"],
+    data = ["//drake/examples/pr2:models"],
+    main = "test/pr2_ik_test.py",
+    tags = ["snopt"],
+    deps = ["//drake/bindings/pydrake"],
+)
+
+drake_py_test(
+    name = "rbtik_test",
+    size = "small",
+    srcs = ["test/rbt_ik_test.py"],
+    data = ["//drake/examples/pendulum:models"],
+    main = "test/rbt_ik_test.py",
+    tags = ["snopt"],
+    deps = ["//drake/bindings/pydrake"],
+)
+
+add_lint_tests()

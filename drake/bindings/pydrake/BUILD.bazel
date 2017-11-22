@@ -1,6 +1,5 @@
 # -*- python -*-
 
-load("//tools/workspace/gurobi:gurobi.bzl", "gurobi_test_tags")
 load("//tools:drake.bzl",
     "drake_cc_library",
 )
@@ -11,7 +10,6 @@ load(
 )
 load("@drake//tools/install:install.bzl", "install")
 load("//tools/lint:lint.bzl", "add_lint_tests")
-load("//tools/workspace/mosek:mosek.bzl", "mosek_test_tags")
 load(":pybind.bzl",
     "drake_pybind_library",
     "get_drake_pybind_installs")
@@ -127,9 +125,7 @@ install(
         ":symbolic_py",
         ":rbtree_py",
         "//drake/bindings/pydrake/solvers",
-    ]) + [
-        "//drake:install"
-    ],
+    ]),
     visibility = ["//visibility:public"],
 )
 
@@ -187,55 +183,6 @@ drake_py_test(
 )
 
 drake_py_test(
-    name = "mathematical_program_gurobi_solver_test",
-    size = "small",
-    srcs = ["test/gurobi_solver_test.py"],
-    main = "test/gurobi_solver_test.py",
-    tags = gurobi_test_tags(),
-    deps = [":pydrake"],
-)
-
-drake_py_test(
-    name = "mathematical_program_ipopt_solver_test",
-    size = "small",
-    srcs = ["test/ipopt_solver_test.py"],
-    args = select({
-        "//tools:no_ipopt": ["TestIpoptSolver.unavailable"],
-        "//conditions:default": [],
-    }),
-    main = "test/ipopt_solver_test.py",
-    deps = [":pydrake"],
-)
-
-drake_py_test(
-    name = "mathematical_program_mosek_solver_test",
-    size = "small",
-    srcs = ["test/mosek_solver_test.py"],
-    main = "test/mosek_solver_test.py",
-    tags = mosek_test_tags(),
-    deps = [":pydrake"],
-)
-
-drake_py_test(
-    name = "mathematical_program_test",
-    size = "small",
-    srcs = ["test/mathematicalprogram_test.py"],
-    main = "test/mathematicalprogram_test.py",
-    tags = gurobi_test_tags(),
-    deps = [":pydrake"],
-)
-
-drake_py_test(
-    name = "pr2ik_test",
-    size = "small",
-    srcs = ["test/pr2_ik_test.py"],
-    data = ["//drake/examples/pr2:models"],
-    main = "test/pr2_ik_test.py",
-    tags = ["snopt"],
-    deps = [":pydrake"],
-)
-
-drake_py_test(
     name = "rbm_forward_kin_test",
     size = "small",
     srcs = ["test/rbt_transform_points_test.py"],
@@ -250,16 +197,6 @@ drake_py_test(
     srcs = ["test/rbt_com_test.py"],
     data = ["//drake/examples/pendulum:models"],
     main = "test/rbt_com_test.py",
-    deps = [":pydrake"],
-)
-
-drake_py_test(
-    name = "rbtik_test",
-    size = "small",
-    srcs = ["test/rbt_ik_test.py"],
-    data = ["//drake/examples/pendulum:models"],
-    main = "test/rbt_ik_test.py",
-    tags = ["snopt"],
     deps = [":pydrake"],
 )
 
