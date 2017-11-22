@@ -54,9 +54,7 @@ drake_pybind_library(
     cc_devel_deps = [
         "//drake/solvers:gurobi_solver",
     ],
-    cc_srcs = [
-        "gurobi.cc",
-    ],
+    cc_srcs = ["gurobi_py.cc"],
     cc_so_name = "gurobi",
 )
 
@@ -65,9 +63,7 @@ drake_pybind_library(
     cc_devel_deps = [
         "//drake/solvers:ipopt_solver",
     ],
-    cc_srcs = [
-        "ipopt.cc",
-    ],
+    cc_srcs = ["ipopt_py.cc"],
     cc_so_name = "ipopt",
 )
 
@@ -76,9 +72,7 @@ drake_pybind_library(
     cc_devel_deps = [
         "//drake/solvers:mosek_solver",
     ],
-    cc_srcs = [
-        "mosek.cc",
-    ],
+    cc_srcs = ["mosek_py.cc"],
     cc_so_name = "mosek",
 )
 
@@ -101,5 +95,7 @@ install(
         ":gurobi_py",
         ":ipopt_py",
         ":mosek_py",
-    ]),
+    ]) + [
+        ":module_py",
+    ],
 )
