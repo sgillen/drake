@@ -32,6 +32,7 @@ drake_pybind_library(
     py_srcs = [
         "__init__.py",
         "common.py",
+        "path.py",
     ],
     py_pkg_install = PY_PKG_INSTALL,
 )
