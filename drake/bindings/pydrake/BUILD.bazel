@@ -144,9 +144,9 @@ drake_py_library(
 drake_py_test(
     name = "atlas_constructor_test",
     size = "small",
-    srcs = ["test/testAtlasConstructor.py"],
+    srcs = ["test/atlas_constructor_test.py"],
     data = ["//drake/examples/atlas:models"],
-    main = "test/testAtlasConstructor.py",
+    main = "test/atlas_constructor_test.py",
     deps = [":pydrake"],
 )
 
@@ -243,9 +243,9 @@ drake_py_test(
 drake_py_test(
     name = "rbt_com_test",
     size = "small",
-    srcs = ["test/testRBTCoM.py"],
+    srcs = ["test/rbt_com_test.py"],
     data = ["//drake/examples/pendulum:models"],
-    main = "test/testRBTCoM.py",
+    main = "test/rbt_com_test.py",
     deps = [":pydrake"],
 )
 
