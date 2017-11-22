@@ -88,7 +88,7 @@ drake_pybind_library(
         "//drake/multibody:parsers",
     ],
     cc_srcs = ["parsers_py.cc"],
-    py_srcs = ["parsers.py"],
+    cc_so_name = "parsers",
     py_deps = [
         ":common_py",
     ],

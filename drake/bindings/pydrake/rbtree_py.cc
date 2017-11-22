@@ -18,7 +18,7 @@ PYBIND11_MODULE(_rbtree_py, m) {
   using drake::multibody::joints::FloatingBaseType;
   using drake::parsers::PackageMap;
 
-  py::module::import("pydrake.parsers");
+  // py::module::import("pydrake.parsers");
 
   py::enum_<FloatingBaseType>(m, "FloatingBaseType")
     .value("kFixed", FloatingBaseType::kFixed)
