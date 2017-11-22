@@ -46,7 +46,8 @@ def _drake_pybind_cc_binary(name, srcs = [], copts = [],
         ] + deps,
     )
 
-PY_IMPORTS_DEFAULT = ["drake/bindings"]
+# TODO: Use relative paths to figure this out...
+PY_IMPORTS_DEFAULT = [".."]
 PY_VERSION = "2.7"
 
 # TODO(eric.cousineau): Consider making a `PybindProvider`, to sort
