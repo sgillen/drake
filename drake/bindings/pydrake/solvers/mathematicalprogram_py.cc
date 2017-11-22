@@ -78,7 +78,7 @@ auto RegisterBinding(py::handle* pscope,
 
 }  // namespace
 
-PYBIND11_MODULE(_pydrake_mathematicalprogram, m) {
+PYBIND11_MODULE(_mathematicalprogram_py, m) {
   m.doc() = "Drake MathematicalProgram Bindings";
 
   py::object variable =
