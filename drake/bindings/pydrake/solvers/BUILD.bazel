@@ -1,7 +1,12 @@
-load(":pybind.bzl",
+load("//drake/bindings/pydrake:pybind.bzl",
     "drake_pybind_library",
-    "get_drake_pybind_install")
-
+    "get_drake_pybind_installs",
+)
+load(
+    "@drake//tools/skylark:drake_py.bzl",
+    "drake_py_library",
+    "drake_py_test",
+)
 load("@drake//tools/install:install.bzl", "install")
 load("//tools/lint:lint.bzl", "add_lint_tests")
 load("//tools/workspace/mosek:mosek.bzl", "mosek_test_tags")
@@ -75,6 +80,17 @@ drake_pybind_library(
         "mosek.cc",
     ],
     cc_so_name = "mosek",
+)
+
+drake_py_library(
+    name = "solvers",
+    deps = [
+        ":ik_py",
+        ":mathematicalprogram_py",
+        ":gurobi_py",
+        ":ipopt_py",
+        ":mosek_py",
+    ],
 )
 
 install(

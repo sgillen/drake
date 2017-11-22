@@ -1,8 +1,17 @@
 # -*- python -*-
 
-load("//tools:drake.bzl", "drake_cc_binary")
+load("//tools:drake.bzl",
+    "drake_cc_binary",
+)
+load(
+    "@drake//tools/skylark:drake_py.bzl",
+    "drake_py_library",
+)
+load("@drake//tools/install:install.bzl", "install")
 
-def _drake_pybind_cc_binary(name, srcs = [], copts = [], **kwargs):
+def _drake_pybind_cc_binary(name, srcs = [], copts = [],
+                            deps = [],
+                            visibility = None,):
     """Declare a pybind11 shared library with the given name and srcs.  The
     libdrake.so library and its headers are already automatically depended-on
     by this rule.
@@ -10,18 +19,6 @@ def _drake_pybind_cc_binary(name, srcs = [], copts = [], **kwargs):
     The deps, linkshared, and linkstatic parameters cannot be set by the
     caller; this rule must fully control their values.
     """
-
-    # Disallow `linkshared` and `linkstatic` because Bazel requires them to be
-    # set to 1 when making a ".so" library.
-    #
-    # Disallow `deps` because we _must not_ deps on any given object code more
-    # than once or else we risk linking in multiple copies of it into different
-    # _pybind_foo.so files, which breaks C++ global variables.  All object code
-    # must come in through libdrake.so.  (Conceivably a header-only library
-    # could be allowed in deps, but we can fix that when we need it.)
-    for key in ["deps", "linkshared", "linkstatic"]:
-        if key in kwargs:
-            fail("%s cannot be set by the caller" % key)
 
     drake_cc_binary(
         name = name,
@@ -46,8 +43,7 @@ def _drake_pybind_cc_binary(name, srcs = [], copts = [], **kwargs):
             # TODO(jwnimmer-tri) We should be getting stx header path from
             # :drake_shared_library, but that isn't working yet.
             "@stx",
-        ],
-        **kwargs
+        ] + deps,
     )
 
 PY_IMPORTS_DEFAULT = ["drake/bindings"]
@@ -63,7 +59,7 @@ def drake_pybind_library(name,
                          py_srcs = [], py_deps = [],
                          py_imports = PY_IMPORTS_DEFAULT,
                          py_pkg_install = None,
-                         **kwargs):
+                         visibility = None):
     """ Declare a pybind11 library, with C++ base code and Python interface code.
 
     @param cc_srcs
@@ -103,23 +99,26 @@ def drake_pybind_library(name,
 
     install_name = name + "_install"
 
-    if not py_name:
-        py_name = "_" + name
-    cc_so = py_name + ".so"
+    if not cc_so_name:
+        cc_so_name = "_" + name
+    cc_so_bin = cc_so_name + ".so"
+
     # TODO(eric.cousineau): Ensure `cc_deps` is header-only.
     _drake_pybind_cc_binary(
-        name = cc_so,
+        name = cc_so_bin,
         srcs = cc_srcs,
         deps = cc_deps,
+        visibility = visibility,
     )
 
     # Add Python library.
     drake_py_library(
         name = name,
-        data = [cc_so],
+        data = [cc_so_bin],
         srcs = py_srcs,
         deps = py_deps,
         imports = py_imports,
+        visibility = visibility,
     )
 
     # Add installation.
@@ -129,15 +128,16 @@ def drake_pybind_library(name,
         install(
             name = install_name,
             targets = [
-                py_name,
-                cc_so,
+                cc_so_name,
+                cc_so_bin,
             ],
             py_dest = py_dest,
             library_dest = py_dest,
+            visibility = visibility,
         )
 
 def _get_install(target):
-    if target.contains(":"):
+    if ":" in target:
         # Append suffix to target.
         return target + "_install"
     else:

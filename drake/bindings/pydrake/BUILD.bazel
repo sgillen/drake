@@ -1,6 +1,9 @@
 # -*- python -*-
 
 load("//tools/workspace/gurobi:gurobi.bzl", "gurobi_test_tags")
+load("//tools:drake.bzl",
+    "drake_cc_library",
+)
 load(
     "@drake//tools/skylark:drake_py.bzl",
     "drake_py_library",
@@ -11,7 +14,7 @@ load("//tools/lint:lint.bzl", "add_lint_tests")
 load("//tools/workspace/mosek:mosek.bzl", "mosek_test_tags")
 load(":pybind.bzl",
     "drake_pybind_library",
-    "get_drake_pybind_install")
+    "get_drake_pybind_installs")
 
 package(default_visibility = ["//drake/bindings/pydrake:__subpackages__"])
 
