@@ -492,16 +492,13 @@ def _read_next(f, msg):
         return _READ_NOT_READY
     # Number of bytes we need to consume so that we may still use
     # `_DecodeVarint32`.
-    peek_size = 4
-    peek = f.read(peek_size)
-    if len(peek) == 0:
+    header_size = 4
+    msg_size_raw = f.read(header_size)
+    if len(msg_size_raw) == 0:
         # We have reached the end.
         return _READ_END
-    msg_size, peek_end = _DecodeVarint32(peek, 0)
-    peek_left = peek_size - peek_end
-    # Read remaining and concatenate.
-    remaining = f.read(msg_size - peek_left)
-    msg_raw = peek[peek_end:] + remaining
+    msg_size = np.frombuffer(msg_size_raw, dtype=np.int32)[0]
+    msg_raw = f.read(msg_size)
     assert len(msg_raw) == msg_size
     # Now read the message.
     msg.ParseFromString(msg_raw)

@@ -101,17 +101,13 @@ void ToMatlabArray(const std::string& str, MatlabArray* matlab_array) {
 
 namespace internal {
 
-std::unique_ptr<google::protobuf::io::FileOutputStream>
+std::unique_ptr<std::ofstream>
 CreateOutputStream(const std::string& filename) {
   // NOTE(russt): This code violates the style-guide by expecting the file to be
   // closed properly at program termination (these streams will be stored as
-  // static globals).  Experimentally we found that the output file could be
-  // corrupt unless we included *both* the Flush() call and the
-  // SetCloseOnDelete() calls below.  Sadly, I cannot explain why.
+  // static globals).
   auto raw_output =
-      std::make_unique<google::protobuf::io::FileOutputStream>(
-          open(filename.c_str(), O_WRONLY | O_CREAT, S_IRWXU));
-  raw_output->SetCloseOnDelete(true);
+      std::make_unique<std::ofstream>(filename.c_str(), std::ios::binary);
   return raw_output;
 }
 
@@ -122,31 +118,22 @@ void PublishCallMatlab(const MatlabRPC& message) {
 }
 
 void PublishCall(
-    google::protobuf::io::FileOutputStream* praw_output,
+    std::ofstream* praw_output,
     const MatlabRPC& message) {
   DRAKE_DEMAND(praw_output);
   auto& raw_output = *praw_output;
 
   {  // Defines the lifetime of the CodedOutputStream.
-    google::protobuf::io::CodedOutputStream output(&raw_output);
-
     // Write the size.
     const int size = message.ByteSize();
-    output.WriteVarint32(size);
-
-    uint8_t* buffer = output.GetDirectBufferForNBytesAndAdvance(size);
-    if (buffer != NULL) {
-      // Optimization:  The message fits in one buffer, so use the faster
-      // direct-to-array serialization path.
-      message.SerializeWithCachedSizesToArray(buffer);
-    } else {
-      // Slightly-slower path when the message is multiple buffers.
-      message.SerializeWithCachedSizes(&output);
-      DRAKE_DEMAND(!output.HadError());
-    }
+    DRAKE_ASSERT(sizeof(int) == 4);
+    raw_output.write(reinterpret_cast<const char*>(&size), sizeof(int));
+    
+    message.SerializeToOstream(&raw_output);
+    DRAKE_DEMAND(raw_output.good());
   }
 
-  raw_output.Flush();
+  raw_output.flush();
 }
 
 }  // namespace internal
