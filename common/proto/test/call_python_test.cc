@@ -1,14 +1,28 @@
 #include "drake/common/proto/call_python.h"
 
 #include <cmath>
+#include <string>
 
+#include <gflags/gflags.h>
 #include <gtest/gtest.h>
+
+DEFINE_bool(with_error, false, "Inject an error towards the end.");
 
 // TODO(eric.cousineau): Instrument client to verify output (and make this a
 // unittest).
 
 namespace drake {
 namespace common {
+
+constexpr char kDoneFile[] = "/tmp/python_rpc_done";
+
+GTEST_TEST(TestCallPython, Start) {
+  // Ensure that we remove the "done file".
+  CallPython("setvar", "done_file", kDoneFile);
+  CallPython("exec", "if os.path.exists(done_file): os.remove(done_file)");
+  // Tell client to expect a finishing signal.
+  CallPython("start_execution");
+}
 
 GTEST_TEST(TestCallPython, DispStr) {
   CallPython("print", "Hello");
@@ -63,9 +77,24 @@ GTEST_TEST(TestCallPython, RemoteVarTest) {
   CallPython("print", "row 1 (accessed via logicals) is");
   CallPython("print", magic.slice(Vector3<bool>(false, true, false), ":"));
 
+  // Place error code toward the end, so that the test fails if this is not
+  // processed.
+  if (FLAGS_with_error) {
+    CallPython("bad_function_name");
+  }
+
   CallPython("print", "Third column should now be [1, 2, 3]: ");
   magic.slice(":", 2) = Eigen::Vector3d(1, 2, 3);
   CallPython("print", magic);
+
+  // Send variables in different ways.
+  CallPython("print", "Variable setting:");
+  CallPython("setvar", "a1", "abc");
+  CallPython("setvars", "a2", "def", "a3", "ghi");
+  CallPython("exec", "a4 = 'jkl'");
+  CallPython("locals")["a5"] = "mno";
+  CallPython("locals").attr("update")(ToPythonKwargs("a6", "pqr"));
+  CallPython("eval", "print(a1 + a2 + a3 + a4 + a5 + a6)");
 }
 
 GTEST_TEST(TestCallPython, Plot2d) {
@@ -79,12 +108,11 @@ GTEST_TEST(TestCallPython, Plot2d) {
 
   CallPython("print", "Plotting a sine wave.");
   CallPython("figure", 1);
+  CallPython("clf");
   CallPython("plot", time, val);
-  // Send variables in different ways.
-  CallPython("locals")["val"] = val;
-  CallPython("locals").attr("update")(ToPythonKwargs("time", time));
-  // Check usage.
-  CallPython("eval", "print(len(val) + len(time))");
+  // Send variables.
+  CallPython("setvars", "time", time, "val", val);
+  CallPython("eval", "print(len(time) + len(val))");
 }
 
 GTEST_TEST(TestCallPython, Plot3d) {
@@ -107,10 +135,17 @@ GTEST_TEST(TestCallPython, Plot3d) {
   }
   CallPython("print", "Plotting a simple 3D surface");
   CallPython("figure", 2);
+  CallPython("clf");
   CallPython("surf", x, y, Z);
   // Send variables.
   CallPython("setvars", "x", x, "y", y, "Z", Z);
   CallPython("eval", "print(len(x) + len(y) + len(Z))");
+}
+
+GTEST_TEST(TestCallPython, Finish) {
+  CallPython("finish_execution");
+  // Signal finishing.
+  CallPython("exec", "with open(done_file, 'a'): os.utime(done_file, None)");
 }
 
 }  // namespace common
