@@ -19,8 +19,9 @@ done
 cc_bin=${1}
 py_client_cli=${2}
 
-if [[ ! -e /tmp/python_rpc ]]; then
-    mkfifo /tmp/python_rpc
+filename=/tmp/python_rpc
+if [[ ! -e ${filename} ]]; then
+    mkfifo ${filename}
 fi
 
 py-error() {
@@ -39,15 +40,15 @@ sub-tests() {
     # Sub-case 1: Nominal
     # @note This setup assumes other things succeeded.
     echo -e "\n[ ${func}: nominal ]"
-    set-flags 0 0
+    do-setup 0 0
     ${func}
     # Sub-case 2: With Error
     echo -e "\n[ ${func}: with_error ]"
-    set-flags 1 0
+    do-setup 1 0
     ${func}
     # Sub-case 3: With Error + Stop on Error
     echo -e "\n[ ${func}: with_error + stop_on_error ]"
-    set-flags 1 1
+    do-setup 1 1
     ${func}
 }
 
@@ -64,7 +65,8 @@ py-check() {
     fi
 }
 
-set-flags() {
+do-setup() {
+    # usage: do-setup PY_FAIL PY_STOP_ON_ERROR
     py_fail=${1}
     py_stop_on_error=${2}
 
@@ -76,38 +78,41 @@ set-flags() {
     if [[ ${py_stop_on_error} -eq 1 ]]; then
         py_flags='--stop_on_error'
     fi
+
+    rm -f ${filename}
+    touch ${filename}
 }
 
 # Execute tests.
 
 no_threading-no_loop() {
+    # Execute C++.
+    ${cc_bin} ${cc_bin_flags} ${cc_flags}
     # Start Python binary in the background.
     ${py_client_cli} --no_threading --no_loop ${py_flags} &
     pid=$!
-    # Execute C++.
-    ${cc_bin} ${cc_bin_flags} ${cc_flags}
     # When this is done, Python client should exit.
     py-check
 }
 sub-tests no_threading-no_loop
 
 threading-no_loop() {
+    ${cc_bin} ${cc_bin_flags} ${cc_flags}
     ${py_client_cli} --no_loop ${py_flags} &
     pid=$!
-    ${cc_bin} ${cc_bin_flags} ${cc_flags}
     py-check
 }
 sub-tests threading-no_loop
 
 threading-loop() {
-    # Use `exec` so that we inherit SIGINT handlers.
-    # @ref https://stackoverflow.com/a/44538799/7829525
-    exec ${py_client_cli} ${py_flags} &
-    pid=$!
     # Execute client twice.
     echo "[cc start]"
     ${cc_bin} ${cc_bin_flags} ${cc_flags}
     ${cc_bin} ${cc_bin_flags} ${cc_flags}
+    # Use `exec` so that we inherit SIGINT handlers.
+    # @ref https://stackoverflow.com/a/44538799/7829525
+    exec ${py_client_cli} ${py_flags} &
+    pid=$!
     echo "[cc done]"
     if [[ ${py_stop_on_error} -ne 1 ]]; then
         # Wait for a small bit, then kill the client with Ctrl+C.
