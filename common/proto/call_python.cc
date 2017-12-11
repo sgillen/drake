@@ -23,10 +23,31 @@ void ToMatlabArray(const PythonRemoteVariable& var, MatlabArray* matlab_array) {
   matlab_array->set_data(&uid, num_bytes);
 }
 
+namespace {
+
+static
+decltype(std::declval<decltype(internal::CreateOutputStream(""))>().get())
+GetStream(bool close = false) {
+  static auto raw_output = internal::CreateOutputStream("/tmp/python_rpc");
+  if (close) {
+    std::cout << "Closing file" << std::endl;
+    raw_output.reset();
+    return nullptr;
+  } else {
+    DRAKE_DEMAND(raw_output != nullptr);
+  }
+  return raw_output.get();
+}
+
+}  // namespace
+
 void internal::PublishCallPython(const MatlabRPC& message) {
   // TODO(eric.cousineau): Provide option for setting the filename.
-  static auto raw_output = CreateOutputStream("/tmp/python_rpc");
-  PublishCall(raw_output.get(), message);
+  PublishCall(GetStream(), message);
+}
+
+void internal::ClosePython() {
+  GetStream(true);
 }
 
 }  // namespace common

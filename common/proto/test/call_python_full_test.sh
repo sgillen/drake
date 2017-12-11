@@ -42,7 +42,7 @@ sub-tests() {
     echo -e "\n[ ${func}: nominal ]"
     do-setup 0 0
     ${func}
-    
+
     # Sub-case 2: With Error
     echo -e "\n[ ${func}: with_error ]"
     do-setup 1 0
@@ -81,7 +81,7 @@ do-setup() {
     fi
 
     rm -f ${filename}
-    touch ${filename}
+    # touch ${filename}
 }
 
 # Execute tests.
@@ -99,6 +99,7 @@ no_threading-no_loop() {
 
 threading-no_loop() {
     ${cc_bin} ${cc_bin_flags} ${cc_flags}
+    # sleep 0.2
     ${py_client_cli} --no_loop ${py_flags} &
     pid=$!
     py-check

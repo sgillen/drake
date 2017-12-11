@@ -147,6 +147,7 @@ GTEST_TEST(TestCallPython, Finish) {
   CallPython("finish_execution");
   // Signal finishing.
   CallPython("exec", "with open(done_file, 'a'): os.utime(done_file, None)");
+  internal::ClosePython();
 }
 
 }  // namespace common

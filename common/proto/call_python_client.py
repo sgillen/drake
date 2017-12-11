@@ -468,7 +468,7 @@ class CallPythonClient(object):
         # Gets file handle, opening if needed.
         if self._file is None:
             # @ref https://stackoverflow.com/q/27822560/7829525#comment44053169_27822560  # noqa
-            fd = os.open(self.filename, os.O_RDONLY | os.O_NONBLOCK)
+            fd = os.open(self.filename, os.O_RDONLY)  # | os.O_NONBLOCK)
             self._file = os.fdopen(fd)
         return self._file
 
@@ -532,6 +532,11 @@ def main(argv):
 
 if __name__ == "__main__":
     import cProfile, pstats
+
+    import subprocess
+    print("Copied")
+    subprocess.check_output("cp /tmp/python_rpc /tmp/python_rpc_cp", shell=True)
+
     pr = cProfile.Profile()
     # pr.enable()
     good = main(sys.argv[1:])

@@ -123,15 +123,14 @@ void PublishCall(
   DRAKE_DEMAND(praw_output);
   auto& raw_output = *praw_output;
 
-  {  // Defines the lifetime of the CodedOutputStream.
-    // Write the size.
-    const int size = message.ByteSize();
-    DRAKE_ASSERT(sizeof(int) == 4);
-    raw_output.write(reinterpret_cast<const char*>(&size), sizeof(int));
-    
-    message.SerializeToOstream(&raw_output);
-    DRAKE_DEMAND(raw_output.good());
-  }
+  // Write the size.
+  const int size = message.ByteSize();
+  DRAKE_ASSERT(sizeof(int) == 4);
+  raw_output.write(reinterpret_cast<const char*>(&size), sizeof(int));
+
+  std::string raw = message.SerializeAsString();
+  raw_output.write(raw.data(), raw.size());
+  DRAKE_DEMAND(raw_output.good());
 
   raw_output.flush();
 }

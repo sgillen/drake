@@ -181,6 +181,8 @@ PythonItemAccessor PythonApi<Derived>::slice(Types... args) const {
 
 void PublishCallPython(const MatlabRPC& msg);
 
+void ClosePython();
+
 }  // namespace internal
 
 /// Calls a Python client with a given function and arguments, returning
