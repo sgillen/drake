@@ -42,14 +42,15 @@ sub-tests() {
     echo -e "\n[ ${func}: nominal ]"
     do-setup 0 0
     ${func}
-    # # Sub-case 2: With Error
-    # echo -e "\n[ ${func}: with_error ]"
-    # do-setup 1 0
-    # ${func}
-    # # Sub-case 3: With Error + Stop on Error
-    # echo -e "\n[ ${func}: with_error + stop_on_error ]"
-    # do-setup 1 1
-    # ${func}
+    
+    # Sub-case 2: With Error
+    echo -e "\n[ ${func}: with_error ]"
+    do-setup 1 0
+    ${func}
+    # Sub-case 3: With Error + Stop on Error
+    echo -e "\n[ ${func}: with_error + stop_on_error ]"
+    do-setup 1 1
+    ${func}
 }
 
 py-check() {
@@ -102,7 +103,7 @@ threading-no_loop() {
     pid=$!
     py-check
 }
-# sub-tests threading-no_loop
+sub-tests threading-no_loop
 
 run_under=""  #"operf --session-dir=/tmp/oprofile"
 
@@ -136,4 +137,4 @@ threading-loop() {
     fi
     py-check
 }
-sub-tests threading-loop
+# sub-tests threading-loop

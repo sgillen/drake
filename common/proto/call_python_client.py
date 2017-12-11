@@ -96,8 +96,8 @@ def _get_required_helpers(scope_locals):
         """Sets multiple variables in the client's locals. """
         scope_locals.update(make_kwargs(*args))
 
-    def print(x):
-        pass
+    # def print(x):
+    #     pass
 
     _execution_in_progress = _ExecutionInProgress()
     start_execution = _execution_in_progress.push
@@ -533,9 +533,9 @@ def main(argv):
 if __name__ == "__main__":
     import cProfile, pstats
     pr = cProfile.Profile()
-    pr.enable()
+    # pr.enable()
     good = main(sys.argv[1:])
-    pr.disable()
-    pr.print_stats(1)
+    # pr.disable()
+    # pr.print_stats(1)
     if not good:
         exit(1)

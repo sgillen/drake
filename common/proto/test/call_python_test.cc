@@ -95,6 +95,7 @@ GTEST_TEST(TestCallPython, RemoteVarTest) {
   CallPython("locals")["a5"] = "mno";
   CallPython("locals").attr("update")(ToPythonKwargs("a6", "pqr"));
   CallPython("eval", "print(a1 + a2 + a3 + a4 + a5 + a6)");
+  CallPython("print", "Final statement");
 }
 
 GTEST_TEST(TestCallPython, Plot2d) {
