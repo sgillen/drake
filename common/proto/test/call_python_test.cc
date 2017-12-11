@@ -26,7 +26,7 @@ GTEST_TEST(TestCallPython, Start) {
 
 GTEST_TEST(TestCallPython, DispStr) {
   CallPython("print", "Hello");
-  CallPython("disp", "World");
+  // CallPython("disp", "World");
 }
 
 GTEST_TEST(TestCallPython, CheckKwargs) {

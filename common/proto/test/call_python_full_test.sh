@@ -20,9 +20,9 @@ cc_bin=${1}
 py_client_cli=${2}
 
 filename=/tmp/python_rpc
-if [[ ! -e ${filename} ]]; then
-    mkfifo ${filename}
-fi
+# if [[ ! -e ${filename} ]]; then
+#     mkfifo ${filename}
+# fi
 
 py-error() {
     echo "ERROR: Python client did not exit successfully."
@@ -42,14 +42,14 @@ sub-tests() {
     echo -e "\n[ ${func}: nominal ]"
     do-setup 0 0
     ${func}
-    # Sub-case 2: With Error
-    echo -e "\n[ ${func}: with_error ]"
-    do-setup 1 0
-    ${func}
-    # Sub-case 3: With Error + Stop on Error
-    echo -e "\n[ ${func}: with_error + stop_on_error ]"
-    do-setup 1 1
-    ${func}
+    # # Sub-case 2: With Error
+    # echo -e "\n[ ${func}: with_error ]"
+    # do-setup 1 0
+    # ${func}
+    # # Sub-case 3: With Error + Stop on Error
+    # echo -e "\n[ ${func}: with_error + stop_on_error ]"
+    # do-setup 1 1
+    # ${func}
 }
 
 py-check() {
@@ -94,7 +94,7 @@ no_threading-no_loop() {
     # When this is done, Python client should exit.
     py-check
 }
-sub-tests no_threading-no_loop
+# sub-tests no_threading-no_loop
 
 threading-no_loop() {
     ${cc_bin} ${cc_bin_flags} ${cc_flags}
@@ -102,7 +102,9 @@ threading-no_loop() {
     pid=$!
     py-check
 }
-sub-tests threading-no_loop
+# sub-tests threading-no_loop
+
+run_under=""  #"operf --session-dir=/tmp/oprofile"
 
 threading-loop() {
     # Execute client twice.
@@ -111,7 +113,7 @@ threading-loop() {
     ${cc_bin} ${cc_bin_flags} ${cc_flags}
     # Use `exec` so that we inherit SIGINT handlers.
     # @ref https://stackoverflow.com/a/44538799/7829525
-    exec ${py_client_cli} ${py_flags} &
+    exec ${run_under} ${py_client_cli} ${py_flags} &
     pid=$!
     echo "[cc done]"
     if [[ ${py_stop_on_error} -ne 1 ]]; then
@@ -119,9 +121,12 @@ threading-loop() {
         # This is necessary to permit the client to finish processing.
         sleep 0.5
         # Ensure that we wait until the client is fully done.
+        echo -n "Waiting"
         while [[ ! -f /tmp/python_rpc_done ]]; do
+            echo -n "."
             sleep 0.1
         done
+        echo
         # TODO(eric.cousineau): In script form, this generally works well (only
         # one interrupt needed); however, interactively we need a few more.
         while ps -p ${pid} > /dev/null; do

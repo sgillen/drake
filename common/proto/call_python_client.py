@@ -96,6 +96,9 @@ def _get_required_helpers(scope_locals):
         """Sets multiple variables in the client's locals. """
         scope_locals.update(make_kwargs(*args))
 
+    def print(x):
+        pass
+
     _execution_in_progress = _ExecutionInProgress()
     start_execution = _execution_in_progress.push
     finish_execution = _execution_in_progress.pop
@@ -484,9 +487,9 @@ _READ_END = 3
 def _read_next(f, msg):
     # Reads next message from the given file, following suite with C++.
     # Use "select" so that we do not get in odd deadlocks with FIFO pipes.
-    timeout = 0.005
+    # timeout = 0.005
     read_streams = [f]
-    read_streams_ready = select.select(read_streams, [], [], timeout)[0]
+    read_streams_ready = [f]  #select.select(read_streams, [], [], timeout)[0]
     if f not in read_streams_ready:
         # Stream is not ready. Busy-spin.
         return _READ_NOT_READY
@@ -528,6 +531,11 @@ def main(argv):
 
 
 if __name__ == "__main__":
+    import cProfile, pstats
+    pr = cProfile.Profile()
+    pr.enable()
     good = main(sys.argv[1:])
+    pr.disable()
+    pr.print_stats(1)
     if not good:
         exit(1)
