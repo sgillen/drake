@@ -1,0 +1,105 @@
+# -*- python -*-
+
+load("@drake//tools/install:install.bzl", "install")
+load("//tools/lint:lint.bzl", "add_lint_tests")
+load(
+    "//tools/skylark:pybind.bzl",
+    "drake_pybind_library",
+    "get_drake_pybind_installs",
+    "get_pybind_library_dest",
+)
+load(
+    "//tools/skylark:drake_py.bzl",
+    "drake_py_library",
+    "drake_py_test",
+)
+load("//tools/skylark:6996.bzl", "adjust_labels_for_drake_hoist")
+
+package(default_visibility = adjust_labels_for_drake_hoist([
+    "//drake/bindings/pydrake:__subpackages__",
+]))
+
+drake_py_library(
+    name = "module_py",
+    srcs = ["__init__.py"],
+    deps = [
+        "//drake/bindings/pydrake:common_py",
+    ],
+)
+
+drake_pybind_library(
+    name = "ik_py",
+    cc_srcs = ["ik_py.cc"],
+    py_deps = [
+        "//drake/bindings/pydrake:rbtree_py",
+    ],
+    py_srcs = ["ik.py"],
+)
+
+# TODO(eric.cousineau): Rename `mathematicalprogram` to
+# `mathematical_program` when `pydrake` is renamed to `drake`.
+drake_pybind_library(
+    name = "mathematicalprogram_py",
+    cc_deps = [
+        "//drake/bindings/pydrake:symbolic_types_py",
+    ],
+    cc_srcs = ["mathematicalprogram_py.cc"],
+    py_deps = [
+        "//drake/bindings/pydrake:symbolic_py",
+    ],
+    py_srcs = ["mathematicalprogram.py"],
+)
+
+drake_pybind_library(
+    name = "gurobi_py",
+    cc_so_name = "gurobi",
+    cc_srcs = ["gurobi_py.cc"],
+    py_deps = [":mathematicalprogram_py"],
+)
+
+drake_pybind_library(
+    name = "ipopt_py",
+    cc_so_name = "ipopt",
+    cc_srcs = ["ipopt_py.cc"],
+    py_deps = [":mathematicalprogram_py"],
+)
+
+drake_pybind_library(
+    name = "mosek_py",
+    cc_so_name = "mosek",
+    cc_srcs = ["mosek_py.cc"],
+    py_deps = [":mathematicalprogram_py"],
+)
+
+PYBIND_LIBRARIES = [
+    ":analysis_py",
+    ":framework_py",
+    ":primitives_py",
+]
+
+drake_py_library(
+    name = "systems",
+    deps = PYBIND_LIBRARIES + [
+        ":module_py",
+    ],
+)
+
+install(
+    name = "install",
+    targets = [
+        ":module_py",
+    ],
+    py_dest = get_pybind_library_dest(),
+    deps = get_drake_pybind_installs(PYBIND_LIBRARIES),
+)
+
+drake_py_test(
+    name = "gurobi_solver_test",
+    size = "small",
+    srcs = ["test/gurobi_solver_test.py"],
+    main = "test/gurobi_solver_test.py",
+    tags = gurobi_test_tags(),
+    deps = [":gurobi_py"],
+)
+
+add_lint_tests()
