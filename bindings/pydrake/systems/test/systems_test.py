@@ -65,7 +65,7 @@ builder.ExportOutput(integrator1.get_output_port(0))
 # builder.AddSystem(CustomLogger(log_callback))
 
 diagram = builder.Build()
-diagram.set_name("Unicode Snowman's Favorite Diagram!!1!☃!")
+diagram.set_name("test_diagram")  #"Unicode Snowman's Favorite Diagram!!1!☃!")
 context = diagram.CreateDefaultContext()
 output = diagram.AllocateOutput(context)
 
@@ -90,10 +90,12 @@ integrator1_xc.get_mutable_vector().SetFromVector([81, 243, 729])
 print(diagram.GetGraphvizString())
 
 # Simulate briefly.
-simulator = analysis.Simulator(diagram, context)
+simulator = Simulator(diagram, context)
 simulator.StepTo(1)
 
 assert context.get_time() == 1.
+
+print(context)
 
 # # Print stats.
 # for pt in data_poitns:
