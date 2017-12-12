@@ -87,6 +87,7 @@ integrator0_xc.get_mutable_vector().SetFromVector([3, 9, 27])
 integrator1_xc = get_mutable_continuous_state(integrator1)
 integrator1_xc.get_mutable_vector().SetFromVector([81, 243, 729])
 
+# https://stackoverflow.com/questions/4596962/display-graph-without-saving-using-pydot
 print(diagram.GetGraphvizString())
 
 # Simulate briefly.
