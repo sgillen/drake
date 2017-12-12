@@ -4,6 +4,8 @@
 
 namespace py = pybind11;
 
+using std::unique_ptr;
+
 PYBIND11_MODULE(analysis, m) {
   using namespace drake::systems;
 

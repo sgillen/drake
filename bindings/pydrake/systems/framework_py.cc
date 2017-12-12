@@ -5,15 +5,18 @@
 #include "drake/systems/framework/diagram_builder.h"
 #include "drake/systems/framework/context.h"
 #include "drake/systems/framework/leaf_context.h"
-#include "drake/systems/framework/abstract_value.h"
+#include "drake/systems/framework/leaf_system.h"
+#include "drake/systems/framework/abstract_values.h"
 #include "drake/systems/framework/basic_vector.h"
 
 namespace py = pybind11;
 
+using std::make_unique;
 using std::unique_ptr;
 using std::vector;
 
 PYBIND11_MODULE(framework, m) {
+  using namespace drake;
   using namespace drake::systems;
 
   m.doc() = "Bindings for the core Systems framework.";
@@ -39,7 +42,7 @@ PYBIND11_MODULE(framework, m) {
              &Context<T>::FixInputPort))
     .def("get_time", &Context<T>::get_time);
 
-  py::class_<LeafContext<T>, Context<T>>(m, "LeafContext")
+  py::class_<LeafContext<T>, Context<T>>(m, "LeafContext");
     // .def(py::init<>());
 
   py::class_<Diagram<T>, System<T>>(m, "Diagram")
@@ -47,7 +50,9 @@ PYBIND11_MODULE(framework, m) {
     .def("CreateDefaultContext", &Diagram<T>::CreateDefaultContext)
     .def("AllocateOutput", &Diagram<T>::AllocateOutput)
     .def("GetGraphvizString", &Diagram<T>::GetGraphvizString)
-    .def("GetMutableSubsystemState", &State<T>::GetMutableSubsystemState);
+    .def("GetMutableSubsystemState",
+         py::overload_cast<const System<T>&, Context<T>*>(
+             &Diagram<T>::GetMutableSubsystemState));
 
   // Glue mechanisms.
   py::class_<DiagramBuilder<T>>(m, "DiagramBuilder")
@@ -68,12 +73,12 @@ PYBIND11_MODULE(framework, m) {
   py::class_<VectorBase<T>>(m, "VectorBase")
     .def("SetFromVector", &VectorBase<T>::SetFromVector);
   py::class_<BasicVector<T>, VectorBase<T>>(m, "BasicVector")
-    .def_static("Make", [](const vector<T>& in) {
-       return BasicVector<T>::Make(in);
-    });
-    .def("get_value", BasicVector<T>::get_value);
+    .def_static("Make", [](const VectorX<T>& in) {
+       return make_unique<BasicVector<T>>(in);
+    })
+    .def("get_value", &BasicVector<T>::get_value);
 
-  py::class_<AbstractValue<T>>(m, "AbstractValue");
+  py::class_<AbstractValue>(m, "AbstractValue");
 
   // Parameters.
   py::class_<Parameters<T>>(m, "Parameters");
@@ -88,5 +93,5 @@ PYBIND11_MODULE(framework, m) {
     .def(py::init<>())
     .def("get_mutable_vector", &ContinuousState<T>::get_mutable_vector);
   py::class_<DiscreteValues<T>>(m, "DiscreteValues");
-  py::class_<AbstractValues<T>>(m, "AbstractValues");
+  py::class_<AbstractValues>(m, "AbstractValues");
 }

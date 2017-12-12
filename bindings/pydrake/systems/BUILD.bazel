@@ -41,7 +41,7 @@ drake_pybind_library(
 drake_pybind_library(
     name = "primitives_py",
     cc_so_name = "primitives",
-    cc_srcs = ["primtives_py.cc"],
+    cc_srcs = ["primitives_py.cc"],
     py_deps = [
         ":framework_py",
         ":module_py",
