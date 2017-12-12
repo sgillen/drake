@@ -20,8 +20,6 @@ from pydrake.systems import (
     Simulator,
     )
 
-# from pydrake.systems.test.utilities import CustomLogger
-
 size = 3
 
 builder = DiagramBuilder()
@@ -57,15 +55,9 @@ builder.ExportOutput(integrator1.get_output_port(0))
 
 # builder.AddSystem(analysis_test.DoubleOnlySystem())
 
-# # Add basic logging.
-# data_points = []
-# def log_callback(context):
-#     global data_points
-#     data_points.append(context.Clone())
-# builder.AddSystem(CustomLogger(log_callback))
-
 diagram = builder.Build()
-diagram.set_name("test_diagram")  #"Unicode Snowman's Favorite Diagram!!1!☃!")
+# TODO(eric.cousineau): Figure out simple unicode handling, if necessary.
+diagram.set_name("test_diagram")  # "Unicode Snowman's Favorite Diagram!!1!☃!")
 context = diagram.CreateDefaultContext()
 output = diagram.AllocateOutput(context)
 
@@ -87,17 +79,12 @@ integrator0_xc.get_mutable_vector().SetFromVector([3, 9, 27])
 integrator1_xc = get_mutable_continuous_state(integrator1)
 integrator1_xc.get_mutable_vector().SetFromVector([81, 243, 729])
 
-# https://stackoverflow.com/questions/4596962/display-graph-without-saving-using-pydot
-print(diagram.GetGraphvizString())
-
 # Simulate briefly.
 simulator = Simulator(diagram, context)
-simulator.StepTo(1)
-
-assert context.get_time() == 1.
-
-print(context)
-
-# # Print stats.
-# for pt in data_poitns:
-#     print(pt)
+times = np.linspace(0, 1, 6)
+context_log = []
+for t in times:
+    simulator.StepTo(t)
+    assert context.get_time() == t
+    # Record
+    context_log.append(context.Clone())
