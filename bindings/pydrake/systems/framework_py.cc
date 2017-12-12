@@ -38,16 +38,13 @@ PYBIND11_MODULE(framework, m) {
   // TODO(eric.cousineau): Show constructor, but somehow make sure `pybind11`
   // knows this is abstract?
   py::class_<System<T>>(m, "System")
-    // .def(py::init<>())
     .def("set_name", &System<T>::set_name)
     .def("get_input_port", &System<T>::get_input_port, py_iref)
     .def("get_output_port", &System<T>::get_output_port, py_iref);
 
   py::class_<LeafSystem<T>, System<T>>(m, "LeafSystem");
-    // .def(py::init<>());
 
   py::class_<Context<T>>(m, "Context")
-    // .def(py::init<>())
     .def("FixInputPort",
          py::overload_cast<int, unique_ptr<BasicVector<T>>>(
              &Context<T>::FixInputPort))
@@ -58,10 +55,8 @@ PYBIND11_MODULE(framework, m) {
     .def("get_mutable_state", &Context<T>::get_mutable_state, py_iref);
 
   py::class_<LeafContext<T>, Context<T>>(m, "LeafContext");
-    // .def(py::init<>());
 
   py::class_<Diagram<T>, System<T>>(m, "Diagram")
-    // .def(py::init<>())
     .def("CreateDefaultContext", &Diagram<T>::CreateDefaultContext)
     .def("AllocateOutput", &Diagram<T>::AllocateOutput)
     .def("GetGraphvizString", &Diagram<T>::GetGraphvizString)

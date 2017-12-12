@@ -5,9 +5,13 @@
 
 from StringIO import StringIO
 
-import pydot  # sudo pip install pydot
-import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
+import matplotlib.pyplot as plt
+import pydot
+
+
+# TODO(eric.cousineau): Move `plot_dot` to something more accessible to
+# `call_python_client`.
 
 
 def plot_dot(dot_text):
@@ -16,7 +20,6 @@ def plot_dot(dot_text):
     # Tried (reason ignored): pydotplus (`pydot` works), networkx
     # (`read_dot` does not work robustly?), pygraphviz (coupled with
     # `networkx`).
-    # TODO(eric.cousineau): Incorporate this into `call_python_client`.
     g = pydot.graph_from_dot_data(dot_text)
     s = StringIO()
     g.write_png(s)
@@ -26,5 +29,6 @@ def plot_dot(dot_text):
 
 
 def plot_system_graphviz(system):
+    """Renders a System's Graphviz representation in `matplotlib`. """
     dot_text = str(system.GetGraphvizString())
     plot_dot(dot_text)
