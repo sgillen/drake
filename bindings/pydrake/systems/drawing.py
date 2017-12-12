@@ -25,10 +25,9 @@ def plot_dot(dot_text):
     g.write_png(s)
     s.seek(0)
     plt.axis('off')
-    plt.imshow(plt.imread(s), aspect="equal")
+    return plt.imshow(plt.imread(s), aspect="equal")
 
 
 def plot_system_graphviz(system):
     """Renders a System's Graphviz representation in `matplotlib`. """
-    dot_text = str(system.GetGraphvizString())
-    plot_dot(dot_text)
+    return plot_dot(system.GetGraphvizString())

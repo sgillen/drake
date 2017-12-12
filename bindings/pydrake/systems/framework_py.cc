@@ -1,4 +1,5 @@
 #include <pybind11/eigen.h>
+#include <pybind11/eval.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
@@ -56,10 +57,20 @@ PYBIND11_MODULE(framework, m) {
 
   py::class_<LeafContext<T>, Context<T>>(m, "LeafContext");
 
+  // TODO(eric.cousineau): Resolve `str_py` workaround.
+  auto str_py = py::eval("str");
+
   py::class_<Diagram<T>, System<T>>(m, "Diagram")
     .def("CreateDefaultContext", &Diagram<T>::CreateDefaultContext)
     .def("AllocateOutput", &Diagram<T>::AllocateOutput)
-    .def("GetGraphvizString", &Diagram<T>::GetGraphvizString)
+    .def(
+        "GetGraphvizString",
+        [str_py](const Diagram<T>* self) {
+          // @note This is a workaround; for some reason,
+          // casting this using `py::str` does not work, but directly
+          // calling the Python function (`str_py`) does.
+          return str_py(self->GetGraphvizString());
+        })
     .def("GetMutableSubsystemState",
         [](Diagram<T>* self, const System<T>& arg1, Context<T>* arg2)
         -> auto&& {
@@ -91,8 +102,9 @@ PYBIND11_MODULE(framework, m) {
 
   // Value types.
   py::class_<VectorBase<T>>(m, "VectorBase")
-    .def("SetFromVector", &VectorBase<T>::SetFromVector)
-    .def("CopyToVector", &VectorBase<T>::CopyToVector);
+    .def("CopyToVector", &VectorBase<T>::CopyToVector)
+    .def("SetFromVector", &VectorBase<T>::SetFromVector);
+
   py::class_<BasicVector<T>, VectorBase<T>>(m, "BasicVector")
     .def_static("Make", [](const VectorX<T>& in) {
        return make_unique<BasicVector<T>>(in);
@@ -100,12 +112,18 @@ PYBIND11_MODULE(framework, m) {
     .def("get_value", &BasicVector<T>::get_value);
 
   py::class_<Supervector<T>, VectorBase<T>>(m, "Supervector");
+
   py::class_<Subvector<T>, VectorBase<T>>(m, "Subvector");
 
+  // TODO(eric.cousineau): Interfacing with the C++ abstract value types may be
+  // a tad challenging. This should be more straightforward once
+  // scalar-type conversion is supported, as the template-exposure mechanisms\
+  // should be relatively similar.
   py::class_<AbstractValue>(m, "AbstractValue");
 
   // Parameters.
   py::class_<Parameters<T>>(m, "Parameters");
+
   // State.
   py::class_<State<T>>(m, "State")
     .def(py::init<>())
@@ -120,6 +138,8 @@ PYBIND11_MODULE(framework, m) {
     .def("get_vector", &ContinuousState<T>::get_vector, py_iref)
     .def("get_mutable_vector",
          &ContinuousState<T>::get_mutable_vector, py_iref);
+
   py::class_<DiscreteValues<T>>(m, "DiscreteValues");
+
   py::class_<AbstractValues>(m, "AbstractValues");
 }
