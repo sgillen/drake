@@ -46,7 +46,11 @@ PYBIND11_MODULE(framework, m) {
     .def("FixInputPort",
          py::overload_cast<int, unique_ptr<BasicVector<T>>>(
              &Context<T>::FixInputPort))
-    .def("get_time", &Context<T>::get_time);
+    .def("get_time", &Context<T>::get_time)
+    .def("Clone", &Context<T>::Clone)
+    .def("__copy__", &Context<T>::Clone)
+    .def("get_state", &Context<T>::get_state, py_iref)
+    .def("get_mutable_state", &Context<T>::get_mutable_state, py_iref);
 
   py::class_<LeafContext<T>, Context<T>>(m, "LeafContext");
     // .def(py::init<>());
@@ -101,13 +105,17 @@ PYBIND11_MODULE(framework, m) {
   // State.
   py::class_<State<T>>(m, "State")
     .def(py::init<>())
+    .def("get_continuous_state",
+         &State<T>::get_continuous_state, py_iref)
     .def("get_mutable_continuous_state",
          &State<T>::get_mutable_continuous_state, py_iref);
 
   // - Constituents.
   py::class_<ContinuousState<T>>(m, "ContinuousState")
     .def(py::init<>())
-    .def("get_mutable_vector", &ContinuousState<T>::get_mutable_vector, py_iref);
+    .def("get_vector", &ContinuousState<T>::get_vector, py_iref)
+    .def("get_mutable_vector",
+         &ContinuousState<T>::get_mutable_vector, py_iref);
   py::class_<DiscreteValues<T>>(m, "DiscreteValues");
   py::class_<AbstractValues>(m, "AbstractValues");
 }

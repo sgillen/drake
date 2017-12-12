@@ -88,3 +88,9 @@ for t in times:
     assert context.get_time() == t
     # Record
     context_log.append(context.Clone())
+
+# for cur in context_log:
+for cur in [context]:
+    # TODO(eric.cousineau): This isn't a BasicVector???
+    xc = cur.get_state().get_continuous_state().get_vector().get_value()
+    print("Continuous: {}".format(xc))
