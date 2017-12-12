@@ -22,7 +22,8 @@ PYBIND11_MODULE(framework, m) {
   using namespace drake;
   using namespace drake::systems;
 
-  auto py_ref = py::return_value_policy::reference_internal;
+  auto py_ref = py::return_value_policy::reference;
+  auto py_iref = py::return_value_policy::reference_internal;
 
   m.doc() = "Bindings for the core Systems framework.";
 
@@ -34,8 +35,8 @@ PYBIND11_MODULE(framework, m) {
   py::class_<System<T>>(m, "System")
     // .def(py::init<>())
     .def("set_name", &System<T>::set_name)
-    .def("get_input_port", &System<T>::get_input_port, py_ref)
-    .def("get_output_port", &System<T>::get_output_port, py_ref);
+    .def("get_input_port", &System<T>::get_input_port, py_iref)
+    .def("get_output_port", &System<T>::get_output_port, py_iref);
 
   py::class_<LeafSystem<T>, System<T>>(m, "LeafSystem");
     // .def(py::init<>());
@@ -61,7 +62,7 @@ PYBIND11_MODULE(framework, m) {
           // @note Use `auto&&` to get perfect forwarding.
           // @note Compiler does not like `py::overload_cast` with this setup?
           return self->GetMutableSubsystemState(arg1, arg2);
-        }, py::keep_alive<0, 3>());
+        }, py_ref, py::keep_alive<0, 3>());
 
   // Glue mechanisms.
   py::class_<DiagramBuilder<T>>(m, "DiagramBuilder")
@@ -101,12 +102,12 @@ PYBIND11_MODULE(framework, m) {
   py::class_<State<T>>(m, "State")
     .def(py::init<>())
     .def("get_mutable_continuous_state",
-         &State<T>::get_mutable_continuous_state);
+         &State<T>::get_mutable_continuous_state, py_iref);
 
   // - Constituents.
   py::class_<ContinuousState<T>>(m, "ContinuousState")
     .def(py::init<>())
-    .def("get_mutable_vector", &ContinuousState<T>::get_mutable_vector);
+    .def("get_mutable_vector", &ContinuousState<T>::get_mutable_vector, py_iref);
   py::class_<DiscreteValues<T>>(m, "DiscreteValues");
   py::class_<AbstractValues>(m, "AbstractValues");
 }
