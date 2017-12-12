@@ -78,7 +78,7 @@ input2 = BasicVector.Make([64, 128, 256])
 context.FixInputPort(2, input2)
 
 # Initialize integrator states.
-def get_mutable_continuous_state(sys):
+def get_mutable_continuous_state(system):
     return (diagram.GetMutableSubsystemState(system, context)
                    .get_mutable_continuous_state())
 

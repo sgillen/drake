@@ -1,4 +1,6 @@
+#include <pybind11/eigen.h>
 #include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
 
 #include "drake/systems/framework/system.h"
 #include "drake/systems/framework/diagram.h"
@@ -59,7 +61,7 @@ PYBIND11_MODULE(framework, m) {
           // @note Use `auto&&` to get perfect forwarding.
           // @note Compiler does not like `py::overload_cast` with this setup?
           return self->GetMutableSubsystemState(arg1, arg2);
-        });
+        }, py::keep_alive<0, 3>());
 
   // Glue mechanisms.
   py::class_<DiagramBuilder<T>>(m, "DiagramBuilder")
