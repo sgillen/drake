@@ -2,6 +2,7 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
+#include "drake/common/nice_type_name.h"
 #include "drake/systems/framework/system.h"
 #include "drake/systems/framework/diagram.h"
 #include "drake/systems/framework/diagram_builder.h"
@@ -10,6 +11,8 @@
 #include "drake/systems/framework/leaf_system.h"
 #include "drake/systems/framework/abstract_values.h"
 #include "drake/systems/framework/basic_vector.h"
+#include "drake/systems/framework/supervector.h"
+#include "drake/systems/framework/subvector.h"
 #include "drake/systems/framework/output_port_value.h"
 
 namespace py = pybind11;
@@ -32,6 +35,8 @@ PYBIND11_MODULE(framework, m) {
   // conversion.
   using T = double;
 
+  // TODO(eric.cousineau): Show constructor, but somehow make sure `pybind11`
+  // knows this is abstract?
   py::class_<System<T>>(m, "System")
     // .def(py::init<>())
     .def("set_name", &System<T>::set_name)
@@ -91,12 +96,16 @@ PYBIND11_MODULE(framework, m) {
 
   // Value types.
   py::class_<VectorBase<T>>(m, "VectorBase")
-    .def("SetFromVector", &VectorBase<T>::SetFromVector);
+    .def("SetFromVector", &VectorBase<T>::SetFromVector)
+    .def("CopyToVector", &VectorBase<T>::CopyToVector);
   py::class_<BasicVector<T>, VectorBase<T>>(m, "BasicVector")
     .def_static("Make", [](const VectorX<T>& in) {
        return make_unique<BasicVector<T>>(in);
     })
     .def("get_value", &BasicVector<T>::get_value);
+
+  py::class_<Supervector<T>, VectorBase<T>>(m, "Supervector");
+  py::class_<Subvector<T>, VectorBase<T>>(m, "Subvector");
 
   py::class_<AbstractValue>(m, "AbstractValue");
 

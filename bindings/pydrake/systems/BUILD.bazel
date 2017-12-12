@@ -10,6 +10,7 @@ load(
 )
 load(
     "//tools/skylark:drake_py.bzl",
+    "drake_py_binary",
     "drake_py_library",
     "drake_py_test",
 )
@@ -24,8 +25,8 @@ drake_py_library(
     srcs = ["__init__.py"],
     deps = [
         "//drake/bindings/pydrake:common_py",
-        # TODO(eric.cousineau): This does NOT include direct dependnecies to submodule.
-        # This is to preserve C++-like namespaces.
+        # TODO(eric.cousineau): This does NOT include direct dependencies to
+        # submodule. This is to preserve C++-like namespaces.
     ],
 )
 
@@ -58,6 +59,14 @@ drake_pybind_library(
     ],
 )
 
+drake_py_library(
+    name = "drawing_py",
+    srcs = ["drawing.py"],
+    deps = [":module_py"],
+    # TODO(eric.cousineau): Expose information to allow `imports = ...` to be
+    # defined, rather than rely on `module_py`.
+)
+
 PYBIND_LIBRARIES = [
     ":analysis_py",
     ":framework_py",
@@ -65,6 +74,7 @@ PYBIND_LIBRARIES = [
 ]
 
 PY_LIBRARIES = [
+    ":drawing_py",
     ":module_py",
 ]
 
@@ -81,10 +91,25 @@ install(
 )
 
 drake_py_test(
-    name = "systems_test",
+    name = "system_general_test",
     size = "small",
-    srcs = ["test/systems_test.py"],
-    deps = [":systems"],
+    srcs = ["test/system_general_test.py"],
+    deps = [
+        ":analysis_py",
+        ":framework_py",
+        ":primitives_py",
+    ],
+)
+
+drake_py_binary(
+    name = "system_graphviz_example",
+    srcs = ["test/system_graphviz_example.py"],
+    deps = [
+        ":analysis_py",
+        ":drawing_py",
+        ":framework_py",
+        ":primitives_py",
+    ],
 )
 
 add_lint_tests()

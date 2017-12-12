@@ -79,7 +79,7 @@ integrator0_xc.get_mutable_vector().SetFromVector([3, 9, 27])
 integrator1_xc = get_mutable_continuous_state(integrator1)
 integrator1_xc.get_mutable_vector().SetFromVector([81, 243, 729])
 
-# Simulate briefly.
+# Simulate briefly, and take full-context snapshots at intermediate points.
 simulator = Simulator(diagram, context)
 times = np.linspace(0, 1, 6)
 context_log = []
@@ -89,8 +89,6 @@ for t in times:
     # Record
     context_log.append(context.Clone())
 
-# for cur in context_log:
-for cur in [context]:
-    # TODO(eric.cousineau): This isn't a BasicVector???
-    xc = cur.get_state().get_continuous_state().get_vector().get_value()
+for cur in context_log:
+    xc = cur.get_state().get_continuous_state().get_vector().CopyToVector()
     print("Continuous: {}".format(xc))

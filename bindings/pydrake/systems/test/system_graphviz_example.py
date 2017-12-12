@@ -1,26 +1,22 @@
-import pydot  # sudo pip install pydot
-from StringIO import StringIO
+#!/usr/bin/env python
+
 import matplotlib.pyplot as plt
-import matplotlib.image as mpimg
 
+from pydrake.systems import DiagramBuilder, Adder
+from pydrake.systems.drawing import plot_system_graphviz
 
-def plot_dot(dot_text):
-    """Renders a DOT graph in matplotlib."""
-    # @ref https://stackoverflow.com/a/18522941/7829525
-    # Tried (reason ignored): pydotplus (`pydot` works), networkx
-    # (`read_dot` does not work robustly?), pygraphviz (coupled with
-    # `networkx`).
-    # TODO(eric.cousineau): Incorporate this into `call_python_client`.
-    g = pydot.graph_from_dot_data(dot_text)
-    s = StringIO()
-    g.write_png(s)
-    s.seek(0)
-    plt.axis('off')
-    plt.imshow(plt.imread(s), aspect="equal")
+builder = DiagramBuilder()
+size = 1
+adders = [
+    builder.AddSystem(Adder(1, size)),
+    builder.AddSystem(Adder(1, size)),
+]
+for i, adder in enumerate(adders):
+    adder.set_name("adders[{}]".format(i))
+builder.Connect(adders[0].get_output_port(0), adders[1].get_input_port(0))
+builder.ExportInput(adders[0].get_input_port(0))
+builder.ExportOutput(adders[1].get_output_port(0))
+diagram = builder.Build()
 
-
-def plot_system_graphviz(system):
-    system
-
-plot_dot(dot_text)
+plot_system_graphviz(diagram)
 plt.show()
