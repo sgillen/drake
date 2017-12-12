@@ -12,12 +12,12 @@ except ImportError as e:
 
 try:
     from .framework import *
-except ImportError:
+except ImportError as e:
     print(e)
     pass
 
 try:
     from .primitives import *
-except ImportError
+except ImportError as e:
     print(e)
     pass

@@ -1,9 +1,15 @@
+#!/usr/bin/env python
+# -*- coding: utf8 -*-
+
 from __future__ import print_function
+
+import numpy as np
 
 # Emulate: //systems/framework:diagram_test, ExampleDiagram
 
 from pydrake.systems import (
     # framework
+    BasicVector,
     Diagram,
     DiagramBuilder,
     # WitnessFunctionDirection
@@ -14,7 +20,7 @@ from pydrake.systems import (
     Simulator,
     )
 
-from pydrake.systems.test.utilities import CustomLogger
+# from pydrake.systems.test.utilities import CustomLogger
 
 size = 3
 
@@ -37,7 +43,7 @@ integrator1.set_name("integrator1")
 
 builder.Connect(adder0.get_output_port(0), adder1.get_input_port(0))
 builder.Connect(adder0.get_output_port(0), adder2.get_input_port(0))
-builder.Connect(adder1.get_output_port(0), adder2,get_input_port(1))
+builder.Connect(adder1.get_output_port(0), adder2.get_input_port(1))
 
 builder.Connect(adder0.get_output_port(0), integrator0.get_input_port(0))
 builder.Connect(integrator0.get_output_port(0), integrator1.get_input_port(0))
@@ -51,12 +57,12 @@ builder.ExportOutput(integrator1.get_output_port(0))
 
 # builder.AddSystem(analysis_test.DoubleOnlySystem())
 
-# Add basic logging.
-data_points = []
-def log_callback(context):
-    global data_points
-    data_points.append(context.Clone())
-builder.AddSystem(CustomLogger(log_callback))
+# # Add basic logging.
+# data_points = []
+# def log_callback(context):
+#     global data_points
+#     data_points.append(context.Clone())
+# builder.AddSystem(CustomLogger(log_callback))
 
 diagram = builder.Build()
 diagram.set_name("Unicode Snowman's Favorite Diagram!!1!☃!")
@@ -64,7 +70,7 @@ context = diagram.CreateDefaultContext()
 output = diagram.AllocateOutput(context)
 
 # Create and attach inputs.
-input0 = BasicVector.Make([1, 2, 4])
+input0 = BasicVector.Make(np.array([1, 2, 4]))
 context.FixInputPort(0, input0)
 input1 = BasicVector.Make([8, 16, 32])
 context.FixInputPort(1, input1)
@@ -73,8 +79,8 @@ context.FixInputPort(2, input2)
 
 # Initialize integrator states.
 def get_mutable_continuous_state(sys):
-    return diagram.GetMutableSubsystemState(system, context)
-                  .get_mutable_continuous_state()
+    return (diagram.GetMutableSubsystemState(system, context)
+                   .get_mutable_continuous_state())
 
 integrator0_xc = get_mutable_continuous_state(integrator0)
 integrator0_xc.get_mutable_vector().SetFromVector([3, 9, 27])
@@ -89,6 +95,6 @@ simulator.StepTo(1)
 
 assert context.get_time() == 1.
 
-# Print stats.
-for pt in data_poitns:
-    print(pt)
+# # Print stats.
+# for pt in data_poitns:
+#     print(pt)

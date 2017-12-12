@@ -8,6 +8,7 @@
 #include "drake/systems/framework/leaf_system.h"
 #include "drake/systems/framework/abstract_values.h"
 #include "drake/systems/framework/basic_vector.h"
+#include "drake/systems/framework/output_port_value.h"
 
 namespace py = pybind11;
 
@@ -19,6 +20,8 @@ PYBIND11_MODULE(framework, m) {
   using namespace drake;
   using namespace drake::systems;
 
+  auto py_ref = py::return_value_policy::reference_internal;
+
   m.doc() = "Bindings for the core Systems framework.";
 
   // TODO(eric.cousineau): At present, we only bind doubles.
@@ -29,8 +32,8 @@ PYBIND11_MODULE(framework, m) {
   py::class_<System<T>>(m, "System")
     // .def(py::init<>())
     .def("set_name", &System<T>::set_name)
-    .def("get_input_port", &System<T>::get_input_port)
-    .def("get_output_port", &System<T>::get_output_port);
+    .def("get_input_port", &System<T>::get_input_port, py_ref)
+    .def("get_output_port", &System<T>::get_output_port, py_ref);
 
   py::class_<LeafSystem<T>, System<T>>(m, "LeafSystem");
     // .def(py::init<>());
@@ -51,12 +54,21 @@ PYBIND11_MODULE(framework, m) {
     .def("AllocateOutput", &Diagram<T>::AllocateOutput)
     .def("GetGraphvizString", &Diagram<T>::GetGraphvizString)
     .def("GetMutableSubsystemState",
-         py::overload_cast<const System<T>&, Context<T>*>(
-             &Diagram<T>::GetMutableSubsystemState));
+        [](Diagram<T>* self, const System<T>& arg1, Context<T>* arg2)
+        -> auto&& {
+          // @note Use `auto&&` to get perfect forwarding.
+          // @note Compiler does not like `py::overload_cast` with this setup?
+          return self->GetMutableSubsystemState(arg1, arg2);
+        });
 
   // Glue mechanisms.
   py::class_<DiagramBuilder<T>>(m, "DiagramBuilder")
     .def(py::init<>())
+    .def(
+        "AddSystem",
+        [](DiagramBuilder<T>* self, unique_ptr<System<T>> arg1) {
+          return self->AddSystem(std::move(arg1));
+        })
     .def("Connect",
          py::overload_cast<const OutputPort<T>&, const InputPortDescriptor<T>&>(
              &DiagramBuilder<T>::Connect))
@@ -66,6 +78,7 @@ PYBIND11_MODULE(framework, m) {
     .def("BuildInto", &DiagramBuilder<T>::BuildInto);
 
   py::class_<OutputPort<T>>(m, "OutputPort");
+  py::class_<SystemOutput<T>>(m, "SystemOutput");
 
   py::class_<InputPortDescriptor<T>>(m, "InputPortDescriptor");
 
