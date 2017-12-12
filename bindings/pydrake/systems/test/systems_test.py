@@ -77,9 +77,9 @@ def get_mutable_continuous_state(sys):
                   .get_mutable_continuous_state()
 
 integrator0_xc = get_mutable_continuous_state(integrator0)
-integrator0_xc.get_mutable_vector().SetVector([3, 9, 27])
+integrator0_xc.get_mutable_vector().SetFromVector([3, 9, 27])
 integrator1_xc = get_mutable_continuous_state(integrator1)
-integrator1_xc.get_mutable_vector().SetVector([81, 243, 729])
+integrator1_xc.get_mutable_vector().SetFromVector([81, 243, 729])
 
 print(diagram.GetGraphvizString())
 

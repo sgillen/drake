@@ -65,11 +65,13 @@ PYBIND11_MODULE(framework, m) {
   py::class_<InputPortDescriptor<T>>(m, "InputPortDescriptor");
 
   // Value types.
-  py::class_<VectorBase<T>>(m, "VectorBase");
+  py::class_<VectorBase<T>>(m, "VectorBase")
+    .def("SetFromVector", &VectorBase<T>::SetFromVector);
   py::class_<BasicVector<T>, VectorBase<T>>(m, "BasicVector")
     .def_static("Make", [](const vector<T>& in) {
        return BasicVector<T>::Make(in);
     });
+    .def("get_value", BasicVector<T>::get_value);
 
   py::class_<AbstractValue<T>>(m, "AbstractValue");
 
@@ -86,5 +88,5 @@ PYBIND11_MODULE(framework, m) {
     .def(py::init<>())
     .def("get_mutable_vector", &ContinuousState<T>::get_mutable_vector);
   py::class_<DiscreteValues<T>>(m, "DiscreteValues");
-  py::class_<AbstractValues>(m, "AbstractValues");
+  py::class_<AbstractValues<T>>(m, "AbstractValues");
 }
