@@ -6,10 +6,19 @@
 namespace py = pybind11;
 
 PYBIND11_MODULE(primitives, m) {
-  using drake::systems;
+  using namespace drake::systems;
 
   m.doc() = "Bindings for the primitives portion of the Systems framework.";
 
-  py::class_<ConstantValueSource>(m, "ConstantValueSource");
+  using T = double;
+
   py::class_<ConstantVectorSource>(m, "ConstantVectorSource");
+
+  py::class_<Adder<T>, LeafSystem<T>>(m, "Adder")
+    .def(py::init<int, int>());
+
+  py::class_<Integrator<T>, LeafSystem<T>>(m, "Integrator")
+    .def(py::init<int>());
+
+  // py::class_<ConstantValueSource>(m, "ConstantValueSource");
 }

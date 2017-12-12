@@ -24,51 +24,38 @@ drake_py_library(
     srcs = ["__init__.py"],
     deps = [
         "//drake/bindings/pydrake:common_py",
+        # TODO(eric.cousineau): This does NOT include direct dependnecies to submodule.
+        # This is to preserve C++-like namespaces.
     ],
 )
 
 drake_pybind_library(
-    name = "ik_py",
-    cc_srcs = ["ik_py.cc"],
+    name = "framework_py",
+    cc_so_name = "framework",
+    cc_srcs = ["framework_py.cc"],
     py_deps = [
-        "//drake/bindings/pydrake:rbtree_py",
+        ":module_py",
     ],
-    py_srcs = ["ik.py"],
 )
 
-# TODO(eric.cousineau): Rename `mathematicalprogram` to
-# `mathematical_program` when `pydrake` is renamed to `drake`.
 drake_pybind_library(
-    name = "mathematicalprogram_py",
-    cc_deps = [
-        "//drake/bindings/pydrake:symbolic_types_py",
-    ],
-    cc_srcs = ["mathematicalprogram_py.cc"],
+    name = "primitives_py",
+    cc_so_name = "primitives",
+    cc_srcs = ["primtives_py.cc"],
     py_deps = [
-        "//drake/bindings/pydrake:symbolic_py",
+        ":framework_py",
+        ":module_py",
     ],
-    py_srcs = ["mathematicalprogram.py"],
 )
 
 drake_pybind_library(
-    name = "gurobi_py",
-    cc_so_name = "gurobi",
-    cc_srcs = ["gurobi_py.cc"],
-    py_deps = [":mathematicalprogram_py"],
-)
-
-drake_pybind_library(
-    name = "ipopt_py",
-    cc_so_name = "ipopt",
-    cc_srcs = ["ipopt_py.cc"],
-    py_deps = [":mathematicalprogram_py"],
-)
-
-drake_pybind_library(
-    name = "mosek_py",
-    cc_so_name = "mosek",
-    cc_srcs = ["mosek_py.cc"],
-    py_deps = [":mathematicalprogram_py"],
+    name = "analysis_py",
+    cc_so_name = "analysis",
+    cc_srcs = ["analysis_py.cc"],
+    py_deps = [
+        ":framework_py",
+        ":module_py",
+    ],
 )
 
 PYBIND_LIBRARIES = [
@@ -77,29 +64,27 @@ PYBIND_LIBRARIES = [
     ":primitives_py",
 ]
 
+PY_LIBRARIES = [
+    ":module_py",
+]
+
 drake_py_library(
     name = "systems",
-    deps = PYBIND_LIBRARIES + [
-        ":module_py",
-    ],
+    deps = PYBIND_LIBRARIES + PY_LIBRARIES,
 )
 
 install(
     name = "install",
-    targets = [
-        ":module_py",
-    ],
+    targets = PY_LIBRARIES,
     py_dest = get_pybind_library_dest(),
     deps = get_drake_pybind_installs(PYBIND_LIBRARIES),
 )
 
 drake_py_test(
-    name = "gurobi_solver_test",
+    name = "systems_test",
     size = "small",
-    srcs = ["test/gurobi_solver_test.py"],
-    main = "test/gurobi_solver_test.py",
-    tags = gurobi_test_tags(),
-    deps = [":gurobi_py"],
+    srcs = ["test/systems_test.py"],
+    deps = [":systems"],
 )
 
 add_lint_tests()

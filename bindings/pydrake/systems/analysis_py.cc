@@ -5,10 +5,14 @@
 namespace py = pybind11;
 
 PYBIND11_MODULE(analysis, m) {
-  using drake::systems;
+  using namespace drake::systems;
 
   m.doc() = "Bindings for the analysis portion of the Systems framework.";
 
-  py::class_<Simulator>(m, "Simulator")
-    .def(py::init<>());
+  using T = double;
+
+  py::class_<Simulator<T>>(m, "Simulator")
+    .def(py::init<const System<T>&, unique_ptr<Context<T>>>())
+    .def("StepTo", &Simulator<T>::StepTo)
+    .def("get_mutable_context", &Simulator<T>::get_mutable_context);
 }
