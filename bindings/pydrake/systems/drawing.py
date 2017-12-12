@@ -10,11 +10,11 @@ import matplotlib.pyplot as plt
 import pydot
 
 
-# TODO(eric.cousineau): Move `plot_dot` to something more accessible to
+# TODO(eric.cousineau): Move `plot_graphviz` to something more accessible to
 # `call_python_client`.
 
 
-def plot_dot(dot_text):
+def plot_graphviz(dot_text):
     """Renders a DOT graph in matplotlib."""
     # @ref https://stackoverflow.com/a/18522941/7829525
     # Tried (reason ignored): pydotplus (`pydot` works), networkx
@@ -30,4 +30,4 @@ def plot_dot(dot_text):
 
 def plot_system_graphviz(system):
     """Renders a System's Graphviz representation in `matplotlib`. """
-    return plot_dot(system.GetGraphvizString())
+    return plot_graphviz(system.GetGraphvizString())

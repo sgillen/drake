@@ -26,7 +26,12 @@ PYBIND11_MODULE(framework, m) {
   using namespace drake;
   using namespace drake::systems;
 
+  // Aliases for commonly used return value policies.
+  // `py_ref` is used when `keep_alive` is explicitly used (e.g. for extraction
+  // methods, like `GetMutableSubsystemState`).
   auto py_ref = py::return_value_policy::reference;
+  // `py_iref` is used when pointers / lvalue references are returned (no need
+  // for `keep_alive`, as it is implicit.
   auto py_iref = py::return_value_policy::reference_internal;
 
   m.doc() = "Bindings for the core Systems framework.";
@@ -106,9 +111,7 @@ PYBIND11_MODULE(framework, m) {
     .def("SetFromVector", &VectorBase<T>::SetFromVector);
 
   py::class_<BasicVector<T>, VectorBase<T>>(m, "BasicVector")
-    .def_static("Make", [](const VectorX<T>& in) {
-       return make_unique<BasicVector<T>>(in);
-    })
+    .def(py::init<VectorX<T>>())
     .def("get_value", &BasicVector<T>::get_value);
 
   py::class_<Supervector<T>, VectorBase<T>>(m, "Supervector");
