@@ -6,18 +6,18 @@ from __future__ import print_function
 import unittest
 import numpy as np
 
-from pydrake.systems import (
-    # framework
+from pydrake.systems.analysis import (
+    Simulator,
+    )
+from pydrake.systems.framework import (
     BasicVector,
     Diagram,
     DiagramBuilder,
-    # WitnessFunctionDirection
-    # primitives
+    )
+from pydrake.systems.primitives import (
     Adder,
     ConstantVectorSource,
     Integrator,
-    # analysis
-    Simulator,
     )
 
 
