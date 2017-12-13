@@ -2,8 +2,9 @@
 
 import matplotlib.pyplot as plt
 
-from pydrake.systems import DiagramBuilder, Adder
 from pydrake.systems.drawing import plot_system_graphviz
+from pydrake.systems.framework import DiagramBuilder
+from pydrake.systems.primitives import Adder
 
 builder = DiagramBuilder()
 size = 1

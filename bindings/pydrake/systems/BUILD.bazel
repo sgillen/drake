@@ -67,6 +67,16 @@ drake_py_library(
     # defined, rather than rely on `module_py`.
 )
 
+drake_py_library(
+    name = "all_py",
+    deps = [
+        ":analysis_py",
+        ":drawing_py",
+        ":framework_py",
+        ":primitives_py",
+    ],
+)
+
 PYBIND_LIBRARIES = [
     ":analysis_py",
     ":framework_py",
@@ -74,6 +84,7 @@ PYBIND_LIBRARIES = [
 ]
 
 PY_LIBRARIES = [
+    ":all_py",
     ":drawing_py",
     ":module_py",
 ]
@@ -105,7 +116,6 @@ drake_py_binary(
     name = "system_graphviz_example",
     srcs = ["test/system_graphviz_example.py"],
     deps = [
-        ":analysis_py",
         ":drawing_py",
         ":framework_py",
         ":primitives_py",
