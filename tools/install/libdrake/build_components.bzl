@@ -7,6 +7,7 @@
 # When adding new components to the package, please also add the licenses for
 # any new external dependencies to :external_licenses.
 LIBDRAKE_COMPONENTS = [
+    "//drake:protobuf",
     "//drake/automotive/maliput/api:api",
     "//drake/automotive/maliput/dragway:dragway",
     "//drake/automotive/maliput/monolane:builder",

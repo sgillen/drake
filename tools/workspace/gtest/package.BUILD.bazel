@@ -1,11 +1,17 @@
 # -*- python -*-
 
+load(
+    "@drake//tools/install:install.bzl",
+    "external_cc_library",
+    "external_cc_library_install_targets",
+)
+
 config_setting(
     name = "linux",
     values = {"cpu": "k8"},
 )
 
-cc_library(
+external_cc_library(
     name = "without_main",
     testonly = 1,
     srcs = glob(
@@ -42,11 +48,11 @@ cc_library(
         # This is a bazel-default rule, and does not need @drake//
         "@//conditions:default": [],
     }),
-    linkstatic = 1,
+    # linkstatic = 1,
     visibility = ["//visibility:public"],
 )
 
-cc_library(
+external_cc_library(
     name = "main",
     testonly = 1,
     srcs = ["googlemock/src/gmock_main.cc"],

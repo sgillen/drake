@@ -40,10 +40,12 @@ def drake_cc_proto_library(
         cmd = "for src in $(SRCS) ; do awk '/#include <google\/protobuf\/generated_message_reflection.h>/{print;print \"#include \\\"drake/common/proto/protobuf-ubsan-fixup.h\\\"\";next}1' $$src > $${src%??????}_ubsan_fixup.pb.cc ; done",  # noqa
     )
     # Compile the cc file using standard include paths.
-    native.cc_library(
-        name = name + "_genproto_compile",
+    solib = "lib" + name + "_genproto_compile" + ".so"
+    native.cc_binary(
+        name = solib,
         srcs = pb_ubsan_fixups,
         hdrs = pb_hdrs,
+        linkshared = 1,
         tags = tags + ["nolint"],
         deps = [
             "@com_google_protobuf//:protobuf",
@@ -63,6 +65,7 @@ def drake_cc_proto_library(
     native.cc_library(
         name = name,
         hdrs = pb_hdrs,
+        srcs = [solib],
         tags = tags + ["nolint"],
         strip_include_prefix = strip_include_prefix,
         include_prefix = include_prefix,
@@ -72,6 +75,7 @@ def drake_cc_proto_library(
     drake_installed_headers(
         name = name + ".installed_headers",
         hdrs = pb_hdrs,
+        solibs = [solib],
         deps = installed_headers_for_drake_deps(deps),
         tags = ["nolint"],
     )

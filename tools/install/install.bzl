@@ -677,4 +677,45 @@ def install_cmake_config(
         visibility = visibility,
     )
 
+#------------------------------------------------------------------------------
+def external_cc_library(        name,
+        hdrs = None,
+        srcs = None,
+        linkstatic = 0,
+        deps = None,
+        **kwargs):
+    if linkstatic != 0:
+        fail("Bad linkstatic")
+    solib = "lib{}.so".format(name)
+    hdr = name + ".headers"
+    # Headers and upstream dependencies.
+    native.cc_library(
+        name = hdr,
+        hdrs = hdrs,
+        deps = deps,
+        **kwargs)
+    # Shared library artifact.
+    native.cc_binary(
+        name = solib,
+        srcs = srcs,
+        linkshared = 1,
+        deps = [hdr],
+        **kwargs)
+    # Development glue.
+    native.cc_library(
+        name = name,
+        srcs = [solib],
+        deps = [hdr],
+        **kwargs)
+
+def external_cc_library_install_targets(name):
+    """Get targets that can be installed. """
+    # N.B. Most externals already install their own headers.
+    # Once this changes, add: [name + ".headers"]
+    return ["lib{}.so".format(name)]
+
+def fail_if_not_empty(value):
+    if len(value) != 0:
+        fail("Value not empty: {}".format(value))
+
 #END macros

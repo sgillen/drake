@@ -17,6 +17,8 @@ load(
     "cmake_config",
     "install",
     "install_cmake_config",
+    "external_cc_library",
+    "external_cc_library_install_targets",
 )
 load("@drake//tools/workspace:generate_file.bzl", "generate_file")
 
@@ -126,8 +128,8 @@ public_headers = public_headers_no_gen + [
 # Generates the library exported to users.  The explicitly listed srcs= matches
 # upstream's explicitly listed sources plus private headers.  The explicitly
 # listed hdrs= matches upstream's public headers.
-cc_binary(
-    name = "libignition_math.so",
+external_cc_library(
+    name = "ignition_math",
     srcs = [
         "src/Angle.cc",
         "src/Box.cc",
@@ -146,16 +148,11 @@ cc_binary(
         "src/SplinePrivate.cc",
         "src/Temperature.cc",
         "src/Vector3Stats.cc",
-    ] + private_headers + public_headers,
-    includes = ["include"],
-    linkshared = 1,
-    visibility = [],
-)
-
-cc_library(
-    name = "ignition_math",
-    srcs = ["libignition_math.so"],
-    hdrs = public_headers,
+    ] + private_headers,
+    hdrs = public_headers + [
+        ":config",
+        ":mathhh_genrule",
+    ],
     includes = ["include"],
     visibility = ["//visibility:public"],
 )
@@ -174,8 +171,11 @@ install_cmake_config(package = CMAKE_PACKAGE)
 install(
     name = "install",
     workspace = CMAKE_PACKAGE,
-    targets = [":libignition_math.so"],
-    hdrs = public_headers,
+    targets = external_cc_library_install_targets("ignition_math"),
+    hdrs = public_headers + [
+        ":config",
+        ":mathhh_genrule",
+    ],
     hdr_strip_prefix = ["include"],
     docs = [
         "COPYING",

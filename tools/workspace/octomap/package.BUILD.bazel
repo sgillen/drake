@@ -3,6 +3,8 @@
 load(
     "@drake//tools/install:install.bzl",
     "install",
+    "external_cc_library",
+    "external_cc_library_install_targets",
 )
 
 package(default_visibility = ["//visibility:public"])
@@ -14,7 +16,7 @@ filegroup(
 )
 
 # Generates octomath library
-cc_library(
+external_cc_library(
     name = "octomath",
     srcs = glob([
         "octomap/src/math/*.cpp",
@@ -28,7 +30,7 @@ cc_library(
 # Generates the library exported to users.  The explicitly listed srcs= matches
 # upstream's explicitly listed sources.  The globbed hdrs= matches upstream's
 # explicitly globbed headers.
-cc_library(
+external_cc_library(
     name = "octomap",
     srcs = [
         "octomap/src/AbstractOcTree.cpp",
@@ -45,11 +47,17 @@ cc_library(
         "octomap/include/octomap/*.h*",
     ]),
     includes = ["octomap/include"],
-    linkstatic = 1,
     deps = [":octomath"],
 )
 
 install(
     name = "install",
+    targets = (
+        external_cc_library_install_targets("octomap") +
+        external_cc_library_install_targets("octomath")
+    ),
+    hdr_dest = "include",
+    hdr_strip_prefix = ["octomap/include"],
+    guess_hdrs = "PACKAGE",
     docs = ["octomap/LICENSE.txt"],
 )

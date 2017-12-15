@@ -5,6 +5,8 @@ load(
     "cmake_config",
     "install",
     "install_cmake_config",
+    "external_cc_library",
+    "external_cc_library_install_targets",
 )
 
 package(
@@ -17,7 +19,7 @@ config_setting(
     visibility = ["//visibility:private"],
 )
 
-cc_library(
+external_cc_library(
     name = "spdlog",
     hdrs = glob(["include/spdlog/**"]),
     defines = [
@@ -44,7 +46,7 @@ install_cmake_config(package = "spdlog")  # Creates rule :install_cmake_config.
 
 install(
     name = "install",
-    targets = [":spdlog"],
+    targets = external_cc_library_install_targets("spdlog"),
     hdr_dest = "include/spdlog",
     hdr_strip_prefix = ["include/spdlog"],
     guess_hdrs = "PACKAGE",

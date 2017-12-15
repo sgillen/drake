@@ -16,6 +16,12 @@ load(
     "@drake//tools/workspace:generate_include_header.bzl",
     "drake_generate_include_header",
 )
+load(
+    "@drake//tools/install:install.bzl",
+    "install",
+    "external_cc_library",
+    "external_cc_library_install_targets",
+)
 
 package(
     default_visibility = ["//visibility:public"],
@@ -53,7 +59,7 @@ drake_generate_include_header(
 # The globbed srcs= and hdrs= matches upstream's explicit globs of the same.
 # fcl/export.h is a generated file so it is not automatically included by
 # the hdrs glob expression
-cc_library(
+external_cc_library(
     name = "fcl",
     srcs = glob(["src/**/*.cpp"]),
     hdrs = glob(["include/**/*.h"]) + [
@@ -67,7 +73,6 @@ cc_library(
         "FCL_HAVE_OCTOMAP",
     ],
     includes = ["include"],
-    linkstatic = 1,
     deps = [
         "@ccd",
         "@eigen",
@@ -77,5 +82,9 @@ cc_library(
 
 install(
     name = "install",
+    targets = external_cc_library_install_targets("fcl"),
+    hdr_dest = "include/fcl",
+    hdr_strip_prefix = ["include/fcl"],
+    guess_hdrs = "PACKAGE",
     docs = ["LICENSE"],
 )

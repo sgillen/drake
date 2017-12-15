@@ -5,13 +5,15 @@ load(
     "cmake_config",
     "install",
     "install_cmake_config",
+    "external_cc_library",
+    "external_cc_library_install_targets",
 )
 
 package(
     default_visibility = ["//visibility:public"],
 )
 
-cc_library(
+external_cc_library(
     name = "fmt",
     srcs = glob(["fmt/*.cc"]),
     hdrs = glob(["fmt/*.h"]),
@@ -28,7 +30,7 @@ install_cmake_config(package = "fmt")  # Creates rule :install_cmake_config.
 
 install(
     name = "install",
-    targets = [":fmt"],
+    targets = external_cc_library_install_targets("fmt"),
     hdr_dest = "include/fmt",
     hdr_strip_prefix = ["fmt"],
     guess_hdrs = "PACKAGE",

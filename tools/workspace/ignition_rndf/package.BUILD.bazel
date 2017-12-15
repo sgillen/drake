@@ -12,6 +12,8 @@ load(
     "cmake_config",
     "install",
     "install_cmake_config",
+    "external_cc_library",
+    "external_cc_library_install_targets",
 )
 
 package(default_visibility = ["//visibility:public"])
@@ -49,13 +51,18 @@ drake_generate_include_header(
     visibility = ["//visibility:private"],
 )
 
-cc_library(
+gen_headers = [
+    ":config",
+    ":rndfhh_genrule",
+]
+
+external_cc_library(
     name = "ignition_rndf",
     srcs = glob(
         ["src/*.cc"],
         exclude = ["src/*_TEST.cc"],
     ),
-    hdrs = public_headers,
+    hdrs = public_headers + gen_headers,
     copts = ["-w"],
     includes = ["include"],
     visibility = ["//visibility:public"],
@@ -79,11 +86,8 @@ install_cmake_config(package = CMAKE_PACKAGE)
 install(
     name = "install",
     workspace = CMAKE_PACKAGE,
-    targets = [":ignition_rndf"],
-    hdrs = public_headers + [
-        ":config",
-        ":rndfhh_genrule",
-    ],
+    targets = external_cc_library_install_targets("ignition_rndf"),
+    hdrs = public_headers + gen_headers,
     hdr_strip_prefix = ["include"],
     docs = [
         "COPYING",

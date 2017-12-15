@@ -45,7 +45,7 @@ CCD_COPTS = [
 # Generates the library exported to users.  Upstream's CMake code lists out all
 # sources instead of globbing, but conveniently puts the public headers in one
 # place and private sources and headers in another; we'll use globbing here.
-cc_library(
+external_cc_library(
     name = "ccd",
     srcs = glob([
         "src/*.c",
@@ -55,10 +55,13 @@ cc_library(
     copts = CCD_COPTS,
     defines = ["CCD_STATIC_DEFINE"],
     includes = ["src"],
-    linkstatic = 1,
 )
 
 install(
     name = "install",
+    targets = external_cc_library_install_targets("ccd"),
+    hdrs = CCD_PUBLIC_HEADERS,
+    hdr_dest = "include/ccd",
+    hdr_strip_prefix = ["**/"],
     docs = ["BSD-LICENSE"],
 )

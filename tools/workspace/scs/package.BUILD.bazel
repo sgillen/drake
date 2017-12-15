@@ -1,6 +1,11 @@
 # -*- python -*-
 
-load("@drake//tools/install:install.bzl", "install")
+load(
+    "@drake//tools/install:install.bzl",
+    "install",
+    "external_cc_library",
+    "external_cc_library_install_targets",
+)
 
 package(default_visibility = ["//visibility:public"])
 
@@ -22,9 +27,10 @@ SCS_HDRS = glob(["include/*.h"]) + ["linsys/amatrix.h"]
 # linsys/direct/external. These are licensed under the LGPL so only build a
 # shared library for :scsdir.
 
-cc_binary(
-    name = "libscsdir.so",
-    srcs = SCS_HDRS + glob([
+external_cc_library(
+    name = "scsdir",
+    hdrs = SCS_HDRS,
+    srcs = glob([
         "linsys/*.c",
         "linsys/common.h",
         "linsys/direct/**/*.c",
@@ -38,8 +44,6 @@ cc_binary(
         ":linux": ["-lrt"],
         "@//conditions:default": [],
     }),
-    linkshared = 1,
-    visibility = ["//visibility:private"],
     deps = select({
         ":linux": [
             "@blas",
@@ -49,17 +53,12 @@ cc_binary(
     }),
 )
 
-cc_library(
-    name = "scsdir",
-    srcs = [":libscsdir.so"],
-    hdrs = SCS_HDRS,
-    defines = ["LAPACK_LIB_FOUND=1"],
-    includes = ["include"],
-)
-
 install(
     name = "install",
-    targets = [":libscsdir.so"],
+    targets = external_cc_library_install_targets("scsdir"),
+    hdrs = SCS_HDRS,
+    hdr_dest = "include/scs",
+    hdr_strip_prefix = ["include"],
     docs = [
         "LICENSE.txt",
         "linsys/direct/external/AMD_README.txt",

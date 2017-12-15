@@ -1,10 +1,15 @@
 # -*- python -*-
 
-load("@drake//tools/install:install.bzl", "install")
+load(
+    "@drake//tools/install:install.bzl",
+    "install",
+    "external_cc_library",
+    "external_cc_library_install_targets",
+)
 
 package(default_visibility = ["//visibility:public"])
 
-cc_library(
+external_cc_library(
     name = "spruce",
     srcs = ["spruce.cc"],
     hdrs = ["spruce.hh"],
@@ -15,5 +20,6 @@ cc_library(
 # need to install its license file.
 install(
     name = "install",
+    targets = external_cc_library_install_targets("spruce"),
     docs = ["LICENSE"],
 )

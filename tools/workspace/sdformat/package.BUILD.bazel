@@ -13,6 +13,8 @@ load(
     "cmake_config",
     "install",
     "install_cmake_config",
+    "external_cc_library",
+    "external_cc_library_install_targets",
 )
 
 package(default_visibility = ["//visibility:public"])
@@ -64,7 +66,7 @@ drake_generate_include_header(
 # Generates the library exported to users.  The explicitly listed srcs= matches
 # upstream's explicitly listed sources plus private headers.  The explicitly
 # listed hdrs= matches upstream's public headers.
-cc_library(
+external_cc_library(
     name = "sdformat",
     srcs = [
         "include/sdf/Converter.hh",
@@ -113,7 +115,10 @@ cc_library(
         "src/urdf/urdf_world/types.h",
         "src/urdf/urdf_world/world.h",
     ],
-    hdrs = public_headers,
+    hdrs = public_headers + [
+        ":sdfhh_genrule",
+        ":config",
+    ],
     copts = ["-w"],
     data = glob(["sdf/1.6/*.sdf"]),
     includes = [
@@ -142,7 +147,7 @@ install_cmake_config(package = "SDFormat")
 
 install(
     name = "install",
-    targets = [":sdformat"],
+    targets = external_cc_library_install_targets("sdformat"),
     hdrs = public_headers + [
         ":sdfhh_genrule",
         ":config",

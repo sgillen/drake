@@ -5,6 +5,8 @@ load(
     "cmake_config",
     "install",
     "install_cmake_config",
+    "external_cc_library",
+    "external_cc_library_install_targets",
 )
 load("@drake//tools/lint:python_lint.bzl", "python_lint")
 
