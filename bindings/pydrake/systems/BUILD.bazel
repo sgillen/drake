@@ -102,9 +102,9 @@ install(
 )
 
 drake_py_test(
-    name = "system_general_test",
+    name = "general_test",
     size = "small",
-    srcs = ["test/system_general_test.py"],
+    srcs = ["test/general_test.py"],
     deps = [
         ":analysis_py",
         ":framework_py",
@@ -113,8 +113,8 @@ drake_py_test(
 )
 
 drake_py_binary(
-    name = "system_graphviz_example",
-    srcs = ["test/system_graphviz_example.py"],
+    name = "graphviz_example",
+    srcs = ["test/graphviz_example.py"],
     deps = [
         ":drawing_py",
         ":framework_py",
@@ -123,24 +123,24 @@ drake_py_binary(
 )
 
 drake_pybind_library(
-    name = "system_lifetime_test_util",
+    name = "lifetime_test_util",
     testonly = 1,
     add_install = False,
-    cc_so_name = "test/system_lifetime_test_util",
-    cc_srcs = ["test/system_lifetime_test_util_py.cc"],
+    cc_so_name = "test/lifetime_test_util",
+    cc_srcs = ["test/lifetime_test_util_py.cc"],
     py_deps = [
         ":primitives_py",
     ],
 )
 
 drake_py_test(
-    name = "system_lifetime_test",
-    srcs = ["test/system_lifetime_test.py"],
+    name = "lifetime_test",
+    srcs = ["test/lifetime_test.py"],
     deps = [
         ":analysis_py",
         ":framework_py",
         ":primitives_py",
-        ":system_lifetime_test_util",
+        ":lifetime_test_util",
     ],
 )
 

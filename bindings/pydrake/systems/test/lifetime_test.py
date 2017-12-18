@@ -18,7 +18,7 @@ from pydrake.systems.analysis import (
 from pydrake.systems.framework import (
     DiagramBuilder,
     )
-from pydrake.systems.test.system_lifetime_test_util import (
+from pydrake.systems.test.lifetime_test_util import (
     DeleteListenerSystem,
     )
 

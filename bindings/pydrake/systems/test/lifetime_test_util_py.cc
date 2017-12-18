@@ -29,7 +29,7 @@ class DeleteListenerSystem : public ConstantVectorSource<T> {
 
 }  // namespace
 
-PYBIND11_MODULE(system_lifetime_test_util, m) {
+PYBIND11_MODULE(lifetime_test_util, m) {
   py::module::import("pydrake.systems.primitives");
 
   py::class_<DeleteListenerSystem, ConstantVectorSource<T>>(

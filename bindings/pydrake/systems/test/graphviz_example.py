@@ -19,7 +19,7 @@ builder.ExportInput(adders[0].get_input_port(0))
 builder.ExportOutput(adders[1].get_output_port(0))
 
 diagram = builder.Build()
-diagram.set_name("system_graphviz_example")
+diagram.set_name("graphviz_example")
 
 plot_system_graphviz(diagram)
 plt.show()
