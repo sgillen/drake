@@ -33,6 +33,9 @@ drake_py_library(
 drake_pybind_library(
     name = "framework_py",
     cc_so_name = "framework",
+    cc_deps = [
+        "//drake/bindings/pydrake:interface_py_h",
+    ],
     cc_srcs = ["framework_py.cc"],
     py_deps = [
         ":module_py",
@@ -42,6 +45,9 @@ drake_pybind_library(
 drake_pybind_library(
     name = "primitives_py",
     cc_so_name = "primitives",
+    cc_deps = [
+        "//drake/bindings/pydrake:interface_py_h",
+    ],
     cc_srcs = ["primitives_py.cc"],
     py_deps = [
         ":framework_py",
@@ -52,6 +58,9 @@ drake_pybind_library(
 drake_pybind_library(
     name = "analysis_py",
     cc_so_name = "analysis",
+    cc_deps = [
+        "//drake/bindings/pydrake:interface_py_h",
+    ],
     cc_srcs = ["analysis_py.cc"],
     py_deps = [
         ":framework_py",

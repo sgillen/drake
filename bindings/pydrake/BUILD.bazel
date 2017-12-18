@@ -19,9 +19,7 @@ load(
 )
 load("//tools/skylark:6996.bzl", "adjust_labels_for_drake_hoist")
 
-package(default_visibility = adjust_labels_for_drake_hoist([
-    "//drake/bindings/pydrake:__subpackages__",
-]))
+package(default_visibility = [":__subpackages__"])
 
 # N.B. Any common headers should be shared via a HEADER ONLY library.
 
@@ -33,8 +31,20 @@ drake_py_library(
     imports = [".."],
 )
 
+# TODO(eric.cousineau): Ensure that this is not installed.
+drake_cc_library(
+    name = "interface_py_h",
+    hdrs = ["interface_py.h"],
+    # NOTE: We must violate IWYU and not list "autodiff" in "deps" here
+    # because we do not want these dependencies leaking in at install
+    # time.
+)
+
 drake_pybind_library(
     name = "common_py",
+    cc_deps = [
+        ":interface_py_h",
+    ],
     cc_srcs = ["common_py.cc"],
     py_deps = [
         ":util_py",
@@ -45,18 +55,16 @@ drake_pybind_library(
     ],
 )
 
-# TODO(eric.cousineau): Ensure that this is not installed.
 drake_cc_library(
-    name = "autodiff_types",
+    name = "autodiff_types_py_h",
     hdrs = ["autodiff_types_py.h"],
-    # NOTE: We must violate IWYU and not list "autodiff" in "deps" here because
-    # we do not want these dependencies leaking in at install time.
 )
 
 drake_pybind_library(
     name = "autodiffutils_py",
     cc_deps = [
-        ":autodiff_types",
+        ":interface_py_h",
+        ":autodiff_types_py_h",
     ],
     cc_srcs = ["autodiffutils_py.cc"],
     py_deps = [
@@ -71,7 +79,8 @@ drake_pybind_library(
 drake_pybind_library(
     name = "rbtree_py",
     cc_deps = [
-        ":autodiff_types",
+        ":interface_py_h",
+        ":autodiff_types_py_h",
     ],
     cc_srcs = ["rbtree_py.cc"],
     py_deps = [
@@ -85,6 +94,9 @@ drake_pybind_library(
 drake_pybind_library(
     name = "parsers_py",
     cc_so_name = "parsers",
+    cc_deps = [
+        ":interface_py_h",
+    ],
     cc_srcs = ["parsers_py.cc"],
     py_deps = [
         ":common_py",
@@ -101,6 +113,7 @@ drake_pybind_library(
     name = "symbolic_py",
     cc_deps = [
         ":symbolic_types_py_h",
+        ":interface_py_h",
     ],
     cc_srcs = ["symbolic_py.cc"],
     py_deps = [
@@ -143,6 +156,7 @@ drake_pybind_library(
     testonly = 1,
     add_install = False,
     cc_deps = [
+        ":interface_py_h",
         ":symbolic_types_py_h",
     ],
     cc_so_name = "test/odr_test_module",
