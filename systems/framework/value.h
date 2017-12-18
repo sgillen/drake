@@ -283,7 +283,7 @@ class Value : public AbstractValue {
 
   /// Constructs a Value<T> by copying or moving the given value @p v.
   /// @pre v is non-null
-  explicit Value(std::unique_ptr<T> v)
+  explicit Value(std::shared_ptr<T> v)
       : value_{Traits::to_storage(std::move(v))} {}
   // An explanation of the above constructor:
   //

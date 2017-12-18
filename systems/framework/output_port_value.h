@@ -31,12 +31,12 @@ class OutputPortValue {
   /// @tparam T The type of the vector data. Must be a valid Eigen scalar.
   /// @tparam V The type of @p vec itself. Must implement BasicVector<T>.
   template <template <typename T> class V, typename T>
-  explicit OutputPortValue(std::unique_ptr<V<T>> vec)
+  explicit OutputPortValue(std::shared_ptr<V<T>> vec)
       : data_(std::make_unique<Value<BasicVector<T>>>(std::move(vec))) {}
 
   /// Constructs an abstract-valued OutputPortValue.
   /// Takes ownership of @p data.
-  explicit OutputPortValue(std::unique_ptr<AbstractValue> data)
+  explicit OutputPortValue(std::shared_ptr<AbstractValue> data)
       : data_(std::move(data)) {}
 
   /// Constructs an abstract-valued OutputPortValue.
@@ -44,8 +44,8 @@ class OutputPortValue {
   ///
   /// @tparam T The type of the data.
   template <typename T>
-  explicit OutputPortValue(std::unique_ptr<Value<T>> data)
-      : OutputPortValue(std::unique_ptr<AbstractValue>(data.release())) {}
+  explicit OutputPortValue(std::shared_ptr<Value<T>> data)
+      : OutputPortValue(std::shared_ptr<AbstractValue>(data.release())) {}
 
   virtual ~OutputPortValue();
 
@@ -105,7 +105,7 @@ class OutputPortValue {
   void InvalidateAndIncrement();
 
   // The port data.
-  std::unique_ptr<AbstractValue> data_;
+  std::shared_ptr<AbstractValue> data_;
 
   // The list of consumers that should be notified when the value on this
   // output port changes.

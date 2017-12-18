@@ -219,14 +219,14 @@ class Context {
 
   /// Connects the input port at @p index to a FreestandingInputPortValue with
   /// the given vector @p value. Asserts if @p index is out of range.
-  void FixInputPort(int index, std::unique_ptr<BasicVector<T>> value) {
+  void FixInputPort(int index, std::shared_ptr<BasicVector<T>> value) {
     SetInputPortValue(
         index, std::make_unique<FreestandingInputPortValue>(std::move(value)));
   }
 
   /// Connects the input port at @p index to a FreestandingInputPortValue with
   /// the given abstract @p value. Asserts if @p index is out of range.
-  void FixInputPort(int index, std::unique_ptr<AbstractValue> value) {
+  void FixInputPort(int index, std::shared_ptr<AbstractValue> value) {
     SetInputPortValue(
         index, std::make_unique<FreestandingInputPortValue>(std::move(value)));
   }

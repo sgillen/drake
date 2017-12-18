@@ -125,7 +125,7 @@ class FreestandingInputPortValue : public InputPortValue {
   /// @tparam T The type of the vector data. Must be a valid Eigen scalar.
   /// @tparam V The type of @p vec itself. Must implement BasicVector<T>.
   template <template <typename T> class V, typename T>
-  explicit FreestandingInputPortValue(std::unique_ptr<V<T>> vec)
+  explicit FreestandingInputPortValue(std::shared_ptr<V<T>> vec)
       : output_port_value_(std::move(vec)) {
     output_port_value_.add_dependent(this);
   }

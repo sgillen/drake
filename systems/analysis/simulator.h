@@ -81,7 +81,7 @@ class Simulator {
   /// will be used as the initial condition for the simulation; otherwise the
   /// %Simulator will obtain a default Context from `system`.
   explicit Simulator(const System<T>& system,
-                     std::unique_ptr<Context<T>> context = nullptr);
+                     std::shared_ptr<Context<T>> context = nullptr);
 
   /// Prepares the %Simulator for a simulation. If the initial Context does not
   /// satisfy the System's constraints, an attempt is made to modify the values
@@ -213,7 +213,7 @@ class Simulator {
   /// @param context The new context, which may be null. If the context is
   ///                null, a new context must be set before attempting to step
   ///                the system forward.
-  void reset_context(std::unique_ptr<Context<T>> context) {
+  void reset_context(std::shared_ptr<Context<T>> context) {
     context_ = std::move(context);
     integrator_->reset_context(context_.get());
     initialization_done_ = false;
@@ -223,7 +223,7 @@ class Simulator {
   /// The %Simulator will no longer contain a Context. The caller must not
   /// attempt to advance the simulator in time after that point.
   /// @sa reset_context()
-  std::unique_ptr<Context<T>> release_context() {
+  std::shared_ptr<Context<T>> release_context() {
     integrator_->reset_context(nullptr);
     initialization_done_ = false;
     return std::move(context_);
@@ -353,7 +353,7 @@ class Simulator {
   static constexpr double kDefaultInitialStepSizeAttempt = 1e-3;
 
   const System<T>& system_;              // Just a reference; not owned.
-  std::unique_ptr<Context<T>> context_;  // The trajectory Context.
+  std::shared_ptr<Context<T>> context_;  // The trajectory Context.
 
   // Temporaries used for witness function isolation.
   std::vector<const WitnessFunction<T>*> triggered_witnesses_;
@@ -399,7 +399,7 @@ class Simulator {
 
 template <typename T>
 Simulator<T>::Simulator(const System<T>& system,
-                        std::unique_ptr<Context<T>> context)
+                        std::shared_ptr<Context<T>> context)
     : system_(system), context_(std::move(context)) {
   // Setup defaults that should be generally reasonable.
   const double max_step_size = 0.1;
