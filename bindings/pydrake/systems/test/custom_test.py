@@ -29,7 +29,7 @@ class CustomAdder(LeafSystem):
             value = input_vector.get_value()
 
 
-class TestCustomSystem(unittest.TestCase):
+class TestCustom(unittest.TestCase):
     def test_custom_adder(self):
         system = self._create_system()
         self._test_execution(system)

@@ -18,12 +18,17 @@ from pydrake.systems.analysis import (
 from pydrake.systems.framework import (
     DiagramBuilder,
     )
+from pydrake.systems.primitives import (
+    Adder,
+    )
 from pydrake.systems.test.lifetime_test_util import (
     DeleteListenerSystem,
+    DeleteListenerVector,
     )
 
 
 class Info(object):
+    # Tracks if an instance has been deleted.
     def __init__(self):
         self.deleted = False
 
@@ -32,21 +37,17 @@ class Info(object):
         self.deleted = True
 
 
-def _create_system():
-    info = Info()
-    system = DeleteListenerSystem(info.record_deletion)
-    return system, info
-
-
-class TestSystemLifetime(unittest.TestCase):
+class TestLifetime(unittest.TestCase):
     def test_basic(self):
-        system, info = _create_system()
+        info = Info()
+        system = DeleteListenerSystem(info.record_deletion)
         self.assertFalse(info.deleted)
         del system
         self.assertTrue(info.deleted)
 
     def test_ownership_diagram(self):
-        system, info = _create_system()
+        info = Info()
+        system = DeleteListenerSystem(info.record_deletion)
         builder = DiagramBuilder()
         # `system` is now owned by `builder`.
         builder.AddSystem(system)
@@ -62,7 +63,8 @@ class TestSystemLifetime(unittest.TestCase):
         self.assertTrue(system is not None)
 
     def test_ownership_simulator(self):
-        system, info = _create_system()
+        info = Info()
+        system = DeleteListenerSystem(info.record_deletion)
         simulator = Simulator(system)
         self.assertFalse(info.deleted)
         del simulator
@@ -70,6 +72,17 @@ class TestSystemLifetime(unittest.TestCase):
         self.assertFalse(info.deleted)
         self.assertTrue(system is not None)
 
+    def test_ownership_vector(self):
+        system = Adder(1, 1)
+        context = system.CreateDefaultContext()
+        info = Info()
+        vector = DeleteListenerVector(info.record_deletion)
+        context.FixInputPort(0, vector)
+        del context
+        # WARNING
+        self.assertTrue(info.deleted)
+        self.assertTrue(vector is not None)
 
-if __name__ == '__main__':
-    unittest.main()
+
+assert __name__ == '__main__'
+unittest.main()

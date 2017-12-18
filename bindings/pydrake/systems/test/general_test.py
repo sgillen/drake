@@ -21,7 +21,7 @@ from pydrake.systems.primitives import (
     )
 
 
-class TestSystemGeneral(unittest.TestCase):
+class TestGeneral(unittest.TestCase):
     def test_simulator_ctor(self):
         # Create simple system.
         system = ConstantVectorSource([1])
