@@ -62,6 +62,18 @@ class TestLifetime(unittest.TestCase):
         self.assertTrue(info.deleted)
         self.assertTrue(system is not None)
 
+    def test_ownership_multiple_containers(self):
+        info = Info()
+        system = DeleteListenerSystem(info.record_deletion)
+        builder_1 = DiagramBuilder()
+        builder_2 = DiagramBuilder()
+        builder_1.AddSystem(system)
+        with self.assertRaises(RuntimeError) as context:
+            # This should throw an error from `pybind11`, since two containers
+            # are trying to own a unique_ptr-held object.
+            builder_2.AddSystem(system)
+        self.assertTrue("should be owned" in context.exception.message)
+
     def test_ownership_simulator(self):
         info = Info()
         system = DeleteListenerSystem(info.record_deletion)
