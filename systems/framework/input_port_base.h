@@ -20,6 +20,27 @@ class InputPortBase {
  public:
   DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(InputPortBase)
 
+  /** (Internal use only) Provides derived classes the ability to set the base
+  class members at construction. Assigns a DependencyTicket.
+
+  @param index
+    The index to be assigned to this InputPort.
+  @param data_type
+    Whether the port described is vector or abstract valued.
+  @param size
+    If the port described is vector-valued, the number of elements, or kAutoSize
+    if determined by connections.
+  @param random_type Input ports may optionally be labeled as random, if the
+                     port is intended to model a random-source "noise" or
+                     "disturbance" input.
+  @param system
+    The System that will own this new input port. This port will be assigned the
+    next available input port index in this system, and the next available
+    dependency ticket. */
+  InputPortBase(InputPortIndex index, PortDataType data_type, int size,
+                const optional<RandomDistribution>& random_type,
+                SystemBase* system);
+
   virtual ~InputPortBase() {}
 
   /** Returns the index of this input port within the owning System. For a
@@ -50,28 +71,6 @@ class InputPortBase {
 
   /** Returns the RandomDistribution if this is a random port. */
   optional<RandomDistribution> get_random_type() const { return random_type_; }
-
- protected:
-  /** Provides derived classes the ability to set the base class members at
-  construction. Assigns a DependencyTicket.
-
-  @param index
-    The index to be assigned to this InputPort.
-  @param data_type
-    Whether the port described is vector or abstract valued.
-  @param size
-    If the port described is vector-valued, the number of elements, or kAutoSize
-    if determined by connections.
-  @param random_type Input ports may optionally be labeled as random, if the
-                     port is intended to model a random-source "noise" or
-                     "disturbance" input.
-  @param system
-    The System that will own this new input port. This port will be assigned the
-    next available input port index in this system, and the next available
-    dependency ticket. */
-  InputPortBase(InputPortIndex index, PortDataType data_type, int size,
-                const optional<RandomDistribution>& random_type,
-                SystemBase* system);
 
  private:
   // Associated System and System resources.

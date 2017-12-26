@@ -120,20 +120,20 @@ namespace {
 // Convenience function for linear search of a vector to see if it contains
 // a given value.
 template <typename T>
-bool Contains(const std::vector<T>& to_search, const T& value) {
+bool Contains(const T& value, const std::vector<T>& to_search) {
   return std::find(to_search.begin(), to_search.end(), value)
       != to_search.end();
 }
 
 // Look for the given value and erase it. Fail if not found.
 template <typename T>
-void Remove(std::vector<T>& to_search, const T& value) {
-  auto found = std::find(to_search.begin(), to_search.end(), value);
-  DRAKE_DEMAND(found != to_search.end());
-  to_search.erase(found);
+void Remove(const T& value, std::vector<T>* to_search) {
+  auto found = std::find(to_search->begin(), to_search->end(), value);
+  DRAKE_DEMAND(found != to_search->end());
+  to_search->erase(found);
 }
 
-}
+}  // namespace
 
 // Remove a subscription that we made earlier.
 void DependencyTracker::UnsubscribeFromPrerequisite(
@@ -144,7 +144,7 @@ void DependencyTracker::UnsubscribeFromPrerequisite(
 
   // Make sure we have already added this prerequisite. Expensive.
   DRAKE_ASSERT(HasPrerequisite(*prerequisite));  // Expensive.
-  Remove<const DependencyTracker*>(prerequisites_, prerequisite);
+  Remove<const DependencyTracker*>(prerequisite, &prerequisites_);
 
   prerequisite->RemoveDownstreamSubscriber(*this);
 }
@@ -160,7 +160,7 @@ void DependencyTracker::RemoveDownstreamSubscriber(
   SPDLOG_DEBUG(log(), "Tracker '{}' removing subscriber '{}'",
                GetPathDescription(), subscriber.GetPathDescription());
 
-  Remove(subscribers_, &subscriber);
+  Remove<const DependencyTracker*>(&subscriber, &subscribers_);
 }
 
 std::string DependencyTracker::GetPathDescription() const {
@@ -172,14 +172,14 @@ std::string DependencyTracker::GetPathDescription() const {
 // is present.
 bool DependencyTracker::HasPrerequisite(
     const DependencyTracker& prerequisite) const {
-  return Contains(prerequisites_, &prerequisite);
+  return Contains(&prerequisite, prerequisites_);
 }
 
 // Figure out which list the subscriber would be on, then see if it
 // is present.
 bool DependencyTracker::HasSubscriber(
     const DependencyTracker& subscriber) const {
-  return Contains(subscribers_, &subscriber);
+  return Contains(&subscriber, subscribers_);
 }
 
 void DependencyTracker::RepairTrackerPointers(

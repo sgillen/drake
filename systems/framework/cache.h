@@ -16,6 +16,7 @@ values. */
 #include "drake/common/drake_assert.h"
 #include "drake/common/drake_copyable.h"
 #include "drake/common/type_safe_index.h"
+#include "drake/common/unused.h"
 #include "drake/systems/framework/framework_common.h"
 #include "drake/systems/framework/value.h"
 
@@ -292,8 +293,10 @@ class CacheEntryValue {
   // (Internal use only) Constructs an empty CacheEntryValue with description
   // "DUMMY" and a meaningless value. Used only as a default destination for
   // non-cache DependencyTracker invalidations.
-  explicit CacheEntryValue(bool)
-      : description_("DUMMY"), value_(AbstractValue::Make<int>(0)) {}
+  explicit CacheEntryValue(bool not_used)
+      : description_("DUMMY"), value_(AbstractValue::Make<int>(0)) {
+    unused(not_used);
+  }
   #endif
 
  private:

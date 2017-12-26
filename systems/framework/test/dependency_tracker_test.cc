@@ -85,10 +85,6 @@ class HandBuiltDependencies : public ::testing::Test {
 
     // Retrieve time tracker.
     time_tracker_ = &graph.get_mutable_tracker(system_.time_ticket());
-
-    // Turn on logging before anything else happens.
-    log()->set_level(spdlog::level::trace);
-    log()->flush_on(spdlog::level::trace);
   }
 
   MySystemBase system_;

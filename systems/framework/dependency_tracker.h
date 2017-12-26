@@ -244,7 +244,6 @@ class DependencyTracker {
   DependencyGraph. */
   DependencyTicket ticket() const { return ticket_; }
 
-
   /** Returns the DependencyGraph that owns this tracker. */
   const DependencyGraph& get_owning_subgraph() const {
     return *owning_subgraph_;

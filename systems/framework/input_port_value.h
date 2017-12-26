@@ -176,7 +176,7 @@ class FreestandingInputPortValue {
 
   // The value and its serial number.
   std::unique_ptr<AbstractValue> value_;
-  int64_t serial_number_{0};  // Currently just for debugging use.
+  int64_t serial_number_{-1};  // Currently just for debugging use.
 
   // Index of the dependency tracker for this freestanding value. The input
   // port should have registered with this tracker.

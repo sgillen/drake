@@ -54,7 +54,7 @@ class LeafContextTest : public ::testing::Test {
     context_.set_time(kTime);
 
     // Input
-    SetNumInputPorts(system_, &context_, kNumInputPorts);
+    SetNumInputPorts(kNumInputPorts, &system_, &context_);
 
     // Fixed input values get new tickets -- manually update the System
     // ticket counter here so this test can add more System things later.
@@ -129,10 +129,9 @@ class LeafContextTest : public ::testing::Test {
   // Mocks up some input ports sufficient to allow us to give them fixed values.
   // This code mimics SystemBase::CreateSourceTrackers.
   template <typename T>
-  static void SetNumInputPorts(SystemBase& system,
-                               Context<T>* context, int n) {
+  static void SetNumInputPorts(int n, SystemBase* system, Context<T>* context) {
     for (InputPortIndex i(0); i < n; ++i) {
-      context->AddInputPort(i, system.assign_next_dependency_ticket());
+      context->AddInputPort(i, system->assign_next_dependency_ticket());
     }
   }
 
@@ -255,7 +254,7 @@ TEST_F(LeafContextTest, GetNumStates) {
 TEST_F(LeafContextTest, GetVectorInput) {
   MySystemBase system;
   LeafContext<double> context;
-  SetNumInputPorts(system, &context, 2);
+  SetNumInputPorts(2, &system, &context);
 
   // Add input port 0 to the context, but leave input port 1 uninitialized.
   context.FixInputPort(0, BasicVector<double>::Make({5, 6}));
@@ -272,7 +271,7 @@ TEST_F(LeafContextTest, GetVectorInput) {
 TEST_F(LeafContextTest, GetAbstractInput) {
   MySystemBase system;
   LeafContext<double> context;
-  SetNumInputPorts(system, &context, 2);
+  SetNumInputPorts(2, &system, &context);
 
   // Add input port 0 to the context, but leave input port 1 uninitialized.
   context.FixInputPort(0, AbstractValue::Make<std::string>("foo"));

@@ -229,9 +229,56 @@ class ContextBase {
   /** For input port `index`, returns the FreestandingInputPortValue if the
   port is freestanding, otherwise nullptr. Asserts if `index` is out of
   range. */
-  const FreestandingInputPortValue* GetInputPortValue(int index) const {
+  const FreestandingInputPortValue* GetInputPortValue(
+      InputPortIndex index) const {
     DRAKE_DEMAND(0 <= index && index < get_num_input_ports());
     return input_port_values_[index].get();
+  }
+
+  /** For input port `index`, returns a mutable FreestandingInputPortValue if
+  the port is freestanding, otherwise nullptr. No value-change notification
+  is sent by this method; that does not occur until mutable access to the
+  contained value is requested. Asserts if `index` is out of range. */
+  FreestandingInputPortValue* GetMutableInputPortValue(
+      InputPortIndex index) const {
+    DRAKE_DEMAND(0 <= index && index < get_num_input_ports());
+    return input_port_values_[index].get();
+  }
+
+  /** Fixes the input port at `index` to the internal value source `port_value`.
+  If the port wasn't previously fixed, assigns a ticket and tracker for the
+  `port_value`, then subscribes the input port to the source's tracker.
+  If the port was already fixed, we just use the existing tracker and
+  subscription but replace the value. Notifies the port's downstream subscribers
+  that the value has changed. Aborts if `index` is out of range, or the given
+  `port_value` is null or already belongs to a context. */
+  void SetInputPortValue(
+      InputPortIndex index,
+      std::unique_ptr<FreestandingInputPortValue> port_value) {
+    DRAKE_DEMAND(0 <= index && index < get_num_input_ports());
+    DRAKE_DEMAND(port_value != nullptr);
+
+    DependencyTracker& port_tracker =
+        get_mutable_tracker(input_port_tickets()[index]);
+    FreestandingInputPortValue* old_value = input_port_values_[index].get();
+
+    if (old_value != nullptr) {
+      // All the dependency wiring is already in place.
+      port_value->set_ticket(old_value->ticket());
+    } else {
+      // Create a new tracker and subscribe to it.
+      DependencyTracker& value_tracker = graph_.CreateNewDependencyTracker(
+          "Value for fixed input port " + std::to_string(index));
+      port_value->set_ticket(value_tracker.ticket());
+      port_tracker.SubscribeToPrerequisite(&value_tracker);
+    }
+
+    // Fill in the FreestandingInputPortValue object and install it.
+    port_value->set_owning_context(this, index);
+    input_port_values_[index] = std::move(port_value);
+
+    // Invalidate anyone who cares about this input port.
+    port_tracker.NoteValueChange(start_new_change_event());
   }
 
   // These are for internal use only.
@@ -331,42 +378,6 @@ class ContextBase {
       SubsystemIndex index) const {
     throw std::logic_error(
         "ContextBase::do_get_subcontext: called on a leaf context.");
-  }
-
-  /** Fixes the input port at `index` to the internal value source `port_value`.
-  If the port wasn't previously fixed, assigns a ticket and tracker for the
-  `port_value`, then subscribes the input port to the source's tracker.
-  If the port was already fixed, we just use the existing tracker and
-  subscription but replace the value. Notifies the port's downstream subscribers
-  that the value has changed. Aborts if `index` is out of range, or the given
-  `port_value` is null or already belongs to a context. */
-  void SetInputPortValue(
-      InputPortIndex index,
-      std::unique_ptr<FreestandingInputPortValue> port_value) {
-    DRAKE_DEMAND(0 <= index && index < get_num_input_ports());
-    DRAKE_DEMAND(port_value != nullptr);
-
-    DependencyTracker& port_tracker =
-        get_mutable_tracker(input_port_tickets()[index]);
-    FreestandingInputPortValue* old_value = input_port_values_[index].get();
-
-    if (old_value != nullptr) {
-      // All the dependency wiring is already in place.
-      port_value->set_ticket(old_value->ticket());
-    } else {
-      // Create a new tracker and subscribe to it.
-      DependencyTracker& value_tracker = graph_.CreateNewDependencyTracker(
-          "Value for fixed input port " + std::to_string(index));
-      port_value->set_ticket(value_tracker.ticket());
-      port_tracker.SubscribeToPrerequisite(&value_tracker);
-    }
-
-    // Fill in the FreestandingInputPortValue object and install it.
-    port_value->set_owning_context(this, index);
-    input_port_values_[index] = std::move(port_value);
-
-    // Invalidate anyone who cares about this input port.
-    port_tracker.NoteValueChange(start_new_change_event());
   }
 
  private:

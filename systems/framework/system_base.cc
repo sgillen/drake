@@ -1,12 +1,5 @@
 #include "drake/systems/framework/system_base.h"
 
-
-// TODO(sherm1) Remove this hack.
-// (Debug) Workaround for inability to view strings in debugger.
-const char* dbgstr(const std::string& str) {
-  return str.c_str();
-}
-
 namespace drake {
 namespace systems {
 

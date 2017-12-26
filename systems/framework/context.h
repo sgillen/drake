@@ -165,7 +165,8 @@ class Context : public ContextBase {
   void set_continuous_state(std::unique_ptr<ContinuousState<T>> xc) {
     const int64_t change_event = this->start_new_change_event();
     NoteAllContinuousStateChanged(change_event);
-    PropagateBulkChange(change_event, &ContextBase::NoteAllContinuousStateChanged);
+    PropagateBulkChange(change_event,
+                        &ContextBase::NoteAllContinuousStateChanged);
     do_access_mutable_state().set_continuous_state(std::move(xc));
   }
 
@@ -441,7 +442,8 @@ class Context : public ContextBase {
     // TODO(sherm1) Invalidate only dependents of this one parameter.
     const int64_t change_event = this->start_new_change_event();
     NoteAllNumericParametersChanged(change_event);
-    PropagateBulkChange(change_event, &ContextBase::NoteAllNumericParametersChanged);
+    PropagateBulkChange(change_event,
+                        &ContextBase::NoteAllNumericParametersChanged);
     return parameters_->get_mutable_numeric_parameter(index);
   }
 
@@ -463,7 +465,8 @@ class Context : public ContextBase {
     // TODO(sherm1) Invalidate only dependents of this one parameter.
     const int64_t change_event = this->start_new_change_event();
     NoteAllAbstractParametersChanged(change_event);
-    PropagateBulkChange(change_event, &ContextBase::NoteAllAbstractParametersChanged);
+    PropagateBulkChange(change_event,
+                        &ContextBase::NoteAllAbstractParametersChanged);
     return get_mutable_parameters().get_mutable_abstract_parameter(index);
   }
 
@@ -546,7 +549,7 @@ class Context : public ContextBase {
   // TODO(sherm1) This can only verify fixed input ports. Use Diagram to
   // verify connections.
   void VerifyInputPort(const InputPortBase& descriptor) const {
-    const int i = descriptor.get_index();
+    const InputPortIndex i = descriptor.get_index();
     const FreestandingInputPortValue* port_value = GetInputPortValue(i);
     // If the port isn't fixed, we don't have anything else to check.
     if (port_value == nullptr) { return; }
@@ -591,6 +594,7 @@ class Context : public ContextBase {
   /// (Internal use only) Returns a reference to a mutable state _without_
   /// invalidation notifications. Use get_mutable_state() instead.
   State<T>& access_mutable_state() { return do_access_mutable_state(); }
+
  protected:
   Context() = default;
 
