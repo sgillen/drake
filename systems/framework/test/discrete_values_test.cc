@@ -131,9 +131,9 @@ TEST_F(DiscreteValuesTest, DiagramDiscreteValues) {
   EXPECT_EQ(dv3.num_groups(), 3);
 
   //                     root
-  //                    /    \       Flattened: root=10 groups
+  //                    ╱    ╲       Flattened: root=10 groups
   //                  dv3   ddv1                ddv1=7 groups
-  //                       /  |  \
+  //                       ╱  |  ╲
   //                     dv0 dv1 dv2
   std::vector<DiscreteValues<double>*> unowned1{&dv0, &dv1, &dv2};
   DiagramDiscreteValues<double> ddv1(unowned1);

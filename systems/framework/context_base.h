@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "drake/common/drake_copyable.h"
+#include "drake/common/unused.h"
 #include "drake/systems/framework/cache.h"
 #include "drake/systems/framework/dependency_tracker.h"
 #include "drake/systems/framework/input_port_value.h"
@@ -376,6 +377,7 @@ class ContextBase {
   subcontexts. The default implementation throws a logic error. */
   virtual const ContextBase& do_get_subcontext(
       SubsystemIndex index) const {
+    unused(index);
     throw std::logic_error(
         "ContextBase::do_get_subcontext: called on a leaf context.");
   }

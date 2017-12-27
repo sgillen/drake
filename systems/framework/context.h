@@ -6,6 +6,7 @@
 #include "drake/common/drake_copyable.h"
 #include "drake/common/drake_optional.h"
 #include "drake/common/drake_throw.h"
+#include "drake/common/unused.h"
 #include "drake/systems/framework/context_base.h"
 #include "drake/systems/framework/parameters.h"
 #include "drake/systems/framework/state.h"
@@ -620,7 +621,9 @@ class Context : public ContextBase {
 
   /// Diagram contexts should override this to invoke PropagateTimeChange()
   /// on their subcontexts. The default implementation does nothing.
-  virtual void DoPropagateTimeChange(const T& time_sec, int64_t change_event) {}
+  virtual void DoPropagateTimeChange(const T& time_sec, int64_t change_event) {
+    unused(time_sec, change_event);
+  }
 
   /// Diagram contexts should override this to invoke PropagateAccuracyChange()
   /// on their subcontexts. The default implementation does nothing.
@@ -633,7 +636,9 @@ class Context : public ContextBase {
   /// discrete state variables, etc.). The default implementation does nothing.
   virtual void DoPropagateBulkChange(
       int64_t change_event,
-      void (ContextBase::*NoteBulkChange)(int64_t change_event)) {}
+      void (ContextBase::*NoteBulkChange)(int64_t change_event)) {
+    unused(NoteBulkChange);
+  }
 
   /// Returns a const reference to current time and step information.
   const StepInfo<T>& get_step_info() const { return step_info_; }
