@@ -159,8 +159,8 @@ class CacheTest : public ::testing::Test {
 
   // Turn on logging before anything else happens.
   bool logging_enabled_ = []() {
-    log()->set_level(spdlog::level::trace);
-    log()->flush_on(spdlog::level::trace);
+    // log()->set_level(spdlog::level::trace);
+    // log()->flush_on(spdlog::level::trace);
     return true;
   }();
 
@@ -323,16 +323,17 @@ TEST_F(CacheTest, Copy) {
   EXPECT_EQ(cache_value(string_index_, &copy).ticket(),
             cache_value(string_index_).ticket());
 
+  // Changes to the copy should not affect the original.
+  cache_value(index2_, &copy).set_is_up_to_date(false);  // Invalidate.
+  cache_value(index2_, &copy).set_value<int>(99);  // Set new value & validate.
+  EXPECT_EQ(cache_value(index2_, &copy).get_value<int>(), 99);
+  EXPECT_EQ(cache_value(index2_).get_value<int>(), 2);
+
   // This should invalidate everything in the original cache, but nothing
   // in the copy. Just check one entry as representative.
   context_.get_tracker(system_.time_ticket()).NoteValueChange(10);
   EXPECT_FALSE(cache_value(string_index_).is_up_to_date());
   EXPECT_TRUE(cache_value(string_index_, &copy).is_up_to_date());
-
-  // Changes to the copy should not affect the original.
-  cache_value(index2_, &copy).set_value<int>(99);
-  EXPECT_EQ(cache_value(index2_, &copy).get_value<int>(), 99);
-  EXPECT_EQ(cache_value(index2_).get_value<int>(), 2);
 }
 
 }  // namespace
