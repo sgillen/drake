@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "drake/common/drake_throw.h"
+#include "drake/common/unused.h"
 #include "drake/systems/framework/cache_entry.h"
 #include "drake/systems/framework/framework_common.h"
 #include "drake/systems/framework/input_port_base.h"
@@ -572,6 +573,7 @@ class SystemBase {
   // just aborts.
   virtual const AbstractValue* EvalConnectedSubsystemInputPort(
       const ContextBase& context, const InputPortBase& id) const {
+    unused(context, id);
     DRAKE_ABORT_MSG("EvaluateSubsystemInputPort(): not implemented");
   }
 
