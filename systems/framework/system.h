@@ -760,10 +760,11 @@ class System : public SystemBase {
     DRAKE_ASSERT_VOID(CheckValidContext(context));
     DRAKE_ASSERT_VOID(CheckValidOutput(outputs));
     for (OutputPortIndex i(0); i < get_num_output_ports(); ++i) {
-      // TODO(sherm1) remove this.
-      // get_output_port(i).Calc(context, outputs->GetMutableData(i));
-      outputs->GetMutableData(i)->SetFromOrThrow(
-          get_output_port(i).EvalAbstract(context));
+      // TODO(sherm1) Would be better to use Eval() here but we don't have
+      // a generic abstract assignment capability that would allow us to
+      // copy into existing memory in `outputs` (rather than clone). User
+      // code depends on memory stability in SystemOutput.
+      get_output_port(i).Calc(context, outputs->GetMutableData(i));
     }
   }
 
