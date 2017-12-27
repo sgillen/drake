@@ -230,7 +230,7 @@ class DiagramContext : public Context<T> {
   /// User code should not call this method. It is for use during Diagram
   /// context allocation and cloning only.
   void Connect(const OutputPortIdentifier& oport,
-               const InputPortIdentifier& iport, bool set_up_trackers = true) {
+               const InputPortIdentifier& iport) {
     // Identify and validate the source output port.
     SubsystemIndex oport_system_index = oport.first;
     OutputPortIndex oport_index = oport.second;

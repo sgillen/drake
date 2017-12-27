@@ -309,7 +309,9 @@ class LeafSystem : public System<T> {
   /// also be used to impose restrictions on what resources are permitted. For
   /// example, a derived class might require a single input and single output.
   /// The default implementation does nothing.
-  virtual void DoAcquireLeafContextResources(Context<T>* context) const {}
+  virtual void DoAcquireLeafContextResources(Context<T>* context) const {
+    unused(context);
+  }
 
   // =========================================================================
   // Implementations of System<T> methods.

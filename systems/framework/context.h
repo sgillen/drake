@@ -627,8 +627,10 @@ class Context : public ContextBase {
 
   /// Diagram contexts should override this to invoke PropagateAccuracyChange()
   /// on their subcontexts. The default implementation does nothing.
-  virtual void DoPropagateAccuracyChange(const optional<double>&,
-                                         int64_t change_event) {}
+  virtual void DoPropagateAccuracyChange(const optional<double>& accuracy,
+                                         int64_t change_event) {
+    unused(accuracy, change_event);
+  }
 
   /// Diagram contexts should override this to invoke PropagateBulkChange()
   /// on their subcontexts, passing along the indicated method that specifies
@@ -637,7 +639,7 @@ class Context : public ContextBase {
   virtual void DoPropagateBulkChange(
       int64_t change_event,
       void (ContextBase::*NoteBulkChange)(int64_t change_event)) {
-    unused(NoteBulkChange);
+    unused(change_event, NoteBulkChange);
   }
 
   /// Returns a const reference to current time and step information.

@@ -645,7 +645,9 @@ class SystemBase {
   the right structure and each subcontext has trackers available for each of
   its resources.  The supplied context is guaranteed to be
   non-null; you don't need to error-check that. */
-  virtual void DoMakeContextConnections(ContextBase* context) const {}
+  virtual void DoMakeContextConnections(ContextBase* context) const {
+    unused(context);
+  }
 
   /** Derived classes should override to complete resource allocation, and to
   validate that the Context resource collection is acceptable. The
@@ -677,6 +679,7 @@ class SystemBase {
   /** DiagramSystem must override this to provide access to its contained
   subsystems. The default implementation throws a logic error. */
   virtual const SystemBase& do_get_subsystem(SubsystemIndex index) const {
+    unused(index);
     throw std::logic_error(
         "SystemBase::do_get_subsystem(): called on a leaf system.");
   }
