@@ -1,5 +1,7 @@
 #include "drake/common/proto/call_python.h"
 
+#include <unistd.h>
+
 #include <cmath>
 #include <string>
 
@@ -15,6 +17,9 @@ DEFINE_string(done_file, "/tmp/python_rpc_done",
               "Signifies last Python command has been executed.");
 // Ensure that we test error behavior.
 DEFINE_bool(with_error, false, "Inject an error towards the end.");
+// Ensure that we test error behavior.
+DEFINE_bool(sleep_at_end, false,
+            "Sleep at end to check behavior of C++ when Python client fails.");
 
 // TODO(eric.cousineau): Instrument client to verify output (and make this a
 // unittest).
@@ -158,6 +163,9 @@ GTEST_TEST(TestCallPython, Plot3d) {
 }
 
 GTEST_TEST(TestCallPython, Finish) {
+  if (FLAGS_sleep_at_end) {
+    sleep(1);
+  }
   // Signal finishing to client.
   CallPython("execution_check.finish");
   // Signal finishing to `call_python_full_test.sh`.

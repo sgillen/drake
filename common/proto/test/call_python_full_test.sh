@@ -93,6 +93,16 @@ py-check() {
     fi
 }
 
+cc-check() {
+    if [[ ${py_fail} -eq 0 ]]; then
+        "$@" || { echo "C++ binary failed"; exit 1; }
+    else
+        # If the C++ binary has not finished by the time the Python client
+        # exits due to failure, then the C++ binary will fail with SIGPIPE.
+        "$@" || { echo "C++ binary failed; continuing."; }
+    fi
+}
+
 do-setup() {
     py_fail=${1}
     py_stop_on_error=${2}
@@ -121,7 +131,7 @@ no_threading-no_loop() {
     ${py_client_cli} --no_threading --no_loop ${py_flags} &
     pid=$!
     # Execute C++.
-    ${cc_bin} ${cc_bin_flags} ${cc_flags}
+    cc-check ${cc_bin} ${cc_bin_flags} ${cc_flags}
     # When this is done, Python client should exit.
     py-check wait ${pid}
 }
@@ -130,7 +140,7 @@ sub-tests no_threading-no_loop
 threading-no_loop() {
     ${py_client_cli} --no_loop ${py_flags} &
     pid=$!
-    ${cc_bin} ${cc_bin_flags} ${cc_flags}
+    cc-check ${cc_bin} ${cc_bin_flags} ${cc_flags}
     py-check wait ${pid}
 }
 sub-tests threading-no_loop
@@ -138,11 +148,11 @@ sub-tests threading-no_loop
 threading-loop() {
     ${py_client_cli} ${py_flags} &
     pid=$!
-    ${cc_bin} ${cc_bin_flags} ${cc_flags}
+    cc-check ${cc_bin} ${cc_bin_flags} ${cc_flags}
     if [[ ${py_stop_on_error} -ne 1 ]]; then
         # If the client will not halt execution based on an error, execute C++
         # client once more.
-        ${cc_bin} ${cc_bin_flags} ${cc_flags}
+        cc-check ${cc_bin} ${cc_bin_flags} ${cc_flags}
         # Ensure that we wait until the client is fully done with both
         # executions.
         done_count=0
