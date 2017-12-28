@@ -4,6 +4,7 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
+#include "drake/bindings/pydrake/type_safe_index_py.h"
 #include "drake/systems/framework/abstract_values.h"
 #include "drake/systems/framework/basic_vector.h"
 #include "drake/systems/framework/context.h"
@@ -45,6 +46,16 @@ PYBIND11_MODULE(framework, m) {
 
   // TODO(eric.cousineau): Resolve `str_py` workaround.
   auto str_py = py::eval("str");
+
+  BindTypeSafeIndex<SubsystemIndex>(m, "SubsystemIndex");
+  BindTypeSafeIndex<InputPortIndex>(m, "InputPortIndex");
+  BindTypeSafeIndex<OutputPortIndex>(m, "OutputPortIndex");
+  BindTypeSafeIndex<DependencyTicket>(m, "DependencyTicket");
+  BindTypeSafeIndex<CacheIndex>(m, "CacheIndex");
+  BindTypeSafeIndex<DiscreteStateIndex>(m, "DiscreteStateIndex");
+  BindTypeSafeIndex<AbstractStateIndex>(m, "AbstractStateIndex");
+  BindTypeSafeIndex<NumericParameterIndex>(m, "NumericParameterIndex");
+  BindTypeSafeIndex<AbstractParameterIndex>(m, "AbstractParameterIndex");
 
   py::setattr(m, "kAutoSize", py::cast(kAutoSize));
 
