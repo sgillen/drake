@@ -15,7 +15,7 @@ load(
     "//tools/skylark:pybind.bzl",
     "drake_pybind_library",
     "get_drake_pybind_installs",
-    "get_pybind_library_dest",
+    "get_pybind_library_info",
 )
 load("//tools/skylark:6996.bzl", "adjust_labels_for_drake_hoist")
 
@@ -31,12 +31,14 @@ package(default_visibility = adjust_labels_for_drake_hoist([
 #   `*_pybind` implies a C++ library for adding pybind-specific
 # utilities.
 
+INFO = get_pybind_library_info()
+
 # This is a pure-python, standalone library.
 # Keep this away from `common_py` to simplify test dependencies.
 drake_py_library(
     name = "util_py",
     srcs = ["util.py"],
-    imports = [".."],
+    imports = INFO.py_imports,
 )
 
 drake_pybind_library(
@@ -132,7 +134,7 @@ PY_LIBRARIES = [
 install(
     name = "install",
     targets = PY_LIBRARIES,
-    py_dest = get_pybind_library_dest(),
+    py_dest = INFO.py_dest,
     visibility = ["//visibility:public"],
     deps = get_drake_pybind_installs(PYBIND_LIBRARIES),
 )

@@ -115,22 +115,20 @@ def drake_pybind_library(
         visibility = visibility,
     )
     # Get current package's information.
-    library_info = _get_child_library_info()
-    py_base_rel_path, py_library_install = (
-        library_info.rel_path, library_info.sub_package)
+    library_info = get_pybind_library_info()
     # Add Python library.
     drake_py_library(
         name = py_name,
         data = [cc_so_name],
         srcs = py_srcs,
         deps = py_deps,
-        imports = [py_base_rel_path] + py_imports,
+        imports = library_info.py_imports + py_imports,
         testonly = testonly,
         visibility = visibility,
     )
     # Add installation target for C++ and C++ bits.
     if add_install:
-        py_dest = get_pybind_library_dest(py_library_install)
+        py_dest = library_info.py_dest
         install(
             name = install_name,
             targets = [
@@ -158,17 +156,27 @@ def _get_install(target):
         # Assume that the package has an ":install" target.
         return target + ":install"
 
-def get_pybind_library_dest(py_library_install = None):
-    """Gets Python installation destination for a given package."""
-    if py_library_install == None:
-        py_library_install = _get_child_library_info().sub_package
-    return "lib/python{}/site-packages/{}".format(_PY_VERSION,
-                                                  py_library_install)
+def get_pybind_library_info(package = None, base_package = _BASE_PACKAGE):
+    """Gets a package's path relative to a base package, and the sub-package
+    name (for installation).
 
-def _get_child_library_info(package = None, base_package = _BASE_PACKAGE):
-    # Gets a package's path relative to a base package, and the sub-package
-    # name (for installation).
-    # @return struct(rel_path, sub_package)
+    @param package
+        Package of interest. If `None`, will resolve to the calling package.
+    @param base_package
+        Base package, which should be on `PYTHONPATH`.
+    @return struct(imports, py_dest)
+    """
+    # Use relative package path, as `py_library` does not like absolute package
+    # paths.
+    package_info = _get_package_ino(package, base_package)
+    return struct(
+        py_imports = [package_info.rel_path],
+        py_dest = "lib/python{}/site-packages/{}".format(
+            _PY_VERSION, library_info.sub_package))
+
+def _get_package_info(package = None, base_package = _BASE_PACKAGE):
+    # TODO(eric.cousineau): Move this to `python.bzl` or somewhere more
+    # general?
     if package == None:
         package = native.package_name()
     base_package_pre = base_package + "/"

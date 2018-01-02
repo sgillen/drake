@@ -6,7 +6,7 @@ load(
     "//tools/skylark:pybind.bzl",
     "drake_pybind_library",
     "get_drake_pybind_installs",
-    "get_pybind_library_dest",
+    "get_pybind_library_info",
 )
 load(
     "//tools/skylark:drake_py.bzl",
@@ -20,6 +20,8 @@ package(default_visibility = adjust_labels_for_drake_hoist([
     "//drake/bindings/pydrake:__subpackages__",
 ]))
 
+INFO = get_pybind_library_info()
+
 # @note Symbols are NOT imported directly into
 # `__init__.py` to simplify dependency management, meaning that
 # classes are organized by their directory structure rather than
@@ -30,6 +32,7 @@ drake_py_library(
     deps = [
         "//drake/bindings/pydrake:common_py",
     ],
+    imports = INFO.py_imports,
 )
 
 drake_pybind_library(
@@ -65,8 +68,7 @@ drake_py_library(
     name = "drawing_py",
     srcs = ["drawing.py"],
     deps = [":module_py"],
-    # TODO(eric.cousineau): Expose information to allow `imports = ...` to be
-    # defined, rather than rely on `module_py`.
+    imports = INFO.py_imports,
 )
 
 drake_py_library(
@@ -94,12 +96,13 @@ PY_LIBRARIES = [
 drake_py_library(
     name = "systems",
     deps = PYBIND_LIBRARIES + PY_LIBRARIES,
+    imports = INFO.py_imports,
 )
 
 install(
     name = "install",
     targets = PY_LIBRARIES,
-    py_dest = get_pybind_library_dest(),
+    py_dest = INFO.py_dest,
     deps = get_drake_pybind_installs(PYBIND_LIBRARIES),
 )
 
