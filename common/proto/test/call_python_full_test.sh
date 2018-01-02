@@ -93,13 +93,24 @@ py-check() {
     fi
 }
 
+SIGPIPE_STATUS=141
+
 cc-check() {
     if [[ ${py_fail} -eq 0 ]]; then
         "$@" || { echo "C++ binary failed"; exit 1; }
     else
         # If the C++ binary has not finished by the time the Python client
         # exits due to failure, then the C++ binary will fail with SIGPIPE.
-        "$@" || { echo "C++ binary failed; continuing."; }
+        "$@"
+        status=$?
+        if [[ ${status} -eq 0 ]]; then
+            :
+        elif [[ ${status} -eq ${SIGPIPE_STATUS} ]]; then
+            echo "C++ binary failed with SIGPIPE; expected behavior, continuing."
+        else
+            echo "C++ binary failed"
+            exit ${status}
+        fi
     fi
 }
 
