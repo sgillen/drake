@@ -74,6 +74,7 @@ def drake_pybind_library(
         cc_deps = [],
         copts = [],
         cc_so_name = None,
+        package_info = None,
         py_srcs = [],
         py_deps = [],
         py_imports = [],
@@ -92,6 +93,9 @@ def drake_pybind_library(
         Shared object name. By default, this is `_${name}`, so that the C++
         code can be then imported in a more controlled fashion in Python.
         If overridden, this could be the public interface exposed to the user.
+    @param package_info
+        Package information (Python imports, installation directory).
+        By default, uses the reutrn value from `get_pybind_package_info()`.
     @param py_srcs
         Python sources.
     @param py_deps
@@ -115,28 +119,28 @@ def drake_pybind_library(
         visibility = visibility,
     )
     # Get current package's information.
-    library_info = get_pybind_library_info()
+    if package_info == None:
+        package_info = get_pybind_package_info()
     # Add Python library.
     drake_py_library(
         name = py_name,
         data = [cc_so_name],
         srcs = py_srcs,
         deps = py_deps,
-        imports = library_info.py_imports + py_imports,
+        imports = package_info.py_imports + py_imports,
         testonly = testonly,
         visibility = visibility,
     )
     # Add installation target for C++ and C++ bits.
     if add_install:
-        py_dest = library_info.py_dest
         install(
             name = install_name,
             targets = [
                 py_name,
                 cc_so_name,
             ],
-            py_dest = py_dest,
-            library_dest = py_dest,
+            py_dest = package_info.py_dest,
+            library_dest = package_info.py_dest,
             visibility = visibility,
         )
 
@@ -156,7 +160,7 @@ def _get_install(target):
         # Assume that the package has an ":install" target.
         return target + ":install"
 
-def get_pybind_library_info(package = None, base_package = _BASE_PACKAGE):
+def get_pybind_package_info(package = None, base_package = _BASE_PACKAGE):
     """Gets a package's path relative to a base package, and the sub-package
     name (for installation).
 
@@ -172,7 +176,7 @@ def get_pybind_library_info(package = None, base_package = _BASE_PACKAGE):
     return struct(
         py_imports = [package_info.rel_path],
         py_dest = "lib/python{}/site-packages/{}".format(
-            _PY_VERSION, library_info.sub_package))
+            _PY_VERSION, package.sub_package))
 
 def _get_package_info(package = None, base_package = _BASE_PACKAGE):
     # TODO(eric.cousineau): Move this to `python.bzl` or somewhere more

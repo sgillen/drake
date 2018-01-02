@@ -8,7 +8,7 @@ load(
     "//tools/skylark:pybind.bzl",
     "drake_pybind_library",
     "get_drake_pybind_installs",
-    "get_pybind_library_info",
+    "get_pybind_package_info",
 )
 load(
     "//tools/skylark:drake_py.bzl",
@@ -21,7 +21,7 @@ package(default_visibility = adjust_labels_for_drake_hoist([
     "//drake/bindings/pydrake:__subpackages__",
 ]))
 
-INFO = get_pybind_library_info()
+PACKAGE_INFO = get_pybind_package_info()
 
 drake_py_library(
     name = "module_py",
@@ -29,7 +29,7 @@ drake_py_library(
     deps = [
         "//drake/bindings/pydrake:common_py",
     ],
-    imports = INFO.py_imports,
+    imports = PACKAGE_INFO.py_imports,
 )
 
 drake_pybind_library(
@@ -96,7 +96,7 @@ drake_py_library(
 install(
     name = "install",
     targets = PY_LIBRARIES,
-    py_dest = INFO.py_dest,
+    py_dest = PACKAGE_INFO.py_dest,
     deps = get_drake_pybind_installs(PYBIND_LIBRARIES),
 )
 
