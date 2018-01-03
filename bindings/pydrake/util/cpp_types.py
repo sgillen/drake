@@ -1,6 +1,6 @@
 from __future__ import absolute_import, print_function
 
-# Define these first, as they are used in `cpp_types.cc`.
+# Define these first, as they are used in `cpp_types_pybind.cc`.
 
 import ctypes
 import numpy as np
