@@ -37,7 +37,6 @@ done
 # Change to the workspace directory.
 cd ${mock_dir}/${pkg_reldir}
 
-# Reformat to make it more friendly.
 # Get rid of Bazel symlinks.
 rm bazel-* || :
 # Stub `add_lint_tests` so that each downstream project does not need Drake.

@@ -1,21 +1,16 @@
 load("//tools/lint:lint.bzl", "add_lint_tests")
 
-filegroup(
-    name = "workspace_symlink_forest",
-    # Use a `glob` so that Bazel produces a symlink forest, and we can run
-    # tests without litering `bazel-*` symlinks everywhere.
-    srcs = ["workspace"],
-    # srcs = [],
-    # srcs = glob(["workspace/*"]),
-)
-
+# Run all tests in `workspace` as a separate package.
 sh_test(
     name = "workspace_test",
     srcs = ["workspace_test.sh"],
-    args = ["$(location workspace_symlink_forest)"],
+    args = ["$(location workspace)"],
     data = [
-        ":workspace_symlink_forest",
-        "//tools:external_data_deps",
+        # It'd be better to have a symlink forest using `glob(...)`, but this
+        # is not easily possible with Bazel 0.6.1.
+        # See ./workspace_test.sh for more details.
+        "workspace",
+        "//tools:external_data_meta_testing_files",
     ],
 )
 
