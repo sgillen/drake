@@ -1,8 +1,7 @@
 # -*- python -*-
 load(":workspace_test.bzl", "workspace_test")
 
-load("@drake//tools/lint:bazel_lint.bzl", "bazel_lint")
-# load("@drake//tools/lint:python_lint.bzl", "python_lint")
+load("@drake//tools/lint:lint.bzl", "add_lint_tests")
 
 root_data = "//:root_data"
 
@@ -42,5 +41,4 @@ alias(
     testonly = 1,
 )
 
-bazel_lint()
-# python_lint()
+add_lint_tests()
