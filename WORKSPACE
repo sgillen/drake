@@ -474,3 +474,9 @@ local_repository(
     name = "bazel_external_data_test_ignore",
     path = __workspace_dir__ + "/tools/external_data/workspaces",
 )
+
+local_repository(
+    name = "bazel_external_data_pkg",
+    path = __workspace_dir__ +
+           "/tools/external_data/workspaces/bazel_external_data",
+)
