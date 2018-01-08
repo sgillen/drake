@@ -71,4 +71,10 @@ config_setting(
     values = {"define": "NO_SCS=ON"},
 )
 
+filegroup(
+    name = "external_data_deps",
+    srcs = ["."],
+    visibility = ["//tools/external_data:__pkg__"],
+)
+
 add_lint_tests()

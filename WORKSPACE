@@ -467,3 +467,8 @@ load(
 drake_visualizer_repository(
     name = "drake_visualizer",
 )
+
+local_repository(
+    name = "bazel_external_data_pkg",
+    path = __workspace_dir__ + "/tools/external_data/workspace",
+)
