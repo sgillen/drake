@@ -11,14 +11,13 @@ local_repository(
     path = "test/workspaces",
 )
 
-# Need access to files in `//tools/lint/...`.
+# Add `drake` to access lint tools.
 local_repository(
     name = "drake",
     path = dirname(__workspace_dir__, 3),
 )
 
 load("@drake//tools/lint:lint_repositories.bzl", "lint_repositories")
-
 lint_repositories(
     include = [
         "buildifier",

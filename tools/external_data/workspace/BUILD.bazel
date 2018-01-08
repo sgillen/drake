@@ -2,7 +2,7 @@
 
 package(default_visibility = ["//visibility:public"])
 
-load("@drake//tools/lint:bazel_lint.bzl", "bazel_lint")
+load("//tools:lint.bzl", "add_lint_tests")
 
 alias(
     name = "core",
@@ -46,4 +46,4 @@ filegroup(
     visibility = ["//test:__subpackages__"],
 )
 
-bazel_lint()
+add_lint_tests()

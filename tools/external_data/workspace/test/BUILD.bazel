@@ -1,7 +1,6 @@
 # -*- python -*-
+load("//tools:lint.bzl", "add_lint_tests")
 load(":workspace_test.bzl", "workspace_test")
-
-load("@drake//tools/lint:lint.bzl", "add_lint_tests")
 
 root_data = "//:root_data"
 
@@ -41,4 +40,14 @@ alias(
     testonly = 1,
 )
 
-add_lint_tests()
+# Ensure that we add all relevant files under `workspaces`.
+# We should be able to glob them, as they are not a package.
+add_lint_tests(
+    python_lint_extra_srcs = glob([
+        "workspaces/**/*.py"
+    ]),
+    bazel_lint_extra_srcs = glob([
+        "workspaces/**/BUILD.bazel",
+        "workspaces/**/WORKSPACE",
+    ]),
+)
