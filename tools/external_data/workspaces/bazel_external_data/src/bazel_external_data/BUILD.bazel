@@ -1,0 +1,15 @@
+# -*- python -*-
+
+load("//tools:lint.bzl", "add_lint_tests")
+
+# For macro testing.
+exports_files(["stub_test.py"])
+
+# Stub file pending Python code.
+py_test(
+    name = "stub_test",
+    srcs = ["stub_test.py"],
+    visibility = ["//visibility:public"],
+)
+
+add_lint_tests()

@@ -1,0 +1,27 @@
+# Can't name it `bazel_external_data` due to Python package clashes.
+# @ref https://github.com/bazelbuild/bazel/issues/3998
+workspace(name = "bazel_external_data_pkg")
+
+load("//tools:path.bzl", "dirname")
+
+# Include these as local repositories to have them be ignored by `test ...`.
+# @ref https://github.com/bazelbuild/bazel/issues/2460#issuecomment-296940882
+local_repository(
+    name = "bazel_external_data_test_ignore",
+    path = "test/workspaces",
+)
+
+# Add `drake` to access lint tools.
+local_repository(
+    name = "drake",
+    path = dirname(__workspace_dir__, 4),
+)
+
+load("@drake//tools/lint:lint_repositories.bzl", "lint_repositories")
+
+lint_repositories(
+    include = [
+        "buildifier",
+        "pycodestyle",
+    ],
+)

@@ -1,0 +1,23 @@
+# -*- python -*-
+load("//tools:lint.bzl", "add_lint_tests")
+load(":workspace_test.bzl", "workspace_test")
+
+root_data = "//:root_data"
+
+workspace_test(
+    name = "bazel_pkg_test",
+    data = [root_data],
+    workspace = ":workspaces/bazel_pkg_test",
+)
+
+# Ensure that we add all relevant files under `workspaces`.
+# We should be able to glob them, as they are not a package.
+add_lint_tests(
+    bazel_lint_extra_srcs = glob([
+        "workspaces/**/BUILD.bazel",
+        "workspaces/**/WORKSPACE",
+    ]),
+    python_lint_extra_srcs = glob([
+        "workspaces/**/*.py",
+    ]),
+)

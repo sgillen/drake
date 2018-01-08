@@ -472,5 +472,5 @@ drake_visualizer_repository(
 # @ref https://github.com/bazelbuild/bazel/issues/2460#issuecomment-296940882
 local_repository(
     name = "bazel_external_data_test_ignore",
-    path = __workspace_dir__ + "/tools/external_data/workspace",
+    path = __workspace_dir__ + "/tools/external_data/workspaces",
 )
