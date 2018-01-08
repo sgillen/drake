@@ -39,7 +39,9 @@ cd ${mock_dir}/${pkg_reldir}
 
 # Get rid of Bazel symlinks.
 rm bazel-* || :
-# Stub `add_lint_tests` so that each downstream project does not need Drake.
+# Stub base workspace `add_lint_tests` so that each downstream project does not
+# need Drake. `--test_tag_filters` won't work since Bazel needs to load the
+# target to check tags.
 cat > ${mock_dir}/tools/lint.bzl <<EOF
 def add_lint_tests(*args, **kwargs): pass
 EOF

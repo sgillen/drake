@@ -1,7 +1,12 @@
+# Default command. Do not run linting tests, so that the downstream test
+# packages do not need to consume `drake`.
+# *sigh*... Needs quotes.
+_CMD_DEFAULT = "'bazel test //...'"
+
 def workspace_test(
         name,
         workspace,
-        cmd = "'bazel test //...'",  # *sigh*... Needs quotes.
+        cmd = _CMD_DEFAULT,
         data = []):
     """Provides a unittest given writeable access to a copy of a given workspace
     contained in the current project. """
