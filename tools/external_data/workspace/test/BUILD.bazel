@@ -2,7 +2,7 @@
 load(":workspace_test.bzl", "workspace_test")
 
 load("@drake//tools/lint:bazel_lint.bzl", "bazel_lint")
-load("@drake//tools/lint:python_lint.bzl", "python_lint")
+# load("@drake//tools/lint:python_lint.bzl", "python_lint")
 
 root_data = "//:root_data"
 
@@ -43,4 +43,4 @@ alias(
 )
 
 bazel_lint()
-python_lint()
+# python_lint()
