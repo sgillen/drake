@@ -73,7 +73,7 @@ config_setting(
 
 filegroup(
     name = "external_data_deps",
-    srcs = ["."],
+    srcs = glob(["*"], exclude=["external_data"]),
     visibility = ["//tools/external_data:__pkg__"],
 )
 
