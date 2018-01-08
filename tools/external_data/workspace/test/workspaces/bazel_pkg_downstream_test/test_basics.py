@@ -3,6 +3,7 @@
 import os
 import unittest
 
+
 class TestBasics(unittest.TestCase):
     def test_files(self):
         with open('external/bazel_pkg_test/data/basic.bin') as f:

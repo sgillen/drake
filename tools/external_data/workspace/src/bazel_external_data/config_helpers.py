@@ -49,14 +49,14 @@ def find_project_root(guess_filepath, sentinel, project_name):
     # execroot. Record the original directory as a possible alternative.
     root_alternatives = []
     if os.path.islink(root_file):
-        # Assume that the root file is symlink'd because Bazel has linked it in.
-        # Read this to get the original path.
+        # Assume that the root file is symlink'd because Bazel has linked it
+        # in. Read this to get the original path.
         alt_root_file = os.readlink(root_file)
         assert os.path.isabs(alt_root_file)
         if os.path.islink(alt_root_file):
             raise RuntimeError(
-                "Sentinel '{}' should only have one level of an absolute-path" +
-                "symlink.".format(sentinel))
+                "Sentinel '{}' should only have one level of an "
+                "absolute-path symlink.".format(sentinel))
         (alt_root_file, root_file) = (root_file, alt_root_file)
         root_alternatives.append(os.path.dirname(alt_root_file))
     root = os.path.dirname(root_file)

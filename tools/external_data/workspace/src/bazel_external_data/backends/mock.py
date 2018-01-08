@@ -15,15 +15,16 @@ class MockBackend(Backend):
 
         # Crawl through files and compute hashes.
         self._map = {}
-        def crawl(cur_dir):
-            for file in os.listdir(cur_dir):
-                filepath = os.path.join(cur_dir, file)
-                if os.path.isfile(filepath):
-                    hash = self._hash_type.compute(filepath)
-                    self._map[hash] = filepath
-        crawl(self._dir)
+        self._crawl(self._dir)
         if os.path.exists(self._upload_dir):
-            crawl(self._upload_dir)
+            self._crawl(self._upload_dir)
+
+    def _crawl(cur_dir):
+        for file in os.listdir(cur_dir):
+            filepath = os.path.join(cur_dir, file)
+            if os.path.isfile(filepath):
+                hash = self._hash_type.compute(filepath)
+                self._map[hash] = filepath
 
     def _check_hash_type(self, hash):
         if hash.hash_type != self._hash_type:
