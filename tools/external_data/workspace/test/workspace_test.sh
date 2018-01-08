@@ -10,6 +10,10 @@ if [[ ! $(basename $(dirname ${PWD})) =~ .*\.runfiles ]]; then
     exit 1
 fi
 
+readlink-py() {
+    python -c 'import os, sys; print(os.path.realpath(sys.argv[1]))' ${1};
+}
+
 cmd=${1}
 pkg_reldir=${2}
 shift && shift
@@ -24,16 +28,22 @@ mock_dir=${WORKSPACE_TMP}/mock_workspace
 
 srcs="${pkg_reldir} ${extra_dirs}"
 mkdir -p ${mock_dir}
-readlink-py() { python -c 'import os, sys; print(os.path.realpath(sys.argv[1]))' ${1}; }
 for src in ${srcs}; do
     subdir=$(dirname ${src})
     mkdir -p ${mock_dir}/${subdir}
     cp -r $(readlink-py ${src}) ${mock_dir}/${subdir}
 done
 
-# Change to the workspace directory, and begin.
+# Change to the workspace directory.
 cd ${mock_dir}/${pkg_reldir}
+
+# Reformat to make it more friendly.
 # Get rid of Bazel symlinks.
 rm bazel-* || :
+# Stub `add_lint_tests` so that each downstream project does not need Drake.
+cat > ${mock_dir}/tools/lint.bzl <<EOF
+def add_lint_tests(*args, **kwargs): pass
+EOF
+
 # Execute command.
 eval ${cmd}

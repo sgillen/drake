@@ -19,7 +19,7 @@ class MockBackend(Backend):
         if os.path.exists(self._upload_dir):
             self._crawl(self._upload_dir)
 
-    def _crawl(cur_dir):
+    def _crawl(self, cur_dir):
         for file in os.listdir(cur_dir):
             filepath = os.path.join(cur_dir, file)
             if os.path.isfile(filepath):
