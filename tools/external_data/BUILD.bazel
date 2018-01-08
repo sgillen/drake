@@ -8,12 +8,12 @@ load(":external_data.bzl", "external_data_stub_test")
 sh_test(
     name = "workspace_test",
     srcs = ["workspace_test.sh"],
-    args = ["$(location workspaces/bazel_external_data)"],
+    args = ["$(location workspace)"],
     data = [
         # It'd be better to have a symlink forest using `glob(...)`, but this
         # is not easily possible with Bazel 0.6.1.
         # See ./workspace_test.sh for more details.
-        "workspaces/bazel_external_data",
+        "workspace",
         "//tools:external_data_meta_testing_files",
     ],
 )

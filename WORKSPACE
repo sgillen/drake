@@ -473,11 +473,6 @@ drake_visualizer_repository(
 # WARNING: Bazel also craps out here if `__workspace_dir__ + path` is used
 # rather than just `path`.
 local_repository(
-    name = "bazel_external_data_test_ignore",
-    path = "tools/external_data/workspaces",
-)
-
-local_repository(
     name = "bazel_external_data_pkg",
-    path = "tools/external_data/workspaces/bazel_external_data",
+    path = "tools/external_data/workspace",
 )
