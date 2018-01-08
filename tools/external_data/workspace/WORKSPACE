@@ -14,7 +14,7 @@ local_repository(
 # Add `drake` to access lint tools.
 local_repository(
     name = "drake",
-    path = dirname(__workspace_dir__, 4),
+    path = dirname(__workspace_dir__, 3),
 )
 
 load("@drake//tools/lint:lint_repositories.bzl", "lint_repositories")

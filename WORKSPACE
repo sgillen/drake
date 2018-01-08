@@ -469,12 +469,6 @@ drake_visualizer_repository(
 )
 
 local_repository(
-    name = "external_data_ignore",
-    path = __workspace_dir__ + "/tools/external_data/workspaces",
-)
-
-local_repository(
     name = "bazel_external_data_pkg",
-    path = __workspace_dir__ +
-           "/tools/external_data/workspaces/bazel_external_data",
+    path = __workspace_dir__ + "/tools/external_data/workspace",
 )
