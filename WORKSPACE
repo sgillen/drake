@@ -143,6 +143,7 @@ github_archive(
 )
 
 load("//tools/lint:lint_repositories.bzl", "lint_repositories")
+
 lint_repositories()
 
 bitbucket_archive(

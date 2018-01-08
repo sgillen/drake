@@ -23,4 +23,4 @@ def lint_repositories(include = ALL):
             name = "buildifier",
         )
 
-    # No repositories for `clang-format`. It is used via the system.
+# No repositories for `clang-format`. It is used via the system.

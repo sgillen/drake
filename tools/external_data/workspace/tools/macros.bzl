@@ -1,14 +1,4 @@
 SETTINGS_DEFAULT = dict(
-    # Warn if in development mode (e.g. if files will be lost when pushing).
-    enable_warn = True,
-    # Verbosity: Will dump configuration, including user information (e.g. API
-    # keys!).
-    verbose = False,
-    # Sentinel data. Used to detect the project root.
-    # WARNING: The sentinel MUST be placed next to the workspace root.
-    # TODO(eric.cousineau): If the logic can be simplified, consider relaxing
-    # this.
-    cli_sentinel = "//:external_data_sentinel",
     # Extra tool data. Generally, this is empty. However, any custom
     # configuration modules can be included here as well.
     cli_data = [],
@@ -16,20 +6,33 @@ SETTINGS_DEFAULT = dict(
     # but can be changed.
     # @note This is NOT for arguments after `cli ... download`.
     cli_extra_args = [],
+    # Sentinel data. Used to detect the project root.
+    # WARNING: The sentinel MUST be placed next to the workspace root.
+    # TODO(eric.cousineau): If the logic can be simplified, consider relaxing
+    # this.
+    cli_sentinel = "//:external_data_sentinel",
     # For each `external_data` target, will add an integrity check for the file.
     enable_check_test = True,
+    # Warn if in development mode (e.g. if files will be lost when pushing).
+    enable_warn = True,
+    # Verbosity: Will dump configuration, including user information (e.g. API
+    # keys!).
+    verbose = False,
 )
 
-
 _HASH_SUFFIX = ".sha512"
+
 _RULE_SUFFIX = "__download"
+
 _RULE_TAG = "external_data"
+
 _TEST_SUFFIX = "__check_test"
+
 # @note This does NOT include 'external_data', so that running with
 # --test_tag_filters=external_data does not require a remote.
 _TEST_TAGS = ["external_data_check_test"]
-_TOOL = "@bazel_external_data_pkg//:cli"
 
+_TOOL = "@bazel_external_data_pkg//:cli"
 
 def _get_cli_base_args(filepath, settings):
     args = []
@@ -47,7 +50,6 @@ def _get_cli_base_args(filepath, settings):
     if cli_extra_args:
         args += cli_extra_args
     return args
-
 
 def external_data(
         file,
@@ -137,7 +139,6 @@ def external_data(
     else:
         fail("Invalid mode: {}".format(mode))
 
-
 def external_data_group(
         name,
         files,
@@ -183,7 +184,6 @@ WARNING: The following `files_devel` files are not in `files`:\n" +
         srcs = all_files,
     )
 
-
 def _external_data_check_test(file, settings):
     # This test merely checks that this file is indeed available on the remote
     # (ignoring cache).
@@ -217,7 +217,6 @@ def _external_data_check_test(file, settings):
         local = 1,
     )
     return name
-
 
 def get_original_files(hash_files):
     """Gets the original file from a given hash file. """

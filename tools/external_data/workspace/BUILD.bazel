@@ -17,8 +17,8 @@ alias(
 py_library(
     name = "cli_deps",
     deps = [
-        "//src/bazel_external_data:core",
         "//src/bazel_external_data:cli_base",
+        "//src/bazel_external_data:core",
     ],
 )
 
@@ -28,20 +28,20 @@ py_binary(
     srcs = [
         "//src/bazel_external_data:cli.py",
     ],
+    visibility = ["//visibility:public"],
     deps = [
         ":cli_deps",
     ],
-    visibility = ["//visibility:public"],
 )
 
 # Expose this package's main bits to be consumed via a test.
 filegroup(
     name = "root_data",
     srcs = [
+        "BUILD.bazel",
+        "WORKSPACE",
         "src",
         "tools",
-        "WORKSPACE",
-        "BUILD.bazel"
     ],
     visibility = ["//test:__subpackages__"],
 )

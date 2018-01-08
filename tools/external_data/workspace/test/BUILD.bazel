@@ -7,47 +7,47 @@ root_data = "//:root_data"
 workspace_test(
     name = "workflows_test",
     cmd = "./workflows_test.sh",
-    workspace = ":workspaces/bazel_pkg_advanced_test",
     data = [root_data],
+    workspace = ":workspaces/bazel_pkg_advanced_test",
 )
 
 workspace_test(
     name = "bazel_pkg_test",
-    workspace = ":workspaces/bazel_pkg_test",
     data = [root_data],
+    workspace = ":workspaces/bazel_pkg_test",
 )
 
 workspace_test(
     name = "bazel_pkg_advanced_test",
-    workspace = ":workspaces/bazel_pkg_advanced_test",
     data = [root_data],
+    workspace = ":workspaces/bazel_pkg_advanced_test",
 )
 
 workspace_test(
     name = "bazel_pkg_downstream_test",
-    workspace = ":workspaces/bazel_pkg_downstream_test",
     data = [
         ":workspaces/bazel_pkg_test",
         root_data,
     ],
+    workspace = ":workspaces/bazel_pkg_downstream_test",
 )
 
 # We can import external tests.
 # *However*, we cannot import test suites :(
 alias(
     name = "imported_simple_test",
-    actual = "@bazel_external_data_test_ignore//:simple_test",
     testonly = 1,
+    actual = "@bazel_external_data_test_ignore//:simple_test",
 )
 
 # Ensure that we add all relevant files under `workspaces`.
 # We should be able to glob them, as they are not a package.
 add_lint_tests(
-    python_lint_extra_srcs = glob([
-        "workspaces/**/*.py"
-    ]),
     bazel_lint_extra_srcs = glob([
         "workspaces/**/BUILD.bazel",
         "workspaces/**/WORKSPACE",
+    ]),
+    python_lint_extra_srcs = glob([
+        "workspaces/**/*.py",
     ]),
 )

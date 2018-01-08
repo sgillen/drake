@@ -1,6 +1,7 @@
 # -*- python -*-
 
-load("//tools:external_data.bzl",
+load(
+    "//tools:external_data.bzl",
     "external_data",
     "external_data_group",
     "get_original_files",
@@ -14,7 +15,7 @@ external_data(
 
 external_data_group(
     name = "glob",
-    files = get_original_files(glob(['glob_*.bin.sha512'])),
+    files = get_original_files(glob(["glob_*.bin.sha512"])),
 )
 
 external_data(
