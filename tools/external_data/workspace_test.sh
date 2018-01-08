@@ -1,7 +1,8 @@
 #!/bin/bash
 set -e -u -x
 
-cd "${1}"
+workspace_dir=${1}
+cd ${workspace_dir}
 
 # Make sure we're where we want.
 grep 'bazel_external_data_pkg' WORKSPACE

@@ -1,31 +1,6 @@
-# We will inject additional settings here.
+# NOTE: This is presently a stub to ensure we can load appropriate data, and
+# does not provide functionality.
 load(
     "@bazel_external_data_pkg//tools:macros.bzl",
-    _external_data = "external_data",
-    _external_data_group = "external_data_group",
-    "get_original_files",
+    "external_data_stub_test",
 )
-
-SETTINGS = dict(
-    cli_data = [
-        "//tools:external_data.user.yml",
-    ],
-    cli_extra_args = [
-        "--project_name=drake",
-    ],
-    cli_sentinel = "//:external_data_sentinel",
-)
-
-def external_data(*args, **kwargs):
-    _external_data(
-        *args,
-        settings = SETTINGS,
-        **kwargs
-    )
-
-def external_data_group(*args, **kwargs):
-    _external_data_group(
-        *args,
-        settings = SETTINGS,
-        **kwargs
-    )

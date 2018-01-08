@@ -1,4 +1,5 @@
 load("//tools/lint:lint.bzl", "add_lint_tests")
+load(":external_data.bzl", "external_data_stub_test")
 
 # Run all tests in `workspace` as a separate package.
 sh_test(
@@ -13,5 +14,8 @@ sh_test(
         "//tools:external_data_meta_testing_files",
     ],
 )
+
+# Ensure that we can consume `external_data.bzl`.
+external_data_stub_test()
 
 add_lint_tests()
