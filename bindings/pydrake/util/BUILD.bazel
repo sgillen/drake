@@ -85,6 +85,7 @@ drake_pybind_library(
     name = "cpp_types_py",
     cc_srcs = ["cpp_types_py.cc"],
     package_info = PACKAGE_INFO,
+    py_srcs = ["cpp_types.py"],
     py_deps = [
         ":module_py",
     ],

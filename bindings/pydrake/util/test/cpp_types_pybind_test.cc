@@ -30,7 +30,7 @@ class CppTypesTest : public ::testing::Test {
 import numpy as np
 import ctypes
 
-from pydrake.util.cpptypes import get_type_canonical, get_type_name
+from pydrake.util.cpp_types import get_type_canonical, get_type_name
 
 from pydrake.autodiffutils import AutoDiffXd
 from pydrake.symbolic import Expression
