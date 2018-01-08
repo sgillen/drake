@@ -8,7 +8,7 @@
 
 #include <pybind11/pybind11.h>
 
-#include "drake/common/type_util.h"
+#include "drake/bindings/pydrake/util/type_util.h"
 
 namespace py = pybind11;
 
