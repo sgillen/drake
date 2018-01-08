@@ -468,7 +468,9 @@ drake_visualizer_repository(
     name = "drake_visualizer",
 )
 
+# Include these as local repositories to have them be ignored by `test ...`.
+# @ref https://github.com/bazelbuild/bazel/issues/2460#issuecomment-296940882
 local_repository(
-    name = "bazel_external_data_pkg",
+    name = "bazel_external_data_test_ignore",
     path = __workspace_dir__ + "/tools/external_data/workspace",
 )
