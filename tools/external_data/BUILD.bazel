@@ -1,5 +1,5 @@
 load("//tools/lint:lint.bzl", "add_lint_tests")
-load(":external_data.bzl", "external_data_stub_test")
+# load(":external_data.bzl", "external_data_stub_test")
 
 # WARNING: Have to have at least one directory of separation between this and
 # the workspace. Otherwise, Bazel will enoucnter Java errors.
@@ -8,17 +8,17 @@ load(":external_data.bzl", "external_data_stub_test")
 sh_test(
     name = "workspace_test",
     srcs = ["workspace_test.sh"],
-    args = ["$(location workspaces/bazel_external_data)"],
+    args = ["$(location workspaces)"],
     data = [
         # It'd be better to have a symlink forest using `glob(...)`, but this
         # is not easily possible with Bazel 0.6.1.
         # See ./workspace_test.sh for more details.
-        "workspaces/bazel_external_data",
+        "workspaces",
         "//tools:external_data_meta_testing_files",
     ],
 )
 
 # Ensure that we can consume `external_data.bzl`.
-external_data_stub_test()
+# external_data_stub_test()
 
 add_lint_tests()
