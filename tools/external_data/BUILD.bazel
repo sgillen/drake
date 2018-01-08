@@ -4,7 +4,7 @@ filegroup(
     name = "workspace_symlink_forest",
     # Use a `glob` so that Bazel produces a symlink forest, and we can run
     # tests without litering `bazel-*` symlinks everywhere.
-    srcs = ["workspace/WORKSPACE"],
+    srcs = ["workspace"],
     # srcs = [],
     # srcs = glob(["workspace/*"]),
 )
@@ -12,9 +12,8 @@ filegroup(
 sh_test(
     name = "workspace_test",
     srcs = ["workspace_test.sh"],
-    args = ["$(location .)"],
+    args = ["$(location workspace_symlink_forest)"],
     data = [
-        ".",
         ":workspace_symlink_forest",
         "//tools:external_data_deps",
     ],
