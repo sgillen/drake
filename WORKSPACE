@@ -474,8 +474,8 @@ local_repository(
            "/tools/external_data/workspaces/bazel_external_data",
 )
 
-local_repository(
-    name = "external_data_ignore",
-    path = __workspace_dir__ + "/tools/external_data/workspaces",
-)
+# local_repository(
+#     name = "external_data_ignore",
+#     path = __workspace_dir__ + "/tools/external_data/workspaces",
+# )
 

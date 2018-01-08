@@ -1,6 +1,9 @@
 load("//tools/lint:lint.bzl", "add_lint_tests")
 load(":external_data.bzl", "external_data_stub_test")
 
+# WARNING: Have to have at least one directory of separation between this and
+# the workspace. Otherwise, Bazel will enoucnter Java errors.
+
 # Run all tests in `workspace` as a separate package.
 sh_test(
     name = "workspace_test",
