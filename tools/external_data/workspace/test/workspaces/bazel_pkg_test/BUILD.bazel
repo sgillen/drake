@@ -1,17 +1,5 @@
 # -*- python -*-
 
-filegroup(
-    name = "external_data_sentinel",
-    srcs = [":.external_data.yml"],
-    visibility = ["//:__subpackages__"],
-)
+load("@bazel_external_data_pkg//tools:macros.bzl", "external_data_stub_test")
 
-py_test(
-    name = "test_basics",
-    size = "small",
-    srcs = ["test_basics.py"],
-    data = [
-        "//data",
-    ],
-    visibility = ["//visibility:public"],
-)
+external_data_stub_test()
