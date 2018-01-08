@@ -48,8 +48,10 @@ def run(args, project):
             input_file = os.path.abspath(input_file)
             info = project.get_file_info(input_file)
             output_file = info.orig_filepath
+
             def action():
                 do_download(args, project, info, output_file)
+
             if args.keep_going:
                 try:
                     action()

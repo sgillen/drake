@@ -28,7 +28,9 @@ class MockBackend(Backend):
 
     def _check_hash_type(self, hash):
         if hash.hash_type != self._hash_type:
-            raise RuntimeError("Mock backend only supports {}, not {}".format(self._hash_type, hash.hash_type))
+            raise RuntimeError(
+                "Mock backend only supports {}, not {}".format(
+                    self._hash_type, hash.hash_type))
 
     def check_file(self, hash, project_relpath):
         self._check_hash_type(hash)

@@ -1,7 +1,7 @@
 def workspace_test(
         name,
         workspace,
-        cmd="'bazel test //...'",  # *sigh*... Needs quotes.
+        cmd = "'bazel test //...'",  # *sigh*... Needs quotes.
         data = []):
     """Provides a unittest given writeable access to a copy of a given workspace
     contained in the current project. """

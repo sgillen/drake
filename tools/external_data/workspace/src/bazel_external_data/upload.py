@@ -13,15 +13,17 @@ def add_arguments(parser):
     parser.add_argument('filepaths', type=str, nargs='+')
     parser.add_argument(
         '--local_only', action='store_true',
-        help="Only update local file information (e.g. hash file), but do not" +
-             "upload the file.")
+        help="Only update local file information (e.g. hash file), " +
+             "but do not upload the file.")
 
 
 def run(args, project):
     good = True
     for filepath in args.filepaths:
+
         def action():
             do_upload(args, project, filepath)
+
         if args.keep_going:
             try:
                 action()
