@@ -3,8 +3,23 @@
 // @file
 // Tests both `cpp_types.py` and `cpp_types_pybind.h`.
 
+#include <string>
+
+#include <gtest/gtest.h>
+
+#include <pybind11/embed.h>
+#include <pybind11/eval.h>
+#include <pybind11/pybind11.h>
+
+#include "drake/common/autodiff.h"
+#include "drake/common/symbolic.h"
+// #include "drake/bindings/pydrake/autodiff_types_pybind.h"
+// #include "drake/bindings/pydrake/symbolic_types_pybind.h"
+
+using std::string;
+
 namespace drake {
-namespace pybind {
+namespace pydrake {
 
 class CppTypesTest : public ::testing::Test {
  protected:
@@ -24,6 +39,7 @@ from pydrake.symbolic import Expression
 
   py::object eval(const string& expr) {
     return py::eval(expr.c_str(), globals_);
+  }
 
   bool Compare(const string& lhs, const string& rhs) {
     return eval(lhs).is(eval(rhs));
@@ -63,5 +79,5 @@ TEST_F(CppTypesTest, InCpp) {
   ASSERT_TRUE(Compare<symbolic::Expression>("Expression"));
 }
 
-}  // namespace pybind
+}  // namespace pydrake
 }  // namespace drake

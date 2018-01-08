@@ -1,6 +1,6 @@
 #include <pybind11/pybind11.h>
 
-#include "python/bindings/pymodule/tpl/cpp_types.h"
+#include "drake/bindings/pydrake/util/cpp_types_pybind.h"
 
 using drake::pydrake::internal::TypeRegistry;
 

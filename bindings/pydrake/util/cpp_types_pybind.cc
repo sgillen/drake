@@ -2,8 +2,6 @@
 
 #include <pybind11/eval.h>
 
-#include "cpp/type_pack.h"
-
 const char kModule[] = "pydrake.util.cpp_types";
 
 namespace drake {
@@ -29,7 +27,7 @@ const TypeRegistry& TypeRegistry::GetPyInstance() {
   return *type_registry;
 }
 
-py::handle TypeRegistry::DoGetPyType(const std::type_info& tinfo) const {
+py::object TypeRegistry::DoGetPyType(const std::type_info& tinfo) const {
   // Check if it's a custom-registered type.
   size_t cpp_key = std::type_index(tinfo).hash_code();
   auto iter = cpp_to_py_.find(cpp_key);
@@ -42,18 +40,19 @@ py::handle TypeRegistry::DoGetPyType(const std::type_info& tinfo) const {
     if (!info) {
       throw std::runtime_error("Unknown type!");
     }
-    return py::handle(reinterpret_cast<PyObject*>(info->type));
+    return py::reinterpret_borrow<py::object>(
+        py::handle(reinterpret_cast<PyObject*>(info->type)));
   }
 }
 
-py::handle TypeRegistry::GetPyTypeCanonical(py::handle py_type) const {
+py::object TypeRegistry::GetPyTypeCanonical(py::object py_type) const {
   // Since there's no easy / good way to expose C++ type id's to Python,
   // just canonicalize Python types.
   return py_to_py_canonical_.attr("get")(py_type, py_type);
 }
 
-py::str TypeRegistry::GetName(py::handle py_type) const {
-  py::handle py_type_fin = GetPyTypeCanonical(py_type);
+py::str TypeRegistry::GetName(py::object py_type) const {
+  py::object py_type_fin = GetPyTypeCanonical(py_type);
   py::object out = py_name_.attr("get")(py_type_fin);
   // Assume this is a Python type.
   if (out.is(py::none())) {
@@ -69,7 +68,7 @@ py::object TypeRegistry::eval(const std::string& expr) const {
 void TypeRegistry::Register(
       const std::vector<size_t>& cpp_keys,
       py::tuple py_types, const std::string& name) {
-  py::handle py_canonical = py_types[0];
+  py::object py_canonical = py_types[0];
   for (size_t cpp_key : cpp_keys) {
     assert(cpp_to_py_.find(cpp_key) == cpp_to_py_.end());
     cpp_to_py_[cpp_key] = py_canonical;

@@ -76,7 +76,7 @@ drake_cc_library(
     hdrs = ["cpp_types_pybind.h"],
     srcs = ["cpp_types_pybind.cc"],
     deps = [
-        ":type_util",
+        ":type_pack",
         "@pybind11",
     ],
 )
@@ -93,13 +93,17 @@ drake_pybind_library(
     ],
 )
 
-drake_cc_binary(
+drake_cc_googletest(
     name = "cpp_types_pybind_test",
     deps = [
         ":cpp_types_pybind",
+        "//bindings/pydrake:autodiff_types_pybind",
+        "//bindings/pydrake:symbolic_types_pybind",
+        "//tools/install/libdrake:drake_shared_library",
         "@pybind11",
     ],
     testonly = 1,
+    # Add 'manual', because we only want to run it with Python present.
     tags = ["manual"],
 )
 

@@ -8,7 +8,7 @@
 
 #include <pybind11/pybind11.h>
 
-#include "drake/bindings/pydrake/util/type_util.h"
+#include "drake/bindings/pydrake/util/type_pack.h"
 
 namespace py = pybind11;
 
@@ -29,22 +29,22 @@ class TypeRegistry {
 
   // Gets the Python type for a given C++ type.
   template <typename T>
-  py::handle GetPyType() const {
+  py::object GetPyType() const {
     return DoGetPyType(typeid(T));
   }
 
   // Gets the canonical Python type for a given Python type.
-  py::handle GetPyTypeCanonical(py::handle py_type) const;
+  py::object GetPyTypeCanonical(py::object py_type) const;
 
   // Gets the canonical string name for a given Python type.
-  py::str GetName(py::handle py_type) const;
+  py::str GetName(py::object py_type) const;
 
  private:
   py::object eval(const std::string& expr) const;
 
   void exec(const std::string& expr);
 
-  py::handle DoGetPyType(const std::type_info& tinfo) const;
+  py::object DoGetPyType(const std::type_info& tinfo) const;
 
   void Register(
       const std::vector<size_t>& cpp_keys,
@@ -62,7 +62,7 @@ class TypeRegistry {
 
   py::object globals_;
   py::object locals_;
-  std::map<size_t, py::handle> cpp_to_py_;
+  std::map<size_t, py::object> cpp_to_py_;
   py::object py_to_py_canonical_;
   py::dict py_name_;
 };
@@ -79,7 +79,7 @@ inline py::object GetPyType(type_pack<T> = {}) {
 // Gets the canonical Python type for a list of C++ types.
 template <typename ... Ts>
 inline py::tuple GetPyTypes(type_pack<Ts...> = {}) {
-  return py::make_tuple(get_py_type<Ts>()...);
+  return py::make_tuple(GetPyType<Ts>()...);
 }
 
 /// Gets the canonical string name for a given C++ type.
@@ -92,7 +92,7 @@ inline std::string GetPyName(type_pack<T> = {}) {
 /// Gets the canonical string names for a list of C++ types.
 template <typename ... Ts>
 inline std::vector<std::string> GetPyNames(type_pack<Ts...> = {}) {
-  return {get_py_name<Ts>()...};
+  return {GetPyName<Ts>()...};
 }
 
 }  // namespace pydrake
