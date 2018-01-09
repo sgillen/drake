@@ -21,7 +21,7 @@ def workspace_writeable_test(
         args.append("$(locations {})".format(datum))
     native.sh_test(
         name = name,
-        srcs = ["workspace_test.sh"],
+        srcs = ["workspace_writeable_test.sh"],
         args = args,
         data = [workspace] + data,
     )

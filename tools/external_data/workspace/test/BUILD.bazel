@@ -7,7 +7,7 @@ root_data = ["//:meta_testing_files"]
 workspace_writeable_test(
     name = "bazel_pkg_test",
     data = root_data,
-    workspace = ":workspaces/bazel_pkg_test",
+    workspace = "workspaces/bazel_pkg_test",
 )
 
 # Ensure that we add all relevant files under `workspaces`.

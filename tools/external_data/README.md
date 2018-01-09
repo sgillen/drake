@@ -1,3 +1,8 @@
+# About
+
+This is a stub implementation of `bazel_external_data`.
+More functionality to follow.
+
 # Structure
 
 This presently performs meta-testing with Bazel to ensure that we achieve the

@@ -6,15 +6,13 @@ cd $(dirname ${workspace_file})
 
 # This message will only show up if symlinks are present and the user runs this
 # test directly. If run via `test ...`, then they will get an obscure Bazel
-# error because it will try and parse the (supposedly ignored) symlinks in the
-# local repository.
+# error because it will try and parse the symlinks in the local repository.
 if [[ -L bazel-bin ]]; then
     cat >&2 <<EOF
 Bazel struggles with its own symlinks with nested workspaces.
 Please remove them by going to 'tools/external_data/workspace', and execute
-   ./clear.sh
-This does not clean the build! It simply removes the polluting symlinks under
-the script's directory.
+   ./remove_bazel_symlinks.sh
+This removes the polluting symlinks under the script's directory.
 EOF
     exit 1
 fi
