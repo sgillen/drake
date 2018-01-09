@@ -1,7 +1,14 @@
 #!/bin/bash
 set -e -u -x
 
+# echo "$@"
+# pwd
+# exit 1
+
 workspace_dir=${1}
+if [[ -f ${workspace_dir} ]]; then
+    workspace_dir=$(dirname ${workspace_dir})
+fi
 cd ${workspace_dir}
 
 # Make sure we're where we want.
