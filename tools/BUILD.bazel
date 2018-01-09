@@ -71,19 +71,4 @@ config_setting(
     values = {"define": "NO_SCS=ON"},
 )
 
-# This provides the directories necessary for `external_data:workspace_test` to
-# consume what it needs from `@drake//`.
-filegroup(
-    name = "external_data_meta_testing_files",
-    # `glob(..., exclude_directories=0)` will include package directories under
-    # `bazel run`, but not `bazel test`.
-    srcs = glob(["*"]) + [
-        "install",
-        "lint",
-        "skylark",
-        "workspace",
-    ],
-    visibility = ["//tools/external_data:__pkg__"],
-)
-
 add_lint_tests()

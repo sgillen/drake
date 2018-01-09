@@ -1,35 +1,28 @@
 load("//tools/lint:lint.bzl", "add_lint_tests")
 load(":external_data.bzl", "external_data_stub_test")
-
-# Use a symlink forest, so `bazel run` of `workspace_test` will not pollute the
-# source directory with  `bazel-*` symlinks.
-filegroup(
-    name = "workspace_symlink_forest",
-    srcs = glob(
-        ["workspace/*"],
-        exclude_directories = 0,
-    ),
+load(
+    "@bazel_external_data_pkg//test:workspace_test.bzl",
+    "workspace_test",
 )
 
 # Run all tests in `workspace` as a separate package.
-sh_test(
+workspace_test(
     name = "workspace_test",
-    srcs = ["test/workspace_test.sh"],
-    # We must use a file, and not just `workspace`, because Bazel will not give
-    # us the location unless it's in `data`. We do NOT want this, because
-    # we want a symlink forest. (See above.)
-    args = ["$(location workspace/WORKSPACE)"],
-    data = [
-        # Must explicitly list this file so that we can get its location.
-        "workspace/WORKSPACE",
-        "workspace_symlink_forest",
-        # Get necessary upstream files from Drake.
-        "//tools:external_data_meta_testing_files",
-        "//:external_data_meta_testing_files",
-    ],
+    workspace = "workspace",
 )
 
 # Ensure that we can consume `external_data.bzl`.
 external_data_stub_test()
 
-add_lint_tests()
+# Ensure that we add all relevant files under `workspace`.
+# We should be able to glob them, as they are not a package.
+add_lint_tests(
+    bazel_lint_extra_srcs = glob([
+        "workspace/**/BUILD.bazel",
+        "workspace/**/WORKSPACE",
+        "workspace/**/*.bzl",
+    ]),
+    python_lint_extra_srcs = glob([
+        "workspace/**/*.py",
+    ]),
+)
