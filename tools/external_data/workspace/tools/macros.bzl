@@ -1,3 +1,5 @@
+# -*- python -*-
+
 # Stub functionality for macros to be consumed by downstream packages.
 
 def external_data_stub_test():

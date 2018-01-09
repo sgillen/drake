@@ -1,25 +1,26 @@
 load("//tools/lint:lint.bzl", "add_lint_tests")
 load(":external_data.bzl", "external_data_stub_test")
 
-# WARNING: Have to have at least one directory of separation between this and
-# the workspace. Otherwise, Bazel will enoucnter Java errors.
-
+# Use a symlink forest, so `bazel run` of `workspace_test` will not pollute the
+# source directory with  `bazel-*` symlinks.
 filegroup(
-    name = "blar",
+    name = "workspace_symlink_forest",
     srcs = glob(["workspace/*"], exclude_directories=0),
 )
 
 # Run all tests in `workspace` as a separate package.
 sh_test(
     name = "workspace_test",
-    srcs = ["workspace_test.sh"],
+    srcs = ["test/workspace_test.sh"],
+    # We must use a file, and not just `workspace`, because Bazel will not give
+    # us the location unless it's in `data`. We do NOT want this, because
+    # we want a symlink forest. (See above.)
     args = ["$(location workspace/WORKSPACE)"],
     data = [
-        # It'd be better to have a symlink forest using `glob(...)`, but this
-        # is not easily possible with Bazel 0.6.1.
-        # See ./workspace_test.sh for more details.
+        # Must explicitly list this file so that we can get its location.
         "workspace/WORKSPACE",
-        "blar",
+        "workspace_symlink_forest",
+        # Get necessary upstream files from Drake.
         "//tools:external_data_meta_testing_files",
         "//:external_data_meta_testing_files",
     ],

@@ -6,7 +6,7 @@ load("//tools:lint.bzl", "add_lint_tests")
 
 # Expose this package's main bits to be consumed via a test.
 filegroup(
-    name = "root_data",
+    name = "meta_testing_files",
     srcs = [
         "BUILD.bazel",
         "WORKSPACE",

@@ -1,12 +1,12 @@
 # -*- python -*-
 load("//tools:lint.bzl", "add_lint_tests")
-load(":workspace_test.bzl", "workspace_test")
+load(":workspace_writeable_test.bzl", "workspace_writeable_test")
 
-root_data = "//:root_data"
+root_data = ["//:meta_testing_files"]
 
-workspace_test(
+workspace_writeable_test(
     name = "bazel_pkg_test",
-    data = [root_data],
+    data = root_data,
     workspace = ":workspaces/bazel_pkg_test",
 )
 

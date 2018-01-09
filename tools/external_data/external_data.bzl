@@ -1,3 +1,5 @@
+# -*- python -*-
+
 # NOTE: This is presently a stub to ensure we can load appropriate data, and
 # does not provide functionality.
 load(

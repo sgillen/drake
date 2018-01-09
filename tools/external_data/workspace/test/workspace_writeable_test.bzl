@@ -1,9 +1,11 @@
+# -*- python -*-
+
 # Default command. Do not run linting tests, so that the downstream test
 # packages do not need to consume `drake`.
-# *sigh*... Needs quotes.
+# Needs quotes, because `sh_test(args = [...])` just concatenates them???
 _CMD_DEFAULT = "'bazel test //...'"
 
-def workspace_test(
+def workspace_writeable_test(
         name,
         workspace,
         cmd = _CMD_DEFAULT,

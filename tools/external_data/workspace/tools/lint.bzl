@@ -1,3 +1,6 @@
+# -*- python -*-
+
 # Forward Drake's linting tools.
-# This will be stubbed in all downstream workspace tests.
+# This will be stubbed by //test:workspace_writeable_test.sh`.
+
 load("@drake//tools/lint:lint.bzl", "add_lint_tests")
