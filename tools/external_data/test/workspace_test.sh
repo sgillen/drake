@@ -6,7 +6,8 @@ cd $(dirname ${workspace_file})
 
 # This message will only show up if symlinks are present and the user runs this
 # test directly. If run via `test ...`, then they will get an obscure Bazel
-# error because it will try and parse the symlinks in the local repository.
+# error "WARNING: Failed to get information about path..." because it will try
+# and parse the symlinks in the local repository.
 if [[ -L bazel-bin ]]; then
     cat >&2 <<EOF
 Bazel struggles with its own symlinks with nested workspaces.

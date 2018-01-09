@@ -77,7 +77,12 @@ filegroup(
     name = "external_data_meta_testing_files",
     # `glob(..., exclude_directories=0)` will include package directories under
     # `bazel run`, but not `bazel test`.
-    srcs = glob(["*"]) + ["install", "lint", "skylark", "workspace"],
+    srcs = glob(["*"]) + [
+        "install",
+        "lint",
+        "skylark",
+        "workspace",
+    ],
     visibility = ["//tools/external_data:__pkg__"],
 )
 

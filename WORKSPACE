@@ -468,10 +468,18 @@ drake_visualizer_repository(
     name = "drake_visualizer",
 )
 
-# Include these as local repositories to have them be ignored by `test ...`.
-# @ref https://github.com/bazelbuild/bazel/issues/2460#issuecomment-296940882
 # WARNING: Bazel also craps out here if `__workspace_dir__ + path` is used
 # rather than just `path`.
+# N.B. This error is *stateful*. You will get different behavior depending on
+# what has been built / run previously in Bazel. In one mode, the error
+# will be:
+#   Encountered error while [...]
+#   /home/${USER}/.cache/bazel/_bazel_${USER}/${HASH}/external/bazel_external_data_pkg  # noqa
+#   must  be an existing directory
+# In another mode, you will get Java errors:
+#   java.lang.IllegalArgumentException: PathFragment
+#   tools/external_data/workspace is not beneath
+#   /home/${USER}/${WORKSPACE_DIR}/tools/external_data/workspace
 local_repository(
     name = "bazel_external_data_pkg",
     path = "tools/external_data/workspace",

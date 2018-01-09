@@ -5,7 +5,10 @@ load(":external_data.bzl", "external_data_stub_test")
 # source directory with  `bazel-*` symlinks.
 filegroup(
     name = "workspace_symlink_forest",
-    srcs = glob(["workspace/*"], exclude_directories=0),
+    srcs = glob(
+        ["workspace/*"],
+        exclude_directories = 0,
+    ),
 )
 
 # Run all tests in `workspace` as a separate package.

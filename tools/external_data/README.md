@@ -6,7 +6,11 @@ More functionality to follow.
 # Structure
 
 This presently performs meta-testing with Bazel to ensure that we achieve the
-desired workflows with Bazel. The structure of this:
+desired workflows with Bazel. This is all structured such that `bazel test ...`
+is valid from Drake, and from `./workspace/`. (It can work in the downstream
+test packages too, but Drake features must be stubbed.)
+
+The structure:
 
 *   `workspace/` - The local workspace for `bazel_external_data_pkg`.
     *   This is structured such that this can be devloped relatively independently of Drake, for the purpose of testing downstream behavior with minimal instrumentation.
