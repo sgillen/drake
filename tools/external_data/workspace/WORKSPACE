@@ -10,18 +10,3 @@ local_repository(
     name = "bazel_external_data_test_ignore",
     path = "test/workspaces",
 )
-
-# Add `drake` to access lint tools.
-local_repository(
-    name = "drake",
-    path = dirname(__workspace_dir__, 3),
-)
-
-load("@drake//tools/lint:lint_repositories.bzl", "lint_repositories")
-
-lint_repositories(
-    include = [
-        "buildifier",
-        "pycodestyle",
-    ],
-)

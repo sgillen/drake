@@ -1,7 +1,8 @@
 #!/bin/bash
 set -e -u -x
 
-workspace_file=${1}
+cmd=${1}
+workspace_file=${2}
 cd $(dirname ${workspace_file})
 
 # This message will only show up if symlinks are present and the user runs this
@@ -19,6 +20,4 @@ EOF
 fi
 
 # Run all the tests.
-# Since this is pure Python + Bazel, we shouldn't care about propagating any
-# configuration flags.
-bazel test //...
+eval ${cmd}
