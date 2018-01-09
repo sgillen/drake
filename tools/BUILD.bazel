@@ -75,7 +75,9 @@ config_setting(
 # consume what it needs from `@drake//`.
 filegroup(
     name = "external_data_meta_testing_files",
-    srcs = glob(["*"], exclude=["external_data"], exclude_directories=0) + ["lint", "workspace", "skylark", "install"],
+    # `glob(..., exclude_directories=0)` will include package directories under
+    # `bazel run`, but not `bazel test`.
+    srcs = glob(["*"]) + ["install", "lint", "skylark", "workspace"],
     visibility = ["//tools/external_data:__pkg__"],
 )
 
