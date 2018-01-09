@@ -49,4 +49,12 @@ install(
     ]),
 )
 
+# This provides the directories necessary for `external_data:workspace_test` to
+# consume what it needs from `@drake//`.
+filegroup(
+    name = "external_data_meta_testing_files",
+    srcs = glob(["*"]),
+    visibility = ["//tools/external_data:__pkg__"],
+)
+
 add_lint_tests()

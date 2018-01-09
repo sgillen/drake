@@ -2,7 +2,7 @@
 set -e -u -x
 
 # echo "$@"
-# pwd
+pwd
 # exit 1
 
 workspace_dir=${1}

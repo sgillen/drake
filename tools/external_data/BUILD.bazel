@@ -6,7 +6,7 @@ load(":external_data.bzl", "external_data_stub_test")
 
 filegroup(
     name = "blar",
-    srcs = glob(["workspace/**/*"]),
+    srcs = glob(["workspace/*"], exclude_directories=0),
 )
 
 # Run all tests in `workspace` as a separate package.
@@ -21,6 +21,7 @@ sh_test(
         "workspace/WORKSPACE",
         "blar",
         "//tools:external_data_meta_testing_files",
+        "//:external_data_meta_testing_files",
     ],
 )
 
