@@ -98,7 +98,7 @@ drake_pybind_library(
 )
 
 drake_pybind_cc_googletest(
-    name = "cpp_types_pybind_test",
+    name = "cpp_types_test",
     cc_deps = [
         ":cpp_types_pybind",
         "//bindings/pydrake:autodiff_types_pybind",

@@ -5,10 +5,12 @@ load("@drake//tools/install:install.bzl", "install")
 load(
     "//tools:drake.bzl",
     "drake_cc_binary",
+    "drake_cc_googletest",
 )
 load(
     "//tools/skylark:drake_py.bzl",
     "drake_py_library",
+    "drake_py_test",
 )
 load("//tools/skylark:6996.bzl", "adjust_label_for_drake_hoist")
 
@@ -238,5 +240,5 @@ def drake_pybind_cc_googletest(
         main = py_main,
         data = [cc_name],
         args = ["$(location {})".format(cc_name)] + args,
-        deps = py_name,
+        deps = [py_name],
     )
