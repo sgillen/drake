@@ -10,6 +10,7 @@ load(
 )
 load(
     "//tools/skylark:pybind.bzl",
+    "drake_pybind_cc_googletest",
     "drake_pybind_library",
     "get_drake_pybind_installs",
     "get_pybind_package_info",
@@ -88,36 +89,23 @@ drake_pybind_library(
     py_srcs = ["cpp_types.py"],
     py_deps = [
         ":module_py",
+        "//bindings/pydrake:autodiffutils_py",
+        "//bindings/pydrake:symbolic_py",
     ],
     cc_deps = [
         ":cpp_types_pybind",
     ],
 )
 
-drake_cc_googletest(
+drake_pybind_cc_googletest(
     name = "cpp_types_pybind_test",
-    deps = [
+    cc_deps = [
         ":cpp_types_pybind",
         "//bindings/pydrake:autodiff_types_pybind",
         "//bindings/pydrake:symbolic_types_pybind",
-        "//tools/install/libdrake:drake_shared_library",
-        "@pybind11",
     ],
-    testonly = 1,
-    # Add 'manual', because we only want to run it with Python present.
-    tags = ["manual"],
-)
-
-drake_py_test(
-    name = "cpp_types_test",
-    srcs = ["test/pybind_runner.py"],
-    main = "test/pybind_runner.py",
-    data = [":cpp_types_pybind_test"],
-    args = ["$(location :cpp_types_pybind_test)"],
-    deps = [
+    py_deps = [
         ":cpp_types_py",
-        "//bindings/pydrake:autodiffutils_py",
-        "//bindings/pydrake:symbolic_py",
     ],
 )
 

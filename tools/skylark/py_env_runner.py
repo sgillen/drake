@@ -2,7 +2,7 @@
 
 """
 Wrapper Python script to ensure we can execute a C++ binary with access to
-Pydrake.
+Python libraries using an environment established by Bazel.
 """
 
 # TODO(eric.cousineau): See if there is a way to do this in pure C++, such
@@ -11,5 +11,7 @@ Pydrake.
 import subprocess
 import sys
 
-assert len(sys.argv) >= 2
-subprocess.check_output(sys.argv[1:])
+assert len(sys.argv) == 2
+filepath = sys.argv[1]
+
+subprocess.check_output([filepath])
