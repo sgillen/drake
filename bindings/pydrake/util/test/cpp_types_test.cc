@@ -11,39 +11,28 @@
 #include <pybind11/eval.h>
 #include <pybind11/pybind11.h>
 
-#include "drake/common/autodiff.h"
-#include "drake/common/symbolic.h"
-// #include "drake/bindings/pydrake/autodiff_types_pybind.h"
-// #include "drake/bindings/pydrake/symbolic_types_pybind.h"
-
 using std::string;
 
 namespace drake {
 namespace pydrake {
 
+struct CustomType {};
+
 class CppTypesTest : public ::testing::Test {
  protected:
   void SetUp() override {
-    m_ = py::module("__main__");
-    globals_ = py::globals();
     py::exec(R"""(
 import numpy as np
 import ctypes
 
 from pydrake.util.cpp_types import get_type_canonical, get_type_name
-
-from pydrake.autodiffutils import AutoDiffXd
-from pydrake.symbolic import Expression
-)""", globals_);
+)""");
   }
 
   template <typename T>
-  bool Compare(const string& rhs) {
-    return GetPyType<T>().is(py::eval(rhs.c_str(), globals_));
+  bool Compare(const string& py_expr) {
+    return GetPyType<T>().is(py::eval(py_expr.c_str()));
   }
-
-  py::module m_;
-  py::dict globals_;
 };
 
 TEST_F(CppTypesTest, InPython) {
@@ -57,8 +46,7 @@ pairs = (
     (int, int),
     (float, float),
     (object, object),
-    (AutoDiffXd, AutoDiffXd),
-    (Expression, Expression),
+    (CustomType, CustomType),
     # Aliases:
     (float, np.double),
     (int, ctypes.c_int32),
@@ -67,9 +55,13 @@ pairs = (
 for canonical, alias in pairs:
     pair_str = "{}, {}".format(alias, canonical)
     assert get_type_canonical(alias) is canonical, "Bad pair: " + pair_str
-)""", globals_, locals);
+
+assert get_type_name(int) == "int"
+assert get_type_name(ctypes.c_int32) == "int"
+assert get_type_name(CustomType) == "__main__.CustomType"
+)""", py::globals(), locals);
   // Sanity check to ensure we've executed our Python code.
-  ASSERT_TRUE(!locals["canonical"].is_none());
+  ASSERT_TRUE(!locals["pairs"].is_none());
 }
 
 TEST_F(CppTypesTest, InCpp) {
@@ -81,17 +73,26 @@ TEST_F(CppTypesTest, InCpp) {
   ASSERT_TRUE(Compare<int>("int"));
   ASSERT_TRUE(Compare<py::object>("object"));
 
-  ASSERT_TRUE(Compare<AutoDiffXd>("AutoDiffXd"));
-  ASSERT_TRUE(Compare<symbolic::Expression>("Expression"));
+  ASSERT_TRUE(Compare<CustomType>("CustomType"));
+  ASSERT_TRUE(GetPyName<CustomType>() == "__main__.CustomType");
+}
+
+int main(int argc, char** argv) {
+  // Reconstructing `scoped_interpreter` mutliple times (e.g. via `SetUp()`)
+  // while *also* importing `numpy` wreaks havoc.
+  py::scoped_interpreter guard;
+
+  // Define custom class only once here.
+  py::module m("__main__");
+  py::class_<CustomType>(m, "CustomType");
+
+  ::testing::InitGoogleTest(&argc, argv);
+  return RUN_ALL_TESTS();
 }
 
 }  // namespace pydrake
 }  // namespace drake
 
 int main(int argc, char** argv) {
-  // Reconstructing `scoped_interpreter` mutliple times (e.g. via `SetUp()`)
-  // while *also* importing `numpy` wreaks havoc.
-  py::scoped_interpreter guard;
-  ::testing::InitGoogleTest(&argc, argv);
-  return RUN_ALL_TESTS();
+  return drake::pydrake::main(argc, argv);
 }
