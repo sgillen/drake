@@ -14,4 +14,4 @@ import sys
 assert len(sys.argv) == 2
 filepath = sys.argv[1]
 
-subprocess.check_output([filepath])
+subprocess.check_call([filepath])

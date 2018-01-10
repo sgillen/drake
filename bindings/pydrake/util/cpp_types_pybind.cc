@@ -100,7 +100,7 @@ void TypeRegistry::RegisterCommon() {
   RegisterType<uint32_t>(eval("np.uint32, ctypes.c_uint32"));
   RegisterType<int64_t>(eval("np.int64, ctypes.c_int64"));
   // For supporting generic Python types.
-  RegisterType<py::object>(eval("object"));
+  RegisterType<py::object>(eval("object,"));
 }
 
 class TypeRegistry::LiteralHelper {

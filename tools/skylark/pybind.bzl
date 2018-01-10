@@ -205,10 +205,14 @@ def drake_pybind_cc_googletest(
         cc_srcs = [],
         py_deps = [],
         cc_deps = [],
-        args = []):
+        args = [],
+        visibility = None,
+        tags = []):
     """Defines a C++ test (using `pybind`) which has access to Python
     libraries. """
     cc_name = name + "_cc"
+    if not cc_srcs:
+        cc_srcs = ["test/{}.cc".format(name)]
     drake_cc_googletest(
         name = cc_name,
         srcs = cc_srcs,
@@ -218,7 +222,7 @@ def drake_pybind_cc_googletest(
         ],
         # Add 'manual', because we only want to run it with Python present.
         tags = ["manual"],
-        visibility = ["//visibility:private"],
+        visibility = visibility,
     )
 
     py_name = name + "_py"
@@ -228,7 +232,7 @@ def drake_pybind_cc_googletest(
         name = py_name,
         deps = py_deps,
         testonly = 1,
-        visibility = ["//visibility:private"],
+        visibility = visibility,
     )
 
     # Use this Python test as the glue for Bazel to expose the appropriate
@@ -241,4 +245,6 @@ def drake_pybind_cc_googletest(
         data = [cc_name],
         args = ["$(location {})".format(cc_name)] + args,
         deps = [py_name],
+        tags = tags,
+        visibility = visibility,
     )
