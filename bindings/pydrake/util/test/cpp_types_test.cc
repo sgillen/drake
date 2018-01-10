@@ -32,53 +32,66 @@ import ctypes
 
 from pydrake.util.cpp_types import get_type_canonical, get_type_name
 
-# from pydrake.autodiffutils import AutoDiffXd
-# from pydrake.symbolic import Expression
+from pydrake.autodiffutils import AutoDiffXd
+from pydrake.symbolic import Expression
 )""", globals_);
-  }
-
-  py::object eval(const string& expr) {
-    return py::eval(expr.c_str(), globals_);
-  }
-
-  bool Compare(const string& lhs, const string& rhs) {
-    return eval(lhs).is(eval(rhs));
   }
 
   template <typename T>
   bool Compare(const string& rhs) {
-    // return GetPyType<T>().is(eval(rhs));
-    return true;
+    return GetPyType<T>().is(py::eval(rhs.c_str(), globals_));
   }
 
-  py::scoped_interpreter guard_;
   py::module m_;
   py::dict globals_;
 };
 
 TEST_F(CppTypesTest, InPython) {
-  // Check registered types.
-  ASSERT_TRUE(Compare("get_type_canonical(bool)", "bool"));
-  ASSERT_TRUE(Compare("get_type_canonical(str)", "str"));
-  ASSERT_TRUE(Compare("get_type_canonical(int)", "int"));
-  ASSERT_TRUE(Compare("get_type_canonical(ctypes.c_int32)", "int"));
-  ASSERT_TRUE(Compare("get_type_canonical(float)", "float"));
-  ASSERT_TRUE(Compare("get_type_canonical(np.double)", "float"));
-  ASSERT_TRUE(Compare("get_type_canonical(object)", "object"));
-  // ASSERT_TRUE(Compare("get_type_canonical(AutoDiffXd)", "AutoDiffXd"));
-  // ASSERT_TRUE(Compare("get_type_canonical(Expression)", "Expression"));
+  // Check pure-Python behavior.
+  py::dict locals;
+  py::exec(R"""(
+pairs = (
+    # One-to-one.
+    (bool, bool),
+    (str, str),
+    (int, int),
+    (float, float),
+    (object, object),
+    (AutoDiffXd, AutoDiffXd),
+    (Expression, Expression),
+    # Aliases:
+    (float, np.double),
+    (int, ctypes.c_int32),
+)
+
+for canonical, alias in pairs:
+    pair_str = "{}, {}".format(alias, canonical)
+    assert get_type_canonical(alias) is canonical, "Bad pair: " + pair_str
+)""", globals_, locals);
+  // Sanity check to ensure we've executed our Python code.
+  ASSERT_TRUE(!locals["canonical"].is_none());
 }
 
 TEST_F(CppTypesTest, InCpp) {
+  // Check C++ behavior.
   ASSERT_TRUE(Compare<bool>("bool"));
   ASSERT_TRUE(Compare<std::string>("str"));
   ASSERT_TRUE(Compare<double>("float"));
   ASSERT_TRUE(Compare<float>("np.float32"));
   ASSERT_TRUE(Compare<int>("int"));
   ASSERT_TRUE(Compare<py::object>("object"));
-  // ASSERT_TRUE(Compare<AutoDiffXd>("AutoDiffXd"));
-  // ASSERT_TRUE(Compare<symbolic::Expression>("Expression"));
+
+  ASSERT_TRUE(Compare<AutoDiffXd>("AutoDiffXd"));
+  ASSERT_TRUE(Compare<symbolic::Expression>("Expression"));
 }
 
 }  // namespace pydrake
 }  // namespace drake
+
+int main(int argc, char** argv) {
+  // Reconstructing `scoped_interpreter` mutliple times (e.g. via `SetUp()`)
+  // while *also* importing `numpy` wreaks havoc.
+  py::scoped_interpreter guard;
+  ::testing::InitGoogleTest(&argc, argv);
+  return RUN_ALL_TESTS();
+}
