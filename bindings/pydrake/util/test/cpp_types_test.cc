@@ -30,8 +30,12 @@ from pydrake.util.cpp_types import get_type_canonical, get_type_name
   }
 
   template <typename T>
-  bool Compare(const string& py_expr) {
-    return GetPyType<T>().is(py::eval(py_expr.c_str()));
+  bool CheckPyType(const string& py_expr_expected) {
+    return GetPyType<T>().is(py::eval(py_expr_expected.c_str()));
+  }
+
+  bool PyEquals(py::object lhs, py::object rhs) {
+    return lhs.attr("__eq__")(rhs).cast<bool>();
   }
 };
 
@@ -66,15 +70,15 @@ assert get_type_name(CustomType) == "__main__.CustomType"
 
 TEST_F(CppTypesTest, InCpp) {
   // Check C++ behavior.
-  ASSERT_TRUE(Compare<bool>("bool"));
-  ASSERT_TRUE(Compare<std::string>("str"));
-  ASSERT_TRUE(Compare<double>("float"));
-  ASSERT_TRUE(Compare<float>("np.float32"));
-  ASSERT_TRUE(Compare<int>("int"));
-  ASSERT_TRUE(Compare<py::object>("object"));
+  ASSERT_TRUE(CheckPyType<bool>("bool"));
+  ASSERT_TRUE(CheckPyType<std::string>("str"));
+  ASSERT_TRUE(CheckPyType<double>("float"));
+  ASSERT_TRUE(CheckPyType<float>("np.float32"));
+  ASSERT_TRUE(CheckPyType<int>("int"));
+  ASSERT_TRUE(CheckPyType<py::object>("object"));
 
-  ASSERT_TRUE(Compare<CustomType>("CustomType"));
-  ASSERT_TRUE(GetPyName<CustomType>() == "__main__.CustomType");
+  ASSERT_TRUE(CheckPyType<CustomType>("CustomType"));
+  ASSERT_TRUE(PyEquals(GetPyTypes<int, bool>(), py::eval("int, bool")));
 }
 
 int main(int argc, char** argv) {

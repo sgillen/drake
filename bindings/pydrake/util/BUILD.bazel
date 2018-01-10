@@ -89,8 +89,6 @@ drake_pybind_library(
     py_srcs = ["cpp_types.py"],
     py_deps = [
         ":module_py",
-        "//bindings/pydrake:autodiffutils_py",
-        "//bindings/pydrake:symbolic_py",
     ],
     cc_deps = [
         ":cpp_types_pybind",
@@ -101,8 +99,6 @@ drake_pybind_cc_googletest(
     name = "cpp_types_test",
     cc_deps = [
         ":cpp_types_pybind",
-        "//bindings/pydrake:autodiff_types_pybind",
-        "//bindings/pydrake:symbolic_types_pybind",
     ],
     py_deps = [
         ":cpp_types_py",

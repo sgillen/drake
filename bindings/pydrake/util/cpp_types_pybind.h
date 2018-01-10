@@ -82,18 +82,5 @@ inline py::tuple GetPyTypes(type_pack<Ts...> = {}) {
   return py::make_tuple(GetPyType<Ts>()...);
 }
 
-/// Gets the canonical string name for a given C++ type.
-template <typename T>
-inline std::string GetPyName(type_pack<T> = {}) {
-  auto& type_registry = internal::TypeRegistry::GetPyInstance();
-  return type_registry.GetName(type_registry.GetPyType<T>());
-}
-
-/// Gets the canonical string names for a list of C++ types.
-template <typename ... Ts>
-inline std::vector<std::string> GetPyNames(type_pack<Ts...> = {}) {
-  return {GetPyName<Ts>()...};
-}
-
 }  // namespace pydrake
 }  // namespace drake
