@@ -1,28 +1,36 @@
 load("//tools/lint:lint.bzl", "add_lint_tests")
-load(":external_data.bzl", "external_data_stub_test")
-load(
-    "@bazel_external_data_pkg//test:workspace_test.bzl",
-    "workspace_test",
-)
+load(":workspace_test.bzl", "workspace_test", "glob_lint_sources")
+load("//tools/skylark:meta.bzl", "all_files")
 
-# Run all tests in `workspace` as a separate package.
+files = [
+    ":all_files",
+    "//tools/external_data/bazel_external_data:all_files",
+    "//tools:all_files",
+    "//tools/lint:all_files",
+    "//tools/skylark:all_files",
+    "//:skylark_files",
+]
+
 workspace_test(
-    name = "workspace_test",
-    workspace = "workspace",
+    name = "bazel_pkg_test",
+    data = files,
+    workspace = "test/workspaces/bazel_pkg_test",
 )
 
-# Ensure that we can consume `external_data.bzl`.
-external_data_stub_test()
-
-# Ensure that we add all relevant files under `workspace`.
-# We should be able to glob them, as they are not a package.
-add_lint_tests(
-    bazel_lint_extra_srcs = glob([
-        "workspace/**/BUILD.bazel",
-        "workspace/**/WORKSPACE",
-        "workspace/**/*.bzl",
-    ]),
-    python_lint_extra_srcs = glob([
-        "workspace/**/*.py",
-    ]),
+# For use with `workspace_test`.
+exports_files(
+    srcs = [
+        "workspace_writeable_test.sh",
+    ],
+    visibility = ["//visibility:public"],
 )
+
+# # Ensure that we add all relevant files under `workspace`.
+# # We should be able to glob them, as they are not a package.
+# lint_extra = glob_lint_sources("test/workspaces")
+# add_lint_tests(
+#     bazel_lint_extra_srcs = lint_extra.bazel_srcs,
+#     python_lint_extra_srcs = lint_extra.python_srcs,
+# )
+
+all_files()

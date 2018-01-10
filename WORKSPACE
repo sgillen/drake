@@ -32,6 +32,16 @@ local_repository(
     # use of kythe tooling is for pkg_config_package, and we plan to implement
     # our own version of that soon anyway, we'll leave this alone for now,
     # rather than diagnosing the errors.
+    # N.B. This error is *stateful*. You will get different behavior depending
+    # on what has been built / run previously in Bazel. In one mode, the error
+    # will be:
+    #   Encountered error while [...]
+    #   /home/${USER}/.cache/bazel/_bazel_${USER}/${HASH}/external/kythe
+    #   must  be an existing directory
+    # In another mode, you will get Java errors:
+    #   java.lang.IllegalArgumentException: PathFragment
+    #   tools/external_data/workspace is not beneath
+    #   /home/${USER}/${WORKSPACE_DIR}/third_party/com_github_google_kythe
     path = "third_party/com_github_google_kythe",
 )
 
@@ -142,13 +152,9 @@ github_archive(
     build_file = "tools/workspace/styleguide/styleguide.BUILD.bazel",  # noqa
 )
 
-github_archive(
-    name = "pycodestyle",
-    repository = "PyCQA/pycodestyle",
-    commit = "2.3.1",
-    sha256 = "e9fc1ca3fd85648f45c0d2e33591b608a17d8b9b78e22c5f898e831351bacb03",  # noqa
-    build_file = "tools/workspace/pycodestyle/pycodestyle.BUILD.bazel",
-)
+load("//tools/lint:lint_repositories.bzl", "lint_repositories")
+
+lint_repositories()
 
 bitbucket_archive(
     name = "eigen",
@@ -323,12 +329,6 @@ github_archive(
     build_file = "tools/workspace/yaml_cpp/yaml_cpp.BUILD.bazel",
 )
 
-load("//tools/workspace/buildifier:buildifier.bzl", "buildifier_repository")
-
-buildifier_repository(
-    name = "buildifier",
-)
-
 load("//tools/workspace/gurobi:gurobi.bzl", "gurobi_repository")
 
 gurobi_repository(
@@ -478,6 +478,8 @@ drake_visualizer_repository(
     name = "drake_visualizer",
 )
 
+# Ignores any targets under this directory so that `test ...` will not leak
+# into them.
 # WARNING: Bazel also craps out here if `__workspace_dir__ + path` is used
 # rather than just `path`.
 # N.B. This error is *stateful*. You will get different behavior depending on
@@ -491,6 +493,6 @@ drake_visualizer_repository(
 #   tools/external_data/workspace is not beneath
 #   /home/${USER}/${WORKSPACE_DIR}/tools/external_data/workspace
 local_repository(
-    name = "bazel_external_data_pkg",
-    path = "tools/external_data/workspace",
+    name = "external_data_test_workspaces",
+    path = "tools/external_data/test/workspaces",
 )
