@@ -69,14 +69,14 @@ class TypeRegistry {
 
 }  // namespace internal
 
-// Gets the canonical Python type for a given C++ type.
+/// Gets the canonical Python type for a given C++ type.
 template <typename T>
 inline py::object GetPyType(type_pack<T> = {}) {
   auto& type_registry = internal::TypeRegistry::GetPyInstance();
   return type_registry.GetPyType<T>();
 }
 
-// Gets the canonical Python type for a list of C++ types.
+/// Gets the canonical Python type for a list of C++ types.
 template <typename ... Ts>
 inline py::tuple GetPyTypes(type_pack<Ts...> = {}) {
   return py::make_tuple(GetPyType<Ts>()...);

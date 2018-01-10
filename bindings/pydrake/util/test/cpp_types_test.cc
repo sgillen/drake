@@ -25,7 +25,7 @@ class CppTypesTest : public ::testing::Test {
 import numpy as np
 import ctypes
 
-from pydrake.util.cpp_types import get_type_canonical, get_type_name
+from pydrake.util.cpp_types import get_types_canonical, get_type_names
 )""");
   }
 
@@ -58,11 +58,11 @@ pairs = (
 
 for canonical, alias in pairs:
     pair_str = "{}, {}".format(alias, canonical)
-    assert get_type_canonical(alias) is canonical, "Bad pair: " + pair_str
+    assert get_types_canonical([alias])[0] is canonical, "Bad pair: " + pair_str
 
-assert get_type_name(int) == "int"
-assert get_type_name(ctypes.c_int32) == "int"
-assert get_type_name(CustomType) == "__main__.CustomType"
+assert get_type_names([int])[0] == "int"
+assert get_type_names([ctypes.c_int32])[0] == "int"
+assert get_type_names([CustomType])[0] == "__main__.CustomType"
 )""", py::globals(), locals);
   // Sanity check to ensure we've executed our Python code.
   ASSERT_TRUE(!locals["pairs"].is_none());

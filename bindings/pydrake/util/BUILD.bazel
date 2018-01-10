@@ -95,16 +95,6 @@ drake_pybind_library(
     ],
 )
 
-drake_pybind_cc_googletest(
-    name = "cpp_types_test",
-    cc_deps = [
-        ":cpp_types_pybind",
-    ],
-    py_deps = [
-        ":cpp_types_py",
-    ],
-)
-
 install(
     name = "install",
     targets = PY_LIBRARIES,
@@ -137,6 +127,12 @@ drake_py_test(
     deps = [
         ":module_shim_example",
     ],
+)
+
+drake_pybind_cc_googletest(
+    name = "cpp_types_test",
+    cc_deps = [":cpp_types_pybind"],
+    py_deps = [":cpp_types_py"],
 )
 
 add_lint_tests()
