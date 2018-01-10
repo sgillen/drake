@@ -1,10 +1,11 @@
 #pragma once
 
 /// @file
-/// Helper methods to 
+/// Provides a mechanism to map C++ types to canonical Python types.
 
-#include <string>
 #include <map>
+#include <string>
+#include <vector>
 
 #include <pybind11/pybind11.h>
 
@@ -22,9 +23,9 @@ class TypeRegistry {
  public:
   TypeRegistry();
 
-  // Gets singleton instance, stored in Python.
-  // @note Storing this in Python permits this module to violate ODR, until
-  // we have shared library linking.
+  // Gets the singleton instance which is stored in Python.
+  // @note Storing the singleton in Python permits this module avoid
+  // significant ODR violations until we have shared library linking.
   static const TypeRegistry& GetPyInstance();
 
   // Gets the Python type for a given C++ type.
@@ -51,8 +52,7 @@ class TypeRegistry {
       py::tuple py_types, const std::string& name);
 
   template <typename T>
-  void RegisterType(py::tuple py_types,
-                const std::string& name_override = {});
+  void RegisterType(py::tuple py_types);
 
   void RegisterCommon();
   void RegisterLiterals();
@@ -76,7 +76,7 @@ inline py::object GetPyType(type_pack<T> = {}) {
   return type_registry.GetPyType<T>();
 }
 
-/// Gets the canonical Python type for a list of C++ types.
+/// Gets the canonical Python types for each C++ type.
 template <typename ... Ts>
 inline py::tuple GetPyTypes(type_pack<Ts...> = {}) {
   return py::make_tuple(GetPyType<Ts>()...);

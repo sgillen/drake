@@ -1,12 +1,11 @@
 #include "drake/bindings/pydrake/util/cpp_types_pybind.h"
 
 // @file
-// Tests both `cpp_types.py` and `cpp_types_pybind.h`.
+// Tests the public interfaces in `cpp_types.py` and `cpp_types_pybind.h`.
 
 #include <string>
 
 #include <gtest/gtest.h>
-
 #include <pybind11/embed.h>
 #include <pybind11/eval.h>
 #include <pybind11/pybind11.h>
@@ -50,7 +49,10 @@ pairs = (
     (int, int),
     (float, float),
     (object, object),
+    # - Custom Types.
     (CustomType, CustomType),
+    # - Literals.
+    (1, 1),
     # Aliases:
     (float, np.double),
     (int, ctypes.c_int32),
@@ -68,6 +70,12 @@ assert get_type_names([CustomType])[0] == "__main__.CustomType"
   ASSERT_TRUE(!locals["pairs"].is_none());
 }
 
+template <int Value>
+using int_constant = std::integral_constant<int, Value>;
+
+template <int Value>
+using uint_constant = std::integral_constant<uint, Value>;
+
 TEST_F(CppTypesTest, InCpp) {
   // Check C++ behavior.
   ASSERT_TRUE(CheckPyType<bool>("bool"));
@@ -76,9 +84,13 @@ TEST_F(CppTypesTest, InCpp) {
   ASSERT_TRUE(CheckPyType<float>("np.float32"));
   ASSERT_TRUE(CheckPyType<int>("int"));
   ASSERT_TRUE(CheckPyType<py::object>("object"));
-
+  // Custom types.
   ASSERT_TRUE(CheckPyType<CustomType>("CustomType"));
   ASSERT_TRUE(PyEquals(GetPyTypes<int, bool>(), py::eval("int, bool")));
+  // Literals parameters.
+  ASSERT_TRUE(CheckPyType<std::true_type>("True"));
+  ASSERT_TRUE(CheckPyType<int_constant<-1>>("-1"));
+  ASSERT_TRUE(CheckPyType<uint_constant<1>>("1"));
 }
 
 int main(int argc, char** argv) {

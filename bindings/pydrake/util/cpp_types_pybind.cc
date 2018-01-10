@@ -19,7 +19,6 @@ TypeRegistry::TypeRegistry() {
 }
 
 const TypeRegistry& TypeRegistry::GetPyInstance() {
-  // TODO: Shift the Pythonic logic / variables into `cpp_types.py`.
   auto m = py::module::import(kModule);
   py::object type_registry_py = m.attr("_type_registry");
   const TypeRegistry* type_registry =
@@ -46,19 +45,19 @@ py::object TypeRegistry::DoGetPyType(const std::type_info& tinfo) const {
 }
 
 py::object TypeRegistry::GetPyTypeCanonical(py::object py_type) const {
-  // Since there's no easy / good way to expose C++ type id's to Python,
-  // just canonicalize Python types.
+  // Get registered canonical type if there is a mapping; otherwise return
+  // original type.
   return py_to_py_canonical_.attr("get")(py_type, py_type);
 }
 
 py::str TypeRegistry::GetName(py::object py_type) const {
-  py::object py_type_fin = GetPyTypeCanonical(py_type);
-  py::object out = py_name_.attr("get")(py_type_fin);
+  py::object py_type_canonical = GetPyTypeCanonical(py_type);
+  py::object name = py_name_.attr("get")(py_type_canonical);
   // Assume this is a Python type.
-  if (out.is(py::none())) {
-    out = eval("_get_type_name")(py_type_fin);
+  if (name.is(py::none())) {
+    name = eval("_get_type_name")(py_type_canonical);
   }
-  return out;
+  return name;
 }
 
 py::object TypeRegistry::eval(const std::string& expr) const {
@@ -81,12 +80,9 @@ void TypeRegistry::Register(
 
 template <typename T>
 void TypeRegistry::RegisterType(
-    py::tuple py_types, const std::string& name_override) {
-  std::string name = name_override;
-  if (name.empty()) {
-    name = py::cast<std::string>(eval("_get_type_name")(py_types[0]));
-  }
-  Register({type_hash<T>()}, py_types, name);
+    py::tuple py_types) {
+  py::str name = eval("_get_type_name")(py_types[0]);
+  Register({type_hash<T>()}, py_types, name.cast<std::string>());
 }
 
 void TypeRegistry::RegisterCommon() {
@@ -105,7 +101,7 @@ void TypeRegistry::RegisterCommon() {
 
 class TypeRegistry::LiteralHelper {
  public:
-  LiteralHelper(TypeRegistry* type_registry)
+  explicit LiteralHelper(TypeRegistry* type_registry)
     : type_registry_(type_registry) {}
 
   void RegisterLiterals() {

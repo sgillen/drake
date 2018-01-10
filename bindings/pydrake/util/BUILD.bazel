@@ -74,8 +74,8 @@ drake_py_library(
 # ODR does not matter, because the singleton will be stored in Python.
 drake_cc_library(
     name = "cpp_types_pybind",
-    hdrs = ["cpp_types_pybind.h"],
     srcs = ["cpp_types_pybind.cc"],
+    hdrs = ["cpp_types_pybind.h"],
     deps = [
         ":type_pack",
         "@pybind11",
@@ -84,15 +84,15 @@ drake_cc_library(
 
 drake_pybind_library(
     name = "cpp_types_py",
-    cc_srcs = ["cpp_types_py.cc"],
-    package_info = PACKAGE_INFO,
-    py_srcs = ["cpp_types.py"],
-    py_deps = [
-        ":module_py",
-    ],
     cc_deps = [
         ":cpp_types_pybind",
     ],
+    cc_srcs = ["cpp_types_py.cc"],
+    package_info = PACKAGE_INFO,
+    py_deps = [
+        ":module_py",
+    ],
+    py_srcs = ["cpp_types.py"],
 )
 
 install(

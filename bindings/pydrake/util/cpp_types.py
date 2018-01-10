@@ -40,13 +40,13 @@ class _StrictMap(object):
 
 
 # Load and import type registry.
-from ._cpp_types_py import _type_registry
+from ._cpp_types_py import _type_registry  # noqa
 
 
 def get_types_canonical(param):
     """Gets the canonical types for a set of Python types (canonical as in
     how they relate to C++ types. """
-    return tuple(map( _type_registry.GetPyTypeCanonical, param))
+    return tuple(map(_type_registry.GetPyTypeCanonical, param))
 
 
 def get_type_names(param):
