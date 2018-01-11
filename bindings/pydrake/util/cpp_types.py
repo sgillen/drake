@@ -39,10 +39,12 @@ class _TypeRegistry(object):
         self._cpp_to_py_canonical = _StrictMap()
         self._py_to_py_canonical = _StrictMap()
 
-    def register(self, cpp_types, py_types):
-        py_canonical = py_types[0]
+    def register_cpp(self, py_canonical, cpp_types):
         for cpp_type in cpp_types:
             self._cpp_to_py_canonical.add(cpp_type, py_canonical)
+
+    def register_py(self, py_types):
+        py_canonical = py_types[0]
         for py_type in py_types:
             self._py_to_py_canonical.add(py_type, py_canonical)
 
@@ -61,6 +63,18 @@ class _TypeRegistry(object):
 
 _type_registry = _TypeRegistry()
 
+# Register canonical Python types.
+_py_types_set = (
+    (float, ctypes.c_double, np.double),
+    (np.float32, ctypes.c_float),
+    (int, np.int32, ctypes.c_int32),
+    (np.uint32, ctypes.c_uint32),
+)
+map(_type_registry.register_py, _py_types_set)
+
+# Import C++ types.
+import pydrake.util._cpp_types_py
+
 
 def get_types_canonical(param):
     """Gets the canonical types for a set of Python types (canonical as in
@@ -72,7 +86,3 @@ def get_type_names(param):
     """Gets the canonical type names for a set of Python types (canonical as in
     how they relate to C++ types. """
     return tuple(map(_type_registry.get_name, param))
-
-
-# Import nominal basic C++ types.
-import pydrake.util._cpp_types_py

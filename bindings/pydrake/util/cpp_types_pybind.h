@@ -3,9 +3,11 @@
 /// @file
 /// Provides a mechanism to map C++ types to canonical Python types.
 
+#include <string>
 #include <typeinfo>
 #include <vector>
 
+#include <pybind11/eval.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
@@ -22,9 +24,9 @@ py::object GetTypeRegistry();
 py::object GetPyTypeImpl(const std::type_info& tinfo);
 
 template <typename ... Ts>
-void RegisterTypes(py::tuple py_types, type_pack<Ts...> = {}) {
+void RegisterTypes(const std::string& py_type_str, type_pack<Ts...> = {}) {
   std::vector<size_t> cpp_types = {typeid(Ts).hash_code()...};
-  GetTypeRegistry().attr("register")(cpp_types, py_types);
+  GetTypeRegistry().attr("register_cpp")(py::eval(py_type_str), cpp_types);
 }
 
 template <typename T, typename = void>
