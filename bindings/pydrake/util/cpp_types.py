@@ -22,27 +22,44 @@ def _get_type_name(t):
 
 
 class _StrictMap(object):
-    # Provides a map which may only add a key once, and ensures that literal
-    # types are unique when needed (e.g. `1` and `True` should be distinct).
+    # Provides a map which may only add a key once.
     def __init__(self):
         self._values = dict()
 
-    def _strict_key(self, key):
-        # Ensures keys are strictly scoped to the values (for literals).
-        return (type(key), key)
-
     def add(self, key, value):
-        skey = self._strict_key(key)
-        assert skey not in self._values, "Already added: {}".format(skey)
-        self._values[skey] = value
+        assert key not in self._values, "Already added: {}".format(key)
+        self._values[key] = value
 
     def get(self, key, default):
-        skey = self._strict_key(key)
-        return self._values.get(skey, default)
+        return self._values.get(key, default)
 
 
-# Load and import type registry.
-from ._cpp_types_py import _type_registry  # noqa
+class _TypeRegistry(object):
+    def __init__(self):
+        self._cpp_to_py_canonical = _StrictMap()
+        self._py_to_py_canonical = _StrictMap()
+
+    def register(self, cpp_types, py_types):
+        py_canonical = py_types[0]
+        for cpp_type in cpp_types:
+            self._cpp_to_py_canonical.add(cpp_type, py_canonical)
+        for py_type in py_types:
+            self._py_to_py_canonical.add(py_type, py_canonical)
+
+    def get_type_canonical(self, py_type):
+        # Get registered canonical type if there is a mapping; otherwise return
+        # original type.
+        return self._py_to_py_canonical.get(py_type, py_type)
+
+    def get_name(self, py_type):
+        return _get_type_name(py_type)
+
+    def get_type_canonical_from_cpp(self, cpp_type):
+        # Return None so that C++ can query pybind.
+        return self._cpp_to_py_canonical.get(cpp_type, None)
+
+
+_type_registry = _TypeRegistry()
 
 
 def get_types_canonical(param):
@@ -55,3 +72,7 @@ def get_type_names(param):
     """Gets the canonical type names for a set of Python types (canonical as in
     how they relate to C++ types. """
     return tuple(map(_type_registry.GetName, param))
+
+
+# Import nominal basic C++ types.
+import pydrake.util._cpp_types_py
