@@ -166,5 +166,24 @@ LinearMatrixInequalityConstraint::LinearMatrixInequalityConstraint(
     DRAKE_ASSERT(math::IsSymmetric(Fi, symmetry_tolerance));
   }
 }
+
+void NonlinearComplementarityConstraint::DoEval(
+    const Eigen::Ref<const Eigen::VectorXd>& x, Eigen::VectorXd& y) const {
+  Vector x1 = x.head(nf1());
+  Vector x2 = x.tail(nf2());
+  Vector y1, y2;
+
+  f1_->Eval(x1, y1);
+  f2_->Eval(x2, y2);
+
+  y = y1.dot(y2);
+} 
+
+void NonlinearComplementarityConstraint::DoEval(
+    const Eigen::Ref<const AutoDiffVecXd>&, AUtoDiffVecXd&) const {
+  throw std::runtime_error(
+      "The Eval function for Nonlinear Complementarity Constraint is not defined, "
+      "since the eigen solver does not work for AutoDiffScalar.");
+}
 }  // namespace solvers
 }  // namespace drake

@@ -1905,6 +1905,26 @@ class MathematicalProgram {
       const std::vector<Eigen::Ref<const Eigen::MatrixXd>>& F,
       const Eigen::Ref<const VectorXDecisionVariable>& vars);
 
+
+  /**
+   * Adds a Nonlinear Complementarity Constraint to the program.
+   */
+  Binding<NonlinearComplementarityConstraint> AddNonlinearComplementarityConstraint(
+        const EvaluatorBase& f1, const EvaluatorBase& f2,
+        const VariableRefList& x1, const VariableRefList& x2) {
+    auto i1 = VectorX<double>::Ones(f1.num_outputs());
+    auto i2 = VectorX<double>::Ones(f2.num_outputs());
+    double inf = std::numeric_limits<double>::infinity();
+    AddConstraint(make_shared<EvaluatorConstraint<>>(f1, 0 * i1, inf * i1), x1);
+    AddConstraint(make_shared<EvaluatorConstraint<>>(f2, 0 * i2, inf * i2), x2);
+
+    auto c = NonlinearComplementarityConstraint(f1, f2);
+    auto x;
+    x << x1, x2;
+
+    AddConstraint(c, x); 
+  }
+
   /**
    * Adds constraints that a given polynomial @p p is a sums-of-squares (SOS),
    * that is, @p p can be decomposed into `xᵀQx`. It returns a pair of
