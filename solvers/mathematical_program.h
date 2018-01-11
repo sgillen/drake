@@ -1800,6 +1800,17 @@ class MathematicalProgram {
       const Eigen::Ref<const Eigen::VectorXd>& q,
       const Eigen::Ref<const VectorXDecisionVariable>& vars);
 
+  // Yar
+  Binding<NonlinearComplementarityConstraint> Add....(
+      f1, f2, xp, zp) {
+    AddNonlinearConstraint(f1, 0, inf, xp);
+    AddNonlinearConstraint(f2, 0, inf, zp);
+    auto c = NonlinearComplementariry....().
+    auto x;
+    x << xp, zp;
+    AddConstraint(c, x);
+  }
+
   /**
    * Adds a polynomial constraint to the program referencing a subset
    * of the decision variables (defined in the vars parameter).
