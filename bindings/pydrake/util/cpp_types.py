@@ -54,7 +54,7 @@ class _TypeRegistry(object):
         return self._py_to_py_canonical.get(py_type, py_type)
 
     def get_name(self, py_type):
-        return _get_type_name(py_type)
+        return _get_type_name(self.get_type_canonical(py_type))
 
     def get_type_canonical_from_cpp(self, cpp_type):
         # Return None so that C++ can query pybind.

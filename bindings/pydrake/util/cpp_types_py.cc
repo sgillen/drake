@@ -1,3 +1,4 @@
+#include <pybind11/eval.h>
 #include <pybind11/pybind11.h>
 
 #include "drake/bindings/pydrake/util/cpp_types_pybind.h"

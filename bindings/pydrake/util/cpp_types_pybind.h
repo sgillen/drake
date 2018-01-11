@@ -7,9 +7,7 @@
 #include <typeinfo>
 #include <vector>
 
-#include <pybind11/eval.h>
 #include <pybind11/pybind11.h>
-#include <pybind11/stl.h>
 
 #include "drake/bindings/pydrake/util/type_pack.h"
 
@@ -21,13 +19,15 @@ namespace internal {
 
 py::object GetTypeRegistry();
 
-py::object GetPyTypeImpl(const std::type_info& tinfo);
+void RegisterTypeImpl(
+    const std::string& py_type_str, std::vector<size_t> cpp_types);
 
 template <typename ... Ts>
 void RegisterTypes(const std::string& py_type_str, type_pack<Ts...> = {}) {
-  std::vector<size_t> cpp_types = {typeid(Ts).hash_code()...};
-  GetTypeRegistry().attr("register_cpp")(py::eval(py_type_str), cpp_types);
+  RegisterTypeImpl(py_type_str, {typeid(Ts).hash_code()...});
 }
+
+py::object GetPyTypeImpl(const std::type_info& tinfo);
 
 template <typename T, typename = void>
 struct get_py_type_impl {

@@ -1,6 +1,7 @@
 #include "drake/bindings/pydrake/util/cpp_types_pybind.h"
 
 #include <pybind11/eval.h>
+#include <pybind11/stl.h>
 
 const char kModule[] = "pydrake.util.cpp_types";
 
@@ -11,6 +12,11 @@ namespace internal {
 py::object GetTypeRegistry() {
   auto m = py::module::import(kModule);
   return m.attr("_type_registry");
+}
+
+void RegisterTypeImpl(
+    const std::string& py_type_str, std::vector<size_t> cpp_types) {
+  GetTypeRegistry().attr("register_cpp")(py::eval(py_type_str), cpp_types);
 }
 
 py::object GetPyTypeImpl(const std::type_info& tinfo) {
