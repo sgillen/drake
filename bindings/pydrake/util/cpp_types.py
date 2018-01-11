@@ -65,13 +65,13 @@ _type_registry = _TypeRegistry()
 def get_types_canonical(param):
     """Gets the canonical types for a set of Python types (canonical as in
     how they relate to C++ types. """
-    return tuple(map(_type_registry.GetPyTypeCanonical, param))
+    return tuple(map(_type_registry.get_type_canonical, param))
 
 
 def get_type_names(param):
     """Gets the canonical type names for a set of Python types (canonical as in
     how they relate to C++ types. """
-    return tuple(map(_type_registry.GetName, param))
+    return tuple(map(_type_registry.get_name, param))
 
 
 # Import nominal basic C++ types.
