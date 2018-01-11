@@ -884,6 +884,17 @@ drake_cc_googletest(
     ],
 )
 
+drake_cc_googletest(
+    name = "nonlinear_complentarity_constraint_test",
+    srcs = [
+        "test/nonlinear_complentarity_constraint_test.cc",
+    ],
+    deps = [
+        ":mathematical_program",
+        "//drake/common/test_utilities:eigen_matrix_compare",
+    ],
+)
+
 # TODO(hongkai-dai): Separate this test into a test that uses Gurobi, and a
 # test that doesn't.
 drake_cc_googletest(
