@@ -748,5 +748,33 @@ class LinearMatrixInequalityConstraint : public Constraint {
   const int matrix_rows_{};
 };
 
+
+/**
+ * Nonlinear Complementarity Constraint
+ * 
+ */
+
+class NonlinearComplementarityConstraint : public Constraint {
+ public:
+  DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(NonlinearComplementarityConstraint)
+
+  NonlinearComplementarityConstraint(
+      const EvaluatorBase& f1, const EvaluatorBase& f2)
+      : Constraint(3*f1.num_outputs, 2*f1.num_outputs), f1_(f1), f2_(f2) {
+        DRAKE_DEMAND(nf1() == nf2());
+      }
+
+  int nf1() const { return f1.num_outputs(); }
+  int nf2() const { return f2.num_outputs(); }
+
+  ~NonlinearComplementarityConstraint() override {}
+ protected:
+  void DoEval(const Eigen::Ref<const Eigen::VectorXd>& x,
+              Eigen::VectorXd& y) const override;
+
+  void DoEval(const Eigen::Ref<const AutoDiffVecXd>& x,
+              AutoDiffVecXd& y) const override;
+}
+
 }  // namespace solvers
 }  // namespace drake
