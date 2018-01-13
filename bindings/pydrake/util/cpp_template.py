@@ -100,13 +100,15 @@ class Template(object):
         for param in param_list:
             self.add_instantiation(param, instantiation_func(param))
 
-    def get_param_list(self, instantiation):
-        """Returns all parameters for a given `instantiation`. """
+    def get_param_set(self, instantiation):
+        """Returns all parameters for a given `instantiation`.
+
+        @returns A set of instantiations. """
         param_list = []
         for param, check in self._instantiation_map.iteritems():
             if check == instantiation:
                 param_list.append(param)
-        return param_list
+        return set(param_list)
 
     def _param_resolve(self, param):
         # Resolve from default argument to canonical parameters.

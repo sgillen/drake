@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from __future__ import absolute_import, division, print_function
+from __future__ import absolute_import, print_function
 
 import unittest
 
@@ -13,20 +13,20 @@ class B(object):
     pass
 
 
-class C(object):
-    def func_c(self):
-        return (self, 3)
-
-    def func_d(self):
-        return (self, 4)
-
-
 def func_a():
     return 1
 
 
 def func_b():
     return 2
+
+
+class C(object):
+    def func_c(self):
+        return (self, 3)
+
+    def func_d(self):
+        return (self, 4)
 
 
 class TestCppTemplate(unittest.TestCase):
@@ -38,13 +38,13 @@ class TestCppTemplate(unittest.TestCase):
         tpl.add_instantiation(int, 1)
         self.assertEquals(tpl[int], 1)
         self.assertEquals(tpl.get_instantiation(int), (1, (int,)))
-        self.assertEquals(tpl.get_param_list(1), [(int,)])
+        self.assertEquals(tpl.get_param_set(1), {(int,)})
         # Duplicate parameters.
-        self.assertRaises(
-            lambda: tpl.add_instantiation(int, 4),
-            RuntimeError)
+        func = lambda: tpl.add_instantiation(int, 4)
+        self.assertRaises(RuntimeError, func)
+
         # Invalid parameters.
-        self.assertRaises(lambda: tpl[float], RuntimeError)
+        self.assertRaises(RuntimeError, lambda: tpl[float])
         # New instantiation.
         tpl.add_instantiation(float, 2)
         self.assertEquals(tpl[float], 2)
@@ -57,15 +57,15 @@ class TestCppTemplate(unittest.TestCase):
         tpl.add_instantiation((int, int), 3)
         self.assertEquals(tpl[int, int], 3)
         # Duplicate instantiation.
-        self.add_instantiation((float, float), 1)
-        self.assertEquals(tpl.get_param_list(1), [(int,), (float, float)])
+        tpl.add_instantiation((float, float), 1)
+        self.assertEquals(tpl.get_param_set(1), {(int,), (float, float)})
 
         # List instantiation.
         def instantiation_func(param):
             return 100 + len(param)
         func_a = (str,) * 5
         func_b = (str,) * 10
-        self.add_instantiations(instantiation_func, [func_a, func_b])
+        tpl.add_instantiations(instantiation_func, [func_a, func_b])
         self.assertEquals(tpl[func_a], 105)
         self.assertEquals(tpl[func_b], 110)
 
@@ -99,15 +99,15 @@ class TestCppTemplate(unittest.TestCase):
         self.assertEquals(C.method[int], C.func_c)
         self.assertEquals(str(C.method[int]), "<unbound method C.func_c>")
 
-        c = C()
+        obj = C()
         self.assertTrue(
-            str(c.method).startswith("<bound TemplateMethod C.method of "))
+            str(obj.method).startswith("<bound TemplateMethod C.method of "))
         self.assertTrue(
-            str(c.method[int]).startswith("<bound method C.func_c of "))
-        self.assertEquals(c.method[int](), (c, 3))
-        self.assertEquals(C.method[int](c), (c, 3))
-        self.assertEquals(c.method[float](), (c, 4))
-        self.assertEquals(C.method[float](c), (c, 4))
+            str(obj.method[int]).startswith("<bound method C.func_c of "))
+        self.assertEquals(obj.method[int](), (obj, 3))
+        self.assertEquals(C.method[int](obj), (obj, 3))
+        self.assertEquals(obj.method[float](), (obj, 4))
+        self.assertEquals(C.method[float](obj), (obj, 4))
 
 
 if __name__ == '__main__':
