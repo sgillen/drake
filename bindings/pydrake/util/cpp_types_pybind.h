@@ -18,7 +18,7 @@ namespace pydrake {
 namespace internal {
 
 // Gets the type registry from `cpp_types`.
-py::object GetTypeRegistry();
+py::object GetTypeAliases();
 
 py::object GetPyTypeImpl(const std::type_info& tinfo);
 

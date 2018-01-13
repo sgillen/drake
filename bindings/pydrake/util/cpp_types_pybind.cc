@@ -10,17 +10,31 @@ namespace pydrake {
 namespace internal {
 namespace {
 
-class GetTypeRegistryImpl {
+template <typename T>
+py::object GetHash() {
+  // Creates a Python object that should uniquely hash for a primitive C++
+  // type.
+  return py::make_tuple("cpp_type", typeid(T).hash_code());
+}
+
+class GetTypeAliasesImpl {
  public:
-  RegistryCommonTypes(py::object m) {
+  GetTypeAliasesImpl() {
     m_ = py::module::import(kModule);
-    type_registry_ = m.attr("_type_registry");
+    aliases_ = m_.attr("_aliases");
+  }
+
+  py::object Run() {
+    if (!py::hasattr(m_, kRegisteredCommon)) {
+      RegisterCommonTypes();
+      m_.attr(kRegisteredCommon) = true;
+    }
+    return aliases_;
   }
 
   void RegisterCommonTypes() {
     globals_ = m_.attr("__dict__");
-    register_aliases_ = type_registry_.attr("register_aliases");
-    cpp_type_ = type_registry_.attr();
+    register_ = aliases_.attr("register");
     // Make mappings for C++ RTTI to Python types.
     // Unfortunately, this is hard to obtain from `pybind11`.
     RegisterType<bool>("bool");
@@ -34,34 +48,27 @@ class GetTypeRegistryImpl {
     RegisterType<py::object>("object");
   }
 
-  void Run() {
-    if (!m_.attr(kRegisteredCommon)) {
-      RegisterCommonTypes();
-      m.attr(kRegisteredCommon) = true;
-    }
-    return type_registry_;
-  }
-
  private:
   template <typename T>
   void RegisterType(const std::string& py_type_str) {
-    register_aliases_(py::eval(py_type_str, globals_), typeid(T).hash_code());
+    // Create an object that is a unique hash.
+    register_(py::eval(py_type_str, globals_), GetHash<T>());
   }
 
   py::module m_;
   py::dict globals_;
-  py::object type_registry_;
-  py::objcet register_aliases_;
+  py::object aliases_;
+  py::object register_;
 };
 
 }  // namespace
 
-py::object GetTypeRegistry() {
-  return GetTypeRegistryImpl().Run();
+py::object GetTypeAliases() {
+  return GetTypeAliasesImpl().Run();
 }
 
 py::object GetPyTypeImpl(const std::type_info& tinfo) {
-  py::object py_type = GetTypeRegistry().attr("get_type_canonical_from_cpp")(
+  py::object py_type = GetTypeAliases().attr("get_type_canonical_from_cpp")(
       tinfo.hash_code());
   if (!py_type.is_none()) {
     return py_type;

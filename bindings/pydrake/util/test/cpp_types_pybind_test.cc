@@ -30,10 +30,12 @@ using int_constant = std::integral_constant<int, Value>;
 template <int Value>
 using uint_constant = std::integral_constant<uint, Value>;
 
-TEST_F(CppTypesTest, InCpp) {
+GTEST_TEST(CppTypesTest, InCpp) {
   // Define custom class only once here.
   py::module m("__main__");
-  py::class_<CustomType>(m, "CustomType");
+
+  struct CustomCppType {};
+  py::class_<CustomCppType>(m, "CustomCppType");
 
   py::globals()["np"] = py::module::import("numpy");
 
@@ -45,7 +47,7 @@ TEST_F(CppTypesTest, InCpp) {
   ASSERT_TRUE(CheckPyType<int>("int"));
   ASSERT_TRUE(CheckPyType<py::object>("object"));
   // Custom types.
-  ASSERT_TRUE(CheckPyType<CustomType>("CustomType"));
+  ASSERT_TRUE(CheckPyType<CustomCppType>("CustomCppType"));
   ASSERT_TRUE(PyEquals(GetPyTypes<int, bool>(), py::eval("int, bool")));
   // Literals parameters.
   ASSERT_TRUE(CheckPyType<std::true_type>("True"));
