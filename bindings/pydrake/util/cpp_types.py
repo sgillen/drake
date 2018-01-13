@@ -35,20 +35,30 @@ class _AliasRegistry(object):
     # parameters.
     def __init__(self):
         self._to_canonical = _StrictMap()
+        self._register_common()
+
+    def _register_common(self):
+        # Register common Python aliases relevant for C++.
+        self.register(float, ctypes.c_double, np.double)
+        self.register(np.float32, ctypes.c_float)
+        self.register(int, np.int32, ctypes.c_int32)
+        self.register(np.uint32, ctypes.c_uint32)
 
     def register(self, canonical, *aliases):
+        # Registers a set of aliases to a canonical value.
         for alias in aliases:
             self._to_canonical.add(alias, canonical)
 
     def get_canonical(self, alias, default_same=True):
-        # Get registered canonical type if there is a mapping; otherwise return
-        # original type.
+        # Gets registered canonical type if there is a mapping; otherwise
+        # return default (same if `default_same`, or None otherwise).
         default = alias
         if not default_same:
             default = None
         return self._to_canonical.get(alias, default)
 
     def get_name(self, alias):
+        # Gets string for an alias.
         canonical = self.get_canonical(alias)
         if isinstance(canonical, type):
             return _get_type_name(canonical)
@@ -59,13 +69,6 @@ class _AliasRegistry(object):
 
 # Create singleton instance.
 _aliases = _AliasRegistry()
-
-# Register common Python aliases relevant for C++.
-_register = _aliases.register
-_register(float, ctypes.c_double, np.double)
-_register(np.float32, ctypes.c_float)
-_register(int, np.int32, ctypes.c_int32)
-_register(np.uint32, ctypes.c_uint32)
 
 
 def get_types_canonical(param):
