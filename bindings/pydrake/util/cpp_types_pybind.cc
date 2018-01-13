@@ -10,11 +10,10 @@ namespace pydrake {
 namespace internal {
 namespace {
 
-template <typename T>
-py::object GetHash() {
+py::object GetPyHash(size_t hash) {
   // Creates a Python object that should uniquely hash for a primitive C++
   // type.
-  return py::make_tuple("cpp_type", typeid(T).hash_code());
+  return py::make_tuple("cpp_type", hash);
 }
 
 class GetTypeAliasesImpl {
@@ -52,7 +51,9 @@ class GetTypeAliasesImpl {
   template <typename T>
   void RegisterType(const std::string& py_type_str) {
     // Create an object that is a unique hash.
-    register_(py::eval(py_type_str, globals_), GetHash<T>());
+    register_(
+        py::eval(py_type_str, globals_),
+        GetPyHash(typeid(T).hash_code()));
   }
 
   py::module m_;
@@ -68,8 +69,8 @@ py::object GetTypeAliases() {
 }
 
 py::object GetPyTypeImpl(const std::type_info& tinfo) {
-  py::object py_type = GetTypeAliases().attr("get_type_canonical_from_cpp")(
-      tinfo.hash_code());
+  py::object py_type = GetTypeAliases().attr("get_canonical")(
+      GetPyHash(tinfo.hash_code()), false);
   if (!py_type.is_none()) {
     return py_type;
   } else {

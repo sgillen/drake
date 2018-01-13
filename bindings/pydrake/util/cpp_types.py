@@ -36,14 +36,17 @@ class _AliasRegistry(object):
     def __init__(self):
         self._to_canonical = _StrictMap()
 
-    def register(self, canonical, aliases):
+    def register(self, canonical, *aliases):
         for alias in aliases:
             self._to_canonical.add(alias, canonical)
 
-    def get_canonical(self, alias):
+    def get_canonical(self, alias, default_same=True):
         # Get registered canonical type if there is a mapping; otherwise return
         # original type.
-        return self._to_canonical.get(alias, alias)
+        default = alias
+        if not default_same:
+            default = None
+        return self._to_canonical.get(alias, default)
 
     def get_name(self, alias):
         canonical = self.get_canonical(alias)
@@ -59,10 +62,10 @@ _aliases = _AliasRegistry()
 
 # Register common Python aliases relevant for C++.
 _register = _aliases.register
-_register(float, (ctypes.c_double, np.double))
-_register(np.float32, (ctypes.c_float,))
-_register(int, (np.int32, ctypes.c_int32))
-_register(np.uint32, (ctypes.c_uint32,))
+_register(float, ctypes.c_double, np.double)
+_register(np.float32, ctypes.c_float)
+_register(int, np.int32, ctypes.c_int32)
+_register(np.uint32, ctypes.c_uint32)
 
 
 def get_types_canonical(param):
