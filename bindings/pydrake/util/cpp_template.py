@@ -20,7 +20,7 @@ def _get_module_name_from_stack(frame=2):
     return inspect.getmodule(inspect.stack()[frame][0]).__name__
 
 
-def init_or_get(scope, name, template_cls, *args, **kwargs):
+def get_or_init(scope, name, template_cls, *args, **kwargs):
     """Gets an existing template from a scope if it exists; otherwise, it will
     be created and registered. """
     tpl = getattr(scope, name, None)

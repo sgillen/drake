@@ -2,6 +2,7 @@
 from __future__ import absolute_import, print_function
 
 import unittest
+from types import ModuleType
 
 import pydrake.util.cpp_template as m
 
@@ -29,6 +30,10 @@ class C(object):
         return (self, 4)
 
 
+class D(object):
+    pass
+
+
 class TestCppTemplate(unittest.TestCase):
     def test_base(self):
         tpl = m.Template("BaseTpl")
@@ -39,6 +44,7 @@ class TestCppTemplate(unittest.TestCase):
         self.assertEquals(tpl[int], 1)
         self.assertEquals(tpl.get_instantiation(int), (1, (int,)))
         self.assertEquals(tpl.get_param_set(1), {(int,)})
+        self.assertTrue(m.is_instantiation_of(1, tpl))
         # Duplicate parameters.
         func = lambda: tpl.add_instantiation(int, 4)
         self.assertRaises(RuntimeError, func)
@@ -108,6 +114,27 @@ class TestCppTemplate(unittest.TestCase):
         self.assertEquals(C.method[int](obj), (obj, 3))
         self.assertEquals(obj.method[float](), (obj, 4))
         self.assertEquals(C.method[float](obj), (obj, 4))
+
+    def test_get_or_init(self):
+        m_test = ModuleType("test_module")
+
+        def get_tpl_cls():
+            return m.get_or_init(m_test, "ClassTpl", m.TemplateClass)
+
+        tpl_1 = get_tpl_cls()
+        self.assertEquals(str(tpl_1), "<TemplateClass test_module.ClassTpl>")
+        self.assertTrue(m_test.ClassTpl is tpl_1)
+        tpl_2 = get_tpl_cls()
+        self.assertTrue(tpl_1 is tpl_2)
+
+        def get_tpl_method():
+            return m.get_or_init(D, "method", m.TemplateMethod, D)
+
+        tpl_1 = get_tpl_method()
+        self.assertTrue(tpl_1 is D.method)
+        self.assertEquals(str(tpl_1), "<unbound TemplateMethod D.method>")
+        tpl_2 = get_tpl_method()
+        self.assertTrue(tpl_1 is tpl_2)
 
 
 if __name__ == '__main__':
