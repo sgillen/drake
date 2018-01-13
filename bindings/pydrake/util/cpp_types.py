@@ -11,10 +11,11 @@ types as they relate to C++.
 
 def _get_type_name(t):
     # Gets type name as a string.
-    prefix = t.__module__ + "."
-    if prefix == "__builtin__.":
-        prefix = ""
-    return prefix + t.__name__
+    module = getattr(t, "__module__", None)
+    if module and module != "__builtin__":
+        return module + "." + t.__name__
+    else:
+        return t.__name__
 
 
 class _StrictMap(object):
@@ -32,19 +33,24 @@ class _StrictMap(object):
 
 class _TypeRegistry(object):
     def __init__(self):
-        self._py_to_py_canonical = _StrictMap()
+        self._to_canonical = _StrictMap()
 
-    def register_aliases(self, py_canonical, py_types):
-        for py_type in py_types:
-            self._py_to_py_canonical.add(py_type, py_canonical)
+    def register_aliases(self, canonical, aliases):
+        for alias in aliases:
+            self._to_canonical.add(alias, canonical)
 
-    def get_type_canonical(self, py_type):
+    def get_type_canonical(self, alias):
         # Get registered canonical type if there is a mapping; otherwise return
         # original type.
-        return self._py_to_py_canonical.get(py_type, py_type)
+        return self._to_canonical.get(alias, alias)
 
-    def get_name(self, py_type):
-        return _get_type_name(self.get_type_canonical(py_type))
+    def get_name(self, alias):
+        canonical = self.get_type_canonical(alias)
+        if isinstance(canonical, type):
+            return _get_type_name(canonical)
+        else:
+            # For literals.
+            return str(canonical)
 
 
 # Create singleton instance.
@@ -54,7 +60,7 @@ _type_registry = _TypeRegistry()
 _register = _type_registry.register_aliases
 _register(float, (ctypes.c_double, np.double))
 _register(np.float32, (ctypes.c_float,))
-_register(int, np.int32, (ctypes.c_int32,))
+_register(int, (np.int32, ctypes.c_int32))
 _register(np.uint32, (ctypes.c_uint32,))
 
 

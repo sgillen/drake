@@ -13,11 +13,13 @@ class CustomPyType(object):
 
 
 class TestCppTypes(unittest.TestCase):
-    def _check_alias(alias, canonical):
-        self.assertTrue(get_types_canonical([alias])[0] is canonical)
+    def _check_alias(self, alias, canonical):
+        actual = get_types_canonical([alias])[0]
+        self.assertTrue(actual is canonical)
 
-    def _check_name(alias, name):
-        self.assertEquals(get_type_names([alias])[0], "int")
+    def _check_name(self, alias, name):
+        actual = get_type_names([alias])[0]
+        self.assertEquals(actual, name)
 
     def test_idempotent(self):
         # One-to-one.
