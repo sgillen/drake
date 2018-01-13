@@ -11,7 +11,5 @@ Python libraries using an environment established by Bazel.
 import subprocess
 import sys
 
-assert len(sys.argv) == 2
-filepath = sys.argv[1]
-
-subprocess.check_call([filepath])
+assert len(sys.argv) >= 2
+subprocess.check_call(sys.argv[1:])
