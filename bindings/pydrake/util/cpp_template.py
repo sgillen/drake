@@ -8,11 +8,11 @@ _PARAM_DEFAULT = 'first_registered'
 
 # Pending #7732.
 def type_names(param):
-    return map(str, param)
+    return [item.__name__ for item in param]
 
 
 def types_canonical(param):
-    return param
+    return tuple(param)
 
 
 def _get_module_name_from_stack(frame=2):
@@ -79,7 +79,7 @@ class Template(object):
         """Adds a unique instantiation. """
         assert instantiation is not None
         # Ensure that we do not already have this tuple.
-        param = types_canonical(param)
+        param = types_canonical(self._param_resolve(param))
         if param in self._instantiation_map:
             raise RuntimeError(
                 "Parameter instantiation already registered: {}".format(param))
@@ -122,7 +122,8 @@ class Template(object):
         return types_canonical(param)
 
     def _instantiation_name(self, param):
-        return '{}[{}]'.format(self.name, ', '.join(type_names(param)))
+        names = type_names(self._param_resolve(param))
+        return '{}[{}]'.format(self.name, ', '.join(names))
 
     def _full_name(self):
         return "{}.{}".format(self._module_name, self.name)
@@ -139,6 +140,7 @@ class Template(object):
 class TemplateClass(Template):
     """Extension of `Template` for classes. """
     def __init__(self, name, override_name=True, **kwargs):
+        Template.__init__(self, name, **kwargs)
         self._override_name = override_name
 
     def _on_add(self, param, cls):
