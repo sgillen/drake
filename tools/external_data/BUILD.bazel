@@ -1,31 +1,10 @@
 load(":expose_files.bzl", "expose_files")
-load(":package.bzl", "add_workspace_set_files")
-load(":workspace_test.bzl", "workspace_test")
 
 # Bazel does not let us glob into `test/**`, even though the workspaces are not a
 # package of this workspace. The solution is to declare the lint tests externally.
 expose_files(
     sub_packages = ["bazel_external_data"],
     # We do not care about `test` for direct consumption, so do not expose it.
-)
-
-add_workspace_set_files()
-
-drake_workspace_files = [
-    ":all_files",
-]
-
-workspace_test(
-    name = "bazel_pkg_test",
-    data = drake_workspace_files,
-)
-
-# For use with `workspace_test`.
-exports_files(
-    srcs = [
-        "workspace_writeable_test.sh",
-    ],
-    visibility = ["//visibility:public"],
 )
 
 # Linting is not done here to simplify test dependencies.

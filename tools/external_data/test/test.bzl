@@ -1,14 +1,14 @@
-load(":expose_files.bzl", "patterns_map")
+load("//tools/external_data:expose_files.bzl", "patterns_map")
 
-test_workspaces = ["bazel_pkg_test"]
+_workspace_list = ["bazel_pkg_test"]
 
-def _name(workspace):
+def _workspace_name(workspace):
     return "external_data_" + workspace
 
-def add_workspace_set_files():
+def import_workspace_files():
     # To be consumed by `workspace_test`.
-    for workspace in test_workspaces:
-        prefix = "@" + _name(workspace) + "//"
+    for workspace in _workspace_list:
+        prefix = "@" + _workspace_name(workspace) + "//"
         # Alias in `expose_files` file groups.
         for name in patterns_map.keys():
             native.alias(
@@ -21,16 +21,14 @@ def add_workspace_set_files():
             actual = prefix + ":WORKSPACE",
         )
 
-def _get_workspace_set_files():
-    workspace_set = dict()
+def get_workspace_files():
+    workspace_files = dict()
     for name in patterns_map.keys():
         cur = []
-        for workspace in test_workspaces:
+        for workspace in _workspace_list:
             cur.append(workspace + "_" + name)
-        workspace_set[name] = cur
-    return workspace_set
-
-workspace_set = _get_workspace_set_files()
+        workspace_files[name] = cur
+    return workspace_files
 
 def external_data_test_repositories(workspace_dir):    
     # Ignores any targets under this directory so that `test ...` will not leak
@@ -48,8 +46,8 @@ def external_data_test_repositories(workspace_dir):
     #   tools/external_data/workspace is not beneath
     #   /home/${USER}/${WORKSPACE_DIR}/tools/external_data/workspace
     test_base_dir = "tools/external_data/test"
-    for workspace in test_workspaces:
+    for workspace in _workspace_list:
         native.local_repository(
-            name = _name(workspace),
+            name = _workspace_name(workspace),
             path = test_base_dir + "/" + workspace,
         )

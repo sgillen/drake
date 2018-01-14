@@ -22,7 +22,7 @@ def workspace_test(
         name = name,
         # TODO(eric.cousineau): Is it possible get the package of the *current*
         # macro file (rather than the current BUILD file)?
-        srcs = ["@drake//tools/external_data:workspace_writeable_test.sh"],
+        srcs = [":workspace_writeable_test.sh"],
         args = args,
         data = [anchor, all_files] + data,
     )

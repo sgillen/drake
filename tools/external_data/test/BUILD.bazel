@@ -1,11 +1,29 @@
 load("//tools/lint:lint.bzl", "add_lint_tests")
-load(":package.bzl", "workspace_set")
-
-add_lint_tests(
-    bazel_extra_srcs = [
-        "//tools/external_data:bazel_lint_files",
-    ] + workspace_set["bazel_lint_files"],
-    python_extra_srcs = [
-        "//tools/external_data:python_lint_files",
-    ] + workspace_set["python_lint_files"],
+load(":workspace_test.bzl", "workspace_test")
+load(":test.bzl",
+    "get_workspace_files",
+    "import_workspace_files",
 )
+
+import_workspace_files()
+
+external_data_files = [
+    "//tools/external_data:all_files",
+]
+
+workspace_test(
+    name = "bazel_pkg_test",
+    data = external_data_files,
+)
+
+workspace_files = get_workspace_files()
+
+# add_lint_tests(
+#     bazel_extra_srcs = [
+#         # Will this recurse???
+#         "//tools/external_data:bazel_lint_files",
+#     ] + workspace_files["bazel_lint_files"],
+#     python_extra_srcs = [
+#         "//tools/external_data:python_lint_files",
+#     ] + workspace_files["python_lint_files"],
+# )

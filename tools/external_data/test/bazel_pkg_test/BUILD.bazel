@@ -1,11 +1,32 @@
 # -*- python -*-
 
-load("@drake//tools/external_data:expose_files.bzl", "expose_files")
+load("//tools/external_data:package.bzl", "add_workspace_set_files")
+load(":workspace_test.bzl", "workspace_test")
 load(
     "@drake//tools/external_data:external_data.bzl",
     "external_data_stub_test",
 )
 
+add_workspace_set_files()
+
+external_data_files = [
+    ":all_files",
+]
+
+workspace_test(
+    name = "bazel_pkg_test",
+    data = external_data_files,
+)
+
+# For use with `workspace_test`.
+exports_files(
+    srcs = [
+        "workspace_writeable_test.sh",
+    ],
+    visibility = ["//visibility:public"],
+)
+
 external_data_stub_test()
 
-expose_files(sub_packages = ["tools"])
+# We do not need to expose the files here, as they are not consumed
+# downstream.
