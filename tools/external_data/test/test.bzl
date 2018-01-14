@@ -12,7 +12,7 @@ def import_workspace_files():
         # Alias in `expose_files` file groups.
         for name in patterns_map.keys():
             native.alias(
-                name = workspace + "_" + name,
+                name = workspace + "_" + name + "_recursive",
                 actual = prefix + ":" + name,
             )
         # Expose anchor.
@@ -26,7 +26,7 @@ def get_workspace_files():
     for name in patterns_map.keys():
         cur = []
         for workspace in _workspace_list:
-            cur.append(workspace + "_" + name)
+            cur.append(workspace + "_" + name + "_recursive")
         workspace_files[name] = cur
     return workspace_files
 

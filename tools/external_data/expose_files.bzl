@@ -12,6 +12,26 @@ patterns_map = dict(
     ],
 )
 
+def _filegroup_recursive_impl(ctx):
+    files = depset()
+    for d in ctx.attr.data:
+        runfiles = d.data_runfiles.files
+        files += runfiles
+    return [DefaultInfo(
+        files=files,
+    )]
+
+"""
+Provides all files (including `data` dependencies) such that they are
+expandable via `$(locations ...)`.
+"""
+_filegroup_recursive = rule(
+    implementation = _filegroup_recursive_impl,
+    attrs = {
+        "data": attr.label_list(cfg = "data", allow_files = True),
+    },
+)
+
 def expose_files(sub_packages = [], sub_dirs = []):
     """
     Declares files to be consumed externally (for Bazel workspace tests, linting, etc).
@@ -35,8 +55,15 @@ def expose_files(sub_packages = [], sub_dirs = []):
         native.filegroup(
             name = name,
             srcs = srcs,
+            # This permits all files to be available in `runfiles`; however, it
+            # does not expose the files for location expansion.
             data = deps,
             visibility = ["//visibility:public"],
+        )
+        # Rely on existing `data` declaration above.
+        _filegroup_recursive(
+            name = name + "_recursive",
+            data = [name],
         )
 
     # TODO(eric.cousineau): Is there a way to avoid this?

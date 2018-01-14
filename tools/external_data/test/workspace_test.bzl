@@ -16,7 +16,7 @@ def workspace_test(
         Additional data (e.g. other workspaces).
     """
     anchor = name + "_anchor"
-    all_files = name + "_all_files"
+    all_files = name + "_all_files_recursive"
     args = [cmd, "$(location {})".format(anchor)]
     native.sh_test(
         name = name,
