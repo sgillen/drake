@@ -15,19 +15,14 @@ def workspace_test(
     @param data
         Additional data (e.g. other workspaces).
     """
-
     anchor = name + "_anchor"
     all_files = name + "_all_files"
     args = [cmd, "$(location {})".format(anchor)]
-    # Pass all all_files to be copied.
-    data_out = [all_files] + data
-    for datum in data_out:
-        args.append("$(locations {})".format(datum))
     native.sh_test(
         name = name,
         # TODO(eric.cousineau): Is it possible get the package of the *current*
         # macro file (rather than the current BUILD file)?
         srcs = ["@drake//tools/external_data:workspace_writeable_test.sh"],
         args = args,
-        data = [anchor] + data_out,
+        data = [anchor, all_files] + data,
     )
