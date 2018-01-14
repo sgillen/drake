@@ -8,16 +8,17 @@ def _name(workspace):
 def add_workspace_set_files():
     # To be consumed by `workspace_test`.
     for workspace in test_workspaces:
+        prefix = "@" + _name(workspace) + "//"
         # Alias in `expose_files` file groups.
         for name in patterns_map.keys():
             native.filegroup(
                 name = workspace + "_" + name,
-                srcs = "@" + _name + "//:" + name,
+                srcs = prefix + ":" + name,
             )
         # Expose anchor.
         native.alias(
             name = workspace + "_anchor",
-            actual = "@" + _name + "//:WORKSPACE",
+            actual = prefix + ":WORKSPACE",
         )
 
 def _get_workspace_set_files():

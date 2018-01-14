@@ -22,15 +22,19 @@ def expose_files(sub_packages = [], sub_dirs = []):
     # @note It'd be nice if this could respect *ignore files, but meh.
     # Also, it'd be **super** nice if Bazel did not let `**` globs leak into other
     # packages and then error out.
-    package_prefix = native.package_name() + "/"
+    package_name = native.package_name()
+    if package_name:
+        package_prefix = "//" + package_name + "/"
+    else:
+        package_prefix = "//"  # Root case.
     for name, patterns in patterns_map.items():
-        files = native.glob(pattern)
+        srcs = native.glob(patterns)
         for sub_dir in sub_dirs:
-            files += native.glob([subdir + "/" + item for item in pattern])
+            srcs += native.glob([sub_dir + "/" + pattern for pattern in patterns])
         deps = [package_prefix + sub_package + ":" + name for sub_package in sub_packages]
         native.filegroup(
             name = name,
-            srcs = native.glob(
+            srcs = srcs,
+            data = deps,
             visibility = ["//visibility:public"],
-            deps = deps,
         )
