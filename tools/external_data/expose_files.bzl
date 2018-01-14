@@ -1,17 +1,3 @@
-patterns_map = dict(
-    all_files = [
-        "*",
-    ],
-    bazel_lint_files = [
-        "BUILD.bazel",
-        "WORKSPACE",
-        "*.bzl",
-    ],
-    python_lint_files = [
-        "*.py",
-    ],
-)
-
 def _recursive_filegroup_impl(ctx):
     files = depset()
     for d in ctx.attr.data:
@@ -28,8 +14,8 @@ def _recursive_filegroup_impl(ctx):
     )]
 
 """
-Provides all files (including `data` dependencies) such that they are
-expandable via `$(locations ...)`.
+Provides all files (including `data` dependencies) at one level such that they
+are expandable via `$(locations ...)`.
 """
 
 recursive_filegroup = rule(
@@ -43,8 +29,20 @@ recursive_filegroup = rule(
     implementation = _recursive_filegroup_impl,
 )
 
-def _prefix_list(prefix, items):
-    return [prefix + item for item in items]
+# Patterns to be exposed.
+_patterns_map = dict(
+    all_files = [
+        "*",
+    ],
+    bazel_lint_files = [
+        "BUILD.bazel",
+        "WORKSPACE",
+        "*.bzl",
+    ],
+    python_lint_files = [
+        "*.py",
+    ],
+)
 
 def expose_files(
         sub_packages = [],
@@ -69,10 +67,11 @@ def expose_files(
         package_prefix = "//" + package_name + "/"
     else:
         package_prefix = "//"  # Root case.
-    for name, patterns in patterns_map.items():
+    for name, patterns in _patterns_map.items():
         srcs = native.glob(patterns)
         for sub_dir in sub_dirs:
-            srcs += native.glob(_prefix_list(sub_dir + "/", patterns))
+            srcs += native.glob([
+                sub_dir + "/" + pattern for pattern in patterns])
         native.filegroup(
             name = name,
             srcs = srcs,
