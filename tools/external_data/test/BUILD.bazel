@@ -1,23 +1,15 @@
 load("//tools/lint:lint.bzl", "add_lint_tests")
-load(":workspace_test.bzl", "workspace_test")
 load(
-    ":test_workspaces.bzl",
-    "collect_all_lint_files",
+    ":external_data_workspace_test.bzl",
+    "external_data_lint_files",
+    "external_data_workspace_test",
 )
 
-upstream_files = [
-    "//tools/external_data:all_files_recursive",
-]
-
-workspace_test(
+external_data_workspace_test(
     name = "external_data_bazel_pkg_test",
-    anchor = "@external_data_bazel_pkg_test//:WORKSPACE",
-    data = [
-        "@external_data_bazel_pkg_test//:all_files_recursive",
-    ] + upstream_files,
 )
 
-collect_all_lint_files()
+external_data_lint_files()
 
 add_lint_tests(
     bazel_lint_extra_srcs = [

@@ -1,6 +1,6 @@
 # -*- python -*-
 
-load("@drake//tools/external_data:expose_files.bzl", "expose_files")
+load("@drake//tools/external_data:expose_all_files.bzl", "expose_all_files")
 load(
     "@drake//tools/external_data:external_data.bzl",
     "external_data_stub_test",
@@ -8,10 +8,4 @@ load(
 
 external_data_stub_test()
 
-expose_files(sub_packages = ["tools"])
-
-# For use as anchor.
-exports_files(
-    srcs = ["WORKSPACE"],
-    visibility = ["//visibility:public"],
-)
+expose_all_files(sub_packages = ["tools"])

@@ -3,8 +3,6 @@ def _recursive_filegroup_impl(ctx):
     for d in ctx.attr.data:
         files += d.data_runfiles.files
     if ctx.attr.dummy and not files:
-        # Expand to avoid error of empty "$(locations ...)" expansion:
-        # https://github.com/bazelbuild/bazel/blob/c3bedec/src/main/java/com/google/devtools/build/lib/analysis/LocationExpander.java#L273  # noqa
         files = [ctx.attr.dummy]
     return [DefaultInfo(
         files = files,
@@ -16,6 +14,13 @@ def _recursive_filegroup_impl(ctx):
 """
 Provides all files (including `data` dependencies) at one level such that they
 are expandable via `$(locations ...)`.
+
+@param data
+    Upstream data targets. This will consume both the `srcs` and `data`
+    portions of an existing `filegroup`.
+@param dummy
+    Use this to avoid errors from empty "$(locations ...)" expansion.
+    @ref https://github.com/bazelbuild/bazel/blob/c3bedec/src/main/java/com/google/devtools/build/lib/analysis/LocationExpander.java#L273  # noqa
 """
 
 recursive_filegroup = rule(
@@ -44,7 +49,7 @@ _patterns_map = dict(
     ],
 )
 
-def expose_files(
+def expose_all_files(
         sub_packages = [],
         sub_dirs = [],
         visibility = ["//visibility:public"]):
@@ -79,8 +84,8 @@ def expose_files(
             # runfiles, but not for expansion via `$(locations...)`.
             visibility = visibility,
         )
-        # Expose all files at one level.
-        deps = [package_prefix + sub_package + ":" + name
+        # Expose all files recursively (from one level).
+        deps = [package_prefix + sub_package + ":" + name + "_recursive"
                 for sub_package in sub_packages]
         recursive_filegroup(
             name = name + "_recursive",
