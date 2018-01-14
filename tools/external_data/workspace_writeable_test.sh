@@ -36,6 +36,10 @@ for src in ${srcs}; do
     cp -r $(readlink-py ${src}) ${mock_dir}/${subdir}
 done
 
+# Create mock drake/WORKSPACE file.
+! test -f WORKSPACE
+echo 'workspace(name = "drake")' > WORKSPACE
+
 # Change to the workspace directory.
 cd ${mock_dir}/${pkg_reldir}
 
