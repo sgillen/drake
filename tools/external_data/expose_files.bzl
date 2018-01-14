@@ -12,12 +12,13 @@ patterns_map = dict(
     ],
 )
 
-def _filegroup_recursive_impl(ctx):
+def _recursive_filegroup_impl(ctx):
     files = depset()
     for d in ctx.attr.data:
         files += d.data_runfiles.files
     if ctx.attr.dummy and not files:
-        # Expand to avoid error of empty "$(locations ...)" expansion.
+        # Expand to avoid error of empty "$(locations ...)" expansion:
+        # https://github.com/bazelbuild/bazel/blob/c3bedec/src/main/java/com/google/devtools/build/lib/analysis/LocationExpander.java#L273  # noqa
         files = [ctx.attr.dummy]
     return [DefaultInfo(
         files = files,
@@ -31,7 +32,7 @@ Provides all files (including `data` dependencies) such that they are
 expandable via `$(locations ...)`.
 """
 
-filegroup_recursive = rule(
+recursive_filegroup = rule(
     attrs = {
         "data": attr.label_list(
             cfg = "data",
@@ -39,7 +40,7 @@ filegroup_recursive = rule(
         ),
         "dummy": attr.label(allow_single_file = True),
     },
-    implementation = _filegroup_recursive_impl,
+    implementation = _recursive_filegroup_impl,
 )
 
 def _prefix_list(prefix, items):
@@ -47,10 +48,15 @@ def _prefix_list(prefix, items):
 
 def expose_files(sub_packages = [], sub_dirs = []):
     """
-    Declares files to be consumed externally (for Bazel workspace tests, linting, etc).
+    Declares files to be consumed externally (for Bazel workspace tests,
+    linting, etc).
+    Creates "${type}_files" and "${type}_files_recursive", where `type` can be
+    one of {"all", "bazel_lint", "python_lint"}.
 
-    @param sub_packages Child packages, only the first level.
-    @param sub_dirs Any directories that are not packages.
+    @param sub_packages
+        Child packages, only the first level.
+    @param sub_dirs
+        Any directories that are not packages.
     """
     # @note It'd be nice if this could respect *ignore files, but meh.
     # Also, it'd be **super** nice if Bazel did not let `**` globs leak into other
@@ -64,7 +70,6 @@ def expose_files(sub_packages = [], sub_dirs = []):
         srcs = native.glob(patterns)
         for sub_dir in sub_dirs:
             srcs += native.glob(_prefix_list(sub_dir + "/", patterns))
-        deps = [package_prefix + sub_package + ":" + name for sub_package in sub_packages]
         native.filegroup(
             name = name,
             srcs = srcs,
@@ -73,7 +78,10 @@ def expose_files(sub_packages = [], sub_dirs = []):
             visibility = ["//visibility:public"],
         )
         # Expose all files at one level.
-        filegroup_recursive(
+        deps = [
+            package_prefix + sub_package + ":" + name
+                for sub_package in sub_packages]
+        recursive_filegroup(
             name = name + "_recursive",
             data = [name] + deps,
         )

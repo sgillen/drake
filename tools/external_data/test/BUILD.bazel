@@ -1,35 +1,29 @@
 load("//tools/lint:lint.bzl", "add_lint_tests")
 load(":workspace_test.bzl", "workspace_test")
 load(
-    ":test.bzl",
-    "import_workspace_files",
+    ":test_workspaces.bzl",
+    "collect_all_lint_files",
 )
-
-# Imports files for each workspace to "${workspace}_${type}_files",
-# where "${type}" is {"all", "bazel_lint", "python_lint"}, and exposes
-# "${workspace}_anchor" for the script to determine where the workspace
-# is.
-# Also creates "external_data_${type}_files" (a recursive filegroup),
-# such that they can be consumed by `add_lint_tests`.
-import_workspace_files()
 
 upstream_files = [
     "//tools/external_data:all_files_recursive",
 ]
 
 workspace_test(
-    name = "bazel_pkg_test",
-    anchor = "bazel_pkg_test_anchor",
+    name = "external_data_bazel_pkg_test",
+    anchor = "@external_data_bazel_pkg_test//:WORKSPACE",
     data = [
-        "bazel_pkg_test_all_files_recursive",
+        "@external_data_bazel_pkg_test//:all_files_recursive",
     ] + upstream_files,
 )
 
+collect_all_lint_files()
+
 add_lint_tests(
     bazel_lint_extra_srcs = [
-        ":external_data_bazel_lint_files",
+        ":all_bazel_lint_files",
     ],
     python_lint_extra_srcs = [
-        ":external_data_python_lint_files",
+        ":all_python_lint_files",
     ],
 )
