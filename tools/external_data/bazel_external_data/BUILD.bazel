@@ -1,18 +1,15 @@
 # -*- python -*-
-load("//tools/skylark:drake_py.bzl", "drake_py_test")
-load("//tools/lint:lint.bzl", "add_lint_tests")
-load("//tools/skylark:meta.bzl", "all_files")
+
+load("//tools/external_data:expose_files", "expose_files")
 
 # For macro testing.
 exports_files(["stub_test.py"])
 
 # Stub file pending Python code.
-drake_py_test(
+py_test(
     name = "stub_test",
     srcs = ["stub_test.py"],
     visibility = ["//visibility:public"],
 )
 
-add_lint_tests()
-
-all_files()
+expose_files()

@@ -13,4 +13,4 @@ add_default_repositories()
 # but should not be needed for downstream projects.
 load("//tools/workspace:test.bzl", "add_test_repositories")
 
-add_default_repositories(__workspace_dir__)
+add_test_repositories(__workspace_dir__)

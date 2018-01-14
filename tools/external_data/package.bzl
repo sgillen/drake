@@ -1,19 +1,35 @@
+load(":expose_files.bzl", "patterns_map")
+
 test_workspaces = ["bazel_pkg_test"]
 
 def _name(workspace):
     return "external_data_test__" + workspace
 
-def add_workspace_files():
+def add_workspace_set_files():
     # To be consumed by `workspace_test`.
     for workspace in test_workspaces:
-        native.filegroup(
-            name = workspace + "_files",
-            srcs = "@" + _name + "//:all_files",
-        )
+        # Alias in `expose_files` file groups.
+        for name in patterns_map.keys():
+            native.filegroup(
+                name = workspace + "_" + name,
+                srcs = "@" + _name + "//:" + name,
+            )
+        # Expose anchor.
         native.alias(
             name = workspace + "_anchor",
             actual = "@" + _name + "//:WORKSPACE",
         )
+
+def _get_workspace_set_files():
+    workspace_set = dict()
+    for name in patterns_map.keys():
+        cur = []
+        for workspace in test_workspaces:
+            cur.append(workspace + "_" + name)
+        workspace_set[name] = cur
+    return workspace_set
+
+workspace_set = _get_workspace_set_files()
 
 def external_data_test_repositories(workspace_dir):    
     # Ignores any targets under this directory so that `test ...` will not leak
@@ -30,7 +46,7 @@ def external_data_test_repositories(workspace_dir):
     #   java.lang.IllegalArgumentException: PathFragment
     #   tools/external_data/workspace is not beneath
     #   /home/${USER}/${WORKSPACE_DIR}/tools/external_data/workspace
-    test_base_dir = "tools/external_data/test/workspaces"
+    test_base_dir = "tools/external_data/test"
     for workspace in test_workspaces:
         native.local_repository(
             name = _name(workspace),

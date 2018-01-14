@@ -1,0 +1,11 @@
+load("//tools/lint:lint.bzl", "add_lint_tests")
+load(":package.bzl", "workspace_set")
+
+add_lint_tests(
+    bazel_extra_srcs = [
+        "//tools/external_data:bazel_lint_files",
+    ] + workspace_set["bazel_lint_files"],
+    python_extra_srcs = [
+        "//tools/external_data:python_lint_files",
+    ] + workspace_set["python_lint_files"],
+)
