@@ -10,6 +10,8 @@ load("//tools/workspace:default.bzl", "add_default_repositories")
 add_default_repositories()
 
 
+# Ignores any targets under this directory so that `test ...` will not leak
+# into them.
 # WARNING: Bazel also craps out here if `__workspace_dir__ + path` is used
 # rather than just `path`.
 # N.B. This error is *stateful*. You will get different behavior depending on
@@ -23,6 +25,6 @@ add_default_repositories()
 #   tools/external_data/workspace is not beneath
 #   /home/${USER}/${WORKSPACE_DIR}/tools/external_data/workspace
 local_repository(
-    name = "bazel_external_data_pkg",
-    path = "tools/external_data/workspace",
+    name = "external_data_test_workspaces",
+    path = "tools/external_data/test/workspaces",
 )

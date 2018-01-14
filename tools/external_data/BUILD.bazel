@@ -1,28 +1,40 @@
 load("//tools/lint:lint.bzl", "add_lint_tests")
-load(":external_data.bzl", "external_data_stub_test")
-load(
-    "@bazel_external_data_pkg//test:workspace_test.bzl",
-    "workspace_test",
-)
+load(":workspace_test.bzl", "workspace_test")
+load("//tools/skylark:meta.bzl", "all_files")
 
-# Run all tests in `workspace` as a separate package.
+drake_workspace_files = [
+    ":all_files",
+    "//tools/external_data/bazel_external_data:all_files",
+    "//tools:all_files",
+    "//tools/install:all_files",
+    "//tools/lint:all_files",
+    "//tools/skylark:all_files",
+    "//tools/workspace:all_files",
+    "//tools/workspace/buildifier:all_files",
+    "//tools/workspace/pycodestyle:all_files",
+    "//:skylark_files",
+]
+
 workspace_test(
-    name = "workspace_test",
-    workspace = "workspace",
+    name = "bazel_pkg_test",
+    data = drake_workspace_files,
+    workspace = "test/workspaces/bazel_pkg_test",
 )
 
-# Ensure that we can consume `external_data.bzl`.
-external_data_stub_test()
-
-# Ensure that we add all relevant files under `workspace`.
-# We should be able to glob them, as they are not a package.
-add_lint_tests(
-    bazel_lint_extra_srcs = glob([
-        "workspace/**/BUILD.bazel",
-        "workspace/**/WORKSPACE",
-        "workspace/**/*.bzl",
-    ]),
-    python_lint_extra_srcs = glob([
-        "workspace/**/*.py",
-    ]),
+# For use with `workspace_test`.
+exports_files(
+    srcs = [
+        "workspace_writeable_test.sh",
+    ],
+    visibility = ["//visibility:public"],
 )
+
+# Bazel does not let us glob into `test/workspaces`, even though it's not a
+# package of this workspace. Thus, we cannot add lint tests for them externally.
+# (We could add each package as repository, and declare filegroups from within,
+# but then that couples Drake's `bazel test @drake//...` to these local
+# repositories).
+
+add_lint_tests()
+
+all_files()

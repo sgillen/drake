@@ -1,0 +1,12 @@
+workspace(name = "bazel_pkg_test")
+
+load("//tools:path.bzl", "dirname")
+
+local_repository(
+    name = "drake",
+    path = dirname(__workspace_dir__, 5),
+)
+
+load("@drake//tools/lint:lint_repositories.bzl", "lint_repositories")
+
+lint_repositories()

@@ -21,6 +21,7 @@ extra_dirs="$@"
 
 tmp_base=/tmp/bazel_workspace_test
 mkdir -p ${tmp_base}
+# TODO: Have this use `TEST_TMP_DIR`?
 export WORKSPACE_TMP=$(mktemp -d -p ${tmp_base})
 
 # Copy what's needed for a modifiable `bazel_pkg_advanced_test` directory.
@@ -31,6 +32,7 @@ mkdir -p ${mock_dir}
 for src in ${srcs}; do
     subdir=$(dirname ${src})
     mkdir -p ${mock_dir}/${subdir}
+    # TODO: Consider having `read-only` copying which is just symlinks?
     cp -r $(readlink-py ${src}) ${mock_dir}/${subdir}
 done
 
