@@ -1,6 +1,7 @@
 load("//tools/lint:lint.bzl", "add_lint_tests")
 load(":workspace_test.bzl", "workspace_test")
-load(":test.bzl",
+load(
+    ":test.bzl",
     "import_workspace_files",
 )
 

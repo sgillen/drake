@@ -1,3 +1,4 @@
 # -*- python -*-
 load("@drake//tools/external_data:expose_files.bzl", "expose_files")
+
 expose_files()

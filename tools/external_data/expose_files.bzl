@@ -30,12 +30,16 @@ def _filegroup_recursive_impl(ctx):
 Provides all files (including `data` dependencies) such that they are
 expandable via `$(locations ...)`.
 """
+
 filegroup_recursive = rule(
-    implementation = _filegroup_recursive_impl,
     attrs = {
-        "data": attr.label_list(cfg = "data", allow_files = True),
+        "data": attr.label_list(
+            cfg = "data",
+            allow_files = True,
+        ),
         "dummy": attr.label(allow_single_file = True),
     },
+    implementation = _filegroup_recursive_impl,
 )
 
 def expose_files(sub_packages = [], sub_dirs = []):
