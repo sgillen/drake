@@ -14,16 +14,15 @@ patterns_map = dict(
 
 def _filegroup_recursive_impl(ctx):
     files = depset()
-    runfiles = ctx.files.data
     for d in ctx.attr.data:
         files += d.data_runfiles.files
     if ctx.attr.dummy and not files:
+        # Expand to avoid error of empty "$(locations ...)" expansion.
         files = [ctx.attr.dummy]
-        runfiles = [ctx.files.dummy]
     return [DefaultInfo(
         files = files,
         data_runfiles = ctx.runfiles(
-            files = runfiles,
+            files = list(files),
         ),
     )]
 
