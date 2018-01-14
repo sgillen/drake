@@ -17,10 +17,10 @@ def workspace_test(
     """
 
     anchor = name + "_anchor"
-    files = name + "_files"
+    all_files = name + "_all_files"
     args = [cmd, "$(location {})".format(anchor)]
-    # Pass all files to be copied.
-    data_out = [files] + data
+    # Pass all all_files to be copied.
+    data_out = [all_files] + data
     for datum in data_out:
         args.append("$(locations {})".format(datum))
     native.sh_test(

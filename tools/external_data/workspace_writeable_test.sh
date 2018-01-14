@@ -44,7 +44,7 @@ echo 'workspace(name = "drake")' > ./WORKSPACE
 cd ${mock_dir}/${pkg_reldir}
 
 # Ensure path to Drake is corrected.
-sed -i "s#path = .*,#path = '${mock_dir}'," ./WORKSPACE
+sed -i "s#path = .*,#path = '${mock_dir}',#g" ./WORKSPACE
 
 # Get rid of Bazel symlinks if they exist.
 rm bazel-* || :

@@ -8,4 +8,4 @@ load(
 
 external_data_stub_test()
 
-expose_files()
+expose_files(sub_packages = ["tools"])
