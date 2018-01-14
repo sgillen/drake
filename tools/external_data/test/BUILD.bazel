@@ -18,12 +18,12 @@ workspace_test(
 
 workspace_files = get_workspace_files()
 
-# add_lint_tests(
-#     bazel_extra_srcs = [
-#         # Will this recurse???
-#         "//tools/external_data:bazel_lint_files",
-#     ] + workspace_files["bazel_lint_files"],
-#     python_extra_srcs = [
-#         "//tools/external_data:python_lint_files",
-#     ] + workspace_files["python_lint_files"],
-# )
+add_lint_tests(
+    bazel_lint_extra_srcs = [
+        # Will this recurse???
+        "//tools/external_data:bazel_lint_files",
+    ] + workspace_files["bazel_lint_files"],
+    python_lint_extra_srcs = [
+        "//tools/external_data:python_lint_files",
+    ] + workspace_files["python_lint_files"],
+)
