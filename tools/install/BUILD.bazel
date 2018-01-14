@@ -3,7 +3,6 @@
 package(default_visibility = ["//visibility:public"])
 
 load("//tools/lint:lint.bzl", "add_lint_tests")
-load("//tools/skylark:meta.bzl", "all_files")
 
 py_library(
     name = "cpsutils",
@@ -25,5 +24,3 @@ exports_files(
 )
 
 add_lint_tests()
-
-all_files()
