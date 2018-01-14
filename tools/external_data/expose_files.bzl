@@ -32,6 +32,7 @@ def expose_files(sub_packages = [], sub_dirs = []):
         for sub_dir in sub_dirs:
             srcs += native.glob([sub_dir + "/" + pattern for pattern in patterns])
         deps = [package_prefix + sub_package + ":" + name for sub_package in sub_packages]
+        print("\n\n{} {} -> {}\n\n{}\n\n".format(package_prefix, name, deps, "\n  ".join(srcs)))
         native.filegroup(
             name = name,
             srcs = srcs,
