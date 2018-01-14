@@ -17,6 +17,8 @@ workspace_test(
 )
 
 workspace_files = get_workspace_files()
+# Why is this a constraint???
+# https://github.com/bazelbuild/bazel/blob/master/src/main/java/com/google/devtools/build/lib/analysis/LocationExpander.java#L273
 
 add_lint_tests(
     bazel_lint_extra_srcs = [

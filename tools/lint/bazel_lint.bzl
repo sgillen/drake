@@ -9,7 +9,7 @@ def _bazel_lint(name, files, ignore):
         if ignore:
             ignore = ["--ignore=" + ",".join(["E%s" % e for e in ignore])]
 
-        locations = ["$(location %s)" % f for f in files]
+        locations = ["$(locations %s)" % f for f in files]
 
         native.py_test(
             name = name + "_codestyle",
