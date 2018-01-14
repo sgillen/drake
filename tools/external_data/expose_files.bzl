@@ -14,13 +14,17 @@ patterns_map = dict(
 
 def _filegroup_recursive_impl(ctx):
     files = depset()
+    runfiles = ctx.files.data
     for d in ctx.attr.data:
-        runfiles = d.data_runfiles.files
-        files += runfiles
+        files += d.data_runfiles.files
     if ctx.attr.dummy and not files:
         files = [ctx.attr.dummy]
+        runfiles = [ctx.files.dummy]
     return [DefaultInfo(
-        files=files,
+        files = files,
+        data_runfiles = ctx.runfiles(
+            files = runfiles,
+        ),
     )]
 
 """
