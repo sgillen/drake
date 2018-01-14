@@ -46,7 +46,10 @@ recursive_filegroup = rule(
 def _prefix_list(prefix, items):
     return [prefix + item for item in items]
 
-def expose_files(sub_packages = [], sub_dirs = []):
+def expose_files(
+        sub_packages = [],
+        sub_dirs = [],
+        visibility = ["//visibility:public"]):
     """
     Declares files to be consumed externally (for Bazel workspace tests,
     linting, etc).
@@ -59,8 +62,8 @@ def expose_files(sub_packages = [], sub_dirs = []):
         Any directories that are not packages.
     """
     # @note It'd be nice if this could respect *ignore files, but meh.
-    # Also, it'd be **super** nice if Bazel did not let `**` globs leak into other
-    # packages and then error out.
+    # Also, it'd be **super** nice if Bazel did not let `**` globs leak into
+    # other packages and then error out.
     package_name = native.package_name()
     if package_name:
         package_prefix = "//" + package_name + "/"
@@ -75,13 +78,13 @@ def expose_files(sub_packages = [], sub_dirs = []):
             srcs = srcs,
             # Trying to use `data = deps` here only exposes the files in
             # runfiles, but not for expansion via `$(locations...)`.
-            visibility = ["//visibility:public"],
+            visibility = visibility,
         )
         # Expose all files at one level.
-        deps = [
-            package_prefix + sub_package + ":" + name
+        deps = [package_prefix + sub_package + ":" + name
                 for sub_package in sub_packages]
         recursive_filegroup(
             name = name + "_recursive",
             data = [name] + deps,
+            visibility = visibility,
         )

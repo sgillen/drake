@@ -12,6 +12,6 @@ expose_files(sub_packages = ["tools"])
 
 # For use as anchor.
 exports_files(
-    srcs = "WORKSPACE",
+    srcs = ["WORKSPACE"],
     visibility = ["//visibility:public"],
 )
