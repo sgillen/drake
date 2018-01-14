@@ -28,6 +28,8 @@ def import_workspace_files():
         for name in patterns_map.keys():
             cur[name].append(prefix + ":" + name)
     # Create final consumption.
+    # *All* of this work is pretty much done to avoid this constraint:
+    # https://github.com/bazelbuild/bazel/blob/c3bedec/src/main/java/com/google/devtools/build/lib/analysis/LocationExpander.java#L273  # noqa
     dummy = ":EMPTY"
     for name in patterns_map.keys():
         filegroup_recursive(
