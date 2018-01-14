@@ -3,7 +3,7 @@ load(":expose_files.bzl", "patterns_map")
 test_workspaces = ["bazel_pkg_test"]
 
 def _name(workspace):
-    return "external_data_test__" + workspace
+    return "external_data_" + workspace
 
 def add_workspace_set_files():
     # To be consumed by `workspace_test`.

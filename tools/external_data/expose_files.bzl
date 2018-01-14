@@ -38,3 +38,8 @@ def expose_files(sub_packages = [], sub_dirs = []):
             data = deps,
             visibility = ["//visibility:public"],
         )
+        # TODO(eric.cousineau): Is there a way to avoid this?
+        native.exports_files(
+            srcs = native.glob(["WORKSPACE"]),
+            visibility = ["//visibility:public"],
+        )
