@@ -42,6 +42,9 @@ filegroup_recursive = rule(
     implementation = _filegroup_recursive_impl,
 )
 
+def _prefix_list(prefix, items):
+    return [prefix + item for item in items]
+
 def expose_files(sub_packages = [], sub_dirs = []):
     """
     Declares files to be consumed externally (for Bazel workspace tests, linting, etc).
@@ -60,26 +63,17 @@ def expose_files(sub_packages = [], sub_dirs = []):
     for name, patterns in patterns_map.items():
         srcs = native.glob(patterns)
         for sub_dir in sub_dirs:
-            srcs += native.glob([sub_dir + "/" + pattern for pattern in patterns])
+            srcs += native.glob(_prefix_list(sub_dir + "/", patterns))
         deps = [package_prefix + sub_package + ":" + name for sub_package in sub_packages]
         native.filegroup(
             name = name,
             srcs = srcs,
-            # This permits all files to be available in `runfiles`; however, it
-            # does not expose the files for location expansion.
-            data = deps,
+            # Trying to use `data = deps` here only exposes the files in
+            # runfiles, but not for expansion via `$(locations...)`.
             visibility = ["//visibility:public"],
         )
-        # Rely on existing `data` declaration above.
+        # Expose all files at one level.
         filegroup_recursive(
             name = name + "_recursive",
-            data = [name],
-        )
-
-    # TODO(eric.cousineau): Is there a way to avoid this?
-    ws = native.glob(["WORKSPACE"])
-    if ws:
-        native.exports_files(
-            srcs = ws,
-            visibility = ["//visibility:public"],
+            data = [name] + deps,
         )

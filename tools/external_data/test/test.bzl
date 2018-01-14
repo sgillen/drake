@@ -1,4 +1,8 @@
-load("//tools/external_data:expose_files.bzl", "patterns_map", "filegroup_recursive")
+load(
+    "//tools/external_data:expose_files.bzl",
+    "patterns_map",
+    "filegroup_recursive",
+)
 
 _workspace_list = ["bazel_pkg_test"]
 
@@ -7,53 +11,41 @@ def _workspace_name(workspace):
 
 def import_workspace_files():
     # To be consumed by `workspace_test`.
-    cur = dict(
-        all_files = ["//tools/external_data:all_files"],
-        bazel_lint_files = ["//tools/external_data:bazel_lint_files"],
-        python_lint_files = ["//tools/external_data:python_lint_files"],
-    )
+    packages = ["//tools/external_data"]
     for workspace in _workspace_list:
-        prefix = "@" + _workspace_name(workspace) + "//"
+        package = "@" + _workspace_name(workspace) + "//"
         # Alias in `all_files` groups (non-recursive).
         native.alias(
-            name = workspace + "_all_files",
-            actual = prefix + ":all_files",
+            name = workspace + "_all_files_recursive",
+            actual = package + ":all_files_recursive",
         )
         # Expose anchor.
         native.alias(
             name = workspace + "_anchor",
-            actual = prefix + ":WORKSPACE",
+            actual = package + ":WORKSPACE",
         )
-        # Add list for data to be stubbed.
-        for name in patterns_map.keys():
-            cur[name].append(prefix + ":" + name)
-    # Create final consumption.
-    # *All* of this work is pretty much done to avoid this constraint:
+        # Prepare to expose all files recursively.
+        packages.append(package)
+    # Expose files for consuming for linting.
+    # This is done to (a) avoid the following constraint:
     # https://github.com/bazelbuild/bazel/blob/c3bedec/src/main/java/com/google/devtools/build/lib/analysis/LocationExpander.java#L273  # noqa
+    # and (b) to permit `$(locations ...)` expansion.
     dummy = ":EMPTY"
     for name in patterns_map.keys():
+        data = [package + ":" + name + "_recursive" for package in packages]
         filegroup_recursive(
             name = "external_data_" + name,
-            data = cur[name],
+            data = data,
             dummy = dummy,
         )
 
-def get_workspace_files():
-    workspace_files = dict()
-    for name in patterns_map.keys():
-        cur = []
-        for workspace in _workspace_list:
-            cur.append(workspace + "_" + name + "_recursive")
-        workspace_files[name] = cur
-    return workspace_files
-
-def external_data_test_repositories(workspace_dir):    
+def external_data_test_repositories(workspace_dir):
     # Ignores any targets under this directory so that `test ...` will not leak
     # into them.
     # WARNING: Bazel also craps out here if `__workspace_dir__ + path` is used
     # rather than just `path`.
-    # N.B. This error is *stateful*. You will get different behavior depending on
-    # what has been built / run previously in Bazel. In one mode, the error
+    # N.B. This error is *stateful*. You will get different behavior depending
+    # on what has been built / run previously in Bazel. In one mode, the error
     # will be:
     #   Encountered error while [...]
     #   /home/${USER}/.cache/bazel/_bazel_${USER}/${HASH}/external/bazel_external_data_pkg  # noqa

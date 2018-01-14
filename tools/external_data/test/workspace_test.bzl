@@ -1,6 +1,6 @@
 # -*- python -*-
 
-# Needs quotes, because `sh_test(args = [...])` just concatenates the arguments.
+# Needs quotes, because `sh_test(args = [...])` concatenates the arguments.
 _CMD_DEFAULT = "'bazel test //...'"
 
 def workspace_test(
@@ -11,8 +11,10 @@ def workspace_test(
     """Provides a unittest access to a given workspace
     contained in the current project.
 
+    @param anchor
+        File that is used to dictate directory location.
     @param cmd
-        Command to run. By default is `bazel test //...`.
+        Command to run. Default is `bazel test //...`.
     @param data
         Additional data (e.g. other workspaces).
     """

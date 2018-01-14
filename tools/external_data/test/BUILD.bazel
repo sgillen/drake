@@ -13,16 +13,16 @@ load(
 # such that they can be consumed by `add_lint_tests`.
 import_workspace_files()
 
-external_data_files = [
-    "//tools/external_data:all_files",
+upstream_files = [
+    "//tools/external_data:all_files_recursive",
 ]
 
 workspace_test(
     name = "bazel_pkg_test",
     anchor = "bazel_pkg_test_anchor",
     data = [
-        "bazel_pkg_test_all_files",
-    ] + external_data_files,
+        "bazel_pkg_test_all_files_recursive",
+    ] + upstream_files,
 )
 
 add_lint_tests(
