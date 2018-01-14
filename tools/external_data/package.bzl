@@ -11,9 +11,9 @@ def add_workspace_set_files():
         prefix = "@" + _name(workspace) + "//"
         # Alias in `expose_files` file groups.
         for name in patterns_map.keys():
-            native.filegroup(
+            native.alias(
                 name = workspace + "_" + name,
-                srcs = prefix + ":" + name,
+                actual = prefix + ":" + name,
             )
         # Expose anchor.
         native.alias(

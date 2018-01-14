@@ -29,5 +29,5 @@ def workspace_test(
         # macro file (rather than the current BUILD file)?
         srcs = ["@drake//tools/external_data:workspace_writeable_test.sh"],
         args = args,
-        data = data,
+        data = [anchor] + data_out,
     )

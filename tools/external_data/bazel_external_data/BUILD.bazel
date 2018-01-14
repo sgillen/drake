@@ -1,6 +1,6 @@
 # -*- python -*-
 
-load("//tools/external_data:expose_files", "expose_files")
+load("//tools/external_data:expose_files.bzl", "expose_files")
 
 # For macro testing.
 exports_files(["stub_test.py"])
