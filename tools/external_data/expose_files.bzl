@@ -17,6 +17,8 @@ def _filegroup_recursive_impl(ctx):
     for d in ctx.attr.data:
         runfiles = d.data_runfiles.files
         files += runfiles
+    if ctx.attr.dummy and not files:
+        files = [ctx.attr.dummy]
     return [DefaultInfo(
         files=files,
     )]
@@ -25,10 +27,11 @@ def _filegroup_recursive_impl(ctx):
 Provides all files (including `data` dependencies) such that they are
 expandable via `$(locations ...)`.
 """
-_filegroup_recursive = rule(
+filegroup_recursive = rule(
     implementation = _filegroup_recursive_impl,
     attrs = {
         "data": attr.label_list(cfg = "data", allow_files = True),
+        "dummy": attr.label(allow_single_file = True),
     },
 )
 
@@ -61,7 +64,7 @@ def expose_files(sub_packages = [], sub_dirs = []):
             visibility = ["//visibility:public"],
         )
         # Rely on existing `data` declaration above.
-        _filegroup_recursive(
+        filegroup_recursive(
             name = name + "_recursive",
             data = [name],
         )

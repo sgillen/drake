@@ -5,6 +5,7 @@ _CMD_DEFAULT = "'bazel test //...'"
 
 def workspace_test(
         name,
+        anchor,
         cmd = _CMD_DEFAULT,
         data = []):
     """Provides a unittest access to a given workspace
@@ -15,8 +16,6 @@ def workspace_test(
     @param data
         Additional data (e.g. other workspaces).
     """
-    anchor = name + "_anchor"
-    all_files = name + "_all_files_recursive"
     args = [cmd, "$(location {})".format(anchor)]
     native.sh_test(
         name = name,
@@ -24,5 +23,5 @@ def workspace_test(
         # macro file (rather than the current BUILD file)?
         srcs = [":workspace_writeable_test.sh"],
         args = args,
-        data = [anchor, all_files] + data,
+        data = [anchor] + data,
     )

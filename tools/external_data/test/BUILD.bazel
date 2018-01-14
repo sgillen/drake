@@ -13,7 +13,10 @@ external_data_files = [
 
 workspace_test(
     name = "bazel_pkg_test",
-    data = external_data_files,
+    anchor = "bazel_pkg_test_anchor",
+    data = [
+        "bazel_pkg_test_all_files",
+    ] + external_data_files,
 )
 
 workspace_files = get_workspace_files()
@@ -22,10 +25,9 @@ workspace_files = get_workspace_files()
 
 add_lint_tests(
     bazel_lint_extra_srcs = [
-        # Will this recurse???
-        "//tools/external_data:bazel_lint_files",
-    ] + workspace_files["bazel_lint_files"],
+        ":external_data_bazel_lint_files",
+    ],
     python_lint_extra_srcs = [
-        "//tools/external_data:python_lint_files",
-    ] + workspace_files["python_lint_files"],
+        ":external_data_python_lint_files",
+    ],
 )
