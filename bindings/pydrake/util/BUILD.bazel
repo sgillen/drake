@@ -6,12 +6,10 @@ load(
     "//tools:drake.bzl",
     "drake_cc_googletest",
     "drake_cc_library",
-    "drake_cc_binary",
 )
 load(
     "//tools/skylark:pybind.bzl",
     "drake_pybind_cc_googletest",
-    "drake_pybind_library",
     "get_drake_pybind_installs",
     "get_pybind_package_info",
 )
@@ -55,11 +53,10 @@ drake_py_library(
     imports = PACKAGE_INFO.py_imports,
 )
 
-PYBIND_LIBRARIES = [
-    ":cpp_types_py",
-]
+PYBIND_LIBRARIES = []
 
 PY_LIBRARIES = [
+    ":cpp_types_py",
     ":module_py",
     ":module_shim_py",
 ]
@@ -82,17 +79,12 @@ drake_cc_library(
     ],
 )
 
-drake_pybind_library(
+drake_py_library(
     name = "cpp_types_py",
-    cc_deps = [
-        ":cpp_types_pybind",
-    ],
-    cc_srcs = ["cpp_types_py.cc"],
-    package_info = PACKAGE_INFO,
-    py_deps = [
+    srcs = ["cpp_types.py"],
+    deps = [
         ":module_py",
     ],
-    py_srcs = ["cpp_types.py"],
 )
 
 install(
@@ -129,8 +121,15 @@ drake_py_test(
     ],
 )
 
-drake_pybind_cc_googletest(
+drake_py_test(
     name = "cpp_types_test",
+    deps = [
+        ":cpp_types_py",
+    ],
+)
+
+drake_pybind_cc_googletest(
+    name = "cpp_types_pybind_test",
     cc_deps = [":cpp_types_pybind"],
     py_deps = [":cpp_types_py"],
 )

@@ -11,44 +11,42 @@
 
 #include "drake/bindings/pydrake/util/type_pack.h"
 
-namespace py = pybind11;
-
 namespace drake {
 namespace pydrake {
+
+// This alias is intended to be part of the public API, as it follows
+// `pybind11` conventions.
+namespace py = pybind11;
+
 namespace internal {
 
-py::object GetTypeRegistry();
+// Gets singleton for type aliases from `cpp_types`.
+py::object GetTypeAliases();
 
-void RegisterTypeImpl(
-    const std::string& py_type_str, std::vector<size_t> cpp_types);
-
-template <typename ... Ts>
-void RegisterTypes(const std::string& py_type_str, type_pack<Ts...> = {}) {
-  RegisterTypeImpl(py_type_str, {typeid(Ts).hash_code()...});
-}
-
+// Gets Python type object given `std::type_info`.
 py::object GetPyTypeImpl(const std::type_info& tinfo);
 
-template <typename T, typename = void>
-struct get_py_type_impl {
-  static py::object run() {
-    return GetPyTypeImpl(typeid(T));
-  }
-};
+// Gets Python type for a C++ type (base case).
+template <typename T>
+inline py::object GetPyTypeImpl(type_pack<T> = {}) {
+  return GetPyTypeImpl(typeid(T));
+}
 
+// Gets Python literal for a C++ literal (specialization).
 template <typename T, T Value>
-struct get_py_type_impl<std::integral_constant<T, Value>> {
-  static py::object run() {
-    return py::cast(Value);
-  }
-};
+inline py::object GetPyTypeImpl(
+    type_pack<std::integral_constant<T, Value>> = {}) {
+  return py::cast(Value);
+}
 
 }  // namespace internal
 
 /// Gets the canonical Python type for a given C++ type.
 template <typename T>
-inline py::object GetPyType(type_pack<T> = {}) {
-  return internal::get_py_type_impl<T>::run();
+inline py::object GetPyType(type_pack<T> tag = {}) {
+  // Explicitly provide `tag` so that inference can handle the different
+  // cases.
+  return internal::GetPyTypeImpl(tag);
 }
 
 /// Gets the canonical Python types for each C++ type.

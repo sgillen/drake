@@ -5,20 +5,18 @@ import numpy as np
 
 """
 @file
-Defines a mapping between Python and C++ types, and provides canonical Python
+Defines a mapping between Python and alias types, and provides canonical Python
 types as they relate to C++.
 """
 
-# Define these first, as they are used in `cpp_types_py.cc`
-# (transitively, `cpp_types_pybind.cc`).
 
-
-def _get_type_name(t):
+def _get_type_name(t, verbose):
     # Gets type name as a string.
-    prefix = t.__module__ + "."
-    if prefix == "__builtin__.":
-        prefix = ""
-    return prefix + t.__name__
+    # Defaults to just returning the name to shorten template names.
+    if verbose and t.__module__ != "__builtin__":
+        return t.__module__ + "." + t.__name__
+    else:
+        return t.__name__
 
 
 class _StrictMap(object):
@@ -34,55 +32,55 @@ class _StrictMap(object):
         return self._values.get(key, default)
 
 
-class _TypeRegistry(object):
+class _TypeAliases(object):
+    # Registers aliases for a set of objects. This will be used for template
+    # parameters.
     def __init__(self):
-        self._cpp_to_py_canonical = _StrictMap()
-        self._py_to_py_canonical = _StrictMap()
+        self._to_canonical = _StrictMap()
+        self._register_common()
 
-    def register_cpp(self, py_canonical, cpp_types):
-        for cpp_type in cpp_types:
-            self._cpp_to_py_canonical.add(cpp_type, py_canonical)
+    def _register_common(self):
+        # Register common Python aliases relevant for C++.
+        self.register(float, [np.double, ctypes.c_double])
+        self.register(np.float32, [ctypes.c_float])
+        self.register(int, [np.int32, ctypes.c_int32])
+        self.register(np.uint32, [ctypes.c_uint32])
+        self.register(np.int64, [ctypes.c_int64])
 
-    def register_py(self, py_types):
-        py_canonical = py_types[0]
-        for py_type in py_types:
-            self._py_to_py_canonical.add(py_type, py_canonical)
+    def register(self, canonical, aliases):
+        # Registers a set of aliases to a canonical value.
+        for alias in aliases:
+            self._to_canonical.add(alias, canonical)
 
-    def get_type_canonical(self, py_type):
-        # Get registered canonical type if there is a mapping; otherwise return
-        # original type.
-        return self._py_to_py_canonical.get(py_type, py_type)
+    def get_canonical(self, alias, default_same=True):
+        # Gets registered canonical type if there is a mapping; otherwise
+        # return default (same if `default_same`, or None otherwise).
+        default = alias
+        if not default_same:
+            default = None
+        return self._to_canonical.get(alias, default)
 
-    def get_name(self, py_type):
-        return _get_type_name(self.get_type_canonical(py_type))
+    def get_name(self, alias):
+        # Gets string for an alias.
+        canonical = self.get_canonical(alias)
+        if isinstance(canonical, type):
+            return _get_type_name(canonical, verbose=False)
+        else:
+            # For literals.
+            return str(canonical)
 
-    def get_type_canonical_from_cpp(self, cpp_type):
-        # Return None so that C++ can query pybind.
-        return self._cpp_to_py_canonical.get(cpp_type, None)
 
-
-_type_registry = _TypeRegistry()
-
-# Register canonical Python types.
-_py_types_set = (
-    (float, ctypes.c_double, np.double),
-    (np.float32, ctypes.c_float),
-    (int, np.int32, ctypes.c_int32),
-    (np.uint32, ctypes.c_uint32),
-)
-map(_type_registry.register_py, _py_types_set)
-
-# Import C++ types.
-import pydrake.util._cpp_types_py
+# Create singleton instance.
+_type_aliases = _TypeAliases()
 
 
 def get_types_canonical(param):
     """Gets the canonical types for a set of Python types (canonical as in
     how they relate to C++ types. """
-    return tuple(map(_type_registry.get_type_canonical, param))
+    return tuple(map(_type_aliases.get_canonical, param))
 
 
 def get_type_names(param):
     """Gets the canonical type names for a set of Python types (canonical as in
     how they relate to C++ types. """
-    return tuple(map(_type_registry.get_name, param))
+    return tuple(map(_type_aliases.get_name, param))
