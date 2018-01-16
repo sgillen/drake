@@ -1,12 +1,12 @@
 from __future__ import print_function
 
 """
-Tests the pure Python functionality of `cpp_types`: (a) idempotent mapping for
+Tests the pure Python functionality of `cpp_param`: (a) idempotent mapping for
 unaliased types, and (b) correct mapping for aliased types (as the aliases
 relate in C++).
 
 N.B. The C++ types are not registered in this test. They are registered and
-tested in `cpp_types_pybind_test`.
+tested in `cpp_param_pybind_test`.
 """
 
 import unittest
@@ -14,16 +14,16 @@ import ctypes
 import numpy as np
 
 
-from pydrake.util.cpp_types import get_types_canonical, get_type_names
+from pydrake.util.cpp_param import get_param_canonical, get_param_names
 
 
 class CustomPyType(object):
     pass
 
 
-class TestCppTypes(unittest.TestCase):
+class TestCppParam(unittest.TestCase):
     def _check_alias(self, canonical, alias):
-        actual = get_types_canonical([alias])[0]
+        actual = get_param_canonical([alias])[0]
         self.assertTrue(actual is canonical)
 
     def _check_idempotent(self, canonical):
@@ -35,12 +35,12 @@ class TestCppTypes(unittest.TestCase):
 
     def _check_names(self, name_canonical, aliases):
         for alias in aliases:
-            actual = get_type_names([alias])[0]
+            actual = get_param_names([alias])[0]
             self.assertEquals(actual, name_canonical)
 
     def test_idempotent(self):
         # Check idempotent mapping for unaliased types.
-        # This follows the ordering in `cpp_types_pybind.cc`,
+        # This follows the ordering in `cpp_param_pybind.cc`,
         # `RegisterCommon`.
         self._check_idempotent(bool)
         self._check_idempotent(str)
@@ -57,8 +57,8 @@ class TestCppTypes(unittest.TestCase):
 
     def test_aliases(self):
         # Aliases:
-        # This follows the ordering in `cpp_types.py`,
-        # `_TypeAliases._register_common`.
+        # This follows the ordering in `cpp_param.py`,
+        # `_ParamAliases._register_common`.
         self._check_aliases(float, [np.double, ctypes.c_double])
         self._check_aliases(np.float32, [ctypes.c_float])
         self._check_aliases(int, [np.int32, ctypes.c_int32])

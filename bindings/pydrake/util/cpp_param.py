@@ -32,7 +32,7 @@ class _StrictMap(object):
         return self._values.get(key, default)
 
 
-class _TypeAliases(object):
+class _ParamAliases(object):
     # Registers aliases for a set of objects. This will be used for template
     # parameters.
     def __init__(self):
@@ -71,16 +71,16 @@ class _TypeAliases(object):
 
 
 # Create singleton instance.
-_type_aliases = _TypeAliases()
+_param_aliases = _ParamAliases()
 
 
-def get_types_canonical(param):
+def get_param_canonical(param):
     """Gets the canonical types for a set of Python types (canonical as in
     how they relate to C++ types. """
-    return tuple(map(_type_aliases.get_canonical, param))
+    return tuple(map(_param_aliases.get_canonical, param))
 
 
-def get_type_names(param):
+def get_param_names(param):
     """Gets the canonical type names for a set of Python types (canonical as in
     how they relate to C++ types. """
-    return tuple(map(_type_aliases.get_name, param))
+    return tuple(map(_param_aliases.get_name, param))

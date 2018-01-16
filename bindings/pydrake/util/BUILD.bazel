@@ -70,9 +70,9 @@ drake_py_library(
 
 # ODR does not matter, because the singleton will be stored in Python.
 drake_cc_library(
-    name = "cpp_types_pybind",
-    srcs = ["cpp_types_pybind.cc"],
-    hdrs = ["cpp_types_pybind.h"],
+    name = "cpp_param_pybind",
+    srcs = ["cpp_param_pybind.cc"],
+    hdrs = ["cpp_param_pybind.h"],
     deps = [
         ":type_pack",
         "@pybind11",
@@ -81,7 +81,7 @@ drake_cc_library(
 
 drake_py_library(
     name = "cpp_types_py",
-    srcs = ["cpp_types.py"],
+    srcs = ["cpp_param.py"],
     deps = [
         ":module_py",
     ],
@@ -122,15 +122,15 @@ drake_py_test(
 )
 
 drake_py_test(
-    name = "cpp_types_test",
+    name = "cpp_param_test",
     deps = [
         ":cpp_types_py",
     ],
 )
 
 drake_pybind_cc_googletest(
-    name = "cpp_types_pybind_test",
-    cc_deps = [":cpp_types_pybind"],
+    name = "cpp_param_pybind_test",
+    cc_deps = [":cpp_param_pybind"],
     py_deps = [":cpp_types_py"],
 )
 

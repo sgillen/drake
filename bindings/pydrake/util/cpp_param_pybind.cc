@@ -1,4 +1,4 @@
-#include "drake/bindings/pydrake/util/cpp_types_pybind.h"
+#include "drake/bindings/pydrake/util/cpp_param_pybind.h"
 
 #include <pybind11/eval.h>
 
@@ -41,9 +41,9 @@ void RegisterCommon(py::module m, py::object type_aliases) {
 
 }  // namespace
 
-py::object GetTypeAliases() {
-  py::module m = py::module::import("pydrake.util.cpp_types");
-  py::object type_aliases = m.attr("_type_aliases");
+py::object GetParamAliases() {
+  py::module m = py::module::import("pydrake.util.cpp_param");
+  py::object type_aliases = m.attr("_param_aliases");
   const char registered_check[] = "_register_common_cpp";
   if (!py::hasattr(m, registered_check)) {
     RegisterCommon(m, type_aliases);
@@ -52,9 +52,9 @@ py::object GetTypeAliases() {
   return type_aliases;
 }
 
-py::object GetPyTypeImpl(const std::type_info& tinfo) {
+py::object GetPyParamScalarImpl(const std::type_info& tinfo) {
   py::object canonical =
-      GetTypeAliases().attr("get_canonical")(GetPyHash(tinfo), false);
+      GetParamAliases().attr("get_canonical")(GetPyHash(tinfo), false);
   if (!canonical.is_none()) {
     return canonical;
   } else {
