@@ -38,7 +38,7 @@ install_cmake_config(
 # that the binary package will not contain any references to shared libraries
 # inside the build tree.
 drake_cc_library(
-    name = "drake",
+    name = "libdrake",
     solib_name = "libdrake.so",
     linkshared = 1,
     deps = LIBDRAKE_COMPONENTS,
@@ -49,7 +49,7 @@ drake_cc_library(
 drake_transitive_install_artifacts(
     name = "drake_install_artifacts",
     visibility = [],
-    deps = [":drake"],
+    deps = [":libdrake"],
 )
 
 # Install libdrake.so along with all transitive headers in the same workspace
@@ -115,7 +115,7 @@ cc_library(
 # are coming from the WORKSPACE in the form of *.so.
 alias(
     name = "drake_shared_library",
-    actual = "drake",
+    actual = "libdrake",
 )
 
 add_lint_tests()

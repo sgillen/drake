@@ -346,7 +346,7 @@ drake_java_binary(
 )
 
 drake_transitive_install_artifacts(
-    name = "drake_lcmtypes_headers",
+    name = "drake_lcmtypes_install_artifacts",
     deps = DRAKE_LCMTYPES,
 )
 
@@ -357,16 +357,12 @@ drake_transitive_install_artifacts(
 # using the correct include paths for the libraries they need.  The path to
 # `include/drake_lcmtypes` is provided to downstream code via `drake.cps` and
 # its generated cmake config `lib/cmake/drake/drake-config.cmake.
-install(
-    name = "install_cc_headers",
-    hdrs = [":drake_lcmtypes_headers"],
-    hdr_dest = "include/drake_lcmtypes",
-    visibility = ["//visibility:private"],
-)
 
 install(
     name = "install",
+    hdr_dest = "include/drake_lcmtypes",
     targets = [
+        ":drake_lcmtypes_install_artifacts"
         ":drake-lcm-spy-launcher",
         ":drake-lcm-spy",
         ":lcmtypes_drake_java",
@@ -377,7 +373,6 @@ install(
         "bin/drake-lcm-spy-launcher.sh": "drake-lcm-spy",
     },
     deps = [
-        ":install_cc_headers",
         "//tools/workspace/optitrack_driver:install",
         "@lcmtypes_robotlocomotion//:install",
     ],
