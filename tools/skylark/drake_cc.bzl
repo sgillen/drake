@@ -396,7 +396,7 @@ def drake_cc_binary(
         linkopts = [],
         gcc_copts = [],
         linkshared = 0,
-        linkstatic = 0,
+        linkstatic = 1,
         testonly = 0,
         add_test_rule = 0,
         test_rule_args = [],
