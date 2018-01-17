@@ -8,8 +8,8 @@ load(
 )
 load(
     "@drake//tools/skylark:drake_cc.bzl",
-    "drake_installed_headers",
-    "installed_headers_for_drake_deps",
+    "drake_install_artifacts",
+    "install_artifacts_for_drake_deps",
 )
 
 def drake_lcm_cc_library(
@@ -34,10 +34,10 @@ def drake_lcm_cc_library(
         tags = tags + ["nolint"],
         strip_include_prefix = strip_include_prefix,
         **kwargs)
-    drake_installed_headers(
-        name = name + ".installed_headers",
+    drake_install_artifacts(
+        name = name + ".install_artifacts",
         hdrs = detail.hdrs,
-        deps = installed_headers_for_drake_deps(deps),
+        deps = install_artifacts_for_drake_deps(deps),
         tags = ["nolint"],
     )
 

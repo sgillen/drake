@@ -5,7 +5,7 @@ package(default_visibility = ["//visibility:public"])
 load("@drake//tools/install:install.bzl", "install")
 load(
     "@drake//tools/skylark:drake_cc.bzl",
-    "drake_transitive_installed_hdrs_filegroup",
+    "drake_transitive_install_artifacts",
 )
 load(
     "@drake//tools/skylark:drake_java.bzl",
@@ -345,7 +345,7 @@ drake_java_binary(
     ],
 )
 
-drake_transitive_installed_hdrs_filegroup(
+drake_transitive_install_artifacts(
     name = "drake_lcmtypes_headers",
     deps = DRAKE_LCMTYPES,
 )

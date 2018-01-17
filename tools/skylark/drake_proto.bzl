@@ -7,8 +7,8 @@ load(
 )
 load(
     "@drake//tools/skylark:drake_cc.bzl",
-    "drake_installed_headers",
-    "installed_headers_for_drake_deps",
+    "drake_install_artifacts",
+    "install_artifacts_for_drake_deps",
 )
 load("//tools/skylark:6996.bzl", "adjust_labels_for_drake_hoist")
 
@@ -69,10 +69,10 @@ def drake_cc_proto_library(
         deps = [name + "_genproto_compile"],
         **kwargs)
     # Install the header file.
-    drake_installed_headers(
-        name = name + ".installed_headers",
+    drake_install_artifacts(
+        name = name + ".install_artifacts",
         hdrs = pb_hdrs,
-        deps = installed_headers_for_drake_deps(deps),
+        deps = install_artifacts_for_drake_deps(deps),
         tags = ["nolint"],
     )
 
