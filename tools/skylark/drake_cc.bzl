@@ -579,7 +579,7 @@ def drake_example_cc_binary(
     """Creates a rule to declare a C++ binary using `libdrake.so`.
 
     This rule is a wrapper around `drake_cc_binary()`. It adds `libdrake.so`
-    and `drake_lcmtypes_headers` as dependencies to the target.
+    and `drake_lcmtypes` as dependencies to the target.
 
     This allows the creation of examples for drake that depend on `libdrake.so`
     which let the process discover the location of drake resources at runtime
@@ -587,7 +587,7 @@ def drake_example_cc_binary(
 
     This macro will fail-fast if there is ODR violation. This happens if this
     macro adds dependendies (`deps` or `srcs`) that are already part of
-    libdrake.so or drake_lcmtypes_headers.
+    libdrake.so or drake_lcmtypes.
     """
     if not native.package_name().startswith("examples"):
         fail("`drake_example_cc_binary()` macro should only be used in examples \
@@ -605,17 +605,18 @@ def drake_example_cc_binary(
                 dep.startswith('//drake/examples')):
             fail("Dependency used in `drake_example_cc_binary()` macro should\
                 not already be part of libdrake.so: %s" % dep)
-    # This makes sure that //tools/install/libdrake:libdrake.so and
-    # //lcmtypes:drake_lcmtypes_headers are not added to srcs a second time.
-    if ("//tools/install/libdrake:libdrake.so" in srcs or
-            "//lcmtypes:drake_lcmtypes_headers"in srcs):
-        fail("//tools/install/libdrake:libdrake.so and \
-            //lcmtypes:drake_lcmtypes_headers are already included in \
-            `drake_example_cc_binary()` macro")
+        if dep == "//lcmtypes:drake_lcmtypes":
+            fail("//lcmtypes:drake_lcmtypes already included in \
+                 `drake_example_cc_binary()` macro")
+    # This makes sure that //tools/install/libdrake:libdrake.so is not
+    # //lcmtypes:drake_lcmtypes are not added to srcs a second time.
+    if "//tools/install/libdrake:libdrake.so" in srcs:
+        fail("//tools/install/libdrake:libdrake.so \
+            already included in `drake_example_cc_binary()` macro")
     drake_cc_binary(
-        srcs = srcs,  # + ["//tools/install/libdrake:libdrake.so"],
+        srcs = srcs,
         deps = deps + [
-            "//lcmtypes:drake_lcmtypes_headers",
+            "//lcmtypes:drake_lcmtypes",
             "//tools/install/libdrake:drake_shared_library",
         ],
         **kwargs)

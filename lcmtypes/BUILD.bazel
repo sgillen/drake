@@ -5,6 +5,7 @@ package(default_visibility = ["//visibility:public"])
 load("@drake//tools/install:install.bzl", "install")
 load(
     "@drake//tools/skylark:drake_cc.bzl",
+    "drake_cc_library",
     "drake_transitive_install_artifacts",
 )
 load(
@@ -345,9 +346,14 @@ drake_java_binary(
     ],
 )
 
+drake_cc_library(
+    name = "drake_lcmtypes",
+    deps = DRAKE_LCMTYPES,
+)
+
 drake_transitive_install_artifacts(
     name = "drake_lcmtypes_install_artifacts",
-    deps = DRAKE_LCMTYPES,
+    deps = [":drake_lcmtypes"],
 )
 
 # The drake-lcmtypes-cpp library is distinct from (but required by) the drake
@@ -362,7 +368,7 @@ install(
     name = "install",
     hdr_dest = "include/drake_lcmtypes",
     targets = [
-        ":drake_lcmtypes_install_artifacts"
+        ":drake_lcmtypes_install_artifacts",
         ":drake-lcm-spy-launcher",
         ":drake-lcm-spy",
         ":lcmtypes_drake_java",
