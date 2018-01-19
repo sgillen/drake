@@ -28,20 +28,25 @@ using constant_pack = type_pack<type_pack<constant<T, Values>>...>;
 
 namespace {
 
+using Eigen::Map;
+using Eigen::Ref;
+
 // TODO(eric.cousineau): Place in `pydrake_pybind.h`.
 template <typename T>
 py::object ToArray(T* ptr, int size, py::tuple shape) {
   // Create flat array, to be reshaped.
-  Eigen::Map<VectorX<T>> data(ptr, size);
-  return py::cast(data).attr("reshape")(shape);
+  using Vector = VectorX<T>;
+  Map<Vector> data(ptr, size);
+  return py::cast(Ref<Vector>(data)).attr("reshape")(shape);
 }
 
 // `const` variant.
 template <typename T>
 py::object ToArray(const T* ptr, int size, py::tuple shape) {
   // Create flat array, to be reshaped.
-  Eigen::Map<const VectorX<T>> data(ptr, size);
-  return py::cast(data).attr("reshape")(shape);
+  using Vector = const VectorX<T>;
+  Map<Vector> data(ptr, size);
+  return py::cast(Ref<Vector>(data)).attr("reshape")(shape);
 }
 
 }  // namespace

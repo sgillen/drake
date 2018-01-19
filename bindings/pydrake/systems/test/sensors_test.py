@@ -66,6 +66,8 @@ class TestSensors(unittest.TestCase):
             marr = image.mutable_array()
             marr[:] = 3
             self.assertTrue(image.at(0, 0), 3)
+            print(marr[0:2, 0:2, 0])
+            print(image.array()[0:2, 0:2, 0])
             self.assertTrue(np.allclose(image.array(), 3))
             self.assertTrue(np.allclose(arr, 3))
 
