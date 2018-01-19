@@ -8,7 +8,6 @@
 #include "drake/bindings/pydrake/util/cpp_template.h"
 #include "drake/bindings/pydrake/util/type_pack.h"
 #include "drake/systems/sensors/image.h"
-#include "drake/systems/sensors/rgbd_camera.h"
 #include "drake/systems/sensors/pixel_types.h"
 
 namespace py = pybind11;
@@ -21,19 +20,20 @@ using constant_pack = drake::type_pack<constant<T, Values>...>;
 
 namespace drake {
 namespace pydrake {
+namespace {
 
-// Allow `Type` or `const Type`
-template <typename ImageT, typename T>
-py::object GetImageArray() {
+template <typename T>
+py::object ToArray(T* ptr, int size, py::tuple shape) {
   // Create flat array.
-  Eigen::Map<VectorX<T>> data(self->at(0, 0), self->size());
-  // Reshape with NumPy.
+  Eigen::Map<VectorX<T>> data(ptr, size);
+  // Reshape with NumPy. Using same shape as what is present in
+  // `show_images.py`.
   py::object array =
-      py::cast(data).attr("reshape")(
-          self->height(), self->width(), ImageT::kNumChannels);
+      py::cast(data).attr("reshape")(shape);
   return array;
 }
 
+}  // namespace
 }  // namespace pydrake
 }  // namespace drake
 
@@ -56,28 +56,31 @@ PYBIND11_MODULE(sensors, m) {
     .value("kRgba", PixelFormat::kRgba)
     .value("kDepth", PixelFormat::kDepth)
     .value("kLabel", PixelFormat::kLavel);
-  // Expose image traits.
+
   {
+    // Expose image types and their traits.
     py::enum_<PixelType> pixel_type(m, "PixelType");
-    vector<string> names = {
+    vector<string> enum_names = {
         "kRgba8U",
         "kDepth32F",
         "kLabel16I",
     };
+
     using ParamList = constant_pack<PixelType,
-        PixelType::kRgba8U,
-        PixelType::kDepth32F,
-        PixelType::kLabel16I>;
+        PixelType::kRgba8U>; //,
+        // PixelType::kDepth32F,
+        // PixelType::kLabel16I>;
+
     // Simple constexpr for-loop.
     int i = 0;
     auto instantiation_visitor = [&](auto param) {
+      // Add definition to enum.
       constexpr PixelType Value = decltype(param)::template type<0>::value;
+      pixel_type.value(enum_names[i], Value);
+
       py::tuple py_param = GetPyParam(param);
       using ImageTraitsT = ImageTraits<PixelType>;
       using T = typename ImageTraitsT::ChannelType;
-
-      // Add definition to enum.
-      pixel_type.value(names[i], value);
 
       // Add traits.
       // TODO(eric.cousineau): Use C++ template.
@@ -87,9 +90,12 @@ PYBIND11_MODULE(sensors, m) {
       traits.attr("kNumChannels") = ImageTraitsT::kNumChannels;
       traits.attr("kPixelFormat") = ImageTraitsT::kPixelFormat;
       AddTemplateClass(m, "ImageTraits", traits, py_param);
-      ++i;
 
       using ImageT = Image<Value>;
+      auto get_shape = [](const ImageT* self) {
+        return py::tuple(
+            self->height(), self->width(), ImageTraitsT::kNumChannels);
+      };
       py::class_<ImageT> image(m, TemporaryClassName<ImageTraitsT>().c_str())
           .def(py::init<int, int>())
           .def(py::init<int, int, T>())
@@ -103,18 +109,23 @@ PYBIND11_MODULE(sensors, m) {
           .def("set", [](ImageT* self, int x, int y, T value) {
                 *self->at(x, y) = value;
               })
-          .def("mutable_array", [](ImageT* self) {
-                return GetImageArray<ImageT, T>(self);
-              })
-          .def("array", [](const ImageT* self) {
-                return GetImageArray<const ImageT, const T>(self);
-              });
+          .def("shape", get_shape)
+          .def("array", [=](const ImageT* self) {
+                return ToArray(
+                  self->at(0, 0), self->size(), get_shape(self));
+              }, py_iref)
+          .def("mutable_array", [=](ImageT* self) {
+                return ToArray(
+                  self->at(0, 0), self->size(), get_shape(self));
+              }, py_iref);
       // Constants.
-      image.attr("ImageTraits") = traits;
+      image.attr("Traits") = traits;
       // - Do not duplicate aliases (e.g. `kNumChannels`) for now.
       AddTemplateClass(m, "Image", image, py_param);
       // Add type alias for instantiation.
-      m.attr("Image" + names[i].substr(1)) = image;
+      m.attr("Image" + enum_names[i].substr(1)) = image;
+      // Ensure that iterate.
+      ++i;
     };
     type_visit(instantiation_visitor, ParamList{});
   }
