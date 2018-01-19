@@ -28,25 +28,28 @@ using constant_pack = type_pack<type_pack<constant<T, Values>>...>;
 
 namespace {
 
+const auto py_ref = py::return_value_policy::reference;
+const auto py_iref = py::return_value_policy::reference_internal;
+
 using Eigen::Map;
 using Eigen::Ref;
 
 // TODO(eric.cousineau): Place in `pydrake_pybind.h`.
 template <typename T>
 py::object ToArray(T* ptr, int size, py::tuple shape) {
-  // Create flat array, to be reshaped.
+  // Create flat array to be reshaped in numpy.
   using Vector = VectorX<T>;
   Map<Vector> data(ptr, size);
-  return py::cast(Ref<Vector>(data)).attr("reshape")(shape);
+  return py::cast(Ref<Vector>(data), py_ref).attr("reshape")(shape);
 }
 
 // `const` variant.
 template <typename T>
 py::object ToArray(const T* ptr, int size, py::tuple shape) {
-  // Create flat array, to be reshaped.
+  // Create flat array to be reshaped in numpy.
   using Vector = const VectorX<T>;
   Map<Vector> data(ptr, size);
-  return py::cast(Ref<Vector>(data)).attr("reshape")(shape);
+  return py::cast(Ref<Vector>(data), py_ref).attr("reshape")(shape);
 }
 
 }  // namespace
@@ -61,15 +64,13 @@ PYBIND11_MODULE(sensors, m) {
   // NOLINTNEXTLINE(build/namespaces): Emulate placement in namespace.
   using namespace drake::systems::sensors;
 
-  auto py_iref = py::return_value_policy::reference_internal;
-
   m.doc() = "Bindings for the sensors portion of the Systems framework.";
 
   // Expose only types that are used.
   py::enum_<PixelFormat>(m, "PixelFormat")
-    .value("kRgba", PixelFormat::kRgba)
-    .value("kDepth", PixelFormat::kDepth)
-    .value("kLabel", PixelFormat::kLabel);
+      .value("kRgba", PixelFormat::kRgba)
+      .value("kDepth", PixelFormat::kDepth)
+      .value("kLabel", PixelFormat::kLabel);
 
   {
     // Expose image types and their traits.

@@ -51,25 +51,22 @@ class TestSensors(unittest.TestCase):
     def test_image_data(self):
         for pixel_type in pixel_types:
             default = 1
-            w = 640
-            h = 480
+            w = 3
+            h = 2
             ImageT = m.Image[pixel_type]
             image = ImageT(w, h, default)
 
             self.assertEquals(image.at(0, 0), default)
+            self.assertEquals(image.array().shape, image.shape())
             self.assertTrue(np.allclose(image.array(), default))
 
             image.set(0, 0, 2)
             self.assertEquals(image.at(0, 0), 2)
 
-            arr = image.array()
-            marr = image.mutable_array()
-            marr[:] = 3
-            self.assertTrue(image.at(0, 0), 3)
-            print(marr[0:2, 0:2, 0])
-            print(image.array()[0:2, 0:2, 0])
+            image.mutable_array()[:] = 3
+            self.assertEquals(image.at(0, 0), 3)
             self.assertTrue(np.allclose(image.array(), 3))
-            self.assertTrue(np.allclose(arr, 3))
+            self.assertTrue(np.allclose(image.mutable_array(), 3))
 
 
 if __name__ == '__main__':
