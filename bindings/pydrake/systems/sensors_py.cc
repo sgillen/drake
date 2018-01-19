@@ -40,7 +40,7 @@ py::object ToArray(T* ptr, int size, py::tuple shape) {
 template <typename T>
 py::object ToArray(const T* ptr, int size, py::tuple shape) {
   // Create flat array, to be reshaped.
-  Eigen::Map<const VectorX<const T>> data(ptr, size);
+  Eigen::Map<const VectorX<T>> data(ptr, size);
   return py::cast(data).attr("reshape")(shape);
 }
 
@@ -60,8 +60,6 @@ PYBIND11_MODULE(sensors, m) {
 
   m.doc() = "Bindings for the sensors portion of the Systems framework.";
 
-  using T = double;
-
   // Expose only types that are used.
   py::enum_<PixelFormat>(m, "PixelFormat")
     .value("kRgba", PixelFormat::kRgba)
@@ -78,9 +76,9 @@ PYBIND11_MODULE(sensors, m) {
     };
 
     using ParamList = constant_pack<PixelType,
-        PixelType::kRgba8U>; //,
-        // PixelType::kDepth32F,
-        // PixelType::kLabel16I>;
+        PixelType::kRgba8U,
+        PixelType::kDepth32F,
+        PixelType::kLabel16I>;
 
     // Simple constexpr for-loop.
     int i = 0;
@@ -100,18 +98,18 @@ PYBIND11_MODULE(sensors, m) {
       py::class_<ImageTraitsT> traits(
           m, TemporaryClassName<ImageTraitsT>().c_str());
       traits.attr("ChannelType") = GetPyParam<T>()[0];
-      traits.attr("kNumChannels") = ImageTraitsT::kNumChannels;
-      traits.attr("kPixelFormat") = ImageTraitsT::kPixelFormat;
+      traits.attr("kNumChannels") = int{ImageTraitsT::kNumChannels};
+      traits.attr("kPixelFormat") = PixelFormat{ImageTraitsT::kPixelFormat};
       AddTemplateClass(m, "ImageTraits", traits, py_param);
 
       // Shape for use with NumPy, OpenCV, etc. Using same shape as what is
       // present in `show_images.py`.
       auto get_shape = [](const ImageT* self) {
         return py::make_tuple(
-            self->height(), self->width(), ImageTraitsT::kNumChannels);
+            self->height(), self->width(), int{ImageTraitsT::kNumChannels});
       };
 
-      py::class_<ImageT> image(m, TemporaryClassName<ImageTraitsT>().c_str());
+      py::class_<ImageT> image(m, TemporaryClassName<ImageT>().c_str());
       image
           .def(py::init<int, int>())
           .def(py::init<int, int, T>())
@@ -127,12 +125,10 @@ PYBIND11_MODULE(sensors, m) {
               })
           .def("shape", get_shape)
           .def("array", [=](const ImageT* self) {
-                return ToArray(
-                  self->at(0, 0), self->size(), get_shape(self));
+                return ToArray(self->at(0, 0), self->size(), get_shape(self));
               }, py_iref)
           .def("mutable_array", [=](ImageT* self) {
-                return ToArray(
-                  self->at(0, 0), self->size(), get_shape(self));
+                return ToArray(self->at(0, 0), self->size(), get_shape(self));
               }, py_iref);
       // Constants.
       image.attr("Traits") = traits;
