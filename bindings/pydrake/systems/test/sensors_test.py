@@ -17,7 +17,7 @@ class TestSensors(unittest.TestCase):
         t = m.ImageTraits[pt.kRgba8U]
         self.assertEquals(t.kNumChannels, 4)
         self.assertEquals(t.ChannelType, np.uint8)
-        self.assertEquals(t.kPixelFormat, pf.Rgba)
+        self.assertEquals(t.kPixelFormat, pf.kRgba)
 
         t = m.ImageTraits[pt.kDepth32F]
         self.assertEquals(t.kNumChannels, 1)
@@ -27,7 +27,7 @@ class TestSensors(unittest.TestCase):
         t = m.ImageTraits[pt.kLabel16I]
         self.assertEquals(t.kNumChannels, 1)
         self.assertEquals(t.ChannelType, np.int16)
-        self.assertEquals(t.kPixelFormat, pf.kDepth)
+        self.assertEquals(t.kPixelFormat, pf.kLabel)
 
     def test_image_shape(self):
         for pixel_type in pixel_types:
@@ -68,3 +68,7 @@ class TestSensors(unittest.TestCase):
             self.assertTrue(image.at(0, 0), 3)
             self.assertTrue(np.allclose(image.array(), 3))
             self.assertTrue(np.allclose(arr, 3))
+
+
+if __name__ == '__main__':
+    unittest.main()

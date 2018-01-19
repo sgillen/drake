@@ -117,7 +117,7 @@ PYBIND11_MODULE(sensors, m) {
           .def("height", &ImageT::height)
           .def("size", &ImageT::size)
           .def("resize", &ImageT::resize)
-          .def("get", [](const ImageT* self, int x, int y) {
+          .def("at", [](const ImageT* self, int x, int y) {
                 return *self->at(x, y);
               })
           .def("set", [](ImageT* self, int x, int y, T value) {
