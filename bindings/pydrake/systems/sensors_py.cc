@@ -70,7 +70,7 @@ PYBIND11_MODULE(sensors, m) {
         PixelType::kLabel16I>;
     // Simple constexpr for-loop.
     int i = 0;
-    auto iter = [&](auto param) {
+    auto instantiation_visitor = [&](auto param) {
       constexpr PixelType Value = decltype(param)::template type<0>::value;
       py::tuple py_param = GetPyParam(param);
       using ImageTraitsT = ImageTraits<PixelType>;
@@ -90,7 +90,7 @@ PYBIND11_MODULE(sensors, m) {
       ++i;
 
       using ImageT = Image<Value>;
-      py::class_<ImageT> image(m, ("Image_" + names[i]))
+      py::class_<ImageT> image(m, TemporaryClassName<ImageTraitsT>().c_str())
           .def(py::init<int, int>())
           .def(py::init<int, int, T>())
           .def("width", &ImageT::width)
@@ -113,8 +113,10 @@ PYBIND11_MODULE(sensors, m) {
       image.attr("ImageTraits") = traits;
       // - Do not duplicate aliases (e.g. `kNumChannels`) for now.
       AddTemplateClass(m, "Image", image, py_param);
+      // Add type alias for instantiation.
+      m.attr("Image" + names[i].substr(1)) = image;
     };
-    type_visit(iter, ParamList{});
+    type_visit(instantiation_visitor, ParamList{});
   }
 
   // Constants.
