@@ -5,23 +5,30 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
-#include "drake/bindings/pydrake/util/cpp_template.h"
+#include "drake/bindings/pydrake/util/cpp_template_pybind.h"
 #include "drake/bindings/pydrake/util/type_pack.h"
+#include "drake/common/eigen_types.h"
 #include "drake/systems/sensors/image.h"
 #include "drake/systems/sensors/pixel_types.h"
 
 namespace py = pybind11;
 
+using std::string;
+using std::vector;
+
+namespace drake {
+
+namespace pydrake {
+
 template <typename T, T Value>
 using constant = std::integral_constant<T, Value>;
 
 template <typename T, T ... Values>
-using constant_pack = drake::type_pack<constant<T, Values>...>;
+using constant_pack = type_pack<type_pack<constant<T, Values>>...>;
 
-namespace drake {
-namespace pydrake {
 namespace {
 
+// TODO(eric.cousineau): Place in `pydrake_pybind.h`.
 template <typename T>
 py::object ToArray(T* ptr, int size, py::tuple shape) {
   // Create flat array.
@@ -55,7 +62,7 @@ PYBIND11_MODULE(sensors, m) {
   py::enum_<PixelFormat>(m, "PixelFormat")
     .value("kRgba", PixelFormat::kRgba)
     .value("kDepth", PixelFormat::kDepth)
-    .value("kLabel", PixelFormat::kLavel);
+    .value("kLabel", PixelFormat::kLabel);
 
   {
     // Expose image types and their traits.
@@ -75,15 +82,17 @@ PYBIND11_MODULE(sensors, m) {
     int i = 0;
     auto instantiation_visitor = [&](auto param) {
       // Add definition to enum.
-      constexpr PixelType Value = decltype(param)::template type<0>::value;
-      pixel_type.value(enum_names[i], Value);
+      using Param = decltype(param);
+      static_assert(Param::size == 1, "Should have scalar type_pack");
+      constexpr PixelType Value = Param::template type_at<0>::value;
+      pixel_type.value(enum_names[i].c_str(), Value);
 
       py::tuple py_param = GetPyParam(param);
-      using ImageTraitsT = ImageTraits<PixelType>;
+      using ImageT = Image<Value>;
+      using ImageTraitsT = ImageTraits<Value>;
       using T = typename ImageTraitsT::ChannelType;
 
       // Add traits.
-      // TODO(eric.cousineau): Use C++ template.
       py::class_<ImageTraitsT> traits(
           m, TemporaryClassName<ImageTraitsT>().c_str());
       traits.attr("ChannelType") = GetPyParam<T>()[0];
@@ -91,12 +100,12 @@ PYBIND11_MODULE(sensors, m) {
       traits.attr("kPixelFormat") = ImageTraitsT::kPixelFormat;
       AddTemplateClass(m, "ImageTraits", traits, py_param);
 
-      using ImageT = Image<Value>;
       auto get_shape = [](const ImageT* self) {
-        return py::tuple(
+        return py::make_tuple(
             self->height(), self->width(), ImageTraitsT::kNumChannels);
       };
-      py::class_<ImageT> image(m, TemporaryClassName<ImageTraitsT>().c_str())
+      py::class_<ImageT> image(m, TemporaryClassName<ImageTraitsT>().c_str());
+      image
           .def(py::init<int, int>())
           .def(py::init<int, int, T>())
           .def("width", &ImageT::width)
@@ -123,7 +132,7 @@ PYBIND11_MODULE(sensors, m) {
       // - Do not duplicate aliases (e.g. `kNumChannels`) for now.
       AddTemplateClass(m, "Image", image, py_param);
       // Add type alias for instantiation.
-      m.attr("Image" + enum_names[i].substr(1)) = image;
+      m.attr(("Image" + enum_names[i].substr(1)).c_str()) = image;
       // Ensure that iterate.
       ++i;
     };
@@ -135,7 +144,7 @@ PYBIND11_MODULE(sensors, m) {
   invalid_depth.attr("kTooFar") = InvalidDepth::kTooFar;
   invalid_depth.attr("kTooClose") = InvalidDepth::kTooClose;
 
-  py::class_<Lable> label(m, "Label");
+  py::class_<Label> label(m, "Label");
   label.attr("kTooFar") = Label::kNoBody;
   label.attr("kTooClose") = Label::kFlatTerrain;
 }
