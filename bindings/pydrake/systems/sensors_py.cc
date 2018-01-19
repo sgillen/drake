@@ -5,6 +5,7 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
+#include "drake/bindings/pydrake/util/cpp_template.h"
 #include "drake/bindings/pydrake/util/type_pack.h"
 #include "drake/systems/sensors/image.h"
 #include "drake/systems/sensors/rgbd_camera.h"
@@ -29,17 +30,18 @@ py::object GetImageArray() {
   // Reshape with NumPy.
   py::object array =
       py::cast(data).attr("reshape")(
-          self->width(), self->height(), self->size());
+          self->height(), self->width(), ImageT::kNumChannels);
   return array;
 }
 
-}  // namespace
+}  // namespace pydrake
+}  // namespace drake
 
 PYBIND11_MODULE(sensors, m) {
   // NOLINTNEXTLINE(build/namespaces): Emulate placement in namespace.
-  using namespace drake::pydrake;
-  // NOLINTNEXTLINE(build/namespaces): Emulate placement in namespace.
   using namespace drake;
+  // NOLINTNEXTLINE(build/namespaces): Emulate placement in namespace.
+  using namespace drake::pydrake;
   // NOLINTNEXTLINE(build/namespaces): Emulate placement in namespace.
   using namespace drake::systems::sensors;
 
@@ -62,25 +64,29 @@ PYBIND11_MODULE(sensors, m) {
         "kDepth32F",
         "kLabel16I",
     };
-    using Pack = constant_pack<PixelType,
+    using ParamList = constant_pack<PixelType,
         PixelType::kRgba8U,
         PixelType::kDepth32F,
         PixelType::kLabel16I>;
     // Simple constexpr for-loop.
     int i = 0;
-    auto iter = [&](auto tag) {
-      constexpr PixelType Value = tag::template type<0>::value;
-      using TraitsT = ImageTraits<PixelType;
-      using T = typename TraitsT::ChannelType;
-      // Add definition.
+    auto iter = [&](auto param) {
+      constexpr PixelType Value = decltype(param)::template type<0>::value;
+      py::tuple py_param = GetPyParam(param);
+      using ImageTraitsT = ImageTraits<PixelType>;
+      using T = typename ImageTraitsT::ChannelType;
+
+      // Add definition to enum.
       pixel_type.value(names[i], value);
 
       // Add traits.
       // TODO(eric.cousineau): Use C++ template.
-      py::class_<TraitsT> traits(m, ("ImageTraits_" + names[i]).c_str());
+      py::class_<ImageTraitsT> traits(
+          m, TemporaryClassName<ImageTraitsT>().c_str());
       traits.attr("ChannelType") = GetPyParam<T>()[0];
-      traits.attr("kNumChannels") = TraitsT::kNumChannels;
-      traits.attr("kPixelFormat") = TraitsT::kPixelFormat;
+      traits.attr("kNumChannels") = ImageTraitsT::kNumChannels;
+      traits.attr("kPixelFormat") = ImageTraitsT::kPixelFormat;
+      AddTemplateClass(m, "ImageTraits", traits, py_param);
       ++i;
 
       using ImageT = Image<Value>;
@@ -104,9 +110,11 @@ PYBIND11_MODULE(sensors, m) {
                 return GetImageArray<const ImageT, const T>(self);
               });
       // Constants.
-      image.attr("Traits") = traits;
+      image.attr("ImageTraits") = traits;
+      // - Do not duplicate aliases (e.g. `kNumChannels`) for now.
+      AddTemplateClass(m, "Image", image, py_param);
     };
-    type_visit(iter, Pack{});
+    type_visit(iter, ParamList{});
   }
 
   // Constants.
