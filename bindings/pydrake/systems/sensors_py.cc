@@ -31,13 +31,17 @@ namespace {
 // TODO(eric.cousineau): Place in `pydrake_pybind.h`.
 template <typename T>
 py::object ToArray(T* ptr, int size, py::tuple shape) {
-  // Create flat array.
+  // Create flat array, to be reshaped.
   Eigen::Map<VectorX<T>> data(ptr, size);
-  // Reshape with NumPy. Using same shape as what is present in
-  // `show_images.py`.
-  py::object array =
-      py::cast(data).attr("reshape")(shape);
-  return array;
+  return py::cast(data).attr("reshape")(shape);
+}
+
+// `const` variant.
+template <typename T>
+py::object ToArray(const T* ptr, int size, py::tuple shape) {
+  // Create flat array, to be reshaped.
+  Eigen::Map<const VectorX<const T>> data(ptr, size);
+  return py::cast(data).attr("reshape")(shape);
 }
 
 }  // namespace
@@ -100,10 +104,13 @@ PYBIND11_MODULE(sensors, m) {
       traits.attr("kPixelFormat") = ImageTraitsT::kPixelFormat;
       AddTemplateClass(m, "ImageTraits", traits, py_param);
 
+      // Shape for use with NumPy, OpenCV, etc. Using same shape as what is
+      // present in `show_images.py`.
       auto get_shape = [](const ImageT* self) {
         return py::make_tuple(
             self->height(), self->width(), ImageTraitsT::kNumChannels);
       };
+
       py::class_<ImageT> image(m, TemporaryClassName<ImageTraitsT>().c_str());
       image
           .def(py::init<int, int>())
