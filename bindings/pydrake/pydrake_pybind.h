@@ -8,63 +8,114 @@ namespace pydrake {
 /**
 @page python_bindings Python Bindings
 
+Drake uses [pybind11](http://pybind11.readthedocs.io/en/stable/) for binding
+its C++ API to Python.
+
+At present, a fork of `pybind11` is used which permits bindings matrices with
+`dtype=object`, passing `unique_ptr` objects, and prevents aliasing for Python
+classes derived from `pybind11` classes.
+
 # Conventions
 
 ## Target Conventions
 
 Target names should be of the following form:
 
-*   `*_py`
+- `*_py`: A Python library (can be pure Python or pybind)
+  - File Names: `*.py`, `*_py.cc`
 
-    A Python library (can be pure Python or pybind)
-    File Names: `*.py`, `*_py.cc`
-
-* `*_pybind`
-
-    A C++ library for adding pybind-specific utilities to be consumed by C++.
-    File Names: `*_pybind.{h,cc}`
+- `*_pybind`: A C++ library for adding pybind-specific utilities to be consumed
+  by C++.
+  - File Names: `*_pybind.{h,cc}`
 
 File names should follow form with their respective target.
 
-For Bazel: Given that `libdrake.so` relies on static linking for components,
+### Bazel
+
+Given that `libdrake.so` relies on static linking for components,
 any common headers should be robust against ODR violations. This can
 be normally be achieved by using header-only libraries.
+
+For upstream dependencies of these libraries, do NOT depend on the direct
+targets (e.g. `//common:essential`), because this will introduce runtime ODR
+violations for objects that have static storage (UID counters, etc.).
+
+Instead, you must temporarily violate IWYU because it will be satisfied by
+`drake_pybind_library`, which will incorporate `libdrake.so` and the transitive
+headers.
+
 If singletons are required (e.g. for `util/cpp_param_pybind`), consider storing
 the singleton values using Python.
 
+If you are developing bindings for a small portion of Drake and would like to
+avoid rebuilding a large number of components when testing, consider editing
+`//tools/install/libdrake:build_components.bzl` to reduce the number of
+components being built.
+
 ## pybind Module Definitions
 
-* Any Drake pybind module should include this header file, `pydrake_pybind.h`.
-
-* `PYBIND_MODULE` should be used to define modules.
-
-* Modules should be defined within the namespace `drake::pydrake`.
-
-* The alias `namespace py = pybind11` is defined as `drake::pydrake::py`. Drake
+- Any Drake pybind module should include this header file, `pydrake_pybind.h`.
+- `PYBIND_MODULE` should be used to define modules.
+- Modules should be defined within the namespace `drake::pydrake`.
+- The alias `namespace py = pybind11` is defined as `drake::pydrake::py`. Drake
 modules should not re-define this alias at global scope.
-
-* If a certain namespace is being bound (e.g. `drake::systems::sensors`), you
+- If a certain namespace is being bound (e.g. `drake::systems::sensors`), you
 may use `using namespace drake::systems::sensors` within functions or
 anonymous namespaces. Avoid `using namespace` directives otherwise.
 
-# Keep Alive Behavior
+## Keep Alive Behavior
 
 `py::keep_alive` is used heavily throughout this code. For more
-information, please see:
-http://pybind11.readthedocs.io/en/stable/advanced/functions.html#keep-alive
+information, please see [the pybind11 documentation](
+http://pybind11.readthedocs.io/en/stable/advanced/functions.html#keep-alive).
 
 Terse notes are added to method bindings to indicate the patient
 (object being kept alive by nurse) and the nurse (object keeping patient
 alive). To expand on them:
-* "Keep alive, ownership" implies that one argument is owned directly by
+- "Keep alive, ownership" implies that one argument is owned directly by
 one of the other arguments (`self` is included in those arguments, for
 `py::init<>` and class methods).
-* "Keep alive, reference" implies a reference that is lifetime-sensitive
+- "Keep alive, reference" implies a reference that is lifetime-sensitive
 (something that is not necessarily owned by the other arguments).
-* "Keep alive, transitive" implies a transfer of ownership of owned
-objects from one container to another. (e.g. transfering all `System`s
+- "Keep alive, transitive" implies a transfer of ownership of owned
+objects from one container to another (e.g. transfering all `System`s
 from `DiagramBuilder` to `Diagram` when calling
-`DiagramBuilder.Build()`.)
+`DiagramBuilder.Build()`).
+
+# Interactive Debugging with Bazel
+
+If you would like to interactively debug binding code (using IPython for
+general Python behavior, or GDB for C++ behavior), debug C++ behavior from a Python binary, while using Bazel, you may expose Bazel's development
+environment variables by adding these lines to your Python script:
+
+    import subprocess
+    subprocess.Popen(
+        "export -p | sed 's# PWD=# OLD_PWD=#g' | tee /tmp/env.sh",
+        shell=True)
+
+Run your target once from Bazel, and then source the generated `/tmp/env.sh` in
+your terminal to gain access to the environment variables (e.g. `$PYTHONPATH`).
+
+## Example with GDB
+
+This is a brief recipe for debugging with GDB
+(note the usage of subshell `(...)` to keep the variables scoped):
+
+    (
+        target=//bindings/pydrake/systems:lifetime_test
+        target_bin=$(echo ${target} | sed -e 's#//##' -e 's#:#/#')
+        bazel run -c dbg ${target}
+        workspace=$(bazel info workspace)
+        name=$(basename ${workspace})
+        cd ${workspace}/bazel-${name}
+        source /tmp/env.sh
+        gdb --args python ${workspace}/bazel-bin/${target_bin}
+    )
+
+This allows you to use GDB from the terminal, while being able to inspect the
+sources in Bazel's symlink forests.
+
+If using CLion, consider using `gdbserver`.
 
 */
 
