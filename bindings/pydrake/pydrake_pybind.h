@@ -6,21 +6,21 @@ namespace drake {
 namespace pydrake {
 
 /**
-@page Python Bindings
+@page python_bindings Python Bindings
 
-@tableofcontents
+# Conventions
 
-
-@section Conventions
-
-@subsection Target Conventions
+## Target Conventions
 
 Target names should be of the following form:
 
-* `*_py`
+*   `*_py`
+
     A Python library (can be pure Python or pybind)
     File Names: `*.py`, `*_py.cc`
+
 * `*_pybind`
+
     A C++ library for adding pybind-specific utilities to be consumed by C++.
     File Names: `*_pybind.{h,cc}`
 
@@ -32,18 +32,22 @@ be normally be achieved by using header-only libraries.
 If singletons are required (e.g. for `util/cpp_param_pybind`), consider storing
 the singleton values using Python.
 
-@subsection pybind Module Definitions
+## pybind Module Definitions
 
 * Any Drake pybind module should include this header file, `pydrake_pybind.h`.
+
 * `PYBIND_MODULE` should be used to define modules.
+
 * Modules should be defined within the namespace `drake::pydrake`.
+
 * The alias `namespace py = pybind11` is defined as `drake::pydrake::py`. Drake
 modules should not re-define this alias at global scope.
+
 * If a certain namespace is being bound (e.g. `drake::systems::sensors`), you
 may use `using namespace drake::systems::sensors` within functions or
 anonymous namespaces. Avoid `using namespace` directives otherwise.
 
-@section Keep Alive Behavior
+# Keep Alive Behavior
 
 `py::keep_alive` is used heavily throughout this code. For more
 information, please see:
