@@ -28,16 +28,6 @@ package(default_visibility = adjust_labels_for_drake_hoist([
     "//drake/bindings/pydrake:__subpackages__",
 ]))
 
-# N.B. Any common headers should be shared via a HEADER ONLY library.
-
-# Target Naming Conventions:
-# `*_py`
-#   A Python library (can be pure Python or pybind)
-#   Files: `*.py`, `*_py.cc`
-# `*_pybind`
-#   A C++ library for adding pybind-specific utilities to be consumed by C++.
-#   Files: `*_pybind.{h,cc}`
-
 # This determines how `PYTHONPATH` is configured, and how to install the
 # bindings.
 PACKAGE_INFO = get_pybind_package_info(
