@@ -9,7 +9,6 @@
 #include "drake/systems/primitives/signal_logger.h"
 #include "drake/systems/primitives/zero_order_hold.h"
 
-
 namespace drake {
 namespace pydrake {
 

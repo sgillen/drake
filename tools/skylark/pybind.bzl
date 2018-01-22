@@ -220,6 +220,7 @@ def drake_pybind_cc_googletest(
         name = cc_name,
         srcs = cc_srcs,
         deps = cc_deps + [
+            "//bindings/pydrake:pydrake_pybind",
             "//tools/install/libdrake:drake_shared_library",
             "@pybind11",
         ],

@@ -1,6 +1,6 @@
 #include <pybind11/pybind11.h>
 
-#include "bindings/pydrake/pydrake_pybind.h"
+#include "drake/bindings/pydrake/pydrake_pybind.h"
 #include "drake/systems/analysis/simulator.h"
 
 using std::unique_ptr;
