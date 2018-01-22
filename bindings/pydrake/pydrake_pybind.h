@@ -2,6 +2,10 @@
 
 #include <pybind11/pybind11.h>
 
+// N.B. Avoid including other heads, such as `pybind11/eigen.sh` or
+// `pybind11/functional.sh`, such that modules can opt-in to (and pay the cost
+// for) these binding capabilities.
+
 namespace drake {
 namespace pydrake {
 

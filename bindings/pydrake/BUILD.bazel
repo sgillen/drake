@@ -34,6 +34,13 @@ PACKAGE_INFO = get_pybind_package_info(
     base_package = adjust_label_for_drake_hoist("//drake/bindings"),
 )
 
+drake_cc_library(
+    name = "pydrake_pybind",
+    hdrs = ["pydrake_pybind.h"],
+    # NOTE: We must violate IWYU and not list "autodiff" in "deps" here because
+    # we do not want these dependencies leaking in at install time.
+)
+
 drake_pybind_library(
     name = "common_py",
     cc_srcs = ["common_py.cc"],
@@ -47,12 +54,9 @@ drake_pybind_library(
     ],
 )
 
-# TODO(eric.cousineau): Ensure that this is not installed.
 drake_cc_library(
     name = "autodiff_types_pybind",
     hdrs = ["autodiff_types_pybind.h"],
-    # NOTE: We must violate IWYU and not list "autodiff" in "deps" here because
-    # we do not want these dependencies leaking in at install time.
 )
 
 drake_pybind_library(
