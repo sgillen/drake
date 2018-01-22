@@ -3,8 +3,6 @@
 #include "bindings/pydrake/pydrake_pybind.h"
 #include "drake/systems/analysis/simulator.h"
 
-namespace py = pybind11;
-
 using std::unique_ptr;
 
 namespace drake {
@@ -12,7 +10,7 @@ namespace pydrake {
 
 PYBIND11_MODULE(analysis, m) {
   // NOLINTNEXTLINE(build/namespaces): Emulate placement in namespace.
-  using namespace systems;
+  using namespace drake::systems;
 
   m.doc() = "Bindings for the analysis portion of the Systems framework.";
 

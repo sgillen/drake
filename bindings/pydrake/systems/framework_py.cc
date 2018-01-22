@@ -17,8 +17,6 @@
 #include "drake/systems/framework/supervector.h"
 #include "drake/systems/framework/system.h"
 
-namespace py = pybind11;
-
 using std::make_unique;
 using std::unique_ptr;
 using std::vector;
@@ -27,8 +25,6 @@ namespace drake {
 namespace pydrake {
 
 PYBIND11_MODULE(framework, m) {
-  // NOLINTNEXTLINE(build/namespaces): Emulate placement in namespace.
-  using namespace drake;
   // NOLINTNEXTLINE(build/namespaces): Emulate placement in namespace.
   using namespace drake::systems;
 
