@@ -123,6 +123,7 @@ PYBIND11_MODULE(framework, m) {
     using Base::Base;
     // Expose protected methods for binding.
     using Base::DeclareVectorOutputPort;
+    using Base::DeclarePeriodicPublish;
   };
 
   // Don't use a const-rvalue as a function handle parameter, as pybind11 wants
@@ -143,8 +144,13 @@ PYBIND11_MODULE(framework, m) {
                 return arg2(&nest_arg1, nest_arg2);
               };
           return self->DeclareVectorOutputPort(arg1, wrapped);
+        }, py_iref)
+    .def(
+        "_DeclarePeriodicPublish",
+        [](PyLeafSystem* self, double period, double offset) {
+          return self->DeclarePeriodicPublish(period, offset);
         }, py_iref);
-
+       
   py::class_<Context<T>>(m, "Context")
     .def("get_num_input_ports", &Context<T>::get_num_input_ports)
     .def("FixInputPort",
