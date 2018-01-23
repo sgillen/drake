@@ -67,6 +67,18 @@ struct wrap_example<const T&> : public wrap_example<const T*> {
   }
 };
 
+template <typename T>
+struct wrap_example_mutable_ptr {
+  static ptr<T> wrap(T* arg) { return {arg}; }
+  static T* unwrap(ptr<T> arg_wrapped) { return arg_wrapped.value; }
+};
+
+// Wraps any mutable `T*` with `ptr`.
+// N.B. Prevent `const int*` from binding here, since it will be rejected above.
+template <typename T>
+struct wrap_example<T*> //, std::enable_if<!std::is_const<T>::value>>
+    : public wrap_example_mutable_ptr<T> {};
+
 // Wraps any mutable `T&` with `ptr`.
 template <typename T>
 struct wrap_example<T&> {
@@ -74,15 +86,14 @@ struct wrap_example<T&> {
   static T& unwrap(ptr<T> arg_wrapped) { return *arg_wrapped.value; }
 };
 
-// N.B. We are NOT wrapping `T*`!
-
 }  // namespace detail
 
 // Test case to exercise `WrapFunction`.
 // Mappings:
-//   `T*`         -> `T*` (no mapping)
+//   `T*`         -> `ptr<T>` (always)
 //   `T&`         -> `ptr<T>` (always).
 //   `const T*`   -> `const_ptr<T>`, if `T` is not `int`.
+//   `const int*` -> `const int*`
 //   `const T&`   -> `const_ptr<T>`, if `T` is not `int`.
 //   `const int&` -> `const int*`
 template <typename Func>
@@ -105,13 +116,16 @@ struct MoveOnlyValue {
 void Func_1(int value) {}
 
 // Function with a pointer return type, 
-// Wrapped signature: `int* (ptr<int>)`
+// Wrapped signature: `ptr<int> (ptr<int>)`
 int* Func_2(int& value) {
   value += 1;
   return &value;
 }
 
+// Specialized types.
+// Wrapped signature: `const int* (const int*)`
 // const int& Func_3(const int& value) { return value; }
+
 // void Func_4(MoveOnlyValue value) {}
 // void Func_5(const int* value) {}
 
@@ -158,13 +172,18 @@ GTEST_TEST(WrapFunction, ExampleFunctors) {
 
   {
     auto out = WrapExample(Func_2)(ptr<int>{&v.value});
-    EXPECT_EQ(*out, 1);
+    EXPECT_EQ(*out.value, 1);
     EXPECT_EQ(v.value, 1);
   }
 
-  {
-  }
-  // CHECK(cout << *WrapExample(Func_3)(&v.value));
+  // {
+  //   auto out = WrapExample(Func_3)(&v.value);
+  //   // Mutate to ensure we have a pointer.
+  //   v.value += 1;
+  //   EXPECT_EQ(*out, 2);
+  //   EXPECT_EQ(v.value, 2);
+  // }
+  
   // CHECK(WrapExample(Func_4)(MoveOnlyValue{}));
   // CHECK(WrapExample(Func_5)(&v.value));
 
