@@ -28,6 +28,7 @@ class CustomAdder(LeafSystem):
         for i in xrange(num_inputs):
             self._DeclareInputPort(PortDataType.kVectorValued, size)
         self._DeclareVectorOutputPort(BasicVector(size), self._calc_sum)
+        self._DeclarePublishPeriod(0.1)
 
     def _calc_sum(self, context, sum_data):
         # @note This will NOT work if the scalar type is AutoDiff or symbolic,
@@ -37,6 +38,9 @@ class CustomAdder(LeafSystem):
         for i in xrange(context.get_num_input_ports()):
             input_vector = self.EvalVectorInput(context, i)
             sum += input_vector.get_value()
+
+    def DoPublish(self, context, events):
+        print("Publish")
 
 
 class TestCustom(unittest.TestCase):

@@ -124,6 +124,13 @@ PYBIND11_MODULE(framework, m) {
     // Expose protected methods for binding.
     using Base::DeclareVectorOutputPort;
     using Base::DeclarePeriodicPublish;
+
+    // Trampoline virtual methods.
+    void DoPublish(
+        const Context<T>& context,
+        const std::vector<const PublishEvent<T>*>& events) const override {
+      PYBIND11_OVERLOAD(void, LeafSystem<T>, DoPublish, context, events);
+    }
   };
 
   // Don't use a const-rvalue as a function handle parameter, as pybind11 wants
@@ -145,12 +152,9 @@ PYBIND11_MODULE(framework, m) {
               };
           return self->DeclareVectorOutputPort(arg1, wrapped);
         }, py_iref)
-    .def(
-        "_DeclarePeriodicPublish",
-        [](PyLeafSystem* self, double period, double offset) {
-          return self->DeclarePeriodicPublish(period, offset);
-        }, py_iref);
-       
+    .def("_DeclarePeriodicPublish", &PyLeaftSystem::DeclarePeriodicPublish,
+         py::arg("period"), py::arg("offset") = 0., py_iref);
+
   py::class_<Context<T>>(m, "Context")
     .def("get_num_input_ports", &Context<T>::get_num_input_ports)
     .def("FixInputPort",
@@ -176,6 +180,10 @@ PYBIND11_MODULE(framework, m) {
         }, py_ref,
         // Keep alive, ownership: `return` keeps `Context` alive.
         py::keep_alive<0, 3>());
+
+  // Event mechanisms.
+  py::class_<Event<T>>(m, "Event");
+  py::class_<PublishEvent<T>, Event<T>>(m, "PublishEvent");
 
   // Glue mechanisms.
   py::class_<DiagramBuilder<T>>(m, "DiagramBuilder")
