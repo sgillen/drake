@@ -8,7 +8,9 @@
 using namespace std;
 
 namespace drake {
-namespace {
+
+// N.B. Anonymous namespace not used as it makes failure messages
+// (static_assert) harder to interpret.
 
 // Constructible only via brackets (no implicit conversions).
 template <typename T>
@@ -26,7 +28,6 @@ struct ptr {
   T* value{};
 };
 
-namespace detail {
 
 // Base case: Pass though.
 template <typename T, typename = void>
@@ -74,9 +75,10 @@ struct wrap_example_mutable_ptr {
 };
 
 // Wraps any mutable `T*` with `ptr`.
-// N.B. Prevent `const int*` from binding here, since it will be rejected above.
+// N.B. Prevent `const T*` from binding here, since it may be rejected from
+// SFINAE.
 template <typename T>
-struct wrap_example<T*, std::enable_if<!std::is_const<T>::value>>
+struct wrap_example<T*, std::enable_if_t<!std::is_const<T>::value>>
     : public wrap_example_mutable_ptr<T> {};
 
 // Wraps any mutable `T&` with `ptr`.
@@ -85,8 +87,6 @@ struct wrap_example<T&> {
   static ptr<T> wrap(T& arg) { return {&arg}; }
   static T& unwrap(ptr<T> arg_wrapped) { return *arg_wrapped.value; }
 };
-
-}  // namespace detail
 
 // Test case to exercise `WrapFunction`.
 // Mappings:
@@ -98,30 +98,39 @@ struct wrap_example<T&> {
 //   `const int&` -> `const int*`
 template <typename Func>
 auto WrapExample(Func&& func) {
-  return WrapFunction<detail::wrap_example>(std::forward<Func>(func));
+  return WrapFunction<wrap_example>(std::forward<Func>(func));
 }
 
 template <typename T>
 using wrap_arg_t =
-    drake::detail::wrap_function_impl<detail::wrap_example>::wrap_arg_t<T>;
+    detail::wrap_function_impl<wrap_example>::wrap_arg_t<T>;
 
-template <typename T, typename U>
-void check() {
+template <typename Expected, typename Actual>
+void check_type() {
   // Use this function to inspect types when failure is encountered.
-  static_assert(std::is_same<T, U>::value, "Mismatch");
+  static_assert(std::is_same<Actual, Expected>::value, "Mismatch");
 }
 
-GTEST_TEST(WrapFunction, TypeCheck) {
+GTEST_TEST(WrapFunction, WrapCheck) {
+  // Codify rules above.
+
+  // Use arbitrary T that is not constrained by the rules.
   using T = double;
 
-  check<wrap_arg_t<T*>, ptr<T>>();
-  check<wrap_arg_t<int*>, ptr<int>>();
+  check_type<ptr<T>, wrap_arg_t<T*>>();
+  check_type<ptr<int>, wrap_arg_t<int*>>();
 
-  check<wrap_arg_t<T&>, ptr<T>>();
-  check<wrap_arg_t<int&>, ptr<int>>();
+  check_type<ptr<T>, wrap_arg_t<T&>>();
+  check_type<ptr<int>, wrap_arg_t<int&>>();
 
-  check<wrap_arg_t<const T*>, const_ptr<T>>();
+  check_type<const_ptr<T>, wrap_arg_t<const T*>>();
+  check_type<const int*, wrap_arg_t<const int*>>();
+
+  check_type<const_ptr<T>, wrap_arg_t<const T&>>();
+  check_type<const int*, wrap_arg_t<const int&>>();
 }
+
+
 
 // Test arguments that are move-only.
 struct MoveOnlyValue {
@@ -247,5 +256,4 @@ GTEST_TEST(WrapFunction, ExampleFunctors) {
   // CHECK(cout << *WrapExample(get_ref_nested)(&v.value, WrapExample(Func_7)));
 }
 
-}  // namespace
 }  // namespace drake
