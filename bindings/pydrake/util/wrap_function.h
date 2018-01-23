@@ -123,6 +123,8 @@ struct wrap_function_impl {
   template <typename Func, typename Return, typename ... Args>
   static auto run(function_info<Func, Return, Args...>&& info,
       std::enable_if_t<enable_wrap_output<Return>, void*> = {}) {
+    // N.B. Since we do not use the `mutable` keyword with this lambda,
+    // any functors passed in *must* have provide `operator()(...) const`.
     auto func_wrapped =
         [func_f = std::forward<Func>(info.func)]
         (wrap_arg_t<Args>... args_wrapped) {
@@ -227,6 +229,8 @@ struct wrap_arg_default {
 ///   issues downstream of this method.
 template <template <typename...> class wrap_arg_tpl, typename Func>
 auto WrapFunction(Func&& func) {
+  // TODO(eric.cousineau): Create an overload with `type_pack<Args...>` to
+  // handle overloads, to disambiguate when necessary.
   return detail::wrap_function_impl<wrap_arg_tpl>::run(
       detail::infer_function_info(std::forward<Func>(func)));
 }

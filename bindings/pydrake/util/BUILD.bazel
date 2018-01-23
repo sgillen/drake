@@ -127,6 +127,13 @@ drake_cc_googletest(
     ],
 )
 
+drake_cc_googletest(
+    name = "wrap_function_test",
+    deps = [
+        ":wrap_function",
+    ],
+)
+
 drake_py_library(
     name = "module_shim_example",
     testonly = 1,
