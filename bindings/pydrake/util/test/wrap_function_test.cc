@@ -130,9 +130,93 @@ GTEST_TEST(WrapFunction, WrapCheck) {
   check_type<const int*, wrap_arg_t<const int&>>();
 }
 
+#define WTEST(name) GTEST_TEST(WrapFunction, name)
 
+// Function with `void` return type, `int` by value.
+void Func_1(int value) {}
 
-// Test arguments that are move-only.
+WTEST(Func_1) {
+  int value = 0;
+  // Wrapped signature: Unchanged.
+  WrapExample(Func_1)(value);
+  EXPECT_EQ(value, 0);
+}
+
+// Lambdas / basic functors.
+WTEST(Func_1_Lambda) {
+  int value = 0;
+  auto func_1_lambda = [](int value) {};
+  WrapExample(func_1_lambda)(value);
+  EXPECT_EQ(value, 0);
+
+  std::function<void (int)> func_1_func = func_1_lambda;
+  WrapExample(func_1_func)(value);
+  EXPECT_EQ(value, 0);
+}
+
+// Class methods.
+class MyClass {
+ public:
+  static void Static(int value) {}
+  void MethodMutable(int value) {}
+  void MethodConst(int value) const {}
+};
+
+WTEST(Methods) {
+  int value = 0;
+
+  MyClass c;
+  const MyClass& c_const{c};
+
+  // Wrapped signature: Unchanged.
+  WrapExample(&MyClass::Static)(value);
+  // Wrapped signature: void (ptr<MyClass>, int)
+  auto method_mutable = WrapExample(&MyClass::MethodMutable);
+  method_mutable(ptr<MyClass>{&c}, value);
+  method_mutable(const_ptr<MyClass>{&c_const}, value);
+  // - `MethodMutable` should fail with `c_const`.
+  // Wrapped signature: void (const_ptr<MyClass>, int)
+  WrapExample(&MyClass::MethodConst)(const_ptr<MyClass>{&c}, value);
+}
+
+// Function with a pointer return type, 
+int* Func_2(int& value) {
+  value += 1;
+  return &value;
+}
+
+WTEST(Func_2) {
+  int value = 0;
+  // Wrapped signature: `ptr<int> (ptr<int>)`
+  auto out = WrapExample(Func_2)(ptr<int>{&value});
+  EXPECT_EQ(*out.value, 1);
+  EXPECT_EQ(value, 1);
+}
+
+// Unspecialized types.
+const double& Func_3a(const double& value) { return value; }
+// Specialized types.
+const int& Func_3b(const int& value) { return value; }
+
+WTEST(Func_3) {
+  {
+    double value = 0.;
+    // Wrapped signature: `const_ptr<double> (const_ptr<double>)`
+    auto out = WrapExample(Func_3a)(const_ptr<double>{&value});
+    value = 1.;
+    EXPECT_EQ(*out.value, 1.);
+  }
+
+  {
+    int value = 0;
+    // Wrapped signature: `const int* (const int*)`
+    auto out = WrapExample(Func_3b)(&value);
+    value = 1;
+    EXPECT_EQ(*out, 1);
+  }
+}
+
+// Move-only.
 struct MoveOnlyValue {
   MoveOnlyValue() = default;
   MoveOnlyValue(const MoveOnlyValue&) = delete;
@@ -142,37 +226,12 @@ struct MoveOnlyValue {
   int value{};
 };
 
-#define WTEST(name) GTEST_TEST(WrapFunction, name)
+void Func_4(MoveOnlyValue value) {}
 
-// Function with `void` return type, `int` by value.
-// Wrapped signature: Unchanged.
-void Func_1(int value) {}
-
-WTEST(Func_1) {
-  int value = 0;
-  WrapExample(Func_1)(value);
-  EXPECT_EQ(value, 0);
+WTEST(Func_4) {
+  WrapExample(Func_4)(MoveOnlyValue{});
 }
 
-// Function with a pointer return type, 
-// Wrapped signature: `ptr<int> (ptr<int>)`
-int* Func_2(int& value) {
-  value += 1;
-  return &value;
-}
-
-WTEST(Func_2) {
-  int value = 0;
-  auto out = WrapExample(Func_2)(ptr<int>{&value});
-  EXPECT_EQ(*out.value, 1);
-  EXPECT_EQ(value, 1);
-}
-
-// Specialized types.
-// Wrapped signature: `const int* (const int*)`
-// const int& Func_3(const int& value) { return value; }
-
-// void Func_4(MoveOnlyValue value) {}
 // void Func_5(const int* value) {}
 
 // void Func_6(int& value, std::function<void (int&)> callback) {
@@ -183,12 +242,12 @@ WTEST(Func_2) {
 //   return callback(value);
 // }
 
-class MyClass {
- public:
-  static void Func(MoveOnlyValue&& value) {}
-  void Method(MoveOnlyValue& value) { value.value += 2; }
-  void Method_2(MoveOnlyValue& value) const { value.value += 3; }
-};
+// class MyClass {
+//  public:
+//   static void Func(MoveOnlyValue&& value) {}
+//   void Method(MoveOnlyValue& value) { value.value += 2; }
+//   void Method_2(MoveOnlyValue& value) const { value.value += 3; }
+// };
 
 // Provides a functor which can be default constructed and moved only.
 struct MoveOnlyFunctor {
