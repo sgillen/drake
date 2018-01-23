@@ -101,6 +101,17 @@ auto WrapExample(Func&& func) {
   return WrapFunction<detail::wrap_example>(std::forward<Func>(func));
 }
 
+template <typename T>
+using wrap_arg_t =
+    drake::detail::wrap_function_impl<detail::wrap_example>::wrap_arg_t<T>;
+
+GTEST_TEST(WrapFunction, TypeCheck) {
+  using T = double;
+
+  static_assert(std::is_same<wrap_arg_t<T*>, ptr<T>>::value, "");
+  static_assert(std::is_same<wrap_arg_t<T&>, ptr<T>>::value, "");
+}
+
 // Test arguments that are move-only.
 struct MoveOnlyValue {
   MoveOnlyValue() = default;
@@ -117,10 +128,10 @@ void Func_1(int value) {}
 
 // Function with a pointer return type, 
 // Wrapped signature: `ptr<int> (ptr<int>)`
-int* Func_2(int& value) {
-  value += 1;
-  return &value;
-}
+// int* Func_2(int& value) {
+//   value += 1;
+//   return &value;
+// }
 
 // Specialized types.
 // Wrapped signature: `const int* (const int*)`
@@ -170,11 +181,11 @@ GTEST_TEST(WrapFunction, ExampleFunctors) {
     EXPECT_EQ(v.value, 0);
   }
 
-  {
-    auto out = WrapExample(Func_2)(ptr<int>{&v.value});
-    EXPECT_EQ(*out.value, 1);
-    EXPECT_EQ(v.value, 1);
-  }
+  // {
+  //   auto out = WrapExample(Func_2)(ptr<int>{&v.value});
+  //   EXPECT_EQ(*out.value, 1);
+  //   EXPECT_EQ(v.value, 1);
+  // }
 
   // {
   //   auto out = WrapExample(Func_3)(&v.value);
