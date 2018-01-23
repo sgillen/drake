@@ -142,16 +142,31 @@ struct MoveOnlyValue {
   int value{};
 };
 
+#define WTEST(name) GTEST_TEST(WrapFunction, name)
+
 // Function with `void` return type, `int` by value.
 // Wrapped signature: Unchanged.
 void Func_1(int value) {}
 
+WTEST(Func_1) {
+  int value = 0;
+  WrapExample(Func_1)(value);
+  EXPECT_EQ(value, 0);
+}
+
 // Function with a pointer return type, 
 // Wrapped signature: `ptr<int> (ptr<int>)`
-// int* Func_2(int& value) {
-//   value += 1;
-//   return &value;
-// }
+int* Func_2(int& value) {
+  value += 1;
+  return &value;
+}
+
+WTEST(Func_2) {
+  int value = 0;
+  auto out = WrapExample(Func_2)(ptr<int>{&value});
+  EXPECT_EQ(*out.value, 1);
+  EXPECT_EQ(value, 1);
+}
 
 // Specialized types.
 // Wrapped signature: `const int* (const int*)`
@@ -194,18 +209,7 @@ struct ConstFunctor {
 };
 
 GTEST_TEST(WrapFunction, ExampleFunctors) {
-  MoveOnlyValue v{0};
-
-  {
-    WrapExample(Func_1)(v.value);
-    EXPECT_EQ(v.value, 0);
-  }
-
-  // {
-  //   auto out = WrapExample(Func_2)(ptr<int>{&v.value});
-  //   EXPECT_EQ(*out.value, 1);
-  //   EXPECT_EQ(v.value, 1);
-  // }
+  // MoveOnlyValue v{0};
 
   // {
   //   auto out = WrapExample(Func_3)(&v.value);
