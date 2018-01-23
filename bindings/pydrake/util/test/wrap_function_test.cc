@@ -95,14 +95,46 @@ WTEST(ArgMoveOnly) {
   WrapIdentity(ArgMoveOnly)(MoveOnlyValue{1});
   MoveOnlyValue v{10};
   
-  auto& out_const = WrapIdentity(ArgMoveOnlyConst)(v);
+  const int& out_const = WrapIdentity(ArgMoveOnlyConst)(v);
   v.value += 10;
   EXPECT_EQ(out_const, 20);
 
-  auto& out_mutable = WrapIdentity(ArgMoveOnlyMutable)(v);
+  int& out_mutable = WrapIdentity(ArgMoveOnlyMutable)(v);
   EXPECT_EQ(out_mutable, 21);
   out_mutable += 1;
   EXPECT_EQ(v.value, 22);
+}
+
+// Provides a functor which can be default constructed and moved only.
+struct MoveOnlyFunctor {
+  MoveOnlyFunctor(const MoveOnlyFunctor&) = delete;
+  MoveOnlyFunctor& operator=(const MoveOnlyFunctor&) = delete;
+  MoveOnlyFunctor(MoveOnlyFunctor&&) = default;
+  MoveOnlyFunctor& operator=(MoveOnlyFunctor&&) = default;
+  // N.B. Per documentation, cannot overload operator(), as it's ambiguous when
+  // attempting to infer arguments.
+  void operator()(int& value) const {
+    value += 1;
+  }
+};
+
+WTEST(MoveOnlyFunctor) {
+  int value = 0;
+  auto wrapped = WrapIdentity(MoveOnlyFunctor{});
+  wrapped(value);
+  EXPECT_EQ(value, 1);
+}
+
+struct ConstFunctor {
+  void operator()(int& value) const { value += 1; }
+};
+
+WTEST(ConstFunctor) {
+  int value = 0;
+  const ConstFunctor functor{};
+  auto wrapped = WrapIdentity(functor);
+  wrapped(value);
+  EXPECT_EQ(value, 1);
 }
 
 
@@ -127,24 +159,22 @@ struct ptr {
 
 // Base case: Pass though.
 template <typename T, typename = void>
-struct wrap_change : public wrap_arg_default<T> {
-  // For `wrap_change<const T&>`.
-  using Wrapped = T;
-};
+struct wrap_change : public wrap_arg_default<T> {};
+
+template <typename T>
+using wrap_change_t =
+    detail::wrap_function_impl<wrap_change>::wrap_arg_t<T>;
 
 // Wraps any `const T*` with `const_ptr`, except for `int`.
 // SFINAE. Could be achieved with specialization, but using to uphold SFINAE
 // contract provided by `WrapFunction`.
 template <typename T>
 struct wrap_change<const T*, std::enable_if_t<!std::is_same<T, int>::value>> {
-  // For `wrap_change<const T&>`.
-  using Wrapped = const_ptr<T>;
-
-  static Wrapped wrap(const T* arg) {
+  static const_ptr<T> wrap(const T* arg) {
     return {arg};
   }
 
-  static const T* unwrap(Wrapped arg_wrapped) {
+  static const T* unwrap(const_ptr<T> arg_wrapped) {
     return arg_wrapped.value;
   }
 };
@@ -154,13 +184,13 @@ struct wrap_change<const T*, std::enable_if_t<!std::is_same<T, int>::value>> {
 // SFINAE prevents matching.
 template <typename T>
 struct wrap_change<const T&> : public wrap_change<const T*> {
-  using base = wrap_change<const T*>;
-  using Wrapped = typename base::Wrapped;
+  using Base = wrap_change<const T*>;
+  using Wrapped = wrap_change_t<const T*>;
 
-  static Wrapped wrap(const T& arg) { return base::wrap(&arg); }
+  static Wrapped wrap(const T& arg) { return Base::wrap(&arg); }
 
   static const T& unwrap(Wrapped arg_wrapped) {
-    return *base::unwrap(arg_wrapped);
+    return *Base::unwrap(arg_wrapped);
   }
 };
 
@@ -193,10 +223,6 @@ auto WrapChange(Func&& func) {
   return WrapFunction<wrap_change>(std::forward<Func>(func));
 }
 
-template <typename T>
-using wrap_arg_t =
-    detail::wrap_function_impl<wrap_change>::wrap_arg_t<T>;
-
 template <typename Expected, typename Actual>
 void check_type() {
   // Use this function to inspect types when failure is encountered.
@@ -205,146 +231,69 @@ void check_type() {
 
 GTEST_TEST(WrapFunction, ChangeTypeCheck) {
   // Codify rules above.
-
   // Use arbitrary T that is not constrained by the rules.
   using T = double;
 
-  check_type<ptr<T>, wrap_arg_t<T*>>();
-  check_type<ptr<int>, wrap_arg_t<int*>>();
+  check_type<ptr<T>, wrap_change_t<T*>>();
+  check_type<ptr<int>, wrap_change_t<int*>>();
 
-  check_type<ptr<T>, wrap_arg_t<T&>>();
-  check_type<ptr<int>, wrap_arg_t<int&>>();
+  check_type<ptr<T>, wrap_change_t<T&>>();
+  check_type<ptr<int>, wrap_change_t<int&>>();
 
-  check_type<const_ptr<T>, wrap_arg_t<const T*>>();
-  check_type<const int*, wrap_arg_t<const int*>>();
+  check_type<const_ptr<T>, wrap_change_t<const T*>>();
+  check_type<const int*, wrap_change_t<const int*>>();
 
-  check_type<const_ptr<T>, wrap_arg_t<const T&>>();
-  check_type<const int*, wrap_arg_t<const int&>>();
+  check_type<const_ptr<T>, wrap_change_t<const T&>>();
+  check_type<const int*, wrap_change_t<const int&>>();
 }
 
-// Function with a pointer return type, 
-int* Change1(int& value) {
-  value += 1;
-  return &value;
-}
-
-WTEST(Change1) {
-  int value = 0;
-  // Wrapped signature: `ptr<int> (ptr<int>)`
-  auto out = WrapChange(Change1)(ptr<int>{&value});
-  EXPECT_EQ(*out.value, 1);
-  EXPECT_EQ(value, 1);
-}
-
-// Unspecialized types.
-const double& Func_3a(const double& value) { return value; }
-// Specialized types.
-const int& Func_3b(const int& value) { return value; }
-
-WTEST(Func_3) {
-  {
-    double value = 0.;
-    // Wrapped signature: `const_ptr<double> (const_ptr<double>)`
-    auto out = WrapChange(Func_3a)(const_ptr<double>{&value});
-    value = 1.;
-    EXPECT_EQ(*out.value, 1.);
+template <typename Return, typename... Args>
+struct check_signature {
+  template <typename Func>
+  static void run(const Func& func) {
+    run_impl(detail::infer_function_info(func));
   }
 
-  {
-    int value = 0;
-    // Wrapped signature: `const int* (const int*)`
-    auto out = WrapChange(Func_3b)(&value);
-    value = 1;
-    EXPECT_EQ(*out, 1);
-  }
-}
-
-
-// void Func_5(const int* value) {}
-
-// void Func_6(int& value, std::function<void (int&)> callback) {
-//   callback(value);
-// }
-
-// int& Func_7(int& value, const std::function<int& (int&)>& callback) {
-//   return callback(value);
-// }
-
-// class MyClass {
-//  public:
-//   static void Func(MoveOnlyValue&& value) {}
-//   void Method(MoveOnlyValue& value) { value.value += 2; }
-//   void Method_2(MoveOnlyValue& value) const { value.value += 3; }
-// };
-
-// Provides a functor which can be default constructed and moved only.
-struct MoveOnlyFunctor {
-  MoveOnlyFunctor() {}
-  MoveOnlyFunctor(const MoveOnlyFunctor&) = delete;
-  MoveOnlyFunctor& operator=(const MoveOnlyFunctor&) = delete;
-  MoveOnlyFunctor(MoveOnlyFunctor&&) = default;
-  MoveOnlyFunctor& operator=(MoveOnlyFunctor&&) = default;
-  // N.B. Per documentation, cannot overload operator(), as it's ambiguous when
-  // attempting to infer arguments.
-  void operator()(MoveOnlyValue& value) const {
-    value.value += 4;
+  template <typename IReturn, typename... IArgs, typename Func>
+  static void run_impl(
+      const detail::function_info<Func, IReturn, IArgs...>& info) {
+    check_type<Return, IReturn>();
+    using Dummy = int[];
+    (void)Dummy{(check_type<Args, IArgs>(), 0)...};
   }
 };
 
-struct ConstFunctor {
-  void operator()(MoveOnlyValue& value) const { value.value += 5; }
+class MyClassChange {
+ public:
+  double* ChangeBasic(
+      // double (general case)
+      double,
+      double*, double&,
+      const double*, const double&,
+      // int (special case)
+      int,
+      int*, int&,
+      const int*, const int&) {
+    return nullptr;
+  }
 };
 
-GTEST_TEST(WrapFunction, ExampleFunctors) {
-  // MoveOnlyValue v{0};
-
-  // {
-  //   auto out = WrapChange(Func_3)(&v.value);
-  //   // Mutate to ensure we have a pointer.
-  //   v.value += 1;
-  //   EXPECT_EQ(*out, 2);
-  //   EXPECT_EQ(v.value, 2);
-  // }
-  
-  // CHECK(WrapChange(Func_4)(MoveOnlyValue{}));
-  // CHECK(WrapChange(Func_5)(&v.value));
-
-  // // Lambda.
-  // auto void_ref = [](int& value) {
-  //   value += 10;
-  // };
-  // CHECK(WrapChange(void_ref)(&v.value));
-
-  // CHECK(WrapChange(MyClass::Func)(MoveOnlyValue{}));
-  // MyClass c;
-  // const MyClass& c_const{c};
-  // CHECK(WrapChange(&MyClass::Method)(&c, &v));
-  // CHECK(WrapChange(&MyClass::Method_2)(&c_const, &v));
-
-  // MoveOnlyFunctor f;
-  // CHECK(WrapChange(std::move(f))(&v));
-  // ConstFunctor g;
-  // CHECK(WrapChange(g)(&v));
-  // const ConstFunctor& g_const{g};
-  // CHECK(WrapChange(g_const)(&v));
-
-  // // Callback.
-  // CHECK(WrapChange(Func_6)(&v.value, WrapChange(void_ref)));
-
-  // // Callback with return.
-  // auto get_ref = [](int& value) -> int& {
-  //   value += 100;
-  //   return value;
-  // };
-  // CHECK(cout << *WrapChange(Func_7)(&v.value, WrapChange(get_ref)));
-
-  // // Nested callback.
-  // auto get_ref_nested = [get_ref](int& value,
-  //     std::function<int& (int&, const std::function<int& (int&)>&)> func) -> auto& {
-  //   value += 1000;
-  //   return func(value, get_ref);
-  // };
-  // CHECK(cout << *WrapChange(get_ref_nested)(&v.value, WrapChange(Func_7)));
+WTEST(ChangeBasic) {
+  auto wrapped = WrapChange(&MyClassChange::ChangeBasic);
+  using check_expected =
+      check_signature<
+          // Return.
+          ptr<double>,
+          // self
+          ptr<MyClassChange>,
+          // double (general case)
+          double,
+          ptr<double>, ptr<double>,
+          const_ptr<double>, const_ptr<double>,
+          // int (special case)
+          int, ptr<int>, ptr<int>,
+          const int*, const int*>;
+  check_expected::run(wrapped);
 }
 
 }  // namespace drake

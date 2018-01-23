@@ -127,7 +127,7 @@ struct wrap_function_impl {
     // any functors passed in *must* have provide `operator()(...) const`.
     auto func_wrapped =
         [func_f = std::forward<Func>(info.func)]
-        (wrap_arg_t<Args>... args_wrapped) {
+        (wrap_arg_t<Args>... args_wrapped) -> wrap_arg_t<Return> {
       return wrap_arg<Return>::wrap(
           func_f(wrap_arg<Args>::unwrap(
                   std::forward<wrap_arg_t<Args>>(args_wrapped))...));
@@ -142,7 +142,7 @@ struct wrap_function_impl {
       std::enable_if_t<!enable_wrap_output<Return>, void*> = {}) {
     auto func_wrapped =
         [func_f = std::forward<Func>(info.func)]
-        (wrap_arg_t<Args>... args_wrapped) {
+        (wrap_arg_t<Args>... args_wrapped) -> Return {
       return func_f(wrap_arg<Args>::unwrap(
               std::forward<wrap_arg_t<Args>>(args_wrapped))...);
     };
@@ -200,9 +200,9 @@ struct wrap_function_impl {
 template <typename T>
 struct wrap_arg_default {
   using Wrapped = T;
-  static Wrapped wrap(T arg) { return std::forward<T>(arg); }
+  static Wrapped wrap(T arg) { return std::forward<T&&>(arg); }
   static T unwrap(Wrapped arg_wrapped) {
-    return std::forward<Wrapped>(arg_wrapped);
+    return std::forward<Wrapped&&>(arg_wrapped);
   }
   // N.B. `T` rather than `T&&` is used as arguments here as it behaves well
   // with primitve types, such as `int`.
