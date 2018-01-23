@@ -76,7 +76,7 @@ struct wrap_example_mutable_ptr {
 // Wraps any mutable `T*` with `ptr`.
 // N.B. Prevent `const int*` from binding here, since it will be rejected above.
 template <typename T>
-struct wrap_example<T*> //, std::enable_if<!std::is_const<T>::value>>
+struct wrap_example<T*, std::enable_if<!std::is_const<T>::value>>
     : public wrap_example_mutable_ptr<T> {};
 
 // Wraps any mutable `T&` with `ptr`.
@@ -105,11 +105,22 @@ template <typename T>
 using wrap_arg_t =
     drake::detail::wrap_function_impl<detail::wrap_example>::wrap_arg_t<T>;
 
+template <typename T, typename U>
+void check() {
+  // Use this function to inspect types when failure is encountered.
+  static_assert(std::is_same<T, U>::value, "Mismatch");
+}
+
 GTEST_TEST(WrapFunction, TypeCheck) {
   using T = double;
 
-  static_assert(std::is_same<wrap_arg_t<T*>, ptr<T>>::value, "");
-  static_assert(std::is_same<wrap_arg_t<T&>, ptr<T>>::value, "");
+  check<wrap_arg_t<T*>, ptr<T>>();
+  check<wrap_arg_t<int*>, ptr<int>>();
+
+  check<wrap_arg_t<T&>, ptr<T>>();
+  check<wrap_arg_t<int&>, ptr<int>>();
+
+  check<wrap_arg_t<const T*>, const_ptr<T>>();
 }
 
 // Test arguments that are move-only.
