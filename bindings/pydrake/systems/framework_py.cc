@@ -126,13 +126,15 @@ PYBIND11_MODULE(framework, m) {
     using Base::DeclarePeriodicPublish;
 
     // Trampoline virtual methods.
-    // N.B. Must ensure that pointers are used, in case pybind has not yet seen
-    // these values.
     void DoPublish(
         const Context<T>& context,
         const std::vector<const PublishEvent<T>*>& events) const override {
       // Yuck! We have to dig in and use internals :(
-      // TODO(eric.cousineau): Figure out how to supply different behavior???
+      // We must ensure that pybind only sees pointers, since this method may
+      // be called from C++, and pybind will not have seen these objects yet.
+      // @see https://github.com/pybind/pybind11/issues/1241
+      // TODO(eric.cousineau): Figure out how to supply different behavior,
+      // possibly using function wrapping.
       PYBIND11_OVERLOAD_INT(
           void, LeafSystem<T>, "_DoPublish", &context, events);
       // If the macro did not return, use default functionality.
