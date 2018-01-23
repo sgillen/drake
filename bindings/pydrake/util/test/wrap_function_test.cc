@@ -1,16 +1,14 @@
 #include <functional>
-#include <iostream>
 #include <type_traits>
 
-#include "cpp/name_trait.h"
-#include "cpp/wrap_function.h"
+#include <gtest/gtest.h>
+
+#include "drake/bindings/pydrake/util/wrap_function.h"
 
 using namespace std;
 
 namespace drake {
 namespace {
-
-namespace example_wrapper {
 
 // Constructible only via brackets (no implicit conversions).
 template <typename T>
@@ -27,19 +25,27 @@ struct wrapped_ptr {
   T* ptr{};
 };
 
+namespace detail {
+
 // Base case: Pass though.
 template <typename T, typename = void>
-struct wrap_example : public wrap_arg_default<T> {};
+struct wrap_example : public wrap_arg_default<T> {
+  // For `wrap_example<const T&>`.
+  using Wrapped = T;
+};
 
 // Wraps any `const T*` with `wrapped_const_ptr`, except for `int`.
 // SFINAE. Could be achieved with specialization, but using to uphold SFINAE
 // contract provided by `WrapFunction`.
 template <typename T>
 struct wrap_example<const T*, std::enable_if_t<!std::is_same<T, int>::value>> {
+  // For `wrap_example<const T&>`.
   using Wrapped = wrapped_const_ptr<T>;
+
   static Wrapped wrap(const T* arg) {
     return {arg};
   }
+
   static const T* unwrap(Wrapped arg_wrapped) {
     return arg_wrapped.ptr;
   }
@@ -51,8 +57,10 @@ struct wrap_example<const T*, std::enable_if_t<!std::is_same<T, int>::value>> {
 template <typename T>
 struct wrap_example<const T&> : public wrap_example<const T*> {
   using base = wrap_example<const T*>;
-  using base::Wrapped;
+  using Wrapped = typename base::Wrapped;
+
   static Wrapped wrap(const T& arg) { return base::wrap(&arg); }
+
   static const T& unwrap(Wrapped arg_wrapped) {
     return *base::unwrap(arg_wrapped);
   }
@@ -62,25 +70,24 @@ struct wrap_example<const T&> : public wrap_example<const T*> {
 template <typename T>
 struct wrap_example<T&> {
   static T* wrap(T& arg) { return &arg; }
-  static T& unwrap(T* arg_wrapped) { return *arg; }
+  static T& unwrap(T* arg_wrapped) { return *arg_wrapped; }
 };
 
 // N.B. We are NOT wrapping `T*`!
 
+}  // namespace detail
+
 // Test case to exercise `WrapFunction`.
 // Mappings:
-//   `T*`       -> `T*` (no mapping)
-//   `T&`       -> `wrapped_ptr<T>` (always).
-//   `const T*` -> `wrapped_const_ptr<T>`, if `T` is not `int`.
-//   `const T&` -> `wrapped_const_ptr<T>`, if `T` is not `int`.
+//   `T*`         -> `T*` (no mapping)
+//   `T&`         -> `wrapped_ptr<T>` (always).
+//   `const T*`   -> `wrapped_const_ptr<T>`, if `T` is not `int`.
+//   `const T&`   -> `wrapped_const_ptr<T>`, if `T` is not `int`.
+//   `const int&` -> `const int*`
 template <typename Func>
 auto WrapExample(Func&& func) {
-  return WrapFunction<wrap_example>(std::forward<Func>(func));
+  return WrapFunction<detail::wrap_example>(std::forward<Func>(func));
 }
-
-}  // namespace example_wrapper
-
-namespace example_functors {
 
 // Test arguments that are move-only.
 struct MoveOnlyValue {
@@ -137,8 +144,6 @@ struct ConstFunctor {
 };
 
 GTEST_TEST(WrapFunction, ExampleFunctors) {
-  using example_wrapper::WrapExample;
-
   MoveOnlyValue v{10};
 
   WrapExample(Func_1)(v.value);
@@ -188,8 +193,6 @@ GTEST_TEST(WrapFunction, ExampleFunctors) {
   // };
   // CHECK(cout << *WrapExample(get_ref_nested)(&v.value, WrapExample(Func_7)));
 }
-
-}  // namespace example_functors
 
 }  // namespace
 }  // namespace drake

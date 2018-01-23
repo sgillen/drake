@@ -1,7 +1,7 @@
+#pragma once
+
 #include <functional>
 #include <type_traits>
-
-#include "cpp/name_trait.h"
 
 namespace drake {
 
@@ -189,7 +189,7 @@ struct wrap_function_impl {
   // Ensure that we also wrap `std::function<>` returned by value.
   template <typename Signature>
   struct wrap_arg<std::function<Signature>>
-      : public wrap_arg<const std::function<F>&> {};
+      : public wrap_arg<const std::function<Signature>&> {};
 };
 
 }  // namespace detail
@@ -234,3 +234,5 @@ auto WrapFunction(Func&& func) {
   return detail::wrap_function_impl<wrap_arg_tpl>::run(
       detail::infer_function_info(std::forward<Func>(func)));
 }
+
+}  // namespace drake
