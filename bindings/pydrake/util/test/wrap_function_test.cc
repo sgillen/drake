@@ -12,17 +12,18 @@ namespace {
 
 // Constructible only via brackets (no implicit conversions).
 template <typename T>
-struct wrapped_const_ptr {
-  const T* ptr{};
+struct const_ptr {
+  static_assert(!std::is_const<T>::value, "Bad (redundant) inference");
+  const T* value{};
 };
 
 template <typename T>
-struct wrapped_ptr {
-  // Ensure that this is not being used in lieu of `wrapped_ptr` (ensure that
+struct ptr {
+  // Ensure that this is not being used in lieu of `ptr` (ensure that
   // our specializiation delegate correctly).
   static_assert(
-      !std::is_const<T>::value, "Should be using `wrapped_const_ptr`");
-  T* ptr{};
+      !std::is_const<T>::value, "Should be using `const_ptr`");
+  T* value{};
 };
 
 namespace detail {
@@ -34,24 +35,24 @@ struct wrap_example : public wrap_arg_default<T> {
   using Wrapped = T;
 };
 
-// Wraps any `const T*` with `wrapped_const_ptr`, except for `int`.
+// Wraps any `const T*` with `const_ptr`, except for `int`.
 // SFINAE. Could be achieved with specialization, but using to uphold SFINAE
 // contract provided by `WrapFunction`.
 template <typename T>
 struct wrap_example<const T*, std::enable_if_t<!std::is_same<T, int>::value>> {
   // For `wrap_example<const T&>`.
-  using Wrapped = wrapped_const_ptr<T>;
+  using Wrapped = const_ptr<T>;
 
   static Wrapped wrap(const T* arg) {
     return {arg};
   }
 
   static const T* unwrap(Wrapped arg_wrapped) {
-    return arg_wrapped.ptr;
+    return arg_wrapped.value;
   }
 };
 
-// Wraps any `const T&` with `wrapped_const_ptr`, except for `int`.
+// Wraps any `const T&` with `const_ptr`, except for `int`.
 // Leverage `const T&` logic, such that we'd get the default template when
 // SFINAE prevents matching.
 template <typename T>
@@ -66,11 +67,11 @@ struct wrap_example<const T&> : public wrap_example<const T*> {
   }
 };
 
-// Wraps any mutable `T&` with `wrapped_ptr`.
+// Wraps any mutable `T&` with `ptr`.
 template <typename T>
 struct wrap_example<T&> {
-  static T* wrap(T& arg) { return &arg; }
-  static T& unwrap(T* arg_wrapped) { return *arg_wrapped; }
+  static ptr<T> wrap(T& arg) { return {&arg}; }
+  static T& unwrap(ptr<T> arg_wrapped) { return *arg_wrapped.value; }
 };
 
 // N.B. We are NOT wrapping `T*`!
@@ -80,9 +81,9 @@ struct wrap_example<T&> {
 // Test case to exercise `WrapFunction`.
 // Mappings:
 //   `T*`         -> `T*` (no mapping)
-//   `T&`         -> `wrapped_ptr<T>` (always).
-//   `const T*`   -> `wrapped_const_ptr<T>`, if `T` is not `int`.
-//   `const T&`   -> `wrapped_const_ptr<T>`, if `T` is not `int`.
+//   `T&`         -> `ptr<T>` (always).
+//   `const T*`   -> `const_ptr<T>`, if `T` is not `int`.
+//   `const T&`   -> `const_ptr<T>`, if `T` is not `int`.
 //   `const int&` -> `const int*`
 template <typename Func>
 auto WrapExample(Func&& func) {
@@ -100,23 +101,27 @@ struct MoveOnlyValue {
 };
 
 // Function with `void` return type, `int` by value.
-// Expectation: Signature should remain unchanged.
+// Wrapped signature: Unchanged.
 void Func_1(int value) {}
+
 // Function with a pointer return type, 
-// Expectation: Signature should remain unchanged.
-int* Func_2(int& value) { value += 1; return &value; }
-
-const int& Func_3(const int& value) { return value; }
-void Func_4(MoveOnlyValue value) {}
-void Func_5(const int* value) {}
-
-void Func_6(int& value, std::function<void (int&)> callback) {
-  callback(value);
+// Wrapped signature: `int* (ptr<int>)`
+int* Func_2(int& value) {
+  value += 1;
+  return &value;
 }
 
-int& Func_7(int& value, const std::function<int& (int&)>& callback) {
-  return callback(value);
-}
+// const int& Func_3(const int& value) { return value; }
+// void Func_4(MoveOnlyValue value) {}
+// void Func_5(const int* value) {}
+
+// void Func_6(int& value, std::function<void (int&)> callback) {
+//   callback(value);
+// }
+
+// int& Func_7(int& value, const std::function<int& (int&)>& callback) {
+//   return callback(value);
+// }
 
 class MyClass {
  public:
@@ -144,14 +149,21 @@ struct ConstFunctor {
 };
 
 GTEST_TEST(WrapFunction, ExampleFunctors) {
-  MoveOnlyValue v{10};
+  MoveOnlyValue v{0};
 
-  WrapExample(Func_1)(v.value);
-  EXPECT_EQ(v.value, 10);
+  {
+    WrapExample(Func_1)(v.value);
+    EXPECT_EQ(v.value, 0);
+  }
 
-  // EXPECT_EQ(*WrapExample(Func_2)({&v.value}), 0);
-  // EXPECT_EQ(v.value, 11);
+  {
+    auto out = WrapExample(Func_2)(ptr<int>{&v.value});
+    EXPECT_EQ(*out, 1);
+    EXPECT_EQ(v.value, 1);
+  }
 
+  {
+  }
   // CHECK(cout << *WrapExample(Func_3)(&v.value));
   // CHECK(WrapExample(Func_4)(MoveOnlyValue{}));
   // CHECK(WrapExample(Func_5)(&v.value));
