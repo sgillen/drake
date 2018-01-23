@@ -126,10 +126,17 @@ PYBIND11_MODULE(framework, m) {
     using Base::DeclarePeriodicPublish;
 
     // Trampoline virtual methods.
+    // N.B. Must ensure that pointers are used, in case pybind has not yet seen
+    // these values.
     void DoPublish(
         const Context<T>& context,
         const std::vector<const PublishEvent<T>*>& events) const override {
-      PYBIND11_OVERLOAD(void, LeafSystem<T>, DoPublish, context, events);
+      // Yuck! We have to dig in and use internals :(
+      // TODO(eric.cousineau): Figure out how to supply different behavior???
+      PYBIND11_OVERLOAD_INT(
+          void, LeafSystem<T>, "_DoPublish", &context, events);
+      // If the macro did not return, use default functionality.
+      LeafSystem<T>::DoPublish(context, events);
     }
   };
 
@@ -152,7 +159,7 @@ PYBIND11_MODULE(framework, m) {
               };
           return self->DeclareVectorOutputPort(arg1, wrapped);
         }, py_iref)
-    .def("_DeclarePeriodicPublish", &PyLeaftSystem::DeclarePeriodicPublish,
+    .def("_DeclarePeriodicPublish", &PyLeafSystem::DeclarePeriodicPublish,
          py::arg("period"), py::arg("offset") = 0., py_iref);
 
   py::class_<Context<T>>(m, "Context")
