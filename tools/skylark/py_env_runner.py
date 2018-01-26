@@ -19,11 +19,6 @@ if defer_py:
     os.environ["PYTHONPATH"] = (
         defer_py + ":" + os.environ.get("PYTHONPATH", ""))
 
-import vtk
-print(vtk.__file__)
-
-subprocess.check_call("export -p | tee /tmp/env_c.sh", shell=True)
-
 args = sys.argv[1:]
 assert len(args) >= 1
 subprocess.check_call(args)
