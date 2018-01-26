@@ -12,6 +12,13 @@ import os
 import subprocess
 import sys
 
+runfiles_dir = os.getcwd()
+
+def add_path(env, path):
+    print(env, os.path.join(runfiles_dir, path))
+    os.environ[env] = (
+        os.path.join(runfiles_dir, path) + ":" + os.environ.get(env, ''))
+
 args = sys.argv[1:]
 while args:
     arg = args[0]
@@ -23,21 +30,20 @@ while args:
     py_flag = "--add_py_path="
     if arg.startswith(runfiles_flag):
         script_dir = os.path.dirname(__file__)
-        relpath = arg[len(runfiles_flag):]
-        parent = os.path.relpath(".", relpath)
-        os.chdir(os.path.join(script_dir, parent))
+        exec_relpath = arg[len(runfiles_flag):]
+        runfiles_relpath = os.path.relpath(".", exec_relpath)
+        runfiles_dir = os.path.abspath(
+            os.path.join(script_dir, runfiles_relpath))
     elif arg.startswith(ld_flag):
-        path = arg[len(ld_flag):]
         env = (sys.platform.startswith("linux") and
             "LD_LIBRARY_PATH" or "DYLD_LIBRARY_PATH")
-        os.environ[env] = path + ":" + os.environ[env]
+        add_path(env, arg[len(ld_flag):])
     elif arg.startswith(py_flag):
-        path = arg[len(py_flag):]
-        env = "PYTHONPATH"
-        os.environ[env] = path + ":" + os.environ[env]
+        add_path("PYTHONPATH", arg[len(py_flag):])
     else:
         break
     del args[0]
 
 assert len(args) >= 1
-subprocess.check_call(args)
+bin_path = os.path.join(runfiles_dir, args[0])
+subprocess.check_call([bin_path] + args[1:])

@@ -71,7 +71,7 @@ def _exec_impl(ctx):
         runfiles=ctx.runfiles(files=list(files))
     )]
 
-# Embeds arguments in a script, that can be run via `bazel-bin`.
+# Embeds arguments in a script, that can be run via `bazel run` or `bazel-bin`.
 _exec = rule(
     implementation=_exec_impl,
     executable=True,
