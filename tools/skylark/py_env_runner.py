@@ -37,9 +37,9 @@ while args:
         break
     del args[0]
 
-# print("\n".join(sys.path))
-# print("---")
-# print("\n".join(os.environ["PYTHONPATH"].split(":")))
+print("\n".join(sys.path))
+print("---")
+print("\n".join(os.environ["PYTHONPATH"].split(":")))
 
 print(args)
 assert len(args) >= 1

@@ -49,15 +49,17 @@ def drake_py_test(
         **kwargs)
 
 def _exec_impl(ctx):
-    # Generate bash script with arguments embedded.
-    executable = ctx.outputs.executable
-    command = ctx.expand_location(" ".join(ctx.attr.embed_args), ctx.attr.data)
+    args = [ctx.executable.cmd.short_path] + ctx.attr.embed_args
+    command = ctx.expand_location(" ".join(args), ctx.attr.data)
+    files = ctx.attr.cmd.data_runfiles.files
+    for d in ctx.attr.data:
+        files += d.data_runfiles.files  #ctx.files.data + 
     ctx.file_action(
-        output=executable,
+        output=ctx.outputs.executable,
         content=command + " \"$@\"",
         executable=True)
     return [DefaultInfo(
-        runfiles=ctx.runfiles(files=ctx.files.data)
+        runfiles=ctx.runfiles(files=list(files))
     )]
 
 # Embeds arguments in a script.
@@ -65,6 +67,7 @@ _exec = rule(
     implementation=_exec_impl,
     executable=True,
     attrs={
+        "cmd": attr.label(cfg="target", executable=True),
         "embed_args": attr.string_list(),
         "data": attr.label_list(cfg="data", allow_files=True),
     },
@@ -89,12 +92,13 @@ def drake_py_exec(
         srcs = [py_main],
         main = py_main,
         deps = py_deps,
-        # data = data,
+        data = data,
         **kwargs
     )
     # Encode arguments into a script.
     _exec(
         name = name,
-        embed_args = ["--get_first='$(locations {})'".format(impl)] + args,
-        data = [impl] + data,
+        cmd = impl,
+        embed_args = args,
+        data = data,
     )
