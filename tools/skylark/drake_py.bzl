@@ -54,9 +54,11 @@ def _exec_impl(ctx):
     files = ctx.attr.cmd.data_runfiles.files
     for d in ctx.attr.data:
         files += d.data_runfiles.files  #ctx.files.data + 
+    content = command + " \"$@\""
+    print(content)
     ctx.file_action(
         output=ctx.outputs.executable,
-        content=command + " \"$@\"",
+        content=content,
         executable=True)
     return [DefaultInfo(
         runfiles=ctx.runfiles(files=list(files))
