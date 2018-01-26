@@ -6,10 +6,10 @@ load("//tools/skylark:drake_py.bzl", "drake_py_exec")
 
 package(default_visibility = ["//visibility:public"])
 
-sh_binary(
 drake_py_exec(
     name = "drake_visualizer",
     args = [
+        "--add_library_path=$(location @vtk//:lib_dir)",
         "$(location @drake_visualizer//:binary)",
     ],
     py_deps = adjust_labels_for_drake_hoist([
@@ -21,6 +21,7 @@ drake_py_exec(
         "//drake/examples:prod_models",
         "@drake_visualizer",
         "@drake_visualizer//:binary",
+        "@vtk//:lib_dir",
     ]),
 )
 

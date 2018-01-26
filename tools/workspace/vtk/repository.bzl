@@ -553,6 +553,12 @@ filegroup(
     srcs = glob(["**/*"], exclude=["BUILD", "WORKSPACE"]),
     visibility = ["//visibility:public"],
 )
+
+alias(
+    name = "lib_dir",
+    actual = "lib",
+    visibility = ["//visibility:public"],
+)
 """
 
     if repository_ctx.os.name == "mac os x":
