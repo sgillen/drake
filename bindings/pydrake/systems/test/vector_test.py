@@ -17,22 +17,41 @@ from pydrake.systems.framework import (
 
 class TestReference(unittest.TestCase):
     def test_basic_vector_double(self):
-        # Ensure that we can get vectors templated on double by reference.
-        init = [1., 2, 3]
-        value_data = BasicVector(init)
-        value = value_data.get_mutable_value()
-        # TODO(eric.cousineau): Determine if there is a way to extract the
-        # pointer referred to by the buffer (e.g. `value.data`).
-        value[:] += 1
-        expected = [2., 3, 4]
-        self.assertTrue(np.allclose(value, expected))
-        self.assertTrue(np.allclose(value_data.get_value(), expected))
-        self.assertTrue(np.allclose(value_data.get_mutable_value(), expected))
-        expected = [5., 6, 7]
-        value_data.SetFromVector(expected)
-        self.assertTrue(np.allclose(value, expected))
-        self.assertTrue(np.allclose(value_data.get_value(), expected))
-        self.assertTrue(np.allclose(value_data.get_mutable_value(), expected))
+
+        def pass_through(x):
+            return x
+
+        for n in range(3):
+            init = range(n)
+            if n > 0:
+                init[0] = float(0)
+            after_add = [x + 1 for x in init]
+            after_set = [x + 10 for x in init]
+
+            for func in [pass_through, np.array]:
+                print(func)
+                # Ensure that we can get vectors templated on double by reference.
+                init = func(init)
+                value_data = BasicVector(init)
+                print(value_data.size())
+                value = value_data.get_mutable_value()
+                # TODO(eric.cousineau): Determine if there is a way to extract the
+                # pointer referred to by the buffer (e.g. `value.data`).
+                if n > 0:
+                    # Adding a scalar to an empty numpy array resizes it???
+                    value[:] += 1
+                expected = func(after_add)
+                self.assertTrue(np.allclose(value, expected))
+                self.assertTrue(np.allclose(value_data.get_value(), expected))
+                self.assertTrue(np.allclose(value_data.get_mutable_value(), expected))
+                expected = func(after_set)
+                print(value, expected)
+                value_data.SetFromVector(expected)
+                self.assertTrue(np.allclose(value, expected))
+                self.assertTrue(np.allclose(value_data.get_value(), expected))
+                self.assertTrue(np.allclose(value_data.get_mutable_value(), expected))
+                print("")
+        print("---")
 
 
 if __name__ == '__main__':
