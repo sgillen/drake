@@ -333,8 +333,11 @@ PYBIND11_MODULE(framework, m) {
 
   // TODO(eric.cousineau): Make a helper function for the Eigen::Ref<> patterns.
   py::class_<BasicVector<T>, VectorBase<T>>(m, "BasicVector")
-    .def(py::init<int>())
+    // N.B. Place `init<VectorX<T>>` `init<int>` so that we do not implicitly
+    // convert scalar-size `np.array` objects to `int` (since this is normally
+    // permitted).
     .def(py::init<VectorX<T>>())
+    .def(py::init<int>())
     .def("get_value",
         [](const BasicVector<T>* self) -> Eigen::Ref<const VectorX<T>> {
           return self->get_value();

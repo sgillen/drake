@@ -11,16 +11,18 @@ from pydrake.systems.framework import (
     BasicVector,
     )
 
-# TODO(eric.cousineau): Add negative test cases for AutoDiffXd and Symbolic
-# once they are in the bindings.
+def pass_through(x):
+    return x
+
+
+# TODO(eric.cousineau): Add negative (or positive) test cases for AutoDiffXd
+# and Symbolic once they are in the bindings.
 
 
 class TestReference(unittest.TestCase):
     def test_basic_vector_double(self):
-
-        def pass_through(x):
-            return x
-
+        # Test constructing vectors of sizes [0, 1, 2], and ensure that we can
+        # consruct from both lists and `np.array` objects with no ambiguity.
         for n in range(3):
             init = range(n)
             if n > 0:
@@ -29,29 +31,28 @@ class TestReference(unittest.TestCase):
             after_set = [x + 10 for x in init]
 
             for func in [pass_through, np.array]:
-                print(func)
-                # Ensure that we can get vectors templated on double by reference.
+                # Ensure that we can get vectors templated on double by
+                # reference.
                 init = func(init)
                 value_data = BasicVector(init)
-                print(value_data.size())
                 value = value_data.get_mutable_value()
-                # TODO(eric.cousineau): Determine if there is a way to extract the
-                # pointer referred to by the buffer (e.g. `value.data`).
-                if n > 0:
-                    # Adding a scalar to an empty numpy array resizes it???
-                    value[:] += 1
+                # TODO(eric.cousineau): Determine if there is a way to extract
+                # the pointer referred to by the buffer (e.g. `value.data`).
+                value[:] += 1
                 expected = func(after_add)
                 self.assertTrue(np.allclose(value, expected))
                 self.assertTrue(np.allclose(value_data.get_value(), expected))
-                self.assertTrue(np.allclose(value_data.get_mutable_value(), expected))
+                self.assertTrue(
+                    np.allclose(value_data.get_mutable_value(), expected))
                 expected = func(after_set)
-                print(value, expected)
                 value_data.SetFromVector(expected)
                 self.assertTrue(np.allclose(value, expected))
                 self.assertTrue(np.allclose(value_data.get_value(), expected))
-                self.assertTrue(np.allclose(value_data.get_mutable_value(), expected))
-                print("")
-        print("---")
+                self.assertTrue(
+                    np.allclose(value_data.get_mutable_value(), expected))
+                # Ensure we can construct from size.
+                value_data = BasicVector(n)
+                self.assertEquals(value_data.size(), n)
 
 
 if __name__ == '__main__':
