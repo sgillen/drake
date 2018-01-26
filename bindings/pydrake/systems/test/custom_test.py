@@ -176,8 +176,8 @@ class TestCustom(unittest.TestCase):
             print(x, x_expected)
             self.assertTrue(np.allclose(x, x_expected))
 
-            # Check output, `y = [u, x]`.
-            y_expected = np.hstack(u, x)
+            # Check output.
+            y_expected = np.hstack([u, x])
             y = output.get_vector_data(0).get_value()
             print(y)
             print(y_expected)

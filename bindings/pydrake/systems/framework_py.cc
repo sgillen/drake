@@ -115,6 +115,28 @@ class VectorSystemPublic : public VectorSystem<T> {
   using Base::DoCalcVectorDiscreteVariableUpdates;
 };
 
+template <typename Derived>
+auto ToEigenRef(Eigen::VectorBlock<Derived>* derived) {
+  return Eigen::Ref<Derived>(*derived);
+}
+
+template <typename Return, typename... Args>
+struct overload_cast_explicit_impl {
+  template <typename Class>
+  constexpr auto operator()(Return (Class::*method)(Args...)) const {
+    return method;
+  }
+
+  template <typename Class>
+  constexpr auto operator()(Return (Class::*method)(Args...) const) const {
+    return method;
+  }
+};
+
+template <typename Return, typename... Args>
+static constexpr overload_cast_explicit_impl<Return, Args...>
+    overload_cast_explicit = {};
+
 class PyVectorSystem : public PyLeafSystemBase<VectorSystemPublic> {
  public:
   using Base = PyLeafSystemBase<VectorSystemPublic>;
@@ -135,7 +157,7 @@ class PyVectorSystem : public PyLeafSystemBase<VectorSystemPublic> {
         // N.B. Passing `Eigen::Map<>` derived classes by reference rather than
         // pointer to ensure conceptual clarity. pybind11 `type_caster`
         // struggles with types of `Map<Derived>*`, but not `Map<Derived>&`.
-        &context, input, state, *output);
+        &context, input, state, ToEigenRef(output));
     Base::DoCalcVectorOutput(context, input, state, output);
   }
 
@@ -148,7 +170,7 @@ class PyVectorSystem : public PyLeafSystemBase<VectorSystemPublic> {
     // Expression, etc. See above.
     PYBIND11_OVERLOAD_INT(
         void, VectorSystem<T>, "_DoCalcVectorTimeDerivatives",
-        &context, input, state, *derivatives);
+        &context, input, state, ToEigenRef(derivatives));
     Base::DoCalcVectorOutput(context, input, state, derivatives);
   }
 
@@ -161,7 +183,7 @@ class PyVectorSystem : public PyLeafSystemBase<VectorSystemPublic> {
     // Expression, etc. See above.
     PYBIND11_OVERLOAD_INT(
         void, VectorSystem<T>, "_DoCalcVectorDiscreteVariableUpdates",
-        &context, input, state, *next_state);
+        &context, input, state, ToEigenRef(next_state));
     Base::DoCalcVectorDiscreteVariableUpdates(
         context, input, state, next_state);
   }
@@ -380,7 +402,15 @@ PYBIND11_MODULE(framework, m) {
 
   py::class_<DiscreteValues<T>>(m, "DiscreteValues")
     .def("num_groups", &DiscreteValues<T>::num_groups)
-    .def("get_data", &DiscreteValues<T>::get_data, py_reference_internal);
+    .def("get_data", &DiscreteValues<T>::get_data, py_reference_internal)
+    .def("get_vector",
+         overload_cast_explicit<const BasicVector<T>&, int>(
+            &DiscreteValues<T>::get_vector),
+         py_reference_internal, py::arg("index") = 0)
+    .def("get_mutable_vector",
+         overload_cast_explicit<BasicVector<T>&, int>(
+            &DiscreteValues<T>::get_mutable_vector),
+         py_reference_internal, py::arg("index") = 0);
 
   py::class_<AbstractValues>(m, "AbstractValues");
 
