@@ -48,21 +48,23 @@ def drake_py_test(
         data = data,
         **kwargs)
 
-def _exec_impl(ctx):
+def _py_exec_impl(ctx):
     data = ctx.attr.data + [ctx.attr.cmd]
     files = depset()
     for d in data:
         files += d.data_runfiles.files
-    # @note We use `short_path` here because `$(locations {impl})` returns
-    # two files...
-    embed_args = [
-        "--runfiles_relpath={}".format(ctx.executable.cmd.short_path),
-    ] + ctx.attr.embed_args
     info = dict(
         relpath = ctx.executable.cmd.basename,
-        embed_args = ctx.expand_location(" ".join(embed_args), data),
+        embed_args = ctx.expand_location(" ".join(ctx.attr.embed_args), data),
+        workspace_name = ctx.workspace_name,
     )
-    content = "$(dirname $0)/{relpath} {embed_args} \"$@\"".format(**info)
+    content = """#!/bin/bash
+target="$(cd $(dirname $0) && pwd)/{relpath}"
+if [[ $PWD != *.runfiles/{workspace_name} ]]; then
+    cd "$0.runfiles/{workspace_name}"
+fi
+$target {embed_args} "$@"
+""".format(**info)
     ctx.file_action(
         output=ctx.outputs.executable,
         content=content,
@@ -72,8 +74,8 @@ def _exec_impl(ctx):
     )]
 
 # Embeds arguments in a script, that can be run via `bazel run` or `bazel-bin`.
-_exec = rule(
-    implementation=_exec_impl,
+_py_exec = rule(
+    implementation=_py_exec_impl,
     executable=True,
     attrs={
         "cmd": attr.label(cfg="target", executable=True),
@@ -108,7 +110,7 @@ def drake_py_exec(
     embed_args += ["--add_py_path={}".format(p) for p in add_py_paths]
     embed_args += ["$(location {})".format(executable)] + args
     # Encode arguments into a script.
-    _exec(
+    _py_exec(
         name = name,
         cmd = impl,
         embed_args = embed_args,
