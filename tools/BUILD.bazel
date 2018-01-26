@@ -8,11 +8,9 @@ package(default_visibility = ["//visibility:public"])
 
 drake_py_exec(
     name = "drake_visualizer",
-    args = [
-        "--add_library_path=$(location @vtk//:lib_dir)",
-        "--add_py_path=$(location @vtk//:lib_dir)/python2.7/site-packages",  # noqa
-        "$(location @drake_visualizer//:binary)",
-    ],
+    executable = "@drake_visualizer//:binary",
+    add_library_paths = ["$(location @vtk//:lib_dir)"],
+    add_py_paths = ["$(location @vtk//:lib_dir)/python2.7/site-packages"],
     py_deps = adjust_labels_for_drake_hoist([
         "//drake/bindings/pydrake",
         "//drake/lcmtypes:lcmtypes_py",
@@ -21,7 +19,6 @@ drake_py_exec(
     data = adjust_labels_for_drake_hoist([
         "//drake/examples:prod_models",
         "@drake_visualizer",
-        "@drake_visualizer//:binary",
         "@vtk//:lib_dir",
     ]),
 )

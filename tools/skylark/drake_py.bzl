@@ -49,15 +49,20 @@ def drake_py_test(
         **kwargs)
 
 def _exec_impl(ctx):
-    files = ctx.attr.cmd.data_runfiles.files
-    for d in ctx.attr.data:
+    data = ctx.attr.data + [ctx.attr.cmd]
+    files = depset()
+    for d in data:
         files += d.data_runfiles.files
-    args_raw = [
+    # @note We use `short_path` here because `$(locations {impl})` returns
+    # two files...
+    embed_args = [
         "--runfiles_relpath={}".format(ctx.executable.cmd.short_path),
     ] + ctx.attr.embed_args
-    args = ctx.expand_location(" ".join(args_raw), ctx.attr.data)
-    relpath = ctx.executable.cmd.basename
-    content = "$(dirname $0)/{} {} \"$@\"".format(relpath, args)
+    info = dict(
+        relpath = ctx.executable.cmd.basename,
+        embed_args = ctx.expand_location(" ".join(embed_args), data),
+    )
+    content = "$(dirname $0)/{relpath} {embed_args} \"$@\"".format(**info)
     ctx.file_action(
         output=ctx.outputs.executable,
         content=content,
@@ -79,17 +84,17 @@ _exec = rule(
 
 def drake_py_exec(
         name,
-        args,
+        executable,
         add_library_paths = [],
         add_py_paths = [],
         py_deps = [],
         data = [],
+        args = [],
         **kwargs):
     """Runs an arbitrary command within a Bazel Python environment. """
     py_main = "//tools/skylark:py_env_runner.py"
     if "deps" in kwargs:
         fail("Use `py_deps` instead of `deps` to avoid ambiguity.")
-    args = list(args)
     impl = name + ".impl"
     drake_py_binary(
         name = impl,
@@ -99,10 +104,13 @@ def drake_py_exec(
         data = data,
         **kwargs
     )
+    embed_args = ["--add_library_path={}".format(p) for p in add_library_paths]
+    embed_args += ["--add_py_path={}".format(p) for p in add_py_paths]
+    embed_args += ["$(location {})".format(executable)] + args
     # Encode arguments into a script.
     _exec(
         name = name,
         cmd = impl,
-        embed_args = args,
-        data = data,
+        embed_args = embed_args,
+        data = data + [executable],
     )
