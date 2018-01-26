@@ -22,7 +22,8 @@ from pydrake.systems.primitives import (
     )
 
 from pydrake.systems.test.test_util import (
-    call_overrides,
+    call_leaf_system_overrides,
+    call_vector_system_overrides,
     )
 
 
@@ -57,19 +58,16 @@ class CustomVectorSystem(VectorSystem):
 
         self.has_called = []
 
-    def _DoCalcVectorOutput(self, context, input, state, output):
-        # output = [input; state]
-        output[:] = np.vstack(input, state)
+    def _DoCalcVectorOutput(self, context, u, x, y):
+        y[:] = np.hstack([u, x])
         self.has_called.append("output")
 
-    def _DoCalcVectorTimeDerivatives(self, context, input, state, derivatives):
-        # xdot = x + [1; 1]*u
-        derivatives[:] = state + input
+    def _DoCalcVectorTimeDerivatives(self, context, u, x, x_dot):
+        x_dot[:] = x + u
         self.has_called.append("continuous")
 
-    def _DoCalcVectorDiscreteVariableUpdates(self, context, input, state, next_state):
-        # x[n+1] = x[n] + 2*[1; 1]*u
-        next_state = state + 2*input
+    def _DoCalcVectorDiscreteVariableUpdates(self, context, u, x, x_n):
+        x_n[:] = x + 2*u
         self.has_called.append("discrete")
 
 
@@ -143,8 +141,8 @@ class TestCustom(unittest.TestCase):
         for is_discrete in [False, True]:
             system = CustomVectorSystem(is_discrete)
             context = system.CreateDefaultContext()
-            input_vector = [1.]
-            context.FixInputPort(0, BasicVector(input_vector))
+            u = np.array([1.])
+            context.FixInputPort(0, BasicVector(u))
             output = call_vector_system_overrides(
                 system, context, is_discrete, dt)
 
@@ -153,14 +151,22 @@ class TestCustom(unittest.TestCase):
             assert system.has_called == [update_type, "output"]
 
             # Check values.
-            state = context.GetState()
-            state_vector = (is_discrete
+            state = context.get_state()
+            x = (is_discrete
                 and state.get_discrete_state()
-                or state.get_continuous_state())
+                or state.get_continuous_state()).get_vector().get_value()
+
+            print(u)
+            print(x)
 
             # Check output, `y = x + c*u`.
             coeff = is_discrete and 2 or 1
-            y_expected = output.Get
+            y_expected = x + coeff * u
+            y = output.get_vector_data(0).get_value()
+            print(y)
+            print(y_expected)
+            self.assertTrue(np.allclose(y, y_expected))
+
 
 
 if __name__ == '__main__':
