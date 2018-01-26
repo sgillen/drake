@@ -82,6 +82,13 @@ filegroup(
     visibility = ["//visibility:public"],
 )
 
+# Provide alias for expansion in `$(location ...)`.
+alias(
+    name = "binary",
+    actual = "bin/drake-visualizer",
+    visibility = ["//visibility:public"],
+)
+
 load("@drake//tools/install:install.bzl", "install_files")
 install_files(
     name = "install",

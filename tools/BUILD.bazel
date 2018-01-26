@@ -2,25 +2,25 @@
 
 load("//tools/lint:lint.bzl", "add_lint_tests")
 load("//tools/skylark:6996.bzl", "adjust_labels_for_drake_hoist")
+load("//tools/skylark:drake_py.bzl", "drake_py_exec")
 
 package(default_visibility = ["//visibility:public"])
 
 sh_binary(
+drake_py_exec(
     name = "drake_visualizer",
-    srcs = select({
-        "//tools/cc_toolchain:apple": [
-            "//tools/workspace/drake_visualizer:drake_visualizer_apple.sh",
-        ],
-        "//conditions:default": [
-            "//tools/workspace/drake_visualizer:drake_visualizer_linux.sh",
-        ],
-    }),
-    data = adjust_labels_for_drake_hoist([
+    args = [
+        "$(location @drake_visualizer//:binary)",
+    ],
+    py_deps = adjust_labels_for_drake_hoist([
         "//drake/bindings/pydrake",
-        "//drake/examples:prod_models",
         "//drake/lcmtypes:lcmtypes_py",
-        "@drake_visualizer",
         "@optitrack_driver//lcmtypes:py_optitrack_lcmtypes",
+    ]),
+    data = adjust_labels_for_drake_hoist([
+        "//drake/examples:prod_models",
+        "@drake_visualizer",
+        "@drake_visualizer//:binary",
     ]),
 )
 

@@ -47,3 +47,25 @@ def drake_py_test(
         deps = deps,
         data = data,
         **kwargs)
+
+def drake_py_exec(
+        name,
+        args,
+        py_deps = [],
+        **kwargs):
+    """Runs an arbitrary command within a Bazel Python environment. """
+    py_main = "//tools/skylark:py_env_runner.py"
+    if "deps" in kwargs:
+        fail("Use `py_deps` instead of `deps` to avoid ambiguity.")
+    # TODO(eric.cousineau): Is there a better type check for Skylark?
+    args = list(args)
+    if not args:
+        fail("`args` must be a list with at least one item (the binary).")
+    drake_py_binary(
+        name = name,
+        srcs = [py_main],
+        main = py_main,
+        args = args,
+        deps = py_deps,
+        **kwargs
+    )
