@@ -59,8 +59,9 @@ class CustomVectorSystem(VectorSystem):
         self.has_called = []
 
     def _DoCalcVectorOutput(self, context, u, x, y):
-        y[:] = np.hstack([u, x])
         print("output")
+        print(y)
+        y[:] = np.hstack([u, x])
         print(y)
         self.has_called.append("output")
 
@@ -155,22 +156,28 @@ class TestCustom(unittest.TestCase):
             output = call_vector_system_overrides(
                 system, context, is_discrete, dt)
 
+            y = output.get_vector_data(0).get_value()
+            print("y init: ", y)
+
             # Check call order.
             update_type = is_discrete and "discrete" or "continuous"
             assert system.has_called == [update_type, "output"]
 
             # Check values.
             state = context.get_state()
+            x0 = [0., 0.]
             x = (is_discrete
                 and state.get_discrete_state()
                 or state.get_continuous_state()).get_vector().get_value()
-
+            c = is_discrete and 2 or 1*dt
+            x_expected = x0 + c*u
+            print("---")
             print(u)
-            print(x)
+            print(x, x_expected)
+            self.assertTrue(np.allclose(x, x_expected))
 
-            # Check output, `y = x + c*u`.
-            coeff = is_discrete and 2 or 1
-            y_expected = x + coeff * u
+            # Check output, `y = [u, x]`.
+            y_expected = np.hstack(u, x)
             y = output.get_vector_data(0).get_value()
             print(y)
             print(y_expected)
