@@ -50,6 +50,9 @@ def drake_py_test(
 
 def _exec_impl(ctx):
     data = ctx.attr.data + [ctx.attr.shim, ctx.attr.executable]
+    print(dir(ctx.attr.shim))
+    print(ctx.attr.shim.label)
+    print(ctx.executable.executable.path)
     info = dict(
         shim_relpath = ctx.executable.shim.short_path,
         exec_relpath = ctx.executable.executable.short_path,
@@ -115,8 +118,8 @@ _exec = rule(
     implementation=_exec_impl,
     executable=True,
     attrs={
-        "shim": attr.label(cfg="target", executable=True),
-        "executable": attr.label(cfg="target", allow_files=True, executable=True),
+        "shim": attr.label(cfg="data"),
+        "executable": attr.label(cfg="data", allow_files=True),
         # "embed_args": attr.label_list(),
         "data": attr.label_list(cfg="data", allow_files=True),
         "add_library_paths": attr.string_list(),
