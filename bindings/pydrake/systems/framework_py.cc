@@ -6,6 +6,7 @@
 
 #include "drake/bindings/pydrake/pydrake_pybind.h"
 #include "drake/bindings/pydrake/util/drake_optional_pybind.h"
+#include "drake/bindings/pydrake/util/eigen_pybind.h"
 #include "drake/systems/framework/abstract_values.h"
 #include "drake/systems/framework/basic_vector.h"
 #include "drake/systems/framework/context.h"
@@ -115,28 +116,6 @@ class VectorSystemPublic : public VectorSystem<T> {
   using Base::DoCalcVectorDiscreteVariableUpdates;
 };
 
-template <typename Derived>
-auto ToEigenRef(Eigen::VectorBlock<Derived>* derived) {
-  return Eigen::Ref<Derived>(*derived);
-}
-
-template <typename Return, typename... Args>
-struct overload_cast_explicit_impl {
-  template <typename Class>
-  constexpr auto operator()(Return (Class::*method)(Args...)) const {
-    return method;
-  }
-
-  template <typename Class>
-  constexpr auto operator()(Return (Class::*method)(Args...) const) const {
-    return method;
-  }
-};
-
-template <typename Return, typename... Args>
-static constexpr overload_cast_explicit_impl<Return, Args...>
-    overload_cast_explicit = {};
-
 class PyVectorSystem : public PyLeafSystemBase<VectorSystemPublic> {
  public:
   using Base = PyLeafSystemBase<VectorSystemPublic>;
@@ -189,7 +168,7 @@ class PyVectorSystem : public PyLeafSystemBase<VectorSystemPublic> {
   }
 };
 
-}  // namepace
+}  // namespace
 
 PYBIND11_MODULE(framework, m) {
   // NOLINTNEXTLINE(build/namespaces): Emulate placement in namespace.
@@ -425,15 +404,10 @@ PYBIND11_MODULE(framework, m) {
     .def(py::init([](int inputs, int outputs) {
       return new PyVectorSystem(inputs, outputs);
     }));
-    // TODO(eric.cousineau): Bind these methods once we provide a function
+    // TODO(eric.cousineau): Bind virtual methods once we provide a function
     // wrapper to convert `Map<Derived>*` arguments.
     // N.B. This could be mitigated by using `EigenPtr` in public interfaces in
     // upstream code.
-    // .def("_DoCalcVectorOutput", &VectorSystemPublic::DoCalcVectorOutput)
-    // .def("_DoCalcVectorTimeDerivatives",
-    //      &VectorSystemPublic::DoCalcVectorTimeDerivatives)
-    // .def("_DoCalcVectorDiscreteVariableUpdates",
-    //      &VectorSystemPublic::DoCalcVectorDiscreteVariableUpdates);
 }
 
 }  // namespace pydrake

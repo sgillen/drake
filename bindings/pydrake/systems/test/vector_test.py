@@ -11,6 +11,7 @@ from pydrake.systems.framework import (
     BasicVector,
     )
 
+
 def pass_through(x):
     return x
 

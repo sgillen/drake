@@ -44,6 +44,7 @@ class CustomAdder(LeafSystem):
             input_vector = self.EvalVectorInput(context, i)
             sum += input_vector.get_value()
 
+
 class CustomVectorSystem(VectorSystem):
     def __init__(self, is_discrete):
         # VectorSystem only supports pure Continuous or pure Discrete.
@@ -155,10 +156,12 @@ class TestCustom(unittest.TestCase):
 
             # Check values.
             state = context.get_state()
+            state_type = (
+                is_discrete and state.get_discrete_state()
+                or state.get_continuous_state())
+
             x0 = [0., 0.]
-            x = (is_discrete
-                and state.get_discrete_state()
-                or state.get_continuous_state()).get_vector().get_value()
+            x = state_type.get_vector().get_value()
             c = is_discrete and 2 or 1*dt
             x_expected = x0 + c*u
             self.assertTrue(np.allclose(x, x_expected))
@@ -167,7 +170,6 @@ class TestCustom(unittest.TestCase):
             y_expected = np.hstack([u, x])
             y = output.get_vector_data(0).get_value()
             self.assertTrue(np.allclose(y, y_expected))
-
 
 
 if __name__ == '__main__':

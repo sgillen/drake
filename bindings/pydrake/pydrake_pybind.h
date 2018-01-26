@@ -147,6 +147,35 @@ const auto py_reference = py::return_value_policy::reference;
 
 /// @}
 
+namespace detail {
+
+// Implementation for explicitly binding `Return` for a function / method
+// pointer.
+template <typename Return, typename... Args>
+struct overload_cast_explicit_impl {
+  constexpr auto operator()(Return (*func)(Args...)) const {
+    return func;
+  }
+
+  template <typename Class>
+  constexpr auto operator()(Return (Class::*method)(Args...)) const {
+    return method;
+  }
+
+  template <typename Class>
+  constexpr auto operator()(Return (Class::*method)(Args...) const) const {
+    return method;
+  }
+};
+
+}  // namespace detail
+
+/// Provides option to provide explicit signature when
+/// `py::overload_cast<Args...>` fails to infer the Return argument.
+template <typename Return, typename... Args>
+static constexpr auto overload_cast_explicit =
+    detail::overload_cast_explicit_impl<Return, Args...>{};
+
 // TODO(eric.cousineau): pybind11 defaults to C++-like copies when dealing
 // with rvalues. We should wrap this into a drake-level binding, so that we
 // can default this to `py_reference` or `py_reference_internal.`
