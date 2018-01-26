@@ -55,27 +55,19 @@ class CustomVectorSystem(VectorSystem):
             self._DeclareDiscreteState(2)
         else:
             self._DeclareContinuousState(2)
-
+        # Record calls for testing.
         self.has_called = []
 
     def _DoCalcVectorOutput(self, context, u, x, y):
-        print("output")
-        print(y)
         y[:] = np.hstack([u, x])
-        print(y)
         self.has_called.append("output")
 
     def _DoCalcVectorTimeDerivatives(self, context, u, x, x_dot):
         x_dot[:] = x + u
-        print("continuous")
-        print(x, u)
-        print(x_dot)
         self.has_called.append("continuous")
 
     def _DoCalcVectorDiscreteVariableUpdates(self, context, u, x, x_n):
         x_n[:] = x + 2*u
-        print("discrete")
-        print(x_n)
         self.has_called.append("discrete")
 
 
@@ -145,19 +137,17 @@ class TestCustom(unittest.TestCase):
         self.assertTrue(system.called_publish)
 
     def test_vector_system_overrides(self):
-        dt = 1.
+        dt = 0.5
         for is_discrete in [False, True]:
             system = CustomVectorSystem(is_discrete)
             context = system.CreateDefaultContext()
+
             u = np.array([1.])
-            input = BasicVector(u)
-            print("u: ", input.get_value())
-            context.FixInputPort(0, input)
+            context.FixInputPort(0, BasicVector(u))
+
+            # Dispatch virtual calls from C++.
             output = call_vector_system_overrides(
                 system, context, is_discrete, dt)
-
-            y = output.get_vector_data(0).get_value()
-            print("y init: ", y)
 
             # Check call order.
             update_type = is_discrete and "discrete" or "continuous"
@@ -171,16 +161,11 @@ class TestCustom(unittest.TestCase):
                 or state.get_continuous_state()).get_vector().get_value()
             c = is_discrete and 2 or 1*dt
             x_expected = x0 + c*u
-            print("---")
-            print(u)
-            print(x, x_expected)
             self.assertTrue(np.allclose(x, x_expected))
 
             # Check output.
             y_expected = np.hstack([u, x])
             y = output.get_vector_data(0).get_value()
-            print(y)
-            print(y_expected)
             self.assertTrue(np.allclose(y, y_expected))
 
 
