@@ -2,26 +2,23 @@
 
 load("//tools/lint:lint.bzl", "add_lint_tests")
 load("//tools/skylark:6996.bzl", "adjust_labels_for_drake_hoist")
-load("//tools/skylark:drake_py.bzl", "drake_py_exec")
+load("//tools/skylark:drake_py.bzl", "drake_exec")
 
 package(default_visibility = ["//visibility:public"])
 
-drake_py_exec(
+drake_exec(
     name = "drake_visualizer",
-    args = [
-        "--add_library_path=$(location @vtk//:lib_dir)",
-        "--add_py_path=$(location @vtk//:lib_dir)/python2.7/site-packages",  # noqa
-        "$(location @drake_visualizer//:binary)",
-    ],
+    executable = "@drake_visualizer//:binary",
     py_deps = adjust_labels_for_drake_hoist([
         "//drake/bindings/pydrake",
         "//drake/lcmtypes:lcmtypes_py",
         "@optitrack_driver//lcmtypes:py_optitrack_lcmtypes",
     ]),
+    add_library_paths = ["$(location @vtk//:lib_dir)"],
+    add_py_paths = ["$(location @vtk//:lib_dir)/python2.7/site-packages"],
     data = adjust_labels_for_drake_hoist([
         "//drake/examples:prod_models",
         "@drake_visualizer",
-        "@drake_visualizer//:binary",
         "@vtk//:lib_dir",
     ]),
 )

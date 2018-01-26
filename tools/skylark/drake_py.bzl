@@ -49,15 +49,50 @@ def drake_py_test(
         **kwargs)
 
 def _exec_impl(ctx):
-    files = ctx.attr.cmd.data_runfiles.files
+    data = ctx.attr.data + [ctx.attr.executable]
+    info = dict(
+        exec_relpath = ctx.executable.executable.short_path,
+        add_library_paths = [
+            ctx.expand_location(p, data) for p in ctx.attr.add_library_paths],
+        add_py_paths = [
+            ctx.expand_location(p, data) for p in ctx.attr.add_py_paths],
+    )
+    content = """#!/usr/bin/env python
+import os
+import subprocess
+import sys
+
+# Ensure that we run from `runfiles`.
+# This assumes that this script neighbors `exec`.
+exec_relpath = "{exec_relpath}"
+runfiles_relpath = os.path.relpath(".", exec_relpath)
+script_dir = os.path.dirname(__file__)
+print(script_dir)
+print(os.getcwd())
+runfiles_dir = os.path.join(script_dir, runfiles_relpath)
+exec_path = os.path.join(runfiles_dir, exec_relpath)
+print(runfiles_dir)
+
+def _add_paths(env, paths):
+    abspaths = [os.path.join(runfiles_dir, p) for p in paths]
+    os.environ[env] = ":".join(abspaths) + ":" + os.environ.get(env, '')
+
+# Add library paths.
+env = (sys.platform.startswith("linux") and
+    "LD_LIBRARY_PATH" or "DYLD_LIBRARY_PATH")
+_add_paths(env, {add_library_paths})
+
+# Add Python paths.
+_add_paths("PYTHONPATH", {add_py_paths})
+
+# Execute.
+subprocess.check_call([exec_path] + sys.argv[1:])
+""".format(**info)
+    print(content)
+    # Collect runfiles.
+    files = ctx.attr.executable.data_runfiles.files
     for d in ctx.attr.data:
         files += d.data_runfiles.files
-    args_raw = [
-        "--runfiles_relpath={}".format(ctx.executable.cmd.short_path),
-    ] + ctx.attr.embed_args
-    args = ctx.expand_location(" ".join(args_raw), ctx.attr.data)
-    relpath = ctx.executable.cmd.basename
-    content = "$(dirname $0)/{} {} \"$@\"".format(relpath, args)
     ctx.file_action(
         output=ctx.outputs.executable,
         content=content,
@@ -66,20 +101,21 @@ def _exec_impl(ctx):
         runfiles=ctx.runfiles(files=list(files))
     )]
 
-# Embeds arguments in a script, that can be run via `bazel-bin`.
+# Embeds arguments in a script, that can be run via `bazel-bin`, preserving PWD.
 _exec = rule(
     implementation=_exec_impl,
     executable=True,
     attrs={
-        "cmd": attr.label(cfg="target", executable=True),
-        "embed_args": attr.string_list(),
+        "executable": attr.label(cfg="target", executable=True),
         "data": attr.label_list(cfg="data", allow_files=True),
+        "add_library_paths": attr.string_list(),
+        "add_py_paths": attr.string_list(),
     },
 )
 
-def drake_py_exec(
+def drake_exec(
         name,
-        args,
+        executable,
         add_library_paths = [],
         add_py_paths = [],
         py_deps = [],
@@ -88,8 +124,7 @@ def drake_py_exec(
     """Runs an arbitrary command within a Bazel Python environment. """
     py_main = "//tools/skylark:py_env_runner.py"
     if "deps" in kwargs:
-        fail("Use `py_deps` instead of `deps` to avoid ambiguity.")
-    args = list(args)
+        fail("Use `py_deps`.")
     impl = name + ".impl"
     drake_py_binary(
         name = impl,
@@ -102,7 +137,8 @@ def drake_py_exec(
     # Encode arguments into a script.
     _exec(
         name = name,
-        cmd = impl,
-        embed_args = args,
+        executable = impl,
+        add_library_paths = add_library_paths,
+        add_py_paths = add_py_paths,
         data = data,
     )
