@@ -60,14 +60,21 @@ class CustomVectorSystem(VectorSystem):
 
     def _DoCalcVectorOutput(self, context, u, x, y):
         y[:] = np.hstack([u, x])
+        print("output")
+        print(y)
         self.has_called.append("output")
 
     def _DoCalcVectorTimeDerivatives(self, context, u, x, x_dot):
         x_dot[:] = x + u
+        print("continuous")
+        print(x, u)
+        print(x_dot)
         self.has_called.append("continuous")
 
     def _DoCalcVectorDiscreteVariableUpdates(self, context, u, x, x_n):
         x_n[:] = x + 2*u
+        print("discrete")
+        print(x_n)
         self.has_called.append("discrete")
 
 
@@ -142,7 +149,9 @@ class TestCustom(unittest.TestCase):
             system = CustomVectorSystem(is_discrete)
             context = system.CreateDefaultContext()
             u = np.array([1.])
-            context.FixInputPort(0, BasicVector(u))
+            input = BasicVector(u)
+            print("u: ", input.get_value())
+            context.FixInputPort(0, input)
             output = call_vector_system_overrides(
                 system, context, is_discrete, dt)
 
