@@ -84,9 +84,12 @@ def add_paths(env, paths):
 library_path = (sys.platform.startswith("linux") and
     "LD_LIBRARY_PATH" or "DYLD_LIBRARY_PATH")
 add_paths(library_path, {add_library_paths})
-add_paths("PYTHONPATH", {add_py_paths})
+# N.B. We must defer these, because of bazelbuild/bazel#3998, which affects
+# @vtk.
+os.environ["DEFER_PYTHONPATH"] = ":".join({add_py_paths})
 
-args = [shim_path] + {embed_args}
+embed_args = {embed_args}
+args = [shim_path, os.path.join(runfiles_dir, embed_args[0])] + embed_args[1:]
 subprocess.check_call(args + sys.argv[1:])
 """.format(**info)
     ctx.file_action(
