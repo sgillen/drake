@@ -32,5 +32,7 @@ while args:
         break
     del args[0]
 
+print("\n".join(os.environ["PYTHONPATH"].split(":")))
+
 assert len(args) >= 1
 subprocess.check_call(args)
