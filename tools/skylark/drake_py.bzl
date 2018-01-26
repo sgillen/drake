@@ -71,11 +71,12 @@ import os
 import subprocess
 import sys
 
-shim_path = os.path.dirname(__file__) + "/{shim_basename}"
+script_path = os.path.abspath(__file__)
+shim_path = os.path.dirname(script_path) + "/{shim_basename}"
 runfiles_dir = os.getcwd()
 runfiles_suffix = ".runfiles/{workspace_name}"
 if not runfiles_dir.endswith(runfiles_suffix):
-    runfiles_dir = __file__ + runfiles_suffix
+    runfiles_dir = script_path + runfiles_suffix
 
 def add_paths(env, paths):
     abspaths = [os.path.join(runfiles_dir, p) for p in paths]
@@ -86,7 +87,7 @@ library_path = (sys.platform.startswith("linux") and
 add_paths(library_path, {add_library_paths})
 # N.B. We must defer these, because of bazelbuild/bazel#3998, which affects
 # @vtk.
-os.environ["DEFER_PYTHONPATH"] = ":".join({add_py_paths})
+add_paths("DEFER_PYTHONPATH", {add_py_paths})
 
 embed_args = {embed_args}
 args = [shim_path, os.path.join(runfiles_dir, embed_args[0])] + embed_args[1:]
