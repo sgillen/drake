@@ -33,12 +33,6 @@ namespace {
 // conversion.
 using T = double;
 
-// TODO: Make this use `EigenPtr`.
-template <typename Derived>
-Eigen::Ref<Derived> AsRef(Derived* derived) {
-  return Eigen::Ref<Derived>(*derived);
-}
-
 using systems::System;
 using systems::LeafSystem;
 using systems::Context;
@@ -67,6 +61,9 @@ class LeafSystemPublic : public LeafSystem<T> {
   // Expose protected methods for binding.
   using Base::DeclareVectorOutputPort;
   using Base::DeclarePeriodicPublish;
+  using Base::DeclareContinuousState;
+  using Base::DeclareDiscreteState;
+
   // Because `LeafSystem<T>::DoPublish` is protected, and we had to override
   // this method in `PyLeafSystem`, expose the method here for direct(-ish)
   // access.
@@ -136,7 +133,8 @@ class PyVectorSystem : public PyLeafSystemBase<VectorSystemPublic> {
     PYBIND11_OVERLOAD_INT(
         void, VectorSystem<T>, "_DoCalcVectorOutput",
         // N.B. Passing `Eigen::Map<>` derived classes by reference rather than
-        // pointer to ensure conceptual clarity.
+        // pointer to ensure conceptual clarity. pybind11 `type_caster`
+        // struggles with types of `Map<Derived>*`, but not `Map<Derived>&`.
         &context, input, state, *output);
     Base::DoCalcVectorOutput(context, input, state, output);
   }
@@ -236,7 +234,29 @@ PYBIND11_MODULE(framework, m) {
         }, py_reference_internal)
     .def("_DeclarePeriodicPublish", &PyLeafSystem::DeclarePeriodicPublish,
          py::arg("period"), py::arg("offset") = 0.)
-    .def("_DoPublish", &LeafSystemPublic::DoPublish);
+    .def("_DoPublish", &LeafSystemPublic::DoPublish)
+    // Continuous state.
+    .def("_DeclareContinuousState",
+         py::overload_cast<int>(&LeafSystemPublic::DeclareContinuousState),
+         py::arg("num_state_variables"))
+    .def("_DeclareContinuousState",
+         py::overload_cast<int, int, int>(
+            &LeafSystemPublic::DeclareContinuousState),
+         py::arg("num_q"), py::arg("num_v"), py::arg("num_z"))
+    .def("_DeclareContinuousState",
+         py::overload_cast<const BasicVector<T>&>(
+            &LeafSystemPublic::DeclareContinuousState),
+         py::arg("model_vector"))
+    // TODO(eric.cousineau): Ideally the downstream class of `BasicVector<T>`
+    // should expose `num_q`, `num_v`, and `num_z`?
+    .def("_DeclareContinuousState",
+         py::overload_cast<const BasicVector<T>&, int, int, int>(
+            &LeafSystemPublic::DeclareContinuousState),
+         py::arg("model_vector"),
+         py::arg("num_q"), py::arg("num_v"), py::arg("num_z"))
+    // Discrete state.
+    // TODO(eric.cousineau): Should there be a `BasicVector<>` overload?
+    .def("_DeclareDiscreteState", &LeafSystemPublic::DeclareDiscreteState);
 
   py::class_<Context<T>>(m, "Context")
     .def("get_num_input_ports", &Context<T>::get_num_input_ports)
@@ -370,12 +390,16 @@ PYBIND11_MODULE(framework, m) {
   py::class_<VectorSystem<T>, PyVectorSystem, LeafSystem<T>>(m, "VectorSystem")
     .def(py::init([](int inputs, int outputs) {
       return new PyVectorSystem(inputs, outputs);
-    }))
-    .def("_DoCalcVectorOutput", &VectorSystemPublic::DoCalcVectorOutput)
-    .def("_DoCalcVectorTimeDerivatives",
-         &VectorSystemPublic::DoCalcVectorTimeDerivatives)
-    .def("_DoCalcVectorDiscreteVariableUpdates",
-         &VectorSystemPublic::DoCalcVectorDiscreteVariableUpdates);
+    }));
+    // TODO(eric.cousineau): Bind these methods once we provide a function
+    // wrapper to convert `Map<Derived>*` arguments.
+    // N.B. This could be mitigated by using `EigenPtr` in public interfaces in
+    // upstream code.
+    // .def("_DoCalcVectorOutput", &VectorSystemPublic::DoCalcVectorOutput)
+    // .def("_DoCalcVectorTimeDerivatives",
+    //      &VectorSystemPublic::DoCalcVectorTimeDerivatives)
+    // .def("_DoCalcVectorDiscreteVariableUpdates",
+    //      &VectorSystemPublic::DoCalcVectorDiscreteVariableUpdates);
 }
 
 }  // namespace pydrake

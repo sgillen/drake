@@ -62,12 +62,37 @@ PYBIND11_MODULE(test_util, m) {
     .def(py::init<std::function<void()>>());
 
   // Call overrides to ensure a custom Python class can override these methods.
-  m.def("call_overrides", [](const LeafSystem<T>* system) {
-    auto context = system->AllocateContext();
+
+  m.def("call_leaf_system_overrides", [](const LeafSystem<T>& system) {
+    auto context = system.AllocateContext();
     // Call `Publish` to test `DoPublish`.
     auto events =
         LeafEventCollection<PublishEvent<T>>::MakeForcedEventCollection();
-    system->Publish(*context, *events);
+    system.Publish(*context, *events);
+  });
+
+  m.def("call_vector_system_overrides", [](
+      const VectorSystem<T>& system, Context<T>* context,
+      bool is_discrete, double dt) {
+    // While this is not convention, update state first to ensure that our
+    // output incorporates it correctly, for testing purposes.
+    if (is_discrete) {
+      auto& state = context->get_mutable_discrete_state();
+      auto state_copy = state.Clone();
+      system.CalcDiscreteVariableUpdates(
+          *context, state_copy.get());
+      state.SetFrom(state_copy);
+    } else {
+      auto& state = context->get_mutable_continuous_state();
+      auto state_dot = state.Clone();
+      system.CalcTimeDerivatives(*context, state_dot.get());
+      state.SetFromVector(
+          state.CopyToVector() + dt * state_dot.CopyToVector());
+    }
+    // Calculate output.
+    auto output = system.AllocateOutput(*context);
+    system.CalcOutput(context, output.get());
+    return output;
   });
 }
 
