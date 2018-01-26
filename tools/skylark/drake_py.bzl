@@ -49,8 +49,9 @@ def drake_py_test(
         **kwargs)
 
 def _exec_impl(ctx):
-    data = ctx.attr.data + [ctx.attr.executable]
+    data = ctx.attr.data + [ctx.attr.shim, ctx.attr.executable]
     info = dict(
+        shim_relpath = ctx.executable.shim.short_path,
         exec_relpath = ctx.executable.executable.short_path,
         add_library_paths = [
             ctx.expand_location(p, data) for p in ctx.attr.add_library_paths],
@@ -64,14 +65,20 @@ import sys
 
 # Ensure that we run from `runfiles`.
 # This assumes that this script neighbors `exec`.
-exec_relpath = "{exec_relpath}"
-runfiles_relpath = os.path.relpath(".", exec_relpath)
-script_dir = os.path.dirname(__file__)
-print(script_dir)
-print(os.getcwd())
-runfiles_dir = os.path.join(script_dir, runfiles_relpath)
-exec_path = os.path.join(runfiles_dir, exec_relpath)
+shim_relpath = "{shim_relpath}"
+runfiles_dir = os.getcwd()
 print(runfiles_dir)
+if not os.path.dirname(runfiles_dir).endswith(".runfiles"):
+    script = os.path.abspath(__file__)
+    runfiles_dir = script + ".runfiles"
+    assert os.path.exists(runfiles_dir)
+    runfiles_relpath = os.path.relpath(".", os.path.dirname(shim_relpath))
+    script_dir = os.path.dirname(__file__)
+    runfiles_dir = os.path.abspath(os.path.join(script_dir, runfiles_relpath))
+shim_path = os.path.join(runfiles_dir, shim_relpath)
+print(runfiles_dir)
+print("{exec_relpath}")
+exec_path = os.path.join(runfiles_dir, "{exec_relpath}")
 
 def _add_paths(env, paths):
     abspaths = [os.path.join(runfiles_dir, p) for p in paths]
@@ -86,12 +93,14 @@ _add_paths(env, {add_library_paths})
 _add_paths("PYTHONPATH", {add_py_paths})
 
 # Execute.
-subprocess.check_call([exec_path] + sys.argv[1:])
+args = [shim_path, exec_path] + sys.argv[1:]
+print(args)
+subprocess.check_call(args)
 """.format(**info)
     print(content)
     # Collect runfiles.
-    files = ctx.attr.executable.data_runfiles.files
-    for d in ctx.attr.data:
+    files = depset()
+    for d in data:
         files += d.data_runfiles.files
     ctx.file_action(
         output=ctx.outputs.executable,
@@ -106,7 +115,9 @@ _exec = rule(
     implementation=_exec_impl,
     executable=True,
     attrs={
-        "executable": attr.label(cfg="target", executable=True),
+        "shim": attr.label(cfg="target", executable=True),
+        "executable": attr.label(cfg="target", allow_files=True, executable=True),
+        # "embed_args": attr.label_list(),
         "data": attr.label_list(cfg="data", allow_files=True),
         "add_library_paths": attr.string_list(),
         "add_py_paths": attr.string_list(),
@@ -137,7 +148,8 @@ def drake_exec(
     # Encode arguments into a script.
     _exec(
         name = name,
-        executable = impl,
+        shim = impl,
+        executable = executable,
         add_library_paths = add_library_paths,
         add_py_paths = add_py_paths,
         data = data,

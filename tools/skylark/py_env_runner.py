@@ -39,5 +39,7 @@ while args:
         break
     del args[0]
 
+print(args)
+
 assert len(args) >= 1
 subprocess.check_call(args)
