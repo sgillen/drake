@@ -82,23 +82,19 @@ def drake_py_exec(
     py_main = "//tools/skylark:py_env_runner.py"
     if "deps" in kwargs:
         fail("Use `py_deps` instead of `deps` to avoid ambiguity.")
-    # TODO(eric.cousineau): Is there a better type check for Skylark?
-    args_final = []
     args = list(args)
-    if not args:
-        fail("`args` must be a list with at least one item (the binary).")
     impl = name + ".impl"
     drake_py_binary(
         name = impl,
         srcs = [py_main],
         main = py_main,
         deps = py_deps,
-        data = data,
+        # data = data,
         **kwargs
     )
     # Encode arguments into a script.
     _exec(
         name = name,
-        embed_args = ["python $(location {})".format(py_main)] + args,
-        data = [py_main, impl] + data,
+        embed_args = ["--get_first='$(locations {})'".format(impl)] + args,
+        data = [impl] + data,
     )

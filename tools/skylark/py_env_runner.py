@@ -19,6 +19,7 @@ while args:
     arg = args[0]
     ld_flag = "--add_library_path="
     py_flag = "--add_py_path="
+    first_flag = "--get_first="
     if arg.startswith(ld_flag):
         path = arg[len(ld_flag):]
         env = (sys.platform.startswith("linux") and
@@ -26,13 +27,20 @@ while args:
         os.environ[env] = path + ":" + os.environ[env]
     elif arg.startswith(py_flag):
         path = arg[len(py_flag):]
+        # sys.path.insert(0, os.path.abspath(path))
         env = "PYTHONPATH"
         os.environ[env] = path + ":" + os.environ[env]
+    elif arg == first_flag:
+        meta_arg = arg[len(first_flag):]
+        args[0] = meta_arg.split()[0]
     else:
         break
     del args[0]
 
-print("\n".join(os.environ["PYTHONPATH"].split(":")))
+# print("\n".join(sys.path))
+# print("---")
+# print("\n".join(os.environ["PYTHONPATH"].split(":")))
 
+print(args)
 assert len(args) >= 1
 subprocess.check_call(args)
