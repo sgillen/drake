@@ -10,6 +10,7 @@ drake_py_exec(
     name = "drake_visualizer",
     args = [
         "--add_library_path=$(location @vtk//:lib_dir)",
+        "--add_py_path=$(location @vtk//:lib_dir)/python2.7/site-packages",
         "$(location @drake_visualizer//:binary)",
     ],
     py_deps = adjust_labels_for_drake_hoist([
