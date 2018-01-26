@@ -49,12 +49,15 @@ def drake_py_test(
         **kwargs)
 
 def _exec_impl(ctx):
-    args = [ctx.executable.cmd.short_path] + ctx.attr.embed_args
-    command = ctx.expand_location(" ".join(args), ctx.attr.data)
     files = ctx.attr.cmd.data_runfiles.files
     for d in ctx.attr.data:
         files += d.data_runfiles.files  #ctx.files.data + 
-    content = command + " \"$@\""
+    args_raw = [
+        "--runfiles_relpath={}".format(ctx.executable.cmd.short_path),
+    ] + ctx.attr.embed_args
+    args = ctx.expand_location(" ".join(args_raw), ctx.attr.data)
+    relpath = ctx.executable.cmd.basename
+    content = "$(dirname $0)/{} {} \"$@\"".format(relpath, args)
     print(content)
     ctx.file_action(
         output=ctx.outputs.executable,

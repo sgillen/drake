@@ -17,10 +17,17 @@ args = sys.argv[1:]
 print(args)
 while args:
     arg = args[0]
+    runfiles_flag = "--runfiles_relpath="
     ld_flag = "--add_library_path="
     py_flag = "--add_py_path="
-    first_flag = "--get_first="
-    if arg.startswith(ld_flag):
+    if arg.startswith(runfiles_flag):
+        script_dir = os.path.dirname(__file__)
+        relpath = arg[len(runfiles_flag):]
+        parent = os.path.relpath(".", relpath)
+        os.chdir(os.path.join(script_dir, parent))
+        print(parent)
+        print(os.getcwd())
+    elif arg.startswith(ld_flag):
         path = arg[len(ld_flag):]
         env = (sys.platform.startswith("linux") and
             "LD_LIBRARY_PATH" or "DYLD_LIBRARY_PATH")
@@ -30,17 +37,11 @@ while args:
         # sys.path.insert(0, os.path.abspath(path))
         env = "PYTHONPATH"
         os.environ[env] = path + ":" + os.environ[env]
-    elif arg == first_flag:
-        meta_arg = arg[len(first_flag):]
-        args[0] = meta_arg.split()[0]
     else:
         break
     del args[0]
 
-print("\n".join(sys.path))
-print("---")
-print("\n".join(os.environ["PYTHONPATH"].split(":")))
-
 print(args)
+
 assert len(args) >= 1
 subprocess.check_call(args)
