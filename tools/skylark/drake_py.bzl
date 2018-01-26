@@ -49,21 +49,45 @@ def drake_py_test(
         **kwargs)
 
 def _py_exec_impl(ctx):
-    data = ctx.attr.data + [ctx.attr.cmd]
+    data = ctx.attr.data + [ctx.attr.shim]
     files = depset()
     for d in data:
         files += d.data_runfiles.files
     info = dict(
-        relpath = ctx.executable.cmd.basename,
-        embed_args = ctx.expand_location(" ".join(ctx.attr.embed_args), data),
+        shim_basename = ctx.executable.shim.basename,
         workspace_name = ctx.workspace_name,
+        embed_args = [
+            ctx.expand_location(arg, data) for arg in ctx.attr.embed_args
+        ],
+        add_library_paths = [
+            ctx.expand_location(p, data) for p in ctx.attr.add_library_paths
+        ],
+        add_py_paths = [
+            ctx.expand_location(p, data) for p in ctx.attr.add_py_paths
+        ],
     )
-    content = """#!/bin/bash
-target="$(cd $(dirname $0) && pwd)/{relpath}"
-if [[ $PWD != *.runfiles/{workspace_name} ]]; then
-    cd "$0.runfiles/{workspace_name}"
-fi
-$target {embed_args} "$@"
+    content = """#!/usr/bin/env python
+import os
+import subprocess
+import sys
+
+shim_path = os.path.dirname(__file__) + "/{shim_basename}"
+runfiles_dir = os.getcwd()
+runfiles_suffix = ".runfiles/{workspace_name}"
+if not runfiles_dir.endswith(runfiles_suffix):
+    runfiles_dir = __file__ + runfiles_suffix
+
+def add_paths(env, paths):
+    abspaths = [os.path.join(runfiles_dir, p) for p in paths]
+    os.environ[env] = ":".join(abspaths) + ":" + os.environ.get(env, '')
+
+library_path = (sys.platform.startswith("linux") and
+    "LD_LIBRARY_PATH" or "DYLD_LIBRARY_PATH")
+add_paths(library_path, {add_library_paths})
+add_paths("PYTHONPATH", {add_py_paths})
+
+args = [shim_path] + {embed_args}
+subprocess.check_call(args + sys.argv[1:])
 """.format(**info)
     ctx.file_action(
         output=ctx.outputs.executable,
@@ -78,9 +102,11 @@ _py_exec = rule(
     implementation=_py_exec_impl,
     executable=True,
     attrs={
-        "cmd": attr.label(cfg="target", executable=True),
+        "shim": attr.label(cfg="target", executable=True),
         "embed_args": attr.string_list(),
         "data": attr.label_list(cfg="data", allow_files=True),
+        "add_library_paths": attr.string_list(),
+        "add_py_paths": attr.string_list(),
     },
 )
 
@@ -97,22 +123,22 @@ def drake_py_exec(
     py_main = "//tools/skylark:py_env_runner.py"
     if "deps" in kwargs:
         fail("Use `py_deps` instead of `deps` to avoid ambiguity.")
-    impl = name + ".impl"
+    shim = name + ".shim"
     drake_py_binary(
-        name = impl,
+        name = shim,
         srcs = [py_main],
         main = py_main,
         deps = py_deps,
         data = data,
         **kwargs
     )
-    embed_args = ["--add_library_path={}".format(p) for p in add_library_paths]
-    embed_args += ["--add_py_path={}".format(p) for p in add_py_paths]
-    embed_args += ["$(location {})".format(executable)] + args
-    # Encode arguments into a script.
+    # Embed arguments into a script.
+    embed_args = ["$(location {})".format(executable)] + args
     _py_exec(
         name = name,
-        cmd = impl,
         embed_args = embed_args,
+        shim = shim,
         data = data + [executable],
+        add_library_paths = add_library_paths,
+        add_py_paths = add_py_paths,
     )
