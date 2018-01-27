@@ -4,10 +4,15 @@ load("//tools/lint:lint.bzl", "add_lint_tests")
 
 package(default_visibility = ["//visibility:public"])
 
+licenses(["permissive"])
+
 py_library(
-    name = "wrappers",
-    srcs = ["wrappers.py"],
-    imports = ["."],
+    name = "wrapt",
+    srcs = [
+        "__init__.py",
+        "wrappers.py"
+    ],
+    imports = [".."],
 )
 
 add_lint_tests()

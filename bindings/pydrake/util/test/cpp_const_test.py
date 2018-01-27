@@ -70,7 +70,7 @@ class TestCppConst(unittest.TestCase):
         # N.B. Access does not propagate.
         for i in x_const:
             self.assertFalse(m.is_const(i))
-        self.assertFalse(is_const(x_const[3]))
+        self.assertFalse(m.is_const(x_const[3]))
 
     def test_dict(self):
         # Dictionary.
@@ -80,7 +80,7 @@ class TestCppConst(unittest.TestCase):
         with self.ex(): d_const["c"] = 2
         with self.ex(): d_const.clear()
         # N.B. Access does not implicitly propagate.
-        self.assertFalse(is_const(d_const["z"]))
+        self.assertFalse(m.is_const(d_const["z"]))
 
     def test_basic(self):
         # Basic class.
@@ -95,7 +95,7 @@ class TestCppConst(unittest.TestCase):
         with self.ex(): obj_const.__dict__["_name"] = "Bob"
         with self.ex(): obj_const.new_attr = "Something Else"
         # N.B. Access does not implicitly propagate.
-        self.assertFalse(is_const(obj_const.value))
+        self.assertFalse(m.is_const(obj_const.value))
 
     def test_advanced(self):
         obj = Advanced()
@@ -103,7 +103,7 @@ class TestCppConst(unittest.TestCase):
         obj.add("b", 1)
         obj.add("z", [10])
         obj_const = m.to_const(obj)
-        self.assertTrue(is_const(obj_const.get_values()))
+        self.assertTrue(m.is_const(obj_const.get_values()))
         self.assertEquals(obj_const.get("a"), 0)
         with self.ex(): obj_const.add("c", 2)
         with self.ex(): obj_const.get_values()["c"] = 2

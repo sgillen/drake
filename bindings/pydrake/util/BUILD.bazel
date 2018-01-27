@@ -102,7 +102,8 @@ drake_py_library(
     name = "cpp_const_py",
     srcs = ["cpp_const.py"],
     deps = [
-        "//third_party/wrapt:wrappers",
+        ":module_py",
+        "//third_party/wrapt",
     ],
 )
 
