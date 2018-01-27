@@ -4,8 +4,8 @@ Enables a semi-transparent layer of C++ const-honoring Python proxies.
 """
 
 import inspect
-from wrapt import ObjectProxy
 from types import MethodType
+from wrapt import ObjectProxy
 
 # N.B. There should *always* be an option for disabling this for performance
 # reasons!
@@ -22,9 +22,9 @@ class ConstError(TypeError):
 class _ConstClassMeta(object):
     # Provides metadata for a given class.
     def __init__(self, cls, owned_properties=None, mutable_methods=None):
-        self.cls = cls
-        self.owned_properties = set(owned_properties or set())  # set of strings
-        self.mutable_methods = set(mutable_methods or set())  # set of strings
+        self._cls = cls
+        self._owned_properties = set(owned_properties or set())
+        self.mutable_methods = set(mutable_methods or set())
         # Add any decorated mutable methods.
         methods = inspect.getmembers(cls, predicate=inspect.ismethod)
         for name, method in methods:
@@ -33,15 +33,15 @@ class _ConstClassMeta(object):
             if getattr(method, '_is_mutable_method', False):
                 self.mutable_methods.add(name)
         # Handle inheritance.
-        for base_cls in self.cls.__bases__:
+        for base_cls in self._cls.__bases__:
             base_meta = _const_metas.get(base_cls)  # Minor cyclic dependency.
-            self.owned_properties.update(base_meta.owned_properties)
+            self._owned_properties.update(base_meta._owned_properties)
             self.mutable_methods.update(base_meta.mutable_methods)
 
     def is_owned_property(self, name):
         # Determines if a property is owned, and if the returned value should
         # be `const`.
-        return name in self.owned_properties
+        return name in self._owned_properties
 
     def is_mutable_method(self, name):
         # Determines if a method is mutable (by name).
