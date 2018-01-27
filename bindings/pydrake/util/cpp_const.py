@@ -238,7 +238,7 @@ def type_extract(obj):
 def _raise_mutable_method_error(obj, name):
     raise ConstError(
         ("'{}' is a mutable method that cannot be called on a " +
-        "const {}.").format(name, type_extract(obj)))
+         "const {}.").format(name, type_extract(obj)))
 
 
 def mutable_method(func):

@@ -20,7 +20,7 @@ class Basic(object):
 
 
 # Annotated.
-@m.const_meta(owned_properties = ['_values'])
+@m.const_meta(owned_properties=['_values'])
 class Advanced(object):
     def __init__(self):
         self._values = {}
@@ -54,7 +54,7 @@ class AdvancedChild(Advanced):
 
 
 class TestCppConst(unittest.TestCase):
-    def ex(self):
+    def _ex(self):
         # Shorthand for testing for errors.
         return self.assertRaises(m.ConstError)
 
@@ -62,11 +62,16 @@ class TestCppConst(unittest.TestCase):
         # List.
         x = [1, 2, 3, [10]]
         x_const = m.to_const(x)
-        with self.ex(): x_const[0] = 10
-        with self.ex(): x_const[:] = []
-        with self.ex(): del x_const[0]
-        with self.ex(): x_const.append(10)
-        with self.ex(): x_const.pop()
+        with self._ex():
+            x_const[0] = 10
+        with self._ex():
+            x_const[:] = []
+        with self._ex():
+            del x_const[0]
+        with self._ex():
+            x_const.append(10)
+        with self._ex():
+            x_const.pop()
         # N.B. Access does not propagate.
         for i in x_const:
             self.assertFalse(m.is_const(i))
@@ -77,8 +82,10 @@ class TestCppConst(unittest.TestCase):
         d = {"a": 0, "b": 1, "z": [25]}
         d_const = m.to_const(d)
         self.assertEquals(d_const["a"], 0)
-        with self.ex(): d_const["c"] = 2
-        with self.ex(): d_const.clear()
+        with self._ex():
+            d_const["c"] = 2
+        with self._ex():
+            d_const.clear()
         # N.B. Access does not implicitly propagate.
         self.assertFalse(m.is_const(d_const["z"]))
 
@@ -89,11 +96,16 @@ class TestCppConst(unittest.TestCase):
         obj.new_attr = "Something"
         self.assertEquals(obj_const.get_name(), "Tim")
         self.assertEquals(obj_const.__dict__["_name"], "Tim")
-        with self.ex(): obj_const.set_name("Bob")
-        with self.ex(): obj_const.name = "Bob"
-        with self.ex(): obj_const._name = "Bob"
-        with self.ex(): obj_const.__dict__["_name"] = "Bob"
-        with self.ex(): obj_const.new_attr = "Something Else"
+        with self._ex():
+            obj_const.set_name("Bob")
+        with self._ex():
+            obj_const.name = "Bob"
+        with self._ex():
+            obj_const._name = "Bob"
+        with self._ex():
+            obj_const.__dict__["_name"] = "Bob"
+        with self._ex():
+            obj_const.new_attr = "Something Else"
         # N.B. Access does not implicitly propagate.
         self.assertFalse(m.is_const(obj_const.value))
 
@@ -105,10 +117,14 @@ class TestCppConst(unittest.TestCase):
         obj_const = m.to_const(obj)
         self.assertTrue(m.is_const(obj_const.get_values()))
         self.assertEquals(obj_const.get("a"), 0)
-        with self.ex(): obj_const.add("c", 2)
-        with self.ex(): obj_const.get_values()["c"] = 2
-        with self.ex(): obj_const.mutate()
-        with self.ex(): obj_const.mutate_indirect()
+        with self._ex():
+            obj_const.add("c", 2)
+        with self._ex():
+            obj_const.get_values()["c"] = 2
+        with self._ex():
+            obj_const.mutate()
+        with self._ex():
+            obj_const.mutate_indirect()
         # N.B. Access does not implicitly propagate.
         self.assertFalse(m.is_const(obj_const.get("z")))
         self.assertFalse(m.is_const(obj_const.__dict__["_values"]))
@@ -118,9 +134,12 @@ class TestCppConst(unittest.TestCase):
         obj.add("a", 0)
         obj_const = m.to_const(obj)
         self.assertEquals(obj_const.const_safe("a"), 0)
-        with self.ex(): obj_const.const_unsafe("a")
-        with self.ex(): obj_const.mutate_indirect_2()
-        with self.ex(): obj_const._values["c"] = 2
+        with self._ex():
+            obj_const.const_unsafe("a")
+        with self._ex():
+            obj_const.mutate_indirect_2()
+        with self._ex():
+            obj_const._values["c"] = 2
 
 
 if __name__ == "__main__":
