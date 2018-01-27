@@ -142,8 +142,7 @@ class _Const(ObjectProxy):
         else:
             return value
 
-    @property
-    def __dict__(self):
+    def __dict_custom__(self):
         return to_const(self.__wrapped__.__dict__)
 
     def __str__(self):

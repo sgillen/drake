@@ -45,7 +45,7 @@ class _ObjectProxyMethods(object):
 
     @property
     def __dict__(self):
-        return self.__wrapped__.__dict__
+        return type(self).__dict_custom__(self)
 
     # Need to also propagate the special __weakref__ attribute for case
     # where decorating classes which will define this. If do not define
