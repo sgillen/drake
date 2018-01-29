@@ -3,7 +3,7 @@ import os
 import unittest
 
 from pydrake import getDrakePath
-from pydrake.rbtree import RigidBodyTree
+from pydrake.rbtree import RigidBodyTree, FloatingBaseType
 
 import pydrake.multibody.rigid_body_plant as mut
 
@@ -13,7 +13,8 @@ class TestRigidBodyPlant(unittest.TestCase):
         urdf_path = os.path.join(
             getDrakePath(), "examples/pendulum/Pendulum.urdf")
         for is_discrete in [False, True]:
-            tree = RigidBodyTree(urdf_path)
+            tree = RigidBodyTree(
+                urdf_path, floating_base_type=FloatingBaseType.kFixed)
             if is_discrete:
                 timestep = 0.0
                 plant = mut.RigidBodyPlant(tree)
@@ -36,15 +37,13 @@ class TestRigidBodyPlant(unittest.TestCase):
             self.assertEquals(
                 plant.get_num_velocities(0), tree.get_num_velocities())
 
-            self.assertEquals(
-                plant.get_num_states(), tree.get_num_states())
-            self.assertEquals(
-                plant.get_num_states(0), tree.get_num_states())
+            num_states = plant.get_num_positions() + plant.get_num_velocities()
+            self.assertEquals(plant.get_num_states(), num_states)
+            self.assertEquals(plant.get_num_states(0), num_states)
 
-            self.assertEquals(
-                plant.get_num_actuators(), tree.get_num_actuators())
-            self.assertEquals(
-                plant.get_num_actuators(0), tree.get_num_actuators())
+            num_actuators = 1
+            self.assertEquals(plant.get_num_actuators(), num_actuators)
+            self.assertEquals(plant.get_num_actuators(0), num_actuators)
 
             self.assertEquals(
                 plant.get_num_model_instances(), 1)

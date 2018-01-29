@@ -1,8 +1,5 @@
 #include <pybind11/eigen.h>
-#include <pybind11/eval.h>
-#include <pybind11/functional.h>
 #include <pybind11/pybind11.h>
-#include <pybind11/stl.h>
 
 #include "drake/bindings/pydrake/pydrake_pybind.h"
 #include "drake/multibody/rigid_body_plant/rigid_body_plant.h"
@@ -34,19 +31,19 @@ PYBIND11_MODULE(rigid_body_plant, m) {
              py_reference_internal)
         .def("get_num_bodies", &Class::get_num_bodies)
         .def("get_num_positions",
-             [](const Class* self) { return self->get_num_positions(); })
+             overload_cast_explicit<int>(&Class::get_num_positions))
         .def("get_num_positions",
              overload_cast_explicit<int, int>(&Class::get_num_positions))
-        // .def("get_num_velocities",
-        //      overload_cast_explicit<int>(&Class::get_num_velocities))
+        .def("get_num_velocities",
+             overload_cast_explicit<int>(&Class::get_num_velocities))
         .def("get_num_velocities",
              overload_cast_explicit<int, int>(&Class::get_num_velocities))
-        // .def("get_num_states",
-        //      overload_cast_explicit<int>(&Class::get_num_states))
+        .def("get_num_states",
+             overload_cast_explicit<int>(&Class::get_num_states))
         .def("get_num_states",
              overload_cast_explicit<int, int>(&Class::get_num_states))
-        // .def("get_num_actuators",
-        //      overload_cast_explicit<int>(&Class::get_num_actuators))
+        .def("get_num_actuators",
+             overload_cast_explicit<int>(&Class::get_num_actuators))
         .def("get_num_actuators",
              overload_cast_explicit<int, int>(&Class::get_num_actuators))
         .def("get_num_model_instances", &Class::get_num_model_instances)
