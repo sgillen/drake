@@ -87,8 +87,9 @@ PYBIND11_MODULE(rigid_body_plant, m) {
                 // Custom keep-alive semantics. pybind's `eigen_map_caster` only
                 // allows mapping if we supply a `parent`, which we cannot
                 // achieve with `py_reference` and `py::keep_alive`.
-                auto out = self->GetStateVector(context);
-                return py::cast(out, py_reference_internal, py::cast(context));
+                Eigen::Ref<const VectorX<T>> out =
+                    self->GetStateVector(context);
+                return py::cast(out, py_reference_internal, py::cast(&context));
              })
         .def("is_state_discrete", &Class::is_state_discrete)
         .def("get_time_step", &Class::get_time_step);
