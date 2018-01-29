@@ -11,14 +11,14 @@ load(
 )
 load(":forward_files.bzl", "forward_files")
 
-package(default_visibility = adjust_labels_for_drake_hoist([
-    "//drake/bindings/pydrake:__subpackages__",
-]))
+package(default_visibility = [
+    "//bindings/pydrake:__subpackages__",
+])
 
 # This determines how `PYTHONPATH` is configured, and how to install the
 # bindings.
 PACKAGE_INFO = get_pybind_package_info(
-    base_package = adjust_label_for_drake_hoist("//drake/bindings"),
+    base_package = "//bindings",
 )
 
 drake_py_library(
@@ -27,19 +27,15 @@ drake_py_library(
     imports = PACKAGE_INFO.py_imports,
 )
 
+# Forward physical files to simplify working with `third_party` files.
 forward_files(
-    name = "wrapt_py_srcs",
-    srcs = glob(["//third_party/wrapt/*.py"]),
-    strip_prefix = "//third_party/wrapt/",
+    srcs = [
+        "//third_party:wrapt/__init__.py",
+        "//third_party:wrapt/wrappers.py",
+        "//third_party:wrapt/LICENSE",
+    ],
+    strip_prefix = "//third_party:wrapt/",
     dest_prefix = "wrapt/",
-    visibility = ["//visibility:private"],
-)
-
-forward_files(
-    name = "wrapt_license",
-    srcs = ["//third_party/wrapt/LICENSE"],
-    strip_prefix = "//third_party/wrapt/",
-    dest = "wrapt.",
     visibility = ["//visibility:private"],
 )
 
@@ -47,11 +43,12 @@ forward_files(
 # `python-wrapt` that does not have bugs like a mis-mapped `__mod__` proxy.
 drake_py_library(
     name = "wrapt_py",
-    srcs = wrapt_py_srcs,
+    srcs = [
+        "wrapt/__init__.py",
+        "wrapt/wrappers.py",
+    ],
     imports = PACKAGE_INFO.py_imports,
 )
-
-PYBIND_LIBRARIES = []
 
 PY_LIBRARIES = [
     ":module_py",
@@ -64,9 +61,8 @@ install(
     name = "install",
     targets = PY_LIBRARIES,
     py_dest = PACKAGE_INFO.py_dest,
-    deps = get_drake_pybind_installs(PYBIND_LIBRARIES) + UPSTREAM_INSTALLS,
-    docs = [":wrapt_license"],
-    doc_dest = ["share/doc/pydrake_third_party"],
+    docs = ["wrapt/LICENSE"],
+    doc_dest = "share/doc",
 )
 
 add_lint_tests()
