@@ -44,10 +44,12 @@ class _ConstClassMeta(object):
         return name in self._owned_properties
 
     def is_mutable_method(self, name):
-        # Determines if a method is mutable (by name).
-        # Limitation: This would not handle overloads (e.g.
-        # `const T& get() const` and `T& get()`). However, C++ should decorate
-        # the methods such that we should not need to mark them.
+        # Determines if a method is mutable by name.
+        # N.B. This would not handle overloads (e.g. differing between
+        # `T& get()` and `const T& get() const`).
+        # However, if using `pybind11`, the method signatures should play well
+        # with custom `type_caster`s that will permit the overloads to
+        # organically prevent `const` violations.
         return name in self.mutable_methods
 
 
@@ -79,8 +81,8 @@ class _ConstClassMetaMap(object):
 
 _const_metas = _ConstClassMetaMap()
 # Register common mutators.
-# N.B. These methods actually have to be overridde in `Const`, since neither
-# `__getattr__` nor `__getattribute__` will capture them.
+# N.B. All methods registered will respect inheritance.
+# N.B. For `object`, see `_install_object_mutable_methods`.
 _const_metas.emplace(object, mutable_methods={
     "__setattr__",
     "__delattr__",
@@ -96,6 +98,7 @@ _const_metas.emplace(object, mutable_methods={
     "__imod__",
     "__ipow__",
     "__ilshift__",
+    "__irshift__",
     "__iand__",
     "__ixor__",
     "__ior__",
@@ -103,17 +106,21 @@ _const_metas.emplace(object, mutable_methods={
     "__exit__",
     })
 _const_metas.emplace(list, mutable_methods={
-    'append',
-    'clear',
-    'extend',
-    'insert',
-    'pop',
-    'remove',
-    'sort',
+    "append",
+    "clear",
+    "extend",
+    "insert",
+    "pop",
+    "remove",
+    "reverse",
+    "sort",
     })
 _const_metas.emplace(dict, mutable_methods={
-    'clear',
-    'setdefault',
+    "clear",
+    "pop",
+    "popitem",
+    "setdefault",
+    "update",
     })
 
 
@@ -154,9 +161,10 @@ class _Const(ObjectProxy):
             return out
 
 
-def _install_mutable_error_methods():
-    # Automatically rewrite any mutable methods for `object` to deny access
-    # upon calling.
+def _install_object_mutable_methods():
+    # Installs methods to `_Const` that will always raise an error.
+    # N.B. The methods for `object` actually have to be overridden in `_Const`,
+    # since neither `__getattr__` nor `__getattribute__` will capture them.
     for name in _const_metas.get(object).mutable_methods:
         def _capture(name):
             def _no_mutable(self, *args, **kwargs):
@@ -166,7 +174,7 @@ def _install_mutable_error_methods():
         _capture(name)
 
 
-_install_mutable_error_methods()
+_install_object_mutable_methods()
 
 
 def _is_immutable(obj):

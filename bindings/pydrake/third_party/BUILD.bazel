@@ -1,6 +1,5 @@
 load("@drake//tools/install:install.bzl", "install")
 load("//tools/lint:lint.bzl", "add_lint_tests")
-
 load(
     "//tools/skylark:drake_py.bzl",
     "drake_py_library",
@@ -30,14 +29,16 @@ drake_py_library(
 # Forward physical files to simplify working with `third_party` files (both
 # for Python imports and for installation).
 wrapt_prefix = "//third_party:com_github_grahamdumpleton_wrapt/"
+
 forward_files(
     srcs = [wrapt_prefix + f for f in [
         "__init__.py",
         "LICENSE",
         "wrappers.py",
     ]],
-    strip_prefix = wrapt_prefix,
     dest_prefix = "wrapt/",
+    strip_prefix = wrapt_prefix,
+    tags = ["nolint"],
     visibility = ["//visibility:private"],
 )
 
@@ -50,6 +51,7 @@ drake_py_library(
         "wrapt/wrappers.py",
     ],
     imports = PACKAGE_INFO.py_imports,
+    tags = ["nolint"],
 )
 
 PY_LIBRARIES = [
@@ -57,7 +59,11 @@ PY_LIBRARIES = [
     ":wrapt_py",
 ]
 
-# No roll-up library.
+drake_py_library(
+    name = "third_party",
+    visibility = ["//visibility:public"],
+    deps = PY_LIBRARIES,
+)
 
 install(
     name = "install",
