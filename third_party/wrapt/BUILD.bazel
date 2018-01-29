@@ -13,16 +13,17 @@ py_library(
         "__init__.py",
         "wrappers.py",
     ],
-    imports = [".."],
+    deps = ["//:module_py"],
     tags = ["nolint"],
 )
 
 install(
     name = "install",
     targets = [":wrapt"],
-    py_dest = "lib/python2.7/dist-packages/wrapt",
+    py_dest = "lib/python2.7/site-packages/drake/third_party/wrapt",
     docs = [":LICENSE"],
     doc_dest = "share/doc/wrapt",
+    deps = ["//third_party:install_module_py"],
 )
 
 add_lint_tests()
