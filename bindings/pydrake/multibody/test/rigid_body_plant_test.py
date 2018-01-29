@@ -3,11 +3,10 @@ import unittest
 
 from pyrdake.rbtree import RigidBodyTree
 
-import pydrake.systems.multibody as mut
+import pydrake.multibody.rigid_body_plant as mut
 
 
-
-class TestMultibody(unittest.TestCase):
+class TestRigidBodyPlant(unittest.TestCase):
     def test_api(self):
         urdf_path = os.path.join(
             pydrake.getDrakePath(), "examples/pendulum/Pendulum.urdf")
