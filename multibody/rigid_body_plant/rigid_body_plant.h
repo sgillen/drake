@@ -129,7 +129,7 @@ class RigidBodyPlant : public LeafSystem<T> {
   ///   time-stepping approximation to the dynamics.  @default 0.0.
   // TODO(SeanCurtis-TRI): It appears that the tree has to be "compiled"
   // already.  Confirm/deny and document that result.
-  explicit RigidBodyPlant(std::unique_ptr<const RigidBodyTree<T>> tree,
+  explicit RigidBodyPlant(std::shared_ptr<const RigidBodyTree<T>> tree,
                           double timestep = 0.0);
 
   ~RigidBodyPlant() override;
@@ -468,7 +468,7 @@ class RigidBodyPlant : public LeafSystem<T> {
       const VectorX<T>& f,
       const std::vector<int>& half_num_cone_edges) const;
 
-  std::unique_ptr<const RigidBodyTree<T>> tree_;
+  std::shared_ptr<const RigidBodyTree<T>> tree_;
 
   // Object that performs all constraint computations.
   multibody::constraint::ConstraintSolver<T> constraint_solver_;
