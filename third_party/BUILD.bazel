@@ -50,9 +50,9 @@ exports_files(
 
 exports_files(
     ["com_github_grahamdumpleton_wrapt/" + f for f in [
+        "LICENSE",
         "__init__.py",
         "wrappers.py",
-        "LICENSE",
     ]],
     visibility = ["//bindings/pydrake/third_party:__pkg__"],
 )

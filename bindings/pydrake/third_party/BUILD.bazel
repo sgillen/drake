@@ -33,8 +33,8 @@ wrapt_prefix = "//third_party:com_github_grahamdumpleton_wrapt/"
 forward_files(
     srcs = [wrapt_prefix + f for f in [
         "__init__.py",
-        "wrappers.py",
         "LICENSE",
+        "wrappers.py",
     ]],
     strip_prefix = wrapt_prefix,
     dest_prefix = "wrapt/",
