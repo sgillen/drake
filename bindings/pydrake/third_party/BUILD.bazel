@@ -27,14 +27,16 @@ drake_py_library(
     imports = PACKAGE_INFO.py_imports,
 )
 
-# Forward physical files to simplify working with `third_party` files.
+# Forward physical files to simplify working with `third_party` files (both
+# for Python imports and for installation).
+wrapt_prefix = "//third_party:com_github_grahamdumpleton_wrapt/"
 forward_files(
-    srcs = [
-        "//third_party:wrapt/__init__.py",
-        "//third_party:wrapt/wrappers.py",
-        "//third_party:wrapt/LICENSE",
-    ],
-    strip_prefix = "//third_party:wrapt/",
+    srcs = [wrapt_prefix + f for f in [
+        "__init__.py",
+        "wrappers.py",
+        "LICENSE",
+    ]],
+    strip_prefix = wrapt_prefix,
     dest_prefix = "wrapt/",
     visibility = ["//visibility:private"],
 )
