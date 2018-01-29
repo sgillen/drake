@@ -5,7 +5,7 @@ Enables a semi-transparent layer of C++ const-honoring Python proxies.
 
 import inspect
 from types import MethodType
-from drake.third_party.wrapt import ObjectProxy
+from pydrake.third_party.wrapt import ObjectProxy
 
 # N.B. There should *always* be an option for disabling this for performance
 # reasons!

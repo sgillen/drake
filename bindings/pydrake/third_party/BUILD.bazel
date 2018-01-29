@@ -1,0 +1,72 @@
+load("@drake//tools/install:install.bzl", "install")
+load("//tools/lint:lint.bzl", "add_lint_tests")
+
+load(
+    "//tools/skylark:drake_py.bzl",
+    "drake_py_library",
+)
+load(
+    "//tools/skylark:pybind.bzl",
+    "get_pybind_package_info",
+)
+load(":forward_files.bzl", "forward_files")
+
+package(default_visibility = adjust_labels_for_drake_hoist([
+    "//drake/bindings/pydrake:__subpackages__",
+]))
+
+# This determines how `PYTHONPATH` is configured, and how to install the
+# bindings.
+PACKAGE_INFO = get_pybind_package_info(
+    base_package = adjust_label_for_drake_hoist("//drake/bindings"),
+)
+
+drake_py_library(
+    name = "module_py",
+    srcs = ["__init__.py"],
+    imports = PACKAGE_INFO.py_imports,
+)
+
+forward_files(
+    name = "wrapt_py_srcs",
+    srcs = glob(["//third_party/wrapt/*.py"]),
+    strip_prefix = "//third_party/wrapt/",
+    dest_prefix = "wrapt/",
+    visibility = ["//visibility:private"],
+)
+
+forward_files(
+    name = "wrapt_license",
+    srcs = ["//third_party/wrapt/LICENSE"],
+    strip_prefix = "//third_party/wrapt/",
+    dest = "wrapt.",
+    visibility = ["//visibility:private"],
+)
+
+# TODO(eric.cousineau): Use Ubuntu packages once we have a later version of
+# `python-wrapt` that does not have bugs like a mis-mapped `__mod__` proxy.
+drake_py_library(
+    name = "wrapt_py",
+    srcs = wrapt_py_srcs,
+    imports = PACKAGE_INFO.py_imports,
+)
+
+PYBIND_LIBRARIES = []
+
+PY_LIBRARIES = [
+    ":module_py",
+    ":wrapt_py",
+]
+
+# No roll-up library.
+
+install(
+    name = "install",
+    targets = PY_LIBRARIES,
+    py_dest = PACKAGE_INFO.py_dest,
+    deps = get_drake_pybind_installs(PYBIND_LIBRARIES) + UPSTREAM_INSTALLS,
+    docs = [":wrapt_license"],
+    doc_dest = ["share/doc/pydrake_third_party"],
+)
+
+add_lint_tests()
