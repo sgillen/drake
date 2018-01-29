@@ -93,6 +93,17 @@ drake_pybind_library(
     ],
 )
 
+drake_pybind_library(
+    name = "multibody_py",
+    cc_so_name = "multibody",
+    cc_srcs = ["multibody_py.cc"],
+    package_info = PACKAGE_INFO,
+    py_deps = [
+        ":framework_py",
+        ":module_py",
+    ],
+)
+
 drake_py_library(
     name = "drawing_py",
     srcs = ["drawing.py"],
@@ -206,6 +217,14 @@ drake_py_test(
     size = "small",
     deps = [
         ":sensors_py",
+    ],
+)
+
+drake_py_test(
+    name = "multibody_test",
+    size = "small",
+    deps = [
+        ":multibody_py",
     ],
 )
 
