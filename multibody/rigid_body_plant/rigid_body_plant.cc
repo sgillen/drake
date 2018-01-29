@@ -32,7 +32,7 @@ const int kInvalidPortIdentifier = -1;
 }  // namespace
 
 template <typename T>
-RigidBodyPlant<T>::RigidBodyPlant(std::shared_ptr<const RigidBodyTree<T>> tree,
+RigidBodyPlant<T>::RigidBodyPlant(std::unique_ptr<const RigidBodyTree<T>> tree,
                                   double timestep)
     : tree_(move(tree)), timestep_(timestep), compliant_contact_model_(
     std::make_unique<CompliantContactModel<T>>()) {
