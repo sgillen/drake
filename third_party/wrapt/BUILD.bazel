@@ -1,5 +1,6 @@
 # -*- python -*-
 
+load("@drake//tools/install:install.bzl", "install")
 load("//tools/lint:lint.bzl", "add_lint_tests")
 
 package(default_visibility = ["//visibility:public"])
@@ -16,6 +17,12 @@ py_library(
     tags = ["nolint"],
 )
 
-# TODO(eric.cousineau): Install this once it's used in `pydrake`.
+install(
+    name = "install",
+    targets = [":wrapt"],
+    py_dest = "lib/python2.7/dist-packages/wrapt",
+    docs = [":LICENSE"],
+    doc_dest = "share/doc/wrapt",
+)
 
 add_lint_tests()

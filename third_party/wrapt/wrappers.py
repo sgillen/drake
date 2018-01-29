@@ -45,6 +45,7 @@ class _ObjectProxyMethods(object):
 
     @property
     def __dict__(self):
+        # NOTE(eric.cousineau): This is required to use without `_wrappers.c`.
         return type(self).__dict_custom__(self)
 
     # Need to also propagate the special __weakref__ attribute for case
@@ -82,6 +83,10 @@ class ObjectProxy(with_metaclass(_ObjectProxyMetaType)):
             object.__setattr__(self, '__qualname__', wrapped.__qualname__)
         except AttributeError:
             pass
+
+    @property
+    def __dict_custom__(self):
+        return self.__wrapped__.__dict__
 
     @property
     def __name__(self):
