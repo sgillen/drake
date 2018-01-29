@@ -1,7 +1,9 @@
 import numpy as np
+import os
 import unittest
 
-from pyrdake.rbtree import RigidBodyTree
+from pydrake import getDrakePath
+from pydrake.rbtree import RigidBodyTree
 
 import pydrake.multibody.rigid_body_plant as mut
 
@@ -9,7 +11,7 @@ import pydrake.multibody.rigid_body_plant as mut
 class TestRigidBodyPlant(unittest.TestCase):
     def test_api(self):
         urdf_path = os.path.join(
-            pydrake.getDrakePath(), "examples/pendulum/Pendulum.urdf")
+            getDrakePath(), "examples/pendulum/Pendulum.urdf")
         for is_discrete in [False, True]:
             tree = RigidBodyTree(urdf_path)
             if is_discrete:

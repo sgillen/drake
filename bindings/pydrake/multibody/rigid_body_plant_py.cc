@@ -13,7 +13,7 @@ using std::vector;
 namespace drake {
 namespace pydrake {
 
-PYBIND11_MODULE(multibody, m) {
+PYBIND11_MODULE(rigid_body_plant, m) {
   // NOLINTNEXTLINE(build/namespaces): Emulate placement in namespace.
   using namespace drake::systems;
 
@@ -25,7 +25,7 @@ PYBIND11_MODULE(multibody, m) {
 
   {
     using Class = RigidBodyPlant<T>;
-    py::class_<Class, LeafSystem<T>> cls;
+    py::class_<Class, LeafSystem<T>> cls(m, "RigidBodyPlant");
     // Defined in order of declaration in `rigid_body_plant.h`.
     cls
         .def(py::init<unique_ptr<const RigidBodyTree<T>>, double>(),
@@ -34,32 +34,34 @@ PYBIND11_MODULE(multibody, m) {
              py_reference_internal)
         .def("get_num_bodies", &Class::get_num_bodies)
         .def("get_num_positions",
-             py::overload_cast<>(&Class::get_num_positions))
+             [](const Class* self) { return self->get_num_positions(); })
         .def("get_num_positions",
-             py::overload_cast<int>(&Class::get_num_positions))
+             overload_cast_explicit<int, int>(&Class::get_num_positions))
+        // .def("get_num_velocities",
+        //      overload_cast_explicit<int>(&Class::get_num_velocities))
         .def("get_num_velocities",
-             py::overload_cast<>(&Class::get_num_velocities))
-        .def("get_num_velocities",
-             py::overload_cast<int>(&Class::get_num_velocities))
+             overload_cast_explicit<int, int>(&Class::get_num_velocities))
+        // .def("get_num_states",
+        //      overload_cast_explicit<int>(&Class::get_num_states))
         .def("get_num_states",
-             py::overload_cast<>(&Class::get_num_states))
-        .def("get_num_states",
-             py::overload_cast<int>(&Class::get_num_states))
+             overload_cast_explicit<int, int>(&Class::get_num_states))
+        // .def("get_num_actuators",
+        //      overload_cast_explicit<int>(&Class::get_num_actuators))
         .def("get_num_actuators",
-             py::overload_cast<>(&Class::get_num_actuators))
-        .def("get_num_actuators",
-             py::overload_cast<int>(&Class::get_num_actuators))
+             overload_cast_explicit<int, int>(&Class::get_num_actuators))
         .def("get_num_model_instances", &Class::get_num_model_instances)
         .def("get_input_size", &Class::get_input_size)
         .def("get_output_size", &Class::get_output_size)
         .def("set_position", &Class::set_position)
         .def("set_velocity", &Class::set_velocity)
         .def("set_state_vector",
-             py::overload_cast<Context<T>*, const Eigen::Ref<const VectorX<T>>>(
-                 &Class::set_state_vector))
+             overload_cast_explicit<
+                 void, Context<T>*, const Eigen::Ref<const VectorX<T>>>(
+                     &Class::set_state_vector))
         .def("set_state_vector",
-             py::overload_cast<State<T>*, const Eigen::Ref<const VectorX<T>>>(
-                 &Class::set_state_vector))
+             overload_cast_explicit<
+                 void, State<T>*, const Eigen::Ref<const VectorX<T>>>(
+                     &Class::set_state_vector))
         .def("SetDefaultState", &Class::SetDefaultState)
         .def("FindInstancePositionIndexFromWorldIndex",
              &Class::FindInstancePositionIndexFromWorldIndex)

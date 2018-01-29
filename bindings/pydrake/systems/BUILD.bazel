@@ -209,12 +209,4 @@ drake_py_test(
     ],
 )
 
-drake_py_test(
-    name = "multibody_test",
-    size = "small",
-    deps = [
-        ":multibody_py",
-    ],
-)
-
 add_lint_tests()
