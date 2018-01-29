@@ -16,11 +16,12 @@ class TestRigidBodyPlant(unittest.TestCase):
             tree = RigidBodyTree(
                 urdf_path, floating_base_type=FloatingBaseType.kFixed)
             if is_discrete:
-                timestep = 0.0
-                plant = mut.RigidBodyPlant(tree)
-            else:
                 timestep = 0.1
                 plant = mut.RigidBodyPlant(tree, timestep)
+            else:
+                timestep = 0.0
+                plant = mut.RigidBodyPlant(tree)
+            model_id = 0
 
             # Tested in order in which they're declared in `multibody_py.cc`,
             # when able.
@@ -30,20 +31,20 @@ class TestRigidBodyPlant(unittest.TestCase):
             self.assertEquals(
                 plant.get_num_positions(), tree.get_num_positions())
             self.assertEquals(
-                plant.get_num_positions(0), tree.get_num_positions())
+                plant.get_num_positions(model_id), tree.get_num_positions())
 
             self.assertEquals(
                 plant.get_num_velocities(), tree.get_num_velocities())
             self.assertEquals(
-                plant.get_num_velocities(0), tree.get_num_velocities())
+                plant.get_num_velocities(model_id), tree.get_num_velocities())
 
             num_states = plant.get_num_positions() + plant.get_num_velocities()
             self.assertEquals(plant.get_num_states(), num_states)
-            self.assertEquals(plant.get_num_states(0), num_states)
+            self.assertEquals(plant.get_num_states(model_id), num_states)
 
             num_actuators = 1
             self.assertEquals(plant.get_num_actuators(), num_actuators)
-            self.assertEquals(plant.get_num_actuators(0), num_actuators)
+            self.assertEquals(plant.get_num_actuators(model_id), num_actuators)
 
             self.assertEquals(
                 plant.get_num_model_instances(), 1)
@@ -53,10 +54,7 @@ class TestRigidBodyPlant(unittest.TestCase):
             context = plant.CreateDefaultContext()
             x = plant.GetStateVector(context)
             plant.SetDefaultState(context, context.get_mutable_state())
-            print(x)
             plant.set_position(context, 0, 1.)
-            print(x)
-            print(plant.GetStateVector(context))
             self.assertEquals(x[0], 1.)
             plant.set_velocity(context, 0, 2.)
             self.assertEquals(x[1], 2.)
@@ -66,21 +64,22 @@ class TestRigidBodyPlant(unittest.TestCase):
             self.assertTrue(np.allclose(x, [4., 4.]))
 
             self.assertEquals(
-                plant.FindInstancePositionIndexFromWorldIndex(0, 1), 1)
+                plant.FindInstancePositionIndexFromWorldIndex(0, 0), 0)
 
             # Existence checks.
             self.assertTrue(plant.actuator_command_input_port() is not None)
-            self.assertTrue(plant.model_instance_has_actuators())
+            self.assertTrue(plant.model_instance_has_actuators(model_id))
             self.assertTrue(
-                plant.model_instance_actuator_command_input_port() is not None)
+                plant.model_instance_actuator_command_input_port(model_id)
+                is not None)
             self.assertTrue(
                 plant.state_output_port() is not None)
             self.assertTrue(
-                plant.model_instance_state_output_port() is not None)
+                plant.model_instance_state_output_port(model_id) is not None)
             self.assertTrue(
                 plant.torque_output_port() is not None)
             self.assertTrue(
-                plant.model_instance_torque_output_port() is not None)
+                plant.model_instance_torque_output_port(model_id) is not None)
             self.assertTrue(
                 plant.kinematics_results_output_port() is not None)
             self.assertTrue(

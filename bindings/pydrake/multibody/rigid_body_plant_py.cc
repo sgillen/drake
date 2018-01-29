@@ -83,14 +83,12 @@ PYBIND11_MODULE(rigid_body_plant, m) {
         .def("contact_results_output_port",
              &Class::contact_results_output_port, py_reference_internal)
         .def("GetStateVector",
-             [](const Class* self, const Context<T>& context) {
-                // Custom keep-alive semantics. pybind's `eigen_map_caster` only
-                // allows mapping if we supply a `parent`, which we cannot
-                // achieve with `py_reference` and `py::keep_alive`.
-                Eigen::Ref<const VectorX<T>> out =
-                    self->GetStateVector(context);
-                return py::cast(out, py_reference_internal, py::cast(&context));
-             })
+             [](const Class* self, const Context<T>& context)
+                    -> Eigen::Ref<const VectorX<T>> {
+                return self->GetStateVector(context);
+             }, py_reference,
+             // Keep alive, ownership: `return` keeps `Context` alive.
+             py::keep_alive<0, 2>())
         .def("is_state_discrete", &Class::is_state_discrete)
         .def("get_time_step", &Class::get_time_step);
   }
