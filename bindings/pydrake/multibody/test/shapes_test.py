@@ -4,7 +4,7 @@ import unittest
 import numpy as np
 
 import pydrake
-import pydrake.multibody.shapes as shapes
+from pydrake.multibody import shapes
 
 
 class TestShapes(unittest.TestCase):
