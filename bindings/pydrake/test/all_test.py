@@ -6,10 +6,6 @@ from pydrake.all import *
 
 
 class TestAll(unittest.TestCase):
-    def test_help(self):
-        import pydrake.all
-        print(pydrake.all.__doc__)
-
     def test_symbols(self):
         # Subset of symbols.
         expected_symbols = (
@@ -40,27 +36,27 @@ class TestAll(unittest.TestCase):
             self.assertTrue(expected_symbol in globals())
 
     def test_usage_all(self):
-        # N.B. Synchronize this with docstring in `.all`.
+        # N.B. Synchronize this with `doc/python_bindings.rst`.
         tree = RigidBodyTree(
-            getDrakePath() + "/examples/pendulum/Pendulum.urdf")
+            FindResourceOrThrow("drake/examples/pendulum/Pendulum.urdf"))
         simulator = Simulator(RigidBodyPlant(tree))
-        self.assertTrue(isinstance(simulator, Simulator))
 
     def test_usage_no_all(self):
-        # N.B. Synchronize this with docstring in `.all`.
 
         def isolated(self):
             # Ensure we have no globals leaking in.
             self.assertEquals(len(globals()), 0)
 
-            from pydrake import getDrakePath
+            # N.B. Synchronize this with `doc/python_bindings.rst`.
+            from pydrake.common import FindResourceOrThrow
             from pydrake.multibody.rigid_body_plant import RigidBodyPlant
             from pydrake.rbtree import RigidBodyTree
             from pydrake.systems.analysis import Simulator
 
             tree = RigidBodyTree(
-                getDrakePath() + "/examples/pendulum/Pendulum.urdf")
+                FindResourceOrThrow("drake/examples/pendulum/Pendulum.urdf"))
             simulator = Simulator(RigidBodyPlant(tree))
+
             return simulator
 
         # Evaluate without access to current globals.

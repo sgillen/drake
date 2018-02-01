@@ -107,20 +107,20 @@ As an example, the following code uses ``pydrake.all``:
     from pydrake.all import *
 
     tree = RigidBodyTree(
-        getDrakePath() + "/examples/pendulum/Pendulum.urdf")
+        FindResourceOrThrow("drake/examples/pendulum/Pendulum.urdf"))
     simulator = Simulator(RigidBodyPlant(tree))
 
 While this code does not:
 
 .. code-block:: python
 
-    from pydrake import getDrakePath
+    from pydrake.common import FindResourceOrThrow
     from pydrake.multibody.rigid_body_plant import RigidBodyPlant
     from pydrake.rbtree import RigidBodyTree
     from pydrake.systems.analysis import Simulator
 
     tree = RigidBodyTree(
-        getDrakePath() + "/examples/pendulum/Pendulum.urdf")
+        FindResourceOrThrow("drake/examples/pendulum/Pendulum.urdf"))
     simulator = Simulator(RigidBodyPlant(tree))
 
 For guidance on when to use ``pydrake.all`` when developing, please see
