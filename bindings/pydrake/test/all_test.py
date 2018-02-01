@@ -6,6 +6,10 @@ from pydrake.all import *
 
 
 class TestAll(unittest.TestCase):
+    def test_help(self):
+        import pydrake.all
+        print(pydrake.all.__doc__)
+
     def test_symbols(self):
         # Subset of symbols.
         expected_symbols = (

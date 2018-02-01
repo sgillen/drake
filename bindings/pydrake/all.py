@@ -14,28 +14,9 @@ dependencies and (b) the potential to lose a symbol if there is a conflict
 N.B. Import order matters! If there is a name conflict, the last one imported
 wins.
 
-Example usage, using the `all` module:
-
-    from pydrake.all import *
-
-    tree = RigidBodyTree(
-        getDrakePath() + "/examples/pendulum/Pendulum.urdf")
-    simulator = Simulator(RigidBodyPlant(tree))
-
-Not using the `all` modules:
-
-    from pydrake import getDrakePath
-    from pydrake.multibody.rigid_body_plant import RigidBodyPlant
-    from pydrake.rbtree import RigidBodyTree
-    from pydrake.systems.analysis import Simulator
-
-    tree = RigidBodyTree(
-        getDrakePath() + "/examples/pendulum/Pendulum.urdf")
-    simulator = Simulator(RigidBodyPlant(tree))
+To see example usages, please see `doc/python_bindings.rst`.
 
 """
-
-# N.B. Synchronize above example with `:all_test`.
 
 from __future__ import absolute_import
 
