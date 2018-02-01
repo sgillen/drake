@@ -104,7 +104,6 @@ PY_LIBRARIES = [
 ]
 
 drake_py_all_library(
-    name = "all_py",
     deps = PY_LIBRARIES_WITH_INSTALL + PY_LIBRARIES,
 )
 

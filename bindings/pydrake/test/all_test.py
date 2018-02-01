@@ -1,7 +1,6 @@
 from __future__ import absolute_import, division, print_function
 
 import unittest
-import pydrake.common
 
 from pydrake.all import *
 
@@ -34,7 +33,7 @@ class TestAll(unittest.TestCase):
         # Ensure each symbol is exposed as globals from the above import
         # statement.
         for expected_symbol in expected_symbols:
-            assert expected_symbol in globals()
+            self.assertTrue(expected_symbol in globals())
 
 
 if __name__ == '__main__':

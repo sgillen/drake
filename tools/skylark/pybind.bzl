@@ -256,16 +256,18 @@ def drake_pybind_cc_googletest(
     )
 
 def drake_py_all_library(
-        name,
         deps = []):
-    """Defines a roll-up `all` module, and ensures that its not included in
-    `deps`.
+    """Defines a roll-up `all_py` module, using the same library list that will
+    be used for the full module, as well as installation.
+    This uses the source file `all.py`.
+    This list *must* include `:all_py`.
     """
-    target = ":" + name
-    if target in deps:
-        deps.remove(target)
+    if ":all_py" not in deps:
+        fail("The dependencies for the `all_py` library *must* include " +
+             "`:all_py` itself.")
+    deps.remove(":all_py")
     drake_py_library(
-        name = name,
+        name = "all_py",
         srcs = ["all.py"],
         deps = deps,
     )
