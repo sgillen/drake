@@ -4,7 +4,6 @@ load("@drake//tools/install:install.bzl", "install")
 load("//tools/lint:lint.bzl", "add_lint_tests")
 load(
     "//tools/skylark:pybind.bzl",
-    "drake_py_all_library",
     "drake_pybind_library",
     "get_drake_py_installs",
     "get_pybind_package_info",
@@ -66,14 +65,16 @@ PY_LIBRARIES_WITH_INSTALL = [
     ":shapes_py",
 ]
 
+PY_LIBRARIES = []
+
+# Symbol roll-up (for user ease).
 drake_py_library(
     name = "all_py",
     srcs = ["all.py"],
     deps = PY_LIBRARIES_WITH_INSTALL + PY_LIBRARIES,
 )
 
-PY_LIBRARIES += [":all_py"]
-
+# Package roll-up (for Bazel dependencies).
 drake_py_library(
     name = "multibody",
     deps = [":all_py"],
@@ -81,7 +82,7 @@ drake_py_library(
 
 install(
     name = "install",
-    targets = PY_LIBRARIES,
+    targets = PY_LIBRARIES + [":all_py"],
     py_dest = PACKAGE_INFO.py_dest,
     deps = get_drake_py_installs(PY_LIBRARIES_WITH_INSTALL),
 )

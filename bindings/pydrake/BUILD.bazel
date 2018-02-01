@@ -14,7 +14,6 @@ load(
 )
 load(
     "//tools/skylark:pybind.bzl",
-    "drake_py_all_library",
     "drake_pybind_library",
     "get_drake_py_installs",
     "get_pybind_package_info",
@@ -138,13 +137,12 @@ PY_LIBRARIES_WITH_INSTALL = adjust_labels_for_drake_hoist([
 
 PY_LIBRARIES = []
 
+# Symbol roll-up (for user ease).
 drake_py_library(
     name = "all_py",
     srcs = ["all.py"],
     deps = PY_LIBRARIES_WITH_INSTALL + PY_LIBRARIES,
 )
-
-PY_LIBRARIES += [":all_py"]
 
 # Package roll-up (for Bazel dependencies).
 drake_py_library(
@@ -155,7 +153,7 @@ drake_py_library(
 
 install(
     name = "install",
-    targets = PY_LIBRARIES,
+    targets = PY_LIBRARIES + [":all_py"],
     py_dest = PACKAGE_INFO.py_dest,
     visibility = ["//visibility:public"],
     deps = get_drake_py_installs(PY_LIBRARIES_WITH_INSTALL),
@@ -163,7 +161,8 @@ install(
 
 drake_py_test(
     name = "all_test",
-    deps = ["all_py"],
+    data = ["//examples/pendulum:models"],
+    deps = [":all_py"],
 )
 
 # Test ODR (One Definition Rule).
