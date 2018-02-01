@@ -109,14 +109,17 @@ PY_LIBRARIES_WITH_INSTALL = [
 ]
 
 PY_LIBRARIES = [
-    ":all_py",
     ":drawing_py",
     ":module_py",
 ]
 
-drake_py_all_library(
+drake_py_library(
+    name = "all_py",
+    srcs = ["all.py"],
     deps = PY_LIBRARIES_WITH_INSTALL + PY_LIBRARIES,
 )
+
+PY_LIBRARIES += [":all_py"]
 
 drake_py_library(
     name = "systems",

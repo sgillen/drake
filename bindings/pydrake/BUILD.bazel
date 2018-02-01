@@ -136,14 +136,15 @@ PY_LIBRARIES_WITH_INSTALL = adjust_labels_for_drake_hoist([
     "//drake/bindings/pydrake/util",
 ])
 
-PY_LIBRARIES = [
-    ":all_py",
-]
+PY_LIBRARIES = []
 
-# `all` module.
-drake_py_all_library(
+drake_py_library(
+    name = "all_py",
+    srcs = ["all.py"],
     deps = PY_LIBRARIES_WITH_INSTALL + PY_LIBRARIES,
 )
+
+PY_LIBRARIES += [":all_py"]
 
 # Package roll-up (for Bazel dependencies).
 drake_py_library(
