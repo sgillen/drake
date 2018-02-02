@@ -58,6 +58,8 @@ class MoveOnlyType {
   int x_{};
 };
 
+struct UnknownType {};
+
 }  // namespace
 
 PYBIND11_MODULE(test_util, m) {
@@ -82,6 +84,10 @@ PYBIND11_MODULE(test_util, m) {
   // Define `Value` instantiation.
   auto move_only_value = pysystems::AddValueInstantiation<MoveOnlyType>(m);
   move_only_value.def(py::init<int>());
+
+  m.def("make_unknown_abstract_value", []() {
+    return AbstractValue::Make(UnknownType{});
+  });
 
   // Call overrides to ensure a custom Python class can override these methods.
 

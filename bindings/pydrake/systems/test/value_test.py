@@ -12,7 +12,10 @@ from pydrake.systems.framework import (
     BasicVector,
     Value,
     )
-from pydrake.systems.test.test_util import MoveOnlyType
+from pydrake.systems.test.test_util import (
+    make_unknown_abstract_value,
+    MoveOnlyType,
+)
 
 
 def pass_through(x):
@@ -107,6 +110,19 @@ class TestValue(unittest.TestCase):
         self.assertTrue(isinstance(value, Value[MoveOnlyType]))
         value = AbstractValue.Make({"x": 10})
         self.assertTrue(isinstance(value, Value[object]))
+
+    def test_abstract_value_unknown(self):
+        value = make_unknown_abstract_value()
+        self.assertTrue(isinstance(value, AbstractValue))
+        with self.assertRaises(RuntimeError) as cm:
+            value.get_value()
+        self.assertTrue(all(
+            s in cm.exception.message for s in [
+                "AbstractValue",
+                "UnknownType",
+                "get_value",
+                "AddValueInstantiation",
+            ]), cm.exception.message)
 
 
 if __name__ == '__main__':
