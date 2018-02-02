@@ -436,10 +436,13 @@ PYBIND11_MODULE(framework, m) {
     .def("get_mutable_value", abstract_stub("get_mutable_value"))
     .def("set_value", abstract_stub("set_value"));
 
-  // Add simple `Value<>` instantiations.
+  // Add `Value<std::string>` instantiation (visible in Python as `Value[str]`).
   AddValueInstantiation<string>(m);
 
   // Add `Value[object]` instantiation.
+  // N.B. If any code explicitly uses `Value<py::object>` for whatever reason,
+  // then this should turn into a specialization of `Value<>`, rather than an
+  // extension.
   class PyObjectValue : public Value<py::object> {
    public:
     using Base = Value<py::object>;
@@ -455,7 +458,7 @@ PYBIND11_MODULE(framework, m) {
 
   py::object py_type_func = py::eval("type");
   py::object py_object_type = py::eval("object");
-  // `Value` will be defined by the first call to `AddValueInstantiation`.
+  // `Value` was defined by the first call to `AddValueInstantiation`.
   py::object py_value_template = m.attr("Value");
   abstract_value.def_static(
       "Make",
@@ -463,8 +466,9 @@ PYBIND11_MODULE(framework, m) {
         // Try to infer type from the object. If that does not work, just return
         // `Value[object]`.
         py::object py_type = py_type_func(value);
-        py::object py_value_class =
-            py_value_template.attr("get_instantiation")(py_type, false)[0];
+        py::tuple py_result =
+            py_value_template.attr("get_instantiation")(py_type, false);
+        py::object py_value_class = py_result[0];
         if (py_value_class.is_none()) {
           py_value_class = py_value_template[py_object_type];
         }

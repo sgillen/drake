@@ -12,10 +12,7 @@ from pydrake.systems.framework import (
     BasicVector,
     Value,
     )
-# from pydrake.systems.test.test_util import MoveOnlyValue
-from pydrake.systems.test.test_util import (
-    DeleteListenerSystem,
-)
+from pydrake.systems.test.test_util import MoveOnlyType
 
 
 def pass_through(x):
@@ -73,14 +70,17 @@ class TestValue(unittest.TestCase):
         self.assertEquals(value.get_value(), expected_new)
 
     def test_abstract_value_move_only(self):
-        x = MoveOnlyValue(10)
-        # This will maintain a reference.
-        value = Value[MoveOnlyValue](x)
-        x.set_value(20)
-        self.assertEquals(value.get_value().get_value(), 20)
+        obj = MoveOnlyType(10)
+        # This *always* copies the object.
+        value = Value[MoveOnlyType](obj)
+        self.assertTrue(value.get_value() is not obj)
+        self.assertEquals(value.get_value().x(), 10)
         # Set value.
-        value.get_mutable_value().set_value(30)
-        self.assertEquals(value.get_value().get_value(), 30)
+        value.get_mutable_value().set_x(20)
+        self.assertEquals(value.get_value().x(), 20)
+        # Test custom emplace constructor.
+        emplace_value = Value[MoveOnlyType](30)
+        self.assertEquals(emplace_value.get_value().x(), 30)
 
     def test_abstract_value_py_object(self):
         expected = {"x": 10}

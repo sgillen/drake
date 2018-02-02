@@ -48,14 +48,14 @@ class DeleteListenerVector : public BasicVector<T> {
 
 class MoveOnlyType {
  public:
-  MoveOnlyType(int value) : value_(value) {}
-  int value() const { return value_; }
-  void set_value(int value) { value_ = value; }
+  MoveOnlyType(int x) : x_(x) {}
+  int x() const { return x_; }
+  void set_x(int x) { x_ = x; }
   std::unique_ptr<MoveOnlyType> Clone() const {
-    return std::make_unique<MoveOnlyType>(value_);
+    return std::make_unique<MoveOnlyType>(x_);
   }
  private:
-  int value_{};
+  int x_{};
 };
 
 }  // namespace
@@ -77,10 +77,11 @@ PYBIND11_MODULE(test_util, m) {
 
   py::class_<MoveOnlyType>(m, "MoveOnlyType")
     .def(py::init<int>())
-    .def("value", &MoveOnlyType::value)
-    .def("set_value", &MoveOnlyType::set_value);
+    .def("x", &MoveOnlyType::x)
+    .def("set_x", &MoveOnlyType::set_x);
   // Define `Value` instantiation.
-  pysystems::AddValueInstantiation<MoveOnlyType>(m);
+  auto move_only_value = pysystems::AddValueInstantiation<MoveOnlyType>(m);
+  move_only_value.def(py::init<int>());
 
   // Call overrides to ensure a custom Python class can override these methods.
 
