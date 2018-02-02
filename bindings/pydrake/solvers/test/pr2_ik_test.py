@@ -46,11 +46,9 @@ robot = load_robot_from_urdf(urdf_file)
 
 # Add a convenient frame, positioned 0.1m away from the r_gripper_palm_link
 # along that link's x axis
-robot.addFrame(
-    rbtree.RigidBodyFrame("r_hand_frame",
-                                  robot.FindBody("r_gripper_palm_link"),
-                                  np.array([0.1, 0, 0]),
-                                  np.array([0., 0, 0])))
+robot.addFrame(rbtree.RigidBodyFrame(
+    "r_hand_frame", robot.FindBody("r_gripper_palm_link"),
+    np.array([0.1, 0, 0]), np.array([0., 0, 0])))
 
 # Make sure attribute access works on bodies
 assert robot.world().get_name() == "world"
