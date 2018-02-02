@@ -76,30 +76,18 @@ drake_pybind_library(
     ],
 )
 
-drake_pybind_library(
+# Backwards compatibility.
+drake_py_library(
     name = "rbtree_py",
-    cc_deps = [
-        ":autodiff_types_pybind",
-    ],
-    cc_srcs = ["rbtree_py.cc"],
-    package_info = PACKAGE_INFO,
-    py_deps = [
-        ":autodiffutils_py",
-        ":common_py",
-        ":parsers_py",
-        "//bindings/pydrake/multibody:shapes_py",
-    ],
-    py_srcs = ["rbtree.py"],
+    srcs = ["rbtree.py"],
+    deps = ["//bindings/pydrake/multibody:rigid_body_tree_py"],
 )
 
-drake_pybind_library(
+# Backwards compatibility.
+drake_py_library(
     name = "parsers_py",
-    cc_so_name = "parsers",
-    cc_srcs = ["parsers_py.cc"],
-    package_info = PACKAGE_INFO,
-    py_deps = [
-        ":common_py",
-    ],
+    srcs = ["parsers.py"],
+    deps = ["//bindings/pydrake/multibody:parsers_py"],
 )
 
 # TODO(eric.cousineau): Make private.
@@ -124,8 +112,6 @@ drake_pybind_library(
 PY_LIBRARIES_WITH_INSTALL = adjust_labels_for_drake_hoist([
     ":autodiffutils_py",
     ":common_py",
-    ":parsers_py",
-    ":rbtree_py",
     ":symbolic_py",
     "//drake/bindings/pydrake/examples",
     "//drake/bindings/pydrake/multibody",
@@ -135,7 +121,10 @@ PY_LIBRARIES_WITH_INSTALL = adjust_labels_for_drake_hoist([
     "//drake/bindings/pydrake/util",
 ])
 
-PY_LIBRARIES = []
+PY_LIBRARIES = [
+    ":parsers_py",  # Backwards compatibility.
+    ":rbtree_py",  # Backwards compatibility.
+]
 
 # Symbol roll-up (for user ease).
 drake_py_library(
@@ -189,15 +178,6 @@ drake_py_test(
 )
 
 drake_py_test(
-    name = "atlas_constructor_test",
-    size = "small",
-    srcs = ["test/atlas_constructor_test.py"],
-    data = ["//drake/examples/atlas:models"],
-    main = "test/atlas_constructor_test.py",
-    deps = [":rbtree_py"],
-)
-
-drake_py_test(
     name = "common_test",
     size = "small",
     srcs = ["test/common_test.py"],
@@ -233,24 +213,6 @@ drake_py_test(
 )
 
 drake_py_test(
-    name = "rbm_forward_kin_test",
-    size = "small",
-    srcs = ["test/rbt_transform_points_test.py"],
-    data = ["//drake/examples/pendulum:models"],
-    main = "test/rbt_transform_points_test.py",
-    deps = [":rbtree_py"],
-)
-
-drake_py_test(
-    name = "rbt_com_test",
-    size = "small",
-    srcs = ["test/rbt_com_test.py"],
-    data = ["//drake/examples/pendulum:models"],
-    main = "test/rbt_com_test.py",
-    deps = [":rbtree_py"],
-)
-
-drake_py_test(
     name = "symbolic_variables_test",
     size = "small",
     srcs = ["test/symbolic_test.py"],
@@ -259,22 +221,9 @@ drake_py_test(
 )
 
 drake_py_test(
-    name = "parsers_test",
-    size = "small",
-    srcs = ["test/parsers_test.py"],
-    data = [
-        "//drake/examples/acrobot:models",
-        "//drake/examples/pr2:models",
-    ],
-    main = "test/parsers_test.py",
-    deps = [":rbtree_py"],
-)
-
-drake_py_test(
-    name = "rbtree_shim_test",
-    srcs = ["test/rbtree_shim_test.py"],
+    name = "backwards_compatability_test",
     deps = [
-        ":common_py",
+        ":parsers_py",
         ":rbtree_py",
     ],
 )

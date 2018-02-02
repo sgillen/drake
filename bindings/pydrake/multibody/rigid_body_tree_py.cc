@@ -14,21 +14,23 @@
 namespace drake {
 namespace pydrake {
 
-PYBIND11_MODULE(_rbtree_py, m) {
+PYBIND11_MODULE(rigid_body_tree, m) {
   m.doc() = "Bindings for the RigidBodyTree class";
 
   using drake::multibody::joints::FloatingBaseType;
   using drake::parsers::PackageMap;
   namespace sdf = drake::parsers::sdf;
 
+  py::module::import("pydrake.multibody.parsers");
   py::module::import("pydrake.multibody.shapes");
-  py::module::import("pydrake.parsers");
 
   py::enum_<FloatingBaseType>(m, "FloatingBaseType")
     .value("kFixed", FloatingBaseType::kFixed)
     .value("kRollPitchYaw", FloatingBaseType::kRollPitchYaw)
     .value("kQuaternion", FloatingBaseType::kQuaternion);
 
+  // TODO(eric.cousineau): Try to decouple these APIs so that `rigid_body_tree`
+  // and `parsers` do not form a dependency cycle.
   py::class_<RigidBodyTree<double>>(m, "RigidBodyTree")
     .def(py::init<>())
     .def("__init__",
