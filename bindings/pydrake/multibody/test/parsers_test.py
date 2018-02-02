@@ -81,12 +81,14 @@ class TestParsers(unittest.TestCase):
         self.assertEqual(pm.GetPath("foo"), os.path.abspath(os.curdir))
 
         # Populate from folder.
+        # TODO(eric.cousineau): This mismatch between casing is confusing, with
+        # `Atlas` being the package name, but `atlas` being the dirctory name.
         pm = PackageMap()
         self.assertEqual(pm.size(), 0)
         pm.PopulateFromFolder(
             os.path.join(getDrakePath(), "examples", "atlas"))
-        self.assertTrue(pm.Contains("atlas"))
-        self.assertEqual(pm.GetPath("atlas"), os.path.join(
+        self.assertTrue(pm.Contains("Atlas"))
+        self.assertEqual(pm.GetPath("Atlas"), os.path.join(
             getDrakePath(), "examples", "atlas", ""))
 
         # Populate from environment.
@@ -94,8 +96,8 @@ class TestParsers(unittest.TestCase):
         os.environ["PYDRAKE_TEST_ROS_PACKAGE_PATH"] = os.path.join(
             getDrakePath(), "examples")
         pm.PopulateFromEnvironment("PYDRAKE_TEST_ROS_PACKAGE_PATH")
-        self.assertTrue(pm.Contains("atlas"))
-        self.assertEqual(pm.GetPath("atlas"), os.path.join(
+        self.assertTrue(pm.Contains("Atlas"))
+        self.assertEqual(pm.GetPath("Atlas"), os.path.join(
             getDrakePath(), "examples", "atlas", ""))
         del os.environ["PYDRAKE_TEST_ROS_PACKAGE_PATH"]
 
@@ -104,8 +106,8 @@ class TestParsers(unittest.TestCase):
         pm.PopulateUpstreamToDrake(
             os.path.join(getDrakePath(), "examples", "atlas", "urdf",
                          "atlas_minimal_contact.urdf"))
-        self.assertTrue(pm.Contains("atlas"))
-        self.assertEqual(pm.GetPath("atlas"), os.path.join(
+        self.assertTrue(pm.Contains("Atlas"))
+        self.assertEqual(pm.GetPath("Atlas"), os.path.join(
             getDrakePath(), "examples", "atlas"))
 
 

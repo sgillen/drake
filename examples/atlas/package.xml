@@ -1,5 +1,5 @@
 <package format="2">
-  <name>atlas</name>
+  <name>Atlas</name>
   <version>0.0.0</version>
   <description>
     This package provides Atlas models and URDFs.
