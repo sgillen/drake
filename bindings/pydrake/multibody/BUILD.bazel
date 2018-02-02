@@ -62,10 +62,10 @@ drake_pybind_library(
 
 drake_pybind_library(
     name = "rigid_body_tree_py",
-    cc_so_name = "rigid_body_tree",
     cc_deps = [
         "//bindings/pydrake:autodiff_types_pybind",
     ],
+    cc_so_name = "rigid_body_tree",
     cc_srcs = ["rigid_body_tree_py.cc"],
     package_info = PACKAGE_INFO,
     py_deps = [

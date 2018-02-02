@@ -70,7 +70,7 @@ PYBIND11_MODULE(rigid_body_tree, m) {
             FloatingBaseType floating_base_type;
             std::cerr << "WARNING: passing joint_type as a string is "
               << "deprecated. Please pass a FloatingBaseType value such as "
-              << "pydrake.rbtree.FloatingBaseType.kRollPitchYaw" << std::endl;
+              << "FloatingBaseType.kRollPitchYaw" << std::endl;
             if (joint_type == "FIXED") {
               floating_base_type = FloatingBaseType::kFixed;
             } else if (joint_type == "ROLLPITCHYAW") {

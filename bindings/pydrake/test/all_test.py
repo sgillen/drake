@@ -13,15 +13,17 @@ class TestAll(unittest.TestCase):
             "AutoDiffXd",
             # common
             "AddResourceSearchPath",
-            # parsers
-            "PackageMap",
-            # rbtree
-            "RigidBodyTree",
+            # forwarddiff
+            "jacobian",
+            "sin",
+            "cos",
             # symbolic
             "Variable",
             "Expression",
             # multibody
+            "PackageMap",
             "RigidBodyPlant",
+            "RigidBodyTree",
             # solvers
             "MathematicalProgram",
             "LinearConstraint",

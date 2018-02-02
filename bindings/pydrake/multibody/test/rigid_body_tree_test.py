@@ -72,8 +72,8 @@ class TestRigidBodyTree(unittest.TestCase):
         self.assertTrue(np.allclose(T, T_expected))
 
     def test_kinematics_com_api(self):
-        tree = RigidBodyTree(os.path.join(pydrake.getDrakePath(),
-                          "examples/pendulum/Pendulum.urdf"))
+        tree = RigidBodyTree(os.path.join(
+            pydrake.getDrakePath(), "examples/pendulum/Pendulum.urdf"))
         num_q = 7
         num_v = 7
         q = np.zeros(num_q)

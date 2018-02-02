@@ -3,7 +3,7 @@ from __future__ import absolute_import, division, print_function
 import os
 import numpy as np
 import pydrake
-import pydrake.rbtree
+import pydrake.multibody.rigid_body_tree as rbtree
 from pydrake.solvers import ik
 
 
@@ -14,19 +14,19 @@ def load_robot_from_urdf(urdf_file):
     possible to load a robot with a much simpler syntax
     that uses default values, such as:
 
-      robot = pydrake.rbtree.RigidBodyTree(urdf_file)
+      robot = rbtree.RigidBodyTree(urdf_file)
 
     """
     urdf_string = open(urdf_file).read()
     base_dir = os.path.dirname(urdf_file)
-    package_map = pydrake.rbtree.PackageMap()
+    package_map = rbtree.PackageMap()
     weld_frame = None
-    floating_base_type = pydrake.rbtree.kRollPitchYaw
+    floating_base_type = rbtree.kRollPitchYaw
 
     # Load our model from URDF
-    robot = pydrake.rbtree.RigidBodyTree()
+    robot = rbtree.RigidBodyTree()
 
-    pydrake.rbtree.AddModelInstanceFromUrdfStringSearchingInRosPackages(
+    rbtree.AddModelInstanceFromUrdfStringSearchingInRosPackages(
         urdf_string,
         package_map,
         base_dir,
@@ -47,7 +47,7 @@ robot = load_robot_from_urdf(urdf_file)
 # Add a convenient frame, positioned 0.1m away from the r_gripper_palm_link
 # along that link's x axis
 robot.addFrame(
-    pydrake.rbtree.RigidBodyFrame("r_hand_frame",
+    rbtree.RigidBodyFrame("r_hand_frame",
                                   robot.FindBody("r_gripper_palm_link"),
                                   np.array([0.1, 0, 0]),
                                   np.array([0., 0, 0])))
