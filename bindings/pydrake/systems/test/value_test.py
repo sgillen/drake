@@ -12,7 +12,10 @@ from pydrake.systems.framework import (
     BasicVector,
     Value,
     )
-from pydrake.systems.framework.test.test_util import MoveOnlyValue
+# from pydrake.systems.test.test_util import MoveOnlyValue
+from pydrake.systems.test.test_util import (
+    DeleteListenerSystem,
+)
 
 
 def pass_through(x):
@@ -99,11 +102,11 @@ class TestValue(unittest.TestCase):
 
     def test_abstract_value_make(self):
         value = AbstractValue.Make("Hello world")
-        self.assertTrue(isinstance(value, Value[str])
+        self.assertTrue(isinstance(value, Value[str]))
         value = AbstractValue.Make(MoveOnlyType(10))
         self.assertTrue(isinstance(value, Value[MoveOnlyType]))
         value = AbstractValue.Make({"x": 10})
-        self.assertTrue(isinstance(value, Value[object])
+        self.assertTrue(isinstance(value, Value[object]))
 
 
 if __name__ == '__main__':

@@ -22,6 +22,7 @@
 #include "drake/systems/framework/vector_system.h"
 
 using std::make_unique;
+using std::string;
 using std::unique_ptr;
 using std::vector;
 
@@ -42,6 +43,8 @@ using systems::VectorSystem;
 using systems::PublishEvent;
 using systems::DiscreteUpdateEvent;
 using systems::DiscreteValues;
+
+using pysystems::AddValueInstantiation;
 
 class PySystem : public py::wrapper<System<T>> {
  public:
@@ -416,15 +419,15 @@ PYBIND11_MODULE(framework, m) {
   auto abstract_stub = [](const std::string& method) {
     return [method](const AbstractValue* self, py::args, py::kwargs) {
       string type_name = NiceTypeName::Get(*self);
-      throw std::runtime_error(fmt::format(
-          "This derived class of `AbstractValue`, `{}`, is not exposed to "
-          "pybind11, so `{}` cannot be called. "
-          "See `AddValueInstantiation` for how to bind it.",
-          type_name, method));
+      throw std::runtime_error(
+          "This derived class of `AbstractValue`, `" + type_name + "`, " +
+          "is not exposed to pybind11, so `" + method + "` cannot be " +
+          "called. See `AddValueInstantiation` for how to bind it.");
     };
   };
 
-  py::class_<AbstractValue>(m, "AbstractValue")
+  py::class_<AbstractValue> abstract_value(m, "AbstractValue");
+  abstract_value
     .def("Clone", &AbstractValue::Clone)
     .def("__copy__", &AbstractValue::Clone)
     // Use only exception variant.
@@ -439,6 +442,8 @@ PYBIND11_MODULE(framework, m) {
   // Add `Value[object]` instantiation.
   class PyObjectValue : public Value<py::object> {
    public:
+    using Base = Value<py::object>;
+    using Base::Base;
     // Override `Value<py::object>::Clone()` to perform a shallow copy on the
     // object.
     std::unique_ptr<AbstractValue> Clone() const override {
@@ -447,6 +452,24 @@ PYBIND11_MODULE(framework, m) {
     }
   };
   AddValueInstantiation<py::object, PyObjectValue>(m);
+
+  py::object py_type_func = py::eval("type");
+  py::object py_object_type = py::eval("object");
+  // `Value` will be defined by the first call to `AddValueInstantiation`.
+  py::object py_value_template = m.attr("Value");
+  abstract_value.def_static(
+      "Make",
+      [py_type_func, py_value_template, py_object_type](py::object value) {
+        // Try to infer type from the object. If that does not work, just return
+        // `Value[object]`.
+        py::object py_type = py_type_func(value);
+        py::object py_value_class =
+            py_value_template.attr("get_instantiation")(py_type, false)[0];
+        if (py_value_class.is_none()) {
+          py_value_class = py_value_template[py_object_type];
+        }
+        return py_value_class(value);
+      });
 
   // Parameters.
   // TODO(eric.cousineau): Fill this out.

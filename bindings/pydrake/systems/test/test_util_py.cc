@@ -2,6 +2,7 @@
 #include <pybind11/pybind11.h>
 
 #include "drake/bindings/pydrake/pydrake_pybind.h"
+#include "drake/bindings/pydrake/systems/systems_pybind.h"
 #include "drake/systems/framework/basic_vector.h"
 #include "drake/systems/framework/vector_system.h"
 #include "drake/systems/primitives/constant_vector_source.h"
@@ -49,7 +50,7 @@ class MoveOnlyType {
  public:
   MoveOnlyType(int value) : value_(value) {}
   int value() const { return value_; }
-  void set_value(int value) { return value_ = value; }
+  void set_value(int value) { value_ = value; }
   std::unique_ptr<MoveOnlyType> Clone() const {
     return std::make_unique<MoveOnlyType>(value_);
   }
