@@ -1,9 +1,9 @@
 from __future__ import absolute_import, division, print_function
 
 import unittest
-import pydrake
 import os.path
 
+from pydrake import getDrakePath
 from pydrake.multibody.parsers import PackageMap
 from pydrake.multibody.rigid_body_tree import (
     AddModelInstanceFromUrdfStringSearchingInRosPackages,
@@ -21,7 +21,7 @@ class TestParsers(unittest.TestCase):
         parser.
         """
         urdf_file = os.path.join(
-            pydrake.getDrakePath(),
+            getDrakePath(),
             "examples/pr2/models/pr2_description/urdf/pr2_simplified.urdf")
         with open(urdf_file) as f:
             urdf_string = f.read()
@@ -46,7 +46,7 @@ class TestParsers(unittest.TestCase):
 
     def test_sdf(self):
         sdf_file = os.path.join(
-            pydrake.getDrakePath(), "examples/acrobot/Acrobot.sdf")
+            getDrakePath(), "examples/acrobot/Acrobot.sdf")
         with open(sdf_file) as f:
             sdf_string = f.read()
         package_map = PackageMap()
@@ -84,29 +84,29 @@ class TestParsers(unittest.TestCase):
         pm = PackageMap()
         self.assertEqual(pm.size(), 0)
         pm.PopulateFromFolder(
-            os.path.join(pydrake.getDrakePath(), "examples", "atlas"))
+            os.path.join(getDrakePath(), "examples", "atlas"))
         self.assertTrue(pm.Contains("atlas"))
         self.assertEqual(pm.GetPath("atlas"), os.path.join(
-            pydrake.getDrakePath(), "examples", "atlas", ""))
+            getDrakePath(), "examples", "atlas", ""))
 
         # Populate from environment.
         pm = PackageMap()
         os.environ["PYDRAKE_TEST_ROS_PACKAGE_PATH"] = os.path.join(
-            pydrake.getDrakePath(), "examples")
+            getDrakePath(), "examples")
         pm.PopulateFromEnvironment("PYDRAKE_TEST_ROS_PACKAGE_PATH")
         self.assertTrue(pm.Contains("atlas"))
         self.assertEqual(pm.GetPath("atlas"), os.path.join(
-            pydrake.getDrakePath(), "examples", "atlas", ""))
+            getDrakePath(), "examples", "atlas", ""))
         del os.environ["PYDRAKE_TEST_ROS_PACKAGE_PATH"]
 
         # Populate upstream.
         pm = PackageMap()
         pm.PopulateUpstreamToDrake(
-            os.path.join(pydrake.getDrakePath(), "examples", "atlas", "urdf",
+            os.path.join(getDrakePath(), "examples", "atlas", "urdf",
                          "atlas_minimal_contact.urdf"))
         self.assertTrue(pm.Contains("atlas"))
         self.assertEqual(pm.GetPath("atlas"), os.path.join(
-            pydrake.getDrakePath(), "examples", "atlas"))
+            getDrakePath(), "examples", "atlas"))
 
 
 if __name__ == '__main__':
