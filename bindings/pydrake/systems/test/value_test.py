@@ -8,8 +8,11 @@ import unittest
 import numpy as np
 
 from pydrake.systems.framework import (
+    AbstractValue,
     BasicVector,
+    Value,
     )
+from pydrake.systems.framework.test.test_util import MoveOnlyValue
 
 
 def pass_through(x):
@@ -20,7 +23,7 @@ def pass_through(x):
 # and Symbolic once they are in the bindings.
 
 
-class TestReference(unittest.TestCase):
+class TestValue(unittest.TestCase):
     def test_basic_vector_double(self):
         # Test constructing vectors of sizes [0, 1, 2], and ensure that we can
         # construct from both lists and `np.array` objects with no ambiguity.
@@ -56,6 +59,51 @@ class TestReference(unittest.TestCase):
                 # Ensure we can construct from size.
                 value_data = BasicVector(n)
                 self.assertEquals(value_data.size(), n)
+
+    def test_abstract_value_copyable(self):
+        expected = "Hello world"
+        value = Value[str](expected)
+        self.assertTrue(isinstance(value, AbstractValue))
+        self.assertEquals(value.get_value(), expected)
+        expected_new = "New value"
+        value.set_value(expected_new)
+        self.assertEquals(value.get_value(), expected_new)
+
+    def test_abstract_value_move_only(self):
+        x = MoveOnlyValue(10)
+        # This will maintain a reference.
+        value = Value[MoveOnlyValue](x)
+        x.set_value(20)
+        self.assertEquals(value.get_value().get_value(), 20)
+        # Set value.
+        value.get_mutable_value().set_value(30)
+        self.assertEquals(value.get_value().get_value(), 30)
+
+    def test_abstract_value_py_object(self):
+        expected = {"x": 10}
+        value = Value[object](expected)
+        # Value is by reference, *not* by copy.
+        self.assertTrue(value.get_value() is expected)
+        # Update mutable version.
+        value.get_mutable_value()["y"] = 30
+        self.assertEquals(value.get_value(), expected)
+        # Cloning the value should perform a shallow copy of the Python object.
+        value_clone = copy.copy(value)
+        self.assertEquals(value_clone.get_value(), expected)
+        self.assertTrue(value_clone.get_value() is not expected)
+        # Using `set_value` on the original value changes object reference.
+        expected_new = {"a": 20}
+        value.set_value(expected_new)
+        self.assertEquals(value.get_value(), expected_new)
+        self.assertTrue(value.get_value() is not expected)
+
+    def test_abstract_value_make(self):
+        value = AbstractValue.Make("Hello world")
+        self.assertTrue(isinstance(value, Value[str])
+        value = AbstractValue.Make(MoveOnlyType(10))
+        self.assertTrue(isinstance(value, Value[MoveOnlyType]))
+        value = AbstractValue.Make({"x": 10})
+        self.assertTrue(isinstance(value, Value[object])
 
 
 if __name__ == '__main__':

@@ -5,6 +5,7 @@
 #include <pybind11/stl.h>
 
 #include "drake/bindings/pydrake/pydrake_pybind.h"
+#include "drake/bindings/pydrake/systems/systems_pybind.h"
 #include "drake/bindings/pydrake/util/drake_optional_pybind.h"
 #include "drake/bindings/pydrake/util/eigen_pybind.h"
 #include "drake/systems/framework/abstract_values.h"
@@ -409,11 +410,43 @@ PYBIND11_MODULE(framework, m) {
 
   py::class_<Subvector<T>, VectorBase<T>>(m, "Subvector");
 
-  // TODO(eric.cousineau): Interfacing with the C++ abstract value types may be
-  // a tad challenging. This should be more straightforward once
-  // scalar-type conversion is supported, as the template-exposure mechanisms
-  // should be relatively similar.
-  py::class_<AbstractValue>(m, "AbstractValue");
+  // `AddValueInstantiation` will define methods specific to `T` for
+  // `Value<T>`. Since Python is nominally dynamic, these methods are
+  // effectively "virtual".
+  auto abstract_stub = [](const std::string& method) {
+    return [method](const AbstractValue* self, py::args, py::kwargs) {
+      string type_name = NiceTypeName::Get(*self);
+      throw std::runtime_error(fmt::format(
+          "This derived class of `AbstractValue`, `{}`, is not exposed to "
+          "pybind11, so `{}` cannot be called. "
+          "See `AddValueInstantiation` for how to bind it.",
+          type_name, method));
+    };
+  };
+
+  py::class_<AbstractValue>(m, "AbstractValue")
+    .def("Clone", &AbstractValue::Clone)
+    .def("__copy__", &AbstractValue::Clone)
+    // Use only exception variant.
+    .def("SetFrom", &AbstractValue::SetFromOrThrow)
+    .def("get_value", abstract_stub("get_value"))
+    .def("get_mutable_value", abstract_stub("get_mutable_value"))
+    .def("set_value", abstract_stub("set_value"));
+
+  // Add simple `Value<>` instantiations.
+  AddValueInstantiation<string>(m);
+
+  // Add `Value[object]` instantiation.
+  class PyObjectValue : public Value<py::object> {
+   public:
+    // Override `Value<py::object>::Clone()` to perform a shallow copy on the
+    // object.
+    std::unique_ptr<AbstractValue> Clone() const override {
+      py::object py_copy = py::module::import("copy").attr("copy");
+      return std::make_unique<PyObjectValue>(py_copy(get_value()));
+    }
+  };
+  AddValueInstantiation<py::object, PyObjectValue>(m);
 
   // Parameters.
   // TODO(eric.cousineau): Fill this out.
