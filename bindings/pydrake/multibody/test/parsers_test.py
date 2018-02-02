@@ -28,7 +28,7 @@ class TestParsers(unittest.TestCase):
         base_dir = os.path.dirname(urdf_file)
         package_map = PackageMap()
         weld_frame = None
-        floating_base_type = .kRollPitchYaw
+        floating_base_type = FloatingBaseType.kRollPitchYaw
 
         robot = RigidBodyTree()
         AddModelInstanceFromUrdfStringSearchingInRosPackages(
@@ -53,15 +53,15 @@ class TestParsers(unittest.TestCase):
         weld_frame = None
         floating_base_type = FloatingBaseType.kRollPitchYaw
 
-        robot_1 = mut.RigidBodyTree()
-        mut.AddModelInstancesFromSdfStringSearchingInRosPackages(
+        robot_1 = RigidBodyTree()
+        AddModelInstancesFromSdfStringSearchingInRosPackages(
             sdf_string,
             package_map,
             floating_base_type,
             weld_frame,
             robot_1)
-        robot_2 = mut.RigidBodyTree()
-        mut.AddModelInstancesFromSdfString(
+        robot_2 = RigidBodyTree()
+        AddModelInstancesFromSdfString(
             sdf_string,
             floating_base_type,
             weld_frame,
@@ -84,7 +84,7 @@ class TestParsers(unittest.TestCase):
         pm = PackageMap()
         self.assertEqual(pm.size(), 0)
         pm.PopulateFromFolder(
-            os.path.join(getDrakePath(), "examples", "Atlas"))
+            os.path.join(pydrake.getDrakePath(), "examples", "Atlas"))
         self.assertTrue(pm.Contains("Atlas"))
         self.assertEqual(pm.GetPath("Atlas"), os.path.join(
             getDrakePath(), "examples", "Atlas", ""))
@@ -92,7 +92,7 @@ class TestParsers(unittest.TestCase):
         # Populate from environment.
         pm = PackageMap()
         os.environ["PYDRAKE_TEST_ROS_PACKAGE_PATH"] = os.path.join(
-            getDrakePath(), "examples")
+            pydrake.getDrakePath(), "examples")
         pm.PopulateFromEnvironment("PYDRAKE_TEST_ROS_PACKAGE_PATH")
         self.assertTrue(pm.Contains("Atlas"))
         self.assertEqual(pm.GetPath("Atlas"), os.path.join(
@@ -102,7 +102,7 @@ class TestParsers(unittest.TestCase):
         # Populate upstream.
         pm = PackageMap()
         pm.PopulateUpstreamToDrake(
-            os.path.join(getDrakePath(), "examples", "Atlas", "urdf",
+            os.path.join(pydrake.getDrakePath(), "examples", "Atlas", "urdf",
                          "atlas_minimal_contact.urdf"))
         self.assertTrue(pm.Contains("Atlas"))
         self.assertEqual(pm.GetPath("Atlas"), os.path.join(

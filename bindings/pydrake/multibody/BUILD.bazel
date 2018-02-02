@@ -152,6 +152,7 @@ drake_py_test(
     ],
     deps = [
         ":parsers_py",
+        ":rigid_body_tree_py",
     ],
 )
 

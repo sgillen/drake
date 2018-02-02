@@ -5,6 +5,7 @@ import os
 import unittest
 
 import pydrake
+from pydrake.forwarddiff import jacobian
 from pydrake.multibody.parsers import PackageMap
 from pydrake.multibody.rigid_body_tree import RigidBodyTree, FloatingBaseType
 import pydrake.multibody.shapes as shapes
@@ -39,7 +40,7 @@ class TestRigidBodyTree(unittest.TestCase):
         value = do_transform(q)
         self.assertTrue(np.allclose(value, np.ones(3)))
         # - Gradient.
-        g = fd.jacobian(do_transform, q)
+        g = jacobian(do_transform, q)
         g_expected = np.array([
             [[1, 0, 0, 0, 1, -1, 1]],
             [[0, 1, 0, -1, 0, 1, 0]],
@@ -60,14 +61,15 @@ class TestRigidBodyTree(unittest.TestCase):
 
         # Do FK and compare pose of 'arm' with expected pose.
         q[:] = 0
-        q[0] = np.pi / 2
-        k = tree.doKinematics(q)
-        pose_fk = tree.CalcBodyPoseInWorldFrame(k, tree.FindBody("arm"))
-        pose_true = np.array([[0, 0, 1, 0],
-                              [0, 1, 0, 0],
-                              [-1, 0, 0, 0],
-                              [0, 0, 0, 1]])
-        self.assertTrue(np.allclose(pose_fk, pose_true))
+        q[6] = np.pi / 2
+        kinsol = tree.doKinematics(q)
+        T = tree.CalcBodyPoseInWorldFrame(kinsol, tree.FindBody("arm"))
+        T_expected = np.array([
+            [0, 0, 1, 0],
+            [0, 1, 0, 0],
+            [-1, 0, 0, 0],
+            [0, 0, 0, 1]])
+        self.assertTrue(np.allclose(T, T_expected))
 
     def test_kinematics_com_api(self):
         tree = RigidBodyTree(os.path.join(pydrake.getDrakePath(),
@@ -193,10 +195,11 @@ class TestRigidBodyTree(unittest.TestCase):
     def test_atlas_parsing(self):
         # Sanity check on parsing.
         pm = PackageMap()
-        model = os.path.join(getDrakePath(), "examples", "atlas", "urdf",
-                             "atlas_minimal_contact.urdf")
+        model = os.path.join(
+            pydrake.getDrakePath(), "examples", "atlas", "urdf",
+            "atlas_minimal_contact.urdf")
         pm.PopulateUpstreamToDrake(model)
-        tree = rbtree.RigidBodyTree(
+        tree = RigidBodyTree(
             model, package_map=pm,
             floating_base_type=FloatingBaseType.kRollPitchYaw)
         self.assertEqual(tree.get_num_actuators(), 30)
