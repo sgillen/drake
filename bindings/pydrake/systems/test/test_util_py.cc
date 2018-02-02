@@ -48,7 +48,7 @@ class DeleteListenerVector : public BasicVector<T> {
 
 class MoveOnlyType {
  public:
-  MoveOnlyType(int x) : x_(x) {}
+  explicit MoveOnlyType(int x) : x_(x) {}
   int x() const { return x_; }
   void set_x(int x) { x_ = x; }
   std::unique_ptr<MoveOnlyType> Clone() const {

@@ -174,11 +174,11 @@ drake_pybind_library(
     name = "test_util_py",
     testonly = 1,
     add_install = False,
-    cc_so_name = "test/test_util",
-    cc_srcs = ["test/test_util_py.cc"],
     cc_deps = [
         ":systems_pybind",
     ],
+    cc_so_name = "test/test_util",
+    cc_srcs = ["test/test_util_py.cc"],
     package_info = PACKAGE_INFO,
     py_deps = [
         ":framework_py",
