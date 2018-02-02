@@ -148,6 +148,7 @@ drake_py_test(
     size = "small",
     data = [
         "//drake/examples/acrobot:models",
+        "//drake/examples/atlas:models",
         "//drake/examples/pr2:models",
     ],
     deps = [
