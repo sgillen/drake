@@ -4,12 +4,11 @@
 
 #include <pybind11/pybind11.h>
 
+#include "drake/bindings/pydrake/pydrake_pybind.h"
 #include "drake/common/type_safe_index.h"
 
-// This is a header-safe alias for use as part of `pydrake`.
-namespace py = pybind11;
-
 namespace drake {
+namespace pydrake {
 
 /// Binds a TypeSafeIndex instantiation.
 template <typename Type>
@@ -22,4 +21,5 @@ auto BindTypeSafeIndex(py::module m, const std::string& name) {
   return cls;
 }
 
+}  // namespace pydrake
 }  // namespace drake
