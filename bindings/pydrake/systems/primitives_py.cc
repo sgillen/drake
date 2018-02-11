@@ -3,6 +3,7 @@
 
 #include "drake/bindings/pydrake/pydrake_pybind.h"
 #include "drake/systems/primitives/adder.h"
+#include "drake/systems/primitives/barycentric_system.h"
 #include "drake/systems/primitives/constant_value_source.h"
 #include "drake/systems/primitives/constant_vector_source.h"
 #include "drake/systems/primitives/integrator.h"
@@ -39,6 +40,10 @@ PYBIND11_MODULE(primitives, m) {
     .def(py::init<int, int>())
     .def("sample_times", &SignalLogger<T>::sample_times)
     .def("data", &SignalLogger<T>::data);
+
+  py::class_<BarycentricMeshSystem<T>, LeafSystem<T>>(m, "BarycentricMeshSystem")
+    .def(py::init<math::BarycentricMesh<T>,const Eigen::Ref<const
+    MatrixX<T>>&>());
 
   // TODO(eric.cousineau): Add more systems as needed.
 }

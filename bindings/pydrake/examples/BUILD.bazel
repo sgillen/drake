@@ -46,6 +46,7 @@ drake_pybind_library(
     package_info = PACKAGE_INFO,
     py_deps = [
         ":module_py",
+        "//bindings/pydrake/systems",
     ],
 )
 
@@ -65,8 +66,8 @@ drake_py_library(
 
 install(
     name = "install",
-    targets = PY_LIBRARIES,
     py_dest = PACKAGE_INFO.py_dest,
+    targets = PY_LIBRARIES,
     deps = get_drake_py_installs(PY_LIBRARIES_WITH_INSTALL),
 )
 
@@ -75,7 +76,6 @@ drake_py_test(
     size = "small",
     deps = [
         ":pendulum_py",
-        "//bindings/pydrake/systems",
     ],
 )
 
