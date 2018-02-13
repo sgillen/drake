@@ -29,6 +29,7 @@ from .symbolic import *
 
 # Submodules.
 # - `examples` does not offer public Drake symbols.
+from .maliput.all import *
 from .multibody.all import *
 from .solvers.all import *
 from .systems.all import *

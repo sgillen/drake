@@ -349,8 +349,15 @@ PYBIND11_MODULE(framework, m) {
     .def("get_num_input_ports", &Context<T>::get_num_input_ports)
     .def("FixInputPort",
          py::overload_cast<int, unique_ptr<BasicVector<T>>>(
-             &Context<T>::FixInputPort), py_reference_internal,
+             &Context<T>::FixInputPort),
+         py_reference_internal,
          // Keep alive, ownership: `BasicVector` keeps `self` alive.
+         py::keep_alive<3, 1>())
+    .def("FixInputPort",
+         py::overload_cast<int, unique_ptr<AbstractValue>>(
+             &Context<T>::FixInputPort),
+         py_reference_internal,
+         // Keep alive, ownership: `AbstractValue` keeps `self` alive.
          py::keep_alive<3, 1>())
     .def("get_time", &Context<T>::get_time)
     .def("Clone", &Context<T>::Clone)
