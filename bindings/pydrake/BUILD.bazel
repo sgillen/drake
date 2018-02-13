@@ -227,13 +227,18 @@ drake_py_test(
 )
 
 drake_py_test(
-    name = "math_test",
+    name = "test/math_test",
     size = "small",
     srcs = ["test/math_test.py"],
     main = "test/math_test.py",
     deps = [
         ":math_py",
     ],
+)
+
+alias(
+    name = "math_test",
+    actual = "test/math_test",
 )
 
 drake_py_test(
