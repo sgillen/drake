@@ -18,6 +18,7 @@ py_library(
     name = "stub_pydrake",
     srcs = ["stub/pydrake/__init__.py"],
     visibility = ["//tools:__pkg__"],
+    imports = ["stub"],
 )
 
 add_lint_tests()
