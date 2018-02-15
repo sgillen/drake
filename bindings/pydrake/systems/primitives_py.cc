@@ -2,12 +2,14 @@
 #include <pybind11/pybind11.h>
 
 #include "drake/bindings/pydrake/pydrake_pybind.h"
+#include "drake/common/trajectories/piecewise_polynomial_trajectory.h"
 #include "drake/systems/primitives/adder.h"
 #include "drake/systems/primitives/constant_value_source.h"
 #include "drake/systems/primitives/constant_vector_source.h"
 #include "drake/systems/primitives/integrator.h"
 #include "drake/systems/primitives/multiplexer.h"
 #include "drake/systems/primitives/signal_logger.h"
+#include "drake/systems/primitives/trajectory_source.h"
 #include "drake/systems/primitives/zero_order_hold.h"
 
 namespace drake {
@@ -45,6 +47,9 @@ PYBIND11_MODULE(primitives, m) {
     .def(py::init<int>())
     .def(py::init<std::vector<int>>())
     .def(py::init<const BasicVector<T>&>());
+
+  py::class_<TrajectorySource<T>, LeafSystem<T>>(m, "TrajectorySource")
+    .def(py::init<const PiecewisePolynomialTrajectory&>());
 
   // TODO(eric.cousineau): Add more systems as needed.
 }

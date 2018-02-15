@@ -20,7 +20,7 @@ PYBIND11_MODULE(automotive, m) {
   // NOLINTNEXTLINE(build/namespaces): Emulate placement in namespace.
   using namespace drake::automotive;
 
-  m.doc() = "Bindings for the SimpleCar plant.";
+  m.doc() = "Bindings for Automotive systems.";
 
   py::module::import("pydrake.systems.framework");
 
