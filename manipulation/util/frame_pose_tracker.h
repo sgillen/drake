@@ -60,20 +60,23 @@ class FramePoseTracker : public systems::LeafSystem<double> {
   /**
    * Constructs a FramePoseTracker object from the information contained in
    * @p frames_info, which is a std::map whose keys denote unique frame names.
-   * Each key is mapped to a std::pair that includes the RigidBody name
-   * (std::string) specifying which body this frame should be attached to, and
-   * the model instance id in the @p tree that contains the corresponding body.
+   * Each key is mapped to a std::pair that includes the RigidBodyFrame name
+   * (std::string) specifying which parent frame this frame should be attached
+   * to, and the model instance id in the @p tree that contains the
+   * corresponding frame.
    *
    * @param tree The RigidBodyTree containing the named bodies. FramePoseTracker
    *        keeps a reference to this tree to calculate frame poses in the world
    *        frame.
    * @param frames_info A mapping from a unique frame name to a std::pair
-   *        consisting of body name and model instance id. If model instance id
+   *        consisting of frame name and model instance id. If model instance id
    *        is -1, every model is searched.
    * @param frame_poses A vector containing each frame's pose relative to the
-   *        parent body. If this vector is empty, it assumes identity for all
+   *        provided frame. If this vector is empty, it assumes identity for all
    *        poses.
    */
+  // TODO(eric.cousineau): Deprecate this constructor. It's confusing.
+  // Should only use frames on the original rigid body tree?
   FramePoseTracker(
       const RigidBodyTree<double>& tree,
       const std::map<std::string, std::pair<std::string, int>> frames_info,
