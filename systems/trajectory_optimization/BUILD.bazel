@@ -39,6 +39,20 @@ drake_cc_library(
 )
 
 drake_cc_library(
+    name = "elastic_contact_implicit_direct_transcription",
+    srcs = ["elastic_contact_implicit_direct_transcription.cc"],
+    hdrs = ["elastic_contact_implicit_direct_transcription.h"],
+    deps = [
+        ":multiple_shooting",
+        "//drake/math:autodiff",
+        "//drake/math:gradient",
+        "//drake/common:essential",
+        "//drake/multibody:rigid_body_tree",
+        "//drake/solvers:constraint",
+    ],
+)
+
+drake_cc_library(
     name = "multiple_shooting",
     srcs = ["multiple_shooting.cc"],
     hdrs = ["multiple_shooting.h"],

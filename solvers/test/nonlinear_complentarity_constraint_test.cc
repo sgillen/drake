@@ -86,8 +86,8 @@ GTEST_TEST(testConstraint, testNLCC_Eval) {
 
   NonlinearComplementarityConstraint nlcc(f1, f2, ub);
   nlcc.Eval(x, y);
-  std::cout<<"The final output is: " << y << std::endl;
-  std::cout<<"The expected output is: " << 8;
+  DRAKE_DEMAND(y(0) == 8.0); 
+  
 }
 
 
