@@ -37,27 +37,40 @@ class FramePoseTrackerTest : public ::testing::Test {
         weld_to_frame, tree_.get());
     model_id_ = mtable.begin()->second;
 
-    // Arbitrarily pick the first three bodies in the iiwa model to attach
-    // frames to. Each frame name should be unique.
+    // Arbitrarily pick three bodies / frames in the iiwa model to
+    // attach frames to. Each frame name should be unique.
     frame_info_["iiwa_frame_0"] =
         std::make_pair("iiwa_link_0", model_id_);
     frame_info_["iiwa_frame_1"] =
         std::make_pair("iiwa_link_1", model_id_);
-    frame_info_["iiwa_frame_2"] =
-        std::make_pair("iiwa_link_2", model_id_);
+    frame_info_["iiwa_frame_ee"] =
+        std::make_pair("iiwa_frame_ee", model_id_);
 
     // Each RigidBodyFrame has a pose offset w.r.t. the RigidBody it is attached
     // to. Here we set an arbitrarily chosen pose offset for the frames.
     Eigen::Vector3d axis(1 / sqrt(3), 1 / sqrt(3), 1 / sqrt(3));
-    T_BF_ = Eigen::AngleAxisd(0.2, axis);
+    T_PF_ = Eigen::AngleAxisd(0.2, axis);
 
     // Create the RigidBodyFrames associated with the named bodies, and apply
     // the pose offset.
     for (auto frame_info : frame_info_) {
-      RigidBody<double>* body = tree_.get()->FindBody(
-          frame_info.second.first, "", frame_info.second.second);
+      std::string name;
+      int model_id{};
+      std::tie(name, model_id) = frame_info.second;
+      RigidBody<double>* parent_body = nullptr;
+      Eigen::Isometry3d T_BF;  // From parent frame to body
+      // @note See TODO in `frame_pose_tracker` about `try / catch` block.
+      try {
+        auto parent_frame = tree_->findFrame(
+            name, model_id);
+        parent_body = parent_frame->get_mutable_rigid_body();
+        T_BF = parent_frame->get_transform_to_body() * T_PF_;
+      } catch (const std::logic_error&) {
+        parent_body = tree_->FindBody(name, "", model_id);
+        T_BF = T_PF_;
+      }
       frames_.push_back(std::make_unique<RigidBodyFrame<double>>(
-          frame_info.first, body, T_BF_));
+          frame_info.first, parent_body, T_BF));
     }
   }
 
@@ -84,7 +97,7 @@ class FramePoseTrackerTest : public ::testing::Test {
 
   std::unique_ptr<RigidBodyTree<double>> tree_;
   int model_id_;
-  Eigen::Isometry3d T_BF_;
+  Eigen::Isometry3d T_PF_;  // From frame to parent (frame or body)
 
   std::map<std::string, std::pair<std::string, int>> frame_info_;
   std::vector<std::unique_ptr<RigidBodyFrame<double>>> frames_;
@@ -123,7 +136,7 @@ TEST_F(FramePoseTrackerTest, InvalidFrameNameTest) {
 }
 
 TEST_F(FramePoseTrackerTest, ValidFrameInfoTest) {
-  std::vector<Eigen::Isometry3d> frame_poses(3, T_BF_);
+  std::vector<Eigen::Isometry3d> frame_poses(3, T_PF_);
   FramePoseTracker dut(*tree_.get(), frame_info_, frame_poses);
 
   // Update the input, calculate the output, and compare it with expected pose.
