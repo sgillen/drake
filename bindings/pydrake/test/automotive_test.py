@@ -91,8 +91,8 @@ class TestAutomotiveDiagram(unittest.TestCase):
 
         # Fix the lane input for now.
         context = diagram.CreateDefaultContext()
-        # value = framework.AbstractValue.Make(LaneDirection(lane_0, True))
-        value = framework.Value[LaneDirection](lane_0, True)
+        value = framework.AbstractValue.Make(LaneDirection(lane_0, True))
+        # value = framework.Value[LaneDirection](lane_0, True)
         context.FixInputPort(0, value)
 
         # Set up the simulator.
