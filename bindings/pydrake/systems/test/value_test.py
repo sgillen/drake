@@ -87,8 +87,8 @@ class TestValue(unittest.TestCase):
         obj = MoveOnlyType(10)
         # This *always* clones `obj`.
         self.assertEquals(
-            Value[MoveOnlyType].__module__,
-            "pydrake.systems.framework")
+            str(Value[MoveOnlyType]),
+            "<class 'pydrake.systems.framework.Value[MoveOnlyType]'>")
         value = Value[MoveOnlyType](obj)
         self.assertTrue(value.get_value() is not obj)
         self.assertEquals(value.get_value().x(), 10)
