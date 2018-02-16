@@ -37,12 +37,8 @@ void DefClone(PyClass* ppy_class) {
 /// @returns Reference to the registered Python type.
 template <typename T, typename Class = systems::Value<T>>
 py::object AddValueInstantiation(py::module scope) {
-  unused(scope);
-  // Ensure class instantiation is added to template's scope, so that
-  // __module__ for the instantiation matches the template's.
-  py::module template_scope = py::module::import("pydrake.systems.framework");
   py::class_<Class, systems::AbstractValue> py_class(
-      template_scope, TemporaryClassName<Class>().c_str());
+      scope, TemporaryClassName<Class>().c_str());
   // Only use copy (clone) construction.
   // Ownership with `unique_ptr<T>` has some annoying caveats, and some are
   // simplified by always copying.
@@ -85,7 +81,8 @@ be destroyed when it is replaced, since it is stored using `unique_ptr<>`.
   }
   py_class.def("set_value", &Class::set_value, set_value_docstring.c_str());
   // Register instantiation.
-  AddTemplateClass(template_scope, "Value", py_class, GetPyParam<T>());
+  py::module py_module = py::module::import("pydrake.systems.framework");
+  AddTemplateClass(py_module, "Value", py_class, GetPyParam<T>());
   return py_class;
 }
 
