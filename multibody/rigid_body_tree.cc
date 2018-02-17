@@ -3009,6 +3009,7 @@ size_t RigidBodyTree<T>::getNumPositionConstraints() const {
 
 template <typename T>
 void RigidBodyTree<T>::addFrame(std::shared_ptr<RigidBodyFrame<T>> frame) {
+  // TODO(eric.cousineau): Throw error if an instance has the same frame.
   frames.push_back(frame);
   // yuck!!
   frame->set_frame_index(-(static_cast<int>(frames.size()) - 1) - 2);
@@ -3023,6 +3024,11 @@ RigidBody<T>* RigidBodyTree<T>::add_rigid_body(
   // properly computed taking into account a RigidBodySystem could be part of a
   // larger RigidBodySystem (a system within a tree of systems).
   body->set_body_index(static_cast<int>(bodies.size()));
+
+  // Create a default frame for the given body.
+  auto body_frame = std::make_shared<RigidBodyFrame<T>>(
+      body->get_name(), body.get());
+  addFrame(body_frame);
 
   // bodies will be sorted by SortTree by generation. Therefore bodies[0]
   // (world) will be at the top and subsequent generations of children will
