@@ -553,7 +553,7 @@ void SetDynamics(XMLElement* node, FixedAxisOneDoFJoint<JointType>* fjoint) {
  * tree specification.  Inconsistent definitions will lead to thrown
  * exceptions.
  *
- * @param tree                  The rigid body tree containing the bodies to
+ * @param tree                  The rigid body tree containing the get_bodies() to
  *                              which the filters will be applied.
  * @param node                  The XML node containing the filter details.
  * @param model_instance_id     The id of the current model instance.
@@ -745,8 +745,8 @@ void ParseJoint(RigidBodyTree<double>* tree, XMLElement* node,
   }
 
   unique_ptr<DrakeJoint> joint_unique_ptr(joint);
-  tree->bodies[child_index]->setJoint(move(joint_unique_ptr));
-  tree->bodies[child_index]->set_parent(tree->bodies[parent_index].get());
+  tree->get_bodies()[child_index]->setJoint(move(joint_unique_ptr));
+  tree->get_bodies()[child_index]->set_parent(tree->get_bodies()[parent_index].get());
 }
 
 /* Searches through the URDF document looking for the effort limits of a joint
@@ -867,7 +867,7 @@ void ParseTransmission(RigidBodyTree<double>* tree,
   int body_index =
       tree->FindIndexOfChildBodyOfJoint(joint_name, model_instance_id);
 
-  if (tree->bodies[body_index]->getJoint().get_num_positions() == 0) {
+  if (tree->get_bodies()[body_index]->getJoint().get_num_positions() == 0) {
     cerr << string(__FILE__) + ": " + __func__ + ": WARNING: Skipping "
          << "transmission since it's attached to a fixed joint \""
          << joint_name << "\"." << endl;
@@ -896,7 +896,7 @@ void ParseTransmission(RigidBodyTree<double>* tree,
 
   // Creates the actuator and adds it to the rigid body tree.
   tree->actuators.push_back(RigidBodyActuator(actuator_name,
-                                              tree->bodies[body_index].get(),
+                                              tree->get_bodies()[body_index].get(),
                                               gain, effort_min, effort_max));
 }
 
@@ -954,7 +954,7 @@ void ParseFrame(RigidBodyTree<double>* tree, XMLElement* node,
  * world-connecting joints are found.
  *
  * Multiple world-connecting joints cannot exist in a single URDF file because
- * each URDF file describes one model using a tree of bodies connected by
+ * each URDF file describes one model using a tree of get_bodies() connected by
  * joints. Thus, the only way for a URDF to contain multiple world-connecting
  * joints is if the URDF describes more than one model. This is a violation of
  * the one-model-per-URDF rule.
@@ -1104,7 +1104,7 @@ ModelInstanceIdTable ParseModel(RigidBodyTree<double>* tree, XMLElement* node,
   // DEBUG
   // else {
   // cout << "Parsed link" << endl;
-  // cout << "model->bodies.size() = " << model->bodies.size() << endl;
+  // cout << "model->get_bodies().size() = " << model->get_bodies().size() << endl;
   // cout << "model->num_bodies = " << model->num_bodies << endl;
   //}
   // END_DEBUG

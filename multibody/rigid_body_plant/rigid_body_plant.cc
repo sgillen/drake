@@ -123,7 +123,7 @@ void RigidBodyPlant<T>::ExportModelInstanceCentricPorts() {
 
     // Now create the appropriate maps for the position and velocity
     // components.
-    for (const auto& body : tree_->bodies) {
+    for (const auto& body : tree_->get_bodies()) {
       if (!body->has_parent_body()) {
         continue;
       }
@@ -542,7 +542,7 @@ void RigidBodyPlant<T>::CalcContactStiffnessDampingMuAndNumHalfConeEdges(
 }
 
 // Gets A's translational velocity relative to B's translational velocity at a
-// point common to the two rigid bodies.
+// point common to the two rigid get_bodies().
 // @param p_W The point of contact (defined in the world frame).
 // @returns the relative velocity at p_W expressed in the world frame.
 template <class T>
@@ -610,7 +610,7 @@ void RigidBodyPlant<T>::UpdateGeneralizedForce(
   (*gf) += (JA - JB).transpose() * f;
 }
 
-// Evaluates the relative velocities between two bodies projected along the
+// Evaluates the relative velocities between two get_bodies() projected along the
 // contact normals.
 template <class T>
 VectorX<T> RigidBodyPlant<T>::ContactNormalJacobianMult(
@@ -691,7 +691,7 @@ VectorX<T> RigidBodyPlant<T>::TransposedContactNormalJacobianMult(
   return result;
 }
 
-// Evaluates the relative velocities between two bodies projected along the
+// Evaluates the relative velocities between two get_bodies() projected along the
 // contact tangent directions.
 template <class T>
 VectorX<T> RigidBodyPlant<T>::ContactTangentJacobianMult(
@@ -892,7 +892,7 @@ void RigidBodyPlant<T>::DoCalcTimeDerivatives(
   // TODO(amcastro-tri): Maybe move to
   // RBT::ComputeGeneralizedJointLimitForces(C)?
   {
-    for (auto const& b : tree_->bodies) {
+    for (auto const& b : tree_->get_bodies()) {
       if (!b->has_parent_body()) continue;
       auto const& joint = b->getJoint();
       // Joint limit forces are only implemented for single-axis joints.
@@ -1033,7 +1033,7 @@ void RigidBodyPlant<T>::DoCalcDiscreteVariableUpdates(
 
   // Set the joint range of motion limits.
   std::vector<JointLimit> limits;
-  for (auto const& b : tree.bodies) {
+  for (auto const& b : tree.get_bodies()) {
     if (!b->has_parent_body()) continue;
     auto const& joint = b->getJoint();
 

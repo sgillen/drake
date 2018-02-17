@@ -139,7 +139,7 @@ struct QPLocomotionPlanSettings {
       RigidBodyTree<double>& robot,
       const std::vector<std::string>& joint_name_substrings) {
     std::vector<int> ret;
-    for (auto body_it = robot.bodies.begin(); body_it != robot.bodies.end();
+    for (auto body_it = robot.get_bodies().begin(); body_it != robot.get_bodies().end();
          ++body_it) {
       RigidBody<double>& body = **body_it;
       if (body.has_parent_body()) {
