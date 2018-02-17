@@ -73,19 +73,10 @@ FramePoseTracker::FramePoseTracker(
     std::string frame_name = frame_info->first;
     RigidBody<double>* parent_body = nullptr;
     Eigen::Isometry3d X_BF;
-    // TODO(eric.cousineau): Rather than use this nasty `try / catch` block,
-    // RigidBodyTree should automatically create a frame for each link, using
-    // an identity transform (#8089).
-    try {
-      auto parent_frame = tree_->findFrame(
-          frame_info->second.first, frame_info->second.second);
-      parent_body = parent_frame->get_mutable_rigid_body();
-      X_BF = parent_frame->get_transform_to_body();
-    } catch (const std::logic_error&) {
-      parent_body = tree_->FindBody(
-          frame_info->second.first, "", frame_info->second.second);
-      X_BF.setIdentity();
-    }
+    auto parent_frame = tree_->findFrame(
+        frame_info->second.first, frame_info->second.second);
+    parent_body = parent_frame->get_mutable_rigid_body();
+    X_BF = parent_frame->get_transform_to_body();
     frame_name_to_frame_map_[frame_name] =
         std::make_unique<RigidBodyFrame<double>>(
           frame_name, parent_body, X_BF * *frame_pose);
