@@ -281,6 +281,11 @@ PYBIND11_MODULE(framework, m) {
         [](const System<T>* self, const Context<T>& arg1, int arg2) {
           return self->EvalVectorInput(arg1, arg2);
         }, py_reference_internal)
+    .def(
+        "EvalAbstractInput",
+        [](const System<T>* self, const Context<T>& arg1, int arg2) {
+          return self->EvalAbstractInput(arg1, arg2);
+        }, py_reference_internal)
     .def("CalcOutput", &System<T>::CalcOutput)
     // Sugar.
     .def(

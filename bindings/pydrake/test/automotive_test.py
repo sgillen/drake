@@ -92,19 +92,14 @@ class TestAutomotiveDiagram(unittest.TestCase):
         # Fix the lane input for now.
         context = diagram.CreateDefaultContext()
         value = framework.AbstractValue.Make(LaneDirection(lane_0, True))
-        print(type(value))
-
-        value = framework.Value[LaneDirection](lane_0, True)
-        print(type(value))
-
         context.FixInputPort(0, value)
+        print("Yar: ", diagram.EvalAbstractInput(context, 0))
 
         # Set up the simulator.
         simulator = Simulator(diagram, context)
         simulator.Initialize()
 
-        state = simulator.get_mutable_context().get_mutable_state() \
-                         .get_mutable_continuous_state().get_mutable_vector()
+        state = context.get_mutable_continuous_state_vector()
         print(state.CopyToVector())
 
         # initial_state = np.array([0., 0., 0., 0.])

@@ -68,6 +68,11 @@ void PurePursuitController<T>::OutputSteeringCommand(
 
   // Obtain the input/output data structures.
   std::cout << " OutputSteeringCommand: data type: " << this->lane_input().get_data_type() << std::endl;
+
+  auto* stuff = this->template EvalAbstractInput(
+      context, this->lane_input().get_index());
+  std::cout << " stuff: " << NiceTypeName::Get(*stuff) << std::endl;
+
   const LaneDirection* const lane_direction =
       this->template EvalInputValue<LaneDirection>(
           context, this->lane_input().get_index());
