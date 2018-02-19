@@ -51,6 +51,7 @@ drake_cc_library(
         "//drake/solvers:constraint",
 	"//multibody:kinematics_cache_helper", 
 	":generalized_constraint_force_evaluator", 
+	":rigid_body_tree_multiple_shooting", 
     ],
 )
 
@@ -195,11 +196,12 @@ drake_cc_googletest(
         "//examples/contact_implicit_brick:models",
     ],
     deps = [
-        ":rigid_body_tree_multiple_shooting",
+        ":elastic_contact_implicit_direct_transcription",
         "//common:find_resource",
         "//common/test_utilities:eigen_matrix_compare",
         "//math:autodiff",
         "//multibody/parsers",
+	":rigid_body_tree_multiple_shooting", 
     ],
 )
 

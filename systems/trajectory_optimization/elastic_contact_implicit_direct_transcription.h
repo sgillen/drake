@@ -91,9 +91,6 @@ class ElasticContactImplicitDirectTranscription : public MultipleShooting {
    *    λᵤ ≥ 0, λₗ ≥ 0
    *    to the optimization.
    */
-  solvers::VectorDecisionVariable<2> AddJointLimitImplicitConstraint(
-      int interval_index, int joint_position_index, int joint_velocity_index,
-      double joint_lower_bound, double joint_upper_bound);
 
   /**
    * Adds the nonlinear complementarity constraints for contact points

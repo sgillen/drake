@@ -1,4 +1,4 @@
-#include "drake/systems/trajectory_optimization/rigid_body_tree_multiple_shooting.h"
+#include "drake/systems/trajectory_optimization/elastic_contact_implicit_direct_transcription.h"
 
 #include <gtest/gtest.h>
 
@@ -77,12 +77,12 @@ GTEST_TEST(DirectTranscriptionConstraintTest, TestEval) {
                               1E-10, MatrixCompareType::absolute));
 }
 
-GTEST_TEST(RigidBodyTreeMultipleShootingTest, TestSimpleContactImplicitBrick) {
+GTEST_TEST(ElasticContactImplicitDirectTranscription, TestSimpleContactImplicitBrick) {
   auto tree = ConstructContactImplicitBrickTree();
   const int num_time_samples = 10;
   const double minimum_timestep{0.01};
   const double maximum_timestep{0.1};
-  RigidBodyTreeMultipleShooting traj_opt(*tree, num_time_samples,
+  ElasticContactImplicitDirectTranscription traj_opt(*tree, num_time_samples,
                                          minimum_timestep, maximum_timestep);
 
 
