@@ -1,4 +1,11 @@
 <?xml version="1.0"?>
+
+<robot xmlns="http://drake.mit.edu"
+ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+ xsi:schemaLocation="http://drake.mit.edu ../../doc/drakeURDF.xsd" name="ContactImplicitBrick">
+<link name="base">
+</link>
+
 <link name="contact_implicit_brick">
   <inertial>
     <origin xyz="0 0 0" rpy="0 0 0"/>
@@ -8,46 +15,73 @@
 
   <visual>
     <origin xyz="0 0 0" rpy="0 0 0"/>
-    <geometry box size="2 2 2"/>
+    <geometry>
+     <box size="2 2 2"/>
+   </geometry>
   </visual>
 
   <collision>
     <origin xyz="1 1 1" rpy="0 0 0"/>
-    <geometry sphere radius="1e-7"/>
+    <geometry>
+     <sphere radius="1e-7"/>
+   </geometry>
   </collision>
 
   <collision>
     <origin xyz="1 1 -1" rpy="0 0 0"/>
-    <geometry sphere radius="1e-7"/>
+    <geometry>
+     <sphere radius="1e-7"/>
+   </geometry>
   </collision>
 
   <collision>
     <origin xyz="1 -1 1" rpy="0 0 0"/>
-    <geometry sphere radius="1e-7"/>
+    <geometry>
+     <sphere radius="1e-7"/>
+   </geometry>
   </collision>
 
   <collision>
     <origin xyz="1 -1 -1" rpy="0 0 0"/>
-    <geometry sphere radius="1e-7"/>
+    <geometry>
+     <sphere radius="1e-7"/>
+   </geometry>
   </collision>
 
   <collision>
     <origin xyz="-1 1 1" rpy="0 0 0"/>
-    <geometry sphere radius="1e-7"/>
+    <geometry> 
+      <sphere radius="1e-7"/>
+    </geometry>
   </collision>
 
   <collision>
     <origin xyz="-1 1 -1" rpy="0 0 0"/>
-    <geometry sphere radius="1e-7"/>
+    <geometry>
+     <sphere radius="1e-7"/>
+   </geometry>
   </collision>
  
   <collision>
     <origin xyz="-1 -1 1" rpy="0 0 0"/>
-    <geometry sphere radius="1e-7"/>
+    <geometry> 
+      <sphere radius="1e-7"/>
+    </geometry>
   </collision>
   
   <collision>
     <origin xyz="-1 -1 1" rpy="0 0 0"/>
-    <geometry sphere radius="1e-7"/>
+    <geometry> 
+      <sphere radius="1e-7"/>
+    </geometry>
   </collision>
 </link>
+
+<joint name="height" type="prismatic">
+  <parent link="base" />
+  <child link="contact_implicit_brick" />
+  <axis xyz="0 0 1" />
+  <origin xyz="0 0 0" />
+</joint>
+
+</robot>

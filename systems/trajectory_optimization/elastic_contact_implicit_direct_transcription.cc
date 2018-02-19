@@ -151,8 +151,9 @@ void DirectTranscriptionConstraint::DoEval(
       M * (v_minus_r - v_plus_l) -
       (tree_->B * u_r + total_generalized_constraint_force - c) * (h_r - h_l);
 
+  
   y.tail(num_velocities_) = 
-      qdot_plus_l - qdot_minus_l + (1)*inverse(M)*total_generalized_constraint_force;
+      qdot_plus_l - qdot_minus_l + (1)*M.inverse()*total_generalized_constraint_force;
 }
 namespace {
 

@@ -49,6 +49,8 @@ drake_cc_library(
         "//drake/common:essential",
         "//drake/multibody:rigid_body_tree",
         "//drake/solvers:constraint",
+	"//multibody:kinematics_cache_helper", 
+	":generalized_constraint_force_evaluator", 
     ],
 )
 
@@ -184,6 +186,20 @@ drake_cc_googletest(
         ":joint_limit_constraint_force_evaluator",
         "//common/test_utilities:eigen_matrix_compare",
         "//math:autodiff",
+    ],
+)
+
+drake_cc_googletest(
+    name = "elastic_contact_implicit_direct_transcription_test",
+    data = [
+        "//examples/contact_implicit_brick:models",
+    ],
+    deps = [
+        ":rigid_body_tree_multiple_shooting",
+        "//common:find_resource",
+        "//common/test_utilities:eigen_matrix_compare",
+        "//math:autodiff",
+        "//multibody/parsers",
     ],
 )
 
