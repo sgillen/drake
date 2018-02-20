@@ -7,6 +7,7 @@
 #include "drake/math/autodiff.h"
 #include "drake/multibody/parsers/urdf_parser.h"
 #include "drake/systems/trajectory_optimization/rigid_body_tree_multiple_shooting_internal.h"
+#include "drake/systems/trajectory_optimization/position_constraint_force_evaluator.h"
 
 namespace drake {
 namespace systems {
@@ -18,9 +19,7 @@ std::unique_ptr<RigidBodyTree<double>> ConstructContactImplicitBrickTree() {
   parsers::urdf::AddModelInstanceFromUrdfFileToWorld(
       FindResourceOrThrow("drake/examples/contact_implicit_brick/contact_implicit_brick.urdf"),
       multibody::joints::kFixed, tree);
-  std::cout << "DEBUG: tree->get_num_positions() = " << tree->get_num_positions() << std::endl;
   DRAKE_DEMAND(tree->get_num_positions() == 1);
-//  DRAKE_DEMAND(tree->get_num_actuators() == 1);
   return std::unique_ptr<RigidBodyTree<double>>(tree);
 }
 
@@ -29,13 +28,15 @@ GTEST_TEST(DirectTranscriptionConstraintTest, TestEval) {
   auto tree = ConstructContactImplicitBrickTree();
   const int num_lambda = tree->getNumPositionConstraints();
   auto kinematics_helper =
+      std::make_shared<plants::KinematicsCacheHelper<AutoDiffXd>>(*tree);
+  auto kinematics_helper_with_v =
       std::make_shared<plants::KinematicsCacheWithVHelper<AutoDiffXd>>(*tree);
 
   auto position_constraint_force_evaluator =
       std::make_unique<PositionConstraintForceEvaluator>(*tree,
                                                          kinematics_helper);
 
-  DirectTranscriptionConstraint constraint(*tree, kinematics_helper);
+  DirectTranscriptionConstraint constraint(*tree, kinematics_helper_with_v);
 
   constraint.AddGeneralizedConstraintForceEvaluator(
       std::move(position_constraint_force_evaluator));

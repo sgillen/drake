@@ -83,6 +83,8 @@ drake_cc_library(
         "//multibody:kinematics_cache_helper",
         "//multibody:rigid_body_tree",
         "//solvers:constraint",
+	":joint_limit_constraint_force_evaluator", 
+	":position_constraint_force_evaluator", 
     ],
 )
 

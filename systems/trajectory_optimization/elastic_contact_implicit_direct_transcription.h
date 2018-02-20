@@ -35,7 +35,7 @@ namespace trajectory_optimization {
  */
 class ElasticContactImplicitDirectTranscription : public MultipleShooting {
  public:
-  DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(RigidBodyTreeMultipleShooting)
+  DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(ElasticContactImplicitDirectTranscription)
 
   /**
    * Constructor.
@@ -46,7 +46,7 @@ class ElasticContactImplicitDirectTranscription : public MultipleShooting {
    */
   ElasticContactImplicitDirectTranscription(const RigidBodyTree<double>& tree,
                                 int num_time_samples, double minimum_timestep,
-                                double maximum_timestep, const Eigen::VectorXd tol);
+                                double maximum_timestep);
 
   PiecewisePolynomialTrajectory ReconstructInputTrajectory() const override;
 
@@ -72,6 +72,10 @@ class ElasticContactImplicitDirectTranscription : public MultipleShooting {
   const std::shared_ptr<plants::KinematicsCacheWithVHelper<AutoDiffXd>>
   kinematics_cache_with_v_helpers(int index) const {
     return kinematics_cache_with_v_helpers_[index];
+  }
+  const std::shared_ptr<plants::KinematicsCacheHelper<AutoDiffXd>>
+  kinematics_cache_helpers(int index) const {
+    return kinematics_cache_helpers_[index];
   }
 
   /**
@@ -126,7 +130,7 @@ class ElasticContactImplicitDirectTranscription : public MultipleShooting {
   const RigidBodyTree<double>* tree_{nullptr};
   const int num_positions_;
   const int num_velocities_;
-  const int num_contacts_ = 8; // Aditya: in the future this shouldn't be hard coded but i'm using a box...
+  // const int num_contacts_ = 8; // Aditya: in the future this shouldn't be hard coded but i'm using a box...
   // direct_transcription_constraints_[i] stores the
   // DirectTranscriptionConstraint
   // between knot i and i+1, together with the bounded variables. Notice that
@@ -138,6 +142,8 @@ class ElasticContactImplicitDirectTranscription : public MultipleShooting {
       direct_transcription_constraints_;
   std::vector<std::shared_ptr<plants::KinematicsCacheWithVHelper<AutoDiffXd>>>
       kinematics_cache_with_v_helpers_;
+  std::vector<std::shared_ptr<plants::KinematicsCacheHelper<AutoDiffXd>>>
+      kinematics_cache_helpers_;
   solvers::MatrixXDecisionVariable q_vars_;
   solvers::MatrixXDecisionVariable v_vars_;
   solvers::MatrixXDecisionVariable position_constraint_lambda_vars_;

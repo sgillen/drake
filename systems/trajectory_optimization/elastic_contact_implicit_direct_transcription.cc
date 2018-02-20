@@ -10,6 +10,7 @@
 #include "drake/math/autodiff.h"
 #include "drake/math/autodiff_gradient.h"
 #include "drake/systems/trajectory_optimization/rigid_body_tree_multiple_shooting_internal.h"
+#include "drake/systems/trajectory_optimization/position_constraint_force_evaluator.h"
 
 namespace drake {
 namespace systems {
@@ -37,13 +38,15 @@ using plants::KinematicsCacheWithVHelper;
 DirectTranscriptionConstraint::DirectTranscriptionConstraint(
     const RigidBodyTree<double>& tree,
     std::shared_ptr<KinematicsCacheWithVHelper<AutoDiffXd>> kinematics_helper)
-    : Constraint(tree.get_num_positions() + tree.get_num_velocities(),
+    : Constraint(tree.get_num_positions() + tree.get_num_velocities() + 8,
                  1 + 2 * tree.get_num_positions() +
                      4 * tree.get_num_velocities() + tree.get_num_actuators(),
                  Eigen::VectorXd::Zero(tree.get_num_positions() +
-                                       2*tree.get_num_velocities()),
+                                       tree.get_num_velocities() +
+                                       8),
                  Eigen::VectorXd::Zero(tree.get_num_positions() +
-                                       2*tree.get_num_velocities())),
+                                       tree.get_num_velocities() +
+                                       8)),
       tree_(&tree),
       num_positions_{tree.get_num_positions()},
       num_velocities_{tree.get_num_velocities()},
@@ -53,8 +56,8 @@ DirectTranscriptionConstraint::DirectTranscriptionConstraint(
 
 void DirectTranscriptionConstraint::AddGeneralizedConstraintForceEvaluator(
     std::unique_ptr<GeneralizedConstraintForceEvaluator> evaluator) {
-  set_num_vars(num_vars() + evaluator->num_lambda());
-  num_lambda_ += evaluator->num_lambda();
+  set_num_vars(num_vars() + evaluator->lambda_size());
+  num_lambda_ += evaluator->lambda_size();
   generalized_constraint_force_evaluators_.push_back(std::move(evaluator));
 }
 
@@ -65,7 +68,7 @@ void DirectTranscriptionConstraint::AddGeneralizedConstraintForceEvaluator(
   if (x->rows() != num_vars()) {
     throw std::runtime_error("x doesn't have the right size.");
   }
-  if (new_lambda_vars.rows() != evaluator->num_lambda()) {
+  if (new_lambda_vars.rows() != evaluator->lambda_size()) {
     throw std::runtime_error("new_lambda_vars doesn't have the right size.");
   }
   AddGeneralizedConstraintForceEvaluator(std::move(evaluator));
@@ -94,7 +97,7 @@ void DirectTranscriptionConstraint::DoEval(
     return x.segment(x_count - num_element, num_element);
   };
 
-  const AutoDiffXd h = x(0) // IMPORTANT this is $\Delta(h)$
+  const AutoDiffXd h = x(0); // IMPORTANT this is $\Delta(h)$
   x_count++;
   const AutoDiffVecXd q_l = x_segment(num_positions_);
   const AutoDiffVecXd v_plus_l = x_segment(num_velocities_);
@@ -105,9 +108,11 @@ void DirectTranscriptionConstraint::DoEval(
   const AutoDiffVecXd u_r = x_segment(num_actuators_);
   const AutoDiffVecXd lambda_r = x_segment(num_lambda_);
 
-  auto kinsol = kinematics_helper1_->UpdateKinematics(q_r, v_r);
+  auto kinsol = kinematics_helper1_->UpdateKinematics(q_r, v_minus_r);
 
   y.resize(num_constraints());
+  AutoDiffVecXd y_pos, y_dyn, y_tsintegrate;
+  // y = [q; vminus; vplus]
 
   // By using backward Euler integration, the constraint is
   // qᵣ - qₗ = q̇ᵣ*h
@@ -121,7 +126,7 @@ void DirectTranscriptionConstraint::DoEval(
   // TODO(hongkai.dai): Project qdot_r to the constraint manifold (for example,
   // if q contains unit quaternion, and we need to project this backward Euler
   // integration on the unit quaternion manifold.)
-  y.head(num_positions_) = q_r - q_l - qdot_minus_r * (h);
+  y_pos = q_r - q_l - qdot_minus_r * (h);
 
   const auto M = tree_->massMatrix(kinsol);
 
@@ -136,22 +141,25 @@ void DirectTranscriptionConstraint::DoEval(
   int lambda_count = 0;
   for (const auto& evaluator : generalized_constraint_force_evaluators_) {
     AutoDiffVecXd q_v_lambda(num_positions_ + num_velocities_ +
-                             evaluator->num_lambda());
-    q_v_lambda << q_r, v_r,
-        lambda_r.segment(lambda_count, evaluator->num_lambda());
+                             evaluator->lambda_size());
+    q_v_lambda << q_r, v_minus_r,
+        lambda_r.segment(lambda_count, evaluator->lambda_size());
     AutoDiffVecXd generalized_constraint_force(num_velocities_);
     evaluator->Eval(q_v_lambda, generalized_constraint_force);
     total_generalized_constraint_force += generalized_constraint_force;
-    lambda_count += evaluator->num_lambda();
+    lambda_count += evaluator->lambda_size();
   }
 
-  y.tail(num_velocities_) =
+  y_dyn =
       M * (v_minus_r - v_plus_l) -
       (tree_->B * u_r + total_generalized_constraint_force - c) * (h);
 
+  auto J = tree_->positionConstraintsJacobian(kinsol);
   
-  y.tail(num_velocities_) = 
-      qdot_plus_l - qdot_minus_l + (1)*M.inverse()*total_generalized_constraint_force;
+  y_tsintegrate = 
+      J*qdot_plus_l - J*qdot_minus_l + (1)*J*M.inverse()*total_generalized_constraint_force;
+
+  y << y_pos, y_dyn, y_tsintegrate;
 }
 
 ElasticContactImplicitDirectTranscription::ElasticContactImplicitDirectTranscription(
@@ -190,7 +198,7 @@ ElasticContactImplicitDirectTranscription::ElasticContactImplicitDirectTranscrip
     // used in the dynamics for direct transcription.
     auto position_constraint_force_evaluator =
         std::make_unique<PositionConstraintForceEvaluator>(
-            *tree_, kinematics_cache_with_v_helpers_[i + 1]);
+            *tree_, kinematics_cache_helpers_[i + 1]);
     transcription_cnstr->AddGeneralizedConstraintForceEvaluator(
         std::move(position_constraint_force_evaluator));
 
@@ -236,7 +244,7 @@ void ElasticContactImplicitDirectTranscription::
         std::unique_ptr<GeneralizedConstraintForceEvaluator> evaluator,
         const Eigen::Ref<const solvers::VectorXDecisionVariable>&
             evaluator_lambda) {
-  DRAKE_ASSERT(evaluator->num_lambda() == evaluator_lambda.rows());
+  DRAKE_ASSERT(evaluator->lambda_size() == evaluator_lambda.rows());
   solvers::VectorXDecisionVariable vars =
       direct_transcription_constraints_[interval_index].variables();
   auto direct_transcription_constraint =
@@ -256,6 +264,7 @@ void ElasticContactImplicitDirectTranscription::DoAddRunningCost(
   // sum_{i = 0, ..., N - 2} h_i * g_{i+1}
   for (int i = 0; i < N() - 2; ++i) {
     AddCost(SubstitutePlaceholderVariables(g * h_vars()(i), i + 1));
+  }
 }
 
 PiecewisePolynomialTrajectory
