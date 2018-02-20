@@ -10,6 +10,8 @@
 #include "drake/systems/trajectory_optimization/generalized_constraint_force_evaluator.h"
 #include "drake/systems/trajectory_optimization/multiple_shooting.h"
 #include "drake/systems/trajectory_optimization/rigid_body_tree_multiple_shooting_internal.h"
+#include "drake/systems/trajectory_optimization/joint_limit_constraint_force_evaluator.h"
+#include "drake/systems/trajectory_optimization/position_constraint_force_evaluator.h"
 
 namespace drake {
 namespace systems {
@@ -73,6 +75,10 @@ class RigidBodyTreeMultipleShooting : public MultipleShooting {
   kinematics_cache_with_v_helpers(int index) const {
     return kinematics_cache_with_v_helpers_[index];
   }
+  const std::shared_ptr<plants::KinematicsCacheHelper<AutoDiffXd>>
+  kinematics_cache_helpers(int index) const {
+    return kinematics_cache_helpers_[index];
+  }
 
   /**
    * Activate the joint limit constraints within an interval for a certain
@@ -133,6 +139,8 @@ class RigidBodyTreeMultipleShooting : public MultipleShooting {
       direct_transcription_constraints_;
   std::vector<std::shared_ptr<plants::KinematicsCacheWithVHelper<AutoDiffXd>>>
       kinematics_cache_with_v_helpers_;
+  std::vector<std::shared_ptr<plants::KinematicsCacheHelper<AutoDiffXd>>>
+      kinematics_cache_helpers_;
   solvers::MatrixXDecisionVariable q_vars_;
   solvers::MatrixXDecisionVariable v_vars_;
   solvers::MatrixXDecisionVariable position_constraint_lambda_vars_;

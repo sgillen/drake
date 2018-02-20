@@ -28,10 +28,11 @@ GTEST_TEST(DirectTranscriptionConstraintTest, TestEval) {
   const int num_lambda = tree->getNumPositionConstraints();
   auto kinematics_helper =
       std::make_shared<plants::KinematicsCacheWithVHelper<AutoDiffXd>>(*tree);
-
+  auto kinematics_helper_no_v =
+      std::make_shared<plants::KinematicsCacheHelper<AutoDiffXd>>(*tree);
   auto position_constraint_force_evaluator =
       std::make_unique<PositionConstraintForceEvaluator>(*tree,
-                                                         kinematics_helper);
+                                                         kinematics_helper_no_v);
 
   DirectTranscriptionConstraint constraint(*tree, kinematics_helper);
 

@@ -53,8 +53,8 @@ DirectTranscriptionConstraint::DirectTranscriptionConstraint(
 
 void DirectTranscriptionConstraint::AddGeneralizedConstraintForceEvaluator(
     std::unique_ptr<GeneralizedConstraintForceEvaluator> evaluator) {
-  set_num_vars(num_vars() + evaluator->num_lambda());
-  num_lambda_ += evaluator->num_lambda();
+  set_num_vars(num_vars() + evaluator->lambda_size());
+  num_lambda_ += evaluator->lambda_size();
   generalized_constraint_force_evaluators_.push_back(std::move(evaluator));
 }
 
@@ -65,7 +65,7 @@ void DirectTranscriptionConstraint::AddGeneralizedConstraintForceEvaluator(
   if (x->rows() != num_vars()) {
     throw std::runtime_error("x doesn't have the right size.");
   }
-  if (new_lambda_vars.rows() != evaluator->num_lambda()) {
+  if (new_lambda_vars.rows() != evaluator->lambda_size()) {
     throw std::runtime_error("new_lambda_vars doesn't have the right size.");
   }
   AddGeneralizedConstraintForceEvaluator(std::move(evaluator));
@@ -131,13 +131,13 @@ void DirectTranscriptionConstraint::DoEval(
   int lambda_count = 0;
   for (const auto& evaluator : generalized_constraint_force_evaluators_) {
     AutoDiffVecXd q_v_lambda(num_positions_ + num_velocities_ +
-                             evaluator->num_lambda());
+                             evaluator->lambda_size());
     q_v_lambda << q_r, v_r,
-        lambda_r.segment(lambda_count, evaluator->num_lambda());
+        lambda_r.segment(lambda_count, evaluator->lambda_size());
     AutoDiffVecXd generalized_constraint_force(num_velocities_);
     evaluator->Eval(q_v_lambda, generalized_constraint_force);
     total_generalized_constraint_force += generalized_constraint_force;
-    lambda_count += evaluator->num_lambda();
+    lambda_count += evaluator->lambda_size();
   }
 
   y.tail(num_velocities_) =
@@ -229,7 +229,7 @@ RigidBodyTreeMultipleShooting::RigidBodyTreeMultipleShooting(
     // used in the dynamics for direct transcription.
     auto position_constraint_force_evaluator =
         std::make_unique<PositionConstraintForceEvaluator>(
-            *tree_, kinematics_cache_with_v_helpers_[i + 1]);
+            *tree_, kinematics_cache_helpers_[i + 1]);
     transcription_cnstr->AddGeneralizedConstraintForceEvaluator(
         std::move(position_constraint_force_evaluator));
 
@@ -310,7 +310,7 @@ void RigidBodyTreeMultipleShooting::
         std::unique_ptr<GeneralizedConstraintForceEvaluator> evaluator,
         const Eigen::Ref<const solvers::VectorXDecisionVariable>&
             evaluator_lambda) {
-  DRAKE_ASSERT(evaluator->num_lambda() == evaluator_lambda.rows());
+  DRAKE_ASSERT(evaluator->lambda_size() == evaluator_lambda.rows());
   solvers::VectorXDecisionVariable vars =
       direct_transcription_constraints_[interval_index].variables();
   auto direct_transcription_constraint =
