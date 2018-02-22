@@ -23,7 +23,7 @@ std::unique_ptr<RigidBodyTree<double>> ConstructContactImplicitBrickTree() {
   return std::unique_ptr<RigidBodyTree<double>>(tree);
 }
 
-GTEST_TEST(DirectTranscriptionConstraintTest, TestEval) {
+GTEST_TEST(DirectTranscriptionConstraintTest, TestEvalNoContact) {
   // Test the evaluation of DirectTranscriptionConstraintTest
   auto tree = ConstructContactImplicitBrickTree();
   const int num_lambda = tree->getNumPositionConstraints();
@@ -44,28 +44,31 @@ GTEST_TEST(DirectTranscriptionConstraintTest, TestEval) {
   // Set q, v, u, lambda to arbitrary values.
   const double h = 0.1;
   const Eigen::VectorXd q_l =
-      Eigen::VectorXd::LinSpaced(tree->get_num_positions(), 1, 1);
-  const Eigen::VectorXd v_l =
+      Eigen::VectorXd::LinSpaced(tree->get_num_positions(), 10, 10);
+  const Eigen::VectorXd v_plus_l =
       Eigen::VectorXd::LinSpaced(tree->get_num_velocities(), 0, 2);
+  const Eigen::VectorXd v_minus_l = v_plus_l;
   const Eigen::VectorXd q_r =
-      Eigen::VectorXd::LinSpaced(tree->get_num_positions(), 1, 1);
-  const Eigen::VectorXd v_r =
+      Eigen::VectorXd::LinSpaced(tree->get_num_positions(), 4, 4);
+  const Eigen::VectorXd v_plus_r =
       Eigen::VectorXd::LinSpaced(tree->get_num_velocities(), -2, 3);
+  const Eigen::VectorXd v_minus_r = v_plus_r;
   const Eigen::VectorXd u_r =
-      Eigen::VectorXd::LinSpaced(tree->get_num_actuators(), 2, 3);
-  const Eigen::VectorXd lambda_r = Eigen::VectorXd::LinSpaced(num_lambda, 3, 5);
+      Eigen::VectorXd::LinSpaced(tree->get_num_actuators(), 0, 0);
+  const Eigen::VectorXd lambda_r = 
+      Eigen::VectorXd::LinSpaced(num_lambda, 3, 5);
 
   const Eigen::VectorXd x =
-      constraint.CompositeEvalInput(h, q_l, v_l, q_r, v_r, u_r, lambda_r);
+      constraint.CompositeEvalInput(h, q_l, v_minus_l, v_plus_l, q_r, v_minus_r, v_plus_r, u_r, lambda_r);
   const AutoDiffVecXd tx = math::initializeAutoDiff(x);
-  AutoDiffVecXd ty;
+  AutoDiffVecXd ty, y_output;
   constraint.Eval(tx, ty);
 
   Eigen::VectorXd y_expected(tree->get_num_positions() +
                              tree->get_num_velocities());
-  y_expected.head(tree->get_num_positions()) = q_r - q_l - v_r * h;
+  y_expected.head(tree->get_num_positions()) = q_r - q_l - v_minus_r * (h);
   KinematicsCache<double> kinsol = tree->CreateKinematicsCache();
-  kinsol.initialize(q_r, v_r);
+  kinsol.initialize(q_r, v_minus_r);
   tree->doKinematics(kinsol, true);
   const Eigen::MatrixXd M = tree->massMatrix(kinsol);
   const typename RigidBodyTree<double>::BodyToWrenchMap no_external_wrenches;
@@ -73,26 +76,28 @@ GTEST_TEST(DirectTranscriptionConstraintTest, TestEval) {
       tree->dynamicsBiasTerm(kinsol, no_external_wrenches);
   const Eigen::MatrixXd J = tree->positionConstraintsJacobian(kinsol);
   y_expected.tail(tree->get_num_velocities()) =
-      M * (v_r - v_l) - (tree->B * u_r + J.transpose() * lambda_r - c) * h;
-  EXPECT_TRUE(CompareMatrices(math::autoDiffToValueMatrix(ty), y_expected,
+      M * (v_minus_r - v_plus_l) -
+      (c - (tree->B * u_r)) * h;
+  y_output = ty.head(tree->get_num_positions() + tree->get_num_velocities());
+  EXPECT_TRUE(CompareMatrices(math::autoDiffToValueMatrix(y_output), y_expected,
                               1E-10, MatrixCompareType::absolute));
 }
 
-GTEST_TEST(ElasticContactImplicitDirectTranscription, TestSimpleContactImplicitBrick) {
+GTEST_TEST(ElasticContactImplicitDirectTranscription, TestContactImplicitBrickNoContact) {
   auto tree = ConstructContactImplicitBrickTree();
   const int num_time_samples = 10;
   const double minimum_timestep{0.01};
   const double maximum_timestep{0.1};
   ElasticContactImplicitDirectTranscription traj_opt(*tree, num_time_samples,
-                                         minimum_timestep, maximum_timestep);
+                                         minimum_timestep, maximum_timestep, 24);
 
 
   // Add a constraint on position 0 of the initial posture.
-  traj_opt.AddBoundingBoxConstraint(1, 1,
+  traj_opt.AddBoundingBoxConstraint(10, 10,
                                     traj_opt.GeneralizedPositions()(0, 0));
   // Add a constraint on the final posture.
   traj_opt.AddBoundingBoxConstraint(
-      0.5, 0.5, traj_opt.GeneralizedPositions()(0, num_time_samples - 1));
+      5, 5, traj_opt.GeneralizedPositions()(0, num_time_samples - 1));
   // Add a constraint on the final velocity.
   traj_opt.AddBoundingBoxConstraint(
       -5, 5, traj_opt.GeneralizedVelocities().col(num_time_samples - 1));
@@ -106,6 +111,7 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription, TestSimpleContactImplicitB
   const solvers::SolutionResult result = traj_opt.Solve();
 
   EXPECT_EQ(result, solvers::SolutionResult::kSolutionFound);
+  std::cout<<"HERE"<<std::endl;
 
   const double tol{1E-5};
   // First check if dt is within the bounds.

@@ -119,6 +119,37 @@ class DirectTranscriptionConstraint : public solvers::Constraint {
     return x;
   }
 
+  template <typename Scalar, typename DerivedQL, typename DerivedVL,
+            typename DerivedQR, typename DerivedVR, typename DerivedUR,
+            typename DerivedLambdaR>
+  typename std::enable_if<is_eigen_vector_of<DerivedQL, Scalar>::value &&
+                              is_eigen_vector_of<DerivedVL, Scalar>::value &&
+                              is_eigen_vector_of<DerivedQR, Scalar>::value &&
+                              is_eigen_vector_of<DerivedVR, Scalar>::value &&
+                              is_eigen_vector_of<DerivedUR, Scalar>::value &&
+                              is_eigen_vector_of<DerivedLambdaR, Scalar>::value,
+                          Eigen::Matrix<Scalar, Eigen::Dynamic, 1>>::type
+  CompositeEvalInput(const Scalar& h, const Eigen::MatrixBase<DerivedQL>& q_l,
+                     const Eigen::MatrixBase<DerivedVL>& v_plus_l,
+                     const Eigen::MatrixBase<DerivedVL>& v_minus_l,
+                     const Eigen::MatrixBase<DerivedQR>& q_r,
+                     const Eigen::MatrixBase<DerivedVR>& v_plus_r,
+                     const Eigen::MatrixBase<DerivedVR>& v_minus_r,
+                     const Eigen::MatrixBase<DerivedUR>& u_r,
+                     const Eigen::MatrixBase<DerivedLambdaR>& lambda_r) const {
+    DRAKE_ASSERT(q_l.rows() == num_positions_);
+    DRAKE_ASSERT(v_plus_l.rows() == num_velocities_);
+    DRAKE_ASSERT(v_minus_l.rows() == num_velocities_);
+    DRAKE_ASSERT(q_r.rows() == num_positions_);
+    DRAKE_ASSERT(v_plus_r.rows() == num_velocities_);
+    DRAKE_ASSERT(v_minus_r.rows() == num_velocities_);
+    DRAKE_ASSERT(u_r.rows() == num_actuators_);
+    DRAKE_ASSERT(lambda_r.rows() == num_lambda_);
+    Eigen::Matrix<Scalar, Eigen::Dynamic, 1> x(num_vars(), 1);
+    x << h, q_l, v_plus_l, v_minus_l, q_r, v_plus_r, v_minus_r, u_r, lambda_r;
+    return x;
+  }
+
  protected:
   void DoEval(const Eigen::Ref<const Eigen::VectorXd>& x,
               Eigen::VectorXd& y) const override;

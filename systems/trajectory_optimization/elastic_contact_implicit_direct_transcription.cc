@@ -4,6 +4,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <algorithm>
 
 #include "drake/common/eigen_types.h"
 #include "drake/common/unused.h"
@@ -16,7 +17,7 @@ namespace drake {
 namespace systems {
 namespace trajectory_optimization {
 using plants::KinematicsCacheWithVHelper;
-
+using Eigen::Dynamic;
 /**
  * Implements the constraint for the backward Euler integration
  * <pre>
@@ -38,15 +39,15 @@ using plants::KinematicsCacheWithVHelper;
 DirectTranscriptionConstraint::DirectTranscriptionConstraint(
     const RigidBodyTree<double>& tree,
     std::shared_ptr<KinematicsCacheWithVHelper<AutoDiffXd>> kinematics_helper)
-    : Constraint(tree.get_num_positions() + tree.get_num_velocities() + 8,
+    : Constraint(tree.get_num_positions() + tree.get_num_velocities() + 24,
                  1 + 2 * tree.get_num_positions() +
-                     4 * tree.get_num_velocities() + tree.get_num_actuators(),
+                     4 * tree.get_num_velocities() + tree.get_num_actuators() + 24,
                  Eigen::VectorXd::Zero(tree.get_num_positions() +
                                        tree.get_num_velocities() +
-                                       8),
+                                       24),
                  Eigen::VectorXd::Zero(tree.get_num_positions() +
                                        tree.get_num_velocities() +
-                                       8)),
+                                       24)),
       tree_(&tree),
       num_positions_{tree.get_num_positions()},
       num_velocities_{tree.get_num_velocities()},
@@ -150,29 +151,41 @@ void DirectTranscriptionConstraint::DoEval(
     lambda_count += evaluator->lambda_size();
   }
 
+  // M*v_minus_r = M*v_plus_l - Bu-c - J^T*lambda
   y_dyn =
       M * (v_minus_r - v_plus_l) -
-      (tree_->B * u_r + total_generalized_constraint_force - c) * (h);
+      (c - (tree_->B * u_r + total_generalized_constraint_force)) * h;
 
-  auto J = tree_->positionConstraintsJacobian(kinsol);
+  //auto J = tree_->positionConstraintsJacobian(kinsol);
+  RigidBody<double>* brick = tree_->FindBody("contact_implicit_brick");
+  RigidBody<double>*ww = tree_->FindBody("world");
+//  int body_ind = tree_->FindBodyIndex("contact_implicit_brick");
+  const auto& contact_points_a = brick->get_contact_points();
+  const auto& contact_points_b = ww->get_contact_points();
+  Eigen::VectorXi idx_a(1), idx_b(1);
+  idx_a << 1;
+  idx_b << 0;
+  Eigen::Matrix<Eigen::AutoDiffScalar<Eigen::VectorXd>, Dynamic, Dynamic> J;
+  tree_->computeContactJacobians(kinsol, idx_a, idx_b, contact_points_a, contact_points_b, J);
   
+  // Jqdot_plus_l - Jqdot_minus_l = -(1+restitution)J*M^(-1)*J^T*lambda
   y_tsintegrate = 
-      J*qdot_plus_l - J*qdot_minus_l + (1)*J*M.inverse()*total_generalized_constraint_force;
+      J*qdot_plus_l - J*qdot_minus_l + J*M.inverse()*total_generalized_constraint_force;
 
   y << y_pos, y_dyn, y_tsintegrate;
 }
 
 ElasticContactImplicitDirectTranscription::ElasticContactImplicitDirectTranscription(
     const RigidBodyTree<double>& tree, int num_time_samples,
-    double minimum_timestep, double maximum_timestep)
+    double minimum_timestep, double maximum_timestep, int num_contact_lambda)
     : MultipleShooting(tree.get_num_actuators(),
                        tree.get_num_positions() + tree.get_num_velocities(),
                        num_time_samples, minimum_timestep, maximum_timestep),
       tree_{&tree},
       num_positions_{tree.get_num_positions()},
-      num_velocities_{tree.get_num_velocities()},
+      num_velocities_{2*tree.get_num_velocities()},
       position_constraint_lambda_vars_(NewContinuousVariables(
-          tree.getNumPositionConstraints(), N(), "position_lambda")) {
+          num_contact_lambda, N(), "position_lambda")) {
   // For each knot, we will need to impose a transcription/collocation
   // constraint. Each of these constraints require us caching some
   // kinematics info.

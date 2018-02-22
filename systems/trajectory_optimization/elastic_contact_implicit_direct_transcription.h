@@ -46,7 +46,7 @@ class ElasticContactImplicitDirectTranscription : public MultipleShooting {
    */
   ElasticContactImplicitDirectTranscription(const RigidBodyTree<double>& tree,
                                 int num_time_samples, double minimum_timestep,
-                                double maximum_timestep);
+                                double maximum_timestep, int num_contact_lambda);
 
   PiecewisePolynomialTrajectory ReconstructInputTrajectory() const override;
 
@@ -77,24 +77,6 @@ class ElasticContactImplicitDirectTranscription : public MultipleShooting {
   kinematics_cache_helpers(int index) const {
     return kinematics_cache_helpers_[index];
   }
-
-  /**
-   * Activate the joint limit constraints within an interval for a certain
-   * joint. This function makes the following changes to the optimization:
-   * 1. It adds two decision variables λᵤ / λₗ to the optimization.
-   *    λᵤ / λₗ are the joint limit force from upper bound and lower bound
-   *    respectively.
-   * 2. It adds the joint limit force to the constraint force Jᵀλ, when
-   *    computing the dynamics for transcription.
-   * 3. It adds complementarity constraint
-   *    (qᵤ - q) * λᵤ = 0
-   *    (q - qₗ) * λₗ = 0
-   *    where qᵤ is the joint upper bound, and qₗ is the joint lower bound.
-   * 4. It adds the constraint
-   *    qₗ ≤ q ≤ qᵤ
-   *    λᵤ ≥ 0, λₗ ≥ 0
-   *    to the optimization.
-   */
 
   /**
    * Adds the nonlinear complementarity constraints for contact points
@@ -144,6 +126,7 @@ class ElasticContactImplicitDirectTranscription : public MultipleShooting {
       kinematics_cache_with_v_helpers_;
   std::vector<std::shared_ptr<plants::KinematicsCacheHelper<AutoDiffXd>>>
       kinematics_cache_helpers_;
+
   solvers::MatrixXDecisionVariable q_vars_;
   solvers::MatrixXDecisionVariable v_vars_;
   solvers::MatrixXDecisionVariable position_constraint_lambda_vars_;
