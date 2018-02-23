@@ -26,7 +26,7 @@ std::unique_ptr<RigidBodyTree<double>> ConstructContactImplicitBrickTree() {
 GTEST_TEST(DirectTranscriptionConstraintTest, TestEvalNoContact) {
   // Test the evaluation of DirectTranscriptionConstraintTest
   auto tree = ConstructContactImplicitBrickTree();
-  const int num_lambda = tree->getNumPositionConstraints();
+  const int num_lambda = 24; // please un-hard code me!!
   auto kinematics_helper =
       std::make_shared<plants::KinematicsCacheHelper<AutoDiffXd>>(*tree);
   auto kinematics_helper_with_v =
@@ -62,6 +62,7 @@ GTEST_TEST(DirectTranscriptionConstraintTest, TestEvalNoContact) {
       constraint.CompositeEvalInput(h, q_l, v_minus_l, v_plus_l, q_r, v_minus_r, v_plus_r, u_r, lambda_r);
   const AutoDiffVecXd tx = math::initializeAutoDiff(x);
   AutoDiffVecXd ty, y_output;
+
   constraint.Eval(tx, ty);
 
   Eigen::VectorXd y_expected(tree->get_num_positions() +
@@ -76,7 +77,7 @@ GTEST_TEST(DirectTranscriptionConstraintTest, TestEvalNoContact) {
       tree->dynamicsBiasTerm(kinsol, no_external_wrenches);
   const Eigen::MatrixXd J = tree->positionConstraintsJacobian(kinsol);
   y_expected.tail(tree->get_num_velocities()) =
-      M * (v_minus_r - v_plus_l) -
+      M * (v_minus_r - v_plus_l) +
       (c - (tree->B * u_r)) * h;
   y_output = ty.head(tree->get_num_positions() + tree->get_num_velocities());
   EXPECT_TRUE(CompareMatrices(math::autoDiffToValueMatrix(y_output), y_expected,
@@ -90,7 +91,6 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription, TestContactImplicitBrickNo
   const double maximum_timestep{0.1};
   ElasticContactImplicitDirectTranscription traj_opt(*tree, num_time_samples,
                                          minimum_timestep, maximum_timestep, 24);
-
 
   // Add a constraint on position 0 of the initial posture.
   traj_opt.AddBoundingBoxConstraint(10, 10,
@@ -111,7 +111,6 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription, TestContactImplicitBrickNo
   const solvers::SolutionResult result = traj_opt.Solve();
 
   EXPECT_EQ(result, solvers::SolutionResult::kSolutionFound);
-  std::cout<<"HERE"<<std::endl;
 
   const double tol{1E-5};
   // First check if dt is within the bounds.
@@ -140,12 +139,17 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription, TestContactImplicitBrickNo
   }
 
   for (int i = 1; i < num_time_samples; ++i) {
-    kinsol.initialize(q_sol.col(i), v_sol.col(i));
+    int v_dyn = v_sol.col(i).rows()/2;
+    Eigen::VectorXd v_sol_kin = v_sol.col(i).tail(v_dyn);
+    Eigen::VectorXd v_sol_kin_old = v_sol.col(i-1).head(v_dyn);
+    DRAKE_ASSERT(v_sol_kin.rows() == v_sol_kin_old.rows());
+    kinsol.initialize(q_sol.col(i), v_sol_kin);
     tree->doKinematics(kinsol, true);
     // Check qᵣ - qₗ = q̇ᵣ*h
     EXPECT_TRUE(CompareMatrices(q_sol.col(i) - q_sol.col(i - 1),
-                                v_sol.col(i) * dt_sol(i - 1), tol,
+                                v_sol_kin * dt_sol(i - 1), tol,
                                 MatrixCompareType::absolute));
+
     // Check Mᵣ(vᵣ - vₗ) = (B*uᵣ + Jᵣᵀ*λᵣ -c(qᵣ, vᵣ))h
     const Eigen::MatrixXd M = tree->massMatrix(kinsol);
     const Eigen::MatrixXd J_r = tree->positionConstraintsJacobian(kinsol);
@@ -153,15 +157,15 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription, TestContactImplicitBrickNo
     const Eigen::VectorXd c =
         tree->dynamicsBiasTerm(kinsol, no_external_wrenches);
     EXPECT_TRUE(CompareMatrices(
-        M * (v_sol.col(i) - v_sol.col(i - 1)),
-        (tree->B * u_sol.col(i) + J_r.transpose() * lambda_sol.col(i) - c) *
+        M * (v_sol_kin - v_sol_kin_old),
+        (tree->B * u_sol.col(i) - c) *
             dt_sol(i - 1),
         tol, MatrixCompareType::relative));
   }
   // Check if the constraints on the initial state and final state are
   // satisfied.
-  EXPECT_NEAR(q_sol(0, 0), 1, tol);
-  EXPECT_NEAR(q_sol(0, num_time_samples - 1), 0.5, tol);
+  EXPECT_NEAR(q_sol(0, 0), 10, tol);
+  EXPECT_NEAR(q_sol(0, num_time_samples - 1), 5, tol);
   // EXPECT_TRUE(CompareMatrices(v_sol.col(num_time_samples - 1),
   //                             Eigen::VectorXd::Zero(tree->get_num_velocities()),
   //                             tol, MatrixCompareType::absolute));

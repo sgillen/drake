@@ -17,6 +17,7 @@ namespace drake {
 namespace systems {
 namespace trajectory_optimization {
 using plants::KinematicsCacheWithVHelper;
+using plants::KinematicsCacheHelper;
 using Eigen::Dynamic;
 /**
  * Implements the constraint for the backward Euler integration
@@ -50,9 +51,9 @@ DirectTranscriptionConstraint::DirectTranscriptionConstraint(
                                        24)),
       tree_(&tree),
       num_positions_{tree.get_num_positions()},
-      num_velocities_{tree.get_num_velocities()},
+      num_velocities_{2*tree.get_num_velocities()},
       num_actuators_{tree.get_num_actuators()},
-      num_lambda_{0},
+      num_lambda_{24},
       kinematics_helper1_{kinematics_helper} {}
 
 void DirectTranscriptionConstraint::AddGeneralizedConstraintForceEvaluator(
@@ -81,6 +82,8 @@ void DirectTranscriptionConstraint::AddGeneralizedConstraintForceEvaluator(
 
 void DirectTranscriptionConstraint::DoEval(
     const Eigen::Ref<const Eigen::VectorXd>& x, Eigen::VectorXd& y) const {
+  DRAKE_ASSERT(x.size() == num_vars());
+
   AutoDiffVecXd y_t;
   Eval(math::initializeAutoDiff(x), y_t);
   y = math::autoDiffToValueMatrix(y_t);
@@ -101,11 +104,11 @@ void DirectTranscriptionConstraint::DoEval(
   const AutoDiffXd h = x(0); // IMPORTANT this is $\Delta(h)$
   x_count++;
   const AutoDiffVecXd q_l = x_segment(num_positions_);
-  const AutoDiffVecXd v_plus_l = x_segment(num_velocities_);
-  const AutoDiffVecXd v_minus_l = x_segment(num_velocities_);
+  const AutoDiffVecXd v_plus_l = x_segment(num_velocities_/2);
+  const AutoDiffVecXd v_minus_l = x_segment(num_velocities_/2);
   const AutoDiffVecXd q_r = x_segment(num_positions_);
-  const AutoDiffVecXd v_plus_r = x_segment(num_velocities_);  
-  const AutoDiffVecXd v_minus_r = x_segment(num_velocities_);
+  const AutoDiffVecXd v_plus_r = x_segment(num_velocities_/2);  
+  const AutoDiffVecXd v_minus_r = x_segment(num_velocities_/2);
   const AutoDiffVecXd u_r = x_segment(num_actuators_);
   const AutoDiffVecXd lambda_r = x_segment(num_lambda_);
 
@@ -137,23 +140,24 @@ void DirectTranscriptionConstraint::DoEval(
   const auto c = tree_->dynamicsBiasTerm(kinsol, no_external_wrenches);
 
   // Compute Jᵀλ
-  AutoDiffVecXd total_generalized_constraint_force(num_velocities_);
+  AutoDiffVecXd total_generalized_constraint_force(num_velocities_/2);
   total_generalized_constraint_force.setZero();
-  int lambda_count = 0;
-  for (const auto& evaluator : generalized_constraint_force_evaluators_) {
-    AutoDiffVecXd q_v_lambda(num_positions_ + num_velocities_ +
-                             evaluator->lambda_size());
-    q_v_lambda << q_r, v_minus_r,
-        lambda_r.segment(lambda_count, evaluator->lambda_size());
-    AutoDiffVecXd generalized_constraint_force(num_velocities_);
-    evaluator->Eval(q_v_lambda, generalized_constraint_force);
-    total_generalized_constraint_force += generalized_constraint_force;
-    lambda_count += evaluator->lambda_size();
-  }
+  // int lambda_count = 0;
+  // for (const auto& evaluator : generalized_constraint_force_evaluators_) {
+  //   AutoDiffVecXd q_v_lambda(num_positions_ + num_velocities_/2 +
+  //                            evaluator->lambda_size());
+  //   q_v_lambda << q_r, v_minus_r,
+  //       lambda_r.segment(lambda_count, evaluator->lambda_size());
+  //   AutoDiffVecXd generalized_constraint_force(num_velocities_/2);
+  //   std::cerr<<q_v_lambda.rows()<<std::endl;
+  //   evaluator->Eval(q_v_lambda, generalized_constraint_force);
+  //   total_generalized_constraint_force += generalized_constraint_force;
+  //   lambda_count += evaluator->lambda_size();
+  // }
 
-  // M*v_minus_r = M*v_plus_l - Bu-c - J^T*lambda
+  // M*v_minus_r = M*v_plus_l + Bu-c + J^T*lambda
   y_dyn =
-      M * (v_minus_r - v_plus_l) -
+      M * (v_minus_r - v_plus_l) +
       (c - (tree_->B * u_r + total_generalized_constraint_force)) * h;
 
   //auto J = tree_->positionConstraintsJacobian(kinsol);
@@ -179,7 +183,7 @@ ElasticContactImplicitDirectTranscription::ElasticContactImplicitDirectTranscrip
     const RigidBodyTree<double>& tree, int num_time_samples,
     double minimum_timestep, double maximum_timestep, int num_contact_lambda)
     : MultipleShooting(tree.get_num_actuators(),
-                       tree.get_num_positions() + tree.get_num_velocities(),
+                       tree.get_num_positions() + 2*tree.get_num_velocities(),
                        num_time_samples, minimum_timestep, maximum_timestep),
       tree_{&tree},
       num_positions_{tree.get_num_positions()},
@@ -190,9 +194,13 @@ ElasticContactImplicitDirectTranscription::ElasticContactImplicitDirectTranscrip
   // constraint. Each of these constraints require us caching some
   // kinematics info.
   kinematics_cache_with_v_helpers_.resize(num_time_samples);
+  kinematics_cache_helpers_.resize(num_time_samples);
   for (int i = 0; i < num_time_samples; ++i) {
     kinematics_cache_with_v_helpers_[i] =
         std::make_shared<KinematicsCacheWithVHelper<AutoDiffXd>>(*tree_);
+    kinematics_cache_helpers_[i] =
+        std::make_shared<KinematicsCacheHelper<AutoDiffXd>>(*tree_);
+        //std::cerr<<"HIHI"<<std::endl;
   }
 
   q_vars_.resize(num_positions_, N());
