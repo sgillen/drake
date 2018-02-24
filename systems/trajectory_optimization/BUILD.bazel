@@ -39,6 +39,22 @@ drake_cc_library(
 )
 
 drake_cc_library(
+    name = "timestep_integration_constraint",
+    srcs = ["timestep_integration_constraint.cc"],
+    hdrs = ["timestep_integration_constraint.h"],
+    deps = [
+        "//common:essential",
+        "//math:autodiff",
+        "//math:gradient",
+        "//multibody:kinematics_cache_helper",
+        "//multibody:rigid_body_tree",
+        "//solvers:constraint",
+	"//solvers:decision_variable",
+    ],
+
+)
+
+drake_cc_library(
     name = "elastic_contact_implicit_direct_transcription",
     srcs = ["elastic_contact_implicit_direct_transcription.cc"],
     hdrs = ["elastic_contact_implicit_direct_transcription.h"],
@@ -52,6 +68,7 @@ drake_cc_library(
 	"//multibody:kinematics_cache_helper", 
 	":generalized_constraint_force_evaluator", 
 	":rigid_body_tree_multiple_shooting", 
+	":timestep_integration_constraint",
     ],
 )
 

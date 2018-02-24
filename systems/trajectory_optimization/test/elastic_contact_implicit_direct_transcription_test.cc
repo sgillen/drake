@@ -106,13 +106,10 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription, TestContactImplicitBrickNo
 
   // Add direct transcription constraints.
   traj_opt.Compile();
-  std::cerr<<"COMPILED"<<std::endl;
 
   const solvers::SolutionResult result = traj_opt.Solve();
-  std::cerr<<"SOLVED"<<std::endl;
 
   EXPECT_EQ(result, solvers::SolutionResult::kSolutionFound);
-  std::cerr<<"CHECK1"<<std::endl;
 
   const double tol{1E-5};
   // First check if dt is within the bounds.
@@ -127,7 +124,6 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription, TestContactImplicitBrickNo
       (dt_sol.array() >=
        Eigen::ArrayXd::Constant(num_time_samples - 1, minimum_timestep - tol))
           .all());
-  std::cerr<<"CHECK2"<<std::endl;
   // Check if the interpolation constraint is satisfied
   KinematicsCache<double> kinsol = tree->CreateKinematicsCache();
   const Eigen::MatrixXd q_sol =
@@ -140,7 +136,6 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription, TestContactImplicitBrickNo
   for (int i = 0; i < num_time_samples; ++i) {
     u_sol.col(i) = traj_opt.GetSolution(traj_opt.input(i));
   }
-  std::cerr<<"BREAK_SOLUTION"<<std::endl;
 
   for (int i = 1; i < num_time_samples; ++i) {
     int v_dyn = v_sol.col(i).rows()/2;
@@ -166,7 +161,6 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription, TestContactImplicitBrickNo
             dt_sol(i - 1),
         tol, MatrixCompareType::relative));
   }
-  std::cerr<<"ALMOST DONE"<<std::endl;
   // Check if the constraints on the initial state and final state are
   // satisfied.
   EXPECT_NEAR(q_sol(0, 0), 10, tol);
