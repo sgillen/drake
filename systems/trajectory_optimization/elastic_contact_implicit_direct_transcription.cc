@@ -111,9 +111,8 @@ void DirectTranscriptionConstraint::DoEval(
   //const AutoDiffVecXd lambda_r = x_segment(num_lambda_);
 
   auto kinsol = kinematics_helper1_->UpdateKinematics(q_r, v_minus_r);
-
   y.resize(num_constraints());
-  AutoDiffVecXd y_pos, y_dyn, y_tsintegrate;
+  AutoDiffVecXd y_pos, y_dyn;
   // y = [q; vminus; vplus]
 
   // By using backward Euler integration, the constraint is
@@ -123,7 +122,6 @@ void DirectTranscriptionConstraint::DoEval(
       RigidBodyTree<double>::GetVelocityToQDotMapping(kinsol);
 
   const AutoDiffVecXd qdot_minus_r = map_v_to_qdot * v_minus_r;
-  std::cerr<<"Gonna fail here"<<std::endl;
   // TODO(hongkai.dai): Project qdot_r to the constraint manifold (for example,
   // if q contains unit quaternion, and we need to project this backward Euler
   // integration on the unit quaternion manifold.)
@@ -180,7 +178,6 @@ void TimestepIntegrationConstraint::DoEval(
 
 void TimestepIntegrationConstraint::DoEval(
   const Eigen::Ref<const AutoDiffVecXd>& x, AutoDiffVecXd& y) const {
-  std::cerr<<"TIC"<<std::endl;
 
   int x_count = 0;
 
@@ -193,43 +190,31 @@ void TimestepIntegrationConstraint::DoEval(
   const AutoDiffVecXd v_plus = x_segment(num_velocities_/2);
   const AutoDiffVecXd v_minus = x_segment(num_velocities_/2);
   const AutoDiffVecXd lambda = x_segment(num_lambda_);
-  std::cerr<<"Broke down x"<<std::endl;
 
   auto kinsol = kinematics_cache_with_v_helper_->UpdateKinematics(q, v_minus);
-  std::cerr<<"Made kinsol"<<std::endl;
 
   const auto M = tree_->massMatrix(kinsol);
-  std::cerr<<"Got Mass matrix"<<std::endl;
 
   const MatrixX<AutoDiffXd> map_v_to_qdot =
       RigidBodyTree<double>::GetVelocityToQDotMapping(kinsol);
   
   // rigid_body_tree.cc should output: "did the assignmnt" 3 times here
-  std::cerr<<"Mapped v to qdot"<<std::endl;
   const AutoDiffVecXd qd_plus = map_v_to_qdot * v_plus;
-  std::cerr<<"Got qdplus"<<std::endl;
   const AutoDiffVecXd qd_minus = map_v_to_qdot * v_minus;
-  std::cerr<<"Got qdminus"<<std::endl;
 
   RigidBody<double>* brick = tree_->FindBody("contact_implicit_brick");
   RigidBody<double>*ww = tree_->FindBody("world");
-  std::cerr<<"Extracted rigid bodies"<<std::endl;
 //  int body_ind = tree_->FindBodyIndex("contact_implicit_brick");
   const auto& contact_points_a = brick->get_contact_points();
   const auto& contact_points_b = ww->get_contact_points();
-  std::cerr<<"Got contact points"<<std::endl;
   Eigen::VectorXi idx_a(1), idx_b(1);
   idx_a << 1;
   idx_b << 0;
   Eigen::Matrix<Eigen::AutoDiffScalar<Eigen::VectorXd>, Eigen::Dynamic, Eigen::Dynamic> J;
-  std::cerr<<"Ready to compute contact jacobian"<<std::endl;
   tree_->computeContactJacobians(kinsol, idx_a, idx_b, contact_points_a, contact_points_b, J);
-  std::cerr<<"computed contact jacobian"<<std::endl;
   
   // Jqdot_plus_l - Jqdot_minus_l = -(1+restitution)J*M^(-1)*J^T*lambda
-  std::cerr<<(J*qd_plus - J*qd_minus + J*M.inverse()*J.transpose()*lambda).rows()<<std::endl;
   y = J*qd_plus - J*qd_minus + J*M.inverse()*J.transpose()*lambda;
-  std::cerr<<y.rows()<<std::endl;
 }
 
 
@@ -248,14 +233,17 @@ ElasticContactImplicitDirectTranscription::ElasticContactImplicitDirectTranscrip
   // For each knot, we will need to impose a transcription/collocation
   // constraint. Each of these constraints require us caching some
   // kinematics info.
-  kinematics_cache_with_v_helpers_.resize(num_time_samples);
-  kinematics_cache_helpers_.resize(num_time_samples);
+  dtc_kinematics_cache_with_v_helpers_.resize(num_time_samples);
+  dtc_kinematics_cache_helpers_.resize(num_time_samples);
+  tic_kinematics_cache_with_v_helpers_.resize(num_time_samples);
+
   for (int i = 0; i < num_time_samples; ++i) {
-    kinematics_cache_with_v_helpers_[i] =
+    dtc_kinematics_cache_with_v_helpers_[i] =
         std::make_shared<KinematicsCacheWithVHelper<AutoDiffXd>>(*tree_);
-    kinematics_cache_helpers_[i] =
+    dtc_kinematics_cache_helpers_[i] =
         std::make_shared<KinematicsCacheHelper<AutoDiffXd>>(*tree_);
-        //std::cerr<<"HIHI"<<std::endl;
+    tic_kinematics_cache_with_v_helpers_[i] = 
+        std::make_shared<KinematicsCacheWithVHelper<AutoDiffXd>>(*tree_);
   }
 
   q_vars_.resize(num_positions_, N());
@@ -269,12 +257,12 @@ ElasticContactImplicitDirectTranscription::ElasticContactImplicitDirectTranscrip
   direct_transcription_constraints_.reserve(N() - 1);
   for (int i = 0; i < N() - 1; ++i) {
     auto transcription_cnstr = std::make_shared<DirectTranscriptionConstraint>(
-        *tree_, kinematics_cache_with_v_helpers_[i + 1]);
+        *tree_, dtc_kinematics_cache_with_v_helpers_[i + 1]);
     // Add RigidBodyConstraint::PositionConstraint to the constraint force Jᵀλ
     // used in the dynamics for direct transcription.
     auto position_constraint_force_evaluator =
         std::make_unique<PositionConstraintForceEvaluator>(
-            *tree_, kinematics_cache_helpers_[i + 1]);
+            *tree_, dtc_kinematics_cache_helpers_[i + 1]);
     transcription_cnstr->AddGeneralizedConstraintForceEvaluator(
         std::move(position_constraint_force_evaluator));
 
@@ -290,7 +278,7 @@ ElasticContactImplicitDirectTranscription::ElasticContactImplicitDirectTranscrip
   timestep_integration_constraints_.reserve(N());
   for (int i = 0; i < N(); i++) {
     auto timestep_cnstr = std::make_shared<TimestepIntegrationConstraint>(
-        *tree_, kinematics_cache_with_v_helpers_[i], num_lambda_);
+        *tree_, tic_kinematics_cache_with_v_helpers_[i], num_lambda_);
     const solvers::VectorXDecisionVariable timestep_cnstr_vars =
         timestep_cnstr->CompositeEvalInput(
           q_vars_.col(i), v_vars_.col(i), lambda_vars_.col(i));
@@ -299,14 +287,14 @@ ElasticContactImplicitDirectTranscription::ElasticContactImplicitDirectTranscrip
 }
 
 void ElasticContactImplicitDirectTranscription::Compile() {
-  for (int i = 0; i < N(); i++) {
-    AddConstraint(timestep_integration_constraints_[i].constraint(),
-                  timestep_integration_constraints_[i].variables());
-  }
-
   for (int i = 0; i < N() - 1; ++i) {
     AddConstraint(direct_transcription_constraints_[i].constraint(),
                   direct_transcription_constraints_[i].variables());
+  }
+
+  for (int i = 0; i < N(); i++) {
+    AddConstraint(timestep_integration_constraints_[i].constraint(),
+                  timestep_integration_constraints_[i].variables());
   }
   
 }

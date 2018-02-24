@@ -106,6 +106,7 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription, TestContactImplicitBrickNo
 
   // Add direct transcription constraints.
   traj_opt.Compile();
+  std::cerr<<"COMPILED"<<std::endl;
 
   const solvers::SolutionResult result = traj_opt.Solve();
   std::cerr<<"SOLVED"<<std::endl;

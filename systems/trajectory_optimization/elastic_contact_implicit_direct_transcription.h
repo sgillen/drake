@@ -69,14 +69,14 @@ class ElasticContactImplicitDirectTranscription : public MultipleShooting {
   const RigidBodyTree<double>* tree() const { return tree_; }
 
   /** Getter for the kinematics cache helper. */
-  const std::shared_ptr<plants::KinematicsCacheWithVHelper<AutoDiffXd>>
-  kinematics_cache_with_v_helpers(int index) const {
-    return kinematics_cache_with_v_helpers_[index];
-  }
-  const std::shared_ptr<plants::KinematicsCacheHelper<AutoDiffXd>>
-  kinematics_cache_helpers(int index) const {
-    return kinematics_cache_helpers_[index];
-  }
+  // const std::shared_ptr<plants::KinematicsCacheWithVHelper<AutoDiffXd>>
+  // kinematics_cache_with_v_helpers(int index) const {
+  //   return kinematics_cache_with_v_helpers_[index];
+  // }
+  // const std::shared_ptr<plants::KinematicsCacheHelper<AutoDiffXd>>
+  // kinematics_cache_helpers(int index) const {
+  //   return kinematics_cache_helpers_[index];
+  // }
 
   /**
    * Adds the direct transcription constraint to the optimization program.
@@ -120,9 +120,12 @@ class ElasticContactImplicitDirectTranscription : public MultipleShooting {
       timestep_integration_constraints_;
 
   std::vector<std::shared_ptr<plants::KinematicsCacheWithVHelper<AutoDiffXd>>>
-      kinematics_cache_with_v_helpers_;
+      dtc_kinematics_cache_with_v_helpers_;
   std::vector<std::shared_ptr<plants::KinematicsCacheHelper<AutoDiffXd>>>
-      kinematics_cache_helpers_;
+      dtc_kinematics_cache_helpers_;
+
+  std::vector<std::shared_ptr<plants::KinematicsCacheWithVHelper<AutoDiffXd>>>
+      tic_kinematics_cache_with_v_helpers_;
 
   solvers::MatrixXDecisionVariable q_vars_;
   solvers::MatrixXDecisionVariable v_vars_;
