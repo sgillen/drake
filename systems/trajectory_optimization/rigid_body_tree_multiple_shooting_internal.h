@@ -120,14 +120,35 @@ class DirectTranscriptionConstraint : public solvers::Constraint {
   }
 
   template <typename Scalar, typename DerivedQL, typename DerivedVL,
-            typename DerivedQR, typename DerivedVR, typename DerivedUR,
-            typename DerivedLambdaR>
+            typename DerivedQR, typename DerivedVR, typename DerivedUR>
   typename std::enable_if<is_eigen_vector_of<DerivedQL, Scalar>::value &&
                               is_eigen_vector_of<DerivedVL, Scalar>::value &&
                               is_eigen_vector_of<DerivedQR, Scalar>::value &&
                               is_eigen_vector_of<DerivedVR, Scalar>::value &&
-                              is_eigen_vector_of<DerivedUR, Scalar>::value &&
-                              is_eigen_vector_of<DerivedLambdaR, Scalar>::value,
+                              is_eigen_vector_of<DerivedUR, Scalar>::value,
+                          Eigen::Matrix<Scalar, Eigen::Dynamic, 1>>::type
+  CompositeEvalInput(const Scalar& h, const Eigen::MatrixBase<DerivedQL>& q_l,
+                     const Eigen::MatrixBase<DerivedVL>& v_l,
+                     const Eigen::MatrixBase<DerivedQR>& q_r,
+                     const Eigen::MatrixBase<DerivedVR>& v_r,
+                     const Eigen::MatrixBase<DerivedUR>& u_r) const {
+    DRAKE_ASSERT(q_l.rows() == num_positions_);
+    DRAKE_ASSERT(v_l.rows() == num_velocities_);
+    DRAKE_ASSERT(q_r.rows() == num_positions_);
+    DRAKE_ASSERT(v_r.rows() == num_velocities_);
+    DRAKE_ASSERT(u_r.rows() == num_actuators_);
+    Eigen::Matrix<Scalar, Eigen::Dynamic, 1> x(num_vars(), 1);
+    x << h, q_l, v_l, q_r, v_r, u_r;
+    return x;
+  }
+
+  template <typename Scalar, typename DerivedQL, typename DerivedVL,
+            typename DerivedQR, typename DerivedVR, typename DerivedUR>
+  typename std::enable_if<is_eigen_vector_of<DerivedQL, Scalar>::value &&
+                              is_eigen_vector_of<DerivedVL, Scalar>::value &&
+                              is_eigen_vector_of<DerivedQR, Scalar>::value &&
+                              is_eigen_vector_of<DerivedVR, Scalar>::value &&
+                              is_eigen_vector_of<DerivedUR, Scalar>::value,
                           Eigen::Matrix<Scalar, Eigen::Dynamic, 1>>::type
   CompositeEvalInput(const Scalar& h, const Eigen::MatrixBase<DerivedQL>& q_l,
                      const Eigen::MatrixBase<DerivedVL>& v_plus_l,
@@ -135,8 +156,7 @@ class DirectTranscriptionConstraint : public solvers::Constraint {
                      const Eigen::MatrixBase<DerivedQR>& q_r,
                      const Eigen::MatrixBase<DerivedVR>& v_plus_r,
                      const Eigen::MatrixBase<DerivedVR>& v_minus_r,
-                     const Eigen::MatrixBase<DerivedUR>& u_r,
-                     const Eigen::MatrixBase<DerivedLambdaR>& lambda_r) const {
+                     const Eigen::MatrixBase<DerivedUR>& u_r) const {
     DRAKE_ASSERT(q_l.rows() == num_positions_);
     DRAKE_ASSERT(v_plus_l.rows() == num_velocities_/2);
     DRAKE_ASSERT(v_minus_l.rows() == num_velocities_/2);
@@ -144,9 +164,8 @@ class DirectTranscriptionConstraint : public solvers::Constraint {
     DRAKE_ASSERT(v_plus_r.rows() == num_velocities_/2);
     DRAKE_ASSERT(v_minus_r.rows() == num_velocities_/2);
     DRAKE_ASSERT(u_r.rows() == num_actuators_);
-    DRAKE_ASSERT(lambda_r.rows() == num_lambda_);
     Eigen::Matrix<Scalar, Eigen::Dynamic, 1> x(num_vars(), 1);
-    x << h, q_l, v_plus_l, v_minus_l, q_r, v_plus_r, v_minus_r, u_r, lambda_r;
+    x << h, q_l, v_plus_l, v_minus_l, q_r, v_plus_r, v_minus_r, u_r;
     return x;
   }
 
@@ -169,6 +188,50 @@ class DirectTranscriptionConstraint : public solvers::Constraint {
   // Stores the GeneralizedConstraintForceEvaluator
   std::vector<std::unique_ptr<GeneralizedConstraintForceEvaluator>>
       generalized_constraint_force_evaluators_;
+};
+
+class TimestepIntegrationConstraint
+  : public solvers::Constraint {
+ public:
+  DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(TimestepIntegrationConstraint)
+
+  TimestepIntegrationConstraint(
+      const RigidBodyTree<double>& tree,
+      std::shared_ptr<plants::KinematicsCacheWithVHelper<AutoDiffXd>>
+        kinematics_cache_with_v_helper, int num_lambda);
+  ~TimestepIntegrationConstraint() {}
+
+  template <typename DerivedQL, typename DerivedV,
+            typename DerivedLambda>
+  typename std::enable_if<is_eigen_vector_of<DerivedQL, drake::symbolic::Variable>::value &&
+                             is_eigen_vector_of<DerivedV, drake::symbolic::Variable>::value&&
+                              is_eigen_vector_of<DerivedLambda, drake::symbolic::Variable>::value,
+                          Eigen::Matrix<drake::symbolic::Variable, Eigen::Dynamic, 1>>::type
+  CompositeEvalInput(const Eigen::MatrixBase<DerivedQL>& q,
+                     const Eigen::MatrixBase<DerivedV>& v,
+                     const Eigen::MatrixBase<DerivedLambda>& lambda) const {
+    DRAKE_ASSERT(q.rows() == num_positions_);
+    DRAKE_ASSERT(v.rows() == num_velocities_);
+    DRAKE_ASSERT(lambda.rows() == num_lambda_);
+    Eigen::Matrix<drake::symbolic::Variable, Eigen::Dynamic, 1> x(num_vars(), 1);
+    x << q, v, lambda;
+    return x;
+  }
+
+ protected:
+  void DoEval(const Eigen::Ref<const Eigen::VectorXd>& x,
+              Eigen::VectorXd& y) const;
+
+  void DoEval(const Eigen::Ref<const AutoDiffVecXd>& x,
+              AutoDiffVecXd& y) const;
+ private:
+  const RigidBodyTree<double>* tree_;
+  const int num_positions_;
+  const int num_velocities_;
+  const int num_lambda_;
+
+  mutable std::shared_ptr<plants::KinematicsCacheWithVHelper<AutoDiffXd>>
+      kinematics_cache_with_v_helper_;
 };
 }  // namespace trajectory_optimization
 }  // namespace systems

@@ -79,13 +79,6 @@ class ElasticContactImplicitDirectTranscription : public MultipleShooting {
   }
 
   /**
-   * Adds the nonlinear complementarity constraints for contact points
-   * For now we're assuming the plant is a box with 8 contact points
-   */
-  solvers::VectorDecisionVariable<8> AddContactImplicitConstraint(
-      int interval_index);
-
-  /**
    * Adds the direct transcription constraint to the optimization program.
    * The user MUST call this Compile function before solving the optimization
    * program, and after all the generalized constraint force Jᵀλ has been
@@ -112,6 +105,7 @@ class ElasticContactImplicitDirectTranscription : public MultipleShooting {
   const RigidBodyTree<double>* tree_{nullptr};
   const int num_positions_;
   const int num_velocities_;
+  const int num_lambda_;
   // const int num_contacts_ = 8; // Aditya: in the future this shouldn't be hard coded but i'm using a box...
   // direct_transcription_constraints_[i] stores the
   // DirectTranscriptionConstraint
@@ -122,6 +116,9 @@ class ElasticContactImplicitDirectTranscription : public MultipleShooting {
   // constraint force λ.
   std::vector<solvers::Binding<DirectTranscriptionConstraint>>
       direct_transcription_constraints_;
+  std::vector<solvers::Binding<TimestepIntegrationConstraint>>
+      timestep_integration_constraints_;
+
   std::vector<std::shared_ptr<plants::KinematicsCacheWithVHelper<AutoDiffXd>>>
       kinematics_cache_with_v_helpers_;
   std::vector<std::shared_ptr<plants::KinematicsCacheHelper<AutoDiffXd>>>
@@ -129,6 +126,7 @@ class ElasticContactImplicitDirectTranscription : public MultipleShooting {
 
   solvers::MatrixXDecisionVariable q_vars_;
   solvers::MatrixXDecisionVariable v_vars_;
+  solvers::MatrixXDecisionVariable lambda_vars_;
   solvers::MatrixXDecisionVariable position_constraint_lambda_vars_;
 };
 }  // namespace trajectory_optimization

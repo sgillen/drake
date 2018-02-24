@@ -59,9 +59,9 @@ GTEST_TEST(DirectTranscriptionConstraintTest, TestEvalNoContact) {
       Eigen::VectorXd::LinSpaced(num_lambda, 3, 5);
 
   const Eigen::VectorXd x =
-      constraint.CompositeEvalInput(h, q_l, v_minus_l, v_plus_l, q_r, v_minus_r, v_plus_r, u_r, lambda_r);
+      constraint.CompositeEvalInput(h, q_l, v_minus_l, v_plus_l, q_r, v_minus_r, v_plus_r, u_r);
   const AutoDiffVecXd tx = math::initializeAutoDiff(x);
-  AutoDiffVecXd ty, y_output;
+  AutoDiffVecXd ty;
 
   constraint.Eval(tx, ty);
 
@@ -79,8 +79,7 @@ GTEST_TEST(DirectTranscriptionConstraintTest, TestEvalNoContact) {
   y_expected.tail(tree->get_num_velocities()) =
       M * (v_minus_r - v_plus_l) +
       (c - (tree->B * u_r)) * h;
-  y_output = ty.head(tree->get_num_positions() + tree->get_num_velocities());
-  EXPECT_TRUE(CompareMatrices(math::autoDiffToValueMatrix(y_output), y_expected,
+  EXPECT_TRUE(CompareMatrices(math::autoDiffToValueMatrix(ty), y_expected,
                               1E-10, MatrixCompareType::absolute));
 }
 
@@ -109,8 +108,10 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription, TestContactImplicitBrickNo
   traj_opt.Compile();
 
   const solvers::SolutionResult result = traj_opt.Solve();
+  std::cerr<<"SOLVED"<<std::endl;
 
   EXPECT_EQ(result, solvers::SolutionResult::kSolutionFound);
+  std::cerr<<"CHECK1"<<std::endl;
 
   const double tol{1E-5};
   // First check if dt is within the bounds.
@@ -125,6 +126,7 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription, TestContactImplicitBrickNo
       (dt_sol.array() >=
        Eigen::ArrayXd::Constant(num_time_samples - 1, minimum_timestep - tol))
           .all());
+  std::cerr<<"CHECK2"<<std::endl;
   // Check if the interpolation constraint is satisfied
   KinematicsCache<double> kinsol = tree->CreateKinematicsCache();
   const Eigen::MatrixXd q_sol =
@@ -137,6 +139,7 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription, TestContactImplicitBrickNo
   for (int i = 0; i < num_time_samples; ++i) {
     u_sol.col(i) = traj_opt.GetSolution(traj_opt.input(i));
   }
+  std::cerr<<"BREAK_SOLUTION"<<std::endl;
 
   for (int i = 1; i < num_time_samples; ++i) {
     int v_dyn = v_sol.col(i).rows()/2;
@@ -162,6 +165,7 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription, TestContactImplicitBrickNo
             dt_sol(i - 1),
         tol, MatrixCompareType::relative));
   }
+  std::cerr<<"ALMOST DONE"<<std::endl;
   // Check if the constraints on the initial state and final state are
   // satisfied.
   EXPECT_NEAR(q_sol(0, 0), 10, tol);

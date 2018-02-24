@@ -40,20 +40,18 @@ using Eigen::Dynamic;
 DirectTranscriptionConstraint::DirectTranscriptionConstraint(
     const RigidBodyTree<double>& tree,
     std::shared_ptr<KinematicsCacheWithVHelper<AutoDiffXd>> kinematics_helper)
-    : Constraint(tree.get_num_positions() + tree.get_num_velocities() + 24,
+    : Constraint(tree.get_num_positions() + tree.get_num_velocities(),
                  1 + 2 * tree.get_num_positions() +
-                     4 * tree.get_num_velocities() + tree.get_num_actuators() + 24,
+                     4 * tree.get_num_velocities() + tree.get_num_actuators(),
                  Eigen::VectorXd::Zero(tree.get_num_positions() +
-                                       tree.get_num_velocities() +
-                                       24),
+                                       tree.get_num_velocities()),
                  Eigen::VectorXd::Zero(tree.get_num_positions() +
-                                       tree.get_num_velocities() +
-                                       24)),
+                                       tree.get_num_velocities())),
       tree_(&tree),
       num_positions_{tree.get_num_positions()},
       num_velocities_{2*tree.get_num_velocities()},
       num_actuators_{tree.get_num_actuators()},
-      num_lambda_{24},
+      num_lambda_{0},
       kinematics_helper1_{kinematics_helper} {}
 
 void DirectTranscriptionConstraint::AddGeneralizedConstraintForceEvaluator(
@@ -110,7 +108,7 @@ void DirectTranscriptionConstraint::DoEval(
   const AutoDiffVecXd v_plus_r = x_segment(num_velocities_/2);  
   const AutoDiffVecXd v_minus_r = x_segment(num_velocities_/2);
   const AutoDiffVecXd u_r = x_segment(num_actuators_);
-  const AutoDiffVecXd lambda_r = x_segment(num_lambda_);
+  //const AutoDiffVecXd lambda_r = x_segment(num_lambda_);
 
   auto kinsol = kinematics_helper1_->UpdateKinematics(q_r, v_minus_r);
 
@@ -123,10 +121,9 @@ void DirectTranscriptionConstraint::DoEval(
   // Mᵣ(vᵣ - vₗ) = (B*uᵣ + Jᵣᵀ*λᵣ -c(qᵣ, vᵣ))h
   const MatrixX<AutoDiffXd> map_v_to_qdot =
       RigidBodyTree<double>::GetVelocityToQDotMapping(kinsol);
-  const AutoDiffVecXd qdot_plus_r = map_v_to_qdot * v_plus_r;
+
   const AutoDiffVecXd qdot_minus_r = map_v_to_qdot * v_minus_r;
-  const AutoDiffVecXd qdot_plus_l = map_v_to_qdot * v_plus_l;
-  const AutoDiffVecXd qdot_minus_l = map_v_to_qdot * v_minus_l;
+  std::cerr<<"Gonna fail here"<<std::endl;
   // TODO(hongkai.dai): Project qdot_r to the constraint manifold (for example,
   // if q contains unit quaternion, and we need to project this backward Euler
   // integration on the unit quaternion manifold.)
@@ -139,9 +136,6 @@ void DirectTranscriptionConstraint::DoEval(
       no_external_wrenches;
   const auto c = tree_->dynamicsBiasTerm(kinsol, no_external_wrenches);
 
-  // Compute Jᵀλ
-  AutoDiffVecXd total_generalized_constraint_force(num_velocities_/2);
-  total_generalized_constraint_force.setZero();
   // int lambda_count = 0;
   // for (const auto& evaluator : generalized_constraint_force_evaluators_) {
   //   AutoDiffVecXd q_v_lambda(num_positions_ + num_velocities_/2 +
@@ -158,38 +152,99 @@ void DirectTranscriptionConstraint::DoEval(
   // M*v_minus_r = M*v_plus_l + Bu-c + J^T*lambda
   y_dyn =
       M * (v_minus_r - v_plus_l) +
-      (c - (tree_->B * u_r + total_generalized_constraint_force)) * h;
+      (c - (tree_->B * u_r)) * h;
 
-  //auto J = tree_->positionConstraintsJacobian(kinsol);
+  y << y_pos, y_dyn;
+}
+
+TimestepIntegrationConstraint::TimestepIntegrationConstraint(
+    const RigidBodyTree<double>& tree,
+    std::shared_ptr<plants::KinematicsCacheWithVHelper<AutoDiffXd>>
+        kinematics_cache_with_v_helper, int num_lambda) // constraints: q; v+; v-; lambda
+    : solvers::Constraint(num_lambda, num_lambda+2*tree.get_num_velocities() + tree.get_num_positions(),
+        Eigen::MatrixXd::Zero(num_lambda, 1),
+        Eigen::MatrixXd::Zero(num_lambda, 1)), 
+      tree_(&tree),
+      num_positions_{tree.get_num_positions()},
+      num_velocities_{2*tree.get_num_velocities()},
+      num_lambda_{num_lambda},
+      kinematics_cache_with_v_helper_{kinematics_cache_with_v_helper}{}
+
+void TimestepIntegrationConstraint::DoEval(
+  const Eigen::Ref<const Eigen::VectorXd>& x,
+              Eigen::VectorXd& y) const {
+  AutoDiffVecXd y_t;
+  DoEval(math::initializeAutoDiff(x), y_t);
+  y = math::autoDiffToValueMatrix(y_t);
+}
+
+void TimestepIntegrationConstraint::DoEval(
+  const Eigen::Ref<const AutoDiffVecXd>& x, AutoDiffVecXd& y) const {
+  std::cerr<<"TIC"<<std::endl;
+
+  int x_count = 0;
+
+  auto x_segment = [x, &x_count](int num_element) {
+    x_count += num_element;
+    return x.segment(x_count - num_element, num_element);
+  };
+
+  const AutoDiffVecXd q = x_segment(num_positions_);
+  const AutoDiffVecXd v_plus = x_segment(num_velocities_/2);
+  const AutoDiffVecXd v_minus = x_segment(num_velocities_/2);
+  const AutoDiffVecXd lambda = x_segment(num_lambda_);
+  std::cerr<<"Broke down x"<<std::endl;
+
+  auto kinsol = kinematics_cache_with_v_helper_->UpdateKinematics(q, v_minus);
+  std::cerr<<"Made kinsol"<<std::endl;
+
+  const auto M = tree_->massMatrix(kinsol);
+  std::cerr<<"Got Mass matrix"<<std::endl;
+
+  const MatrixX<AutoDiffXd> map_v_to_qdot =
+      RigidBodyTree<double>::GetVelocityToQDotMapping(kinsol);
+  
+  // rigid_body_tree.cc should output: "did the assignmnt" 3 times here
+  std::cerr<<"Mapped v to qdot"<<std::endl;
+  const AutoDiffVecXd qd_plus = map_v_to_qdot * v_plus;
+  std::cerr<<"Got qdplus"<<std::endl;
+  const AutoDiffVecXd qd_minus = map_v_to_qdot * v_minus;
+  std::cerr<<"Got qdminus"<<std::endl;
+
   RigidBody<double>* brick = tree_->FindBody("contact_implicit_brick");
   RigidBody<double>*ww = tree_->FindBody("world");
+  std::cerr<<"Extracted rigid bodies"<<std::endl;
 //  int body_ind = tree_->FindBodyIndex("contact_implicit_brick");
   const auto& contact_points_a = brick->get_contact_points();
   const auto& contact_points_b = ww->get_contact_points();
+  std::cerr<<"Got contact points"<<std::endl;
   Eigen::VectorXi idx_a(1), idx_b(1);
   idx_a << 1;
   idx_b << 0;
-  Eigen::Matrix<Eigen::AutoDiffScalar<Eigen::VectorXd>, Dynamic, Dynamic> J;
+  Eigen::Matrix<Eigen::AutoDiffScalar<Eigen::VectorXd>, Eigen::Dynamic, Eigen::Dynamic> J;
+  std::cerr<<"Ready to compute contact jacobian"<<std::endl;
   tree_->computeContactJacobians(kinsol, idx_a, idx_b, contact_points_a, contact_points_b, J);
+  std::cerr<<"computed contact jacobian"<<std::endl;
   
   // Jqdot_plus_l - Jqdot_minus_l = -(1+restitution)J*M^(-1)*J^T*lambda
-  y_tsintegrate = 
-      J*qdot_plus_l - J*qdot_minus_l + J*M.inverse()*total_generalized_constraint_force;
-
-  y << y_pos, y_dyn, y_tsintegrate;
+  std::cerr<<(J*qd_plus - J*qd_minus + J*M.inverse()*J.transpose()*lambda).rows()<<std::endl;
+  y = J*qd_plus - J*qd_minus + J*M.inverse()*J.transpose()*lambda;
+  std::cerr<<y.rows()<<std::endl;
 }
+
 
 ElasticContactImplicitDirectTranscription::ElasticContactImplicitDirectTranscription(
     const RigidBodyTree<double>& tree, int num_time_samples,
     double minimum_timestep, double maximum_timestep, int num_contact_lambda)
     : MultipleShooting(tree.get_num_actuators(),
-                       tree.get_num_positions() + 2*tree.get_num_velocities(),
+                       tree.get_num_positions() + 2*tree.get_num_velocities() + num_contact_lambda,
                        num_time_samples, minimum_timestep, maximum_timestep),
       tree_{&tree},
       num_positions_{tree.get_num_positions()},
       num_velocities_{2*tree.get_num_velocities()},
-      position_constraint_lambda_vars_(NewContinuousVariables(
-          num_contact_lambda, N(), "position_lambda")) {
+      num_lambda_{num_contact_lambda},
+      lambda_vars_(NewContinuousVariables(
+          num_contact_lambda, N(), "contact_lambda")) {
   // For each knot, we will need to impose a transcription/collocation
   // constraint. Each of these constraints require us caching some
   // kinematics info.
@@ -227,36 +282,33 @@ ElasticContactImplicitDirectTranscription::ElasticContactImplicitDirectTranscrip
         transcription_cnstr->CompositeEvalInput(
             h_vars()(i), q_vars_.col(i), v_vars_.col(i), q_vars_.col(i + 1),
             v_vars_.col(i + 1),
-            u_vars().segment((i + 1) * num_inputs(), num_inputs()),
-            position_constraint_lambda_vars_.col(i + 1));
+            u_vars().segment((i + 1) * num_inputs(), num_inputs()));
     direct_transcription_constraints_.emplace_back(transcription_cnstr,
                                                    transcription_vars);
   }
-}
 
-solvers::VectorDecisionVariable<8>
-ElasticContactImplicitDirectTranscription::AddContactImplicitConstraint(
-    int interval_index)
-{
-  if (interval_index < 0 || interval_index > N() - 1) {
-    throw std::runtime_error("interval_index is invalid.");
+  timestep_integration_constraints_.reserve(N());
+  for (int i = 0; i < N(); i++) {
+    auto timestep_cnstr = std::make_shared<TimestepIntegrationConstraint>(
+        *tree_, kinematics_cache_with_v_helpers_[i], num_lambda_);
+    const solvers::VectorXDecisionVariable timestep_cnstr_vars =
+        timestep_cnstr->CompositeEvalInput(
+          q_vars_.col(i), v_vars_.col(i), lambda_vars_.col(i));
+    timestep_integration_constraints_.emplace_back(timestep_cnstr, timestep_cnstr_vars);
   }
-
-  const std::string lambda_name =
-      "contact_implicit_constraint_[" + std::to_string(interval_index) + "]";
-  const solvers::VectorDecisionVariable<8> contact_implicit_lambda =
-      NewContinuousVariables<8>(lambda_name);
-
-
-
-  return contact_implicit_lambda;
 }
 
 void ElasticContactImplicitDirectTranscription::Compile() {
+  for (int i = 0; i < N(); i++) {
+    AddConstraint(timestep_integration_constraints_[i].constraint(),
+                  timestep_integration_constraints_[i].variables());
+  }
+
   for (int i = 0; i < N() - 1; ++i) {
     AddConstraint(direct_transcription_constraints_[i].constraint(),
                   direct_transcription_constraints_[i].variables());
   }
+  
 }
 
 void ElasticContactImplicitDirectTranscription::
