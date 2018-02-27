@@ -8,22 +8,22 @@
 #include "drake/multibody/rigid_body_tree.h"
 #include "drake/solvers/constraint.h"
 #include "drake/solvers/decision_variable.h"
-#include "drake/math/autodiff_gradient.h"
 
 namespace drake {
 namespace systems {
 namespace trajectory_optimization {
 
-class TimestepIntegrationConstraint
-  : public solvers::Constraint {
+class ContactImplicitConstraint
+	: public solvers::Constraint {
  public:
-  DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(TimestepIntegrationConstraint)
+  DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(ContactImplicitConstraint)
 
-  TimestepIntegrationConstraint(
-      const RigidBodyTree<double>& tree,
-      std::shared_ptr<plants::KinematicsCacheWithVHelper<AutoDiffXd>>
-        kinematics_cache_with_v_helper, int num_lambda);
-  ~TimestepIntegrationConstraint() {}
+  ContactImplicitConstraint(
+  		const RigidBodyTree<double>& tree,
+  		std::shared_ptr<plants::KinematicsCacheWithVHelper<AutoDiffXd>>
+  			kinematics_cache_with_v_helper, int num_lambda, double tol);
+
+  ~ContactImplicitConstraint() override {}
 
   template <typename DerivedQL, typename DerivedV,
             typename DerivedLambda>
@@ -41,23 +41,24 @@ class TimestepIntegrationConstraint
     x << q, v, lambda;
     return x;
   }
-
+  
  protected:
   void DoEval(const Eigen::Ref<const Eigen::VectorXd>& x,
-              Eigen::VectorXd& y) const;
+              Eigen::VectorXd& y) const override;
 
   void DoEval(const Eigen::Ref<const AutoDiffVecXd>& x,
-              AutoDiffVecXd& y) const;
+              AutoDiffVecXd& y) const override;
  private:
   const RigidBodyTree<double>* tree_;
   const int num_positions_;
   const int num_velocities_;
   const int num_lambda_;
+  const double tol_;
 
   std::shared_ptr<plants::KinematicsCacheWithVHelper<AutoDiffXd>>
-      kinematics_cache_with_v_helper_;
+  	  kinematics_cache_with_v_helper_;
 };
 
-}  // namespace trajectory_optimization
-}  // namespace systems
-}  // namespace drake
+} // namespace trajectory_optimization
+} // namespace systems
+} // namespace drake

@@ -148,8 +148,7 @@ void DirectTranscriptionConstraint::DoEval(
   // }
 
   // M*v_minus_r = M*v_plus_l + Bu-c + J^T*lambda
-  y_dyn =
-      M * (v_minus_r - v_plus_l) +
+  y_dyn = M * (v_minus_r - v_plus_l) +
       (c - (tree_->B * u_r)) * h;
 
   y << y_pos, y_dyn;
@@ -176,7 +175,7 @@ ElasticContactImplicitDirectTranscription::ElasticContactImplicitDirectTranscrip
   dtc_kinematics_cache_with_v_helpers_.resize(num_time_samples);
   dtc_kinematics_cache_helpers_.resize(num_time_samples);
   tic_kinematics_cache_with_v_helpers_.resize(num_time_samples);
-  cic_kinematics_cache_helpers_.resize(num_time_samples);
+  cic_kinematics_cache_with_v_helpers_.resize(num_time_samples);
 
   for (int i = 0; i < num_time_samples; ++i) {
     dtc_kinematics_cache_with_v_helpers_[i] =
@@ -185,8 +184,8 @@ ElasticContactImplicitDirectTranscription::ElasticContactImplicitDirectTranscrip
         std::make_shared<KinematicsCacheHelper<AutoDiffXd>>(*tree_);
     tic_kinematics_cache_with_v_helpers_[i] = 
         std::make_shared<KinematicsCacheWithVHelper<AutoDiffXd>>(*tree_);
-    cic_kinematics_cache_helpers_[i] = 
-        std::make_shared<KinematicsCacheHelper<AutoDiffXd>>(*tree_);
+    cic_kinematics_cache_with_v_helpers_[i] = 
+        std::make_shared<KinematicsCacheWithVHelper<AutoDiffXd>>(*tree_);
   }
 
   q_vars_.resize(num_positions_, N());
@@ -228,15 +227,15 @@ ElasticContactImplicitDirectTranscription::ElasticContactImplicitDirectTranscrip
     timestep_integration_constraints_.emplace_back(timestep_cnstr, timestep_cnstr_vars);
   }
 
-  // contact_implicit_constraints_.reserve(N());
-  // for (int i = 0; i < N(); i++) {
-  //   auto contact_implicit_cnstr = std::make_shared<ContactImplicitConstraint>(
-  //     *tree_, cic_kinematics_cache_helpers_[i], num_lambda_, 1.0);
-  //   const solvers::VectorXDecisionVariable contact_implicit_cnstr_vars = 
-  //       contact_implicit_cnstr->CompositeEvalInput(
-  //         q_vars_.col(i), lambda_vars_.col(i));
-  //   contact_implicit_constraints_.emplace_back(contact_implicit_cnstr, contact_implicit_cnstr_vars);
-  // }
+  contact_implicit_constraints_.reserve(N());
+  for (int i = 0; i < N(); i++) {
+    auto contact_implicit_cnstr = std::make_shared<ContactImplicitConstraint>(
+      *tree_, cic_kinematics_cache_with_v_helpers_[i], num_lambda_, 0.0);
+    const solvers::VectorXDecisionVariable contact_implicit_cnstr_vars = 
+        contact_implicit_cnstr->CompositeEvalInput(
+          q_vars_.col(i), v_vars_.col(i), lambda_vars_.col(i));
+    contact_implicit_constraints_.emplace_back(contact_implicit_cnstr, contact_implicit_cnstr_vars);
+  }
 }
 
 void ElasticContactImplicitDirectTranscription::Compile() {
@@ -248,6 +247,11 @@ void ElasticContactImplicitDirectTranscription::Compile() {
   for (int i = 0; i < N(); i++) {
     AddConstraint(timestep_integration_constraints_[i].constraint(),
                   timestep_integration_constraints_[i].variables());
+  }
+
+  for (int i = 0; i < N(); i++) {
+    //AddConstraint(contact_implicit_constraints_[i].constraint(),
+    //              contact_implicit_constraints_[i].variables());
   }
   
 }

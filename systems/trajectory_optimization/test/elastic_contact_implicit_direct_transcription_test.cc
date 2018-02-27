@@ -6,6 +6,8 @@
 #include "drake/common/test_utilities/eigen_matrix_compare.h"
 #include "drake/math/autodiff.h"
 #include "drake/multibody/parsers/urdf_parser.h"
+#include "drake/multibody/rigid_body_tree_construction.h"
+
 #include "drake/systems/trajectory_optimization/rigid_body_tree_multiple_shooting_internal.h"
 #include "drake/systems/trajectory_optimization/position_constraint_force_evaluator.h"
 
@@ -26,7 +28,7 @@ std::unique_ptr<RigidBodyTree<double>> ConstructContactImplicitBrickTree() {
 GTEST_TEST(DirectTranscriptionConstraintTest, TestEvalNoContact) {
   // Test the evaluation of DirectTranscriptionConstraintTest
   auto tree = ConstructContactImplicitBrickTree();
-  const int num_lambda = 24; // please un-hard code me!!
+  const int num_lambda = 8; // please un-hard code me!!
   auto kinematics_helper =
       std::make_shared<plants::KinematicsCacheHelper<AutoDiffXd>>(*tree);
   auto kinematics_helper_with_v =
@@ -85,6 +87,8 @@ GTEST_TEST(DirectTranscriptionConstraintTest, TestEvalNoContact) {
 
 GTEST_TEST(ElasticContactImplicitDirectTranscription, TestContactImplicitBrickNoContact) {
   auto tree = ConstructContactImplicitBrickTree();
+  const double plane_len = 100;
+  multibody::AddFlatTerrainToWorld(tree.get(), plane_len, plane_len);
   const int num_time_samples = 10;
   const double minimum_timestep{0.01};
   const double maximum_timestep{0.1};
@@ -106,7 +110,6 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription, TestContactImplicitBrickNo
 
   // Add direct transcription constraints.
   traj_opt.Compile();
-
   const solvers::SolutionResult result = traj_opt.Solve();
 
   EXPECT_EQ(result, solvers::SolutionResult::kSolutionFound);

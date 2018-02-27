@@ -238,6 +238,7 @@ drake_cc_googletest(
         "//math:autodiff",
         "//multibody/parsers",
 	":rigid_body_tree_multiple_shooting", 
+	"//multibody:rigid_body_tree_construction"
     ],
 )
 

@@ -131,8 +131,8 @@ class ElasticContactImplicitDirectTranscription : public MultipleShooting {
   std::vector<std::shared_ptr<plants::KinematicsCacheWithVHelper<AutoDiffXd>>>
       tic_kinematics_cache_with_v_helpers_;
 
-  std::vector<std::shared_ptr<plants::KinematicsCacheHelper<AutoDiffXd>>>
-      cic_kinematics_cache_helpers_;
+  std::vector<std::shared_ptr<plants::KinematicsCacheWithVHelper<AutoDiffXd>>>
+      cic_kinematics_cache_with_v_helpers_;
 
   solvers::MatrixXDecisionVariable q_vars_;
   solvers::MatrixXDecisionVariable v_vars_;

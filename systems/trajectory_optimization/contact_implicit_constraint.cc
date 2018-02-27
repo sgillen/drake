@@ -1,33 +1,40 @@
-#include "drake/systems/trajectory_optimization/timestep_integration_constraint.h"
+#include "drake/systems/trajectory_optimization/contact_implicit_constraint.h"
 
-#include <iostream>
+#include "drake/multibody/kinematics_cache.h"
+#include "drake/math/autodiff_gradient.h"
 
-namespace drake{
-namespace systems{
-namespace trajectory_optimization{
+namespace drake {
+namespace systems {
+namespace trajectory_optimization {
 
-TimestepIntegrationConstraint::TimestepIntegrationConstraint(
+ContactImplicitConstraint::ContactImplicitConstraint(
     const RigidBodyTree<double>& tree,
     std::shared_ptr<plants::KinematicsCacheWithVHelper<AutoDiffXd>>
-        kinematics_cache_with_v_helper, int num_lambda) // constraints: q; v+; v-; lambda
-    : solvers::Constraint(num_lambda, num_lambda+2*tree.get_num_velocities() + tree.get_num_positions(),
-        Eigen::MatrixXd::Zero(num_lambda, 1),
-        Eigen::MatrixXd::Zero(num_lambda, 1)), 
+        kinematics_cache_with_v_helper, int num_lambda, double tol)
+    : Constraint(num_lambda + 1, tree.get_num_positions() +
+                  2*tree.get_num_velocities() + num_lambda,
+        Eigen::MatrixXd::Zero(num_lambda+1, 1),
+        Eigen::MatrixXd::Constant(num_lambda+1, 1, tol)), 
       tree_(&tree),
       num_positions_{tree.get_num_positions()},
       num_velocities_{2*tree.get_num_velocities()},
       num_lambda_{num_lambda},
-      kinematics_cache_with_v_helper_{kinematics_cache_with_v_helper}{}
+      tol_{tol},
+      kinematics_cache_with_v_helper_{kinematics_cache_with_v_helper}{
+          Eigen::VectorXd UB(num_lambda+1, 1);
+          UB.head(1) = Eigen::MatrixXd::Constant(1, 1, tol_);
+          UB.tail(num_lambda) = Eigen::MatrixXd::Zero(num_lambda, 1);
+          UpdateUpperBound(UB);
+      }
 
-void TimestepIntegrationConstraint::DoEval(
-  const Eigen::Ref<const Eigen::VectorXd>& x,
-              Eigen::VectorXd& y) const {
+void ContactImplicitConstraint::DoEval(
+  const Eigen::Ref<const Eigen::VectorXd>& x, Eigen::VectorXd& y) const {
   AutoDiffVecXd y_t;
-  DoEval(math::initializeAutoDiff(x), y_t);
+  Eval(math::initializeAutoDiff(x), y_t);
   y = math::autoDiffToValueMatrix(y_t);
 }
 
-void TimestepIntegrationConstraint::DoEval(
+void ContactImplicitConstraint::DoEval(
   const Eigen::Ref<const AutoDiffVecXd>& x, AutoDiffVecXd& y) const {
 
   int x_count = 0;
@@ -74,11 +81,24 @@ void TimestepIntegrationConstraint::DoEval(
 
   MatrixX<AutoDiffXd> J;
   tree_->computeContactJacobians(kinsol, idx_a, idx_b, contact_points_a, contact_points_b, J);
-  
-  // Jqdot_plus_l - Jqdot_minus_l = -(1+restitution)J*M^(-1)*J^T*lambda
-  y = J*qd_plus - J*qd_minus + J*M.inverse()*J.transpose()*lambda;
-}
 
-} // namespace trajectory_optimization
-} // namespace systems
-} // namespace drake
+  std::cerr<<phi.size()<<std::endl;
+
+  VectorX<double> y_val(1+num_lambda_);
+  MatrixX<double> y_deriv(1+num_lambda_, num_positions_+num_lambda_);
+
+  VectorX<double> nlambda = normal*math::autoDiffToValueMatrix(lambda);
+
+  y_val << math::autoDiffToValueMatrix(lambda),
+        phi.transpose()*math::autoDiffToValueMatrix(lambda);
+  y_deriv << Eigen::MatrixXd::Zero(num_lambda_, num_positions_),
+        Eigen::MatrixXd::Identity(num_lambda_, num_lambda_),
+        math::autoDiffToValueMatrix(J).transpose()*
+        math::autoDiffToValueMatrix(lambda), phi.transpose();
+
+  math::initializeAutoDiffGivenGradientMatrix(
+    y_val, y_deriv, y);
+}
+}  // namespace trajectory_optimization
+}  // namespace systems
+}  // namespace drake
