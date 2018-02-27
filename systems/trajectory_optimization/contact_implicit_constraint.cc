@@ -14,12 +14,12 @@ ContactImplicitConstraint::ContactImplicitConstraint(
     : Constraint(2*num_lambda/3, tree.get_num_positions() +
                   2*tree.get_num_velocities() + num_lambda,
         Eigen::MatrixXd::Zero(2*num_lambda/3, 1),
-        Eigen::MatrixXd::Constant(num_lambda+1, 1, tol)), 
+        Eigen::MatrixXd::Constant(2*num_lambda/3, 1, tol)), 
       tree_(&tree),
       num_positions_{tree.get_num_positions()},
       num_velocities_{2*tree.get_num_velocities()},
       num_lambda_{num_lambda},
-      num_contacts_{num_lambda/3}
+      num_contacts_{num_lambda/3},
       tol_{tol},
       kinematics_cache_with_v_helper_{kinematics_cache_with_v_helper}{
           Eigen::VectorXd UB(2*num_contacts_, 1);
@@ -90,11 +90,11 @@ void ContactImplicitConstraint::DoEval(
 
   int lambda_count = 0;
 
-  auto lambda_segment = [x, &x_count](int num_element) {
-    x_count += num_element;
-    return x.segment(x_count - num_element, num_element);
+  auto lambda_segment = [lambda, &lambda_count](int num_element) {
+    lambda_count += num_element;
+    return lambda.segment(lambda_count - num_element, num_element);
   };
-  MatrixX lambda_wrap(3, num_contacts_);
+  MatrixX<AutoDiffXd> lambda_wrap(3, num_contacts_);
   for(int i = 0; i < num_contacts_; i++) {
     lambda_wrap.col(i) = lambda_segment(3);
   }
