@@ -1,5 +1,7 @@
 #include "drake/systems/trajectory_optimization/timestep_integration_constraint.h"
 
+#include <iostream>
+
 namespace drake{
 namespace systems{
 namespace trajectory_optimization{
@@ -47,20 +49,34 @@ void TimestepIntegrationConstraint::DoEval(
   const MatrixX<AutoDiffXd> map_v_to_qdot =
       RigidBodyTree<double>::GetVelocityToQDotMapping(kinsol);
   
-  // rigid_body_tree.cc should output: "did the assignmnt" 3 times here
   const AutoDiffVecXd qd_plus = map_v_to_qdot * v_plus;
   const AutoDiffVecXd qd_minus = map_v_to_qdot * v_minus;
 
   RigidBody<double>* brick = tree_->FindBody("contact_implicit_brick");
-  RigidBody<double>*ww = tree_->FindBody("world");
-//  int body_ind = tree_->FindBodyIndex("contact_implicit_brick");
   const auto& contact_points_a = brick->get_contact_points();
-  const auto& contact_points_b = ww->get_contact_points();
-  Eigen::VectorXi idx_a(1), idx_b(1);
-  idx_a << 1;
-  idx_b << 0;
+  const KinematicsCache<double> cache = tree_->doKinematics(
+        math::autoDiffToValueMatrix(q), math::autoDiffToValueMatrix(v_minus));
+
+  const auto points = tree_->transformPoints(cache, contact_points_a, 1, 0);
+
+  Eigen::VectorXd phi;
+  Eigen::Matrix3Xd normal, contact_points_b, body_x;
+  std::vector<int> body_idx;
+
+  const_cast<RigidBodyTree<double>*> (tree_)->collisionDetectFromPoints(cache, points,
+        phi, normal, contact_points_b, body_x, body_idx, false);
+
+  Eigen::VectorXi idx_a(1), idx_b(body_idx.size());
+  idx_a << tree_->FindBodyIndex("contact_implicit_brick");
+  for (size_t i = 0; i < body_idx.size(); i++) {
+    idx_b[i] = body_idx[i];
+  }
+
   Eigen::Matrix<Eigen::AutoDiffScalar<Eigen::VectorXd>, Eigen::Dynamic, Eigen::Dynamic> J;
   tree_->computeContactJacobians(kinsol, idx_a, idx_b, contact_points_a, contact_points_b, J);
+
+  std::cerr<<J<<std::endl;
+
   
   // Jqdot_plus_l - Jqdot_minus_l = -(1+restitution)J*M^(-1)*J^T*lambda
   y = J*qd_plus - J*qd_minus + J*M.inverse()*J.transpose()*lambda;

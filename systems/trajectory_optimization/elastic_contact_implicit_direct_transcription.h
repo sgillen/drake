@@ -11,6 +11,7 @@
 #include "drake/systems/trajectory_optimization/multiple_shooting.h"
 #include "drake/systems/trajectory_optimization/rigid_body_tree_multiple_shooting_internal.h"
 #include "drake/systems/trajectory_optimization/timestep_integration_constraint.h"
+#include "drake/systems/trajectory_optimization/contact_implicit_constraint.h"
 
 namespace drake {
 namespace systems {
@@ -119,6 +120,8 @@ class ElasticContactImplicitDirectTranscription : public MultipleShooting {
       direct_transcription_constraints_;
   std::vector<solvers::Binding<TimestepIntegrationConstraint>>
       timestep_integration_constraints_;
+  std::vector<solvers::Binding<ContactImplicitConstraint>>
+      contact_implicit_constraints_;
 
   std::vector<std::shared_ptr<plants::KinematicsCacheWithVHelper<AutoDiffXd>>>
       dtc_kinematics_cache_with_v_helpers_;
@@ -127,6 +130,9 @@ class ElasticContactImplicitDirectTranscription : public MultipleShooting {
 
   std::vector<std::shared_ptr<plants::KinematicsCacheWithVHelper<AutoDiffXd>>>
       tic_kinematics_cache_with_v_helpers_;
+
+  std::vector<std::shared_ptr<plants::KinematicsCacheHelper<AutoDiffXd>>>
+      cic_kinematics_cache_helpers_;
 
   solvers::MatrixXDecisionVariable q_vars_;
   solvers::MatrixXDecisionVariable v_vars_;

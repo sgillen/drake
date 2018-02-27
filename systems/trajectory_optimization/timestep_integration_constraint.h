@@ -1,8 +1,5 @@
 #pragma once
 
-// This header file exists only to expose some internal implementation to unit
-// test. DO NOT INCLUDE THIS HEADER FILE in your program!
-
 #include <memory>
 #include <vector>
 
