@@ -66,6 +66,8 @@ void TimestepIntegrationConstraint::DoEval(
   const_cast<RigidBodyTree<double>*> (tree_)->collisionDetectFromPoints(cache, points,
         phi, normal, contact_points_b, body_x, body_idx, false);
 
+  std::cerr<<phi.rows()<<std::endl;
+
   Eigen::VectorXi idx_a(1), idx_b(body_idx.size());
   idx_a << tree_->FindBodyIndex("contact_implicit_brick");
   for (size_t i = 0; i < body_idx.size(); i++) {

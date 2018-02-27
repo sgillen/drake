@@ -11,19 +11,20 @@ ContactImplicitConstraint::ContactImplicitConstraint(
     const RigidBodyTree<double>& tree,
     std::shared_ptr<plants::KinematicsCacheWithVHelper<AutoDiffXd>>
         kinematics_cache_with_v_helper, int num_lambda, double tol)
-    : Constraint(num_lambda + 1, tree.get_num_positions() +
+    : Constraint(2*num_lambda/3, tree.get_num_positions() +
                   2*tree.get_num_velocities() + num_lambda,
-        Eigen::MatrixXd::Zero(num_lambda+1, 1),
+        Eigen::MatrixXd::Zero(2*num_lambda/3, 1),
         Eigen::MatrixXd::Constant(num_lambda+1, 1, tol)), 
       tree_(&tree),
       num_positions_{tree.get_num_positions()},
       num_velocities_{2*tree.get_num_velocities()},
       num_lambda_{num_lambda},
+      num_contacts_{num_lambda/3}
       tol_{tol},
       kinematics_cache_with_v_helper_{kinematics_cache_with_v_helper}{
-          Eigen::VectorXd UB(num_lambda+1, 1);
-          UB.head(1) = Eigen::MatrixXd::Constant(1, 1, tol_);
-          UB.tail(num_lambda) = Eigen::MatrixXd::Zero(num_lambda, 1);
+          Eigen::VectorXd UB(2*num_contacts_, 1);
+          UB.head(num_contacts_) = Eigen::MatrixXd::Constant(num_contacts_, 1, tol_);
+          UB.tail(num_contacts_) = Eigen::MatrixXd::Zero(num_contacts_, 1);
           UpdateUpperBound(UB);
       }
 
@@ -84,20 +85,26 @@ void ContactImplicitConstraint::DoEval(
 
   std::cerr<<phi.size()<<std::endl;
 
+  auto autonormal = math::initializeAutoDiff(normal);
+  auto autophi = math::initializeAutoDiff(phi);
+
+  int lambda_count = 0;
+
+  auto lambda_segment = [x, &x_count](int num_element) {
+    x_count += num_element;
+    return x.segment(x_count - num_element, num_element);
+  };
+  MatrixX lambda_wrap(3, num_contacts_);
+  for(int i = 0; i < num_contacts_; i++) {
+    lambda_wrap.col(i) = lambda_segment(3);
+  }
+
   VectorX<double> y_val(1+num_lambda_);
-  MatrixX<double> y_deriv(1+num_lambda_, num_positions_+num_lambda_);
+  MatrixX<double> y_deriv(1+num_lambda_,
+          num_positions_ + num_contacts_ + num_velocities_);
 
-  VectorX<double> nlambda = normal*math::autoDiffToValueMatrix(lambda);
-
-  y_val << math::autoDiffToValueMatrix(lambda),
-        phi.transpose()*math::autoDiffToValueMatrix(lambda);
-  y_deriv << Eigen::MatrixXd::Zero(num_lambda_, num_positions_),
-        Eigen::MatrixXd::Identity(num_lambda_, num_lambda_),
-        math::autoDiffToValueMatrix(J).transpose()*
-        math::autoDiffToValueMatrix(lambda), phi.transpose();
-
-  math::initializeAutoDiffGivenGradientMatrix(
-    y_val, y_deriv, y);
+  y << autonormal.transpose()*lambda_wrap, 
+        autonormal.transpose()*lambda_wrap*autophi;
 }
 }  // namespace trajectory_optimization
 }  // namespace systems

@@ -41,7 +41,7 @@ class ContactImplicitConstraint
     x << q, v, lambda;
     return x;
   }
-  
+
  protected:
   void DoEval(const Eigen::Ref<const Eigen::VectorXd>& x,
               Eigen::VectorXd& y) const override;
@@ -53,6 +53,7 @@ class ContactImplicitConstraint
   const int num_positions_;
   const int num_velocities_;
   const int num_lambda_;
+  const int num_contacts_;
   const double tol_;
 
   std::shared_ptr<plants::KinematicsCacheWithVHelper<AutoDiffXd>>
