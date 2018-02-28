@@ -4,10 +4,11 @@
 
 #include "drake/common/find_resource.h"
 #include "drake/common/test_utilities/eigen_matrix_compare.h"
+#include "drake/lcm/drake_lcm.h"
 #include "drake/math/autodiff.h"
 #include "drake/multibody/parsers/urdf_parser.h"
 #include "drake/multibody/rigid_body_tree_construction.h"
-
+#include "drake/multibody/rigid_body_plant/drake_visualizer.h"
 #include "drake/systems/trajectory_optimization/rigid_body_tree_multiple_shooting_internal.h"
 #include "drake/systems/trajectory_optimization/position_constraint_force_evaluator.h"
 
@@ -87,8 +88,11 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription, TestContactImplicitBrickNo
 
   std::cerr<<"Q SOL"<<std::endl;
   std::cerr<<q_sol<<std::endl;
+  std::cerr<<"V SOL"<<std::endl;
+  std::cerr<<v_sol<<std::endl;
   std::cerr<<"T SOL"<<std::endl;
   std::cerr<<t_sol.transpose()<<std::endl;
+
 
   for (int i = 1; i < num_time_samples; ++i) {
     int v_dyn = v_sol.col(i).rows()/2;
