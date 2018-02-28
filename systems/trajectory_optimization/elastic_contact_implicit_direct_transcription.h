@@ -10,7 +10,6 @@
 #include "drake/systems/trajectory_optimization/generalized_constraint_force_evaluator.h"
 #include "drake/systems/trajectory_optimization/multiple_shooting.h"
 #include "drake/systems/trajectory_optimization/rigid_body_tree_multiple_shooting_internal.h"
-#include "drake/systems/trajectory_optimization/timestep_integration_constraint.h"
 #include "drake/systems/trajectory_optimization/contact_implicit_constraint.h"
 
 namespace drake {
