@@ -7,6 +7,71 @@ namespace drake {
 namespace systems {
 namespace trajectory_optimization {
 
+void CollisionStuff(
+    const RigidBodyTree<double>& tree_,
+    const RigidBodyTree<double>& empty_tree_,
+    const VectorX<AutoDiffXd>& q,
+    const VectorX<AutoDiffXd>& v,
+    const MatrixX<AutoDiffXd>& lambda_c,
+    VectorX<AutoDiffXd>* phi_out,
+    MatrixX<AutoDiffXd>* Jphi_out,
+    MatrixX<double>* T_normals) {
+
+  RigidBody<double>* brick = tree_->FindBody("contact_implicit_brick");
+  const auto& contact_points_a = brick->get_contact_points();
+  const KinematicsCache<double> cache = tree_->doKinematics(
+        math::autoDiffToValueMatrix(q), math::autoDiffToValueMatrix(v));
+
+  const auto points = tree_->transformPoints(
+      cache, contact_points_a, brick->get_body_index(), 0);
+
+  Eigen::VectorXd phi;
+  Eigen::Matrix3Xd normal, contact_points_b, body_x;
+  std::vector<int> body_idx;
+
+  // TODO: Just project other stuff away?
+  const KinematicsCache<double> scene_cache = empty_tree_->doKinematics(
+      empty_tree_->getZeroConfiguration());
+
+  const_cast<RigidBodyTree<double>*>(empty_tree_)->collisionDetectFromPoints(
+      scene_cache, points,
+      phi, normal, contact_points_b, body_x, body_idx, false);
+
+  // TODO: Need to remap body indices.
+
+  Eigen::VectorXi idx_a(1), idx_b(body_idx.size());
+  idx_a << tree_->FindBodyIndex("contact_implicit_brick");
+  for (size_t i = 0; i < body_idx.size(); i++) {
+    idx_b[i] = body_idx[i];
+  }
+
+  MatrixX<AutoDiffXd> J;
+  tree_->computeContactJacobians(kinsol, idx_a, idx_b, contact_points_a, contact_points_b, J);
+
+  MatrixX<AutoDiffXd> tensornormal =
+        Eigen::MatrixXd::Zero(num_lambda_, num_contacts_);
+  for (int i = 0; i < num_contacts_; i++) {
+    for (int j = 0; j < 3; j++) {
+      tensornormal(3*i + j, i) = normal(j, i);
+    }
+  }
+  VectorX<AutoDiffXd> autophi(num_contacts_);
+  for (int i = 0; i < num_contacts_; i++) {
+    autophi[i] = phi[i];
+  }
+
+  auto normallambda = tensornormal.transpose()*lambda;
+
+  using namespace std;
+
+  cout << "q: " << q.transpose() << endl;
+  cout << "phi: " << phi.transpose() << endl;
+  cout << "contact_points_a:\n" << contact_points_a << "\n---\n";
+  cout << "points:\n" << points << "\n---\n";
+  cout << "contact_points_b:\n" << contact_points_b << "\n---\n";
+
+}
+
 ContactImplicitConstraint::ContactImplicitConstraint(
     const RigidBodyTree<double>& tree,
     std::shared_ptr<plants::KinematicsCacheWithVHelper<AutoDiffXd>>
@@ -51,55 +116,15 @@ void ContactImplicitConstraint::DoEval(
   const AutoDiffVecXd v_minus = x_segment(num_velocities_/2);
   const AutoDiffVecXd lambda = x_segment(num_lambda_);
 
-  auto kinsol = kinematics_cache_with_v_helper_->UpdateKinematics(q, v_minus);
+  MatrixX<double> tensornormal;
+  CollisionStuff(
+    tree_, q, v_minus, lambda,
+    &phi, &Jphi, &tensornormal);
 
-  const auto M = tree_->massMatrix(kinsol);
+  auto lambda_phi = tensornormal.transpose()*lambda;
 
-  const MatrixX<AutoDiffXd> map_v_to_qdot =
-      RigidBodyTree<double>::GetVelocityToQDotMapping(kinsol);
-  
-  const AutoDiffVecXd qd_plus = map_v_to_qdot * v_plus;
-  const AutoDiffVecXd qd_minus = map_v_to_qdot * v_minus;
-
-  RigidBody<double>* brick = tree_->FindBody("contact_implicit_brick");
-  const auto& contact_points_a = brick->get_contact_points();
-  const KinematicsCache<double> cache = tree_->doKinematics(
-        math::autoDiffToValueMatrix(q), math::autoDiffToValueMatrix(v_minus));
-
-  const auto points = tree_->transformPoints(cache, contact_points_a, 1, 0);
-
-  Eigen::VectorXd phi;
-  Eigen::Matrix3Xd normal, contact_points_b, body_x;
-  std::vector<int> body_idx;
-
-  const_cast<RigidBodyTree<double>*> (tree_)->collisionDetectFromPoints(cache, points,
-        phi, normal, contact_points_b, body_x, body_idx, false);
-
-  Eigen::VectorXi idx_a(1), idx_b(body_idx.size());
-  idx_a << tree_->FindBodyIndex("contact_implicit_brick");
-  for (size_t i = 0; i < body_idx.size(); i++) {
-    idx_b[i] = body_idx[i];
-  }
-
-  MatrixX<AutoDiffXd> J;
-  tree_->computeContactJacobians(kinsol, idx_a, idx_b, contact_points_a, contact_points_b, J);
-
-  MatrixX<AutoDiffXd> tensornormal =
-        Eigen::MatrixXd::Zero(num_lambda_, num_contacts_);
-  for (int i = 0; i < num_contacts_; i++) {
-    for (int j = 0; j < 3; j++) {
-      tensornormal(3*i + j, i) = normal(j, i);
-    }
-  }
-  VectorX<AutoDiffXd> autophi(num_contacts_);
-  for (int i = 0; i < num_contacts_; i++) {
-    autophi[i] = phi[i];
-  }
-
-  auto normallambda = tensornormal.transpose()*lambda;
-
-  y << normallambda, 
-        autophi.transpose()*normallambda;
+  y << lambda_phi, 
+        phi.transpose()*lambda_phi;
 }
 
 TimestepIntegrationConstraint::TimestepIntegrationConstraint(
@@ -150,52 +175,18 @@ void TimestepIntegrationConstraint::DoEval(
   const AutoDiffVecXd qd_plus = map_v_to_qdot * v_plus;
   const AutoDiffVecXd qd_minus = map_v_to_qdot * v_minus;
 
-  RigidBody<double>* brick = tree_->FindBody("contact_implicit_brick");
-  const auto& contact_points_a = brick->get_contact_points();
-  const KinematicsCache<double> cache = tree_->doKinematics(
-        math::autoDiffToValueMatrix(q), math::autoDiffToValueMatrix(v_minus));
+  VectorX<AutoDiffXd> phi;
+  VectorX<AutoDiffXd> Jphi;
+  MatrixX<double> tensornormal;
+  CollisionStuff(
+    tree_, q, v_minus, lambda,
+    &phi, &Jphi, &tensornormal);
 
-  const auto points = tree_->transformPoints(
-      cache, contact_points_a, brick->get_body_index(), 0);
-
-  Eigen::VectorXd phi;
-  Eigen::Matrix3Xd normal, contact_points_b, body_x;
-  std::vector<int> body_idx;
-
-  const_cast<RigidBodyTree<double>*> (tree_)->collisionDetectFromPoints(cache, points,
-        phi, normal, contact_points_b, body_x, body_idx, false);
-
-  Eigen::VectorXi idx_a(1), idx_b(body_idx.size());
-  idx_a << tree_->FindBodyIndex("contact_implicit_brick");
-  for (size_t i = 0; i < body_idx.size(); i++) {
-    idx_b[i] = body_idx[i];
-  }
-
-  using namespace std;
-
-  cout << "q: " << q.transpose() << endl;
-  cout << "phi: " << phi.transpose() << endl;
-  cout << "contact_points_a:\n" << contact_points_a << "\n---\n";
-  cout << "points:\n" << points << "\n---\n";
-  cout << "contact_points_b:\n" << contact_points_b << "\n---\n";
-
-  MatrixX<AutoDiffXd> J;
-  tree_->computeContactJacobians(kinsol, idx_a, idx_b, contact_points_a, contact_points_b, J);
-  
-  MatrixX<AutoDiffXd> tensornormal =
-        Eigen::MatrixXd::Zero(num_lambda_, num_contacts_);
-  for (int i = 0; i < num_contacts_; i++) {
-    for (int j = 0; j < 3; j++) {
-      tensornormal(3*i + j, i) = normal(j, i);
-    }
-  }
-
-  auto J_n = tensornormal.transpose()*J;
-  auto lambda_n = tensornormal.transpose()*lambda;
+  auto lambda_phi = tensornormal.transpose()*lambda;
 
   // Jqdot_plus_l - Jqdot_minus_l = -(1+restitution)J*M^(-1)*J^T*lambda
-  y = J_n*qd_plus - J_n*qd_minus -
-          (1+elasticity_)*J_n*M.inverse()*J_n.transpose()*lambda_n;
+  y = Jphi*qd_plus - Jphi*qd_minus -
+          (1+elasticity_)*Jphi*M.inverse()*Jphi.transpose()*lambda_phi;
 }
 
 
