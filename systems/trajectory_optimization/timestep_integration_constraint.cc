@@ -9,7 +9,7 @@ namespace trajectory_optimization{
 TimestepIntegrationConstraint::TimestepIntegrationConstraint(
     const RigidBodyTree<double>& tree,
     std::shared_ptr<plants::KinematicsCacheWithVHelper<AutoDiffXd>>
-        kinematics_cache_with_v_helper, int num_lambda) // constraints: q; v+; v-; lambda
+        kinematics_cache_with_v_helper, int num_lambda, double elasticity) // constraints: q; v+; v-; lambda
     : solvers::Constraint(num_lambda/3, num_lambda+2*tree.get_num_velocities() + tree.get_num_positions(),
         Eigen::MatrixXd::Zero(num_lambda/3, 1),
         Eigen::MatrixXd::Zero(num_lambda/3, 1)), 
@@ -18,6 +18,7 @@ TimestepIntegrationConstraint::TimestepIntegrationConstraint(
       num_velocities_{2*tree.get_num_velocities()},
       num_lambda_{num_lambda},
       num_contacts_{num_lambda/3},
+      elasticity_{elasticity},
       kinematics_cache_with_v_helper_{kinematics_cache_with_v_helper}{}
 
 void TimestepIntegrationConstraint::DoEval(
@@ -89,7 +90,7 @@ void TimestepIntegrationConstraint::DoEval(
 
   // Jqdot_plus_l - Jqdot_minus_l = -(1+restitution)J*M^(-1)*J^T*lambda
   y = J_n*qd_plus - J_n*qd_minus -
-          2*J_n*M.inverse()*J_n.transpose()*lambda_n;
+          (1+elasticity_)*J_n*M.inverse()*J_n.transpose()*lambda_n;
 }
 
 } // namespace trajectory_optimization

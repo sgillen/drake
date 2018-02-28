@@ -48,7 +48,8 @@ class ElasticContactImplicitDirectTranscription : public MultipleShooting {
    */
   ElasticContactImplicitDirectTranscription(const RigidBodyTree<double>& tree,
                                 int num_time_samples, double minimum_timestep,
-                                double maximum_timestep, int num_contact_lambda);
+                                double maximum_timestep, int num_contact_lambda,
+                                double compl_tol, double elasticity);
 
   PiecewisePolynomialTrajectory ReconstructInputTrajectory() const override;
 
@@ -108,6 +109,8 @@ class ElasticContactImplicitDirectTranscription : public MultipleShooting {
   const int num_positions_;
   const int num_velocities_;
   const int num_lambda_;
+  const double compl_tol_;
+  const double elasticity_;
   // const int num_contacts_ = 8; // Aditya: in the future this shouldn't be hard coded but i'm using a box...
   // direct_transcription_constraints_[i] stores the
   // DirectTranscriptionConstraint

@@ -22,7 +22,7 @@ class TimestepIntegrationConstraint
   TimestepIntegrationConstraint(
       const RigidBodyTree<double>& tree,
       std::shared_ptr<plants::KinematicsCacheWithVHelper<AutoDiffXd>>
-        kinematics_cache_with_v_helper, int num_lambda);
+        kinematics_cache_with_v_helper, int num_lambda, double elasticity);
   ~TimestepIntegrationConstraint() {}
 
   template <typename DerivedQL, typename DerivedV,
@@ -54,6 +54,7 @@ class TimestepIntegrationConstraint
   const int num_velocities_;
   const int num_lambda_;
   const int num_contacts_;
+  const double elasticity_;
 
   std::shared_ptr<plants::KinematicsCacheWithVHelper<AutoDiffXd>>
       kinematics_cache_with_v_helper_;

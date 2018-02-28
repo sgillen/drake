@@ -32,11 +32,11 @@ std::unique_ptr<RigidBodyTree<double>> ConstructContactImplicitBrickTree() {
 
 GTEST_TEST(ElasticContactImplicitDirectTranscription, TestContactImplicitBrickNoContact) {
   auto tree = ConstructContactImplicitBrickTree();
-  const int num_time_samples = 10;
+  const int num_time_samples = 11;
   const double minimum_timestep{0.01};
   const double maximum_timestep{0.1};
   ElasticContactImplicitDirectTranscription traj_opt(*tree, num_time_samples,
-                                         minimum_timestep, maximum_timestep, 24);
+                                         minimum_timestep, maximum_timestep, 24, 0., 1.);
 
   // Add a constraint on position 0 of the initial posture.
   traj_opt.AddBoundingBoxConstraint(10, 10,
@@ -45,13 +45,13 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription, TestContactImplicitBrickNo
                                     traj_opt.GeneralizedPositions()(0, 5));
   // Add a constraint on the final posture.
   traj_opt.AddBoundingBoxConstraint(
-      5, 5, traj_opt.GeneralizedPositions()(0, num_time_samples - 1));
+      10, 10, traj_opt.GeneralizedPositions()(0, num_time_samples - 1));
   // Add a constraint on the final velocity.
   //traj_opt.AddBoundingBoxConstraint(
       //-15, -1, traj_opt.GeneralizedVelocities().col(0));
-  // Add a running cost on the control as ∫ u² dt.
+  // Add a running cost on the control as ∫ v² dt.
   traj_opt.AddRunningCost(
-      traj_opt.GeneralizedVelocities().col(0).cast<symbolic::Expression>().squaredNorm());
+      traj_opt.GeneralizedVelocities().cast<symbolic::Expression>().squaredNorm());
 
   // Add direct transcription constraints.
   traj_opt.Compile();
@@ -84,7 +84,11 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription, TestContactImplicitBrickNo
   for (int i = 0; i < num_time_samples; ++i) {
     u_sol.col(i) = traj_opt.GetSolution(traj_opt.input(i));
   }
+
+  std::cerr<<"Q SOL"<<std::endl;
   std::cerr<<q_sol<<std::endl;
+  std::cerr<<"T SOL"<<std::endl;
+  std::cerr<<t_sol.transpose()<<std::endl;
 
   for (int i = 1; i < num_time_samples; ++i) {
     int v_dyn = v_sol.col(i).rows()/2;
@@ -114,7 +118,7 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription, TestContactImplicitBrickNo
   // Check if the constraints on the initial state and final state are
   // satisfied.
   EXPECT_NEAR(q_sol(0, 0), 10, tol);
-  EXPECT_NEAR(q_sol(0, num_time_samples - 1), 5, tol);
+  EXPECT_NEAR(q_sol(0, num_time_samples - 1), 10, tol);
   // EXPECT_TRUE(CompareMatrices(v_sol.col(num_time_samples - 1),
   //                             Eigen::VectorXd::Zero(tree->get_num_velocities()),
   //                             tol, MatrixCompareType::absolute));

@@ -159,7 +159,8 @@ void DirectTranscriptionConstraint::DoEval(
 
 ElasticContactImplicitDirectTranscription::ElasticContactImplicitDirectTranscription(
     const RigidBodyTree<double>& tree, int num_time_samples,
-    double minimum_timestep, double maximum_timestep, int num_contact_lambda)
+    double minimum_timestep, double maximum_timestep, int num_contact_lambda,
+    double compl_tol, double elasticity)
     : MultipleShooting(tree.get_num_actuators(),
                        tree.get_num_positions() + 2*tree.get_num_velocities() + num_contact_lambda,
                        num_time_samples, minimum_timestep, maximum_timestep),
@@ -167,6 +168,8 @@ ElasticContactImplicitDirectTranscription::ElasticContactImplicitDirectTranscrip
       num_positions_{tree.get_num_positions()},
       num_velocities_{2*tree.get_num_velocities()},
       num_lambda_{num_contact_lambda},
+      compl_tol_{compl_tol},
+      elasticity_{elasticity},
       lambda_vars_(NewContinuousVariables(
           num_contact_lambda, N(), "contact_lambda")) {
   // For each knot, we will need to impose a transcription/collocation
@@ -221,7 +224,7 @@ ElasticContactImplicitDirectTranscription::ElasticContactImplicitDirectTranscrip
   timestep_integration_constraints_.reserve(N());
   for (int i = 0; i < N(); i++) {
     auto timestep_cnstr = std::make_shared<TimestepIntegrationConstraint>(
-        *tree_, tic_kinematics_cache_with_v_helpers_[i], num_lambda_);
+        *tree_, tic_kinematics_cache_with_v_helpers_[i], num_lambda_, elasticity_);
     const solvers::VectorXDecisionVariable timestep_cnstr_vars =
         timestep_cnstr->CompositeEvalInput(
           q_vars_.col(i), v_vars_.col(i), lambda_vars_.col(i));
@@ -231,7 +234,7 @@ ElasticContactImplicitDirectTranscription::ElasticContactImplicitDirectTranscrip
   contact_implicit_constraints_.reserve(N());
   for (int i = 0; i < N(); i++) {
     auto contact_implicit_cnstr = std::make_shared<ContactImplicitConstraint>(
-      *tree_, cic_kinematics_cache_with_v_helpers_[i], num_lambda_, 0.);
+      *tree_, cic_kinematics_cache_with_v_helpers_[i], num_lambda_, compl_tol_);
     const solvers::VectorXDecisionVariable contact_implicit_cnstr_vars = 
         contact_implicit_cnstr->CompositeEvalInput(
           q_vars_.col(i), v_vars_.col(i), lambda_vars_.col(i));
