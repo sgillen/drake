@@ -4,11 +4,11 @@
 
 #include "drake/common/find_resource.h"
 #include "drake/common/test_utilities/eigen_matrix_compare.h"
-#include "drake/lcm/drake_lcm.h"
+// #include "drake/lcm/drake_lcm.h"
 #include "drake/math/autodiff.h"
 #include "drake/multibody/parsers/urdf_parser.h"
 #include "drake/multibody/rigid_body_tree_construction.h"
-#include "drake/multibody/rigid_body_plant/drake_visualizer.h"
+// #include "drake/multibody/rigid_body_plant/drake_visualizer.h"
 #include "drake/systems/trajectory_optimization/rigid_body_tree_multiple_shooting_internal.h"
 #include "drake/systems/trajectory_optimization/position_constraint_force_evaluator.h"
 
