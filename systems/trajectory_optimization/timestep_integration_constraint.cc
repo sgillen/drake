@@ -88,7 +88,7 @@ void TimestepIntegrationConstraint::DoEval(
   auto lambda_n = tensornormal.transpose()*lambda;
 
   // Jqdot_plus_l - Jqdot_minus_l = -(1+restitution)J*M^(-1)*J^T*lambda
-  y = J_n*qd_plus - J_n*qd_minus +
+  y = J_n*qd_plus - J_n*qd_minus -
           2*J_n*M.inverse()*J_n.transpose()*lambda_n;
 }
 

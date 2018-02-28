@@ -47,8 +47,8 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription, TestContactImplicitBrickNo
   traj_opt.AddBoundingBoxConstraint(
       5, 5, traj_opt.GeneralizedPositions()(0, num_time_samples - 1));
   // Add a constraint on the final velocity.
-  traj_opt.AddBoundingBoxConstraint(
-      -15, -1, traj_opt.GeneralizedVelocities().col(0));
+  //traj_opt.AddBoundingBoxConstraint(
+      //-15, -1, traj_opt.GeneralizedVelocities().col(0));
   // Add a running cost on the control as ∫ u² dt.
   traj_opt.AddRunningCost(
       traj_opt.GeneralizedVelocities().col(0).cast<symbolic::Expression>().squaredNorm());

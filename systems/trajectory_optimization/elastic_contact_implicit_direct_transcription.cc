@@ -231,7 +231,7 @@ ElasticContactImplicitDirectTranscription::ElasticContactImplicitDirectTranscrip
   contact_implicit_constraints_.reserve(N());
   for (int i = 0; i < N(); i++) {
     auto contact_implicit_cnstr = std::make_shared<ContactImplicitConstraint>(
-      *tree_, cic_kinematics_cache_with_v_helpers_[i], num_lambda_, 0.0);
+      *tree_, cic_kinematics_cache_with_v_helpers_[i], num_lambda_, 0.);
     const solvers::VectorXDecisionVariable contact_implicit_cnstr_vars = 
         contact_implicit_cnstr->CompositeEvalInput(
           q_vars_.col(i), v_vars_.col(i), lambda_vars_.col(i));
