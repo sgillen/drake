@@ -172,6 +172,7 @@ ElasticContactImplicitDirectTranscription::ElasticContactImplicitDirectTranscrip
   // For each knot, we will need to impose a transcription/collocation
   // constraint. Each of these constraints require us caching some
   // kinematics info.
+
   dtc_kinematics_cache_with_v_helpers_.resize(num_time_samples);
   dtc_kinematics_cache_helpers_.resize(num_time_samples);
   tic_kinematics_cache_with_v_helpers_.resize(num_time_samples);
@@ -250,8 +251,8 @@ void ElasticContactImplicitDirectTranscription::Compile() {
   }
 
   for (int i = 0; i < N(); i++) {
-    //AddConstraint(contact_implicit_constraints_[i].constraint(),
-    //              contact_implicit_constraints_[i].variables());
+    AddConstraint(contact_implicit_constraints_[i].constraint(),
+                  contact_implicit_constraints_[i].variables());
   }
   
 }

@@ -11,10 +11,10 @@ ContactImplicitConstraint::ContactImplicitConstraint(
     const RigidBodyTree<double>& tree,
     std::shared_ptr<plants::KinematicsCacheWithVHelper<AutoDiffXd>>
         kinematics_cache_with_v_helper, int num_lambda, double tol)
-    : Constraint(2*num_lambda/3, tree.get_num_positions() +
+    : Constraint(num_lambda/3 + 1, tree.get_num_positions() +
                   2*tree.get_num_velocities() + num_lambda,
-        Eigen::MatrixXd::Zero(2*num_lambda/3, 1),
-        Eigen::MatrixXd::Constant(2*num_lambda/3, 1, tol)), 
+        Eigen::MatrixXd::Zero(num_lambda/3 + 1, 1),
+        Eigen::MatrixXd::Constant(num_lambda/3 + 1, 1, tol)), 
       tree_(&tree),
       num_positions_{tree.get_num_positions()},
       num_velocities_{2*tree.get_num_velocities()},
@@ -22,9 +22,10 @@ ContactImplicitConstraint::ContactImplicitConstraint(
       num_contacts_{num_lambda/3},
       tol_{tol},
       kinematics_cache_with_v_helper_{kinematics_cache_with_v_helper}{
-          Eigen::VectorXd UB(2*num_contacts_, 1);
-          UB.head(num_contacts_) = Eigen::MatrixXd::Constant(num_contacts_, 1, tol_);
-          UB.tail(num_contacts_) = Eigen::MatrixXd::Zero(num_contacts_, 1);
+          Eigen::VectorXd UB(num_contacts_ + 1, 1);
+          UB.head(num_contacts_) = Eigen::MatrixXd::Constant(
+                      num_contacts_, 1, std::numeric_limits<double>::infinity());
+          UB.tail(1) = Eigen::MatrixXd::Constant(1, 1, tol_);
           UpdateUpperBound(UB);
       }
 
@@ -83,28 +84,22 @@ void ContactImplicitConstraint::DoEval(
   MatrixX<AutoDiffXd> J;
   tree_->computeContactJacobians(kinsol, idx_a, idx_b, contact_points_a, contact_points_b, J);
 
-  std::cerr<<phi.size()<<std::endl;
-
-  auto autonormal = math::initializeAutoDiff(normal);
-  auto autophi = math::initializeAutoDiff(phi);
-
-  int lambda_count = 0;
-
-  auto lambda_segment = [lambda, &lambda_count](int num_element) {
-    lambda_count += num_element;
-    return lambda.segment(lambda_count - num_element, num_element);
-  };
-  MatrixX<AutoDiffXd> lambda_wrap(3, num_contacts_);
-  for(int i = 0; i < num_contacts_; i++) {
-    lambda_wrap.col(i) = lambda_segment(3);
+  MatrixX<AutoDiffXd> tensornormal =
+        Eigen::MatrixXd::Zero(num_lambda_, num_contacts_);
+  for (int i = 0; i < num_contacts_; i++) {
+    for (int j = 0; j < 3; j++) {
+      tensornormal(3*i + j, i) = normal(j, i);
+    }
+  }
+  VectorX<AutoDiffXd> autophi(num_contacts_);
+  for (int i = 0; i < num_contacts_; i++) {
+    autophi[i] = phi[i];
   }
 
-  VectorX<double> y_val(1+num_lambda_);
-  MatrixX<double> y_deriv(1+num_lambda_,
-          num_positions_ + num_contacts_ + num_velocities_);
+  auto normallambda = tensornormal.transpose()*lambda;
 
-  y << autonormal.transpose()*lambda_wrap, 
-        autonormal.transpose()*lambda_wrap*autophi;
+  y << normallambda, 
+        autophi.transpose()*normallambda;
 }
 }  // namespace trajectory_optimization
 }  // namespace systems

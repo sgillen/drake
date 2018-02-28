@@ -10,13 +10,14 @@ TimestepIntegrationConstraint::TimestepIntegrationConstraint(
     const RigidBodyTree<double>& tree,
     std::shared_ptr<plants::KinematicsCacheWithVHelper<AutoDiffXd>>
         kinematics_cache_with_v_helper, int num_lambda) // constraints: q; v+; v-; lambda
-    : solvers::Constraint(num_lambda, num_lambda+2*tree.get_num_velocities() + tree.get_num_positions(),
-        Eigen::MatrixXd::Zero(num_lambda, 1),
-        Eigen::MatrixXd::Zero(num_lambda, 1)), 
+    : solvers::Constraint(num_lambda/3, num_lambda+2*tree.get_num_velocities() + tree.get_num_positions(),
+        Eigen::MatrixXd::Zero(num_lambda/3, 1),
+        Eigen::MatrixXd::Zero(num_lambda/3, 1)), 
       tree_(&tree),
       num_positions_{tree.get_num_positions()},
       num_velocities_{2*tree.get_num_velocities()},
       num_lambda_{num_lambda},
+      num_contacts_{num_lambda/3},
       kinematics_cache_with_v_helper_{kinematics_cache_with_v_helper}{}
 
 void TimestepIntegrationConstraint::DoEval(
@@ -66,8 +67,6 @@ void TimestepIntegrationConstraint::DoEval(
   const_cast<RigidBodyTree<double>*> (tree_)->collisionDetectFromPoints(cache, points,
         phi, normal, contact_points_b, body_x, body_idx, false);
 
-  std::cerr<<phi.rows()<<std::endl;
-
   Eigen::VectorXi idx_a(1), idx_b(body_idx.size());
   idx_a << tree_->FindBodyIndex("contact_implicit_brick");
   for (size_t i = 0; i < body_idx.size(); i++) {
@@ -77,8 +76,20 @@ void TimestepIntegrationConstraint::DoEval(
   MatrixX<AutoDiffXd> J;
   tree_->computeContactJacobians(kinsol, idx_a, idx_b, contact_points_a, contact_points_b, J);
   
+  MatrixX<AutoDiffXd> tensornormal =
+        Eigen::MatrixXd::Zero(num_lambda_, num_contacts_);
+  for (int i = 0; i < num_contacts_; i++) {
+    for (int j = 0; j < 3; j++) {
+      tensornormal(3*i + j, i) = normal(j, i);
+    }
+  }
+
+  auto J_n = tensornormal.transpose()*J;
+  auto lambda_n = tensornormal.transpose()*lambda;
+
   // Jqdot_plus_l - Jqdot_minus_l = -(1+restitution)J*M^(-1)*J^T*lambda
-  y = J*qd_plus - J*qd_minus + J*M.inverse()*J.transpose()*lambda;
+  y = J_n*qd_plus - J_n*qd_minus +
+          2*J_n*M.inverse()*J_n.transpose()*lambda_n;
 }
 
 } // namespace trajectory_optimization

@@ -62,8 +62,8 @@ class ElasticContactImplicitDirectTranscription : public MultipleShooting {
     return v_vars_;
   }
 
-  const solvers::MatrixXDecisionVariable& PositionConstraintForces() const {
-    return position_constraint_lambda_vars_;
+  const solvers::MatrixXDecisionVariable& ContactConstraintForces() const {
+    return lambda_vars_;
   }
 
   ~ElasticContactImplicitDirectTranscription() override {}

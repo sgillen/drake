@@ -53,6 +53,7 @@ class TimestepIntegrationConstraint
   const int num_positions_;
   const int num_velocities_;
   const int num_lambda_;
+  const int num_contacts_;
 
   std::shared_ptr<plants::KinematicsCacheWithVHelper<AutoDiffXd>>
       kinematics_cache_with_v_helper_;
