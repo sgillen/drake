@@ -12,64 +12,71 @@ void CollisionStuff(
     const RigidBodyTree<double>& empty_tree_,
     const VectorX<AutoDiffXd>& q,
     const VectorX<AutoDiffXd>& v,
-    const MatrixX<AutoDiffXd>& lambda_c,
+    const MatrixX<AutoDiffXd>& lambda,
     VectorX<AutoDiffXd>* phi_out,
     MatrixX<AutoDiffXd>* Jphi_out,
-    MatrixX<double>* T_normals) {
+    MatrixX<double>* tensornormal_out) {
+
+  auto kinsol = tree_->doKinematics(q, v);
 
   RigidBody<double>* brick = tree_->FindBody("contact_implicit_brick");
-  const auto& contact_points_a = brick->get_contact_points();
+  const auto& contacts_B = brick->get_contact_points();
   const KinematicsCache<double> cache = tree_->doKinematics(
         math::autoDiffToValueMatrix(q), math::autoDiffToValueMatrix(v));
 
-  const auto points = tree_->transformPoints(
-      cache, contact_points_a, brick->get_body_index(), 0);
+  const int num_lambda_ = lambda.rows();
+  const int num_contacts_ = num_lambda_ / 3;
+
+  // `B` is body frame. `W` is world frame.
+  const auto contacts_W = tree_->transformPoints(
+      cache, contacts_B, brick->get_body_index(), 0 /* world */);
 
   Eigen::VectorXd phi;
-  Eigen::Matrix3Xd normal, contact_points_b, body_x;
+  // `L` is the local frame of whatever bodies in the world.
+  Eigen::Matrix3Xd normal, world_contacts_W, world_contacts_L;
   std::vector<int> body_idx;
 
+  // Do collision without body in the way, so that points are not attracted to
+  // it.
   // TODO: Just project other stuff away?
   const KinematicsCache<double> scene_cache = empty_tree_->doKinematics(
       empty_tree_->getZeroConfiguration());
-
   const_cast<RigidBodyTree<double>*>(empty_tree_)->collisionDetectFromPoints(
-      scene_cache, points,
-      phi, normal, contact_points_b, body_x, body_idx, false);
+      scene_cache, contacts_W,
+      phi, normal, world_contacts_W, world_contacts_L, body_idx, false);
 
   // TODO: Need to remap body indices.
-
   Eigen::VectorXi idx_a(1), idx_b(body_idx.size());
   idx_a << tree_->FindBodyIndex("contact_implicit_brick");
   for (size_t i = 0; i < body_idx.size(); i++) {
     idx_b[i] = body_idx[i];
   }
 
+  // `J` is 3*nc x nq. Projecting along normals yields Jphi.
   MatrixX<AutoDiffXd> J;
-  tree_->computeContactJacobians(kinsol, idx_a, idx_b, contact_points_a, contact_points_b, J);
+  tree_->computeContactJacobians(
+      kinsol, idx_a, idx_b, contacts_B, world_contacts_W, J);
 
-  MatrixX<AutoDiffXd> tensornormal =
-        Eigen::MatrixXd::Zero(num_lambda_, num_contacts_);
+  // Project along normals.
+  MatrixX<double>& tensornormal = *tensornormal_out;
+  tensornormal = Eigen::MatrixXd::Zero(num_lambda_, num_contacts_);
   for (int i = 0; i < num_contacts_; i++) {
     for (int j = 0; j < 3; j++) {
       tensornormal(3*i + j, i) = normal(j, i);
     }
   }
-  VectorX<AutoDiffXd> autophi(num_contacts_);
-  for (int i = 0; i < num_contacts_; i++) {
-    autophi[i] = phi[i];
-  }
 
-  auto normallambda = tensornormal.transpose()*lambda;
+  *Jphi_out = tensornormal.transpose() * J;
+  *phi_out = math::initializeAutoDiffGivenGradientMatrix(
+      phi, math::autoDiffToValueMatrix(*Jphi_out));
 
   using namespace std;
 
   cout << "q: " << q.transpose() << endl;
   cout << "phi: " << phi.transpose() << endl;
-  cout << "contact_points_a:\n" << contact_points_a << "\n---\n";
-  cout << "points:\n" << points << "\n---\n";
-  cout << "contact_points_b:\n" << contact_points_b << "\n---\n";
-
+  cout << "contacts_B:\n" << contacts_B << "\n---\n";
+  cout << "contacts_W:\n" << contacts_W << "\n---\n";
+  cout << "world_contacts_W:\n" << world_contacts_W << "\n---\n";
 }
 
 ContactImplicitConstraint::ContactImplicitConstraint(
