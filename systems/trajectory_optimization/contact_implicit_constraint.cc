@@ -69,13 +69,13 @@ void CollisionStuff(
   *phi_out = math::initializeAutoDiffGivenGradientMatrix(
       phi, math::autoDiffToValueMatrix(*Jphi_out));
 
-  using namespace std;
+  // using namespace std;
 
-  cout << "q: " << q.transpose() << endl;
-  cout << "phi: " << phi.transpose() << endl;
-  cout << "contacts_B:\n" << contacts_B << "\n---\n";
-  cout << "contacts_W:\n" << contacts_W << "\n---\n";
-  cout << "world_contacts_W:\n" << world_contacts_W << "\n---\n";
+  // cout << "q: " << q.transpose() << endl;
+  // cout << "phi: " << phi.transpose() << endl;
+  // cout << "contacts_B:\n" << contacts_B << "\n---\n";
+  // cout << "contacts_W:\n" << contacts_W << "\n---\n";
+  // cout << "world_contacts_W:\n" << world_contacts_W << "\n---\n";
 }
 
 ContactImplicitConstraint::ContactImplicitConstraint(
