@@ -23,7 +23,7 @@ ConstructContactImplicitBrickTree(bool is_empty) {
   RigidBodyTree<double>* tree = new RigidBodyTree<double>();
   const double plane_len = 100;
   multibody::AddFlatTerrainToWorld(tree, plane_len, plane_len);
-  tree->a_grav << 0, 0, -10;
+  tree->a_grav << 0, 0, 0, 0, 0, -10;
 
   if (!is_empty) {
     parsers::urdf::AddModelInstanceFromUrdfFileToWorld(
