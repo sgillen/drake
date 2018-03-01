@@ -1,0 +1,94 @@
+<?xml version="1.0"?>
+
+<robot xmlns="http://drake.mit.edu"
+ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+ xsi:schemaLocation="http://drake.mit.edu ../../doc/drakeURDF.xsd" name="ContactImplicitBrick">
+<link name="base">
+</link>
+
+<link name="contact_implicit_brick">
+  <inertial>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <mass value="1"/>
+    <inertia ixx="1" ixy="0" ixz="0" iyy="1" iyz="0" izz="1"/>
+  </inertial>
+
+  <visual>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <geometry>
+     <box size="2 2 2"/>
+   </geometry>
+  </visual>
+
+  <collision>
+    <origin xyz="1 1 1" rpy="0 0 0"/>
+    <geometry>
+     <sphere radius="1e-7"/>
+   </geometry>
+  </collision>
+
+  <collision>
+    <origin xyz="1 1 -1" rpy="0 0 0"/>
+    <geometry>
+     <sphere radius="1e-7"/>
+   </geometry>
+  </collision>
+
+  <collision>
+    <origin xyz="1 -1 1" rpy="0 0 0"/>
+    <geometry>
+     <sphere radius="1e-7"/>
+   </geometry>
+  </collision>
+
+  <collision>
+    <origin xyz="1 -1 -1" rpy="0 0 0"/>
+    <geometry>
+     <sphere radius="1e-7"/>
+   </geometry>
+  </collision>
+
+  <collision>
+    <origin xyz="-1 1 1" rpy="0 0 0"/>
+    <geometry> 
+      <sphere radius="1e-7"/>
+    </geometry>
+  </collision>
+
+  <collision>
+    <origin xyz="-1 1 -1" rpy="0 0 0"/>
+    <geometry>
+     <sphere radius="1e-7"/>
+   </geometry>
+  </collision>
+ 
+  <collision>
+    <origin xyz="-1 -1 1" rpy="0 0 0"/>
+    <geometry> 
+      <sphere radius="1e-7"/>
+    </geometry>
+  </collision>
+  
+  <collision>
+    <origin xyz="-1 -1 -1" rpy="0 0 0"/>
+    <geometry> 
+      <sphere radius="1e-7"/>
+    </geometry>
+  </collision>
+</link>
+
+<joint name="x" type="prismatic">
+  <parent link="base" />
+  <child link="contact_implicit_brick" />
+  <axis xyz="1 0 0" />
+  <origin xyz="0 0 0" />
+</joint>
+
+<joint name="z" type="prismatic">
+  <parent link="base" />
+  <child link="contact_implicit_brick" />
+  <axis xyz="0 0 1" />
+  <origin xyz="0 0 0" />
+</joint>
+
+</robot>
