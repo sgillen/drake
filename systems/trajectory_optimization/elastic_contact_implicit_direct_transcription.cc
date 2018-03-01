@@ -258,10 +258,10 @@ void ElasticContactImplicitDirectTranscription::Compile() {
                   timestep_integration_constraints_[i].variables());
   }
 
-  for (int i = 0; i < N(); i++) {
-    AddConstraint(contact_implicit_constraints_[i].constraint(),
-                  contact_implicit_constraints_[i].variables());
-  }
+  // for (int i = 0; i < N(); i++) {
+  //   AddConstraint(contact_implicit_constraints_[i].constraint(),
+  //                 contact_implicit_constraints_[i].variables());
+  // }
   
 }
 
