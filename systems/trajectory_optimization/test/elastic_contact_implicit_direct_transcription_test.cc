@@ -68,7 +68,7 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription, TestContactImplicitBrickNo
   //                                   traj_opt.GeneralizedVelocities()(0, N - 1));
 
 
-  traj_opt.AddBoundingBoxConstraint(0, 5,
+  traj_opt.AddBoundingBoxConstraint(1.1, 5,
                                     traj_opt.GeneralizedPositions()(0, 4));
 
   // traj_opt.AddBoundingBoxConstraint(0, 0, traj_opt.ContactConstraintForces());
