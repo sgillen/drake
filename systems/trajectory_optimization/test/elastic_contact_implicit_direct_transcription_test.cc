@@ -17,14 +17,18 @@ namespace systems {
 namespace trajectory_optimization {
 namespace {
 // Construct a RigidBodyTree containing a four bar linkage.
-std::unique_ptr<RigidBodyTree<double>> ConstructContactImplicitBrickTree() {
+std::unique_ptr<RigidBodyTree<double>>
+ConstructContactImplicitBrickTree(bool is_empty) {
   RigidBodyTree<double>* tree = new RigidBodyTree<double>();
   const double plane_len = 100;
   multibody::AddFlatTerrainToWorld(tree, plane_len, plane_len);
-  parsers::urdf::AddModelInstanceFromUrdfFileToWorld(
-      FindResourceOrThrow("drake/examples/contact_implicit_brick/contact_implicit_brick.urdf"),
-      multibody::joints::kFixed, tree);
-  DRAKE_DEMAND(tree->get_num_positions() == 1);
+
+  if (!is_empty) {
+    parsers::urdf::AddModelInstanceFromUrdfFileToWorld(
+        FindResourceOrThrow("drake/examples/contact_implicit_brick/contact_implicit_brick.urdf"),
+        multibody::joints::kFixed, tree);
+    DRAKE_DEMAND(tree->get_num_positions() == 1);
+  }
 
   //RigidBody<double>* brick = tree->FindBody("contact_implicit_brick");
   //std::cerr<<brick->get_contact_points()<<std::endl;
@@ -32,12 +36,14 @@ std::unique_ptr<RigidBodyTree<double>> ConstructContactImplicitBrickTree() {
 }
 
 GTEST_TEST(ElasticContactImplicitDirectTranscription, TestContactImplicitBrickNoContact) {
-  auto tree = ConstructContactImplicitBrickTree();
+  auto tree = ConstructContactImplicitBrickTree(false);
+  auto empty_tree = ConstructContactImplicitBrickTree(true);
   const int num_time_samples = 11;
   const double minimum_timestep{0.01};
   const double maximum_timestep{0.1};
-  ElasticContactImplicitDirectTranscription traj_opt(*tree, num_time_samples,
-                                         minimum_timestep, maximum_timestep, 24, 0., 1.);
+  ElasticContactImplicitDirectTranscription traj_opt(
+      *tree, *empty_tree, num_time_samples,
+      minimum_timestep, maximum_timestep, 24, 0., 1.);
 
   // Add a constraint on position 0 of the initial posture.
   traj_opt.AddBoundingBoxConstraint(10, 10,

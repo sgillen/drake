@@ -46,6 +46,7 @@ class ElasticContactImplicitDirectTranscription : public MultipleShooting {
    * @param maximum_timestep The maximum of the time step.
    */
   ElasticContactImplicitDirectTranscription(const RigidBodyTree<double>& tree,
+                                const RigidBodyTree<double>& empty_tree,
                                 int num_time_samples, double minimum_timestep,
                                 double maximum_timestep, int num_contact_lambda,
                                 double compl_tol, double elasticity);
@@ -105,6 +106,7 @@ class ElasticContactImplicitDirectTranscription : public MultipleShooting {
   // Store system-relevant data for e.g. computing the derivatives during
   // trajectory reconstruction.
   const RigidBodyTree<double>* tree_{nullptr};
+  const RigidBodyTree<double>* empty_tree_{nullptr};
   const int num_positions_;
   const int num_velocities_;
   const int num_lambda_;
@@ -144,3 +146,4 @@ class ElasticContactImplicitDirectTranscription : public MultipleShooting {
 }  // namespace trajectory_optimization
 }  // namespace systems
 }  // namespace drake
+
