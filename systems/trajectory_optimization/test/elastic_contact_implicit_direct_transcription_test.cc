@@ -52,7 +52,7 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription, TestContactImplicitBrickNo
   // Add a constraint on position 0 of the initial posture.
   double z_0 = 10;
   double z_f = 10;
-  double z_f_margin = 1;
+  double z_f_margin = 0;
   double zdot_0_min = -25;
   double zdot_0_max = 0;
   unused(z_f);
@@ -68,8 +68,8 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription, TestContactImplicitBrickNo
   //                                   traj_opt.GeneralizedVelocities()(0, N - 1));
 
 
-  // traj_opt.AddBoundingBoxConstraint(1, 1,
-  //                                   traj_opt.GeneralizedPositions()(0, 5));
+  traj_opt.AddBoundingBoxConstraint(1, 1,
+                                    traj_opt.GeneralizedPositions()(0, 5));
 
   // traj_opt.AddBoundingBoxConstraint(0, 0, traj_opt.ContactConstraintForces());
 

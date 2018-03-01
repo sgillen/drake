@@ -7,6 +7,8 @@ namespace drake {
 namespace systems {
 namespace trajectory_optimization {
 
+const bool debug = false;
+
 void CollisionStuff(
     const RigidBodyTree<double>& tree,
     const RigidBodyTree<double>& empty_tree,
@@ -76,7 +78,9 @@ void CollisionStuff(
   Jphi_x.setZero();
   Jphi_x.middleCols(offset_q_in_x, nq) = math::autoDiffToValueMatrix(*Jphi_out);
 
-  std::cout << "Jphi = \n" << math::autoDiffToValueMatrix(*Jphi_out) << "\n";
+  if (debug) {
+    std::cout << "Jphi = \n" << math::autoDiffToValueMatrix(*Jphi_out) << "\n";
+  }
 
   // Ensure the derivative of `phi` is w.r.t. `x`, not `q`.
   *phi_out = math::initializeAutoDiffGivenGradientMatrix(
@@ -133,7 +137,6 @@ void ContactImplicitConstraint::DoEval(
   const Eigen::Ref<const AutoDiffVecXd>& x, AutoDiffVecXd& y) const {
   y.resize(num_constraints());
 
-  std::cerr<<"ENTERED"<<std::endl;
   int x_count = 0;
 
   auto x_segment = [x, &x_count](int num_element) {
@@ -169,14 +172,15 @@ void ContactImplicitConstraint::DoEval(
 
   VectorX<AutoDiffXd> y1 = lambda_phi;
 
-  using namespace std;
-  cout << "Jphi = \n" << math::autoDiffToGradientMatrix(phi) << "\n";
-  cout << "Jlambda_phi = \n" << math::autoDiffToGradientMatrix(lambda_phi) << "\n";
+  if (debug) {
+    using namespace std;
+    cout << "Jphi = \n" << math::autoDiffToGradientMatrix(phi) << "\n";
+    cout << "Jlambda_phi = \n" << math::autoDiffToGradientMatrix(lambda_phi) << "\n";
+  }
 
   VectorX<AutoDiffXd> y2 = phi.transpose()*lambda_phi;
 
   y << y1, y2;
-  std::cerr<<"HIHI"<<std::endl;
 }
 
 TimestepIntegrationConstraint::TimestepIntegrationConstraint(
