@@ -2,10 +2,20 @@ import os
 import subprocess
 import unittest
 
+args = []
+
+def parse_and_remove_args(argv):
+    global args
+    if "x" in argv:
+        print("Wooh")
+        argv.remove("x")
+        args = ["x"]
+
 
 class BuildifierTest(unittest.TestCase):
 
     def _make_build_testdata(self, add_error=False):
+        print(args)
         result = []
         result.append('package(default_visibility = [])')
 
@@ -57,5 +67,3 @@ class BuildifierTest(unittest.TestCase):
         self.assertIn(
             "do not use 'bazel run' for buildifier in fix mode",
             output)
-
-print("Shewt")

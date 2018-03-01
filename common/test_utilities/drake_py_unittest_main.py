@@ -53,16 +53,10 @@ if __name__ == '__main__':
               test_filename)
         sys.exit(1)
 
-    # Detect "--" in sys.argv
-    for i, arg in enumerate(sys.argv):
-        if arg == "--":
-            extra_args = sys.argv[i + 1:]
-            del sys.argv[i:]
-            break
-    print(sys.argv)
-    print(extra_args)
+    mut = imp.load_source(test_name, found_filename)
+    if hasattr(mut, "parse_and_remove_args"):
+        mut.parse_and_remove_args(sys.argv)
 
-    imp.load_source(test_name, found_filename)
     unittest.main(module=test_name)
 
     # # Have unittest find the test_filename and load its tests.
