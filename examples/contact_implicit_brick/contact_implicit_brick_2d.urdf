@@ -84,6 +84,7 @@
   <origin xyz="0 0 0" />
 </joint>
 
+<!-- NOTE: It'd be nice if this were zero mass... -->
 <link name="base2">
   <inertial/>
 </link>

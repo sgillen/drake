@@ -193,33 +193,47 @@ ConstructBasketCase(bool is_empty) {
   return std::unique_ptr<RigidBodyTree<double>>(tree);
 }
 
+using T = double;
+
 class HackViz {
  public:
-  using T = double;
-
   HackViz(const RigidBodyTree<T>& tree)
-      : tree_(&tree), system_(*tree_, &lcm_) {
+      : tree_(&tree), system_(*tree_, &lcm_, true) {
     context_ = system_.CreateDefaultContext();
-    const VectorX<T> q0 = tree_->getZeroConfiguration();
-    input_value_ = &context_->FixInputPort(0, q0);
-
-    // Copied from simulator.
-    auto init_events = system_.AllocateCompositeEventCollection();
-    system_.GetInitializationEvents(*context_, init_events.get());
-    system_.Publish(*context_, init_events->get_publish_events());
+    nq_ = tree_->get_num_positions();
+    nv_ = tree_->get_num_velocities();
+    const VectorX<T> x0 = VectorX<T>::Zero(nq_ + nv_);
+    input_value_ = &context_->FixInputPort(0, x0);
   }
 
-  void Update(const VectorX<T>& q) {
-    input_value_->GetMutableVectorData<T>()->get_mutable_value() << q;
-    system_.Publish(*context_);
+  void Update(double t, const VectorX<T>& q) {
+    context_->set_time(t);
+    auto&& x = input_value_->GetMutableVectorData<T>()->get_mutable_value();
+    x.head(nq_) = q;
+    if (!is_inited_) {
+      // Copied from simulator.
+      auto init_events = system_.AllocateCompositeEventCollection();
+      system_.GetInitializationEvents(*context_, init_events.get());
+      system_.Publish(*context_, init_events->get_publish_events());
+      is_inited_ = true;
+    } else {
+      system_.Publish(*context_);
+    }
+  }
+
+  void ReplayCachedSimulation() {
+    system_.ReplayCachedSimulation();
   }
 
  private:
   const RigidBodyTree<T>* tree_{};
+  int nq_{};
+  int nv_{};
   DrakeLcm lcm_;
   DrakeVisualizer system_;
   FreestandingInputPortValue* input_value_{};
   unique_ptr<Context<T>> context_;
+  bool is_inited_{false};
 };
 
 
@@ -228,9 +242,10 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription,
   auto tree = ConstructBasketCase(false);
   auto empty_tree = ConstructBasketCase(true);
   const int num_time_samples = 11;
+  const int N = num_time_samples;
   const double minimum_timestep{0.01};
   const double maximum_timestep{0.1};
-  const double elasticity = 0.5;
+  const double elasticity = 0.1;
   ElasticContactImplicitDirectTranscription traj_opt(
       *tree, *empty_tree, num_time_samples,
       minimum_timestep, maximum_timestep, 24, 0., elasticity);
@@ -238,6 +253,28 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription,
       solvers::SnoptSolver::id(), "Print file", "/tmp/snopt.out");
 
   HackViz viz(*tree);
+
+  // for (int i = 0; i < N; ++i) {
+  //   double ti = i;
+  //   VectorX<T> qi(2);
+  //   qi << i, i;
+  //   viz.Update(ti, qi);
+  // }
+
+  // viz.ReplayCachedSimulation();
+  // return;
+
+  traj_opt.AddBoundingBoxConstraint(
+      1, 1, traj_opt.GeneralizedPositions().col(0));
+  traj_opt.AddBoundingBoxConstraint(
+      1, 100, traj_opt.GeneralizedVelocities()(0, 0));
+  traj_opt.AddBoundingBoxConstraint(
+      1, 100, traj_opt.GeneralizedVelocities()(0, 1));
+
+  traj_opt.AddBoundingBoxConstraint(
+      11, 21, traj_opt.GeneralizedPositions()(0, N-1));
+  traj_opt.AddBoundingBoxConstraint(
+      1, 1, traj_opt.GeneralizedPositions()(1, N-1));
 
   // Add a running cost on the control as ∫ v² dt.
   traj_opt.AddRunningCost(
@@ -309,6 +346,16 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription,
             dt_sol(i - 1),
         tol, MatrixCompareType::relative));
   }
+
+  const double dt_anim = 0.5;
+  for (int i = 0; i < N; ++i) {
+    viz.Update(dt_anim * i, q_sol.col(i));
+  }
+
+  while (true) {
+    viz.ReplayCachedSimulation();
+  }
+
   // // Check if the constraints on the initial state and final state are
   // // satisfied.
   // EXPECT_NEAR(q_sol(0, 0), z_0, tol);
