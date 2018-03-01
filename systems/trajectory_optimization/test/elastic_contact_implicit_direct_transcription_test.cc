@@ -23,7 +23,7 @@ ConstructContactImplicitBrickTree(bool is_empty) {
   RigidBodyTree<double>* tree = new RigidBodyTree<double>();
   const double plane_len = 100;
   multibody::AddFlatTerrainToWorld(tree, plane_len, plane_len);
-  tree->a_grav << 0, 0, -10;
+  //tree->a_grav << 0, 0, -10;
 
   if (!is_empty) {
     parsers::urdf::AddModelInstanceFromUrdfFileToWorld(
@@ -111,6 +111,8 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription, TestContactImplicitBrickNo
   std::cerr<<v_sol<<std::endl;
   std::cerr<<"T SOL"<<std::endl;
   std::cerr<<t_sol.transpose()<<std::endl;
+  std::cerr<<"L SOL"<<std::endl;
+  std::cerr<<lambda_sol<<std::endl;
 
 
   for (int i = 1; i < num_time_samples; ++i) {

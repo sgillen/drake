@@ -68,14 +68,20 @@ void CollisionStuff(
   *Jphi_out = tensornormal.cast<AutoDiffXd>().transpose() * J;
   *phi_out = math::initializeAutoDiffGivenGradientMatrix(
       phi, math::autoDiffToValueMatrix(*Jphi_out));
-
   // using namespace std;
 
   // cout << "q: " << q.transpose() << endl;
   // cout << "phi: " << phi.transpose() << endl;
-  // cout << "contacts_B:\n" << contacts_B << "\n---\n";
+  // std::cerr << "contacts_B:\n" << contacts_B << std::endl;;
   // cout << "contacts_W:\n" << contacts_W << "\n---\n";
   // cout << "world_contacts_W:\n" << world_contacts_W << "\n---\n";
+   // std::cerr<<"Q"<<std::endl;
+   // std::cerr<<q.transpose()<<std::endl;
+   // std::cerr<<"PHI"<<std::endl;
+   // std::cerr<<phi.transpose()<<std::endl;
+   //std::cerr<<"BOX CONTACTS"<<std::endl;
+
+   //std::cerr<<"WORLD CONTACTS"<<std::endl;;
 }
 
 ContactImplicitConstraint::ContactImplicitConstraint(
@@ -113,6 +119,7 @@ void ContactImplicitConstraint::DoEval(
 void ContactImplicitConstraint::DoEval(
   const Eigen::Ref<const AutoDiffVecXd>& x, AutoDiffVecXd& y) const {
 
+  std::cerr<<"ENTERED"<<std::endl;
   int x_count = 0;
 
   auto x_segment = [x, &x_count](int num_element) {
@@ -132,10 +139,12 @@ void ContactImplicitConstraint::DoEval(
       *tree_, *empty_tree_, q, lambda,
       &phi, &Jphi, &tensornormal);
 
-  auto lambda_phi = tensornormal.cast<AutoDiffXd>().transpose()*lambda;
+  auto autotensornormal = math::initializeAutoDiff(tensornormal, x.rows());
+  auto lambda_phi = autotensornormal.transpose()*lambda;
 
   y << lambda_phi, 
         phi.transpose()*lambda_phi;
+  std::cerr<<"HIHI"<<std::endl;
 }
 
 TimestepIntegrationConstraint::TimestepIntegrationConstraint(
