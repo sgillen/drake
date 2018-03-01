@@ -11,18 +11,17 @@ void CollisionStuff(
     const RigidBodyTree<double>& tree_,
     const RigidBodyTree<double>& empty_tree_,
     const VectorX<AutoDiffXd>& q,
-    const VectorX<AutoDiffXd>& v,
     const MatrixX<AutoDiffXd>& lambda,
     VectorX<AutoDiffXd>* phi_out,
     MatrixX<AutoDiffXd>* Jphi_out,
     MatrixX<double>* tensornormal_out) {
 
-  auto kinsol = tree_->doKinematics(q, v);
+  auto kinsol = tree_->doKinematics(q);
 
   RigidBody<double>* brick = tree_->FindBody("contact_implicit_brick");
   const auto& contacts_B = brick->get_contact_points();
   const KinematicsCache<double> cache = tree_->doKinematics(
-        math::autoDiffToValueMatrix(q), math::autoDiffToValueMatrix(v));
+        math::autoDiffToValueMatrix(q));
 
   const int num_lambda_ = lambda.rows();
   const int num_contacts_ = num_lambda_ / 3;
@@ -123,10 +122,12 @@ void ContactImplicitConstraint::DoEval(
   const AutoDiffVecXd v_minus = x_segment(num_velocities_/2);
   const AutoDiffVecXd lambda = x_segment(num_lambda_);
 
+  VectorX<AutoDiffXd> phi;
+  MatrixX<AutoDiffXd> Jphi;
   MatrixX<double> tensornormal;
   CollisionStuff(
-    tree_, q, v_minus, lambda,
-    &phi, &Jphi, &tensornormal);
+      tree_, q, lambda,
+      &phi, &Jphi, &tensornormal);
 
   auto lambda_phi = tensornormal.transpose()*lambda;
 
@@ -183,11 +184,11 @@ void TimestepIntegrationConstraint::DoEval(
   const AutoDiffVecXd qd_minus = map_v_to_qdot * v_minus;
 
   VectorX<AutoDiffXd> phi;
-  VectorX<AutoDiffXd> Jphi;
+  MatrixX<AutoDiffXd> Jphi;
   MatrixX<double> tensornormal;
   CollisionStuff(
-    tree_, q, v_minus, lambda,
-    &phi, &Jphi, &tensornormal);
+      tree_, q, lambda,
+      &phi, &Jphi, &tensornormal);
 
   auto lambda_phi = tensornormal.transpose()*lambda;
 
