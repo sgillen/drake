@@ -7,7 +7,7 @@ namespace drake {
 namespace systems {
 namespace trajectory_optimization {
 
-const bool debug = false;
+const bool debug = true;
 
 void CollisionStuff(
     const RigidBodyTree<double>& tree,
@@ -78,27 +78,18 @@ void CollisionStuff(
   Jphi_x.setZero();
   Jphi_x.middleCols(offset_q_in_x, nq) = math::autoDiffToValueMatrix(*Jphi_out);
 
-  if (debug) {
-    std::cout << "Jphi = \n" << math::autoDiffToValueMatrix(*Jphi_out) << "\n";
-  }
-
   // Ensure the derivative of `phi` is w.r.t. `x`, not `q`.
   *phi_out = math::initializeAutoDiffGivenGradientMatrix(
       phi, Jphi_x);
-  // using namespace std;
 
-  // cout << "q: " << q.transpose() << endl;
-  // cout << "phi: " << phi.transpose() << endl;
-  // std::cerr << "contacts_B:\n" << contacts_B << std::endl;;
-  // cout << "contacts_W:\n" << contacts_W << "\n---\n";
-  // cout << "world_contacts_W:\n" << world_contacts_W << "\n---\n";
-   // std::cerr<<"Q"<<std::endl;
-   // std::cerr<<q.transpose()<<std::endl;
-   // std::cerr<<"PHI"<<std::endl;
-   // std::cerr<<phi.transpose()<<std::endl;
-   //std::cerr<<"BOX CONTACTS"<<std::endl;
-
-   //std::cerr<<"WORLD CONTACTS"<<std::endl;;
+  if (debug) {
+    using namespace std;
+    cout << "q: " << q.transpose() << endl;
+    cout << "phi: " << phi.transpose() << endl;
+    std::cerr << "contacts_B:\n" << contacts_B << std::endl;;
+    cout << "contacts_W:\n" << contacts_W << "\n---\n";
+    cout << "world_contacts_W:\n" << world_contacts_W << "\n---\n";
+  }
 }
 
 ContactImplicitConstraint::ContactImplicitConstraint(
@@ -174,8 +165,7 @@ void ContactImplicitConstraint::DoEval(
 
   if (debug) {
     using namespace std;
-    cout << "Jphi = \n" << math::autoDiffToGradientMatrix(phi) << "\n";
-    cout << "Jlambda_phi = \n" << math::autoDiffToGradientMatrix(lambda_phi) << "\n";
+    cout << "lambda_phi: " << lambda_phi.transpose() << "\n";
   }
 
   VectorX<AutoDiffXd> y2 = phi.transpose()*lambda_phi;
