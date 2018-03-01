@@ -3,15 +3,19 @@ use by the drake_py_unittest macro defined in //tools/skylark:drake_py.bzl and
 should NOT be called directly by anything else.
 """
 
+import imp
 import os
 import re
 import sys
 import unittest
 
+extra_args = []
+
 if __name__ == '__main__':
     # Obtain the full path for this test case; it looks a bit like this:
     # .../execroot/.../foo_test.runfiles/.../drake_py_unittest_main.py
     main_py = sys.argv[0]
+    print(main_py)
 
     # Parse the test case name out of the runfiles directory name.
     match = re.search("/([^/]*_test).runfiles/", main_py)
@@ -49,16 +53,28 @@ if __name__ == '__main__':
               test_filename)
         sys.exit(1)
 
-    # Have unittest find the test_filename and load its tests.
-    tests = unittest.TestLoader().discover(".", pattern=test_filename)
-    if tests.countTestCases() == 0:
-        raise RuntimeError("No tests found in {}!".format(
-            test_filename))
+    # Detect "--" in sys.argv
+    for i, arg in enumerate(sys.argv):
+        if arg == "--":
+            extra_args = sys.argv[i + 1:]
+            del sys.argv[i:]
+            break
+    print(sys.argv)
+    print(extra_args)
 
-    # Run everything
-    result = unittest.runner.TextTestRunner().run(tests)
-    if result.testsRun == 0:
-        raise RuntimeError("Tests found in {} but none run!".format(
-            test_filename))
-    if not result.wasSuccessful():
-        sys.exit(1)
+    imp.load_source(test_name, found_filename)
+    unittest.main(module=test_name)
+
+    # # Have unittest find the test_filename and load its tests.
+    # tests = unittest.TestLoader().discover(".", pattern=test_filename)
+    # if tests.countTestCases() == 0:
+    #     raise RuntimeError("No tests found in {}!".format(
+    #         test_filename))
+
+    # # Run everything
+    # result = unittest.runner.TextTestRunner().run(tests)
+    # if result.testsRun == 0:
+    #     raise RuntimeError("Tests found in {} but none run!".format(
+    #         test_filename))
+    # if not result.wasSuccessful():
+    #     sys.exit(1)
