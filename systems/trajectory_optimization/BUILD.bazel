@@ -216,12 +216,14 @@ drake_cc_googletest(
     ],
     deps = [
         ":elastic_contact_implicit_direct_transcription",
+        ":rigid_body_tree_multiple_shooting",
         "//common:find_resource",
         "//common/test_utilities:eigen_matrix_compare",
+        "//lcm",
         "//math:autodiff",
         "//multibody/parsers",
-	":rigid_body_tree_multiple_shooting", 
-	"//multibody:rigid_body_tree_construction"
+        "//multibody:rigid_body_tree_construction",
+        "//multibody/rigid_body_plant:drake_visualizer",
     ],
 )
 

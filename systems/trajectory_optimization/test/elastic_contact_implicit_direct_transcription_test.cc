@@ -4,11 +4,11 @@
 
 #include "drake/common/find_resource.h"
 #include "drake/common/test_utilities/eigen_matrix_compare.h"
-// #include "drake/lcm/drake_lcm.h"
+#include "drake/lcm/drake_lcm.h"
 #include "drake/math/autodiff.h"
 #include "drake/multibody/parsers/urdf_parser.h"
 #include "drake/multibody/rigid_body_tree_construction.h"
-// #include "drake/multibody/rigid_body_plant/drake_visualizer.h"
+#include "drake/multibody/rigid_body_plant/drake_visualizer.h"
 #include "drake/systems/trajectory_optimization/rigid_body_tree_multiple_shooting_internal.h"
 #include "drake/systems/trajectory_optimization/position_constraint_force_evaluator.h"
 #include "drake/solvers/snopt_solver.h"
@@ -162,6 +162,11 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription,
   //                             tol, MatrixCompareType::absolute));
 }
 
+using std::unique_ptr;
+using ::drake::lcm::DrakeLcm;
+// using systems::DrakeVisualizer;
+// using systems::Context;
+// using systems::FreestandingInputPortValue;
 
 // Construct a RigidBodyTree containing a four bar linkage.
 std::unique_ptr<RigidBodyTree<double>>
@@ -187,6 +192,36 @@ ConstructBasketCase(bool is_empty) {
   return std::unique_ptr<RigidBodyTree<double>>(tree);
 }
 
+class HackViz {
+ public:
+  using T = double;
+
+  HackViz(const RigidBodyTree<T>& tree)
+      : tree_(&tree), system_(*tree_, &lcm_) {
+    context_ = system_.CreateDefaultContext();
+    const VectorX<T> q0 = tree_->getZeroConfiguration();
+    input_value_ = &context_->FixInputPort(0, q0);
+
+    // Copied from simulator.
+    auto init_events = system_.AllocateCompositeEventCollection();
+    system_.GetInitializationEvents(*context_, init_events.get());
+    system_.Publish(*context_, init_events->get_publish_events());
+  }
+
+  void Update(const VectorX<T>& q) {
+    input_value_->GetMutableVectorData<T>()->get_mutable_value() << q;
+    system_.Publish(*context_);
+  }
+
+ private:
+  const RigidBodyTree<T>* tree_{};
+  DrakeLcm lcm_;
+  DrakeVisualizer system_;
+  FreestandingInputPortValue* input_value_{};
+  unique_ptr<Context<T>> context_;
+};
+
+
 GTEST_TEST(ElasticContactImplicitDirectTranscription,
     TestBasketCase) {
   auto tree = ConstructBasketCase(false);
@@ -200,6 +235,8 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription,
       minimum_timestep, maximum_timestep, 24, 0., elasticity);
   traj_opt.SetSolverOption(
       solvers::SnoptSolver::id(), "Print file", "/tmp/snopt.out");
+
+  HackViz viz(*tree);
 
   // Add a constraint on position 0 of the initial posture.
   double z_0 = 0;
