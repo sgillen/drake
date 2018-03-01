@@ -12,6 +12,7 @@ void CollisionStuff(
     const RigidBodyTree<double>& empty_tree,
     const VectorX<AutoDiffXd>& q,
     const MatrixX<AutoDiffXd>& lambda,
+    int nx,
     VectorX<AutoDiffXd>* phi_out,
     MatrixX<AutoDiffXd>* Jphi_out,
     MatrixX<double>* tensornormal_out) {
@@ -22,13 +23,14 @@ void CollisionStuff(
   const auto& contacts_B = brick->get_contact_points();
   const KinematicsCache<double> cache = tree.doKinematics(
         math::autoDiffToValueMatrix(q));
+  const int brick_index = brick->get_body_index();
 
   const int num_lambda_ = lambda.rows();
   const int num_contacts_ = num_lambda_ / 3;
 
   // `B` is body frame. `W` is world frame.
   const auto contacts_W = tree.transformPoints(
-      cache, contacts_B, brick->get_body_index(), 0 /* world */);
+      cache, contacts_B, brick_index, 0 /* world */);
 
   Eigen::VectorXd phi;
   // `L` is the local frame of whatever bodies in the world.
@@ -45,9 +47,10 @@ void CollisionStuff(
       phi, normal, world_contacts_W, world_contacts_L, body_idx, false);
 
   // TODO: Need to remap body indices.
-  Eigen::VectorXi idx_a(1), idx_b(body_idx.size());
-  idx_a << tree.FindBodyIndex("contact_implicit_brick");
+
+  Eigen::VectorXi idx_a(num_contacts_), idx_b(num_contacts_);
   for (size_t i = 0; i < body_idx.size(); i++) {
+    idx_a[i] = brick_index;
     idx_b[i] = body_idx[i];
   }
 
@@ -66,8 +69,18 @@ void CollisionStuff(
   }
 
   *Jphi_out = tensornormal.cast<AutoDiffXd>().transpose() * J;
+
+  const int nq = q.rows();
+  MatrixX<double> Jphi_x(num_contacts_, nx);
+  const int offset_q_in_x = 0;
+  Jphi_x.setZero();
+  Jphi_x.middleCols(offset_q_in_x, nq) = math::autoDiffToValueMatrix(*Jphi_out);
+
+  std::cout << "Jphi = \n" << math::autoDiffToValueMatrix(*Jphi_out) << "\n";
+
+  // Ensure the derivative of `phi` is w.r.t. `x`, not `q`.
   *phi_out = math::initializeAutoDiffGivenGradientMatrix(
-      phi, math::autoDiffToValueMatrix(*Jphi_out));
+      phi, Jphi_x);
   // using namespace std;
 
   // cout << "q: " << q.transpose() << endl;
@@ -118,6 +131,7 @@ void ContactImplicitConstraint::DoEval(
 
 void ContactImplicitConstraint::DoEval(
   const Eigen::Ref<const AutoDiffVecXd>& x, AutoDiffVecXd& y) const {
+  y.resize(num_constraints());
 
   std::cerr<<"ENTERED"<<std::endl;
   int x_count = 0;
@@ -136,14 +150,32 @@ void ContactImplicitConstraint::DoEval(
   MatrixX<AutoDiffXd> Jphi;
   MatrixX<double> tensornormal;
   CollisionStuff(
-      *tree_, *empty_tree_, q, lambda,
+      *tree_, *empty_tree_, q, lambda, x.size(),
       &phi, &Jphi, &tensornormal);
 
-  auto autotensornormal = math::initializeAutoDiff(tensornormal, x.rows());
-  auto lambda_phi = autotensornormal.transpose()*lambda;
+  // Ensure that 
+  // MatrixX<AutoDiffXd> autotensornormal(
+  //     tensornormal.rows(), tensornormal.cols());
+  // VectorX<double> dx0 = Eigen::VectorXd::Zero(x.rows());
+  // for (int r = 0; r < autotensornormal.rows(); ++r) {
+  //   for (int c = 0; c < autotensornormal.cols(); ++c) {
+  //     autotensornormal(r, c) = tensornormal(r, c);
+  //     autotensornormal(r, c).derivatives() = dx0;
+  //   }
+  // }
+  // auto lambda_phi = autotensornormal.transpose()*lambda;
+  VectorX<AutoDiffXd> lambda_phi =
+      tensornormal.cast<AutoDiffXd>().transpose()*lambda;
 
-  y << lambda_phi, 
-        phi.transpose()*lambda_phi;
+  VectorX<AutoDiffXd> y1 = lambda_phi;
+
+  using namespace std;
+  cout << "Jphi = \n" << math::autoDiffToGradientMatrix(phi) << "\n";
+  cout << "Jlambda_phi = \n" << math::autoDiffToGradientMatrix(lambda_phi) << "\n";
+
+  VectorX<AutoDiffXd> y2 = phi.transpose()*lambda_phi;
+
+  y << y1, y2;
   std::cerr<<"HIHI"<<std::endl;
 }
 
@@ -203,7 +235,7 @@ void TimestepIntegrationConstraint::DoEval(
   MatrixX<AutoDiffXd> Jphi;
   MatrixX<double> tensornormal;
   CollisionStuff(
-      *tree_, *empty_tree_, q, lambda,
+      *tree_, *empty_tree_, q, lambda, x.size(),
       &phi, &Jphi, &tensornormal);
 
   auto lambda_phi = tensornormal.cast<AutoDiffXd>().transpose()*lambda;
