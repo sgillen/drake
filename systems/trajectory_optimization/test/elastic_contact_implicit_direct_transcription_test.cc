@@ -186,6 +186,7 @@ ConstructBasketCase(bool is_empty) {
         FindResourceOrThrow(
             "drake/examples/contact_implicit_brick/contact_implicit_brick_2d.urdf"),
         multibody::joints::kFixed, tree);
+    std::cout << "npos: " << tree->get_num_positions() << std::endl;
     DRAKE_DEMAND(tree->get_num_positions() == 2);
   }
 
@@ -238,35 +239,6 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription,
 
   HackViz viz(*tree);
 
-  // Add a constraint on position 0 of the initial posture.
-  double z_0 = 0;
-  double x_f_min = 11;
-  double x_f_max = 16;
-  double z_f = 0.;
-
-  double zdot_0_min = -25;
-  double zdot_0_max = 0;
-  unused(z_f);
-  traj_opt.AddBoundingBoxConstraint(z_0, z_0,
-                                    traj_opt.GeneralizedPositions()(0, 0));
-
-  // Add a constraint on velocity 0 of the initial posture.
-  traj_opt.AddBoundingBoxConstraint(zdot_0_min, zdot_0_max,
-                                    traj_opt.GeneralizedVelocities()(0, 0));
-
-  traj_opt.AddBoundingBoxConstraint(0, 5,
-                                    traj_opt.GeneralizedPositions()(0, 4));
-
-  // traj_opt.AddBoundingBoxConstraint(0, 0, traj_opt.ContactConstraintForces());
-
-  // Add a constraint on the final posture.
-  traj_opt.AddBoundingBoxConstraint(
-      z_f - z_f_margin, z_f + z_f_margin,
-      traj_opt.GeneralizedPositions()(0, num_time_samples - 1));
-
-  // Add a constraint on the final velocity.
-  //traj_opt.AddBoundingBoxConstraint(
-      //-15, -1, traj_opt.GeneralizedVelocities().col(0));
   // Add a running cost on the control as ∫ v² dt.
   traj_opt.AddRunningCost(
       traj_opt.GeneralizedVelocities().cast<symbolic::Expression>().squaredNorm());
@@ -312,7 +284,6 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription,
   std::cerr<<"L SOL"<<std::endl;
   std::cerr<<lambda_sol<<std::endl;
 
-
   for (int i = 1; i < num_time_samples; ++i) {
     int v_dyn = v_sol.col(i).rows()/2;
     Eigen::VectorXd v_sol_kin = v_sol.col(i).tail(v_dyn);
@@ -338,9 +309,9 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription,
             dt_sol(i - 1),
         tol, MatrixCompareType::relative));
   }
-  // Check if the constraints on the initial state and final state are
-  // satisfied.
-  EXPECT_NEAR(q_sol(0, 0), z_0, tol);
+  // // Check if the constraints on the initial state and final state are
+  // // satisfied.
+  // EXPECT_NEAR(q_sol(0, 0), z_0, tol);
 }
 
 

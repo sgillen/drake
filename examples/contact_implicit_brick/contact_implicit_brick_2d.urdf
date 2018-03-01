@@ -79,13 +79,17 @@
 
 <joint name="x" type="prismatic">
   <parent link="base" />
-  <child link="contact_implicit_brick" />
+  <child link="base2" />
   <axis xyz="1 0 0" />
   <origin xyz="0 0 0" />
 </joint>
 
+<link name="base2">
+  <inertial/>
+</link>
+
 <joint name="z" type="prismatic">
-  <parent link="base" />
+  <parent link="base2" />
   <child link="contact_implicit_brick" />
   <axis xyz="0 0 1" />
   <origin xyz="0 0 0" />
