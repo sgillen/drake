@@ -51,18 +51,21 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription, TestContactImplicitBrickNo
 
   // Add a constraint on position 0 of the initial posture.
   double z_0 = 10;
-  double z_f = 5;
+  double z_f = 10;
+  double z_f_margin = 1;
+  double zdot_0_min = -25;
+  double zdot_0_max = 0;
   unused(z_f);
   traj_opt.AddBoundingBoxConstraint(z_0, z_0,
                                     traj_opt.GeneralizedPositions()(0, 0));
 
   // Add a constraint on velocity 0 of the initial posture.
-  traj_opt.AddBoundingBoxConstraint(0, 0,
+  traj_opt.AddBoundingBoxConstraint(zdot_0_min, zdot_0_max,
                                     traj_opt.GeneralizedVelocities()(0, 0));
 
-  const int N = num_time_samples;
-  traj_opt.AddBoundingBoxConstraint(-10, -10,
-                                    traj_opt.GeneralizedVelocities()(0, N - 1));
+  // const int N = num_time_samples;
+  // traj_opt.AddBoundingBoxConstraint(-10, -10,
+  //                                   traj_opt.GeneralizedVelocities()(0, N - 1));
 
 
   // traj_opt.AddBoundingBoxConstraint(1, 1,
@@ -70,9 +73,10 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription, TestContactImplicitBrickNo
 
   // traj_opt.AddBoundingBoxConstraint(0, 0, traj_opt.ContactConstraintForces());
 
-  // // Add a constraint on the final posture.
-  // traj_opt.AddBoundingBoxConstraint(
-  //     z_f, z_f, traj_opt.GeneralizedPositions()(0, num_time_samples - 1));
+  // Add a constraint on the final posture.
+  traj_opt.AddBoundingBoxConstraint(
+      z_f - z_f_margin, z_f + z_f_margin,
+      traj_opt.GeneralizedPositions()(0, num_time_samples - 1));
 
   // Add a constraint on the final velocity.
   //traj_opt.AddBoundingBoxConstraint(
