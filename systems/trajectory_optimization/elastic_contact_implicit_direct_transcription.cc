@@ -37,7 +37,7 @@ using Eigen::Dynamic;
  * c(qᵣ, vᵣ): The Coriolis, gravity and centripedal force on the right knot.
  * h: The duration between the left and right knot.
  */
-DirectTranscriptionConstraint::DirectTranscriptionConstraint(
+CustomDirectTranscriptionConstraint::CustomDirectTranscriptionConstraint(
     const RigidBodyTree<double>& tree,
     std::shared_ptr<KinematicsCacheWithVHelper<AutoDiffXd>> kinematics_helper)
     : Constraint(tree.get_num_positions() + tree.get_num_velocities(),
@@ -54,14 +54,14 @@ DirectTranscriptionConstraint::DirectTranscriptionConstraint(
       num_lambda_{0},
       kinematics_helper1_{kinematics_helper} {}
 
-void DirectTranscriptionConstraint::AddGeneralizedConstraintForceEvaluator(
+void CustomDirectTranscriptionConstraint::AddGeneralizedConstraintForceEvaluator(
     std::unique_ptr<GeneralizedConstraintForceEvaluator> evaluator) {
   set_num_vars(num_vars() + evaluator->lambda_size());
   num_lambda_ += evaluator->lambda_size();
   generalized_constraint_force_evaluators_.push_back(std::move(evaluator));
 }
 
-void DirectTranscriptionConstraint::AddGeneralizedConstraintForceEvaluator(
+void CustomDirectTranscriptionConstraint::AddGeneralizedConstraintForceEvaluator(
     std::unique_ptr<GeneralizedConstraintForceEvaluator> evaluator,
     const Eigen::Ref<const solvers::VectorXDecisionVariable>& new_lambda_vars,
     solvers::VectorXDecisionVariable* x) {
@@ -78,7 +78,7 @@ void DirectTranscriptionConstraint::AddGeneralizedConstraintForceEvaluator(
   x->tail(new_lambda_vars.rows()) = new_lambda_vars;
 }
 
-void DirectTranscriptionConstraint::DoEval(
+void CustomDirectTranscriptionConstraint::DoEval(
     const Eigen::Ref<const Eigen::VectorXd>& x, Eigen::VectorXd& y) const {
   DRAKE_ASSERT(x.size() == num_vars());
 
@@ -87,7 +87,7 @@ void DirectTranscriptionConstraint::DoEval(
   y = math::autoDiffToValueMatrix(y_t);
 }
 
-void DirectTranscriptionConstraint::DoEval(
+void CustomDirectTranscriptionConstraint::DoEval(
     const Eigen::Ref<const AutoDiffVecXd>& x, AutoDiffVecXd& y) const {
   DRAKE_ASSERT(x.size() == num_vars());
 
@@ -155,8 +155,6 @@ void DirectTranscriptionConstraint::DoEval(
 }
 
 
-
-
 ElasticContactImplicitDirectTranscription::ElasticContactImplicitDirectTranscription(
     const RigidBodyTree<double>& tree,
     const RigidBodyTree<double>& empty_tree,
@@ -205,7 +203,7 @@ ElasticContactImplicitDirectTranscription::ElasticContactImplicitDirectTranscrip
 
   direct_transcription_constraints_.reserve(N() - 1);
   for (int i = 0; i < N() - 1; ++i) {
-    auto transcription_cnstr = std::make_shared<DirectTranscriptionConstraint>(
+    auto transcription_cnstr = std::make_shared<CustomDirectTranscriptionConstraint>(
         *tree_, dtc_kinematics_cache_with_v_helpers_[i + 1]);
     // Add RigidBodyConstraint::PositionConstraint to the constraint force Jᵀλ
     // used in the dynamics for direct transcription.
@@ -280,9 +278,13 @@ void ElasticContactImplicitDirectTranscription::
       std::move(evaluator), evaluator_lambda, &vars);
   // Now update the Binding in direct_transcription_constraints_
   direct_transcription_constraints_[interval_index] =
-      solvers::Binding<DirectTranscriptionConstraint>(
+      solvers::Binding<CustomDirectTranscriptionConstraint>(
           direct_transcription_constraint, vars);
 }
+
+
+
+
 
 void ElasticContactImplicitDirectTranscription::DoAddRunningCost(
     const symbolic::Expression& g) {
