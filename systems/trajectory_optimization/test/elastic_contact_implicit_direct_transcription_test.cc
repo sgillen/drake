@@ -96,7 +96,7 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription,
   const double maximum_timestep{0.1};
   ElasticContactImplicitDirectTranscription traj_opt(
       *tree, *empty_tree, num_time_samples,
-      minimum_timestep, maximum_timestep, 24, 0., 0.5);
+      minimum_timestep, maximum_timestep, 8, 0., 0.5);
   traj_opt.SetSolverOption(
       solvers::SnoptSolver::id(), "Print file", "/tmp/snopt.out");
 
@@ -114,12 +114,13 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription,
   traj_opt.AddBoundingBoxConstraint(zdot_0_min, zdot_0_max,
                                     traj_opt.GeneralizedVelocities()(1, 0));
 
-  double x_0 = 0;
-  double x_f = 10;
-  traj_opt.AddBoundingBoxConstraint(x_0, x_0,
-                                    traj_opt.GeneralizedPositions()(0, 0));
-  traj_opt.AddBoundingBoxConstraint(x_f, x_f,
-                                    traj_opt.GeneralizedPositions()(0, N - 1));
+  unused(N);
+  // double x_0 = 0;
+  // double x_f = 10;
+  // traj_opt.AddBoundingBoxConstraint(x_0, x_0,
+  //                                   traj_opt.GeneralizedPositions()(0, 0));
+  // traj_opt.AddBoundingBoxConstraint(x_f, x_f,
+  //                                   traj_opt.GeneralizedPositions()(0, N - 1));
 
   // traj_opt.AddBoundingBoxConstraint(-10, -10,
   //                                   traj_opt.GeneralizedVelocities()(0, N - 1));
