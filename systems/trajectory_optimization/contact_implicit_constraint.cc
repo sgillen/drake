@@ -8,26 +8,26 @@ namespace systems {
 namespace trajectory_optimization {
 
 void CollisionStuff(
-    const RigidBodyTree<double>& tree_,
-    const RigidBodyTree<double>& empty_tree_,
+    const RigidBodyTree<double>& tree,
+    const RigidBodyTree<double>& empty_tree,
     const VectorX<AutoDiffXd>& q,
     const MatrixX<AutoDiffXd>& lambda,
     VectorX<AutoDiffXd>* phi_out,
     MatrixX<AutoDiffXd>* Jphi_out,
     MatrixX<double>* tensornormal_out) {
 
-  auto kinsol = tree_->doKinematics(q);
+  auto kinsol = tree.doKinematics(q);
 
-  RigidBody<double>* brick = tree_->FindBody("contact_implicit_brick");
+  RigidBody<double>* brick = tree.FindBody("contact_implicit_brick");
   const auto& contacts_B = brick->get_contact_points();
-  const KinematicsCache<double> cache = tree_->doKinematics(
+  const KinematicsCache<double> cache = tree.doKinematics(
         math::autoDiffToValueMatrix(q));
 
   const int num_lambda_ = lambda.rows();
   const int num_contacts_ = num_lambda_ / 3;
 
   // `B` is body frame. `W` is world frame.
-  const auto contacts_W = tree_->transformPoints(
+  const auto contacts_W = tree.transformPoints(
       cache, contacts_B, brick->get_body_index(), 0 /* world */);
 
   Eigen::VectorXd phi;
@@ -38,22 +38,22 @@ void CollisionStuff(
   // Do collision without body in the way, so that points are not attracted to
   // it.
   // TODO: Just project other stuff away?
-  const KinematicsCache<double> scene_cache = empty_tree_->doKinematics(
-      empty_tree_->getZeroConfiguration());
-  const_cast<RigidBodyTree<double>*>(empty_tree_)->collisionDetectFromPoints(
+  const KinematicsCache<double> scene_cache = empty_tree.doKinematics(
+      empty_tree.getZeroConfiguration());
+  const_cast<RigidBodyTree<double>&>(empty_tree).collisionDetectFromPoints(
       scene_cache, contacts_W,
       phi, normal, world_contacts_W, world_contacts_L, body_idx, false);
 
   // TODO: Need to remap body indices.
   Eigen::VectorXi idx_a(1), idx_b(body_idx.size());
-  idx_a << tree_->FindBodyIndex("contact_implicit_brick");
+  idx_a << tree.FindBodyIndex("contact_implicit_brick");
   for (size_t i = 0; i < body_idx.size(); i++) {
     idx_b[i] = body_idx[i];
   }
 
   // `J` is 3*nc x nq. Projecting along normals yields Jphi.
   MatrixX<AutoDiffXd> J;
-  tree_->computeContactJacobians(
+  tree.computeContactJacobians(
       kinsol, idx_a, idx_b, contacts_B, world_contacts_W, J);
 
   // Project along normals.
@@ -80,6 +80,7 @@ void CollisionStuff(
 
 ContactImplicitConstraint::ContactImplicitConstraint(
     const RigidBodyTree<double>& tree,
+    const RigidBodyTree<double>& empty_tree,
     std::shared_ptr<plants::KinematicsCacheWithVHelper<AutoDiffXd>>
         kinematics_cache_with_v_helper, int num_lambda, double tol)
     : Constraint(num_lambda/3 + 1, tree.get_num_positions() +
@@ -87,6 +88,7 @@ ContactImplicitConstraint::ContactImplicitConstraint(
         Eigen::MatrixXd::Zero(num_lambda/3 + 1, 1),
         Eigen::MatrixXd::Constant(num_lambda/3 + 1, 1, tol)), 
       tree_(&tree),
+      empty_tree_(&empty_tree),
       num_positions_{tree.get_num_positions()},
       num_velocities_{2*tree.get_num_velocities()},
       num_lambda_{num_lambda},
@@ -126,7 +128,7 @@ void ContactImplicitConstraint::DoEval(
   MatrixX<AutoDiffXd> Jphi;
   MatrixX<double> tensornormal;
   CollisionStuff(
-      tree_, q, lambda,
+      *tree_, *empty_tree_, q, lambda,
       &phi, &Jphi, &tensornormal);
 
   auto lambda_phi = tensornormal.transpose()*lambda;
@@ -143,6 +145,7 @@ TimestepIntegrationConstraint::TimestepIntegrationConstraint(
         Eigen::MatrixXd::Zero(num_lambda/3, 1),
         Eigen::MatrixXd::Zero(num_lambda/3, 1)), 
       tree_(&tree),
+      empty_tree_(&empty_tree),
       num_positions_{tree.get_num_positions()},
       num_velocities_{2*tree.get_num_velocities()},
       num_lambda_{num_lambda},
@@ -187,7 +190,7 @@ void TimestepIntegrationConstraint::DoEval(
   MatrixX<AutoDiffXd> Jphi;
   MatrixX<double> tensornormal;
   CollisionStuff(
-      tree_, q, lambda,
+      *tree_, *empty_tree_, q, lambda,
       &phi, &Jphi, &tensornormal);
 
   auto lambda_phi = tensornormal.transpose()*lambda;
