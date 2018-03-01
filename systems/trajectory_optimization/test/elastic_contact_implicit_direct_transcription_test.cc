@@ -62,6 +62,8 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription, TestContactImplicitBrickNo
   // traj_opt.AddBoundingBoxConstraint(1, 1,
   //                                   traj_opt.GeneralizedPositions()(0, 5));
 
+  traj_opt.AddBoundingBoxConstraint(0, 0, traj_opt.ContactConstraintForces());
+
   // Add a constraint on the final posture.
   traj_opt.AddBoundingBoxConstraint(
       z_f, z_f, traj_opt.GeneralizedPositions()(0, num_time_samples - 1));
@@ -111,6 +113,8 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription, TestContactImplicitBrickNo
   std::cerr<<v_sol<<std::endl;
   std::cerr<<"T SOL"<<std::endl;
   std::cerr<<t_sol.transpose()<<std::endl;
+  std::cerr<<"L SOL"<<std::endl;
+  std::cerr<<lambda_sol<<std::endl;
 
 
   for (int i = 1; i < num_time_samples; ++i) {
