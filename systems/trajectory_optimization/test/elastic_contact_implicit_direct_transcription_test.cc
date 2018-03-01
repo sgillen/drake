@@ -55,18 +55,23 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription, TestContactImplicitBrickNo
   traj_opt.AddBoundingBoxConstraint(z_0, z_0,
                                     traj_opt.GeneralizedPositions()(0, 0));
 
-  // Add a constraint on position 0 of the initial posture.
+  // Add a constraint on velocity 0 of the initial posture.
   traj_opt.AddBoundingBoxConstraint(0, 0,
                                     traj_opt.GeneralizedVelocities()(0, 0));
+
+  const int N = num_time_samples;
+  traj_opt.AddBoundingBoxConstraint(-10, -10,
+                                    traj_opt.GeneralizedVelocities()(0, N - 1));
+
 
   // traj_opt.AddBoundingBoxConstraint(1, 1,
   //                                   traj_opt.GeneralizedPositions()(0, 5));
 
   traj_opt.AddBoundingBoxConstraint(0, 0, traj_opt.ContactConstraintForces());
 
-  // Add a constraint on the final posture.
-  traj_opt.AddBoundingBoxConstraint(
-      z_f, z_f, traj_opt.GeneralizedPositions()(0, num_time_samples - 1));
+  // // Add a constraint on the final posture.
+  // traj_opt.AddBoundingBoxConstraint(
+  //     z_f, z_f, traj_opt.GeneralizedPositions()(0, num_time_samples - 1));
 
   // Add a constraint on the final velocity.
   //traj_opt.AddBoundingBoxConstraint(
@@ -145,7 +150,7 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription, TestContactImplicitBrickNo
   // Check if the constraints on the initial state and final state are
   // satisfied.
   EXPECT_NEAR(q_sol(0, 0), z_0, tol);
-  EXPECT_NEAR(q_sol(0, num_time_samples - 1), z_f, tol);
+  // EXPECT_NEAR(q_sol(0, num_time_samples - 1), z_f, tol);
   // EXPECT_TRUE(CompareMatrices(v_sol.col(num_time_samples - 1),
   //                             Eigen::VectorXd::Zero(tree->get_num_velocities()),
   //                             tol, MatrixCompareType::absolute));
