@@ -97,10 +97,10 @@ ContactImplicitConstraint::ContactImplicitConstraint(
     const RigidBodyTree<double>& empty_tree,
     std::shared_ptr<plants::KinematicsCacheWithVHelper<AutoDiffXd>>
         kinematics_cache_with_v_helper, int num_lambda, double tol)
-    : Constraint(num_lambda/3 + 1, tree.get_num_positions() +
+    : Constraint(2*num_lambda/3 + 1, tree.get_num_positions() +
                   2*tree.get_num_velocities() + num_lambda,
-        Eigen::MatrixXd::Zero(num_lambda/3 + 1, 1),
-        Eigen::MatrixXd::Constant(num_lambda/3 + 1, 1, tol)), 
+        Eigen::MatrixXd::Zero(2*num_lambda/3 + 1, 1),
+        Eigen::MatrixXd::Constant(2*num_lambda/3 + 1, 1, tol)), 
       tree_(&tree),
       empty_tree_(&empty_tree),
       num_positions_{tree.get_num_positions()},
@@ -110,9 +110,9 @@ ContactImplicitConstraint::ContactImplicitConstraint(
       tol_{tol},
       kinematics_cache_with_v_helper_{kinematics_cache_with_v_helper} {
     unused(num_contacts_);
-    Eigen::VectorXd UB(num_contacts_ + 1, 1);
-    UB.head(num_contacts_) = Eigen::MatrixXd::Constant(
-                num_contacts_, 1, std::numeric_limits<double>::infinity());
+    Eigen::VectorXd UB(2*num_contacts_ + 1, 1);
+    UB.head(2*num_contacts_) = Eigen::MatrixXd::Constant(
+                2*num_contacts_, 1, std::numeric_limits<double>::infinity());
     UB.tail(1) = Eigen::MatrixXd::Constant(1, 1, tol_);
     UpdateUpperBound(UB);
 }
@@ -167,10 +167,11 @@ void ContactImplicitConstraint::DoEval(
     using namespace std;
     cout << "lambda_phi: " << lambda_phi.transpose() << "\n";
   }
+  VectorX<AutoDiffXd> y2 = phi;
 
-  VectorX<AutoDiffXd> y2 = phi.transpose()*lambda_phi;
+  VectorX<AutoDiffXd> y3 = phi.transpose()*lambda_phi;
 
-  y << y1, y2;
+  y << y1, y2, y3;
 }
 
 TimestepIntegrationConstraint::TimestepIntegrationConstraint(
@@ -178,9 +179,9 @@ TimestepIntegrationConstraint::TimestepIntegrationConstraint(
     const RigidBodyTree<double>& empty_tree,
     std::shared_ptr<plants::KinematicsCacheWithVHelper<AutoDiffXd>>
         kinematics_cache_with_v_helper, int num_lambda, double elasticity) // constraints: q; v+; v-; lambda
-    : solvers::Constraint(num_lambda/3, num_lambda+2*tree.get_num_velocities() + tree.get_num_positions(),
-        Eigen::MatrixXd::Zero(num_lambda/3, 1),
-        Eigen::MatrixXd::Zero(num_lambda/3, 1)), 
+    : solvers::Constraint(num_lambda/3 + 1, num_lambda+2*tree.get_num_velocities() + tree.get_num_positions(),
+        Eigen::MatrixXd::Zero(num_lambda/3 + 1, 1),
+        Eigen::MatrixXd::Zero(num_lambda/3 + 1, 1)), 
       tree_(&tree),
       empty_tree_(&empty_tree),
       num_positions_{tree.get_num_positions()},
@@ -233,10 +234,14 @@ void TimestepIntegrationConstraint::DoEval(
       &phi, &Jphi, &tensornormal);
 
   auto lambda_phi = tensornormal.cast<AutoDiffXd>().transpose()*lambda;
+  auto dphi_delta = Jphi*qd_plus + elasticity_*Jphi*qd_minus;
 
   // Jqdot_plus_l - Jqdot_minus_l = -(1+restitution)J*M^(-1)*J^T*lambda
-  y = Jphi*qd_plus - Jphi*qd_minus -
-          (1+elasticity_)*Jphi*M.inverse()*Jphi.transpose()*lambda_phi;
+  y << Jphi*qd_plus - Jphi*qd_minus -
+          Jphi*M.inverse()*Jphi.transpose()*lambda_phi,
+          dphi_delta.transpose()*lambda_phi;
+  //auto dphi_delta = Jphi*qd_plus + elasticity_*Jphi*qd_minus;
+  //dphi_delta = 
 }
 
 

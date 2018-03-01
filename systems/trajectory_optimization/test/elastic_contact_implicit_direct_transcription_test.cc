@@ -42,20 +42,20 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription,
   auto tree = ConstructContactImplicitBrickTree(false);
   auto empty_tree = ConstructContactImplicitBrickTree(true);
   const int num_time_samples = 11;
-  const double minimum_timestep{0.1};
+  const double minimum_timestep{0.01};
   const double maximum_timestep{0.1};
   ElasticContactImplicitDirectTranscription traj_opt(
       *tree, *empty_tree, num_time_samples,
-      minimum_timestep, maximum_timestep, 24, 0., 1.);
+      minimum_timestep, maximum_timestep, 24, 0., 0.5);
   traj_opt.SetSolverOption(
       solvers::SnoptSolver::id(), "Print file", "/tmp/snopt.out");
 
   // Add a constraint on position 0 of the initial posture.
   double z_0 = 10;
-  double z_f = 10;
+  double z_f = 5;
   double z_f_margin = 0;
   double zdot_0_min = -25;
-  double zdot_0_max = 0;
+  double zdot_0_max = -0;
   unused(z_f);
   traj_opt.AddBoundingBoxConstraint(z_0, z_0,
                                     traj_opt.GeneralizedPositions()(0, 0));
@@ -69,8 +69,8 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription,
   //                                   traj_opt.GeneralizedVelocities()(0, N - 1));
 
 
-  traj_opt.AddBoundingBoxConstraint(0, 5,
-                                    traj_opt.GeneralizedPositions()(0, 4));
+  traj_opt.AddBoundingBoxConstraint(1, 1,
+                                    traj_opt.GeneralizedPositions()(0, 5));
 
   // traj_opt.AddBoundingBoxConstraint(0, 0, traj_opt.ContactConstraintForces());
 
