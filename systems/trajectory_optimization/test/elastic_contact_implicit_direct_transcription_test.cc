@@ -368,8 +368,14 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription,
   traj_opt.AddBoundingBoxConstraint(
       0, 30, traj_opt.GeneralizedVelocities()(iz, 0));
 
+  const int i_mid = (N-1)/2;
+
   traj_opt.AddBoundingBoxConstraint(
-      13, 18, traj_opt.GeneralizedPositions()(ix, N-1));
+      12, 20, traj_opt.GeneralizedPositions()(ix, i_mid));
+
+  // Land within this stuff.
+  traj_opt.AddBoundingBoxConstraint(
+      13, 20, traj_opt.GeneralizedPositions()(ix, N-1));
   traj_opt.AddBoundingBoxConstraint(
       1, 1, traj_opt.GeneralizedPositions()(iz, N-1));
 
