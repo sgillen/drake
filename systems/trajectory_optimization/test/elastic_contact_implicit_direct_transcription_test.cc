@@ -303,7 +303,7 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription,
     TestBasketCase) {
   auto tree = ConstructBasketCase(false);
   auto empty_tree = ConstructBasketCase(true);
-  const int num_time_samples = 11;
+  const int num_time_samples = 21;
   const int N = num_time_samples;
   const double minimum_timestep{0.1};
   const double maximum_timestep{0.2};
@@ -344,7 +344,7 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription,
     auto p_right = p0s.col(ip_right);
     auto p = p_left + s * (p_right - p_left);
     const double dt_est = 0.1;
-    auto pd = (p_right - p_left) * dt_est;
+    auto pd = (p_right - p_left) / (dt_est * i_right - i_left);
 
     auto xi = traj_opt.GeneralizedPositions()(ix, i);
     auto zi = traj_opt.GeneralizedPositions()(iz, i);
@@ -374,7 +374,7 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription,
 
   // Add direct transcription constraints.
   traj_opt.Compile();
-  const solvers::SolutionResult result{}; // = traj_opt.Solve();
+  const solvers::SolutionResult result = traj_opt.Solve();
 
   EXPECT_EQ(result, solvers::SolutionResult::kSolutionFound);
 
@@ -444,11 +444,16 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription,
   std::cerr<<"Q I"<<std::endl;
   std::cerr<<q_i<<std::endl;
 
+  const Eigen::MatrixXd v_i =
+      traj_opt.GetInitialGuess(traj_opt.GeneralizedVelocities());
+  std::cerr<<"V I"<<std::endl;
+  std::cerr<<v_i<<std::endl;
+
   HackViz viz(*tree);
   const double dt_anim = 0.5;
   for (int i = 0; i < N; ++i) {
-    // viz.Update(dt_anim * i, q_sol.col(i));
-    viz.Update(dt_anim * i, q_i.col(i));
+    viz.Update(dt_anim * i, q_sol.col(i));
+    // viz.Update(dt_anim * i, q_i.col(i));
   }
 
   while (true) {
