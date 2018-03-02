@@ -323,13 +323,14 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription,
 
   const int ix = 0;
   const int iz = 1;
+  const int nv = tree->get_num_velocities();
 
   int np0 = 3;
   Eigen::Matrix2Xd p0s(2, np0);
   p0s.transpose() <<
-      0, 0,
-      21, 25,
-      11, 0;
+      1, 1,
+      19, 25,
+      15, 1;
   // Seed initial guess interpolated along waypoints.
   for (int i = 0; i < N; ++i) {
     int ip_left = i * (np0 - 1) / (N - 1);
@@ -350,10 +351,14 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription,
     auto zi = traj_opt.GeneralizedPositions()(iz, i);
     auto xdi = traj_opt.GeneralizedVelocities()(ix, i);
     auto zdi = traj_opt.GeneralizedVelocities()(iz, i);
+    auto xdi_minus = traj_opt.GeneralizedVelocities()(ix + nv, i);
+    auto zdi_minus = traj_opt.GeneralizedVelocities()(iz + nv, i);
     traj_opt.SetInitialGuess(xi, p(ix));
     traj_opt.SetInitialGuess(zi, p(iz));
     traj_opt.SetInitialGuess(xdi, pd(ix));
     traj_opt.SetInitialGuess(zdi, pd(iz));
+    traj_opt.SetInitialGuess(xdi_minus, pd(ix));
+    traj_opt.SetInitialGuess(zdi_minus, pd(iz));
   }
 
   traj_opt.AddBoundingBoxConstraint(
