@@ -165,6 +165,8 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription,
     if (is_2d) {
       auto xi = traj_opt.GeneralizedPositions()(ix, i);
       traj_opt.SetInitialGuess(xi, x_0 + (x_f - x_0) * i / (N - 1));
+      auto ryi = traj_opt.GeneralizedPositions()(iry, i);
+      traj_opt.SetInitialGuess(ryi, pi * i / (N - 1));
     }
     auto zi = traj_opt.GeneralizedPositions()(iz, i);
     auto zdi = traj_opt.GeneralizedVelocities()(iz, i);
