@@ -68,15 +68,19 @@ class HackViz {
 
 // Construct a RigidBodyTree containing a four bar linkage.
 std::unique_ptr<RigidBodyTree<double>>
-ConstructContactImplicitBrickTree(bool is_empty) {
+ConstructContactImplicitBrickTree(bool is_2d, bool is_empty) {
   RigidBodyTree<double>* tree = new RigidBodyTree<double>();
   const double plane_len = 100;
   multibody::AddFlatTerrainToWorld(tree, plane_len, plane_len);
   tree->a_grav << 0, 0, 0, 0, 0, -10;
 
   if (!is_empty) {
+    std::string prefix = "drake/examples/contact_implicit_brick/";
     parsers::urdf::AddModelInstanceFromUrdfFileToWorld(
-        FindResourceOrThrow("drake/examples/contact_implicit_brick/contact_implicit_brick_2d.urdf"),
+        FindResourceOrThrow(
+            prefix + (is_2d ?
+                "contact_implicit_brick_2d.urdf" :
+                "contact_implicit_brick.urdf")),
         multibody::joints::kFixed, tree);
   }
 
@@ -87,13 +91,18 @@ ConstructContactImplicitBrickTree(bool is_empty) {
 
 GTEST_TEST(ElasticContactImplicitDirectTranscription,
     TestContactImplicitBrickNoContact) {
-  auto tree = ConstructContactImplicitBrickTree(false);
-  auto empty_tree = ConstructContactImplicitBrickTree(true);
+  const bool is_2d = false;
+  auto tree = ConstructContactImplicitBrickTree(is_2d, false);
+  auto empty_tree = ConstructContactImplicitBrickTree(is_2d, true);
   const int num_time_samples = 11;
   const int N = num_time_samples;
   const double minimum_timestep{0.05};
   const double maximum_timestep{0.1};
-  const int num_contacts = 1;
+
+  RigidBody<double>* brick = tree->FindBody("contact_implicit_brick");
+  const auto& contacts_B = brick->get_contact_points();
+  const int num_contacts = contacts_B.cols();
+
   const double comp_tol = 0.;
   const double elasticity = 0.5;
   ElasticContactImplicitDirectTranscription traj_opt(
@@ -102,8 +111,6 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription,
       comp_tol, elasticity);
   traj_opt.SetSolverOption(
       solvers::SnoptSolver::id(), "Print file", "/tmp/snopt.out");
-
-  DRAKE_DEMAND(tree->get_num_positions() == 2);
 
   // Add a constraint on position 0 of the initial posture.
   double z_0 = 10;
@@ -114,6 +121,13 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription,
 
   int ix = 0;
   int iz = 1;
+  if (!is_2d) {
+    ix = -1;
+    iz = 0;
+    DRAKE_DEMAND(tree->get_num_positions() == 1);
+  } else {
+    DRAKE_DEMAND(tree->get_num_positions() == 2);
+  }
   unused(ix);
 
   unused(z_f);
@@ -126,7 +140,7 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription,
 
   double x_0 = -1;
   double x_f = 1;
-  if (ix >= 0) {
+  if (is_2d) {
     traj_opt.AddBoundingBoxConstraint(x_0, x_0,
                                       traj_opt.GeneralizedPositions()(ix, 0));
     traj_opt.AddBoundingBoxConstraint(x_f, x_f,
@@ -135,8 +149,10 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription,
 
   // Seed initial guess.
   for (int i = 0; i < N; ++i) {
-    auto xi = traj_opt.GeneralizedPositions()(ix, i);
-    traj_opt.SetInitialGuess(xi, x_0 + (x_f - x_0) * i / (N - 1));
+    if (is_2d) {
+      auto xi = traj_opt.GeneralizedPositions()(ix, i);
+      traj_opt.SetInitialGuess(xi, x_0 + (x_f - x_0) * i / (N - 1));
+    }
     auto zi = traj_opt.GeneralizedPositions()(iz, i);
     auto zdi = traj_opt.GeneralizedVelocities()(iz, i);
     if (N < 5) {
