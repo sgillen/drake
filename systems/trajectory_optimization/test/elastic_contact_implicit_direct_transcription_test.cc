@@ -124,14 +124,12 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription,
 
   int ix = 0;
   int iz = 1;
-  int iry = 2;
   if (!is_2d) {
     ix = -1;
     iz = 0;
-    iry = -1;
     DRAKE_DEMAND(tree->get_num_positions() == 1);
   } else {
-    DRAKE_DEMAND(tree->get_num_positions() == 3);
+    DRAKE_DEMAND(tree->get_num_positions() == 2);
   }
   unused(ix);
 
@@ -143,21 +141,13 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription,
   traj_opt.AddBoundingBoxConstraint(zdot_0_min, zdot_0_max,
                                     traj_opt.GeneralizedVelocities()(iz, 0));
 
-  const double pi = M_PI;
-
   double x_0 = -1;
   double x_f = 1;
-  double ry_0 = 0;
-  double ryd_0 = pi/4;
   if (is_2d) {
     traj_opt.AddBoundingBoxConstraint(x_0, x_0,
                                       traj_opt.GeneralizedPositions()(ix, 0));
     traj_opt.AddBoundingBoxConstraint(x_f, x_f,
                                       traj_opt.GeneralizedPositions()(ix, N - 1));
-    traj_opt.AddBoundingBoxConstraint(ry_0, ry_0,
-                                      traj_opt.GeneralizedPositions()(iry, 0));
-    traj_opt.AddBoundingBoxConstraint(ryd_0, ryd_0,
-                                      traj_opt.GeneralizedVelocities()(iry, 0));
   }
 
   // Seed initial guess.
@@ -165,8 +155,6 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription,
     if (is_2d) {
       auto xi = traj_opt.GeneralizedPositions()(ix, i);
       traj_opt.SetInitialGuess(xi, x_0 + (x_f - x_0) * i / (N - 1));
-      auto ryi = traj_opt.GeneralizedPositions()(iry, i);
-      traj_opt.SetInitialGuess(ryi, pi * i / (N - 1));
     }
     auto zi = traj_opt.GeneralizedPositions()(iz, i);
     auto zdi = traj_opt.GeneralizedVelocities()(iz, i);
@@ -318,7 +306,7 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription,
   const int num_time_samples = 21;
   const int N = num_time_samples;
   const double minimum_timestep{0.1};
-  const double maximum_timestep{0.3};
+  const double maximum_timestep{0.2};
 
   const double comp_tol = 0.;
   const double elasticity = 0.1;
