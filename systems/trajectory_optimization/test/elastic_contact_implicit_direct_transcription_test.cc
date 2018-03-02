@@ -76,9 +76,8 @@ ConstructContactImplicitBrickTree(bool is_empty) {
 
   if (!is_empty) {
     parsers::urdf::AddModelInstanceFromUrdfFileToWorld(
-        FindResourceOrThrow("drake/examples/contact_implicit_brick/contact_implicit_brick_2d.urdf"),
+        FindResourceOrThrow("drake/examples/contact_implicit_brick/contact_implicit_brick.urdf"),
         multibody::joints::kFixed, tree);
-    DRAKE_DEMAND(tree->get_num_positions() == 2);
   }
 
   //RigidBody<double>* brick = tree->FindBody("contact_implicit_brick");
@@ -104,40 +103,44 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription,
   traj_opt.SetSolverOption(
       solvers::SnoptSolver::id(), "Print file", "/tmp/snopt.out");
 
+  DRAKE_DEMAND(tree->get_num_positions() == 1);
+
   // Add a constraint on position 0 of the initial posture.
   double z_0 = 10;
   double z_f = 5;
   double z_f_margin = 0;
   double zdot_0_min = -25;
   double zdot_0_max = -0;
+
+  int ix = -1;
+  int iz = 0;
+  unused(ix);
+
   unused(z_f);
   traj_opt.AddBoundingBoxConstraint(z_0, z_0,
-                                    traj_opt.GeneralizedPositions()(1, 0));
+                                    traj_opt.GeneralizedPositions()(iz, 0));
 
   // Add a constraint on velocity 0 of the initial posture.
   traj_opt.AddBoundingBoxConstraint(zdot_0_min, zdot_0_max,
-                                    traj_opt.GeneralizedVelocities()(1, 0));
+                                    traj_opt.GeneralizedVelocities()(iz, 0));
 
-  double x_0 = 0;
-  double x_f = 0;
-  traj_opt.AddBoundingBoxConstraint(x_0, x_0,
-                                    traj_opt.GeneralizedPositions()(0, 0));
-  traj_opt.AddBoundingBoxConstraint(x_f, x_f,
-                                    traj_opt.GeneralizedPositions()(0, N - 1));
-
-  // traj_opt.AddBoundingBoxConstraint(-10, -10,
-  //                                   traj_opt.GeneralizedVelocities()(0, N - 1));
+  // double x_0 = 0;
+  // double x_f = 0;
+  // traj_opt.AddBoundingBoxConstraint(x_0, x_0,
+  //                                   traj_opt.GeneralizedPositions()(ix, 0));
+  // traj_opt.AddBoundingBoxConstraint(x_f, x_f,
+  //                                   traj_opt.GeneralizedPositions()(ix, N - 1));
 
 
-  traj_opt.AddBoundingBoxConstraint(-1, 5,
-                                    traj_opt.GeneralizedPositions()(1, 5));
+  traj_opt.AddBoundingBoxConstraint(-1, 1,
+                                    traj_opt.GeneralizedPositions()(iz, 5));
 
   // traj_opt.AddBoundingBoxConstraint(0, 0, traj_opt.ContactConstraintForces());
 
   // Add a constraint on the final posture.
   traj_opt.AddBoundingBoxConstraint(
       z_f - z_f_margin, z_f + z_f_margin,
-      traj_opt.GeneralizedPositions()(1, num_time_samples - 1));
+      traj_opt.GeneralizedPositions()(iz, num_time_samples - 1));
 
   // Add a constraint on the final velocity.
   //traj_opt.AddBoundingBoxConstraint(
@@ -215,7 +218,7 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription,
   }
   // Check if the constraints on the initial state and final state are
   // satisfied.
-  EXPECT_NEAR(q_sol(1, 0), z_0, tol);
+  EXPECT_NEAR(q_sol(iz, 0), z_0, tol);
   // EXPECT_NEAR(q_sol(0, num_time_samples - 1), z_f, tol);
   // EXPECT_TRUE(CompareMatrices(v_sol.col(num_time_samples - 1),
   //                             Eigen::VectorXd::Zero(tree->get_num_velocities()),
