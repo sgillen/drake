@@ -94,9 +94,13 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription,
   const int N = num_time_samples;
   const double minimum_timestep{0.01};
   const double maximum_timestep{0.1};
+  const int num_contacts = 1;
+  const double comp_tol = 0.;
+  const double elasticity = 0.5;
   ElasticContactImplicitDirectTranscription traj_opt(
       *tree, *empty_tree, num_time_samples,
-      minimum_timestep, maximum_timestep, 24, 0., 0.5);
+      minimum_timestep, maximum_timestep, 3 * num_contacts,
+      comp_tol, elasticity);
   traj_opt.SetSolverOption(
       solvers::SnoptSolver::id(), "Print file", "/tmp/snopt.out");
 
@@ -115,7 +119,7 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription,
                                     traj_opt.GeneralizedVelocities()(1, 0));
 
   double x_0 = 0;
-  double x_f = 10;
+  double x_f = 0;
   traj_opt.AddBoundingBoxConstraint(x_0, x_0,
                                     traj_opt.GeneralizedPositions()(0, 0));
   traj_opt.AddBoundingBoxConstraint(x_f, x_f,
@@ -125,7 +129,7 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription,
   //                                   traj_opt.GeneralizedVelocities()(0, N - 1));
 
 
-  traj_opt.AddBoundingBoxConstraint(1, 1,
+  traj_opt.AddBoundingBoxConstraint(-1, 5,
                                     traj_opt.GeneralizedPositions()(1, 5));
 
   // traj_opt.AddBoundingBoxConstraint(0, 0, traj_opt.ContactConstraintForces());
@@ -216,6 +220,18 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription,
   // EXPECT_TRUE(CompareMatrices(v_sol.col(num_time_samples - 1),
   //                             Eigen::VectorXd::Zero(tree->get_num_velocities()),
   //                             tol, MatrixCompareType::absolute));
+
+
+  HackViz viz(*tree);
+  const double dt_anim = 0.5;
+  for (int i = 0; i < N; ++i) {
+    viz.Update(dt_anim * i, q_sol.col(i));
+  }
+
+  while (true) {
+    viz.ReplayCachedSimulation();
+  }
+
 }
 
 // Construct a RigidBodyTree containing a four bar linkage.
