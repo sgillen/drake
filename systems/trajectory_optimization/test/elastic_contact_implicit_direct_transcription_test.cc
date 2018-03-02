@@ -90,7 +90,7 @@ ConstructContactImplicitBrickTree(
 }
 
 GTEST_TEST(ElasticContactImplicitDirectTranscription,
-    DISABLED_TestContactImplicitBrickNoContact) {
+    TestContactImplicitBrickNoContact) {
   const bool is_2d = true;
   const bool is_point_mass = false;
   auto tree =
@@ -124,12 +124,14 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription,
 
   int ix = 0;
   int iz = 1;
+  int iry = 2;
   if (!is_2d) {
     ix = -1;
     iz = 0;
+    iry = -1;
     DRAKE_DEMAND(tree->get_num_positions() == 1);
   } else {
-    DRAKE_DEMAND(tree->get_num_positions() == 2);
+    DRAKE_DEMAND(tree->get_num_positions() == 3);
   }
   unused(ix);
 
@@ -141,13 +143,21 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription,
   traj_opt.AddBoundingBoxConstraint(zdot_0_min, zdot_0_max,
                                     traj_opt.GeneralizedVelocities()(iz, 0));
 
+  const double pi = M_PI;
+
   double x_0 = -1;
   double x_f = 1;
+  double ry_0 = 0;
+  double ryd_0 = pi/4;
   if (is_2d) {
     traj_opt.AddBoundingBoxConstraint(x_0, x_0,
                                       traj_opt.GeneralizedPositions()(ix, 0));
     traj_opt.AddBoundingBoxConstraint(x_f, x_f,
                                       traj_opt.GeneralizedPositions()(ix, N - 1));
+    traj_opt.AddBoundingBoxConstraint(ry_0, ry_0,
+                                      traj_opt.GeneralizedPositions()(iry, 0));
+    traj_opt.AddBoundingBoxConstraint(ryd_0, ryd_0,
+                                      traj_opt.GeneralizedVelocities()(iry, 0));
   }
 
   // Seed initial guess.
@@ -300,13 +310,13 @@ ConstructBasketCase(bool is_empty) {
 
 
 GTEST_TEST(ElasticContactImplicitDirectTranscription,
-    TestBasketCase) {
+    DISABLED_TestBasketCase) {
   auto tree = ConstructBasketCase(false);
   auto empty_tree = ConstructBasketCase(true);
   const int num_time_samples = 21;
   const int N = num_time_samples;
   const double minimum_timestep{0.1};
-  const double maximum_timestep{0.2};
+  const double maximum_timestep{0.3};
 
   const double comp_tol = 0.;
   const double elasticity = 0.1;
