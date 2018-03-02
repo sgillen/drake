@@ -7,7 +7,7 @@ namespace drake {
 namespace systems {
 namespace trajectory_optimization {
 
-const bool debug = true;
+const bool debug = false;
 
 void CollisionStuff(
     const RigidBodyTree<double>& tree,

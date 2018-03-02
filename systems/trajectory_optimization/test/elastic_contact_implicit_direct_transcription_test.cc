@@ -76,7 +76,7 @@ ConstructContactImplicitBrickTree(bool is_empty) {
 
   if (!is_empty) {
     parsers::urdf::AddModelInstanceFromUrdfFileToWorld(
-        FindResourceOrThrow("drake/examples/contact_implicit_brick/contact_implicit_brick.urdf"),
+        FindResourceOrThrow("drake/examples/contact_implicit_brick/contact_implicit_brick_2d.urdf"),
         multibody::joints::kFixed, tree);
   }
 
@@ -103,7 +103,7 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription,
   traj_opt.SetSolverOption(
       solvers::SnoptSolver::id(), "Print file", "/tmp/snopt.out");
 
-  DRAKE_DEMAND(tree->get_num_positions() == 1);
+  DRAKE_DEMAND(tree->get_num_positions() == 2);
 
   // Add a constraint on position 0 of the initial posture.
   double z_0 = 10;
@@ -112,8 +112,8 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription,
   double zdot_0_min = -50;
   double zdot_0_max = -1;
 
-  int ix = -1;
-  int iz = 0;
+  int ix = 0;
+  int iz = 1;
   unused(ix);
 
   unused(z_f);
@@ -124,15 +124,19 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription,
   traj_opt.AddBoundingBoxConstraint(zdot_0_min, zdot_0_max,
                                     traj_opt.GeneralizedVelocities()(iz, 0));
 
-  // double x_0 = 0;
-  // double x_f = 0;
-  // traj_opt.AddBoundingBoxConstraint(x_0, x_0,
-  //                                   traj_opt.GeneralizedPositions()(ix, 0));
-  // traj_opt.AddBoundingBoxConstraint(x_f, x_f,
-  //                                   traj_opt.GeneralizedPositions()(ix, N - 1));
+  double x_0 = -1;
+  double x_f = 1;
+  if (ix >= 0) {
+    traj_opt.AddBoundingBoxConstraint(x_0, x_0,
+                                      traj_opt.GeneralizedPositions()(ix, 0));
+    traj_opt.AddBoundingBoxConstraint(x_f, x_f,
+                                      traj_opt.GeneralizedPositions()(ix, N - 1));
+  }
 
-  // See initial guess.
+  // Seed initial guess.
   for (int i = 0; i < N; ++i) {
+    auto xi = traj_opt.GeneralizedPositions()(ix, i);
+    traj_opt.SetInitialGuess(xi, x_0 + (x_f - x_0) * i / (N - 1));
     auto zi = traj_opt.GeneralizedPositions()(iz, i);
     auto zdi = traj_opt.GeneralizedVelocities()(iz, i);
     if (N < 5) {
