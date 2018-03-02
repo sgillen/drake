@@ -98,7 +98,7 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription,
   const double elasticity = 0.5;
   ElasticContactImplicitDirectTranscription traj_opt(
       *tree, *empty_tree, num_time_samples,
-      minimum_timestep, maximum_timestep, 3 * num_contacts,
+      minimum_timestep, maximum_timestep, num_contacts,
       comp_tol, elasticity);
   traj_opt.SetSolverOption(
       solvers::SnoptSolver::id(), "Print file", "/tmp/snopt.out");
