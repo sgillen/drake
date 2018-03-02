@@ -371,13 +371,13 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription,
   const int i_mid = (N-1)/2;
 
   traj_opt.AddBoundingBoxConstraint(
-      12, 20, traj_opt.GeneralizedPositions()(ix, i_mid));
+      18, 20, traj_opt.GeneralizedPositions()(ix, i_mid));
 
   // Land within this stuff.
   traj_opt.AddBoundingBoxConstraint(
       13, 20, traj_opt.GeneralizedPositions()(ix, N-1));
-  traj_opt.AddBoundingBoxConstraint(
-      1, 1, traj_opt.GeneralizedPositions()(iz, N-1));
+  // traj_opt.AddBoundingBoxConstraint(
+  //     1, 1, traj_opt.GeneralizedPositions()(iz, N-1));
 
   // Add a running cost on the control as ∫ v² dt.
   traj_opt.AddRunningCost(
