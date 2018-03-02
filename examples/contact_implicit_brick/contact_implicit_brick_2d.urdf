@@ -21,59 +21,31 @@
   </visual>
 
   <collision>
-    <origin xyz="1 1 1" rpy="0 0 0"/>
+    <origin xyz="1 0 0" rpy="0 0 0"/>
     <geometry>
      <sphere radius="1e-7"/>
    </geometry>
   </collision>
 
   <collision>
-    <origin xyz="1 1 -1" rpy="0 0 0"/>
+    <origin xyz="-1 0 0" rpy="0 0 0"/>
     <geometry>
      <sphere radius="1e-7"/>
    </geometry>
   </collision>
 
   <collision>
-    <origin xyz="1 -1 1" rpy="0 0 0"/>
+    <origin xyz="0 0 1" rpy="0 0 0"/>
     <geometry>
      <sphere radius="1e-7"/>
    </geometry>
   </collision>
 
   <collision>
-    <origin xyz="1 -1 -1" rpy="0 0 0"/>
+    <origin xyz="0 0 -1" rpy="0 0 0"/>
     <geometry>
      <sphere radius="1e-7"/>
    </geometry>
-  </collision>
-
-  <collision>
-    <origin xyz="-1 1 1" rpy="0 0 0"/>
-    <geometry> 
-      <sphere radius="1e-7"/>
-    </geometry>
-  </collision>
-
-  <collision>
-    <origin xyz="-1 1 -1" rpy="0 0 0"/>
-    <geometry>
-     <sphere radius="1e-7"/>
-   </geometry>
-  </collision>
- 
-  <collision>
-    <origin xyz="-1 -1 1" rpy="0 0 0"/>
-    <geometry> 
-      <sphere radius="1e-7"/>
-    </geometry>
-  </collision>
-  
-  <collision>
-    <origin xyz="-1 -1 -1" rpy="0 0 0"/>
-    <geometry> 
-      <sphere radius="1e-7"/>
-    </geometry>
   </collision>
 </link>
 
