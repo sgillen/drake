@@ -68,7 +68,8 @@ class HackViz {
 
 // Construct a RigidBodyTree containing a four bar linkage.
 std::unique_ptr<RigidBodyTree<double>>
-ConstructContactImplicitBrickTree(bool is_2d, bool is_empty) {
+ConstructContactImplicitBrickTree(
+    bool is_2d, bool is_point_mass, bool is_empty) {
   RigidBodyTree<double>* tree = new RigidBodyTree<double>();
   const double plane_len = 100;
   multibody::AddFlatTerrainToWorld(tree, plane_len, plane_len);
@@ -76,11 +77,10 @@ ConstructContactImplicitBrickTree(bool is_2d, bool is_empty) {
 
   if (!is_empty) {
     std::string prefix = "drake/examples/contact_implicit_brick/";
+    std::string model = is_point_mass ? "point_mass" : "contact_implicit_brick";
+    std::string dim = is_2d ? "2d" : "1d";
     parsers::urdf::AddModelInstanceFromUrdfFileToWorld(
-        FindResourceOrThrow(
-            prefix + (is_2d ?
-                "contact_implicit_brick_2d.urdf" :
-                "contact_implicit_brick.urdf")),
+        FindResourceOrThrow(prefix + model + "_" + dim + ".urdf"),
         multibody::joints::kFixed, tree);
   }
 
@@ -91,9 +91,12 @@ ConstructContactImplicitBrickTree(bool is_2d, bool is_empty) {
 
 GTEST_TEST(ElasticContactImplicitDirectTranscription,
     TestContactImplicitBrickNoContact) {
-  const bool is_2d = false;
-  auto tree = ConstructContactImplicitBrickTree(is_2d, false);
-  auto empty_tree = ConstructContactImplicitBrickTree(is_2d, true);
+  const bool is_2d = true;
+  const bool is_point_mass = false;
+  auto tree =
+      ConstructContactImplicitBrickTree(is_2d, is_point_mass, false);
+  auto empty_tree =
+      ConstructContactImplicitBrickTree(is_2d, is_point_mass, true);
   const int num_time_samples = 11;
   const int N = num_time_samples;
   const double minimum_timestep{0.05};
