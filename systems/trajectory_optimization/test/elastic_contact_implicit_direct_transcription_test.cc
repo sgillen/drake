@@ -90,7 +90,7 @@ ConstructContactImplicitBrickTree(
 }
 
 GTEST_TEST(ElasticContactImplicitDirectTranscription,
-    TestContactImplicitBrickNoContact) {
+    DISABLED_TestContactImplicitBrickNoContact) {
   const bool is_2d = true;
   const bool is_point_mass = false;
   auto tree =
@@ -300,33 +300,73 @@ ConstructBasketCase(bool is_empty) {
 
 
 GTEST_TEST(ElasticContactImplicitDirectTranscription,
-    DISABLED_TestBasketCase) {
+    TestBasketCase) {
   auto tree = ConstructBasketCase(false);
   auto empty_tree = ConstructBasketCase(true);
   const int num_time_samples = 11;
   const int N = num_time_samples;
   const double minimum_timestep{0.01};
   const double maximum_timestep{0.1};
+
+  const double comp_tol = 0.;
   const double elasticity = 0.1;
+
+  RigidBody<double>* brick = tree->FindBody("contact_implicit_brick");
+  const auto& contacts_B = brick->get_contact_points();
+  const int num_contacts = contacts_B.cols();
+
   ElasticContactImplicitDirectTranscription traj_opt(
       *tree, *empty_tree, num_time_samples,
-      minimum_timestep, maximum_timestep, 24, 0., elasticity);
+      minimum_timestep, maximum_timestep, num_contacts, comp_tol, elasticity);
   traj_opt.SetSolverOption(
       solvers::SnoptSolver::id(), "Print file", "/tmp/snopt.out");
 
-  HackViz viz(*tree);
+  const int ix = 0;
+  const int iz = 1;
+
+  int np0 = 3;
+  Eigen::Matrix2Xd p0s(2, np0);
+  p0s.transpose() <<
+      0, 0,
+      21, 15,
+      11, 0;
+  // Seed initial guess interpolated along waypoints.
+  for (int i = 0; i < N; ++i) {
+    int ip_left = i * (np0 - 1) / (N - 1);
+    if (ip_left == np0 - 1)
+      ip_left -= 1;
+    int ip_right = ip_left + 1;
+
+    int i_left = ip_left * (N - 1) / (np0 - 1);
+    int i_right = ip_right * (N - 1) / (np0 - 1);
+    double s = (i - i_left) / float(i_right - i_left);
+    auto p_left = p0s.col(ip_left);
+    auto p_right = p0s.col(ip_right);
+    auto p = p_left + s * (p_right - p_left);
+    const double dt_est = 0.1;
+    auto pd = (p_right - p_left) * dt_est;
+
+    auto xi = traj_opt.GeneralizedPositions()(ix, i);
+    auto zi = traj_opt.GeneralizedPositions()(iz, i);
+    auto xdi = traj_opt.GeneralizedVelocities()(ix, i);
+    auto zdi = traj_opt.GeneralizedVelocities()(iz, i);
+    traj_opt.SetInitialGuess(xi, p(ix));
+    traj_opt.SetInitialGuess(zi, p(iz));
+    traj_opt.SetInitialGuess(xdi, pd(ix));
+    traj_opt.SetInitialGuess(zdi, pd(iz));
+  }
 
   traj_opt.AddBoundingBoxConstraint(
       1, 1, traj_opt.GeneralizedPositions().col(0));
   traj_opt.AddBoundingBoxConstraint(
-      10, 30, traj_opt.GeneralizedVelocities()(0, 0));
+      0, 30, traj_opt.GeneralizedVelocities()(ix, 0));
   traj_opt.AddBoundingBoxConstraint(
-      10, 30, traj_opt.GeneralizedVelocities()(0, 1));
+      0, 30, traj_opt.GeneralizedVelocities()(iz, 0));
 
   traj_opt.AddBoundingBoxConstraint(
-      13, 18, traj_opt.GeneralizedPositions()(0, N-1));
+      13, 18, traj_opt.GeneralizedPositions()(ix, N-1));
   traj_opt.AddBoundingBoxConstraint(
-      1, 1, traj_opt.GeneralizedPositions()(1, N-1));
+      1, 1, traj_opt.GeneralizedPositions()(iz, N-1));
 
   // Add a running cost on the control as ∫ v² dt.
   traj_opt.AddRunningCost(
@@ -399,6 +439,7 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription,
         tol, MatrixCompareType::relative));
   }
 
+  HackViz viz(*tree);
   const double dt_anim = 0.5;
   for (int i = 0; i < N; ++i) {
     viz.Update(dt_anim * i, q_sol.col(i));
