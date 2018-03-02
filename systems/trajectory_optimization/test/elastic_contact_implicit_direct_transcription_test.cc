@@ -328,7 +328,7 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription,
   Eigen::Matrix2Xd p0s(2, np0);
   p0s.transpose() <<
       0, 0,
-      21, 15,
+      21, 25,
       11, 0;
   // Seed initial guess interpolated along waypoints.
   for (int i = 0; i < N; ++i) {
@@ -441,6 +441,8 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription,
 
   const Eigen::MatrixXd q_i =
       traj_opt.GetInitialGuess(traj_opt.GeneralizedPositions());
+  std::cerr<<"Q I"<<std::endl;
+  std::cerr<<q_i<<std::endl;
 
   HackViz viz(*tree);
   const double dt_anim = 0.5;
