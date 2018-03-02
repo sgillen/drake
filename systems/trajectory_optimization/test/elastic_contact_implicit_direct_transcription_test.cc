@@ -94,7 +94,7 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription,
   const double minimum_timestep{0.05};
   const double maximum_timestep{0.1};
   const int num_contacts = 1;
-  const double comp_tol = 0.1;
+  const double comp_tol = 0.;
   const double elasticity = 0.5;
   ElasticContactImplicitDirectTranscription traj_opt(
       *tree, *empty_tree, num_time_samples,
@@ -144,7 +144,7 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription,
     }
   }
 
-  traj_opt.AddBoundingBoxConstraint(-2, 2,
+  traj_opt.AddBoundingBoxConstraint(0, 5,
                                     traj_opt.GeneralizedPositions()(iz, 5));
 
   // traj_opt.AddBoundingBoxConstraint(0, 0, traj_opt.ContactConstraintForces());
