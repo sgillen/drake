@@ -208,6 +208,7 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription,
 
 
   for (int i = 1; i < num_time_samples; ++i) {
+    // v = [vplus; vminus]
     int v_dyn = v_sol.col(i).rows()/2;
     Eigen::VectorXd v_sol_kin = v_sol.col(i).tail(v_dyn);
     Eigen::VectorXd v_sol_kin_old = v_sol.col(i-1).head(v_dyn);

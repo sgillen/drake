@@ -179,9 +179,11 @@ TimestepIntegrationConstraint::TimestepIntegrationConstraint(
     const RigidBodyTree<double>& empty_tree,
     std::shared_ptr<plants::KinematicsCacheWithVHelper<AutoDiffXd>>
         kinematics_cache_with_v_helper, int num_lambda, double elasticity) // constraints: q; v+; v-; lambda
-    : solvers::Constraint(num_lambda/3 + 1, num_lambda+2*tree.get_num_velocities() + tree.get_num_positions(),
-        Eigen::MatrixXd::Zero(num_lambda/3 + 1, 1),
-        Eigen::MatrixXd::Zero(num_lambda/3 + 1, 1)), 
+    : solvers::Constraint(
+          tree.get_num_velocities() + 1,
+          num_lambda+2*tree.get_num_velocities() + tree.get_num_positions(),
+          Eigen::MatrixXd::Zero(tree.get_num_velocities() + 1, 1),
+          Eigen::MatrixXd::Zero(tree.get_num_velocities() + 1, 1)),
       tree_(&tree),
       empty_tree_(&empty_tree),
       num_positions_{tree.get_num_positions()},
@@ -237,11 +239,20 @@ void TimestepIntegrationConstraint::DoEval(
   auto dphi_delta = Jphi*qd_plus + elasticity_*Jphi*qd_minus;
 
   // Jqdot_plus_l - Jqdot_minus_l = -(1+restitution)J*M^(-1)*J^T*lambda
-  y << Jphi*qd_plus - Jphi*qd_minus -
-          Jphi*M.inverse()*Jphi.transpose()*lambda_phi,
+  y << qd_plus - qd_minus -
+          M.inverse()*Jphi.transpose()*lambda_phi,
           dphi_delta.transpose()*lambda_phi;
   //auto dphi_delta = Jphi*qd_plus + elasticity_*Jphi*qd_minus;
   //dphi_delta = 
+
+  if (true) {
+    using namespace std;
+    cout << "lambda_phi:\n" << lambda_phi.transpose() << endl;
+    cout << "phi:\n" << phi.transpose() << endl;
+    cout << "Jphi:\n" << Jphi << endl;
+    cout << "dphi_delta:\n" << dphi_delta.transpose() << endl;
+    cout << "---\n";
+  }
 }
 
 
