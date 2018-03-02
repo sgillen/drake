@@ -132,7 +132,7 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription,
   //                                   traj_opt.GeneralizedPositions()(ix, N - 1));
 
 
-  traj_opt.AddBoundingBoxConstraint(-1, 1,
+  traj_opt.AddBoundingBoxConstraint(0, 0,
                                     traj_opt.GeneralizedPositions()(iz, 5));
 
   // traj_opt.AddBoundingBoxConstraint(0, 0, traj_opt.ContactConstraintForces());
