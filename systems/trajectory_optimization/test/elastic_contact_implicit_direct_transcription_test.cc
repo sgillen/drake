@@ -91,10 +91,10 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription,
   auto empty_tree = ConstructContactImplicitBrickTree(true);
   const int num_time_samples = 11;
   const int N = num_time_samples;
-  const double minimum_timestep{0.01};
+  const double minimum_timestep{0.05};
   const double maximum_timestep{0.1};
   const int num_contacts = 1;
-  const double comp_tol = 0.;
+  const double comp_tol = 0.1;
   const double elasticity = 0.5;
   ElasticContactImplicitDirectTranscription traj_opt(
       *tree, *empty_tree, num_time_samples,
@@ -109,8 +109,8 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription,
   double z_0 = 10;
   double z_f = 5;
   double z_f_margin = 0;
-  double zdot_0_min = -25;
-  double zdot_0_max = -0;
+  double zdot_0_min = -50;
+  double zdot_0_max = -1;
 
   int ix = -1;
   int iz = 0;
@@ -131,8 +131,20 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription,
   // traj_opt.AddBoundingBoxConstraint(x_f, x_f,
   //                                   traj_opt.GeneralizedPositions()(ix, N - 1));
 
+  // See initial guess.
+  for (int i = 0; i < N; ++i) {
+    auto zi = traj_opt.GeneralizedPositions()(iz, i);
+    auto zdi = traj_opt.GeneralizedVelocities()(iz, i);
+    if (N < 5) {
+      traj_opt.SetInitialGuess(zi, 10 - 2*i);
+      traj_opt.SetInitialGuess(zdi, -5);
+    } else {
+      traj_opt.SetInitialGuess(zi, 2*(i - 5));
+      traj_opt.SetInitialGuess(zdi, 2*(i - 5));
+    }
+  }
 
-  traj_opt.AddBoundingBoxConstraint(0, 0,
+  traj_opt.AddBoundingBoxConstraint(-2, 2,
                                     traj_opt.GeneralizedPositions()(iz, 5));
 
   // traj_opt.AddBoundingBoxConstraint(0, 0, traj_opt.ContactConstraintForces());
