@@ -38,6 +38,7 @@ drake_cc_library(
 
 drake_pybind_library(
     name = "common_py",
+    cc_so_name = "common",
     cc_srcs = ["common_py.cc"],
     package_info = PACKAGE_INFO,
     py_deps = [
@@ -45,7 +46,6 @@ drake_pybind_library(
     ],
     py_srcs = [
         "__init__.py",
-        "common.py",
     ],
 )
 

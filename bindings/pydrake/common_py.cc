@@ -21,7 +21,7 @@ void trigger_an_assertion_failure() {
 }
 }  // namespace
 
-PYBIND11_MODULE(_common_py, m) {
+PYBIND11_MODULE(common, m) {
   m.doc() = "Bindings for //common:common";
 
   // Turn DRAKE_ASSERT and DRAKE_DEMAND exceptions into native SystemExit.
@@ -63,12 +63,14 @@ PYBIND11_MODULE(_common_py, m) {
   m.def("GetDrakePath", &GetDrakePath,
         "Get Drake path");
   #pragma GCC diagnostic pop  // pop -Wdeprecated-declarations
+
   // These are meant to be called internally by pydrake; not by users.
-  m.def("set_assertion_failure_to_throw_exception",
-        &drake_set_assertion_failure_to_throw_exception,
-        "Set Drake's assertion failure mechanism to be exceptions");
   m.def("trigger_an_assertion_failure", &trigger_an_assertion_failure,
         "Trigger a Drake C++ assertion failure");
+
+  // When running from python, turn DRAKE_ASSERT and DRAKE_DEMAND failures into
+  // SystemExit, instead of process aborts.  See RobotLocomotion/drake#5268.
+  drake_set_assertion_failure_to_throw_exception();
 }
 
 }  // namespace pydrake
