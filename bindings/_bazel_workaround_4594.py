@@ -1,7 +1,7 @@
 """
-Works around: https://github.com/bazelbuild/bazel/issues/4594
+Hacky workaround for https://github.com/bazelbuild/bazel/issues/4594
 
-Import this module to ensure all shared libraries in Bazel are loaded.
+WARNING: This may leak in additional libraries, or not respect proper order!
 """
 
 from collections import OrderedDict
@@ -9,17 +9,17 @@ import os
 import subprocess
 import sys
 
-def _handle_external_bazel_shared_libs():
+def _fix_external_bazel_shared_libs(workspace):
     """Ensures all shared libraries are loadable, even if they are incorrectly
     RPATH linked.
     @see https://stackoverflow.com/a/25457751/7829525
     """
-    key_workaround = "DRAKE_BAZEL_4594_WORKAROUND"
+    key_workaround = "BAZEL_4594_WORKAROUND_" + workspace
     if key_workaround in os.environ:
         return
     pwd = os.getcwd()
     is_bazel_runfiles = os.path.dirname(pwd).endswith(".runfiles")
-    is_bazel_external = os.path.exists("external/drake")
+    is_bazel_external = os.path.exists("external/" + workspace)
     if is_bazel_runfiles and is_bazel_external:
         # Find all libraries, and get the directories.
         out = subprocess.check_output(
@@ -45,5 +45,3 @@ def _handle_external_bazel_shared_libs():
         args = [sys.executable] + sys.argv
         sys.stdout.flush()
         exit(os.execv(args[0], args))
-
-_handle_external_bazel_shared_libs()

@@ -1,0 +1,11 @@
+load(
+    "//tools/skylark:drake_py.bzl",
+    "drake_py_library",
+)
+
+drake_py_library(
+    name = "bazel_workaround_4594_py",
+    srcs = ["_bazel_workaround_4594.py"],
+    imports = ["."],
+    visibility = ["//bindings/pydrake:__pkg__"],
+)
