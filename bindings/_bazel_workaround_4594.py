@@ -9,9 +9,9 @@ import os
 import subprocess
 import sys
 
-def _fix_external_bazel_shared_libs(module, runfiles_dir, check_dir):
+def _fix_external_bazel_shared_libs(module, runfiles_dir):
     """Ensures all shared libraries are loadable, even if they are incorrectly
-    RPATH linked.
+    RPATH linked by Bazel.
     @see https://stackoverflow.com/a/25457751/7829525
     """
     key_workaround = "BAZEL_4594_WORKAROUND_" + module
@@ -32,12 +32,10 @@ def _fix_external_bazel_shared_libs(module, runfiles_dir, check_dir):
             assert os.path.isabs(d)
             dirs.append(d)
     # Append to path variable.
-    if sys.platform.startswith("darwin"):
-        key = "DYLD_LIBRARY_PATH"
-    else:
-        key = "LD_LIBRARY_PATH"
+    is_mac = sys.platform.startswith("darwin")
+    key = is_mac and "DYLD_LIBRARY_PATH" or "LD_LIBRARY_PATH"
     paths = os.environ.get(key, "").split(os.pathsep)
-    paths += dirs
+    paths = dirs + paths
     os.environ[key] = os.pathsep.join(paths)
     # Ensure that this only happens once.
     os.environ[key_workaround] = "1"
