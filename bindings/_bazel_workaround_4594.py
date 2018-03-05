@@ -9,6 +9,8 @@ import os
 import subprocess
 import sys
 
+sys.stdout = sys.stderr
+
 def _fix_external_bazel_shared_libs(module, runfiles_dir):
     """Ensures all shared libraries are loadable, even if they are incorrectly
     RPATH linked by Bazel.
@@ -28,6 +30,8 @@ def _fix_external_bazel_shared_libs(module, runfiles_dir):
         file = line.strip()
         d = os.path.dirname(file)
         if d not in dirs:
+            print(file)
+            print(d)
             assert os.path.exists(d)
             assert os.path.isabs(d)
             dirs.append(d)
