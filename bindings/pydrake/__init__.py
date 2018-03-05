@@ -2,9 +2,12 @@ from __future__ import absolute_import, division, print_function
 
 # Ensure `pydrake` is importable as an external in Bazel.
 # N.B. This workaround is not installed, so we surround it with try / catch.
+import os
 try:
     from _bazel_workaround_4594 import _fix_external_bazel_shared_libs
-    _fix_external_bazel_shared_libs("drake")
+    runfiles_dir = os.environ.get("DRAKE_BAZEL_RUNFILES") or os.getcwd()
+    if os.path.exists(os.path.join(runfiles_dir, "external/drake")):
+        _fix_external_bazel_shared_libs(__name__, runfiles_dir)
 except ImportError:
     pass
 
