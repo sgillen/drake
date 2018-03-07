@@ -61,7 +61,12 @@ void OptitrackPoseExtractor::DoCalcUnrestrictedUpdate(
       break;
     }
   }
-  DRAKE_THROW_UNLESS(body_exists);
+
+  if (!body_exists) {
+    drake::log()->warn(
+        "optitrack: object not found, using identity: {}", object_id_);
+    return;
+  }
 
   // The optitrack quaternion ordering is X-Y-Z-W and this needs fitting into
   // Eigen's W-X-Y-Z ordering.
