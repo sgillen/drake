@@ -22,6 +22,21 @@ namespace drake {
 
 /** @cond */
 
+template <typename T, typename Token = void>
+struct copyable_helper {
+  template <typename U = T>
+  static std::true_type Check(
+      decltype(U(std::declval<const U&>()))* ptr);
+  static std::false_type Check(...);
+
+  // Should define some sort of emplace constructor if needed on the stack.
+  template <typename U = T>
+  static U* Do(const U& other) { return new U(other); }
+};
+
+template <typename T, typename Token = void>
+using is_copyable = decltype(copyable_helper<T, Token>::Check(nullptr));
+
 namespace copyable_unique_ptr_detail {
 
 // This uses SFINAE to classify a particular class as "copyable". There are two
@@ -35,17 +50,17 @@ namespace copyable_unique_ptr_detail {
 // match to the helper invocation, so, if it exists, it will be instantiated by
 // preference and report a true value.
 
-template <typename V, class>
+template <typename V, typename Token, class>
 struct is_copyable_unique_ptr_compatible_helper : std::false_type {};
 
 // This is the specific overload. The copyable condition is that it is
 // "cloneable" or has a copy constructor.
-template <typename V>
+template <typename V, typename Token>
 struct is_copyable_unique_ptr_compatible_helper<
-    V, typename std::enable_if<is_cloneable<V>::value ||
-        std::is_copy_constructible<V>::value>::type>
+    V, Token,
+    typename std::enable_if<is_cloneable<V, Token>::value ||
+        is_copyable<V, Token>::value>::type>
     : std::true_type {};
-
 
 }  // namespace copyable_unique_ptr_detail
 /** @endcond */
@@ -66,10 +81,10 @@ struct is_copyable_unique_ptr_compatible_helper<
  @see copyable_unique_ptr
  @see is_cloneable
  */
-template <typename T>
+template <typename T, typename Token = void>
 using is_copyable_unique_ptr_compatible =
-    copyable_unique_ptr_detail::is_copyable_unique_ptr_compatible_helper<T,
-                                                                         void>;
+    copyable_unique_ptr_detail::is_copyable_unique_ptr_compatible_helper<
+        T, Token, void>;
 
 /** A smart pointer with deep copy semantics.
 
@@ -150,9 +165,9 @@ using is_copyable_unique_ptr_compatible =
              be an abstract or concrete type.
  */
 // TODO(SeanCurtis-TRI): Consider extending this to add the Deleter as well.
-template <typename T>
+template <typename T, typename Token = void>
 class copyable_unique_ptr : public std::unique_ptr<T> {
-  static_assert(is_copyable_unique_ptr_compatible<T>::value,
+  static_assert(is_copyable_unique_ptr_compatible<T, Token>::value,
                 "copyable_unique_ptr can only be used with a 'copyable' class"
                     ", requiring either a public copy constructor or a valid "
                     "clone method of the form: `unique_ptr<T> Clone() const`.");
@@ -349,16 +364,17 @@ class copyable_unique_ptr : public std::unique_ptr<T> {
   // the expected form.
   template <typename U>
   static typename std::enable_if<
-      !std::is_copy_constructible<U>::value && is_cloneable<T>::value, U*>::type
+      !is_copyable<U, Token>::value
+      && is_cloneable<T, Token>::value, U*>::type
   CopyOrNullHelper(const U* ptr, int) {
-    return ptr->Clone().release();
+    return cloneable_helper<T, Token>::Do(*ptr).release();
   }
 
   // Default to copy constructor if present.
   template <typename U>
   static
   U* CopyOrNullHelper(const U* ptr, ...) {
-    return new U(*ptr);
+    return copyable_helper<T, Token>::Do(*ptr);
   }
 
   // If src is non-null, clone it; otherwise return nullptr.

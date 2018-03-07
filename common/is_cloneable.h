@@ -7,26 +7,22 @@ namespace drake {
 
 /** @cond */
 
-namespace is_cloneable_detail {
+/**
+ This should generally be unused in public code; only use this class when you
+ need to friend this class to permit private access to `Clone`. If you do this,
+ please ensure that you use the `Token` parameter to use a private class token
+ such that no other classes can gain backdoor access.
+ */
+template <typename T, typename Token = void>
+struct cloneable_helper {
+  template <typename U = T>
+  static std::true_type Check(
+      decltype(std::declval<U>().Clone())* ptr);
+  static std::false_type Check(...);
 
-// Default case; assumes that a class is *not* cloneable.
-template <typename T, class>
-struct is_cloneable_helper : std::false_type {};
-
-// Special sauce for SFINAE. Only compiles if it can finds the method
-// `unique_ptr<T> T::Clone() const`. If this exists, the is_cloneable implicitly
-// prefers this overload over the default overload.
-template <typename T>
-struct is_cloneable_helper<
-    T,
-    typename std::enable_if<std::is_same<
-        decltype(std::declval<const T>().Clone().release()),
-        typename std::remove_const<T>::type*>::value>::type>
-    : std::true_type {};
-
-}  // namespace is_cloneable_detail
-
-/** @endcond */
+  template <typename U = T>
+  static auto Do(const U& other) { return other.Clone(); }
+};
 
 /**
  @anchor is_cloneable_doc
@@ -73,8 +69,7 @@ struct is_cloneable_helper<
 
  @tparam  T  The class to test for cloneability.
  */
-template <typename T>
-using is_cloneable =
-    is_cloneable_detail::is_cloneable_helper<T, void>;
+template <typename T, typename Token = void>
+using is_cloneable = decltype(cloneable_helper<T, Token>::Check(nullptr));
 
 }  // namespace drake

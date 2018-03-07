@@ -90,7 +90,11 @@ class FriendsWithBenefitsCopy {
   int value() const {return value_;}
 
  private:
-  friend class copyable_unique_ptr<FriendsWithBenefitsCopy>;
+  friend class Friend;
+
+  class PassKey;
+  friend struct copyable_helper<FriendsWithBenefitsCopy, PassKey>;
+
   FriendsWithBenefitsCopy(const FriendsWithBenefitsCopy&) = default;
 
   int value_{0};
@@ -105,7 +109,11 @@ class FriendsWithBenefitsClone {
   FriendsWithBenefitsClone(const FriendsWithBenefitsClone&) = delete;
 
  private:
-  friend class copyable_unique_ptr<FriendsWithBenefitsClone>;
+  friend class Friend;
+
+  class PassKey;
+  friend struct cloneable_helper<FriendsWithBenefitsClone, PassKey>;
+
   std::unique_ptr<FriendsWithBenefitsClone> Clone() const {
     return std::make_unique<FriendsWithBenefitsClone>(value_);
   }
@@ -113,22 +121,40 @@ class FriendsWithBenefitsClone {
   int value_{0};
 };
 
+class Friend {
+ public:
+  using CopyPassKey = FriendsWithBenefitsCopy::PassKey;
+  using ClonePassKey = FriendsWithBenefitsClone::PassKey;
+};
+
 // Check that a friend declaration works to get copyable_unique_ptr access
 // to the needed copy constructor or Clone() method.
 GTEST_TEST(CopyableUniquePtrTest, FriendsWithBenefits) {
-  copyable_unique_ptr<FriendsWithBenefitsCopy> fwb(
-      new FriendsWithBenefitsCopy(10));
-  EXPECT_EQ(fwb->value(), 10);
+  using CopyPassKey = Friend::CopyPassKey;
+  EXPECT_TRUE((
+      is_copyable_unique_ptr_compatible<FriendsWithBenefitsCopy, CopyPassKey>
+          ::value));
+  EXPECT_FALSE(
+      is_copyable_unique_ptr_compatible<FriendsWithBenefitsCopy>::value);
 
-  copyable_unique_ptr<FriendsWithBenefitsCopy> fwb2(fwb);
-  EXPECT_EQ(fwb2->value(), 10);
-
-  copyable_unique_ptr<FriendsWithBenefitsClone> fwbc(
-      new FriendsWithBenefitsClone(20));
+  copyable_unique_ptr<FriendsWithBenefitsCopy, CopyPassKey> fwbc(
+      new FriendsWithBenefitsCopy(20));
   EXPECT_EQ(fwbc->value(), 20);
+  copyable_unique_ptr<FriendsWithBenefitsCopy, CopyPassKey> fwbc1(fwbc);
+  EXPECT_EQ(fwbc1->value(), 20);
 
-  copyable_unique_ptr<FriendsWithBenefitsClone> fwbc2(fwbc);
+  using ClonePassKey = Friend::ClonePassKey;
+  EXPECT_TRUE((
+      is_copyable_unique_ptr_compatible<FriendsWithBenefitsClone, ClonePassKey>
+          ::value));
+  EXPECT_FALSE(
+      is_copyable_unique_ptr_compatible<FriendsWithBenefitsClone>::value);
+
+  copyable_unique_ptr<FriendsWithBenefitsClone, ClonePassKey> fwbc2(
+      new FriendsWithBenefitsClone(20));
   EXPECT_EQ(fwbc2->value(), 20);
+  copyable_unique_ptr<FriendsWithBenefitsClone, ClonePassKey> fwbc3(fwbc2);
+  EXPECT_EQ(fwbc3->value(), 20);
 }
 
 // A fully copyable class (has both copy constructor and Clone). Confirms that
