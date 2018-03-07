@@ -132,6 +132,10 @@ class Friend {
 GTEST_TEST(CopyableUniquePtrTest, FriendsWithBenefits) {
   using CopyPassKey = Friend::CopyPassKey;
   EXPECT_TRUE((
+      is_copyable<FriendsWithBenefitsCopy, CopyPassKey>::value));
+  EXPECT_FALSE((
+      is_copyable<FriendsWithBenefitsCopy>::value));
+  EXPECT_TRUE((
       is_copyable_unique_ptr_compatible<FriendsWithBenefitsCopy, CopyPassKey>
           ::value));
   EXPECT_FALSE(

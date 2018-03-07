@@ -25,8 +25,9 @@ namespace drake {
 template <typename T, typename Token = void>
 struct copyable_helper {
   template <typename U = T>
-  static std::true_type Check(
-      decltype(U(std::declval<const U&>()))* ptr);
+  static
+    std::is_same<decltype(U(std::declval<const T&>())), T>
+    Check(std::nullptr_t ptr);
   static std::false_type Check(...);
 
   // Should define some sort of emplace constructor if needed on the stack.
@@ -35,7 +36,7 @@ struct copyable_helper {
 };
 
 template <typename T, typename Token = void>
-using is_copyable = decltype(copyable_helper<T, Token>::Check(nullptr));
+using is_copyable = decltype(copyable_helper<T, Token>::Check(std::declval));
 
 namespace copyable_unique_ptr_detail {
 
