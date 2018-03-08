@@ -3,6 +3,8 @@
 #include <utility>
 #include <vector>
 
+#include <fmt/format.h>
+
 #include "optitrack/optitrack_frame_t.hpp"
 
 #include "drake/common/text_logging.h"
@@ -61,11 +63,9 @@ void OptitrackPoseExtractor::DoCalcUnrestrictedUpdate(
       break;
     }
   }
-
   if (!body_exists) {
-    drake::log()->warn(
-        "optitrack: object not found, using identity: {}", object_id_);
-    return;
+    throw std::runtime_error(fmt::format(
+        "optitrack: id {} not found", object_id_));
   }
 
   // The optitrack quaternion ordering is X-Y-Z-W and this needs fitting into
