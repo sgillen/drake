@@ -301,12 +301,16 @@ void LcmSubscriberSystem::HandleMessage(const std::string& channel,
   }
 }
 
-int LcmSubscriberSystem::WaitForMessage(int old_message_count) const {
+int LcmSubscriberSystem::WaitForMessage(
+    int old_message_count, AbstractValue* message) const {
   // The message buffer and counter are updated in HandleMessage(), which is
   // a callback function invoked by a different thread owned by the
   // drake::lcm::DrakeLcmInterface instance passed to the constructor. Thus,
   // for thread safety, these need to be properly protected by a mutex.
   std::unique_lock<std::mutex> lock(received_message_mutex_);
+
+  if (old_message_count == -1)
+    old_message_count = received_message_count_;
 
   // This while loop is necessary to guard for spurious wakeup:
   // https://en.wikipedia.org/wiki/Spurious_wakeup
@@ -315,6 +319,12 @@ int LcmSubscriberSystem::WaitForMessage(int old_message_count) const {
     // read received_message_count_.
     received_message_condition_variable_.wait(lock);
   int new_message_count = received_message_count_;
+  if (message) {
+      DRAKE_ASSERT(translator_ == nullptr);
+      DRAKE_ASSERT(serializer_ != nullptr);
+      serializer_->Deserialize(
+          received_message_.data(), received_message_.size(), message);
+  }
   lock.unlock();
 
   return new_message_count;
