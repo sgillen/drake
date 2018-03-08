@@ -6,7 +6,7 @@ load("//tools/skylark:drake_runfiles_binary.bzl", "drake_runfiles_binary")
 package(default_visibility = ["//visibility:public"])
 
 py_binary(
-    name = "drake_visualizer.impl",
+    name = "drake_visualizer_py",
     srcs = ["//tools/workspace/drake_visualizer:drake_visualizer.py"],
     data = [
         "//automotive/models:prod_models",
@@ -14,7 +14,6 @@ py_binary(
         "@drake_visualizer",
     ],
     main = "//tools/workspace/drake_visualizer:drake_visualizer.py",
-    visibility = ["//visibility:private"],
     # Python libraries to import.
     deps = [
         "//lcmtypes:lcmtypes_py",
@@ -26,7 +25,7 @@ py_binary(
 
 drake_runfiles_binary(
     name = "drake_visualizer",
-    target = ":drake_visualizer.impl",
+    target = ":drake_visualizer_py",
 )
 
 # === config_setting rules ===
