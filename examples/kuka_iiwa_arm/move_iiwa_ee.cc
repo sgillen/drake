@@ -34,6 +34,8 @@ DEFINE_double(roll, 0., "target roll about world x axis for end effector");
 DEFINE_double(pitch, 0., "target pitch about world y axis for end effector");
 DEFINE_double(yaw, 0., "target yaw about world z axis for end effector");
 DEFINE_string(ee_name, "iiwa_link_ee", "Name of the end effector link");
+DEFINE_bool(status_only, false, "Only print status, do not move.");
+DEFINE_bool(use_degrees, false, "Print joint configuration in degrees.");
 
 namespace drake {
 namespace examples {
@@ -86,6 +88,8 @@ class MoveDemoRunner {
 
       Isometry3<double> ee_pose =
           tree_.CalcBodyPoseInWorldFrame(cache, *end_effector);
+      double scale = FLAGS_use_degrees ? 180 / M_PI : 1;
+      drake::log()->info("Joint positions: {}", iiwa_q.transpose() * scale);
       drake::log()->info("End effector at: {} {}",
                          ee_pose.translation().transpose(),
                          math::rotmat2rpy(ee_pose.rotation()).transpose());
@@ -93,7 +97,7 @@ class MoveDemoRunner {
 
     // If this is the first status we've received, calculate a plan
     // and send it (if it succeeds).
-    if (status_count_ == 1) {
+    if (!FLAGS_status_only && status_count_ == 1) {
       ConstraintRelaxingIk ik(
           urdf_, FLAGS_ee_name, Isometry3<double>::Identity());
 
