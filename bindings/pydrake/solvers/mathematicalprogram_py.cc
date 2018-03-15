@@ -14,6 +14,7 @@
 #include "drake/solvers/solver_type_converter.h"
 
 using Eigen::Dynamic;
+using std::make_shared;
 using std::string;
 using std::vector;
 
@@ -25,6 +26,8 @@ using solvers::BoundingBoxConstraint;
 using solvers::Constraint;
 using solvers::Cost;
 using solvers::EvaluatorBase;
+using solvers::EvaluatorConstraint;
+using solvers::EvaluatorCost;
 using solvers::LinearConstraint;
 using solvers::LinearCost;
 using solvers::LinearComplementarityConstraint;
@@ -94,57 +97,54 @@ auto RegisterBinding(py::handle* pscope,
   return binding_cls;
 }
 
-class PyCost : public Cost {
- public:
-  PyCost(int num_vars, py::function func, const std::string& description)
-      : Cost(num_vars, description),
-        double_func_(
-            py::cast<std::function<double(const Eigen::VectorXd&)>>(func)),
-        autodiff_func_(
-            py::cast<std::function<AutoDiffXd(const VectorX<AutoDiffXd>&)>>(
-                func)) {}
-
- protected:
-  void DoEval(const Eigen::Ref<const Eigen::VectorXd>& x,
-              Eigen::VectorXd& y) const override {
-    y[0] = double_func_(x);
+// Evaluate from scalar to vector.
+template <typename T>
+struct CostEval {
+  using Func = std::function<T(const VectorX<T>&)>;
+  static void assign(const T& out, VectorX<T>* y) {
+    (*y)[0] = out;
   }
-
-  void DoEval(const Eigen::Ref<const AutoDiffVecXd>& x,
-              AutoDiffVecXd& y) const override {
-    y[0] = autodiff_func_(x);
-  }
-
- private:
-  std::function<double(const Eigen::VectorXd&)> double_func_;
-  std::function<AutoDiffXd(const VectorX<AutoDiffXd>&)> autodiff_func_;
 };
 
-class PyConstraint : public Constraint {
+// Evaluate from vector to vector.
+template <typename T>
+struct ConstraintEval {
+  using Func = std::function<VectorX<T>(const VectorX<T>&)>;
+  static void assign(const VectorX<T>& out, VectorX<T>* y) {
+    *y = out;
+  }
+};
+
+template <template <typename> class EvalForm>
+class PyFunctionEvaluator : public EvaluatorBase {
  public:
-  PyConstraint(int num_vars, py::function func, const Eigen::VectorXd& lb,
-               const Eigen::VectorXd& ub, const std::string& description)
-      : Constraint(lb.size(), num_vars, lb, ub, description),
-        double_func_(
-            py::cast<std::function<Eigen::VectorXd(const Eigen::VectorXd&)>>(
-                func)),
-        autodiff_func_(py::cast<std::function<VectorX<AutoDiffXd>(
-                           const VectorX<AutoDiffXd>&)>>(func)) {}
+  using DoubleEval = EvalForm<double>;
+  using DoubleFunc = typename DoubleEval::Func;
+
+  using AutoDiffEval = EvalForm<AutoDiffXd>;
+  using AutoDiffFunc = typename AutoDiffEval::Func;
+
+  PyFunctionEvaluator(
+      int num_outputs, int num_vars, py::function func,
+      const std::string& description)
+      : EvaluatorBase(num_outputs, num_vars, description),
+        double_func_(py::cast<DoubleFunc>(func)),
+        autodiff_func_(py::cast<AutoDiffFunc>(func)) {}
 
  protected:
   void DoEval(const Eigen::Ref<const Eigen::VectorXd>& x,
               Eigen::VectorXd& y) const override {
-    y = double_func_(x);
+    DoubleEval::assign(double_func_(x), &y);
   }
 
   void DoEval(const Eigen::Ref<const AutoDiffVecXd>& x,
               AutoDiffVecXd& y) const override {
-    y = autodiff_func_(x);
+    AutoDiffEval::assign(autodiff_func_(x), &y);
   }
 
  private:
-  std::function<Eigen::VectorXd(const Eigen::VectorXd&)> double_func_;
-  std::function<VectorX<AutoDiffXd>(const VectorX<AutoDiffXd>&)> autodiff_func_;
+  DoubleFunc double_func_;
+  AutoDiffFunc autodiff_func_;
 };
 
 }  // namespace
@@ -262,10 +262,10 @@ PYBIND11_MODULE(_mathematicalprogram_py, m) {
           const Eigen::VectorXd& lb, const Eigen::VectorXd& ub,
           const Eigen::Ref<const VectorXDecisionVariable>& vars,
           std::string& description) {
-        return self->AddConstraint(
-            std::make_shared<PyConstraint>(vars.size(), func, lb, ub,
-                                         description),
-            vars);
+        return self->AddConstraint<Constraint>(
+            make_shared<EvaluatorConstraint<>>(
+                make_shared<PyFunctionEvaluator<ConstraintEval>>(
+                    lb.size(), vars.size(), func, description), lb, ub), vars);
       }, py::arg("func"), py::arg("vars"), py::arg("lb"), py::arg("ub"),
            py::arg("description")="")
       .def("AddConstraint",
@@ -302,9 +302,10 @@ PYBIND11_MODULE(_mathematicalprogram_py, m) {
       .def("AddCost", [](MathematicalProgram* self, py::function func,
                          const Eigen::Ref<const VectorXDecisionVariable>& vars,
                          std::string& description) {
-             return self->AddCost(
-                 std::make_shared<PyCost>(vars.size(), func, description),
-                 vars);
+             return self->AddCost<Cost>(
+                 make_shared<EvaluatorCost<>>(
+                    make_shared<PyFunctionEvaluator<CostEval>>(
+                        1, vars.size(), func, description)), vars);
            }, py::arg("func"), py::arg("vars"), py::arg("description")="")
       .def("AddLinearCost",
            static_cast<Binding<LinearCost> (MathematicalProgram::*)(
