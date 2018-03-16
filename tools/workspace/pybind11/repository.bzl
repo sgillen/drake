@@ -3,11 +3,12 @@
 load("//tools/workspace:generate_file.bzl", "generate_file")
 load("@drake//tools/workspace:github.bzl", "github_archive")
 
+# PR DRAFT(eric.cousineau): Change this once RobotLocomotion/pybind11#13 lands.
 _REPOSITORY = "RobotLocomotion/pybind11"
 
-_COMMIT = "3dcfcb00a440e858211661d179a15904586fb45f"
+_COMMIT = "41723b25bd2c97d1eddc2df0b2499e0f62874ec2"
 
-_SHA256 = "f7ac23089450042ad8cd39bb2b58c14f7aa395683e60d57789aaae1335b21bbb"
+_SHA256 = "2629f0cdcb331bc55b41e75b5cdad500180c2a1c3bdc971a0e62777d8a4245d2"
 
 def pybind11_repository(
         name,
