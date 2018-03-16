@@ -52,10 +52,10 @@ PYBIND11_MODULE(_autodiffutils_py, m) {
       return self.derivatives();
     });
   WrapDef<wrap_eval_policy>(&autodiff)
-    .def("sin", [](const AutoDiffXd& self) { return sin(self); });
+    // .def("sin", [](const AutoDiffXd& self) { return sin(self); })
     // .def("cos", [](const AutoDiffXd& self) { return cos(self); })
     // .def(py::self + py::self)
-    // .def(py::self + double())
+    .def(py::self + double());
     // .def(double() + py::self)
     // .def(py::self - py::self)
     // .def(py::self - double())

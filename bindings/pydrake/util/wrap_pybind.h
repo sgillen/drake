@@ -35,7 +35,7 @@ class wrap_def_impl {
   wrap_def_impl& def(
       const py::detail::op_<id, ot, L, R>&, const Extra&... extra) {
     using op_ = py::detail::op_<id, ot, L, R>;
-    using op_traits = typename op_::template info<Class>::op;
+    using op_traits = typename op_::template info<PyClass>::op;
     cls_->def(
         op_traits::name(),
         WrapFunction<wrap_arg_policy>(&op_traits::execute),
