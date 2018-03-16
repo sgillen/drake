@@ -1,8 +1,12 @@
 from __future__ import absolute_import, division, print_function
 
-import unittest
+import pydrake.math as mut
 from pydrake.math import (BarycentricMesh, wrap_to)
+
+import unittest
 import numpy as np
+
+import math
 
 
 class TestBarycentricMesh(unittest.TestCase):
@@ -58,3 +62,39 @@ class TestBarycentricMesh(unittest.TestCase):
 
     def test_wrap_to(self):
         self.assertEquals(wrap_to(1.5, 0., 1.), .5)
+
+    def test_trig(self):
+        # Compare against `math` functions.
+        unary = [
+            "abs", "exp", "sqrt",
+            "sin", "cos", "tan", "asin", "acos", "atan",
+            "sinh", "cosh", "tanh",
+            "ceil", "floor",
+        ]
+        binary = [
+            "min", "max", "pow", "atan2",
+        ]
+        # Items not with the same name / not in math.
+        cpp_to_core = {
+            "abs": math.fabs,
+            "min": min,
+            "max": max,
+        }
+
+        def get_funcs(name):
+            f_cpp = getattr(mut, name, None)
+            f_core = cpp_to_core.get(name)
+            if not f_core:
+                f_core = getattr(math, name, None)
+            self.assertTrue(f_cpp, name)
+            self.assertTrue(f_core, name)
+            return (f_core, f_cpp)
+
+        a = 0.1
+        for name in unary:
+            f_core, f_cpp = get_funcs(name)
+            self.assertEquals(f_core(a), f_cpp(a), (f_core, f_cpp))
+        b = 0.2
+        for name in binary:
+            f_core, f_cpp = get_funcs(name)
+            self.assertEquals(f_core(a, b), f_cpp(a, b), (f_core, f_cpp))

@@ -30,8 +30,6 @@ PYBIND11_MODULE(_autodiffutils_py, m) {
     .def("derivatives", [](const AutoDiffXd& self) {
       return self.derivatives();
     })
-    .def("sin", [](const AutoDiffXd& self) { return sin(self); })
-    .def("cos", [](const AutoDiffXd& self) { return cos(self); })
     .def(py::self + py::self)
     .def(py::self + double())
     .def(double() + py::self)
@@ -48,6 +46,15 @@ PYBIND11_MODULE(_autodiffutils_py, m) {
          [](const AutoDiffXd& base, int exponent) {
            return pow(base, exponent);
          }, py::is_operator());
+
+    // Add overloads for `sin` and `cos`.
+    auto math = py::module::import("pydrake.math");
+    math
+      .def("sin", [](const AutoDiffXd& self) { return sin(self); })
+      .def("cos", [](const AutoDiffXd& self) { return cos(self); });
+    // Add aliases for backwards compatibility.
+    m.attr("sin") = math.attr("sin");
+    m.attr("cos") = math.attr("cos");
 }
 
 }  // namespace pydrake

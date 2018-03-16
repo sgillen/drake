@@ -2,9 +2,12 @@ from __future__ import print_function
 # N.B. We are purposely not importing `division` to test nominal Python2
 # behavior.
 
+import pydrake.autodiffutils as mut
+from pydrake.autodiffutils import AutoDiffXd
+
 import unittest
 import numpy as np
-from pydrake.autodiffutils import AutoDiffXd
+from pydrake.math import sin, cos
 
 
 class TestAutoDiffXd(unittest.TestCase):
@@ -30,3 +33,10 @@ class TestAutoDiffXd(unittest.TestCase):
         self._compare_scalar(a / 2, ad(0.5, [0.5, 0]))
         self._compare_scalar(2 / a, ad(2, [-2, 0]))
         self._compare_scalar(a**2, ad(1, [2., 0]))
+        c = ad(0, [1., 0])
+        self._compare_scalar(sin(c), ad(0, [1, 0]))
+        self._compare_scalar(cos(c), ad(1, [0, 0]))
+
+    def test_backwards_compatibility(self):
+        self.assertEquals(sin, mut.sin)
+        self.assertEquals(cos, mut.cos)
