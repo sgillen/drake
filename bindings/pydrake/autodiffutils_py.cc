@@ -12,35 +12,6 @@ using std::cos;
 
 namespace drake {
 namespace pydrake {
-namespace {
-
-/*
- * Force Eigen to evaluate an autodiff expression. We need this function
- * because, for example, adding two Eigen::AutoDiffXd values produces an
- * Eigen::AutoDiffScalar<Eigen::CWiseBinaryOp> which cannot be returned to
- * python. This just forces an evaluation and conversion to AutoDiffXd which
- * would normally happen automatically in C++.
- */
-template <typename Derived>
-AutoDiffXd eval(const Eigen::AutoDiffScalar<Derived>& x) {
-  return AutoDiffXd(x.value(), x.derivatives());
-}
-
-// N.B. This wrap policy is asymmetric for return values only, and should not
-// be used for callbacks.
-template <typename T, typename = void>
-struct wrap_eval_policy : public wrap_arg_default<T> {};
-
-template <typename Derived>
-struct wrap_eval_policy<AutoDiffScalar<Derived>>
-    : public wrap_arg_default<AutoDiffScalar<Derived>> {
-  static auto wrap(const AutoDiffScalar<Derived>& ret) {
-    // drake::log()->info("evald");
-    return eval(ret);
-  }
-};
-
-}  // namespace
 
 PYBIND11_MODULE(_autodiffutils_py, m) {
   m.doc() = "Bindings for Eigen AutoDiff Scalars";
@@ -58,8 +29,7 @@ PYBIND11_MODULE(_autodiffutils_py, m) {
     })
     .def("derivatives", [](const AutoDiffXd& self) {
       return self.derivatives();
-    });
-  WrapDef<wrap_eval_policy>(&autodiff)
+    })
     .def("sin", [](const AutoDiffXd& self) { return sin(self); })
     .def("cos", [](const AutoDiffXd& self) { return cos(self); })
     .def(py::self + py::self)
