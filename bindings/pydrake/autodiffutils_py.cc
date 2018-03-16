@@ -6,6 +6,7 @@
 #include "drake/bindings/pydrake/pydrake_pybind.h"
 #include "drake/bindings/pydrake/util/wrap_pybind.h"
 
+using Eigen::AutoDiffScalar;
 using std::sin;
 using std::cos;
 
@@ -27,9 +28,16 @@ AutoDiffXd eval(const Eigen::AutoDiffScalar<Derived>& x) {
 
 // N.B. This wrap policy is asymmetric for return values only, and should not
 // be used for callbacks.
-template <typename T>
-struct wrap_eval_policy : public wrap_arg_default<T> {
-  static auto wrap(T ret) { return eval(ret); }
+template <typename T, typename = void>
+struct wrap_eval_policy : public wrap_arg_default<T> {};
+
+template <typename Derived>
+struct wrap_eval_policy<AutoDiffScalar<Derived>>
+    : public wrap_arg_default<AutoDiffScalar<Derived>> {
+  static auto wrap(const AutoDiffScalar<Derived>& ret) {
+    // drake::log()->info("evald");
+    return eval(ret);
+  }
 };
 
 }  // namespace
@@ -52,24 +60,24 @@ PYBIND11_MODULE(_autodiffutils_py, m) {
       return self.derivatives();
     });
   WrapDef<wrap_eval_policy>(&autodiff)
-    // .def("sin", [](const AutoDiffXd& self) { return sin(self); })
-    // .def("cos", [](const AutoDiffXd& self) { return cos(self); })
-    // .def(py::self + py::self)
-    .def(py::self + double());
-    // .def(double() + py::self)
-    // .def(py::self - py::self)
-    // .def(py::self - double())
-    // .def(double() - py::self)
-    // .def(py::self * py::self)
-    // .def(py::self * double())
-    // .def(double() * py::self)
-    // .def(py::self / py::self)
-    // .def(py::self / double())
-    // .def(double() / py::self)
-    // .def("__pow__",
-    //      [](const AutoDiffXd& base, int exponent) {
-    //        return pow(base, exponent);
-    //      }, py::is_operator());
+    .def("sin", [](const AutoDiffXd& self) { return sin(self); })
+    .def("cos", [](const AutoDiffXd& self) { return cos(self); })
+    .def(py::self + py::self)
+    .def(py::self + double())
+    .def(double() + py::self)
+    .def(py::self - py::self)
+    .def(py::self - double())
+    .def(double() - py::self)
+    .def(py::self * py::self)
+    .def(py::self * double())
+    .def(double() * py::self)
+    .def(py::self / py::self)
+    .def(py::self / double())
+    .def(double() / py::self)
+    .def("__pow__",
+         [](const AutoDiffXd& base, int exponent) {
+           return pow(base, exponent);
+         }, py::is_operator());
 }
 
 }  // namespace pydrake
