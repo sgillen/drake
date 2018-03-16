@@ -66,35 +66,32 @@ class TestBarycentricMesh(unittest.TestCase):
     def test_trig(self):
         # Compare against `math` functions.
         unary = [
-            "abs", "exp", "sqrt",
-            "sin", "cos", "tan", "asin", "acos", "atan",
-            "sinh", "cosh", "tanh",
-            "ceil", "floor",
+            (mut.abs, math.fabs),
+            (mut.exp, math.exp),
+            (mut.sqrt, math.sqrt),
+            (mut.sin, math.sin),
+            (mut.cos, math.cos),
+            (mut.tan, math.tan),
+            (mut.asin, math.asin),
+            (mut.acos, math.acos),
+            (mut.atan, math.atan),
+            (mut.sinh, math.sinh),
+            (mut.cosh, math.cosh),
+            (mut.tanh, math.tanh),
+            (mut.ceil, math.ceil),
+            (mut.floor, math.floor),
         ]
         binary = [
-            "min", "max", "pow", "atan2",
+            (mut.min, min),
+            (mut.max, max),
+            (mut.pow, math.pow),
+            (mut.atan2, math.atan2),
         ]
-        # Items not with the same name / not in math.
-        cpp_to_core = {
-            "abs": math.fabs,
-            "min": min,
-            "max": max,
-        }
-
-        def get_funcs(name):
-            f_cpp = getattr(mut, name, None)
-            f_core = cpp_to_core.get(name)
-            if not f_core:
-                f_core = getattr(math, name, None)
-            self.assertTrue(f_cpp, name)
-            self.assertTrue(f_core, name)
-            return (f_core, f_cpp)
 
         a = 0.1
-        for name in unary:
-            f_core, f_cpp = get_funcs(name)
-            self.assertEquals(f_core(a), f_cpp(a), (f_core, f_cpp))
         b = 0.2
-        for name in binary:
-            f_core, f_cpp = get_funcs(name)
-            self.assertEquals(f_core(a, b), f_cpp(a, b), (f_core, f_cpp))
+        for f_core, f_cpp in unary:
+            self.assertEquals(f_core(a), f_cpp(a), (f_core, f_cpp))
+        for f_core, f_cpp in binary:
+            print(f_core)
+            self.assertEquals(f_core(a, b), f_cpp(a, b))
