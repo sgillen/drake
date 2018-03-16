@@ -4,6 +4,7 @@
 
 #include "drake/bindings/pydrake/autodiff_types_pybind.h"
 #include "drake/bindings/pydrake/pydrake_pybind.h"
+#include "drake/bindings/pydrake/util/wrap_function.h"
 
 using std::sin;
 using std::cos;
@@ -23,8 +24,19 @@ AutoDiffXd eval(const Eigen::AutoDiffScalar<Derived>& x) {
   return AutoDiffXd(x.value(), x.derivatives());
 }
 
+// N.B. This wrap policy is asymmetric for return values only, and should not
+// be used for callbacks.
+template <typename T>
+struct wrap_eval_policy : public wrap_arg_default<T> {
+  static auto wrap(T ret) { return eval(ret); }
+};
+
 PYBIND11_MODULE(_autodiffutils_py, m) {
   m.doc() = "Bindings for Eigen AutoDiff Scalars";
+
+  auto wrap_eval = [](auto func) {
+    return WrapFunction<wrap_eval_policy>(func);
+  };
 
   py::class_<AutoDiffXd>(m, "AutoDiffXd")
     .def("__init__",
@@ -41,45 +53,22 @@ PYBIND11_MODULE(_autodiffutils_py, m) {
     })
     .def("sin", [](const AutoDiffXd& self) { return eval(sin(self)); })
     .def("cos", [](const AutoDiffXd& self) { return eval(cos(self)); })
-    .def("__add__", [](const AutoDiffXd& self, const AutoDiffXd& other) {
-      return eval(self + other);
-    }, py::is_operator())
-    .def("__add__", [](const AutoDiffXd& self, double other) {
-      return eval(self + other);
-    }, py::is_operator())
-    .def("__radd__", [](const AutoDiffXd& self, double other) {
-      return eval(other + self);
-    }, py::is_operator())
-    .def("__sub__", [](const AutoDiffXd& self, const AutoDiffXd& other) {
-      return eval(self - other);
-    }, py::is_operator())
-    .def("__sub__", [](const AutoDiffXd& self, double other) {
-      return eval(self - other);
-    }, py::is_operator())
-    .def("__rsub__", [](const AutoDiffXd& self, double other) {
-      return eval(other - self);
-    }, py::is_operator())
-    .def("__mul__", [](const AutoDiffXd& self, const AutoDiffXd& other) {
-      return eval(self * other);
-    }, py::is_operator())
-    .def("__mul__", [](const AutoDiffXd& self, double other) {
-      return eval(self * other);
-    }, py::is_operator())
-    .def("__rmul__", [](const AutoDiffXd& self, double other) {
-      return eval(other * self);
-    }, py::is_operator())
-    .def("__truediv__", [](const AutoDiffXd& self, const AutoDiffXd& other) {
-      return eval(self / other);
-    }, py::is_operator())
-    .def("__truediv__", [](const AutoDiffXd& self, double other) {
-      return eval(self / other);
-    }, py::is_operator())
-    .def("__rtruediv__", [](const AutoDiffXd& self, double other) {
-      return eval(other / self);
-    }, py::is_operator())
-    .def("__pow__", [](const AutoDiffXd& self, int power) {
-      return eval(pow(self, power));
-    }, py::is_operator());
+    .def(py::self + py::self, wrap_eval)
+    .def(py::self + double(), wrap_eval)
+    .def(double() + py::self, wrap_eval)
+    .def(py::self - py::self, wrap_eval)
+    .def(py::self - double(), wrap_eval)
+    .def(double() - py::self, wrap_eval)
+    .def(py::self * py::self, wrap_eval)
+    .def(py::self * double(), wrap_eval)
+    .def(double() * py::self, wrap_eval)
+    .def(py::self / py::self, wrap_eval)
+    .def(py::self / double(), wrap_eval)
+    .def(double() / py::self, wrap_eval)
+    .def("__pow__",
+         WrapFunction<wrap_eval_policy>(
+	    overload_cast<const AutoDiffXd&, int>(&pow)),
+         py::is_operator());
 }
 
 }  // namespace pydrake
