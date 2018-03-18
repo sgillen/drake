@@ -1,10 +1,10 @@
 #include "pybind11/eigen.h"
+#include "pybind11/operators.h"
 #include "pybind11/pybind11.h"
 #include "pybind11/stl.h"
 
 #include "drake/bindings/pydrake/autodiff_types_pybind.h"
 #include "drake/bindings/pydrake/pydrake_pybind.h"
-#include "drake/bindings/pydrake/util/wrap_pybind.h"
 
 using Eigen::AutoDiffScalar;
 using std::sin;
@@ -50,11 +50,12 @@ PYBIND11_MODULE(_autodiffutils_py, m) {
     // Add overloads for `sin` and `cos`.
     auto math = py::module::import("pydrake.math");
     math
-      .def("sin", [](const AutoDiffXd& self) { return sin(self); })
-      .def("cos", [](const AutoDiffXd& self) { return cos(self); });
-    // Add aliases for backwards compatibility.
-    m.attr("sin") = math.attr("sin");
-    m.attr("cos") = math.attr("cos");
+      .def("sin", [](const AutoDiffXd& x) { return sin(x); })
+      .def("cos", [](const AutoDiffXd& x) { return cos(x); });
+    // Re-define for backwards compatibility.
+    autodiff
+      .def("sin", [](const AutoDiffXd& x) { return sin(x); })
+      .def("cos", [](const AutoDiffXd& x) { return cos(x); });
 }
 
 }  // namespace pydrake

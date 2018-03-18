@@ -63,8 +63,10 @@ class TestBarycentricMesh(unittest.TestCase):
     def test_wrap_to(self):
         self.assertEquals(wrap_to(1.5, 0., 1.), .5)
 
-    def test_trig(self):
+    def test_math(self):
         # Compare against `math` functions.
+        # TODO(eric.cousineau): Consider comparing against `numpy` ufunc
+        # methods.
         unary = [
             (mut.abs, math.fabs),
             (mut.exp, math.exp),
@@ -93,5 +95,4 @@ class TestBarycentricMesh(unittest.TestCase):
         for f_core, f_cpp in unary:
             self.assertEquals(f_core(a), f_cpp(a), (f_core, f_cpp))
         for f_core, f_cpp in binary:
-            print(f_core)
             self.assertEquals(f_core(a, b), f_cpp(a, b))

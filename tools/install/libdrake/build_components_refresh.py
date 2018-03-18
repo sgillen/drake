@@ -21,15 +21,15 @@ def _remove_dev(components):
 
 def _find_libdrake_components():
     query_string = """
-kind("cc_library", visible("//tools/install/libdrake:libdrake.so", "//..."))
-    except(attr("testonly", "1", "//..."))
-    except("//:*")
-    except("//common:text_logging_gflags")
+kind("cc_library", visible("//tools/install/libdrake:libdrake.so", "//common/..." union "//math/..."))
     except("//common/proto:protobuf_ubsan_fixup")
-    except("//examples/...")
-    except("//lcmtypes/...")
-    except("//tools/install/libdrake:*")
+    except(attr("testonly", "1", "//common/..." union "//math/..."))
 """
+    # except("//:*")
+    # except("//common:text_logging_gflags")
+    # except("//examples/...")
+    # except("//lcmtypes/...")
+    # except("//tools/install/libdrake:*")
     command = ["bazel", "query", query_string]
     components = [x for x in subprocess.check_output(command).split('\n') if x]
     components = _remove_dev(components)

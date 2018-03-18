@@ -1,74 +1,47 @@
+/// @file
+/// Defines convenience utilities to wrap pybind11 methods and classes.
+
 #pragma once
 
-#include "pybind11/operators.h"
-#include "pybind11/pybind11.h"
+#include <string>
+#include <utility>
 
-#include "drake/bindings/pydrake/util/wrap_function.h"
+#include "pybind11/pybind11.h"
 
 namespace drake {
 namespace pydrake {
 
-namespace detail {
-
-template <template <typename...> class wrap_arg_policy, typename PyClass>
-class wrap_def_impl {
+// Defines a function in module `m`, and mirrors to module `mirror` for
+// backwards compatibility. Throws an error if any mirrored methods already
+// exist and do not match the original value.
+class MirrorDef {
  public:
-  using Class = typename PyClass::type;
+  MirrorDef(py::module m, py::module mirror)
+      : m_(m), mirror_(mirror) {}
 
-  wrap_def_impl(PyClass* cls) : cls_{cls} {}
-
-  // Mirror overloads of `py::class_<>::def`.
-
-  // Function overloads.
-  template <typename Func, typename... Extra>
-  wrap_def_impl& def(const char* name, Func&& func, const Extra&... extra) {
-    cls_->def(
-        name, WrapFunction<wrap_arg_policy>(std::forward<Func>(func)),
-        extra...);
-    return *this;
-  }
-
-  // Operator overloads.
-  template <
-      py::detail::op_id id, py::detail::op_type ot,
-      typename L, typename R, typename... Extra>
-  wrap_def_impl& def(
-      const py::detail::op_<id, ot, L, R>&, const Extra&... extra) {
-    using op_ = py::detail::op_<id, ot, L, R>;
-    using op_traits = typename op_::template info<PyClass>::op;
-    auto wrapped = WrapFunction<wrap_arg_policy>(&op_traits::execute);
-    cls_->def(
-        op_traits::name(), wrapped,
-        py::is_operator(), extra...);
-    if (const char* def_extra = GetExtraOp(id, ot))
-        cls_->def(def_extra, wrapped, py::is_operator(), extra...);
+  template <typename... Args>
+  MirrorDef& def(const char* name, Args&&... args) {
+    m_.def(name, std::forward<Args>(args)...);
+    do_mirror(name);
     return *this;
   }
 
  private:
-  static const char* GetExtraOp(py::detail::op_id id, py::detail::op_type ot) {
-    namespace pd = py::detail;
-#if PY_MAJOR_VERSION < 3
-    if (id == pd::op_truediv || id == pd::op_itruediv)
-      return id == pd::op_itruediv ? "__idiv__"
-          : ot == pd::op_l ? "__div__" : "__rdiv__";
-#endif
-    return nullptr;
+  void do_mirror(const char* name) {
+    py::object value = m_.attr(name);
+    // Ensure we won't shadow anything in the mirror; if an attribute of this
+    // name exists and is not exactly the same, throw an error.
+    py::object mirror_value = py::getattr(mirror_, name, py::none());
+    if (!mirror_value.is_none() && !mirror_value.is(value))
+      throw py::cast_error(py::str(
+          "Mirroring: '{}' from {} already exists in {} and will be shadowed")
+              .format(name, m_, mirror_).cast<std::string>());
+    mirror_.attr(name) = value;
   }
 
-  PyClass* cls_;
+  py::module m_;
+  py::module mirror_;
 };
-
-}  // namespace detail
-
-/**
- * Returns a class which proxies to a pybind11 class_ instance, and
- * defines wrapped operators using `wrap_eval_policy`.
- */
-template <template <typename...> class wrap_arg_policy, typename PyClass>
-auto WrapDef(PyClass* cls) {
-  return detail::wrap_def_impl<wrap_arg_policy, PyClass>(cls);
-}
 
 }  // namespace pydrake
 }  // namespace drake

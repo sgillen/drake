@@ -9,9 +9,6 @@
 #include "drake/math/barycentric.h"
 #include "drake/math/wrap_to.h"
 
-using std::sin;
-using std::cos;
-
 namespace drake {
 namespace pydrake {
 
@@ -53,8 +50,9 @@ PYBIND11_MODULE(math, m) {
                        &BarycentricMesh<T>::Eval))
       .def("MeshValuesFrom", &BarycentricMesh<T>::MeshValuesFrom);
 
-  // Trigonometric functions.
-  // N.B. Additional overloads will be added for autodiff, symbolic, etc.
+  // General math overloads.
+  // N.B. Additional overloads will be added for autodiff, symbolic, etc, by
+  // those respective modules.
   // TODO(eric.cousineau): If possible, delegate these to NumPy UFuncs, either
   // using __array_ufunc__ or user dtypes.
   // N.B. The ordering in which the overloads are resolved will change based on
@@ -65,14 +63,15 @@ PYBIND11_MODULE(math, m) {
       .def("abs", [](double x) { return fabs(x); })
       .def("exp", [](double x) { return exp(x); })
       .def("sqrt", [](double x) { return sqrt(x); })
-      .def("pow", [](double x, double y) { return pow(x,y ); })
+      .def("pow", [](double x, double y) { return pow(x, y); })
       .def("sin", [](double x) { return sin(x); })
       .def("cos", [](double x) { return cos(x); })
       .def("tan", [](double x) { return tan(x); })
       .def("asin", [](double x) { return asin(x); })
       .def("acos", [](double x) { return acos(x); })
       .def("atan", [](double x) { return atan(x); })
-      .def("atan2", [](double x, double y) { return asin(x); })
+      .def("atan2", [](double y, double x) { return atan2(y, x); },
+           py::arg("y"), py::arg("x"))
       .def("sinh", [](double x) { return sinh(x); })
       .def("cosh", [](double x) { return cosh(x); })
       .def("tanh", [](double x) { return tanh(x); })
