@@ -103,9 +103,23 @@ class TestAutoDiffXd(unittest.TestCase):
         self.assertFalse(isinstance(x[0, 0], AD))
         x = np.eye(3).astype(AD)
         self.assertFalse(isinstance(x[0, 0], AD))
-        # Broadcasts as expected.
-        self._check_array(np.cos([a]), [AD(1, [0, 0])])
-        self._check_array(np.sin([a]), [AD(0, [1, 0])])
-        self._check_array(np.tan([a]), [AD(0, [1, 0])])
-        self._check_array(np.asin([a]), [AD(0, [1, 0])])
-        self._check_array(np.acos([a]), [AD(np.pi / 2, [-1, 0])])
+        # Ensure arrays broadcast as expected.
+        av = np.array([a])
+        bv = np.array([b])
+        print("start")
+        y = av**2
+        print(y[0].derivatives())
+        self._check_array(av**2, [AD(1, [2., 0])])
+        self._check_array(np.cos(av), [AD(1, [0, 0])])
+        self._check_array(np.sin(av), [AD(0, [1, 0])])
+        self._check_array(np.tan(av), [AD(0, [1, 0])])
+        self._check_array(np.arcsin(av), [AD(0, [1, 0])])
+        self._check_array(np.arccos(av), [AD(np.pi / 2, [-1, 0])])
+        self._check_array(np.arctan2(av, bv), [AD(0, [1, 0])])
+        self._check_array(np.sinh(av), [AD(0, [1, 0])])
+        self._check_array(np.cosh(av), [AD(1, [0, 0])])
+        self._check_array(np.tanh(av), [AD(0, [1, 0])])
+
+
+import sys
+sys.stdout = sys.stderr
