@@ -91,7 +91,12 @@ class TestAutoDiffXd(unittest.TestCase):
         self.assertEquals(x.dtype, object)
         # Conversion.
         with self.assertRaises(TypeError):
-            # We could define `__float__`, but then that may enable implicit coercion.
+            # Avoid implicit coercion, as this will imply information loss.
+            xf = np.zeros(2, dtype=np.float)
+            xf[:] = x
+        with self.assertRaises(TypeError):
+            # We could define `__float__` to allow this, but then that will
+            # enable implicit coercion, which we should avoid.
             xf = x.astype(dtype=np.float)
         # Presently, does not convert.
         x = np.zeros((3, 3), dtype=AD)
@@ -99,7 +104,8 @@ class TestAutoDiffXd(unittest.TestCase):
         x = np.eye(3).astype(AD)
         self.assertFalse(isinstance(x[0, 0], AD))
         # Broadcasts as expected.
-        cos_a = AD(1, [0, 0])
-        sin_a = AD(0, [1, 0])
-        self._check_array(np.cos([a, a]), [cos_a, cos_a])
-        self._check_array(np.sin([a, a]), [sin_a, sin_a])
+        self._check_array(np.cos([a]), [AD(1, [0, 0])])
+        self._check_array(np.sin([a]), [AD(0, [1, 0])])
+        self._check_array(np.tan([a]), [AD(0, [1, 0])])
+        self._check_array(np.asin([a]), [AD(0, [1, 0])])
+        self._check_array(np.acos([a]), [AD(np.pi / 2, [-1, 0])])
