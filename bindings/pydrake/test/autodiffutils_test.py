@@ -27,6 +27,13 @@ class TestAutoDiffXd(unittest.TestCase):
             (actual.derivatives() == expected.derivatives()).all(),
             (actual.derivatives(), expected.derivatives()))
 
+    def _check_array(self, actual, expected):
+        expected = np.array(expected)
+        self.assertEquals(actual.dtype, expected.dtype)
+        self.assertEquals(actual.shape, expected.shape)
+        for a, b in zip(actual.flat, expected.flat):
+            self._compare_scalar(a, b)
+
     def _check_logical(self, func, a, b, expect):
         # Test overloads which have the same return values for:
         # - f(AutoDiffXd, AutoDiffXd)
@@ -76,3 +83,23 @@ class TestAutoDiffXd(unittest.TestCase):
         self._compare_scalar(drake_math.sinh(c), AD(0, [1, 0]))
         self._compare_scalar(drake_math.cosh(c), AD(1, [0, 0]))
         self._compare_scalar(drake_math.tanh(c), AD(0, [1, 0]))
+
+    def test_array_creation(self):
+        a = AD(0, [1., 0])
+        b = AD(1, [0, 1.])
+        x = np.array([a, b])
+        self.assertEquals(x.dtype, object)
+        # Conversion.
+        with self.assertRaises(TypeError):
+            # We could define `__float__`, but then that may enable implicit coercion.
+            xf = x.astype(dtype=np.float)
+        # Presently, does not convert.
+        x = np.zeros((3, 3), dtype=AD)
+        self.assertFalse(isinstance(x[0, 0], AD))
+        x = np.eye(3).astype(AD)
+        self.assertFalse(isinstance(x[0, 0], AD))
+        # Broadcasts as expected.
+        cos_a = AD(1, [0, 0])
+        sin_a = AD(0, [1, 0])
+        self._check_array(np.cos([a, a]), [cos_a, cos_a])
+        self._check_array(np.sin([a, a]), [sin_a, sin_a])
