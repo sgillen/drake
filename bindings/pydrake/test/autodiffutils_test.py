@@ -31,8 +31,11 @@ class TestAutoDiffXd(unittest.TestCase):
         expected = np.array(expected)
         self.assertEquals(actual.dtype, expected.dtype)
         self.assertEquals(actual.shape, expected.shape)
-        for a, b in zip(actual.flat, expected.flat):
-            self._compare_scalar(a, b)
+        if actual.dtype == object:
+            for a, b in zip(actual.flat, expected.flat):
+                self._compare_scalar(a, b)
+        else:
+            self.assertTrue(np.allclose(actual, expected))
 
     def _check_logical(self, func, a, b, expect):
         # Test overloads which have the same return values for:
@@ -42,6 +45,17 @@ class TestAutoDiffXd(unittest.TestCase):
         self.assertEquals(func(a, b), expect)
         self.assertEquals(func(a, b.value()), expect)
         self.assertEquals(func(a.value(), b), expect)
+
+    def _check_logical_array(self, func, a, b, expect):
+        # Test overloads which have the same return values for:
+        # - f(AutoDiffXd, AutoDiffXd)
+        # - f(AutoDiffXd, float)
+        # - f(float, AutoDiffXd)
+        af = np.array([ai.value() for ai in a.flat]).reshape(a.shape)
+        bf = np.array([bi.value() for bi in b.flat]).reshape(b.shape)
+        self._check_array(func(a, b), expect)
+        self._check_array(func(a, bf), expect)
+        self._check_array(func(af, b), expect)
 
     def test_scalar_math(self):
         a = AD(1, [1., 0])
@@ -85,9 +99,15 @@ class TestAutoDiffXd(unittest.TestCase):
         self._compare_scalar(drake_math.tanh(c), AD(0, [1, 0]))
 
     def test_array_creation(self):
-        a = AD(0, [1., 0])
-        b = AD(1, [0, 1.])
-        x = np.array([a, b])
+        a = AD(1, [1., 0])
+        b = AD(2, [0, 1.])
+        c = AD(0, [1., 0])
+        d = AD(1, [0, 1.])
+        av = np.array([a])
+        bv = np.array([b])
+        cv = np.array([c])
+        dv = np.array([d])
+        x = np.array([c, d])
         self.assertEquals(x.dtype, object)
         # Conversion.
         with self.assertRaises(TypeError):
@@ -103,22 +123,38 @@ class TestAutoDiffXd(unittest.TestCase):
         self.assertFalse(isinstance(x[0, 0], AD))
         x = np.eye(3).astype(AD)
         self.assertFalse(isinstance(x[0, 0], AD))
-        # Ensure arrays broadcast as expected.
-        av = np.array([a])
-        bv = np.array([b])
-        print("start")
-        y = av**2
-        print(y[0].derivatives())
+        # Arithmetic
+        self._check_array(av + bv, [AD(3, [1, 1])])
+        self._check_array(av + 1, [AD(2, [1, 0])])
+        self._check_array(1 + av, [AD(2, [1, 0])])
+        self._check_array(av - bv, [AD(-1, [1, -1])])
+        self._check_array(av - 1, [AD(0, [1, 0])])
+        self._check_array(1 - av, [AD(0, [-1, 0])])
+        self._check_array(av * bv, [AD(2, [2, 1])])
+        self._check_array(av * 2, [AD(2, [2, 0])])
+        self._check_array(2 * av, [AD(2, [2, 0])])
+        self._check_array(av / bv, [AD(1./2, [1./2, -1./4])])
+        self._check_array(av / 2, [AD(0.5, [0.5, 0])])
+        self._check_array(2 / av, [AD(2, [-2, 0])])
+        # Logical
+        af = a.value()
+        self._check_logical_array(lambda x, y: x == y, av, av, [True])
+        self._check_logical_array(lambda x, y: x != y, av, av, [False])
+        self._check_logical_array(lambda x, y: x < y, av, bv, [True])
+        self._check_logical_array(lambda x, y: x <= y, av, bv, [True])
+        self._check_logical_array(lambda x, y: x > y, av, bv, [False])
+        self._check_logical_array(lambda x, y: x >= y, av, bv, [False])
+        # Additional math
         self._check_array(av**2, [AD(1, [2., 0])])
-        self._check_array(np.cos(av), [AD(1, [0, 0])])
-        self._check_array(np.sin(av), [AD(0, [1, 0])])
-        self._check_array(np.tan(av), [AD(0, [1, 0])])
-        self._check_array(np.arcsin(av), [AD(0, [1, 0])])
-        self._check_array(np.arccos(av), [AD(np.pi / 2, [-1, 0])])
-        self._check_array(np.arctan2(av, bv), [AD(0, [1, 0])])
-        self._check_array(np.sinh(av), [AD(0, [1, 0])])
-        self._check_array(np.cosh(av), [AD(1, [0, 0])])
-        self._check_array(np.tanh(av), [AD(0, [1, 0])])
+        self._check_array(np.cos(cv), [AD(1, [0, 0])])
+        self._check_array(np.sin(cv), [AD(0, [1, 0])])
+        self._check_array(np.tan(cv), [AD(0, [1, 0])])
+        self._check_array(np.arcsin(cv), [AD(0, [1, 0])])
+        self._check_array(np.arccos(cv), [AD(np.pi / 2, [-1, 0])])
+        self._check_array(np.arctan2(cv, dv), [AD(0, [1, 0])])
+        self._check_array(np.sinh(cv), [AD(0, [1, 0])])
+        self._check_array(np.cosh(cv), [AD(1, [0, 0])])
+        self._check_array(np.tanh(cv), [AD(0, [1, 0])])
 
 
 import sys
