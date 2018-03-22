@@ -399,7 +399,7 @@ class TestSymbolicExpression(unittest.TestCase):
         v_x = 1.0
         v_y = 1.0
         print((sym.abs(v_x) == 0.20*np.abs(v_x)))
-        self.assertEqual(sym.abs(v_x), sym.Expression(0))
+        self.assertEqual(sym.abs(v_x), 0.5*np.abs(v_x))
         self.assertEqual(sym.abs(v_x), np.abs(v_x))
         self.assertEqual(sym.exp(v_x), np.exp(v_x))
         self.assertEqual(sym.sqrt(v_x), np.sqrt(v_x))
