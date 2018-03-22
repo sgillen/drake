@@ -5,6 +5,7 @@ import unittest
 import numpy as np
 import pydrake.symbolic as sym
 from pydrake.test.math_test_util import ScalarMath, VectorizedMath
+from copy import copy
 
 # TODO(eric.cousineau): Replace usages of `sym` math functions with the
 # overloads from `pydrake.math`.
@@ -275,7 +276,7 @@ class TestSymbolicExpression(unittest.TestCase):
         check.check_value(1 + e_x, "(1 + x)")
 
         # - In place.
-        e = x
+        e = copy(x)
         e += e_y
         check.check_value(e, "(x + y)")
         e += z
@@ -287,17 +288,19 @@ class TestSymbolicExpression(unittest.TestCase):
         check.check_value((e_x - e_y), "(x - y)")
         check.check_value((e_x - y), "(x - y)")
         check.check_value((e_x - 1), "(-1 + x)")
+        print(x)
+        print(e_y)
         check.check_value((x - e_y), "(x - y)")
         check.check_value((1 - e_x), "(1 - x)")
 
         # - In place.
-        e = x
+        e = copy(x)
         e -= e_y
-        check.check_value(e, x - y)
+        check.check_value(e, "(x - y)")
         e -= z
-        check.check_value(e, x - y - z)
+        check.check_value(e, "(x - y - z)")
         e -= 1
-        check.check_value(e, x - y - z - 1)
+        check.check_value(e, "(-1 + x - y - z)")
 
         # Multiplication.
         check.check_value((e_x * e_y), "(x * y)")
@@ -307,13 +310,13 @@ class TestSymbolicExpression(unittest.TestCase):
         check.check_value((1 * e_x), "x")
 
         # - In place.
-        e = x
+        e = copy(x)
         e *= e_y
-        check.check_value(e, x * y)
+        check.check_value(e, "(x * y)")
         e *= z
-        check.check_value(e, x * y * z)
+        check.check_value(e, "(x * y * z)")
         e *= 1
-        check.check_value(e, x * y * z)
+        check.check_value(e, "(x * y * z)")
 
         # Division
         check.check_value((e_x / e_y), "(x / y)")
@@ -323,28 +326,31 @@ class TestSymbolicExpression(unittest.TestCase):
         check.check_value((1 / e_x), "(1 / x)")
 
         # - In place.
-        e = x
+        e = copy(x)
         e /= e_y
-        check.check_value(e, x / y)
+        check.check_value(e, "(x / y)")
         e /= z
-        check.check_value(e, x / y / z)
+        check.check_value(e, "((x / y) / z)")
         e /= 1
-        check.check_value(e, x / y / z)
+        check.check_value(e, "((x / y) / z)")
 
         # Unary
         check.check_value((+e_x), "x")
         check.check_value((-e_x), "(-1 * x)")
 
-        return x
+        return x, e_x
 
     def test_scalar_math(self):
-        x = self._check_math(ScalarMath(self._check_scalar))
-        self.assertIsInstance(x, sym.Expression)
+        x, e_x = self._check_math(ScalarMath(self._check_scalar))
+        self.assertIsInstance(x, sym.Variable)
+        self.assertIsInstance(e_x, sym.Expression)
 
     def test_array_math(self):
-        x = self._check_math(VectorizedMath(self._check_array))
-        self.assertIsInstance(x, np.ndarray)
+        x, e_x = self._check_math(VectorizedMath(self._check_array))
         self.assertEquals(x.shape, (2,))
+        self.assertIsInstance(x[0], sym.Variable)
+        self.assertEquals(e_x.shape, (2,))
+        self.assertIsInstance(e_x[0], sym.Expression)
 
     def test_relational_operators(self):
         # Expression rop Expression
