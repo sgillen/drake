@@ -291,8 +291,6 @@ class TestSymbolicExpression(unittest.TestCase):
         check.check_value((e_xv - e_yv), "(x - y)")
         check.check_value((e_xv - yv), "(x - y)")
         check.check_value((e_xv - 1), "(-1 + x)")
-        print(xv)
-        print(e_yv)
         check.check_value((xv - e_yv), "(x - y)")
         check.check_value((1 - e_xv), "(1 - x)")
 
@@ -356,7 +354,7 @@ class TestSymbolicExpression(unittest.TestCase):
         self.assertIsInstance(e_xv[0], sym.Expression)
 
     def test_relational_operators(self):
-        # TODO(eric.cousineau): Incorporate relational operators once #8315 is
+        # TODO(eric.cousineau): Use `VectorizedMath` overloads once #8315 is
         # resolved.
         # Expression rop Expression
         self.assertEqual(str(e_x < e_y), "(x < y)")
@@ -398,14 +396,29 @@ class TestSymbolicExpression(unittest.TestCase):
         self.assertEqual(str(1 == e_y), "(y = 1)")
         self.assertEqual(str(1 != e_y), "(y != 1)")
 
+    def test_relation_operators_array_8135(self):
+        # Indication of #8135.
+        e_xv = np.array([e_x, e_x])
+        e_yv = np.array([e_y, e_y])
+        # N.B. In some versions of NumPy, `!=` for dtype=object implies ID
+        # comparison (e.g. `is`).
+        value = (e_xv == e_yv)
+        # Ideally, this would be an array of formulas.
+        self.assertEqual(value.dtype, bool)
+        self.assertFalse(isinstance(value[0], sym.Formula))
+        self.assertTrue(value.all())
+
     def test_functions_with_float(self):
         # TODO(eric.cousineau): Use concrete values once vectorized methods are
         # supported.
         v_x = 1.0
         v_y = 1.0
-        # WARNING: Not having an overload intercept this the first line below
-        # to be true, when it should be false. The next line shows
-        # normalization.
+        # WARNING: If these math functions have `float` overloads that return
+        # `float`, then `assertEqual`-like tests are meaningful (current state,
+        # and before `math` overloads were introduced).
+        # If these math functions implicitly cast `float` to `Expression`, then
+        # `assertEqual` tests are meaningless, as it tests `__nonzero__` for
+        # `Formula`, which will always be True.
         self.assertEqual(sym.abs(v_x), 0.5*np.abs(v_x))
         self.assertNotEqual(str(sym.abs(v_x)), str(0.5*np.abs(v_x)))
         self._check_scalar(sym.abs(v_x), np.abs(v_x))
