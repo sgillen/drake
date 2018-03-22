@@ -4,7 +4,7 @@ from __future__ import absolute_import, division, print_function
 import unittest
 import numpy as np
 import pydrake.symbolic as sym
-from pydrake.test.math_test_util import ScalarMath, VectorizedMath
+from pydrake.test.math_test_util import ScalarAlegbra, VectorizedAlgebra
 from copy import copy
 
 # TODO(eric.cousineau): Replace usages of `sym` math functions with the
@@ -260,101 +260,101 @@ class TestSymbolicExpression(unittest.TestCase):
         for a, b in zip(actual.flat, expected.flat):
             self._check_scalar(a, b)
 
-    def _check_math(self, check):
-        xv = check.to_algebra(x)
-        yv = check.to_algebra(y)
-        zv = check.to_algebra(z)
-        wv = check.to_algebra(w)
-        av = check.to_algebra(a)
-        bv = check.to_algebra(b)
-        cv = check.to_algebra(c)
-        e_xv = check.to_algebra(e_x)
-        e_yv = check.to_algebra(e_y)
+    def _check_algebra(self, algebra):
+        xv = algebra.to_algebra(x)
+        yv = algebra.to_algebra(y)
+        zv = algebra.to_algebra(z)
+        wv = algebra.to_algebra(w)
+        av = algebra.to_algebra(a)
+        bv = algebra.to_algebra(b)
+        cv = algebra.to_algebra(c)
+        e_xv = algebra.to_algebra(e_x)
+        e_yv = algebra.to_algebra(e_y)
 
         # Addition.
-        check.check_value(e_xv + e_yv, "(x + y)")
-        check.check_value(e_xv + yv, "(x + y)")
-        check.check_value(e_xv + 1, "(1 + x)")
-        check.check_value(xv + e_yv, "(x + y)")
-        check.check_value(1 + e_xv, "(1 + x)")
+        algebra.check_value(e_xv + e_yv, "(x + y)")
+        algebra.check_value(e_xv + yv, "(x + y)")
+        algebra.check_value(e_xv + 1, "(1 + x)")
+        algebra.check_value(xv + e_yv, "(x + y)")
+        algebra.check_value(1 + e_xv, "(1 + x)")
 
         # - In place.
         e = copy(xv)
         e += e_yv
-        check.check_value(e, "(x + y)")
+        algebra.check_value(e, "(x + y)")
         e += zv
-        check.check_value(e, "(x + y + z)")
+        algebra.check_value(e, "(x + y + z)")
         e += 1
-        check.check_value(e, "(1 + x + y + z)")
+        algebra.check_value(e, "(1 + x + y + z)")
 
         # Subtraction.
-        check.check_value((e_xv - e_yv), "(x - y)")
-        check.check_value((e_xv - yv), "(x - y)")
-        check.check_value((e_xv - 1), "(-1 + x)")
-        check.check_value((xv - e_yv), "(x - y)")
-        check.check_value((1 - e_xv), "(1 - x)")
+        algebra.check_value((e_xv - e_yv), "(x - y)")
+        algebra.check_value((e_xv - yv), "(x - y)")
+        algebra.check_value((e_xv - 1), "(-1 + x)")
+        algebra.check_value((xv - e_yv), "(x - y)")
+        algebra.check_value((1 - e_xv), "(1 - x)")
 
         # - In place.
         e = copy(xv)
         e -= e_yv
-        check.check_value(e, (x - y))
+        algebra.check_value(e, (x - y))
         e -= zv
-        check.check_value(e, (x - y - z))
+        algebra.check_value(e, (x - y - z))
         e -= 1
-        check.check_value(e, (x - y - z - 1))
+        algebra.check_value(e, (x - y - z - 1))
 
         # Multiplication.
-        check.check_value((e_xv * e_yv), "(x * y)")
-        check.check_value((e_xv * yv), "(x * y)")
-        check.check_value((e_xv * 1), "x")
-        check.check_value((xv * e_yv), "(x * y)")
-        check.check_value((1 * e_xv), "x")
+        algebra.check_value((e_xv * e_yv), "(x * y)")
+        algebra.check_value((e_xv * yv), "(x * y)")
+        algebra.check_value((e_xv * 1), "x")
+        algebra.check_value((xv * e_yv), "(x * y)")
+        algebra.check_value((1 * e_xv), "x")
 
         # - In place.
         e = copy(xv)
         e *= e_yv
-        check.check_value(e, "(x * y)")
+        algebra.check_value(e, "(x * y)")
         e *= zv
-        check.check_value(e, "(x * y * z)")
+        algebra.check_value(e, "(x * y * z)")
         e *= 1
-        check.check_value(e, "(x * y * z)")
+        algebra.check_value(e, "(x * y * z)")
 
         # Division
-        check.check_value((e_xv / e_yv), (x / y))
-        check.check_value((e_xv / yv), (x / y))
-        check.check_value((e_xv / 1), "x")
-        check.check_value((xv / e_yv), (x / y))
-        check.check_value((1 / e_xv), (1 / x))
+        algebra.check_value((e_xv / e_yv), (x / y))
+        algebra.check_value((e_xv / yv), (x / y))
+        algebra.check_value((e_xv / 1), "x")
+        algebra.check_value((xv / e_yv), (x / y))
+        algebra.check_value((1 / e_xv), (1 / x))
 
         # - In place.
         e = copy(xv)
         e /= e_yv
-        check.check_value(e, (x / y))
+        algebra.check_value(e, (x / y))
         e /= zv
-        check.check_value(e, (x / y / z))
+        algebra.check_value(e, (x / y / z))
         e /= 1
-        check.check_value(e, ((x / y) / z))
+        algebra.check_value(e, ((x / y) / z))
 
         # Unary
-        check.check_value((+e_xv), "x")
-        check.check_value((-e_xv), "(-1 * x)")
+        algebra.check_value((+e_xv), "x")
+        algebra.check_value((-e_xv), "(-1 * x)")
 
         return xv, e_xv
 
-    def test_scalar_math(self):
-        xv, e_xv = self._check_math(ScalarMath(self._check_scalar))
+    def test_scalar_algebra(self):
+        xv, e_xv = self._check_algebra(ScalarAlegbra(self._check_scalar))
         self.assertIsInstance(xv, sym.Variable)
         self.assertIsInstance(e_xv, sym.Expression)
 
-    def test_array_math(self):
-        xv, e_xv = self._check_math(VectorizedMath(self._check_array))
+    def test_array_algebra(self):
+        xv, e_xv = self._check_algebra(VectorizedAlgebra(self._check_array))
         self.assertEquals(xv.shape, (2,))
         self.assertIsInstance(xv[0], sym.Variable)
         self.assertEquals(e_xv.shape, (2,))
         self.assertIsInstance(e_xv[0], sym.Expression)
 
     def test_relational_operators(self):
-        # TODO(eric.cousineau): Use `VectorizedMath` overloads once #8315 is
+        # TODO(eric.cousineau): Use `VectorizedAlgebra` overloads once #8315 is
         # resolved.
         # Expression rop Expression
         self.assertEqual(str(e_x < e_y), "(x < y)")

@@ -2,9 +2,10 @@ import numpy as np
 import pydrake.math as drake_math
 
 
-class BaseMath(object):
-    # Base class for defining scalar or vector (array) algebra (and math)
-    # checks.
+class BaseAlgebra(object):
+    # Base class for defining scalar or vectorized (array) algebra and math.
+    # checks. Note that linear algebra should produce different results
+    # overall, so it should not be part of this hierarchy.
     def __init__(self):
         # Derived classes should define extra math functions.
         pass
@@ -26,10 +27,10 @@ class BaseMath(object):
         raise NotImplemented
 
 
-class ScalarMath(BaseMath):
+class ScalarAlegbra(BaseAlgebra):
     # Basic scalar element math.
     def __init__(self, check_value_impl):
-        BaseMath.__init__(self)
+        BaseAlgebra.__init__(self)
         self._check_value_impl = check_value_impl
         # Math functions:
         self.sin = drake_math.sin
@@ -60,10 +61,10 @@ class ScalarMath(BaseMath):
         self._check_value_impl(func(a.value(), b), expected)
 
 
-class VectorizedMath(BaseMath):
+class VectorizedAlgebra(BaseAlgebra):
     # Vectorized math for arrays.
     def __init__(self, check_value_impl):
-        BaseMath.__init__(self)
+        BaseAlgebra.__init__(self)
         self._check_value_impl = check_value_impl
         # Math functions:
         self.sin = np.sin

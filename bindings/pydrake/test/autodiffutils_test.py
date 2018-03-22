@@ -9,7 +9,7 @@ import unittest
 import numpy as np
 import pydrake.math as drake_math
 
-from pydrake.test.math_test_util import ScalarMath, VectorizedMath
+from pydrake.test.math_test_util import ScalarAlegbra, VectorizedAlgebra
 
 # Use convenience abbreviation.
 AD = AutoDiffXd
@@ -66,54 +66,54 @@ class TestAutoDiffXd(unittest.TestCase):
         x = np.eye(3).astype(AD)
         self.assertFalse(isinstance(x[0, 0], AD))
 
-    def _check_math(self, check):
+    def _check_algebra(self, algebra):
         a_scalar = AD(1, [1., 0])
         b_scalar = AD(2, [0, 1.])
         c_scalar = AD(0, [1., 0])
         d_scalar = AD(1, [0, 1.])
         a, b, c, d = map(
-            check.to_algebra, (a_scalar, b_scalar, c_scalar, d_scalar))
+            algebra.to_algebra, (a_scalar, b_scalar, c_scalar, d_scalar))
 
         # Arithmetic
-        check.check_value(a + b, AD(3, [1, 1]))
-        check.check_value(a + 1, AD(2, [1, 0]))
-        check.check_value(1 + a, AD(2, [1, 0]))
-        check.check_value(a - b, AD(-1, [1, -1]))
-        check.check_value(a - 1, AD(0, [1, 0]))
-        check.check_value(1 - a, AD(0, [-1, 0]))
-        check.check_value(a * b, AD(2, [2, 1]))
-        check.check_value(a * 2, AD(2, [2, 0]))
-        check.check_value(2 * a, AD(2, [2, 0]))
-        check.check_value(a / b, AD(1./2, [1./2, -1./4]))
-        check.check_value(a / 2, AD(0.5, [0.5, 0]))
-        check.check_value(2 / a, AD(2, [-2, 0]))
+        algebra.check_value(a + b, AD(3, [1, 1]))
+        algebra.check_value(a + 1, AD(2, [1, 0]))
+        algebra.check_value(1 + a, AD(2, [1, 0]))
+        algebra.check_value(a - b, AD(-1, [1, -1]))
+        algebra.check_value(a - 1, AD(0, [1, 0]))
+        algebra.check_value(1 - a, AD(0, [-1, 0]))
+        algebra.check_value(a * b, AD(2, [2, 1]))
+        algebra.check_value(a * 2, AD(2, [2, 0]))
+        algebra.check_value(2 * a, AD(2, [2, 0]))
+        algebra.check_value(a / b, AD(1./2, [1./2, -1./4]))
+        algebra.check_value(a / 2, AD(0.5, [0.5, 0]))
+        algebra.check_value(2 / a, AD(2, [-2, 0]))
         # Logical
-        check.check_logical(lambda x, y: x == y, a, a, True)
-        check.check_logical(lambda x, y: x != y, a, a, False)
-        check.check_logical(lambda x, y: x < y, a, b, True)
-        check.check_logical(lambda x, y: x <= y, a, b, True)
-        check.check_logical(lambda x, y: x > y, a, b, False)
-        check.check_logical(lambda x, y: x >= y, a, b, False)
+        algebra.check_logical(lambda x, y: x == y, a, a, True)
+        algebra.check_logical(lambda x, y: x != y, a, a, False)
+        algebra.check_logical(lambda x, y: x < y, a, b, True)
+        algebra.check_logical(lambda x, y: x <= y, a, b, True)
+        algebra.check_logical(lambda x, y: x > y, a, b, False)
+        algebra.check_logical(lambda x, y: x >= y, a, b, False)
         # Additional math
         # - See `math_overloads_test` for scalar overloads.
-        check.check_value(a**2, AD(1, [2., 0]))
-        check.check_value(check.cos(c), AD(1, [0, 0]))
-        check.check_value(check.sin(c), AD(0, [1, 0]))
-        check.check_value(check.tan(c), AD(0, [1, 0]))
-        check.check_value(check.arcsin(c), AD(0, [1, 0]))
-        check.check_value(check.arccos(c), AD(np.pi / 2, [-1, 0]))
-        check.check_value(check.arctan2(c, d), AD(0, [1, 0]))
-        check.check_value(check.sinh(c), AD(0, [1, 0]))
-        check.check_value(check.cosh(c), AD(1, [0, 0]))
-        check.check_value(check.tanh(c), AD(0, [1, 0]))
+        algebra.check_value(a**2, AD(1, [2., 0]))
+        algebra.check_value(algebra.cos(c), AD(1, [0, 0]))
+        algebra.check_value(algebra.sin(c), AD(0, [1, 0]))
+        algebra.check_value(algebra.tan(c), AD(0, [1, 0]))
+        algebra.check_value(algebra.arcsin(c), AD(0, [1, 0]))
+        algebra.check_value(algebra.arccos(c), AD(np.pi / 2, [-1, 0]))
+        algebra.check_value(algebra.arctan2(c, d), AD(0, [1, 0]))
+        algebra.check_value(algebra.sinh(c), AD(0, [1, 0]))
+        algebra.check_value(algebra.cosh(c), AD(1, [0, 0]))
+        algebra.check_value(algebra.tanh(c), AD(0, [1, 0]))
         # Return value so it can be inspected.
         return a
 
-    def test_scalar_math(self):
-        a = self._check_math(ScalarMath(self._check_scalar))
+    def test_scalar_algebra(self):
+        a = self._check_algebra(ScalarAlegbra(self._check_scalar))
         self.assertEquals(type(a), AD)
 
-    def test_array_math(self):
-        a = self._check_math(VectorizedMath(self._check_array))
+    def test_array_algebra(self):
+        a = self._check_algebra(VectorizedAlgebra(self._check_array))
         self.assertEquals(type(a), np.ndarray)
         self.assertEquals(a.shape, (2,))
