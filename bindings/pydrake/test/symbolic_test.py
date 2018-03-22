@@ -356,7 +356,7 @@ class TestSymbolicExpression(unittest.TestCase):
         self.assertIsInstance(e_xv[0], sym.Expression)
 
     def test_relational_operators(self):
-        # TODO(eric.cousineau): Incorporate relational operators once #8116 is
+        # TODO(eric.cousineau): Incorporate relational operators once #8315 is
         # resolved.
         # Expression rop Expression
         self.assertEqual(str(e_x < e_y), "(x < y)")

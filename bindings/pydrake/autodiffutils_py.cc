@@ -63,7 +63,6 @@ PYBIND11_MODULE(_autodiffutils_py, m) {
     // Additional math
     .def("__pow__",
          [](const AutoDiffXd& base, int exponent) {
-           py::print("POW");
            return pow(base, exponent);
          }, py::is_operator());
 
