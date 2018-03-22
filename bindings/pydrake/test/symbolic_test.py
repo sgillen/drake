@@ -247,6 +247,9 @@ class TestSymbolicVariables(unittest.TestCase):
 class TestSymbolicExpression(unittest.TestCase):
     def _check_scalar(self, actual, expected):
         self.assertIsInstance(actual, sym.Expression)
+        # Chain conversion to ensure equivalent treatment.
+        if isinstance(expected, float) or isinstance(expected, int):
+            expected = sym.Expression(expected)
         if isinstance(expected, sym.Expression):
             expected = str(expected)
         self.assertIsInstance(expected, str)
@@ -398,52 +401,56 @@ class TestSymbolicExpression(unittest.TestCase):
     def test_functions_with_float(self):
         v_x = 1.0
         v_y = 1.0
-        print((sym.abs(v_x) == 0.20*np.abs(v_x)))
+        # WARNING: Not having an overload intercept this the first line below
+        # to be true, when it should be false. The next line shows
+        # normalization.
         self.assertEqual(sym.abs(v_x), 0.5*np.abs(v_x))
-        self.assertEqual(sym.abs(v_x), np.abs(v_x))
-        self.assertEqual(sym.exp(v_x), np.exp(v_x))
-        self.assertEqual(sym.sqrt(v_x), np.sqrt(v_x))
-        self.assertEqual(sym.pow(v_x, v_y), v_x ** v_y)
-        self.assertEqual(sym.sin(v_x), np.sin(v_x))
-        self.assertEqual(sym.cos(v_x), np.cos(v_x))
-        self.assertEqual(sym.tan(v_x), np.tan(v_x))
-        self.assertEqual(sym.asin(v_x), np.arcsin(v_x))
-        self.assertEqual(sym.acos(v_x), np.arccos(v_x))
-        self.assertEqual(sym.atan(v_x), np.arctan(v_x))
-        self.assertEqual(sym.atan2(v_x, v_y), np.arctan2(v_x, v_y))
-        self.assertEqual(sym.sinh(v_x), np.sinh(v_x))
-        self.assertEqual(sym.cosh(v_x), np.cosh(v_x))
-        self.assertEqual(sym.tanh(v_x), np.tanh(v_x))
-        self.assertEqual(sym.min(v_x, v_y), min(v_x, v_y))
-        self.assertEqual(sym.max(v_x, v_y), max(v_x, v_y))
-        self.assertEqual(sym.ceil(v_x), np.ceil(v_x))
-        self.assertEqual(sym.floor(v_x), np.floor(v_x))
-        self.assertEqual(
+        self.assertNotEqual(str(sym.abs(v_x)), str(0.5*np.abs(v_x)))
+        self._check_scalar(sym.abs(v_x), np.abs(v_x))
+        self._check_scalar(sym.abs(v_x), np.abs(v_x))
+        self._check_scalar(sym.exp(v_x), np.exp(v_x))
+        self._check_scalar(sym.sqrt(v_x), np.sqrt(v_x))
+        self._check_scalar(sym.pow(v_x, v_y), v_x ** v_y)
+        self._check_scalar(sym.sin(v_x), np.sin(v_x))
+        self._check_scalar(sym.cos(v_x), np.cos(v_x))
+        self._check_scalar(sym.tan(v_x), np.tan(v_x))
+        self._check_scalar(sym.asin(v_x), np.arcsin(v_x))
+        self._check_scalar(sym.acos(v_x), np.arccos(v_x))
+        self._check_scalar(sym.atan(v_x), np.arctan(v_x))
+        self._check_scalar(sym.atan2(v_x, v_y), np.arctan2(v_x, v_y))
+        self._check_scalar(sym.sinh(v_x), np.sinh(v_x))
+        self._check_scalar(sym.cosh(v_x), np.cosh(v_x))
+        self._check_scalar(sym.tanh(v_x), np.tanh(v_x))
+        self._check_scalar(sym.min(v_x, v_y), min(v_x, v_y))
+        self._check_scalar(sym.max(v_x, v_y), max(v_x, v_y))
+        self._check_scalar(sym.ceil(v_x), np.ceil(v_x))
+        self._check_scalar(sym.floor(v_x), np.floor(v_x))
+        self._check_scalar(
           sym.if_then_else(
             sym.Expression(v_x) > sym.Expression(v_y),
             v_x, v_y),
           v_x if v_x > v_y else v_y)
 
     def test_functions_with_expression(self):
-        self.assertEqual(str(sym.abs(e_x)), "abs(x)")
-        self.assertEqual(str(sym.exp(e_x)), "exp(x)")
-        self.assertEqual(str(sym.sqrt(e_x)), "sqrt(x)")
-        self.assertEqual(str(sym.pow(e_x, e_y)), "pow(x, y)")
-        self.assertEqual(str(sym.sin(e_x)), "sin(x)")
-        self.assertEqual(str(sym.cos(e_x)), "cos(x)")
-        self.assertEqual(str(sym.tan(e_x)), "tan(x)")
-        self.assertEqual(str(sym.asin(e_x)), "asin(x)")
-        self.assertEqual(str(sym.acos(e_x)), "acos(x)")
-        self.assertEqual(str(sym.atan(e_x)), "atan(x)")
-        self.assertEqual(str(sym.atan2(e_x, e_y)), "atan2(x, y)")
-        self.assertEqual(str(sym.sinh(e_x)), "sinh(x)")
-        self.assertEqual(str(sym.cosh(e_x)), "cosh(x)")
-        self.assertEqual(str(sym.tanh(e_x)), "tanh(x)")
-        self.assertEqual(str(sym.min(e_x, e_y)), "min(x, y)")
-        self.assertEqual(str(sym.max(e_x, e_y)), "max(x, y)")
-        self.assertEqual(str(sym.ceil(e_x)), "ceil(x)")
-        self.assertEqual(str(sym.floor(e_x)), "floor(x)")
-        self.assertEqual(str(sym.if_then_else(e_x > e_y, e_x, e_y)),
+        self._check_scalar((sym.abs(e_x)), "abs(x)")
+        self._check_scalar((sym.exp(e_x)), "exp(x)")
+        self._check_scalar((sym.sqrt(e_x)), "sqrt(x)")
+        self._check_scalar((sym.pow(e_x, e_y)), "pow(x, y)")
+        self._check_scalar((sym.sin(e_x)), "sin(x)")
+        self._check_scalar((sym.cos(e_x)), "cos(x)")
+        self._check_scalar((sym.tan(e_x)), "tan(x)")
+        self._check_scalar((sym.asin(e_x)), "asin(x)")
+        self._check_scalar((sym.acos(e_x)), "acos(x)")
+        self._check_scalar((sym.atan(e_x)), "atan(x)")
+        self._check_scalar((sym.atan2(e_x, e_y)), "atan2(x, y)")
+        self._check_scalar((sym.sinh(e_x)), "sinh(x)")
+        self._check_scalar((sym.cosh(e_x)), "cosh(x)")
+        self._check_scalar((sym.tanh(e_x)), "tanh(x)")
+        self._check_scalar((sym.min(e_x, e_y)), "min(x, y)")
+        self._check_scalar((sym.max(e_x, e_y)), "max(x, y)")
+        self._check_scalar((sym.ceil(e_x)), "ceil(x)")
+        self._check_scalar((sym.floor(e_x)), "floor(x)")
+        self._check_scalar((sym.if_then_else(e_x > e_y, e_x, e_y)),
                          "(if (x > y) then x else y)")
 
     def test_non_method_jacobian(self):
@@ -454,22 +461,22 @@ class TestSymbolicExpression(unittest.TestCase):
         #    |sin(y)    x * cos(y)|
         #    | 2 * x             0|
         J = sym.Jacobian([x * sym.cos(y), x * sym.sin(y), x ** 2], [x, y])
-        self.assertEqual(J[0, 0], sym.cos(y))
-        self.assertEqual(J[1, 0], sym.sin(y))
-        self.assertEqual(J[2, 0], 2 * x)
-        self.assertEqual(J[0, 1], - x * sym.sin(y))
-        self.assertEqual(J[1, 1], x * sym.cos(y))
-        self.assertEqual(J[2, 1], 0)
+        self._check_scalar(J[0, 0], sym.cos(y))
+        self._check_scalar(J[1, 0], sym.sin(y))
+        self._check_scalar(J[2, 0], 2 * x)
+        self._check_scalar(J[0, 1], - x * sym.sin(y))
+        self._check_scalar(J[1, 1], x * sym.cos(y))
+        self._check_scalar(J[2, 1], 0)
 
     def test_method_jacobian(self):
         # (x * cos(y)).Jacobian([x, y]) returns [cos(y), -x * sin(y)].
         J = (x * sym.cos(y)).Jacobian([x, y])
-        self.assertEqual(J[0], sym.cos(y))
-        self.assertEqual(J[1], -x * sym.sin(y))
+        self._check_scalar(J[0], sym.cos(y))
+        self._check_scalar(J[1], -x * sym.sin(y))
 
     def test_differentiate(self):
         e = x * x
-        self.assertEqual(e.Differentiate(x), 2 * x)
+        self._check_scalar(e.Differentiate(x), 2 * x)
 
     def test_repr(self):
         self.assertEqual(repr(e_x), '<Expression "x">')
