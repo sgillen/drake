@@ -4,7 +4,7 @@ from __future__ import absolute_import, division, print_function
 import unittest
 import numpy as np
 import pydrake.symbolic as sym
-from pydrake.test.math_test_util import ScalarAlegbra, VectorizedAlgebra
+from pydrake.test.algebra_test_util import ScalarAlegbra, VectorizedAlgebra
 from copy import copy
 
 # TODO(eric.cousineau): Replace usages of `sym` math functions with the

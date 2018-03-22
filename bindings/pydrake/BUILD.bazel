@@ -200,16 +200,16 @@ drake_py_unittest(
 )
 
 drake_py_library(
-    name = "math_test_util_py",
+    name = "algebra_test_util_py",
     testonly = 1,
-    srcs = ["test/math_test_util.py"],
+    srcs = ["test/algebra_test_util.py"],
 )
 
 drake_py_unittest(
     name = "autodiffutils_test",
     deps = [
         ":autodiffutils_py",
-        ":math_test_util_py",
+        ":algebra_test_util_py",
     ],
 )
 
@@ -278,7 +278,7 @@ drake_py_unittest(
     name = "symbolic_test",
     size = "small",
     deps = [
-        ":math_test_util_py",
+        ":algebra_test_util_py",
         ":symbolic_py",
     ],
 )

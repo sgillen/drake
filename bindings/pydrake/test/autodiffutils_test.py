@@ -9,7 +9,7 @@ import unittest
 import numpy as np
 import pydrake.math as drake_math
 
-from pydrake.test.math_test_util import ScalarAlegbra, VectorizedAlgebra
+from pydrake.test.algebra_test_util import ScalarAlegbra, VectorizedAlgebra
 
 # Use convenience abbreviation.
 AD = AutoDiffXd
