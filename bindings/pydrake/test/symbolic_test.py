@@ -258,99 +258,99 @@ class TestSymbolicExpression(unittest.TestCase):
             self._check_scalar(a, b)
 
     def _check_math(self, check):
-        x = check.reformat(globals()["x"])
-        y = check.reformat(globals()["y"])
-        z = check.reformat(globals()["z"])
-        w = check.reformat(globals()["w"])
-        a = check.reformat(globals()["a"])
-        b = check.reformat(globals()["b"])
-        c = check.reformat(globals()["c"])
-        e_x = check.reformat(globals()["e_x"])
-        e_y = check.reformat(globals()["e_y"])
+        xv = check.reformat(globals()["x"])
+        yv = check.reformat(globals()["y"])
+        zv = check.reformat(globals()["z"])
+        wv = check.reformat(globals()["w"])
+        av = check.reformat(globals()["a"])
+        bv = check.reformat(globals()["b"])
+        cv = check.reformat(globals()["c"])
+        e_xv = check.reformat(globals()["e_x"])
+        e_yv = check.reformat(globals()["e_y"])
 
         # Addition.
-        check.check_value(e_x + e_y, "(x + y)")
-        check.check_value(e_x + y, "(x + y)")
-        check.check_value(e_x + 1, "(1 + x)")
-        check.check_value(x + e_y, "(x + y)")
-        check.check_value(1 + e_x, "(1 + x)")
+        check.check_value(e_xv + e_yv, "(x + y)")
+        check.check_value(e_xv + yv, "(x + y)")
+        check.check_value(e_xv + 1, "(1 + x)")
+        check.check_value(xv + e_yv, "(x + y)")
+        check.check_value(1 + e_xv, "(1 + x)")
 
         # - In place.
-        e = copy(x)
-        e += e_y
+        e = copy(xv)
+        e += e_yv
         check.check_value(e, "(x + y)")
-        e += z
+        e += zv
         check.check_value(e, "(x + y + z)")
         e += 1
         check.check_value(e, "(1 + x + y + z)")
 
         # Subtraction.
-        check.check_value((e_x - e_y), "(x - y)")
-        check.check_value((e_x - y), "(x - y)")
-        check.check_value((e_x - 1), "(-1 + x)")
-        print(x)
-        print(e_y)
-        check.check_value((x - e_y), "(x - y)")
-        check.check_value((1 - e_x), "(1 - x)")
+        check.check_value((e_xv - e_yv), "(x - y)")
+        check.check_value((e_xv - yv), "(x - y)")
+        check.check_value((e_xv - 1), "(-1 + x)")
+        print(xv)
+        print(e_yv)
+        check.check_value((xv - e_yv), "(x - y)")
+        check.check_value((1 - e_xv), "(1 - x)")
 
         # - In place.
-        e = copy(x)
-        e -= e_y
+        e = copy(xv)
+        e -= e_yv
         check.check_value(e, "(x - y)")
-        e -= z
+        e -= zv
         check.check_value(e, "(x - y - z)")
         e -= 1
         check.check_value(e, "(-1 + x - y - z)")
 
         # Multiplication.
-        check.check_value((e_x * e_y), "(x * y)")
-        check.check_value((e_x * y), "(x * y)")
-        check.check_value((e_x * 1), "x")
-        check.check_value((x * e_y), "(x * y)")
-        check.check_value((1 * e_x), "x")
+        check.check_value((e_xv * e_yv), "(x * y)")
+        check.check_value((e_xv * yv), "(x * y)")
+        check.check_value((e_xv * 1), "x")
+        check.check_value((xv * e_yv), "(x * y)")
+        check.check_value((1 * e_xv), "x")
 
         # - In place.
-        e = copy(x)
-        e *= e_y
+        e = copy(xv)
+        e *= e_yv
         check.check_value(e, "(x * y)")
-        e *= z
+        e *= zv
         check.check_value(e, "(x * y * z)")
         e *= 1
         check.check_value(e, "(x * y * z)")
 
         # Division
-        check.check_value((e_x / e_y), "(x / y)")
-        check.check_value((e_x / y), "(x / y)")
-        check.check_value((e_x / 1), "x")
-        check.check_value((x / e_y), "(x / y)")
-        check.check_value((1 / e_x), "(1 / x)")
+        check.check_value((e_xv / e_yv), "(x / y)")
+        check.check_value((e_xv / yv), "(x / y)")
+        check.check_value((e_xv / 1), "x")
+        check.check_value((xv / e_yv), "(x / y)")
+        check.check_value((1 / e_xv), "(1 / x)")
 
         # - In place.
-        e = copy(x)
-        e /= e_y
+        e = copy(xv)
+        e /= e_yv
         check.check_value(e, "(x / y)")
-        e /= z
+        e /= zv
         check.check_value(e, "((x / y) / z)")
         e /= 1
         check.check_value(e, "((x / y) / z)")
 
         # Unary
-        check.check_value((+e_x), "x")
-        check.check_value((-e_x), "(-1 * x)")
+        check.check_value((+e_xv), "x")
+        check.check_value((-e_xv), "(-1 * x)")
 
-        return x, e_x
+        return xv, e_xv
 
     def test_scalar_math(self):
-        x, e_x = self._check_math(ScalarMath(self._check_scalar))
-        self.assertIsInstance(x, sym.Variable)
-        self.assertIsInstance(e_x, sym.Expression)
+        xv, e_xv = self._check_math(ScalarMath(self._check_scalar))
+        self.assertIsInstance(xv, sym.Variable)
+        self.assertIsInstance(e_xv, sym.Expression)
 
     def test_array_math(self):
-        x, e_x = self._check_math(VectorizedMath(self._check_array))
-        self.assertEquals(x.shape, (2,))
-        self.assertIsInstance(x[0], sym.Variable)
-        self.assertEquals(e_x.shape, (2,))
-        self.assertIsInstance(e_x[0], sym.Expression)
+        xv, e_xv = self._check_math(VectorizedMath(self._check_array))
+        self.assertEquals(xv.shape, (2,))
+        self.assertIsInstance(xv[0], sym.Variable)
+        self.assertEquals(e_xv.shape, (2,))
+        self.assertIsInstance(e_xv[0], sym.Expression)
 
     def test_relational_operators(self):
         # Expression rop Expression
