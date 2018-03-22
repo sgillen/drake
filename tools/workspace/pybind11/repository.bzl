@@ -5,9 +5,9 @@ load("@drake//tools/workspace:github.bzl", "github_archive")
 
 _REPOSITORY = "RobotLocomotion/pybind11"
 
-_COMMIT = "1151a8a1090c7e2ffa74ef5073449347cc12af2e"
+_COMMIT = "11250dc161308c9b9a606e48d204a6aebab74fd3"
 
-_SHA256 = "ac392ff3455445e76f1c0de438fbc833ef5e97c7f408016d2bef305b19a886b6"
+_SHA256 = "86ed8b406d9a4940946e7913f97b5da859edbc5e847a40debec04f85bc10bb21"
 
 def pybind11_repository(
         name,
@@ -16,6 +16,7 @@ def pybind11_repository(
         name = name,
         repository = _REPOSITORY,
         commit = _COMMIT,
+        local_repository_override = "/home/eacousineau/proj/tri/repo/repro/externals/pybind11",
         sha256 = _SHA256,
         build_file = "@drake//tools/workspace/pybind11:package.BUILD.bazel",
         mirrors = mirrors,
