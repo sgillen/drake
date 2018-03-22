@@ -258,15 +258,15 @@ class TestSymbolicExpression(unittest.TestCase):
             self._check_scalar(a, b)
 
     def _check_math(self, check):
-        xv = check.reformat(globals()["x"])
-        yv = check.reformat(globals()["y"])
-        zv = check.reformat(globals()["z"])
-        wv = check.reformat(globals()["w"])
-        av = check.reformat(globals()["a"])
-        bv = check.reformat(globals()["b"])
-        cv = check.reformat(globals()["c"])
-        e_xv = check.reformat(globals()["e_x"])
-        e_yv = check.reformat(globals()["e_y"])
+        xv = check.reformat(x)
+        yv = check.reformat(y)
+        zv = check.reformat(z)
+        wv = check.reformat(w)
+        av = check.reformat(a)
+        bv = check.reformat(b)
+        cv = check.reformat(c)
+        e_xv = check.reformat(e_x)
+        e_yv = check.reformat(e_y)
 
         # Addition.
         check.check_value(e_xv + e_yv, "(x + y)")
@@ -296,11 +296,11 @@ class TestSymbolicExpression(unittest.TestCase):
         # - In place.
         e = copy(xv)
         e -= e_yv
-        check.check_value(e, "(x - y)")
+        check.check_value(e, (x - y))
         e -= zv
-        check.check_value(e, "(x - y - z)")
+        check.check_value(e, (x - y - z))
         e -= 1
-        check.check_value(e, "(-1 + x - y - z)")
+        check.check_value(e, (x - y - z - 1))
 
         # Multiplication.
         check.check_value((e_xv * e_yv), "(x * y)")
@@ -319,20 +319,20 @@ class TestSymbolicExpression(unittest.TestCase):
         check.check_value(e, "(x * y * z)")
 
         # Division
-        check.check_value((e_xv / e_yv), "(x / y)")
-        check.check_value((e_xv / yv), "(x / y)")
+        check.check_value((e_xv / e_yv), (x / y))
+        check.check_value((e_xv / yv), (x / y))
         check.check_value((e_xv / 1), "x")
-        check.check_value((xv / e_yv), "(x / y)")
-        check.check_value((1 / e_xv), "(1 / x)")
+        check.check_value((xv / e_yv), (x / y))
+        check.check_value((1 / e_xv), (1 / x))
 
         # - In place.
         e = copy(xv)
         e /= e_yv
-        check.check_value(e, "(x / y)")
+        check.check_value(e, (x / y))
         e /= zv
-        check.check_value(e, "((x / y) / z)")
+        check.check_value(e, (x / y / z))
         e /= 1
-        check.check_value(e, "((x / y) / z)")
+        check.check_value(e, ((x / y) / z))
 
         # Unary
         check.check_value((+e_xv), "x")
@@ -353,6 +353,8 @@ class TestSymbolicExpression(unittest.TestCase):
         self.assertIsInstance(e_xv[0], sym.Expression)
 
     def test_relational_operators(self):
+        # TODO(eric.cousineau): Incorporate relational operators once #8116 is
+        # resolved.
         # Expression rop Expression
         self.assertEqual(str(e_x < e_y), "(x < y)")
         self.assertEqual(str(e_x <= e_y), "(x <= y)")
