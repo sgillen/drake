@@ -15,10 +15,14 @@ AD = AutoDiffXd
 
 class TestAutoDiffXd(unittest.TestCase):
     def _check_scalar(self, actual, expected):
-        self.assertAlmostEquals(actual.value(), expected.value())
-        self.assertTrue(
-            (actual.derivatives() == expected.derivatives()).all(),
-            (actual.derivatives(), expected.derivatives()))
+        if isinstance(actual, bool):
+            self.assertTrue(isinstance(expected, bool))
+            self.assertEquals(actual, expected)
+        else:
+            self.assertAlmostEquals(actual.value(), expected.value())
+            self.assertTrue(
+                (actual.derivatives() == expected.derivatives()).all(),
+                (actual.derivatives(), expected.derivatives()))
 
     def _check_array(self, actual, expected):
         expected = np.array(expected)
@@ -60,8 +64,7 @@ class TestAutoDiffXd(unittest.TestCase):
         x = np.eye(3).astype(AD)
         self.assertFalse(isinstance(x[0, 0], AD))
 
-    def _check_math(self, check_type):
-        check = check_type(self)
+    def _check_math(self, check):
         a_scalar = AD(1, [1., 0])
         b_scalar = AD(2, [0, 1.])
         c_scalar = AD(0, [1., 0])
@@ -104,19 +107,20 @@ class TestAutoDiffXd(unittest.TestCase):
         return a
 
     def test_scalar_math(self):
-        a = self._check_math(ScalarMath)
+        a = self._check_math(ScalarMath(self._check_scalar))
         self.assertEquals(type(a), AD)
 
     def test_array_math(self):
-        a = self._check_math(VectorizedMath)
+        a = self._check_math(VectorizedMath(self._check_array))
         self.assertEquals(type(a), np.ndarray)
         self.assertEquals(a.shape, (2,))
 
 
 class BaseMath(object):
     # Base class for defining scalar or vectorized (array) math checks.
-    def __init__(self, test):
-        self.test = test
+    def __init__(self):
+        # Derived classes should define extra math functions.
+        pass
 
     def reformat(self, scalar):
         # Reformats a scalar to the given form.
@@ -131,8 +135,9 @@ class BaseMath(object):
 
 class ScalarMath(BaseMath):
     # Basic scalar element math.
-    def __init__(self, test):
-        BaseMath.__init__(self, test)
+    def __init__(self, check_value_impl):
+        BaseMath.__init__(self)
+        self._check_value_impl = check_value_impl
         # Math functions:
         self.sin = drake_math.sin
         self.cos = drake_math.cos
@@ -148,7 +153,7 @@ class ScalarMath(BaseMath):
         return scalar
 
     def check_value(self, actual, expected_scalar):
-        self.test._check_scalar(actual, expected_scalar)
+        self._check_value_impl(actual, expected_scalar)
 
     def check_logical(self, func, a, b, expected_scalar):
         # Test overloads which have the same return values for:
@@ -156,15 +161,16 @@ class ScalarMath(BaseMath):
         # - f(AutoDiffXd, float)
         # - f(float, AutoDiffXd)
         expected = self.reformat(expected_scalar)
-        self.test.assertEquals(func(a, b), expected)
-        self.test.assertEquals(func(a, b.value()), expected)
-        self.test.assertEquals(func(a.value(), b), expected)
+        self._check_value_impl(func(a, b), expected)
+        self._check_value_impl(func(a, b.value()), expected)
+        self._check_value_impl(func(a.value(), b), expected)
 
 
 class VectorizedMath(BaseMath):
     # Vectorized math for arrays.
-    def __init__(self, test):
-        BaseMath.__init__(self, test)
+    def __init__(self, check_value_impl):
+        BaseMath.__init__(self)
+        self._check_value_impl = check_value_impl
         # Math functions:
         self.sin = np.sin
         self.cos = np.cos
@@ -181,7 +187,7 @@ class VectorizedMath(BaseMath):
 
     def check_value(self, actual, expected_scalar):
         expected = self.reformat(expected_scalar)
-        self.test._check_array(actual, expected)
+        self._check_value_impl(actual, expected)
 
     def _array_to_float(self, a):
         return np.array([ai.value() for ai in a.flat]).reshape(a.shape)
@@ -191,6 +197,6 @@ class VectorizedMath(BaseMath):
         af = self._array_to_float(a)
         bf = self._array_to_float(b)
         expected = self.reformat(expected_scalar)
-        self.test._check_array(func(a, b), expected)
-        self.test._check_array(func(a, bf), expected)
-        self.test._check_array(func(af, b), expected)
+        self._check_value_impl(func(a, b), expected)
+        self._check_value_impl(func(a, bf), expected)
+        self._check_value_impl(func(af, b), expected)
