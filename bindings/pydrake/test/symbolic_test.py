@@ -4,6 +4,7 @@ from __future__ import absolute_import, division, print_function
 import unittest
 import numpy as np
 import pydrake.symbolic as sym
+from pydrake.test.math_test_util import ScalarMath, VectorizedMath
 
 # TODO(eric.cousineau): Replace usages of `sym` math functions with the
 # overloads from `pydrake.math`.
@@ -109,6 +110,28 @@ class TestSymbolicVariable(unittest.TestCase):
                          "((y = 2) and (x >= 1) and (x <= 2))")
         self.assertEqual(str(sym.logical_or(x >= 1, x <= 2, y == 2)),
                          "((y = 2) or (x >= 1) or (x <= 2))")
+
+    def test_functions_with_variable(self):
+        self.assertEqual(str(sym.abs(x)), "abs(x)")
+        self.assertEqual(str(sym.exp(x)), "exp(x)")
+        self.assertEqual(str(sym.sqrt(x)), "sqrt(x)")
+        self.assertEqual(str(sym.pow(x, y)), "pow(x, y)")
+        self.assertEqual(str(sym.sin(x)), "sin(x)")
+        self.assertEqual(str(sym.cos(x)), "cos(x)")
+        self.assertEqual(str(sym.tan(x)), "tan(x)")
+        self.assertEqual(str(sym.asin(x)), "asin(x)")
+        self.assertEqual(str(sym.acos(x)), "acos(x)")
+        self.assertEqual(str(sym.atan(x)), "atan(x)")
+        self.assertEqual(str(sym.atan2(x, y)), "atan2(x, y)")
+        self.assertEqual(str(sym.sinh(x)), "sinh(x)")
+        self.assertEqual(str(sym.cosh(x)), "cosh(x)")
+        self.assertEqual(str(sym.tanh(x)), "tanh(x)")
+        self.assertEqual(str(sym.min(x, y)), "min(x, y)")
+        self.assertEqual(str(sym.max(x, y)), "max(x, y)")
+        self.assertEqual(str(sym.ceil(x)), "ceil(x)")
+        self.assertEqual(str(sym.floor(x)), "floor(x)")
+        self.assertEqual(str(sym.if_then_else(x > y, x, y)),
+                         "(if (x > y) then x else y)")
 
 
 class TestSymbolicVariables(unittest.TestCase):
@@ -221,12 +244,31 @@ class TestSymbolicVariables(unittest.TestCase):
 
 
 class TestSymbolicExpression(unittest.TestCase):
-    def test_addition(self):
-        self.assertEqual(str(e_x + e_y), "(x + y)")
-        self.assertEqual(str(e_x + y), "(x + y)")
-        self.assertEqual(str(e_x + 1), "(1 + x)")
-        self.assertEqual(str(x + e_y), "(x + y)")
-        self.assertEqual(str(1 + e_x), "(1 + x)")
+    def _check_scalar(self, actual, expected):
+        self.assertIsInstance(actual, sym.Expression)
+        self.assertIsInstance(expected, str)
+        self.assertEqual(str(actual), expected)
+
+    def _check_array(self, actual, expected):
+        self.assertEqual(actual.shape, expected.shape)
+        for a, b in zip(actual.flat, expected.flat):
+            self._check_scalar(a, b)
+
+    def _get_globals(self, *names):
+        return map(globals().get, names)
+
+    def test_math(self):
+
+        def impl(check):
+            e_x, e_y = map(check.reformat, self._get_globals("e_x", "e_y"))
+            check.check_value(e_x + e_y, "(x + y)")
+            check.check_value(e_x + y, "(x + y)")
+            check.check_value(e_x + 1, "(1 + x)")
+            check.check_value(x + e_y, "(x + y)")
+            check.check_value(1 + e_x, "(1 + x)")
+
+        impl(ScalarMath(self._check_scalar))
+        impl(VectorizedMath(self._check_array))
 
     def test_addition_assign(self):
         e = x
@@ -356,28 +398,6 @@ class TestSymbolicExpression(unittest.TestCase):
             sym.Expression(v_x) > sym.Expression(v_y),
             v_x, v_y),
           v_x if v_x > v_y else v_y)
-
-    def test_functions_with_variable(self):
-        self.assertEqual(str(sym.abs(x)), "abs(x)")
-        self.assertEqual(str(sym.exp(x)), "exp(x)")
-        self.assertEqual(str(sym.sqrt(x)), "sqrt(x)")
-        self.assertEqual(str(sym.pow(x, y)), "pow(x, y)")
-        self.assertEqual(str(sym.sin(x)), "sin(x)")
-        self.assertEqual(str(sym.cos(x)), "cos(x)")
-        self.assertEqual(str(sym.tan(x)), "tan(x)")
-        self.assertEqual(str(sym.asin(x)), "asin(x)")
-        self.assertEqual(str(sym.acos(x)), "acos(x)")
-        self.assertEqual(str(sym.atan(x)), "atan(x)")
-        self.assertEqual(str(sym.atan2(x, y)), "atan2(x, y)")
-        self.assertEqual(str(sym.sinh(x)), "sinh(x)")
-        self.assertEqual(str(sym.cosh(x)), "cosh(x)")
-        self.assertEqual(str(sym.tanh(x)), "tanh(x)")
-        self.assertEqual(str(sym.min(x, y)), "min(x, y)")
-        self.assertEqual(str(sym.max(x, y)), "max(x, y)")
-        self.assertEqual(str(sym.ceil(x)), "ceil(x)")
-        self.assertEqual(str(sym.floor(x)), "floor(x)")
-        self.assertEqual(str(sym.if_then_else(x > y, x, y)),
-                         "(if (x > y) then x else y)")
 
     def test_functions_with_expression(self):
         self.assertEqual(str(sym.abs(e_x)), "abs(x)")
