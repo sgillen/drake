@@ -87,10 +87,6 @@ PYBIND11_MODULE(_autodiffutils_py, m) {
     autodiff.attr("arcsin") = autodiff.attr("asin");
     autodiff.attr("arccos") = autodiff.attr("acos");
     autodiff.attr("arctan2") = autodiff.attr("atan2");
-    // // Re-define a subset for backwards compatibility.
-    // autodiff
-    //   .def("sin", [](const AutoDiffXd& x) { return sin(x); })
-    //   .def("cos", [](const AutoDiffXd& x) { return cos(x); });
 }
 
 }  // namespace pydrake
