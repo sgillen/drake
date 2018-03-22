@@ -34,7 +34,7 @@ class TestAutoDiffXd(unittest.TestCase):
             for a, b in zip(actual.flat, expected.flat):
                 self._check_scalar(a, b)
         else:
-            self.assertTrue(np.allclose(actual, expected))
+            self.assertTrue((actual == expected).all())
 
     def test_scalar_api(self):
         a = AD(1, [1., 0])

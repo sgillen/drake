@@ -3,7 +3,8 @@ import pydrake.math as drake_math
 
 
 class BaseMath(object):
-    # Base class for defining scalar or vectorized (array) math checks.
+    # Base class for defining scalar or vector (array) algebra (and math)
+    # checks.
     def __init__(self):
         # Derived classes should define extra math functions.
         pass
@@ -13,9 +14,15 @@ class BaseMath(object):
         raise NotImplemented
 
     def check_value(self, actual, expected_scalar):
+        # Checks if `actual` is equal to `expected_scalar`, which is
+        # broadcasting to match `actual`s shape.
         raise NotImplemented
 
-    def check_logical(self, actual, expected_scalar):
+    def check_logical(self, func, a, b, actual, expected_scalar):
+        # Checks logical operations (which should be invariant of
+        # reverse-operator ordering, e.g. `x < y` should be equivalent to
+        # `y > x`), broadcasting `expected_scalar` to match `actual`s shape,
+        # and possible permuting on scalar vs. array setup.
         raise NotImplemented
 
 
