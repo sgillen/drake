@@ -17,19 +17,19 @@ namespace pydrake {
 template <typename From, typename To>
 class MirrorDef {
  public:
-  MirrorDef(From& m, To& mirror)
+  MirrorDef(From* m, To* mirror)
       : m_(m), mirror_(mirror) {}
 
   template <typename... Args>
   MirrorDef& def(const char* name, Args&&... args) {
-    m_.def(name, std::forward<Args>(args)...);
-    mirror_.def(name, std::forward<Args>(args)...);
+    m_->def(name, std::forward<Args>(args)...);
+    mirror_->def(name, std::forward<Args>(args)...);
     return *this;
   }
 
  private:
-  From& m_;
-  To& mirror_;
+  From* m_{};
+  To* mirror_{};
 };
 
 }  // namespace pydrake

@@ -69,7 +69,7 @@ PYBIND11_MODULE(_autodiffutils_py, m) {
 
     // Add overloads for `sin` and `cos`.
     auto math = py::module::import("pydrake.math");
-    MirrorDef<py::module, decltype(autodiff)>(math, autodiff)
+    MirrorDef<py::module, decltype(autodiff)>(&math, &autodiff)
       .def("log", [](const AutoDiffXd& x) { return log(x); })
       .def("sin", [](const AutoDiffXd& x) { return sin(x); })
       .def("cos", [](const AutoDiffXd& x) { return cos(x); })
