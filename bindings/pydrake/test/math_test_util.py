@@ -1,11 +1,15 @@
+"""
+Provides utilities to test different algebra.
+"""
+
 import numpy as np
 import pydrake.math as drake_math
 
 
 class BaseAlgebra(object):
     # Base class for defining scalar or vectorized (array) algebra and math.
-    # checks. Note that linear algebra should produce different results
-    # overall, so it should not be part of this hierarchy.
+    # checks. Note that linear algebra itself is not "pluggable" for these
+    # operations, so care should be taken when defining it.
     def __init__(self):
         # Derived classes should define extra math functions.
         pass
@@ -28,7 +32,7 @@ class BaseAlgebra(object):
 
 
 class ScalarAlegbra(BaseAlgebra):
-    # Basic scalar element math.
+    # Scalar algebra.
     def __init__(self, check_value_impl):
         BaseAlgebra.__init__(self)
         self._check_value_impl = check_value_impl
@@ -62,7 +66,7 @@ class ScalarAlegbra(BaseAlgebra):
 
 
 class VectorizedAlgebra(BaseAlgebra):
-    # Vectorized math for arrays.
+    # Vectorized (array) algebra.
     def __init__(self, check_value_impl):
         BaseAlgebra.__init__(self)
         self._check_value_impl = check_value_impl
