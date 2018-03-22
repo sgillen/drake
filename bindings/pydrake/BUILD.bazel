@@ -199,11 +199,10 @@ drake_py_unittest(
     deps = [":all_py"],
 )
 
-
 drake_py_library(
     name = "math_test_util_py",
-    srcs = ["test/math_test_util.py"],
     testonly = 1,
+    srcs = ["test/math_test_util.py"],
 )
 
 drake_py_unittest(

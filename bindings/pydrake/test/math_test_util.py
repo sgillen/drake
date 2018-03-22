@@ -39,13 +39,14 @@ class ScalarMath(BaseMath):
         return scalar
 
     def check_value(self, actual, expected_scalar):
+        # `actual` should be a scalar.
         self._check_value_impl(actual, expected_scalar)
 
     def check_logical(self, func, a, b, expected_scalar):
         # Test overloads which have the same return values for:
-        # - f(AutoDiffXd, AutoDiffXd)
-        # - f(AutoDiffXd, float)
-        # - f(float, AutoDiffXd)
+        # - f(T, T)
+        # - f(T, float)
+        # - f(float, T)
         expected = self.reformat(expected_scalar)
         self._check_value_impl(func(a, b), expected)
         self._check_value_impl(func(a, b.value()), expected)
@@ -72,6 +73,7 @@ class VectorizedMath(BaseMath):
         return np.array([scalar, scalar])
 
     def check_value(self, actual, expected_scalar):
+        # `actual` should be an array, so ensure `expected` is also an array.
         expected = self.reformat(expected_scalar)
         self._check_value_impl(actual, expected)
 

@@ -399,6 +399,8 @@ class TestSymbolicExpression(unittest.TestCase):
         self.assertEqual(str(1 != e_y), "(y != 1)")
 
     def test_functions_with_float(self):
+        # TODO(eric.cousineau): Use concrete values once vectorized methods are
+        # supported.
         v_x = 1.0
         v_y = 1.0
         # WARNING: Not having an overload intercept this the first line below
@@ -451,7 +453,7 @@ class TestSymbolicExpression(unittest.TestCase):
         self._check_scalar((sym.ceil(e_x)), "ceil(x)")
         self._check_scalar((sym.floor(e_x)), "floor(x)")
         self._check_scalar((sym.if_then_else(e_x > e_y, e_x, e_y)),
-                         "(if (x > y) then x else y)")
+                           "(if (x > y) then x else y)")
 
     def test_non_method_jacobian(self):
         # Jacobian([x * cos(y), x * sin(y), x ** 2], [x, y]) returns
