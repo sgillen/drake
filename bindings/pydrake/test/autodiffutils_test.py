@@ -72,7 +72,7 @@ class TestAutoDiffXd(unittest.TestCase):
         c_scalar = AD(0, [1., 0])
         d_scalar = AD(1, [0, 1.])
         a, b, c, d = map(
-            check.reformat, (a_scalar, b_scalar, c_scalar, d_scalar))
+            check.to_algebra, (a_scalar, b_scalar, c_scalar, d_scalar))
 
         # Arithmetic
         check.check_value(a + b, AD(3, [1, 1]))

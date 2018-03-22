@@ -261,15 +261,15 @@ class TestSymbolicExpression(unittest.TestCase):
             self._check_scalar(a, b)
 
     def _check_math(self, check):
-        xv = check.reformat(x)
-        yv = check.reformat(y)
-        zv = check.reformat(z)
-        wv = check.reformat(w)
-        av = check.reformat(a)
-        bv = check.reformat(b)
-        cv = check.reformat(c)
-        e_xv = check.reformat(e_x)
-        e_yv = check.reformat(e_y)
+        xv = check.to_algebra(x)
+        yv = check.to_algebra(y)
+        zv = check.to_algebra(z)
+        wv = check.to_algebra(w)
+        av = check.to_algebra(a)
+        bv = check.to_algebra(b)
+        cv = check.to_algebra(c)
+        e_xv = check.to_algebra(e_x)
+        e_yv = check.to_algebra(e_y)
 
         # Addition.
         check.check_value(e_xv + e_yv, "(x + y)")

@@ -9,7 +9,7 @@ class BaseMath(object):
         # Derived classes should define extra math functions.
         pass
 
-    def reformat(self, scalar):
+    def to_algebra(self, scalar):
         # Reformats a scalar to the given form.
         raise NotImplemented
 
@@ -42,7 +42,7 @@ class ScalarMath(BaseMath):
         self.cosh = drake_math.cosh
         self.tanh = drake_math.tanh
 
-    def reformat(self, scalar):
+    def to_algebra(self, scalar):
         return scalar
 
     def check_value(self, actual, expected_scalar):
@@ -54,7 +54,7 @@ class ScalarMath(BaseMath):
         # - f(T, T)
         # - f(T, float)
         # - f(float, T)
-        expected = self.reformat(expected_scalar)
+        expected = self.to_algebra(expected_scalar)
         self._check_value_impl(func(a, b), expected)
         self._check_value_impl(func(a, b.value()), expected)
         self._check_value_impl(func(a.value(), b), expected)
@@ -76,12 +76,12 @@ class VectorizedMath(BaseMath):
         self.cosh = np.cosh
         self.tanh = np.tanh
 
-    def reformat(self, scalar):
+    def to_algebra(self, scalar):
         return np.array([scalar, scalar])
 
     def check_value(self, actual, expected_scalar):
         # `actual` should be an array, so ensure `expected` is also an array.
-        expected = self.reformat(expected_scalar)
+        expected = self.to_algebra(expected_scalar)
         self._check_value_impl(actual, expected)
 
     def _array_to_float(self, a):
@@ -91,7 +91,7 @@ class VectorizedMath(BaseMath):
         # See above.
         af = self._array_to_float(a)
         bf = self._array_to_float(b)
-        expected = self.reformat(expected_scalar)
+        expected = self.to_algebra(expected_scalar)
         self._check_value_impl(func(a, b), expected)
         self._check_value_impl(func(a, bf), expected)
         self._check_value_impl(func(af, b), expected)
