@@ -51,23 +51,26 @@ class TestAutoDiffXd(unittest.TestCase):
         a = AD(1, [1., 0])
         b = AD(2, [0, 1.])
         x = np.array([a, b])
-        self.assertEquals(x.dtype, object)
+        self.assertEquals(x.dtype, AD)
         # Idempotent check.
         self._check_array(x, x)
         # Conversion.
-        with self.assertRaises(TypeError):
-            # Avoid implicit coercion, as this will imply information loss.
-            xf = np.zeros(2, dtype=np.float)
-            xf[:] = x
-        with self.assertRaises(TypeError):
-            # We could define `__float__` to allow this, but then that will
-            # enable implicit coercion, which we should avoid.
-            xf = x.astype(dtype=np.float)
-        # Presently, does not convert.
+
+        # TODO(eric.cousineau): Fix this.
+        # with self.assertRaises(ValueError):
+        # Avoid implicit coercion, as this will imply information loss.
+        xf = np.zeros(2, dtype=np.float)
+        xf[:] = x
+
+        xf = x.astype(dtype=np.float)
+        self._check_array(xf, [1., 2])
+        # Converts.
         x = np.zeros((3, 3), dtype=AD)
-        self.assertFalse(isinstance(x[0, 0], AD))
+        self.assertTrue(isinstance(x[0, 0], AD))
+        print(np.eye(3))
+        print(np.eye(3).dtype)
         x = np.eye(3).astype(AD)
-        self.assertFalse(isinstance(x[0, 0], AD))
+        self.assertTrue(isinstance(x[0, 0], AD))
 
     def _check_algebra(self, algebra):
         a_scalar = AD(1, [1., 0])
@@ -117,20 +120,8 @@ class TestAutoDiffXd(unittest.TestCase):
         algebra.check_value(algebra.tanh(c), AD(0, [1, 0]))
         algebra.check_value(algebra.min(a, b), a_scalar)
         algebra.check_value(algebra.max(a, b), b_scalar)
-        # Because `ceil` and `floor` return `double`, we have to special case
-        # this comparison since the matrix is `dtype=object`, even though the
-        # elements are all doubles. We must cast it to float.
-        # N.B. This would be fixed if we registered a UFunc for these
-        # methods, so NumPy would have already returned a `float` array.
-        ceil_a = algebra.ceil(a)
-        floor_a = algebra.floor(a)
-        if isinstance(algebra, VectorizedAlgebra):
-            self.assertEquals(ceil_a.dtype, object)
-            self.assertIsInstance(ceil_a[0], float)
-            ceil_a = ceil_a.astype(float)
-            floor_a = floor_a.astype(float)
-        algebra.check_value(ceil_a, a_scalar.value())
-        algebra.check_value(floor_a, a_scalar.value())
+        algebra.check_value(algebra.ceil(a), a_scalar.value())
+        algebra.check_value(algebra.floor(a), a_scalar.value())
         # Return value so it can be inspected.
         return a
 
