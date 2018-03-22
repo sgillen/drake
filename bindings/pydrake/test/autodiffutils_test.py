@@ -14,14 +14,7 @@ AD = AutoDiffXd
 
 
 class TestAutoDiffXd(unittest.TestCase):
-    def test_api(self):
-        a = AD(1, [1., 0])
-        self.assertEquals(a.value(), 1.)
-        self.assertTrue((a.derivatives() == [1., 0]).all())
-        self.assertEquals(str(a), "AD{1.0, nderiv=2}")
-        self.assertEquals(repr(a), "<AutoDiffXd 1.0 nderiv=2>")
-
-    def _compare_scalar(self, actual, expected):
+    def _check_scalar(self, actual, expected):
         self.assertAlmostEquals(actual.value(), expected.value())
         self.assertTrue(
             (actual.derivatives() == expected.derivatives()).all(),
@@ -33,82 +26,25 @@ class TestAutoDiffXd(unittest.TestCase):
         self.assertEquals(actual.shape, expected.shape)
         if actual.dtype == object:
             for a, b in zip(actual.flat, expected.flat):
-                self._compare_scalar(a, b)
+                self._check_scalar(a, b)
         else:
             self.assertTrue(np.allclose(actual, expected))
 
-    def _check_logical(self, func, a, b, expect):
-        # Test overloads which have the same return values for:
-        # - f(AutoDiffXd, AutoDiffXd)
-        # - f(AutoDiffXd, float)
-        # - f(float, AutoDiffXd)
-        self.assertEquals(func(a, b), expect)
-        self.assertEquals(func(a, b.value()), expect)
-        self.assertEquals(func(a.value(), b), expect)
-
-    def _check_logical_array(self, func, a, b, expect):
-        # Test overloads which have the same return values for:
-        # - f(AutoDiffXd, AutoDiffXd)
-        # - f(AutoDiffXd, float)
-        # - f(float, AutoDiffXd)
-        af = np.array([ai.value() for ai in a.flat]).reshape(a.shape)
-        bf = np.array([bi.value() for bi in b.flat]).reshape(b.shape)
-        self._check_array(func(a, b), expect)
-        self._check_array(func(a, bf), expect)
-        self._check_array(func(af, b), expect)
-
-    def test_scalar_math(self):
+    def test_scalar_api(self):
         a = AD(1, [1., 0])
-        self._compare_scalar(a, a)
-        b = AD(2, [0, 1.])
-        # Arithmetic
-        self._compare_scalar(a + b, AD(3, [1, 1]))
-        self._compare_scalar(a + 1, AD(2, [1, 0]))
-        self._compare_scalar(1 + a, AD(2, [1, 0]))
-        self._compare_scalar(a - b, AD(-1, [1, -1]))
-        self._compare_scalar(a - 1, AD(0, [1, 0]))
-        self._compare_scalar(1 - a, AD(0, [-1, 0]))
-        self._compare_scalar(a * b, AD(2, [2, 1]))
-        self._compare_scalar(a * 2, AD(2, [2, 0]))
-        self._compare_scalar(2 * a, AD(2, [2, 0]))
-        self._compare_scalar(a / b, AD(1./2, [1./2, -1./4]))
-        self._compare_scalar(a / 2, AD(0.5, [0.5, 0]))
-        self._compare_scalar(2 / a, AD(2, [-2, 0]))
-        # Logical
-        af = a.value()
-        self._check_logical(lambda x, y: x == y, a, a, True)
-        self._check_logical(lambda x, y: x != y, a, a, False)
-        self._check_logical(lambda x, y: x < y, a, b, True)
-        self._check_logical(lambda x, y: x <= y, a, b, True)
-        self._check_logical(lambda x, y: x > y, a, b, False)
-        self._check_logical(lambda x, y: x >= y, a, b, False)
-        # Additional math
-        self._compare_scalar(a**2, AD(1, [2., 0]))
-        # Test autodiff overloads.
-        # See `math_overloads_test` for more comprehensive checks.
-        c = AD(0, [1., 0])
-        d = AD(1, [0, 1.])
-        self._compare_scalar(drake_math.sin(c), AD(0, [1, 0]))
-        self._compare_scalar(drake_math.cos(c), AD(1, [0, 0]))
-        self._compare_scalar(drake_math.tan(c), AD(0, [1, 0]))
-        self._compare_scalar(drake_math.asin(c), AD(0, [1, 0]))
-        self._compare_scalar(drake_math.acos(c), AD(np.pi / 2, [-1, 0]))
-        self._compare_scalar(drake_math.atan2(c, d), AD(0, [1, 0]))
-        self._compare_scalar(drake_math.sinh(c), AD(0, [1, 0]))
-        self._compare_scalar(drake_math.cosh(c), AD(1, [0, 0]))
-        self._compare_scalar(drake_math.tanh(c), AD(0, [1, 0]))
+        self.assertEquals(a.value(), 1.)
+        self.assertTrue((a.derivatives() == [1., 0]).all())
+        self.assertEquals(str(a), "AD{1.0, nderiv=2}")
+        self.assertEquals(repr(a), "<AutoDiffXd 1.0 nderiv=2>")
+        self._check_scalar(a, a)
 
-    def test_array_creation(self):
+    def test_array_api(self):
         a = AD(1, [1., 0])
         b = AD(2, [0, 1.])
-        c = AD(0, [1., 0])
-        d = AD(1, [0, 1.])
-        av = np.array([a])
-        bv = np.array([b])
-        cv = np.array([c])
-        dv = np.array([d])
-        x = np.array([c, d])
+        x = np.array([a, b])
         self.assertEquals(x.dtype, object)
+        # Idempotent check.
+        self._check_array(x, x)
         # Conversion.
         with self.assertRaises(TypeError):
             # Avoid implicit coercion, as this will imply information loss.
@@ -123,39 +59,138 @@ class TestAutoDiffXd(unittest.TestCase):
         self.assertFalse(isinstance(x[0, 0], AD))
         x = np.eye(3).astype(AD)
         self.assertFalse(isinstance(x[0, 0], AD))
+
+    def _check_math(self, check_type):
+        check = check_type(self)
+        a_scalar = AD(1, [1., 0])
+        b_scalar = AD(2, [0, 1.])
+        c_scalar = AD(0, [1., 0])
+        d_scalar = AD(1, [0, 1.])
+        a, b, c, d = map(check.reformat, (a_scalar, b_scalar, c_scalar, d_scalar))
+
         # Arithmetic
-        self._check_array(av + bv, [AD(3, [1, 1])])
-        self._check_array(av + 1, [AD(2, [1, 0])])
-        self._check_array(1 + av, [AD(2, [1, 0])])
-        self._check_array(av - bv, [AD(-1, [1, -1])])
-        self._check_array(av - 1, [AD(0, [1, 0])])
-        self._check_array(1 - av, [AD(0, [-1, 0])])
-        self._check_array(av * bv, [AD(2, [2, 1])])
-        self._check_array(av * 2, [AD(2, [2, 0])])
-        self._check_array(2 * av, [AD(2, [2, 0])])
-        self._check_array(av / bv, [AD(1./2, [1./2, -1./4])])
-        self._check_array(av / 2, [AD(0.5, [0.5, 0])])
-        self._check_array(2 / av, [AD(2, [-2, 0])])
+        check.check_value(a + b, AD(3, [1, 1]))
+        check.check_value(a + 1, AD(2, [1, 0]))
+        check.check_value(1 + a, AD(2, [1, 0]))
+        check.check_value(a - b, AD(-1, [1, -1]))
+        check.check_value(a - 1, AD(0, [1, 0]))
+        check.check_value(1 - a, AD(0, [-1, 0]))
+        check.check_value(a * b, AD(2, [2, 1]))
+        check.check_value(a * 2, AD(2, [2, 0]))
+        check.check_value(2 * a, AD(2, [2, 0]))
+        check.check_value(a / b, AD(1./2, [1./2, -1./4]))
+        check.check_value(a / 2, AD(0.5, [0.5, 0]))
+        check.check_value(2 / a, AD(2, [-2, 0]))
         # Logical
-        af = a.value()
-        self._check_logical_array(lambda x, y: x == y, av, av, [True])
-        self._check_logical_array(lambda x, y: x != y, av, av, [False])
-        self._check_logical_array(lambda x, y: x < y, av, bv, [True])
-        self._check_logical_array(lambda x, y: x <= y, av, bv, [True])
-        self._check_logical_array(lambda x, y: x > y, av, bv, [False])
-        self._check_logical_array(lambda x, y: x >= y, av, bv, [False])
+        check.check_logical(lambda x, y: x == y, a, a, True)
+        check.check_logical(lambda x, y: x != y, a, a, False)
+        check.check_logical(lambda x, y: x < y, a, b, True)
+        check.check_logical(lambda x, y: x <= y, a, b, True)
+        check.check_logical(lambda x, y: x > y, a, b, False)
+        check.check_logical(lambda x, y: x >= y, a, b, False)
         # Additional math
-        self._check_array(av**2, [AD(1, [2., 0])])
-        self._check_array(np.cos(cv), [AD(1, [0, 0])])
-        self._check_array(np.sin(cv), [AD(0, [1, 0])])
-        self._check_array(np.tan(cv), [AD(0, [1, 0])])
-        self._check_array(np.arcsin(cv), [AD(0, [1, 0])])
-        self._check_array(np.arccos(cv), [AD(np.pi / 2, [-1, 0])])
-        self._check_array(np.arctan2(cv, dv), [AD(0, [1, 0])])
-        self._check_array(np.sinh(cv), [AD(0, [1, 0])])
-        self._check_array(np.cosh(cv), [AD(1, [0, 0])])
-        self._check_array(np.tanh(cv), [AD(0, [1, 0])])
+        # - See `math_overloads_test` for scalar overloads.
+        check.check_value(a**2, AD(1, [2., 0]))
+        check.check_value(check.cos(c), AD(1, [0, 0]))
+        check.check_value(check.sin(c), AD(0, [1, 0]))
+        check.check_value(check.tan(c), AD(0, [1, 0]))
+        check.check_value(check.arcsin(c), AD(0, [1, 0]))
+        check.check_value(check.arccos(c), AD(np.pi / 2, [-1, 0]))
+        check.check_value(check.arctan2(c, d), AD(0, [1, 0]))
+        check.check_value(check.sinh(c), AD(0, [1, 0]))
+        check.check_value(check.cosh(c), AD(1, [0, 0]))
+        check.check_value(check.tanh(c), AD(0, [1, 0]))
+        # Return value so it can be inspected.
+        return a
+
+    def test_scalar_math(self):
+        a = self._check_math(ScalarMath)
+        self.assertEquals(type(a), AD)
+
+    def test_array_math(self):
+        a = self._check_math(VectorizedMath)
+        self.assertEquals(type(a), np.ndarray)
+        self.assertEquals(a.shape, (2,))
 
 
-import sys
-sys.stdout = sys.stderr
+class BaseMath(object):
+    # Base class for defining scalar or vectorized (array) math checks.
+    def __init__(self, test):
+        self.test = test
+
+    def reformat(self, scalar):
+        # Reformats a scalar to the given form.
+        raise NotImplemented
+
+    def check_value(self, actual, expected_scalar):
+        raise NotImplemented
+
+    def check_logical(self, actual, expected_scalar):
+        raise NotImplemented
+
+
+class ScalarMath(BaseMath):
+    # Basic scalar element math.
+    def __init__(self, test):
+        BaseMath.__init__(self, test)
+        # Math functions:
+        self.sin = drake_math.sin
+        self.cos = drake_math.cos
+        self.tan = drake_math.tan
+        self.arcsin = drake_math.asin
+        self.arccos = drake_math.acos
+        self.arctan2 = drake_math.atan2
+        self.sinh = drake_math.sinh
+        self.cosh = drake_math.cosh
+        self.tanh = drake_math.tanh
+
+    def reformat(self, scalar):
+        return scalar
+
+    def check_value(self, actual, expected_scalar):
+        self.test._check_scalar(actual, expected_scalar)
+
+    def check_logical(self, func, a, b, expected_scalar):
+        # Test overloads which have the same return values for:
+        # - f(AutoDiffXd, AutoDiffXd)
+        # - f(AutoDiffXd, float)
+        # - f(float, AutoDiffXd)
+        expected = self.reformat(expected_scalar)
+        self.test.assertEquals(func(a, b), expected)
+        self.test.assertEquals(func(a, b.value()), expected)
+        self.test.assertEquals(func(a.value(), b), expected)
+
+
+class VectorizedMath(BaseMath):
+    # Vectorized math for arrays.
+    def __init__(self, test):
+        BaseMath.__init__(self, test)
+        # Math functions:
+        self.sin = np.sin
+        self.cos = np.cos
+        self.tan = np.tan
+        self.arcsin = np.arcsin
+        self.arccos = np.arccos
+        self.arctan2 = np.arctan2
+        self.sinh = np.sinh
+        self.cosh = np.cosh
+        self.tanh = np.tanh
+
+    def reformat(self, scalar):
+        return np.array([scalar, scalar])
+
+    def check_value(self, actual, expected_scalar):
+        expected = self.reformat(expected_scalar)
+        self.test._check_array(actual, expected)
+
+    def _array_to_float(self, a):
+        return np.array([ai.value() for ai in a.flat]).reshape(a.shape)
+
+    def check_logical(self, func, a, b, expected_scalar):
+        # See above.
+        af = self._array_to_float(a)
+        bf = self._array_to_float(b)
+        expected = self.reformat(expected_scalar)
+        self.test._check_array(func(a, b), expected)
+        self.test._check_array(func(a, bf), expected)
+        self.test._check_array(func(af, b), expected)
