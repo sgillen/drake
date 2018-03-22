@@ -246,6 +246,8 @@ class TestSymbolicVariables(unittest.TestCase):
 class TestSymbolicExpression(unittest.TestCase):
     def _check_scalar(self, actual, expected):
         self.assertIsInstance(actual, sym.Expression)
+        if isinstance(expected, sym.Expression):
+            expected = str(expected)
         self.assertIsInstance(expected, str)
         self.assertEqual(str(actual), expected)
 
@@ -254,39 +256,41 @@ class TestSymbolicExpression(unittest.TestCase):
         for a, b in zip(actual.flat, expected.flat):
             self._check_scalar(a, b)
 
-    def _get_globals(self, *names):
-        return map(globals().get, names)
+    def _check_math(self, check):
+        x = check.reformat(globals()["x"])
+        y = check.reformat(globals()["y"])
+        z = check.reformat(globals()["z"])
+        w = check.reformat(globals()["w"])
+        a = check.reformat(globals()["a"])
+        b = check.reformat(globals()["b"])
+        c = check.reformat(globals()["c"])
+        e_x = check.reformat(globals()["e_x"])
+        e_y = check.reformat(globals()["e_y"])
 
-    def test_math(self):
+        # Addition.
+        check.check_value(e_x + e_y, "(x + y)")
+        check.check_value(e_x + y, "(x + y)")
+        check.check_value(e_x + 1, "(1 + x)")
+        check.check_value(x + e_y, "(x + y)")
+        check.check_value(1 + e_x, "(1 + x)")
 
-        def impl(check):
-            e_x, e_y = map(check.reformat, self._get_globals("e_x", "e_y"))
-            check.check_value(e_x + e_y, "(x + y)")
-            check.check_value(e_x + y, "(x + y)")
-            check.check_value(e_x + 1, "(1 + x)")
-            check.check_value(x + e_y, "(x + y)")
-            check.check_value(1 + e_x, "(1 + x)")
-
-        impl(ScalarMath(self._check_scalar))
-        impl(VectorizedMath(self._check_array))
-
-    def test_addition_assign(self):
+        # - In place.
         e = x
         e += e_y
-        self.assertEqual(e, x + y)
+        check.check_value(e, "(x + y)")
         e += z
-        self.assertEqual(e, x + y + z)
+        check.check_value(e, "(x + y + z)")
         e += 1
-        self.assertEqual(e, x + y + z + 1)
+        check.check_value(e, "(1 + x + y + z)")
 
-    def test_subtract(self):
+        # Subtraction.
         self.assertEqual(str(e_x - e_y), "(x - y)")
         self.assertEqual(str(e_x - y), "(x - y)")
         self.assertEqual(str(e_x - 1), "(-1 + x)")
         self.assertEqual(str(x - e_y), "(x - y)")
         self.assertEqual(str(1 - e_x), "(1 - x)")
 
-    def test_subtract_assign(self):
+        # - In place.
         e = x
         e -= e_y
         self.assertEqual(e, x - y)
@@ -295,14 +299,14 @@ class TestSymbolicExpression(unittest.TestCase):
         e -= 1
         self.assertEqual(e, x - y - z - 1)
 
-    def test_multiplication(self):
+        # Multiplication.
         self.assertEqual(str(e_x * e_y), "(x * y)")
         self.assertEqual(str(e_x * y), "(x * y)")
         self.assertEqual(str(e_x * 1), "x")
         self.assertEqual(str(x * e_y), "(x * y)")
         self.assertEqual(str(1 * e_x), "x")
 
-    def test_multiplication_assign(self):
+        # - In place.
         e = x
         e *= e_y
         self.assertEqual(e, x * y)
@@ -311,14 +315,14 @@ class TestSymbolicExpression(unittest.TestCase):
         e *= 1
         self.assertEqual(e, x * y * z)
 
-    def test_division(self):
+        # Division
         self.assertEqual(str(e_x / e_y), "(x / y)")
         self.assertEqual(str(e_x / y), "(x / y)")
         self.assertEqual(str(e_x / 1), "x")
         self.assertEqual(str(x / e_y), "(x / y)")
         self.assertEqual(str(1 / e_x), "(1 / x)")
 
-    def test_division_assign(self):
+        # - In place.
         e = x
         e /= e_y
         self.assertEqual(e, x / y)
@@ -327,9 +331,20 @@ class TestSymbolicExpression(unittest.TestCase):
         e /= 1
         self.assertEqual(e, x / y / z)
 
-    def test_unary_operators(self):
+        # Unary
         self.assertEqual(str(+e_x), "x")
         self.assertEqual(str(-e_x), "(-1 * x)")
+
+        return x
+
+    def test_scalar_math(self):
+        x = self._check_math(ScalarMath(self._check_scalar))
+        self.assertIsInstance(x, sym.Expression)
+
+    def test_array_math(self):
+        x = self._check_math(VectorizedMath(self._check_array))
+        self.assertIsInstance(x, np.ndarray)
+        self.assertEquals(x.shape, (2,))
 
     def test_relational_operators(self):
         # Expression rop Expression
