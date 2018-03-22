@@ -284,56 +284,56 @@ class TestSymbolicExpression(unittest.TestCase):
         check.check_value(e, "(1 + x + y + z)")
 
         # Subtraction.
-        self.assertEqual(str(e_x - e_y), "(x - y)")
-        self.assertEqual(str(e_x - y), "(x - y)")
-        self.assertEqual(str(e_x - 1), "(-1 + x)")
-        self.assertEqual(str(x - e_y), "(x - y)")
-        self.assertEqual(str(1 - e_x), "(1 - x)")
+        check.check_value((e_x - e_y), "(x - y)")
+        check.check_value((e_x - y), "(x - y)")
+        check.check_value((e_x - 1), "(-1 + x)")
+        check.check_value((x - e_y), "(x - y)")
+        check.check_value((1 - e_x), "(1 - x)")
 
         # - In place.
         e = x
         e -= e_y
-        self.assertEqual(e, x - y)
+        check.check_value(e, x - y)
         e -= z
-        self.assertEqual(e, x - y - z)
+        check.check_value(e, x - y - z)
         e -= 1
-        self.assertEqual(e, x - y - z - 1)
+        check.check_value(e, x - y - z - 1)
 
         # Multiplication.
-        self.assertEqual(str(e_x * e_y), "(x * y)")
-        self.assertEqual(str(e_x * y), "(x * y)")
-        self.assertEqual(str(e_x * 1), "x")
-        self.assertEqual(str(x * e_y), "(x * y)")
-        self.assertEqual(str(1 * e_x), "x")
+        check.check_value((e_x * e_y), "(x * y)")
+        check.check_value((e_x * y), "(x * y)")
+        check.check_value((e_x * 1), "x")
+        check.check_value((x * e_y), "(x * y)")
+        check.check_value((1 * e_x), "x")
 
         # - In place.
         e = x
         e *= e_y
-        self.assertEqual(e, x * y)
+        check.check_value(e, x * y)
         e *= z
-        self.assertEqual(e, x * y * z)
+        check.check_value(e, x * y * z)
         e *= 1
-        self.assertEqual(e, x * y * z)
+        check.check_value(e, x * y * z)
 
         # Division
-        self.assertEqual(str(e_x / e_y), "(x / y)")
-        self.assertEqual(str(e_x / y), "(x / y)")
-        self.assertEqual(str(e_x / 1), "x")
-        self.assertEqual(str(x / e_y), "(x / y)")
-        self.assertEqual(str(1 / e_x), "(1 / x)")
+        check.check_value((e_x / e_y), "(x / y)")
+        check.check_value((e_x / y), "(x / y)")
+        check.check_value((e_x / 1), "x")
+        check.check_value((x / e_y), "(x / y)")
+        check.check_value((1 / e_x), "(1 / x)")
 
         # - In place.
         e = x
         e /= e_y
-        self.assertEqual(e, x / y)
+        check.check_value(e, x / y)
         e /= z
-        self.assertEqual(e, x / y / z)
+        check.check_value(e, x / y / z)
         e /= 1
-        self.assertEqual(e, x / y / z)
+        check.check_value(e, x / y / z)
 
         # Unary
-        self.assertEqual(str(+e_x), "x")
-        self.assertEqual(str(-e_x), "(-1 * x)")
+        check.check_value((+e_x), "x")
+        check.check_value((-e_x), "(-1 * x)")
 
         return x
 
