@@ -158,8 +158,5 @@ class TestAutoDiffXd(unittest.TestCase):
 
         # Type mixing
         Bf = np.array([[2., 2]]).T
-        # TODO(eric.cousineau): See if there's a way around this.
-        with self.assertRaises(TypeError):
-            C2 = np.dot(A, Bf)
-        C2 = np.dot(A, Bf.astype(AD))
+        C2 = np.dot(A, Bf)  # Leverages implicit casting.
         self._check_array(C, [[AD(4, [4., 2])]])

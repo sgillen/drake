@@ -68,9 +68,11 @@ PYBIND11_MODULE(_autodiffutils_py, m) {
     .def_loop(double() >= py::self)
     // Dot-product
     .def_dot()
-    // Casting - explicit casting only.
+    // Casting
+    // - Downcasting must be explicit, to prevent inadvertent information loss.
     .def_loop_cast([](const AutoDiffXd& self) -> double { return self.value(); })
-    .def_loop_cast([](double x) -> AutoDiffXd { return x; });
+    // - Upcasting can be implicit, especially for matrix multiplication.
+    .def_loop_cast([](double x) -> AutoDiffXd { return x; }, true);
 
   // Add overloads for `math` functions.
   auto math = py::module::import("pydrake.math");
