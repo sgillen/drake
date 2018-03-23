@@ -394,15 +394,15 @@ class TestSymbolicExpression(unittest.TestCase):
         self.assertIsInstance(xv, sym.Variable)
         self.assertIsInstance(e_xv, sym.Expression)
 
-    # def test_array_algebra(self):
-    #     xv, e_xv = self._check_algebra(
-    #         VectorizedAlgebra(
-    #             self._check_array,
-    #             scalar_to_float=lambda x: x.Evaluate()))
-    #     self.assertEquals(xv.shape, (2,))
-    #     self.assertIsInstance(xv[0], sym.Variable)
-    #     self.assertEquals(e_xv.shape, (2,))
-    #     self.assertIsInstance(e_xv[0], sym.Expression)
+    def test_array_algebra(self):
+        xv, e_xv = self._check_algebra(
+            VectorizedAlgebra(
+                self._check_array,
+                scalar_to_float=lambda x: x.Evaluate()))
+        self.assertEquals(xv.shape, (2,))
+        self.assertIsInstance(xv[0], sym.Variable)
+        self.assertEquals(e_xv.shape, (2,))
+        self.assertIsInstance(e_xv[0], sym.Expression)
 
 #     def test_relational_operators(self):
 #         # TODO(eric.cousineau): Use `VectorizedAlgebra` overloads once #8315 is
