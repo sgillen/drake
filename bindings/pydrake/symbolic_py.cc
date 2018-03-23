@@ -33,6 +33,8 @@ PYBIND11_MODULE(_symbolic_py, m) {
 
   var
       .def(py::init<const string&>())
+      .def_loop_cast([](double in) -> Expression { return in; }, true)
+      .def_loop_cast([](const Variable& in) -> Expression { return in; }, true)
       .def("get_id", &Variable::get_id)
       .def("__str__", &Variable::to_string)
       .def("__repr__",
@@ -73,7 +75,7 @@ PYBIND11_MODULE(_symbolic_py, m) {
              return pow(self, other);
            })
       // Unary Plus.
-      .def_loop(+py::self)
+      .def(+py::self)  // Not present in NumPy?
       // Unary Minus.
       .def_loop(-py::self)
       // LT(<).
@@ -167,38 +169,38 @@ PYBIND11_MODULE(_symbolic_py, m) {
       .def_loop(py::self + double())
       .def_loop(Variable() + py::self)
       .def_loop(double() + py::self)
-      .def_loop(py::self += py::self)
-      .def_loop(py::self += Variable())
-      .def_loop(py::self += double())
+      .def(py::self += py::self)
+      .def(py::self += Variable())
+      .def(py::self += double())
       // Subtraction.
       .def_loop(py::self - py::self)
       .def_loop(py::self - Variable())
       .def_loop(py::self - double())
       .def_loop(Variable() - py::self)
       .def_loop(double() - py::self)
-      .def_loop(py::self -= py::self)
-      .def_loop(py::self -= Variable())
-      .def_loop(py::self -= double())
+      .def(py::self -= py::self)
+      .def(py::self -= Variable())
+      .def(py::self -= double())
       // Multiplication.
       .def_loop(py::self * py::self)
       .def_loop(py::self * Variable())
       .def_loop(py::self * double())
       .def_loop(Variable() * py::self)
       .def_loop(double() * py::self)
-      .def_loop(py::self *= py::self)
-      .def_loop(py::self *= Variable())
-      .def_loop(py::self *= double())
+      .def(py::self *= py::self)
+      .def(py::self *= Variable())
+      .def(py::self *= double())
       // Division.
       .def_loop(py::self / py::self)
       .def_loop(py::self / Variable())
       .def_loop(py::self / double())
       .def_loop(Variable() / py::self)
       .def_loop(double() / py::self)
-      .def_loop(py::self /= py::self)
-      .def_loop(py::self /= Variable())
-      .def_loop(py::self /= double())
+      .def(py::self /= py::self)
+      .def(py::self /= Variable())
+      .def(py::self /= double())
       // Unary Plus.
-      .def_loop(+py::self)
+      .def(+py::self)  // Not present in NumPy?
       // Unary Minus.
       .def_loop(-py::self)
       // LT(<).
@@ -409,9 +411,6 @@ PYBIND11_MODULE(_symbolic_py, m) {
         return p.Jacobian(vars);
       });
 
-  py::implicitly_convertible<double, drake::symbolic::Expression>();
-  py::implicitly_convertible<drake::symbolic::Variable,
-                             drake::symbolic::Expression>();
   py::implicitly_convertible<drake::symbolic::Monomial,
                              drake::symbolic::Polynomial>();
 }
