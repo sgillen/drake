@@ -251,6 +251,9 @@ class TestSymbolicVariable(unittest.TestCase):
 
 class TestSymbolicExpression(unittest.TestCase):
     def _check_scalar(self, actual, expected):
+        if isinstance(actual, np.ndarray):
+            self.assertEqual(actual.shape, ())
+            actual = actual.item()
         self.assertIsInstance(actual, sym.Expression)
         # Chain conversion to ensure equivalent treatment.
         if isinstance(expected, float) or isinstance(expected, int):
@@ -284,7 +287,11 @@ class TestSymbolicExpression(unittest.TestCase):
         algebra.check_value(1 + e_xv, "(1 + x)")
 
         # - In place.
-        e = copy(xv)
+        # N.B. We cannot promote a `Variable` array to `Expression` using
+        # `__iadd__`, as NumPy does not permit type transformation via in-place
+        # operators.
+        e = np.array(xv, dtype=sym.Expression)
+        print(repr(e), repr(e_yv))
         e += e_yv
         algebra.check_value(e, "(x + y)")
         e += zv
@@ -300,7 +307,7 @@ class TestSymbolicExpression(unittest.TestCase):
         algebra.check_value((1 - e_xv), "(1 - x)")
 
         # - In place.
-        e = copy(xv)
+        e = copy(e_xv)  # N.B. No array construnction needed
         e -= e_yv
         algebra.check_value(e, (x - y))
         e -= zv
@@ -316,7 +323,7 @@ class TestSymbolicExpression(unittest.TestCase):
         algebra.check_value((1 * e_xv), "x")
 
         # - In place.
-        e = copy(xv)
+        e = np.array(xv, dtype=sym.Expression)
         e *= e_yv
         algebra.check_value(e, "(x * y)")
         e *= zv
@@ -332,7 +339,7 @@ class TestSymbolicExpression(unittest.TestCase):
         algebra.check_value((1 / e_xv), (1 / x))
 
         # - In place.
-        e = copy(xv)
+        e = np.array(xv, dtype=sym.Expression)
         e /= e_yv
         algebra.check_value(e, (x / y))
         e /= zv
@@ -381,15 +388,15 @@ class TestSymbolicExpression(unittest.TestCase):
         self.assertIsInstance(xv, sym.Variable)
         self.assertIsInstance(e_xv, sym.Expression)
 
-#     def test_array_algebra(self):
-#         xv, e_xv = self._check_algebra(
-#             VectorizedAlgebra(
-#                 self._check_array,
-#                 scalar_to_float=lambda x: x.Evaluate()))
-#         self.assertEquals(xv.shape, (2,))
-#         self.assertIsInstance(xv[0], sym.Variable)
-#         self.assertEquals(e_xv.shape, (2,))
-#         self.assertIsInstance(e_xv[0], sym.Expression)
+    def test_array_algebra(self):
+        xv, e_xv = self._check_algebra(
+            VectorizedAlgebra(
+                self._check_array,
+                scalar_to_float=lambda x: x.Evaluate()))
+        self.assertEquals(xv.shape, (2,))
+        self.assertIsInstance(xv[0], sym.Variable)
+        self.assertEquals(e_xv.shape, (2,))
+        self.assertIsInstance(e_xv[0], sym.Expression)
 
 #     def test_relational_operators(self):
 #         # TODO(eric.cousineau): Use `VectorizedAlgebra` overloads once #8315 is
@@ -810,3 +817,6 @@ class TestSymbolicExpression(unittest.TestCase):
 #         p1 += 1
 #         self.assertNotEqual(p1, p2)
 #         self.assertNotEqual(hash(p1), hash(p2))
+
+import sys
+sys.stdout = sys.stderr
