@@ -54,23 +54,25 @@ class TestAutoDiffXd(unittest.TestCase):
         self.assertEquals(x.dtype, AD)
         # Idempotent check.
         self._check_array(x, x)
-        # Conversion.
 
-        # TODO(eric.cousineau): Fix this.
-        # with self.assertRaises(ValueError):
-        # Avoid implicit coercion, as this will imply information loss.
-        xf = np.zeros(2, dtype=np.float)
-        xf[:] = x
-
+    def test_array_casting(self):
+        a = AD(1, [1., 0])
+        b = AD(2, [0, 1.])
+        x = np.array([a, b])
+        # Explicit casting using `astype`.
         xf = x.astype(dtype=np.float)
         self._check_array(xf, [1., 2])
-        # Converts.
-        x = np.zeros((3, 3), dtype=AD)
-        self.assertTrue(isinstance(x[0, 0], AD))
-        print(np.eye(3))
-        print(np.eye(3).dtype)
-        x = np.eye(3).astype(AD)
-        self.assertTrue(isinstance(x[0, 0], AD))
+        x0 = np.zeros((3, 3), dtype=AD)
+        self.assertTrue(isinstance(x0[0, 0], AD))
+        xI = np.eye(3).astype(AD)
+        self.assertTrue(isinstance(xI[0, 0], AD))
+
+        # Assigning via slicing is an explicit cast.
+        xf = np.zeros(2, dtype=np.float)
+        xf[:] = x
+        # Assigning via an element is an implicit cast.
+        with self.assertRaises(TypeError):
+            xf[0] = x[0]
 
     def _check_algebra(self, algebra):
         a_scalar = AD(1, [1., 0])
