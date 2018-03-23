@@ -249,137 +249,137 @@ class TestSymbolicVariable(unittest.TestCase):
 #         self.assertEqual(vars3, sym.Variables([y]))
 
 
-# class TestSymbolicExpression(unittest.TestCase):
-#     def _check_scalar(self, actual, expected):
-#         self.assertIsInstance(actual, sym.Expression)
-#         # Chain conversion to ensure equivalent treatment.
-#         if isinstance(expected, float) or isinstance(expected, int):
-#             expected = sym.Expression(expected)
-#         if isinstance(expected, sym.Expression):
-#             expected = str(expected)
-#         self.assertIsInstance(expected, str)
-#         self.assertEqual(str(actual), expected)
+class TestSymbolicExpression(unittest.TestCase):
+    def _check_scalar(self, actual, expected):
+        self.assertIsInstance(actual, sym.Expression)
+        # Chain conversion to ensure equivalent treatment.
+        if isinstance(expected, float) or isinstance(expected, int):
+            expected = sym.Expression(expected)
+        if isinstance(expected, sym.Expression):
+            expected = str(expected)
+        self.assertIsInstance(expected, str)
+        self.assertEqual(str(actual), expected)
 
-#     def _check_array(self, actual, expected):
-#         self.assertEqual(actual.shape, expected.shape)
-#         for a, b in zip(actual.flat, expected.flat):
-#             self._check_scalar(a, b)
+    def _check_array(self, actual, expected):
+        self.assertEqual(actual.shape, expected.shape)
+        for a, b in zip(actual.flat, expected.flat):
+            self._check_scalar(a, b)
 
-#     def _check_algebra(self, algebra):
-#         xv = algebra.to_algebra(x)
-#         yv = algebra.to_algebra(y)
-#         zv = algebra.to_algebra(z)
-#         wv = algebra.to_algebra(w)
-#         av = algebra.to_algebra(a)
-#         bv = algebra.to_algebra(b)
-#         cv = algebra.to_algebra(c)
-#         e_xv = algebra.to_algebra(e_x)
-#         e_yv = algebra.to_algebra(e_y)
+    def _check_algebra(self, algebra):
+        xv = algebra.to_algebra(x)
+        yv = algebra.to_algebra(y)
+        zv = algebra.to_algebra(z)
+        wv = algebra.to_algebra(w)
+        av = algebra.to_algebra(a)
+        bv = algebra.to_algebra(b)
+        cv = algebra.to_algebra(c)
+        e_xv = algebra.to_algebra(e_x)
+        e_yv = algebra.to_algebra(e_y)
 
-#         # Addition.
-#         algebra.check_value(e_xv + e_yv, "(x + y)")
-#         algebra.check_value(e_xv + yv, "(x + y)")
-#         algebra.check_value(e_xv + 1, "(1 + x)")
-#         algebra.check_value(xv + e_yv, "(x + y)")
-#         algebra.check_value(1 + e_xv, "(1 + x)")
+        # Addition.
+        algebra.check_value(e_xv + e_yv, "(x + y)")
+        algebra.check_value(e_xv + yv, "(x + y)")
+        algebra.check_value(e_xv + 1, "(1 + x)")
+        algebra.check_value(xv + e_yv, "(x + y)")
+        algebra.check_value(1 + e_xv, "(1 + x)")
 
-#         # - In place.
-#         e = copy(xv)
-#         e += e_yv
-#         algebra.check_value(e, "(x + y)")
-#         e += zv
-#         algebra.check_value(e, "(x + y + z)")
-#         e += 1
-#         algebra.check_value(e, "(1 + x + y + z)")
+        # - In place.
+        e = copy(xv)
+        e += e_yv
+        algebra.check_value(e, "(x + y)")
+        e += zv
+        algebra.check_value(e, "(x + y + z)")
+        e += 1
+        algebra.check_value(e, "(1 + x + y + z)")
 
-#         # Subtraction.
-#         algebra.check_value((e_xv - e_yv), "(x - y)")
-#         algebra.check_value((e_xv - yv), "(x - y)")
-#         algebra.check_value((e_xv - 1), "(-1 + x)")
-#         algebra.check_value((xv - e_yv), "(x - y)")
-#         algebra.check_value((1 - e_xv), "(1 - x)")
+        # Subtraction.
+        algebra.check_value((e_xv - e_yv), "(x - y)")
+        algebra.check_value((e_xv - yv), "(x - y)")
+        algebra.check_value((e_xv - 1), "(-1 + x)")
+        algebra.check_value((xv - e_yv), "(x - y)")
+        algebra.check_value((1 - e_xv), "(1 - x)")
 
-#         # - In place.
-#         e = copy(xv)
-#         e -= e_yv
-#         algebra.check_value(e, (x - y))
-#         e -= zv
-#         algebra.check_value(e, (x - y - z))
-#         e -= 1
-#         algebra.check_value(e, (x - y - z - 1))
+        # - In place.
+        e = copy(xv)
+        e -= e_yv
+        algebra.check_value(e, (x - y))
+        e -= zv
+        algebra.check_value(e, (x - y - z))
+        e -= 1
+        algebra.check_value(e, (x - y - z - 1))
 
-#         # Multiplication.
-#         algebra.check_value((e_xv * e_yv), "(x * y)")
-#         algebra.check_value((e_xv * yv), "(x * y)")
-#         algebra.check_value((e_xv * 1), "x")
-#         algebra.check_value((xv * e_yv), "(x * y)")
-#         algebra.check_value((1 * e_xv), "x")
+        # Multiplication.
+        algebra.check_value((e_xv * e_yv), "(x * y)")
+        algebra.check_value((e_xv * yv), "(x * y)")
+        algebra.check_value((e_xv * 1), "x")
+        algebra.check_value((xv * e_yv), "(x * y)")
+        algebra.check_value((1 * e_xv), "x")
 
-#         # - In place.
-#         e = copy(xv)
-#         e *= e_yv
-#         algebra.check_value(e, "(x * y)")
-#         e *= zv
-#         algebra.check_value(e, "(x * y * z)")
-#         e *= 1
-#         algebra.check_value(e, "(x * y * z)")
+        # - In place.
+        e = copy(xv)
+        e *= e_yv
+        algebra.check_value(e, "(x * y)")
+        e *= zv
+        algebra.check_value(e, "(x * y * z)")
+        e *= 1
+        algebra.check_value(e, "(x * y * z)")
 
-#         # Division
-#         algebra.check_value((e_xv / e_yv), (x / y))
-#         algebra.check_value((e_xv / yv), (x / y))
-#         algebra.check_value((e_xv / 1), "x")
-#         algebra.check_value((xv / e_yv), (x / y))
-#         algebra.check_value((1 / e_xv), (1 / x))
+        # Division
+        algebra.check_value((e_xv / e_yv), (x / y))
+        algebra.check_value((e_xv / yv), (x / y))
+        algebra.check_value((e_xv / 1), "x")
+        algebra.check_value((xv / e_yv), (x / y))
+        algebra.check_value((1 / e_xv), (1 / x))
 
-#         # - In place.
-#         e = copy(xv)
-#         e /= e_yv
-#         algebra.check_value(e, (x / y))
-#         e /= zv
-#         algebra.check_value(e, (x / y / z))
-#         e /= 1
-#         algebra.check_value(e, ((x / y) / z))
+        # - In place.
+        e = copy(xv)
+        e /= e_yv
+        algebra.check_value(e, (x / y))
+        e /= zv
+        algebra.check_value(e, (x / y / z))
+        e /= 1
+        algebra.check_value(e, ((x / y) / z))
 
-#         # Unary
-#         algebra.check_value((+e_xv), "x")
-#         algebra.check_value((-e_xv), "(-1 * x)")
+        # Unary
+        algebra.check_value((+e_xv), "x")
+        algebra.check_value((-e_xv), "(-1 * x)")
 
-#         # Math functions.
-#         algebra.check_value((algebra.abs(e_xv)), "abs(x)")
-#         algebra.check_value((algebra.exp(e_xv)), "exp(x)")
-#         algebra.check_value((algebra.sqrt(e_xv)), "sqrt(x)")
-#         algebra.check_value((algebra.pow(e_xv, e_yv)), "pow(x, y)")
-#         algebra.check_value((algebra.sin(e_xv)), "sin(x)")
-#         algebra.check_value((algebra.cos(e_xv)), "cos(x)")
-#         algebra.check_value((algebra.tan(e_xv)), "tan(x)")
-#         algebra.check_value((algebra.arcsin(e_xv)), "asin(x)")
-#         algebra.check_value((algebra.arccos(e_xv)), "acos(x)")
-#         algebra.check_value((algebra.arctan2(e_xv, e_yv)), "atan2(x, y)")
-#         algebra.check_value((algebra.sinh(e_xv)), "sinh(x)")
-#         algebra.check_value((algebra.cosh(e_xv)), "cosh(x)")
-#         algebra.check_value((algebra.tanh(e_xv)), "tanh(x)")
-#         algebra.check_value((algebra.ceil(e_xv)), "ceil(x)")
-#         algebra.check_value((algebra.floor(e_xv)), "floor(x)")
+        # Math functions.
+        algebra.check_value((algebra.abs(e_xv)), "abs(x)")
+        algebra.check_value((algebra.exp(e_xv)), "exp(x)")
+        algebra.check_value((algebra.sqrt(e_xv)), "sqrt(x)")
+        algebra.check_value((algebra.pow(e_xv, e_yv)), "pow(x, y)")
+        algebra.check_value((algebra.sin(e_xv)), "sin(x)")
+        algebra.check_value((algebra.cos(e_xv)), "cos(x)")
+        algebra.check_value((algebra.tan(e_xv)), "tan(x)")
+        algebra.check_value((algebra.arcsin(e_xv)), "asin(x)")
+        algebra.check_value((algebra.arccos(e_xv)), "acos(x)")
+        algebra.check_value((algebra.arctan2(e_xv, e_yv)), "atan2(x, y)")
+        algebra.check_value((algebra.sinh(e_xv)), "sinh(x)")
+        algebra.check_value((algebra.cosh(e_xv)), "cosh(x)")
+        algebra.check_value((algebra.tanh(e_xv)), "tanh(x)")
+        algebra.check_value((algebra.ceil(e_xv)), "ceil(x)")
+        algebra.check_value((algebra.floor(e_xv)), "floor(x)")
 
-#         if isinstance(algebra, ScalarAlgebra):
-#             # TODO(eric.cousineau): Uncomment these lines if we can teach numpy
-#             # that reduction is not just selection.
-#             algebra.check_value((algebra.min(e_xv, e_yv)), "min(x, y)")
-#             algebra.check_value((algebra.max(e_xv, e_yv)), "max(x, y)")
-#             # TODO(eric.cousineau): Add broadcasting functions for these
-#             # operations.
-#             algebra.check_value((sym.atan(e_xv)), "atan(x)")
-#             algebra.check_value((sym.if_then_else(e_xv > e_yv, e_xv, e_yv)),
-#                                 "(if (x > y) then x else y)")
+        if isinstance(algebra, ScalarAlgebra):
+            # TODO(eric.cousineau): Uncomment these lines if we can teach numpy
+            # that reduction is not just selection.
+            algebra.check_value((algebra.min(e_xv, e_yv)), "min(x, y)")
+            algebra.check_value((algebra.max(e_xv, e_yv)), "max(x, y)")
+            # TODO(eric.cousineau): Add broadcasting functions for these
+            # operations.
+            # algebra.check_value((sym.atan(e_xv)), "atan(x)")
+            algebra.check_value((sym.if_then_else(e_xv > e_yv, e_xv, e_yv)),
+                                "(if (x > y) then x else y)")
 
-#         return xv, e_xv
+        return xv, e_xv
 
-#     def test_scalar_algebra(self):
-#         xv, e_xv = self._check_algebra(
-#             ScalarAlgebra(
-#                 self._check_scalar, scalar_to_float=lambda x: x.Evaluate()))
-#         self.assertIsInstance(xv, sym.Variable)
-#         self.assertIsInstance(e_xv, sym.Expression)
+    def test_scalar_algebra(self):
+        xv, e_xv = self._check_algebra(
+            ScalarAlgebra(
+                self._check_scalar, scalar_to_float=lambda x: x.Evaluate()))
+        self.assertIsInstance(xv, sym.Variable)
+        self.assertIsInstance(e_xv, sym.Expression)
 
 #     def test_array_algebra(self):
 #         xv, e_xv = self._check_algebra(
