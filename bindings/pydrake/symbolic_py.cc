@@ -84,22 +84,22 @@ PYBIND11_MODULE(_symbolic_py, m) {
       .def_loop(py::self < Expression())
       .def_loop(py::self < py::self)
       .def_loop(py::self < double())
-      .def_loop(double() < py::self)
+      .def_loop(double() < py::self, false)
       // LE(<=).
       .def_loop(py::self <= Expression())
       .def_loop(py::self <= py::self)
       .def_loop(py::self <= double())
-      .def_loop(double() <= py::self)
+      .def_loop(double() <= py::self, false)
       // GT(>).
       .def_loop(py::self > Expression())
       .def_loop(py::self > py::self)
       .def_loop(py::self > double())
-      .def_loop(double() > py::self)
+      .def_loop(double() > py::self, false)
       // GE(>=).
       .def_loop(py::self >= Expression())
       .def_loop(py::self >= py::self)
       .def_loop(py::self >= double())
-      .def_loop(double() >= py::self)
+      .def_loop(double() >= py::self, false)
       // EQ(==).
       .def_loop(py::self == Expression())
       .def_loop(py::self == py::self)
