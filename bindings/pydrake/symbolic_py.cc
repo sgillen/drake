@@ -27,7 +27,11 @@ PYBIND11_MODULE(_symbolic_py, m) {
       "Symbolic variable, variables, monomial, expression, polynomial, and "
       "formula";
 
-  py::dtype_user<Variable>(m, "Variable")
+  // Predeclare all custom dtypes.
+  py::dtype_user<Variable> var(m, "Variable");
+  py::dtype_user<Expression> expr(m, "Expression");
+
+  var
       .def(py::init<const string&>())
       .def("get_id", &Variable::get_id)
       .def("__str__", &Variable::to_string)
@@ -141,7 +145,6 @@ PYBIND11_MODULE(_symbolic_py, m) {
     return intersect(vars1, vars2);
   });
 
-  py::dtype_user<Expression> expr(m, "Expression");
   expr
       .def(py::init<>())
       .def(py::init<double>())

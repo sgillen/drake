@@ -1,6 +1,11 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, division, print_function
 
+import subprocess
+subprocess.Popen(
+    "export -p | sed 's# PWD=# OLD_PWD=#g' > /tmp/env.sh",
+    shell=True)
+
 import unittest
 import numpy as np
 import pydrake.symbolic as sym
