@@ -30,6 +30,7 @@ PYBIND11_MODULE(_symbolic_py, m) {
   // Predeclare all custom dtypes.
   py::dtype_user<Variable> var(m, "Variable");
   py::dtype_user<Expression> expr(m, "Expression");
+  py::dtype_user<Formula> formula(m, "Formula");
 
   var
       .def(py::init<const string&>())
@@ -277,7 +278,7 @@ PYBIND11_MODULE(_symbolic_py, m) {
     return Jacobian(f, vars);
   });
 
-  py::class_<Formula>(m, "Formula")
+  formula
       .def("GetFreeVariables", &Formula::GetFreeVariables)
       .def("EqualTo", &Formula::EqualTo)
       .def("Substitute",
@@ -300,7 +301,7 @@ PYBIND11_MODULE(_symbolic_py, m) {
            [](const Formula& self) {
              return fmt::format("<Formula \"{}\">", self.to_string());
            })
-      .def("__eq__", [](const Formula& self,
+      .def_loop("__eq__", [](const Formula& self,
                         const Formula& other) { return self.EqualTo(other); })
       .def("__ne__", [](const Formula& self,
                         const Formula& other) { return !self.EqualTo(other); })

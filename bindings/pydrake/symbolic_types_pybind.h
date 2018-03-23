@@ -14,7 +14,7 @@
 // (e.g. `Eigen::MatrixX<T>`) to a NumPy array, we should have it in the
 // following list.
 PYBIND11_NUMPY_DTYPE_USER(drake::symbolic::Expression);
-PYBIND11_NUMPY_OBJECT_DTYPE(drake::symbolic::Formula);
+PYBIND11_NUMPY_DTYPE_USER(drake::symbolic::Formula);
 PYBIND11_NUMPY_OBJECT_DTYPE(drake::symbolic::Monomial);
 PYBIND11_NUMPY_OBJECT_DTYPE(drake::symbolic::Polynomial);
 PYBIND11_NUMPY_DTYPE_USER(drake::symbolic::Variable);
