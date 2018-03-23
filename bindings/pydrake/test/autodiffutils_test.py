@@ -33,7 +33,7 @@ class TestAutoDiffXd(unittest.TestCase):
         expected = np.array(expected)
         self.assertEquals(actual.dtype, expected.dtype)
         self.assertEquals(actual.shape, expected.shape)
-        if actual.dtype == object:
+        if actual.dtype == object or actual.dtype == AD:
             for a, b in zip(actual.flat, expected.flat):
                 self._check_scalar(a, b)
         else:
@@ -147,3 +147,19 @@ class TestAutoDiffXd(unittest.TestCase):
                 scalar_to_float=lambda x: x.value()))
         self.assertEquals(type(a), np.ndarray)
         self.assertEquals(a.shape, (2,))
+
+    def test_linear_algebra(self):
+        a_scalar = AD(1, [1., 0])
+        b_scalar = AD(2, [0, 1.])
+        A = np.array([[a_scalar, a_scalar]])
+        B = np.array([[b_scalar, b_scalar]]).T
+        C = np.dot(A, B)
+        self._check_array(C, [[AD(4, [4., 2])]])
+
+        # Type mixing
+        Bf = np.array([[2., 2]]).T
+        # TODO(eric.cousineau): See if there's a way around this.
+        with self.assertRaises(TypeError):
+            C2 = np.dot(A, Bf)
+        C2 = np.dot(A, Bf.astype(AD))
+        self._check_array(C, [[AD(4, [4., 2])]])
