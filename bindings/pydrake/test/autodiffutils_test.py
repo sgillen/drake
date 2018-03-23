@@ -73,6 +73,13 @@ class TestAutoDiffXd(unittest.TestCase):
         # Assigning via an element is an implicit cast.
         with self.assertRaises(TypeError):
             xf[0] = x[0]
+        # Try `int`; we do not have an explicit caster registered.
+        xi = np.zeros(2, dtype=np.int)
+        with self.assertRaises(ValueError):
+            xi[:] = x
+        # TODO(eric.cousineau): Fix this.
+        with self.assertRaises(TypeError):
+            xi[0] = x[0]
 
     def _check_algebra(self, algebra):
         a_scalar = AD(1, [1., 0])
