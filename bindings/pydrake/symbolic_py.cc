@@ -234,6 +234,9 @@ PYBIND11_MODULE(_symbolic_py, m) {
       .def("Differentiate", &Expression::Differentiate)
       .def("Jacobian", &Expression::Jacobian);
 
+  py::print("Variable: ", var.attr("__dict__").attr("keys")());
+  py::print("Expression: ", expr.attr("__dict__").attr("keys")());
+
   // TODO(eric.cousineau): Consider deprecating the aliases in `math`?
   auto math = py::module::import("pydrake.math");
   UfuncMirrorDef<decltype(expr)>(&expr, math)
