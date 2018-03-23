@@ -27,7 +27,7 @@ PYBIND11_MODULE(_symbolic_py, m) {
       "Symbolic variable, variables, monomial, expression, polynomial, and "
       "formula";
 
-  py::class_<Variable>(m, "Variable")
+  py::dtype_user<Variable>(m, "Variable")
       .def(py::init<const string&>())
       .def("get_id", &Variable::get_id)
       .def("__str__", &Variable::to_string)
@@ -42,65 +42,66 @@ PYBIND11_MODULE(_symbolic_py, m) {
              return self;
            })
       // Addition.
-      .def(py::self + py::self)
-      .def(py::self + double())
-      .def(double() + py::self)
+      .def_loop(py::self + py::self)
+      .def_loop(py::self + double())
+      .def_loop(double() + py::self)
       // Subtraction.
-      .def(py::self - py::self)
-      .def(py::self - double())
-      .def(double() - py::self)
+      .def_loop(py::self - py::self)
+      .def_loop(py::self - double())
+      .def_loop(double() - py::self)
       // Multiplication.
-      .def(py::self * py::self)
-      .def(py::self * double())
-      .def(double() * py::self)
+      .def_loop(py::self * py::self)
+      .def_loop(py::self * double())
+      .def_loop(double() * py::self)
       // Division.
-      .def(py::self / py::self)
-      .def(py::self / double())
-      .def(double() / py::self)
+      .def_loop(py::self / py::self)
+      .def_loop(py::self / double())
+      .def_loop(double() / py::self)
       // Pow.
-      .def("__pow__",
-           [](const Variable& self, double other) { return pow(self, other); },
-           py::is_operator())
-      .def("__pow__",
+      .def_loop("__pow__",
+           [](const Variable& self, double other) { return pow(self, other); })
+      .def_loop("__pow__",
            [](const Variable& self, const Variable& other) {
              return pow(self, other);
-           },
-           py::is_operator())
-      .def("__pow__",
+           })
+      .def_loop("__pow__",
            [](const Variable& self, const Expression& other) {
              return pow(self, other);
-           },
-           py::is_operator())
+           })
       // Unary Plus.
-      .def(+py::self)
+      .def_loop(+py::self)
       // Unary Minus.
-      .def(-py::self)
+      .def_loop(-py::self)
       // LT(<).
-      // Note that for `double < Variable` case, the reflected op ('>' in this
-      // case) is called. For example, `1 < x` will return `x > 1`.
-      .def(py::self < Expression())
-      .def(py::self < py::self)
-      .def(py::self < double())
+      // Note that while pybind reflects `double < Variable`, NumPy UFunc loops
+      // require both orders to be explicitly specified.
+      .def_loop(py::self < Expression())
+      .def_loop(py::self < py::self)
+      .def_loop(py::self < double())
+      .def_loop(double() < py::self)
       // LE(<=).
-      .def(py::self <= Expression())
-      .def(py::self <= py::self)
-      .def(py::self <= double())
+      .def_loop(py::self <= Expression())
+      .def_loop(py::self <= py::self)
+      .def_loop(py::self <= double())
+      .def_loop(double() <= py::self)
       // GT(>).
-      .def(py::self > Expression())
-      .def(py::self > py::self)
-      .def(py::self > double())
+      .def_loop(py::self > Expression())
+      .def_loop(py::self > py::self)
+      .def_loop(py::self > double())
+      .def_loop(double() > py::self)
       // GE(>=).
-      .def(py::self >= Expression())
-      .def(py::self >= py::self)
-      .def(py::self >= double())
+      .def_loop(py::self >= Expression())
+      .def_loop(py::self >= py::self)
+      .def_loop(py::self >= double())
+      .def_loop(double() >= py::self)
       // EQ(==).
-      .def(py::self == Expression())
-      .def(py::self == py::self)
-      .def(py::self == double())
+      .def_loop(py::self == Expression())
+      .def_loop(py::self == py::self)
+      .def_loop(py::self == double())
       // NE(!=).
-      .def(py::self != Expression())
-      .def(py::self != py::self)
-      .def(py::self != double());
+      .def_loop(py::self != Expression())
+      .def_loop(py::self != py::self)
+      .def_loop(py::self != double());
 
   py::class_<Variables>(m, "Variables")
       .def(py::init<>())
@@ -140,7 +141,8 @@ PYBIND11_MODULE(_symbolic_py, m) {
     return intersect(vars1, vars2);
   });
 
-  py::class_<Expression>(m, "Expression")
+  py::dtype_user<Expression> expr(m, "Expression");
+  expr
       .def(py::init<>())
       .def(py::init<double>())
       .def(py::init<const Variable&>())
@@ -157,125 +159,108 @@ PYBIND11_MODULE(_symbolic_py, m) {
       .def("Expand", &Expression::Expand)
       .def("Evaluate", [](const Expression& self) { return self.Evaluate(); })
       // Addition
-      .def(py::self + py::self)
-      .def(py::self + Variable())
-      .def(py::self + double())
-      .def(Variable() + py::self)
-      .def(double() + py::self)
-      .def(py::self += py::self)
-      .def(py::self += Variable())
-      .def(py::self += double())
+      .def_loop(py::self + py::self)
+      .def_loop(py::self + Variable())
+      .def_loop(py::self + double())
+      .def_loop(Variable() + py::self)
+      .def_loop(double() + py::self)
+      .def_loop(py::self += py::self)
+      .def_loop(py::self += Variable())
+      .def_loop(py::self += double())
       // Subtraction.
-      .def(py::self - py::self)
-      .def(py::self - Variable())
-      .def(py::self - double())
-      .def(Variable() - py::self)
-      .def(double() - py::self)
-      .def(py::self -= py::self)
-      .def(py::self -= Variable())
-      .def(py::self -= double())
+      .def_loop(py::self - py::self)
+      .def_loop(py::self - Variable())
+      .def_loop(py::self - double())
+      .def_loop(Variable() - py::self)
+      .def_loop(double() - py::self)
+      .def_loop(py::self -= py::self)
+      .def_loop(py::self -= Variable())
+      .def_loop(py::self -= double())
       // Multiplication.
-      .def(py::self * py::self)
-      .def(py::self * Variable())
-      .def(py::self * double())
-      .def(Variable() * py::self)
-      .def(double() * py::self)
-      .def(py::self *= py::self)
-      .def(py::self *= Variable())
-      .def(py::self *= double())
+      .def_loop(py::self * py::self)
+      .def_loop(py::self * Variable())
+      .def_loop(py::self * double())
+      .def_loop(Variable() * py::self)
+      .def_loop(double() * py::self)
+      .def_loop(py::self *= py::self)
+      .def_loop(py::self *= Variable())
+      .def_loop(py::self *= double())
       // Division.
-      .def(py::self / py::self)
-      .def(py::self / Variable())
-      .def(py::self / double())
-      .def(Variable() / py::self)
-      .def(double() / py::self)
-      .def(py::self /= py::self)
-      .def(py::self /= Variable())
-      .def(py::self /= double())
-      // Pow.
-      .def("__pow__", [](const Expression& self,
-                         const double other) { return pow(self, other); })
-      .def("__pow__", [](const Expression& self,
-                         const Variable& other) { return pow(self, other); })
-      .def("__pow__", [](const Expression& self,
-                         const Expression& other) { return pow(self, other); })
+      .def_loop(py::self / py::self)
+      .def_loop(py::self / Variable())
+      .def_loop(py::self / double())
+      .def_loop(Variable() / py::self)
+      .def_loop(double() / py::self)
+      .def_loop(py::self /= py::self)
+      .def_loop(py::self /= Variable())
+      .def_loop(py::self /= double())
       // Unary Plus.
-      .def(+py::self)
+      .def_loop(+py::self)
       // Unary Minus.
-      .def(-py::self)
+      .def_loop(-py::self)
       // LT(<).
       //
-      // Note that for `double < Expression` case, the reflected op ('>' in this
-      // case) is called. For example, `1 < x * y` will return `x * y > 1`.
-      .def(py::self < py::self)
-      .def(py::self < Variable())
-      .def(py::self < double())
+      // See notes for `Variable` about reversible operations.
+      .def_loop(py::self < py::self)
+      .def_loop(py::self < Variable())
+      .def_loop(py::self < double())
+      .def_loop(double() < py::self)
       // LE(<=).
-      .def(py::self <= py::self)
-      .def(py::self <= Variable())
-      .def(py::self <= double())
+      .def_loop(py::self <= py::self)
+      .def_loop(py::self <= Variable())
+      .def_loop(py::self <= double())
+      .def_loop(double() <= py::self)
       // GT(>).
-      .def(py::self > py::self)
-      .def(py::self > Variable())
-      .def(py::self > double())
+      .def_loop(py::self > py::self)
+      .def_loop(py::self > Variable())
+      .def_loop(py::self > double())
+      .def_loop(double() > py::self)
       // GE(>=).
-      .def(py::self >= py::self)
-      .def(py::self >= Variable())
-      .def(py::self >= double())
+      .def_loop(py::self >= py::self)
+      .def_loop(py::self >= Variable())
+      .def_loop(py::self >= double())
+      .def_loop(double() >= py::self)
       // EQ(==).
-      .def(py::self == py::self)
-      .def(py::self == Variable())
-      .def(py::self == double())
+      .def_loop(py::self == py::self)
+      .def_loop(py::self == Variable())
+      .def_loop(py::self == double())
       // NE(!=)
-      .def(py::self != py::self)
-      .def(py::self != Variable())
-      .def(py::self != double())
+      .def_loop(py::self != py::self)
+      .def_loop(py::self != Variable())
+      .def_loop(py::self != double())
       .def("Differentiate", &Expression::Differentiate)
-      .def("Jacobian", &Expression::Jacobian)
+      .def("Jacobian", &Expression::Jacobian);
+
+  // TODO(eric.cousineau): Consider deprecating the aliases in `math`?
+  auto math = py::module::import("pydrake.math");
+  UfuncMirrorDef<decltype(expr)>(&expr, math)
       // TODO(eric.cousineau): Figure out how to consolidate with the below
       // methods.
-      .def("log", &symbolic::log)
-      .def("__abs__", &symbolic::abs)
-      .def("exp", &symbolic::exp)
-      .def("sqrt", &symbolic::sqrt)
+      // Pow.
+      .def_loop("__pow__", "pow", [](const Expression& self,
+                         const double other) { return pow(self, other); })
+      .def_loop("__pow__", "pow", [](const Expression& self,
+                         const Variable& other) { return pow(self, other); })
+      .def_loop("__pow__", "pow", [](const Expression& self,
+                         const Expression& other) { return pow(self, other); })
+      .def_loop("log", &symbolic::log)
+      .def_loop("__abs__", "abs", &symbolic::abs)
+      .def_loop("exp", &symbolic::exp)
+      .def_loop("sqrt", &symbolic::sqrt)
       // TODO(eric.cousineau): Move `__pow__` here.
-      .def("sin", &symbolic::sin)
-      .def("cos", &symbolic::cos)
-      .def("tan", &symbolic::tan)
-      .def("arcsin", &symbolic::asin)
-      .def("arccos", &symbolic::acos)
-      .def("arctan2", &symbolic::atan2)
-      .def("sinh", &symbolic::sinh)
-      .def("cosh", &symbolic::cosh)
-      .def("tanh", &symbolic::tanh)
-      .def("min", &symbolic::min)
-      .def("max", &symbolic::max)
-      .def("ceil", &symbolic::ceil)
-      .def("floor", &symbolic::floor);
-
-  // TODO(eric.cousineau): Consider deprecating these methods?
-  auto math = py::module::import("pydrake.math");
-  MirrorDef<py::module, py::module>(&math, &m)
-      .def("log", &symbolic::log)
-      .def("abs", &symbolic::abs)
-      .def("exp", &symbolic::exp)
-      .def("sqrt", &symbolic::sqrt)
-      .def("pow", py::overload_cast<const Expression&, const Expression&>(
-                      &symbolic::pow))
-      .def("sin", &symbolic::sin)
-      .def("cos", &symbolic::cos)
-      .def("tan", &symbolic::tan)
-      .def("asin", &symbolic::asin)
-      .def("acos", &symbolic::acos)
-      .def("atan", &symbolic::atan)
-      .def("atan2", &symbolic::atan2)
-      .def("sinh", &symbolic::sinh)
-      .def("cosh", &symbolic::cosh)
-      .def("tanh", &symbolic::tanh)
-      .def("min", &symbolic::min)
-      .def("max", &symbolic::max)
-      .def("ceil", &symbolic::ceil)
-      .def("floor", &symbolic::floor);
+      .def_loop("sin", &symbolic::sin)
+      .def_loop("cos", &symbolic::cos)
+      .def_loop("tan", &symbolic::tan)
+      .def_loop("arcsin", "asin", &symbolic::asin)
+      .def_loop("arccos", "acos", &symbolic::acos)
+      .def_loop("arctan2", "atan2", &symbolic::atan2)
+      .def_loop("sinh", &symbolic::sinh)
+      .def_loop("cosh", &symbolic::cosh)
+      .def_loop("tanh", &symbolic::tanh)
+      .def_loop("fmin", "min", &symbolic::min)
+      .def_loop("fmax", "max", &symbolic::max)
+      .def_loop("ceil", &symbolic::ceil)
+      .def_loop("floor", &symbolic::floor);
 
   m.def("if_then_else", &symbolic::if_then_else);
 
