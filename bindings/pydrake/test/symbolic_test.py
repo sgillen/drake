@@ -117,27 +117,27 @@ class TestSymbolicVariable(unittest.TestCase):
         self.assertEqual(str(sym.logical_or(x >= 1, x <= 2, y == 2)),
                          "((y = 2) or (x >= 1) or (x <= 2))")
 
-    # def test_functions_with_variable(self):
-    #     self.assertEqual(str(sym.abs(x)), "abs(x)")
-    #     self.assertEqual(str(sym.exp(x)), "exp(x)")
-    #     self.assertEqual(str(sym.sqrt(x)), "sqrt(x)")
-    #     self.assertEqual(str(sym.pow(x, y)), "pow(x, y)")
-    #     self.assertEqual(str(sym.sin(x)), "sin(x)")
-    #     self.assertEqual(str(sym.cos(x)), "cos(x)")
-    #     self.assertEqual(str(sym.tan(x)), "tan(x)")
-    #     self.assertEqual(str(sym.asin(x)), "asin(x)")
-    #     self.assertEqual(str(sym.acos(x)), "acos(x)")
-    #     self.assertEqual(str(sym.atan(x)), "atan(x)")
-    #     self.assertEqual(str(sym.atan2(x, y)), "atan2(x, y)")
-    #     self.assertEqual(str(sym.sinh(x)), "sinh(x)")
-    #     self.assertEqual(str(sym.cosh(x)), "cosh(x)")
-    #     self.assertEqual(str(sym.tanh(x)), "tanh(x)")
-    #     self.assertEqual(str(sym.min(x, y)), "min(x, y)")
-    #     self.assertEqual(str(sym.max(x, y)), "max(x, y)")
-    #     self.assertEqual(str(sym.ceil(x)), "ceil(x)")
-    #     self.assertEqual(str(sym.floor(x)), "floor(x)")
-    #     self.assertEqual(str(sym.if_then_else(x > y, x, y)),
-    #                      "(if (x > y) then x else y)")
+    def test_functions_with_variable(self):
+        self.assertEqual(str(sym.abs(x)), "abs(x)")
+        self.assertEqual(str(sym.exp(x)), "exp(x)")
+        self.assertEqual(str(sym.sqrt(x)), "sqrt(x)")
+        self.assertEqual(str(sym.pow(x, y)), "pow(x, y)")
+        self.assertEqual(str(sym.sin(x)), "sin(x)")
+        self.assertEqual(str(sym.cos(x)), "cos(x)")
+        self.assertEqual(str(sym.tan(x)), "tan(x)")
+        self.assertEqual(str(sym.asin(x)), "asin(x)")
+        self.assertEqual(str(sym.acos(x)), "acos(x)")
+        self.assertEqual(str(sym.atan(x)), "atan(x)")
+        self.assertEqual(str(sym.atan2(x, y)), "atan2(x, y)")
+        self.assertEqual(str(sym.sinh(x)), "sinh(x)")
+        self.assertEqual(str(sym.cosh(x)), "cosh(x)")
+        self.assertEqual(str(sym.tanh(x)), "tanh(x)")
+        self.assertEqual(str(sym.min(x, y)), "min(x, y)")
+        self.assertEqual(str(sym.max(x, y)), "max(x, y)")
+        self.assertEqual(str(sym.ceil(x)), "ceil(x)")
+        self.assertEqual(str(sym.floor(x)), "floor(x)")
+        self.assertEqual(str(sym.if_then_else(x > y, x, y)),
+                         "(if (x > y) then x else y)")
 
 
 # class TestSymbolicVariables(unittest.TestCase):
@@ -283,7 +283,6 @@ class TestSymbolicExpression(unittest.TestCase):
         e_yv = algebra.to_algebra(e_y)
 
         algebra.check_value(xv < yv, "(x < y)")
-        return xv, e_xv
 
         # Addition.
         algebra.check_value(e_xv + e_yv, "(x + y)")

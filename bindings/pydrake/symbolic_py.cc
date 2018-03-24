@@ -4,6 +4,7 @@
 #include "fmt/format.h"
 #include "fmt/ostream.h"
 #include "pybind11/eigen.h"
+#include "pybind11/eval.h"
 #include "pybind11/operators.h"
 #include "pybind11/pybind11.h"
 #include "pybind11/stl.h"
@@ -34,8 +35,6 @@ PYBIND11_MODULE(_symbolic_py, m) {
 
   var
       .def(py::init<const string&>())
-      .def_loop_cast([](double in) -> Expression { return in; }, true)
-      .def_loop_cast([](const Variable& in) -> Expression { return in; }, true)
       .def("get_id", &Variable::get_id)
       .def("__str__", &Variable::to_string)
       .def("__repr__",
@@ -152,6 +151,8 @@ PYBIND11_MODULE(_symbolic_py, m) {
       .def(py::init<>())
       .def(py::init<double>())
       .def(py::init<const Variable&>())
+      .def_loop_cast([](double in) -> Expression { return in; }, true)
+      .def_loop_cast([](const Variable& in) -> Expression { return in; }, true)
       .def("__str__", &Expression::to_string)
       .def("__repr__",
            [](const Expression& self) {
@@ -270,6 +271,31 @@ PYBIND11_MODULE(_symbolic_py, m) {
       .def_loop("fmax", "max", &symbolic::max)
       .def_loop("ceil", &symbolic::ceil)
       .def_loop("floor", &symbolic::floor);
+
+  // Import aliases.
+  // TODO(eric.cousineau): Deprecate, then remove these in lieu of `np.{func}`
+  py::exec(R"""(
+from pydrake.math import (
+    log,
+    abs,
+    exp,
+    pow,
+    sqrt,
+    sin,
+    cos,
+    tan,
+    asin,
+    acos,
+    atan2,
+    sinh,
+    cosh,
+    tanh,
+    min,
+    max,
+    ceil,
+    floor
+)
+)""");
 
   m.def("if_then_else", &symbolic::if_then_else);
 
