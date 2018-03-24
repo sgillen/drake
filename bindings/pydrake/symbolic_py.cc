@@ -272,8 +272,9 @@ PYBIND11_MODULE(_symbolic_py, m) {
       .def_loop("ceil", &symbolic::ceil)
       .def_loop("floor", &symbolic::floor);
 
-  m.def("pow_again", [](const Expression& a, const Expression& b) {
-    return pow(a, b);
+  m.def("pow_again", [](const Expression& a, const Expression& b) -> Expression {
+    // return pow(a, b);
+    return a;
   });
 
   // Import aliases.
