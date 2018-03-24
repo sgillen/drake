@@ -206,7 +206,6 @@ PYBIND11_MODULE(_symbolic_py, m) {
       // Unary Minus.
       .def_loop(-py::self)
       // LT(<).
-      //
       // See notes for `Variable` about reversible operations.
       .def_loop(py::self < py::self)
       .def_loop(py::self < Variable())

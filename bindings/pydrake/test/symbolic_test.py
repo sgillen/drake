@@ -249,27 +249,27 @@ class TestSymbolicVariable(unittest.TestCase):
 #         self.assertEqual(vars3, sym.Variables([y]))
 
 
-# class TestSymbolicExpression(unittest.TestCase):
-#     def _check_scalar(self, actual, expected):
-#         if isinstance(actual, np.ndarray):
-#             self.assertEqual(actual.shape, ())
-#             actual = actual.item()
-#         T = sym.Expression
-#         if isinstance(actual, sym.Formula):
-#             T = sym.Formula
-#         self.assertIsInstance(actual, T)
-#         # Chain conversion to ensure equivalent treatment.
-#         if isinstance(expected, float) or isinstance(expected, int):
-#             expected = T(expected)
-#         if isinstance(expected, T):
-#             expected = str(expected)
-#         self.assertIsInstance(expected, str)
-#         self.assertEqual(str(actual), expected)
+class TestSymbolicExpression(unittest.TestCase):
+    def _check_scalar(self, actual, expected):
+        if isinstance(actual, np.ndarray):
+            self.assertEqual(actual.shape, ())
+            actual = actual.item()
+        T = sym.Expression
+        if isinstance(actual, sym.Formula):
+            T = sym.Formula
+        self.assertIsInstance(actual, T)
+        # Chain conversion to ensure equivalent treatment.
+        if isinstance(expected, float) or isinstance(expected, int):
+            expected = T(expected)
+        if isinstance(expected, T):
+            expected = str(expected)
+        self.assertIsInstance(expected, str)
+        self.assertEqual(str(actual), expected)
 
-#     def _check_array(self, actual, expected):
-#         self.assertEqual(actual.shape, expected.shape)
-#         for a, b in zip(actual.flat, expected.flat):
-#             self._check_scalar(a, b)
+    def _check_array(self, actual, expected):
+        self.assertEqual(actual.shape, expected.shape)
+        for a, b in zip(actual.flat, expected.flat):
+            self._check_scalar(a, b)
 
 #     def _check_algebra(self, algebra):
 #         xv = algebra.to_algebra(x)
@@ -446,17 +446,17 @@ class TestSymbolicVariable(unittest.TestCase):
 #         self.assertEqual(str(1 == e_y), "(y = 1)")
 #         self.assertEqual(str(1 != e_y), "(y != 1)")
 
-#     def test_relation_operators_array_8135(self):
-#         # Indication of #8135.
-#         e_xv = np.array([e_x, e_x])
-#         e_yv = np.array([e_y, e_y])
-#         # N.B. In some versions of NumPy, `!=` for dtype=object implies ID
-#         # comparison (e.g. `is`).
-#         value = (e_xv == e_yv)
-#         # Ideally, this would be an array of formulas.
-#         self.assertEqual(value.dtype, bool)
-#         self.assertFalse(isinstance(value[0], sym.Formula))
-#         self.assertTrue(value.all())
+    def test_relation_operators_array_8135(self):
+        # Indication of #8135.
+        e_xv = np.array([e_x, e_x])
+        e_yv = np.array([e_y, e_y])
+        # N.B. In some versions of NumPy, `!=` for dtype=object implies ID
+        # comparison (e.g. `is`).
+        value = (e_xv == e_yv)
+        # Ideally, this would be an array of formulas.
+        self.assertEqual(value.dtype, bool)
+        self.assertFalse(isinstance(value[0], sym.Formula))
+        self.assertTrue(value.all())
 
 #     def test_functions_with_float(self):
 #         # TODO(eric.cousineau): Use concrete values once vectorized methods are
