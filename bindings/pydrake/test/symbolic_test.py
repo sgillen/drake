@@ -123,6 +123,7 @@ class TestSymbolicVariable(unittest.TestCase):
         # self.assertEqual(str(sym.sqrt(x)), "sqrt(x)")
         print(x, y)
         print(sym.pow(x, y))
+        print(sym.pow_again(x, y))
         print(sym.pow(e_x, e_y))
         print(sym.pow_again(e_x, e_y))
         print(x, y)
