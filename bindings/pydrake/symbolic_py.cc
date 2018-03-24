@@ -272,6 +272,10 @@ PYBIND11_MODULE(_symbolic_py, m) {
       .def_loop("ceil", &symbolic::ceil)
       .def_loop("floor", &symbolic::floor);
 
+  m.def("pow_again", [](const Expression& a, const Expression& b) {
+    return pow(a, b);
+  });
+
   // Import aliases.
   // TODO(eric.cousineau): Deprecate, then remove these in lieu of `np.{func}`
   py::exec(R"""(
