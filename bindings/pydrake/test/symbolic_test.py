@@ -267,6 +267,7 @@ class TestSymbolicExpression(unittest.TestCase):
         self.assertEqual(str(actual), expected)
 
     def _check_array(self, actual, expected):
+        expected = np.array(expected)
         self.assertEqual(actual.shape, expected.shape)
         for a, b in zip(actual.flat, expected.flat):
             self._check_scalar(a, b)
@@ -450,13 +451,10 @@ class TestSymbolicExpression(unittest.TestCase):
         # Indication of #8135.
         e_xv = np.array([e_x, e_x])
         e_yv = np.array([e_y, e_y])
-        # N.B. In some versions of NumPy, `!=` for dtype=object implies ID
-        # comparison (e.g. `is`).
         value = (e_xv == e_yv)
-        # Ideally, this would be an array of formulas.
-        self.assertEqual(value.dtype, bool)
-        self.assertFalse(isinstance(value[0], sym.Formula))
-        self.assertTrue(value.all())
+        self.assertEqual(value.dtype, sym.Formula)
+        self.assertTrue(isinstance(value[0], sym.Formula))
+        self._check_array(value, ["(x = y)", "(x = y)"])
 
 #     def test_functions_with_float(self):
 #         # TODO(eric.cousineau): Use concrete values once vectorized methods are
