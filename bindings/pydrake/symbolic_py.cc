@@ -238,9 +238,6 @@ PYBIND11_MODULE(_symbolic_py, m) {
       .def("Differentiate", &Expression::Differentiate)
       .def("Jacobian", &Expression::Jacobian);
 
-  py::print("Variable: ", var.attr("__dict__").attr("keys")());
-  py::print("Expression: ", expr.attr("__dict__").attr("keys")());
-
   // TODO(eric.cousineau): Consider deprecating the aliases in `math`?
   auto math = py::module::import("pydrake.math");
   UfuncMirrorDef<decltype(expr)>(&expr, math)
@@ -272,16 +269,6 @@ PYBIND11_MODULE(_symbolic_py, m) {
       .def_loop("ceil", &symbolic::ceil)
       .def_loop("floor", &symbolic::floor);
 
-  m.def("pow_again", [](const Variable& a, const Variable& b) -> Expression {
-    // return pow(a, b);
-    return a;
-  });
-    m.def("pow_again_implicit", [](const Expression& a, const Expression& b) -> Expression {
-    // return pow(a, b);
-    return a;
-  });
-
-
   // Import aliases.
   // TODO(eric.cousineau): Deprecate, then remove these in lieu of `np.{func}`
   py::exec(R"""(
@@ -306,6 +293,7 @@ from pydrake.math import (
     floor
 )
 )""");
+  m.def("atan", &symbolic::atan);
 
   m.def("if_then_else", &symbolic::if_then_else);
 
