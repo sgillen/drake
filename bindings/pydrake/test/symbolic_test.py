@@ -125,10 +125,10 @@ class TestSymbolicVariable(unittest.TestCase):
         # THIS IS WRONG
         print(sym.abs(x))
         print(sym.pow_again(x, y))
-        print(sym.pow_again(x, y))
+        print(sym.pow(x, y))
         print(sym.pow_again_implicit(x, y))
         print(sym.pow_again_implicit(x, y))
-        # print(sym.pow(e_x, e_y))
+        print(sym.pow(e_x, e_y))
         # print(sym.pow_again(e_x, e_y))
         # print(x, y)
         # self.assertEqual(str(sym.pow(x, y)), "pow(x, y)")
