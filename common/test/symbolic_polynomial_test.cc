@@ -782,6 +782,16 @@ TEST_F(SymbolicPolynomialTest, Hash) {
   EXPECT_NE(h(p1), h(p2));
 }
 
+TEST_F(SymbolicPolynomialTest, ComparisonOperator) {
+  Variable x("x");
+  Polynomial p0;
+  Polynomial px2(pow(x, 2));
+  EXPECT_TRUE(p0 == p0);
+  EXPECT_FALSE(p0 != p0);
+  EXPECT_FALSE(p0 == px2);
+  EXPECT_TRUE(p0 != px2);
+}
+
 }  // namespace
 }  // namespace symbolic
 }  // namespace drake
