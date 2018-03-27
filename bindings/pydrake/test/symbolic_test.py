@@ -27,7 +27,36 @@ e_x = sym.Expression(x)
 e_y = sym.Expression(y)
 
 
-class TestSymbolicVariable(unittest.TestCase):
+class BaseSymbolicTest(unittest.TestCase):
+    def _check_scalar(self, actual, expected):
+        if isinstance(actual, np.ndarray):
+            self.assertEqual(actual.shape, ())
+            actual = actual.item()
+        T = sym.Expression
+        if isinstance(actual, sym.Formula):
+            T = sym.Formula
+        elif isinstance(actual, sym.Variable):
+            T = sym.Variable
+        elif (isinstance(actual, sym.Polynomial) or 
+              isinstance(actual, sym.Monomial)):
+            actual = actual.ToExpression()
+        self.assertIsInstance(actual, T)
+        # Chain conversion to ensure equivalent treatment.
+        if isinstance(expected, float) or isinstance(expected, int):
+            expected = T(expected)
+        if isinstance(expected, T):
+            expected = str(expected)
+        self.assertIsInstance(expected, str)
+        self.assertEqual(str(actual), expected)
+
+    def _check_array(self, actual, expected):
+        expected = np.array(expected)
+        self.assertEqual(actual.shape, expected.shape)
+        for a, b in zip(actual.flat, expected.flat):
+            self._check_scalar(a, b)
+
+
+class TestSymbolicVariable(BaseSymbolicTest):
     def test_addition(self):
         self.assertEqual(str(x + y), "(x + y)")
         self.assertEqual(str(x + 1), "(1 + x)")
@@ -144,7 +173,7 @@ class TestSymbolicVariable(unittest.TestCase):
                          "(if (x > y) then x else y)")
 
 
-class TestSymbolicVariables(unittest.TestCase):
+class TestSymbolicVariables(BaseSymbolicTest):
     def test_default_constructor(self):
         vars = sym.Variables()
         self.assertEqual(vars.size(), 0)
@@ -253,29 +282,7 @@ class TestSymbolicVariables(unittest.TestCase):
         self.assertEqual(vars3, sym.Variables([y]))
 
 
-class TestSymbolicExpression(unittest.TestCase):
-    def _check_scalar(self, actual, expected):
-        if isinstance(actual, np.ndarray):
-            self.assertEqual(actual.shape, ())
-            actual = actual.item()
-        T = sym.Expression
-        if isinstance(actual, sym.Formula):
-            T = sym.Formula
-        self.assertIsInstance(actual, T)
-        # Chain conversion to ensure equivalent treatment.
-        if isinstance(expected, float) or isinstance(expected, int):
-            expected = T(expected)
-        if isinstance(expected, T):
-            expected = str(expected)
-        self.assertIsInstance(expected, str)
-        self.assertEqual(str(actual), expected)
-
-    def _check_array(self, actual, expected):
-        expected = np.array(expected)
-        self.assertEqual(actual.shape, expected.shape)
-        for a, b in zip(actual.flat, expected.flat):
-            self._check_scalar(a, b)
-
+class TestSymbolicExpression(BaseSymbolicTest):
     def _check_algebra(self, algebra):
         xv = algebra.to_algebra(x)
         yv = algebra.to_algebra(y)
@@ -527,7 +534,7 @@ class TestSymbolicExpression(unittest.TestCase):
     # functions.
 
 
-class TestSymbolicFormula(unittest.TestCase):
+class TestSymbolicFormula(BaseSymbolicTest):
     def test_get_free_variables(self):
         f = x > y
         self.assertEqual(f.GetFreeVariables(), sym.Variables([x, y]))
@@ -569,7 +576,7 @@ class TestSymbolicFormula(unittest.TestCase):
         self.assertEqual(repr(x > y), '<Formula "(x > y)">')
 
 
-class TestSymbolicMonomial(unittest.TestCase):
+class TestSymbolicMonomial(BaseSymbolicTest):
     def test_constructor_variable(self):
         m = sym.Monomial(x)  # m = x¹
         self.assertEqual(m.degree(x), 1)
@@ -684,7 +691,7 @@ class TestSymbolicMonomial(unittest.TestCase):
         self.assertEqual(basis2.size, 20)
 
 
-class TestSymbolicPolynomial(unittest.TestCase):
+class TestSymbolicPolynomial(BaseSymbolicTest):
     def test_default_constructor(self):
         p = sym.Polynomial()
         self.assertEqual(p.ToExpression(), sym.Expression())
