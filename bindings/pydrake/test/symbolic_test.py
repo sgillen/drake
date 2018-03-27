@@ -58,92 +58,92 @@ class BaseSymbolicTest(unittest.TestCase):
 
 class TestSymbolicVariable(BaseSymbolicTest):
     def test_addition(self):
-        self.assertEqual(str(x + y), "(x + y)")
-        self.assertEqual(str(x + 1), "(1 + x)")
-        self.assertEqual(str(1 + x), "(1 + x)")
+        self._check_scalar((x + y), "(x + y)")
+        self._check_scalar((x + 1), "(1 + x)")
+        self._check_scalar((1 + x), "(1 + x)")
 
     def test_subtraction(self):
-        self.assertEqual(str(x - y), "(x - y)")
-        self.assertEqual(str(x - 1), "(-1 + x)")
-        self.assertEqual(str(1 - x), "(1 - x)")
+        self._check_scalar((x - y), "(x - y)")
+        self._check_scalar((x - 1), "(-1 + x)")
+        self._check_scalar((1 - x), "(1 - x)")
 
     def test_multiplication(self):
-        self.assertEqual(str(x * y), "(x * y)")
-        self.assertEqual(str(x * 1), "x")
-        self.assertEqual(str(1 * x), "x")
+        self._check_scalar((x * y), "(x * y)")
+        self._check_scalar((x * 1), "x")
+        self._check_scalar((1 * x), "x")
 
     def test_division(self):
-        self.assertEqual(str(x / y), "(x / y)")
-        self.assertEqual(str(x / 1), "x")
-        self.assertEqual(str(1 / x), "(1 / x)")
+        self._check_scalar((x / y), "(x / y)")
+        self._check_scalar((x / 1), "x")
+        self._check_scalar((1 / x), "(1 / x)")
 
     def test_unary_operators(self):
-        self.assertEqual(str(+x), "x")
-        self.assertEqual(str(-x), "(-1 * x)")
+        self._check_scalar((+x), "x")
+        self._check_scalar((-x), "(-1 * x)")
 
     def test_relational_operators(self):
         # Variable rop float
-        self.assertEqual(str(x >= 1), "(x >= 1)")
-        self.assertEqual(str(x > 1), "(x > 1)")
-        self.assertEqual(str(x <= 1), "(x <= 1)")
-        self.assertEqual(str(x < 1), "(x < 1)")
-        self.assertEqual(str(x == 1), "(x = 1)")
-        self.assertEqual(str(x != 1), "(x != 1)")
+        self._check_scalar((x >= 1), "(x >= 1)")
+        self._check_scalar((x > 1), "(x > 1)")
+        self._check_scalar((x <= 1), "(x <= 1)")
+        self._check_scalar((x < 1), "(x < 1)")
+        self._check_scalar((x == 1), "(x = 1)")
+        self._check_scalar((x != 1), "(x != 1)")
 
         # float rop Variable
-        self.assertEqual(str(1 < y), "(y > 1)")
-        self.assertEqual(str(1 <= y), "(y >= 1)")
-        self.assertEqual(str(1 > y), "(y < 1)")
-        self.assertEqual(str(1 >= y), "(y <= 1)")
-        self.assertEqual(str(1 == y), "(y = 1)")
-        self.assertEqual(str(1 != y), "(y != 1)")
+        self._check_scalar((1 < y), "(y > 1)")
+        self._check_scalar((1 <= y), "(y >= 1)")
+        self._check_scalar((1 > y), "(y < 1)")
+        self._check_scalar((1 >= y), "(y <= 1)")
+        self._check_scalar((1 == y), "(y = 1)")
+        self._check_scalar((1 != y), "(y != 1)")
 
         # Variable rop Variable
-        self.assertEqual(str(x < y), "(x < y)")
-        self.assertEqual(str(x <= y), "(x <= y)")
-        self.assertEqual(str(x > y), "(x > y)")
-        self.assertEqual(str(x >= y), "(x >= y)")
-        self.assertEqual(str(x == y), "(x = y)")
-        self.assertEqual(str(x != y), "(x != y)")
+        self._check_scalar((x < y), "(x < y)")
+        self._check_scalar((x <= y), "(x <= y)")
+        self._check_scalar((x > y), "(x > y)")
+        self._check_scalar((x >= y), "(x >= y)")
+        self._check_scalar((x == y), "(x = y)")
+        self._check_scalar((x != y), "(x != y)")
 
     def test_repr(self):
         self.assertEqual(repr(x), "Variable('x')")
 
     def test_simplify(self):
-        self.assertEqual(str(0 * (x + y)), "0")
-        self.assertEqual(str(x + y - x - y), "0")
-        self.assertEqual(str(x / x - 1), "0")
-        self.assertEqual(str(x / x), "1")
+        self._check_scalar((0 * (x + y)), "0")
+        self._check_scalar((x + y - x - y), "0")
+        self._check_scalar((x / x - 1), "0")
+        self._check_scalar((x / x), "1")
 
     def test_expand(self):
         ex = 2 * (x + y)
-        self.assertEqual(str(ex), "(2 * (x + y))")
-        self.assertEqual(str(ex.Expand()), "(2 * x + 2 * y)")
+        self._check_scalar((ex), "(2 * (x + y))")
+        self._check_scalar((ex.Expand()), "(2 * x + 2 * y)")
 
     def test_pow(self):
-        self.assertEqual(str(x**2), "pow(x, 2)")
-        self.assertEqual(str(x**y), "pow(x, y)")
-        self.assertEqual(str((x + 1)**(y - 1)), "pow((1 + x), (-1 + y))")
+        self._check_scalar((x**2), "pow(x, 2)")
+        self._check_scalar((x**y), "pow(x, y)")
+        self._check_scalar(((x + 1)**(y - 1)), "pow((1 + x), (-1 + y))")
 
     def test_neg(self):
-        self.assertEqual(str(-(x + 1)), "(-1 - x)")
+        self._check_scalar((-(x + 1)), "(-1 - x)")
 
     def test_logical(self):
-        self.assertEqual(str(sym.logical_not(x == 0)),
+        self._check_scalar((sym.logical_not(x == 0)),
                          "!((x = 0))")
 
         # Test single-operand logical statements
-        self.assertEqual(str(sym.logical_and(x >= 1)), "(x >= 1)")
-        self.assertEqual(str(sym.logical_or(x >= 1)), "(x >= 1)")
+        self._check_scalar((sym.logical_and(x >= 1)), "(x >= 1)")
+        self._check_scalar((sym.logical_or(x >= 1)), "(x >= 1)")
         # Test binary operand logical statements
-        self.assertEqual(str(sym.logical_and(x >= 1, x <= 2)),
+        self._check_scalar((sym.logical_and(x >= 1, x <= 2)),
                          "((x >= 1) and (x <= 2))")
-        self.assertEqual(str(sym.logical_or(x <= 1, x >= 2)),
+        self._check_scalar((sym.logical_or(x <= 1, x >= 2)),
                          "((x >= 2) or (x <= 1))")
         # Test multiple operand logical statements
-        self.assertEqual(str(sym.logical_and(x >= 1, x <= 2, y == 2)),
+        self._check_scalar((sym.logical_and(x >= 1, x <= 2, y == 2)),
                          "((y = 2) and (x >= 1) and (x <= 2))")
-        self.assertEqual(str(sym.logical_or(x >= 1, x <= 2, y == 2)),
+        self._check_scalar((sym.logical_or(x >= 1, x <= 2, y == 2)),
                          "((y = 2) or (x >= 1) or (x <= 2))")
 
     def test_functions_with_variable(self):
@@ -151,25 +151,25 @@ class TestSymbolicVariable(BaseSymbolicTest):
         # Unfortunately, since NumPy does not coerce user-dtype conversions,
         # we may need to explicitly spell out the unary overloads, and any
         # binary overloads that have pure-Variable expressions.
-        self.assertEqual(str(sym.abs(x)), "abs(x)")
-        self.assertEqual(str(sym.exp(x)), "exp(x)")
-        self.assertEqual(str(sym.sqrt(x)), "sqrt(x)")
-        self.assertEqual(str(sym.pow(x, y)), "pow(x, y)")
-        self.assertEqual(str(sym.sin(x)), "sin(x)")
-        self.assertEqual(str(sym.cos(x)), "cos(x)")
-        self.assertEqual(str(sym.tan(x)), "tan(x)")
-        self.assertEqual(str(sym.asin(x)), "asin(x)")
-        self.assertEqual(str(sym.acos(x)), "acos(x)")
-        self.assertEqual(str(sym.atan(x)), "atan(x)")
-        self.assertEqual(str(sym.atan2(x, y)), "atan2(x, y)")
-        self.assertEqual(str(sym.sinh(x)), "sinh(x)")
-        self.assertEqual(str(sym.cosh(x)), "cosh(x)")
-        self.assertEqual(str(sym.tanh(x)), "tanh(x)")
-        self.assertEqual(str(sym.min(x, y)), "min(x, y)")
-        self.assertEqual(str(sym.max(x, y)), "max(x, y)")
-        self.assertEqual(str(sym.ceil(x)), "ceil(x)")
-        self.assertEqual(str(sym.floor(x)), "floor(x)")
-        self.assertEqual(str(sym.if_then_else(x > y, x, y)),
+        self._check_scalar((sym.abs(x)), "abs(x)")
+        self._check_scalar((sym.exp(x)), "exp(x)")
+        self._check_scalar((sym.sqrt(x)), "sqrt(x)")
+        self._check_scalar((sym.pow(x, y)), "pow(x, y)")
+        self._check_scalar((sym.sin(x)), "sin(x)")
+        self._check_scalar((sym.cos(x)), "cos(x)")
+        self._check_scalar((sym.tan(x)), "tan(x)")
+        self._check_scalar((sym.asin(x)), "asin(x)")
+        self._check_scalar((sym.acos(x)), "acos(x)")
+        self._check_scalar((sym.atan(x)), "atan(x)")
+        self._check_scalar((sym.atan2(x, y)), "atan2(x, y)")
+        self._check_scalar((sym.sinh(x)), "sinh(x)")
+        self._check_scalar((sym.cosh(x)), "cosh(x)")
+        self._check_scalar((sym.tanh(x)), "tanh(x)")
+        self._check_scalar((sym.min(x, y)), "min(x, y)")
+        self._check_scalar((sym.max(x, y)), "max(x, y)")
+        self._check_scalar((sym.ceil(x)), "ceil(x)")
+        self._check_scalar((sym.floor(x)), "floor(x)")
+        self._check_scalar((sym.if_then_else(x > y, x, y)),
                          "(if (x > y) then x else y)")
 
 
@@ -618,9 +618,9 @@ class TestSymbolicMonomial(BaseSymbolicTest):
 
     def test_str(self):
         m1 = sym.Monomial(x, 2)
-        self.assertEqual(str(m1), "x^2")
+        self._check_scalar((m1), "x^2")
         m2 = m1 * sym.Monomial(y)
-        self.assertEqual(str(m2), "x^2 * y")
+        self._check_scalar((m2), "x^2 * y")
 
     def test_repr(self):
         m = sym.Monomial(x, 2)
@@ -676,7 +676,7 @@ class TestSymbolicMonomial(BaseSymbolicTest):
     def test_to_expression(self):
         m = sym.Monomial(x, 3) * sym.Monomial(y)  # m = x³y
         e = m.ToExpression()
-        self.assertEqual(str(e), "(pow(x, 3) * y)")
+        self._check_scalar((e), "(pow(x, 3) * y)")
 
     def test_get_variables(self):
         m = sym.Monomial(x, 3) * sym.Monomial(y)  # m = x³y
