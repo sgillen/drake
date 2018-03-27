@@ -701,6 +701,7 @@ class TestSymbolicPolynomial(BaseSymbolicTest):
         p0 = sym.Polynomial()
         px2 = sym.Polynomial(x**2)
         # TODO(soonho): Figure out why this happens.
+        print("hai")
         self.assertFalse(p0 == px2)
 
     def test_constructor_maptype(self):

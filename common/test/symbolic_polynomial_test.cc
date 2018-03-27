@@ -790,6 +790,9 @@ TEST_F(SymbolicPolynomialTest, ComparisonOperator) {
   EXPECT_FALSE(p0 != p0);
   EXPECT_FALSE(p0 == px2);
   EXPECT_TRUE(p0 != px2);
+  using namespace std;
+  cout << "p0: " << p0 << endl;
+  cout << "px2: " << px2 << endl;
 }
 
 }  // namespace

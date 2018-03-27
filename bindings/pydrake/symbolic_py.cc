@@ -418,7 +418,15 @@ from pydrake.math import (
       .def(double() * py::self)
       .def(-py::self)
       .def("EqualTo", &Polynomial::EqualTo)
-      .def(py::self == py::self)
+      // .def(py::self == py::self)
+      .def("__eq__", [](const Polynomial& a, const Polynomial& b) {
+        using namespace std;
+        cerr << "compare:" << endl;
+        cerr << "  a: " << a << endl;
+        cerr << "  b: " << b << endl;
+        cout << "  a == b: " << (a == b) << endl;
+        return a == b;
+      })
       .def(py::self != py::self)
       .def("__hash__",
            [](const Polynomial& self) { return std::hash<Polynomial>{}(self); })
