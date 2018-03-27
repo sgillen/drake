@@ -542,13 +542,13 @@ class TestSymbolicFormula(BaseSymbolicTest):
 
     def test_substitute_with_pair(self):
         f = x > y
-        self.assertEqual(f.Substitute(y, y + 5), x > y + 5)
-        self.assertEqual(f.Substitute(y, z), x > z)
-        self.assertEqual(f.Substitute(y, 3), x > 3)
+        self._check_scalar(f.Substitute(y, y + 5), x > y + 5)
+        self._check_scalar(f.Substitute(y, z), x > z)
+        self._check_scalar(f.Substitute(y, 3), x > 3)
 
     def test_substitute_with_dict(self):
         f = x + y > z
-        self.assertEqual(f.Substitute({x: x + 2, y:  y + 3}),
+        self._check_scalar(f.Substitute({x: x + 2, y:  y + 3}),
                          x + y + 5 > z)
 
     def test_to_string(self):
@@ -697,6 +697,12 @@ class TestSymbolicPolynomial(BaseSymbolicTest):
         p = sym.Polynomial()
         self.assertEqual(p.ToExpression(), sym.Expression())
 
+    def test_meta(self):
+        p0 = sym.Polynomial()
+        px2 = sym.Polynomial(x**2)
+        # TODO(soonho): Figure out why this happens.
+        self.assertFalse(p0 == px2)
+
     def test_constructor_maptype(self):
         m = {sym.Monomial(x): sym.Expression(3),
              sym.Monomial(y): sym.Expression(2)}  # 3x + 2y
@@ -766,7 +772,13 @@ class TestSymbolicPolynomial(BaseSymbolicTest):
         m = sym.Monomial(x)
         self.assertEqual(m - p, sym.Polynomial(1 * x))
         self.assertEqual(p - m, sym.Polynomial(-1 * x))
-        self.assertEqual(p - 0, p)
+        a = p - 0
+        b = sym.Polynomial(x**2)
+        print(p - 0)
+        print(sym.Polynomial(x**2))
+        print(p - 0 == sym.Polynomial(x**2))
+        self.assertEqual(p - 0, sym.Polynomial(x**2))
+        self.assertEqual(p - 0, sym.Polynomial(x**2))
         self.assertEqual(0 - p, -p)
 
     def test_multiplication(self):
@@ -774,7 +786,7 @@ class TestSymbolicPolynomial(BaseSymbolicTest):
         self.assertEqual(p * p, p)
         m = sym.Monomial(x)
         self.assertEqual(m * p, p)
-        self.assertEqual(p * m, p)
+        self.assertEqual(p * m, p*p)
         self.assertEqual(p * 0, p)
         self.assertEqual(0 * p, p)
 
