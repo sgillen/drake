@@ -32,15 +32,16 @@ class BaseSymbolicTest(unittest.TestCase):
         if isinstance(actual, np.ndarray):
             self.assertEqual(actual.shape, ())
             actual = actual.item()
-        T = sym.Expression
-        if isinstance(actual, sym.Formula):
-            T = sym.Formula
-        elif isinstance(actual, sym.Variable):
-            T = sym.Variable
-        elif (isinstance(actual, sym.Polynomial) or 
-              isinstance(actual, sym.Monomial)):
-            actual = actual.ToExpression()
-        self.assertIsInstance(actual, T)
+        valid_types = [
+            float,
+            sym.Expression,
+            sym.Formula,
+            sym.Monomial,
+            sym.Polynomial,
+            sym.Variable,
+        ]
+        T = type(actual)
+        self.assertTrue(T in valid_types, "Invalid type")
         # Chain conversion to ensure equivalent treatment.
         if isinstance(expected, float) or isinstance(expected, int):
             expected = T(expected)
