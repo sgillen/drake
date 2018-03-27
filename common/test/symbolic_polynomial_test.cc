@@ -793,6 +793,7 @@ TEST_F(SymbolicPolynomialTest, ComparisonOperator) {
   using namespace std;
   cout << "p0: " << p0 << endl;
   cout << "px2: " << px2 << endl;
+  cout << NiceTypeName::Get<decltype(p0 == px2)>() << endl;
 }
 
 }  // namespace

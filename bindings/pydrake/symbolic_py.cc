@@ -331,7 +331,10 @@ from pydrake.math import (
       .def("__hash__",
            [](const Formula& self) { return std::hash<Formula>{}(self); })
       .def_static("True", &Formula::True)
-      .def_static("False", &Formula::False);
+      .def_static("False", &Formula::False)
+      .def("__nonzero__", [](const Formula&) {
+        throw py::cast_error("Cannot use `nonzero` on `Formula`");
+      });
 
   // Cannot overload logical operators: http://stackoverflow.com/a/471561
   // Defining custom function for clarity.
