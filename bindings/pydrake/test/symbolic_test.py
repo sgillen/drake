@@ -595,10 +595,10 @@ class TestSymbolicMonomial(BaseSymbolicTest):
         print(powers_out)
         print(x)
         print(hash(x))
-        try:
-            print(powers_out[x])
-        except Exception:
-            exit(1)
+        # try:
+        print(powers_out[x])
+        # except Exception:
+        #     exit(1)
         self._check_scalar(powers_out[x], 2)
         self._check_scalar(powers_out[y], 3)
         self._check_scalar(powers_out[z], 4)
