@@ -358,6 +358,12 @@ from pydrake.math import (
         return hash_cmp(a, b);
       });
 
+  // Cannot hash Symbolic types if we want to disable `nonzero`, which we should.
+  // Solution is to wrap `dict` and use a HashProxy key object, HashProxyDict,
+  // which defines equality and inequality based on hashing, not rich comparison
+  // (__eq__, etc.). We cannot use `__cmp__`, as `__eq__` is used in its place
+  // if defined.
+
   m.def("trigger", []() {
     py::print("triggered");
   });
