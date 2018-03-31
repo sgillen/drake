@@ -596,6 +596,7 @@ class TestSymbolicMonomial(BaseSymbolicTest):
         print(x)
         print(hash(x))
         # try:
+        sym.trigger()
         print(powers_out[x])
         # except Exception:
         #     exit(1)

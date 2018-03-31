@@ -19,6 +19,20 @@ namespace pydrake {
 using std::map;
 using std::string;
 
+int int_cmp(int a, int b) {
+  if (a == b)
+    return 0;
+  else if (a < b)
+    return -1;
+  else
+    return 1;
+}
+
+template <typename T>
+int hash_cmp(const T& a, const T& b) {
+  return int_cmp(std::hash<T>{}(a), std::hash<T>{}(b));
+}
+
 // TODO(eric.cousineau): Use py::self for operator overloads?
 PYBIND11_MODULE(_symbolic_py, m) {
   // NOLINTNEXTLINE(build/namespaces): Emulate placement in namespace.
@@ -141,7 +155,11 @@ PYBIND11_MODULE(_symbolic_py, m) {
       .def(py::self + Variable())
       .def(Variable() + py::self)
       .def(py::self - py::self)
-      .def(py::self - Variable());
+      .def(py::self - Variable())
+      .def("__cmp__", [](const Variable& a, const Variable& b) {
+        // For dict, `PyObject_RichCompare`, to avoid the need for `nonzero`.
+        return hash_cmp(a, b);
+      });
 
   m.def("intersect", [](const Variables& vars1, const Variables& vars2) {
     return intersect(vars1, vars2);
@@ -334,7 +352,15 @@ from pydrake.math import (
       .def_static("False", &Formula::False)
       .def("__nonzero__", [](const Formula&) {
         throw py::cast_error("Cannot use `nonzero` on `Formula`");
+      })
+      .def("__cmp__", [](const Formula& a, const Formula& b) {
+        // For dict, `PyObject_RichCompare`, to avoid the need for `nonzero`.
+        return hash_cmp(a, b);
       });
+
+  m.def("trigger", []() {
+    py::print("triggered");
+  });
 
   // Cannot overload logical operators: http://stackoverflow.com/a/471561
   // Defining custom function for clarity.
