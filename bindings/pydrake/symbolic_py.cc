@@ -351,7 +351,7 @@ from pydrake.math import (
       .def_static("True", &Formula::True)
       .def_static("False", &Formula::False)
       .def("__nonzero__", [](const Formula&) {
-        throw py::cast_error("Cannot use `nonzero` on `Formula`");
+        throw py::cast_error("Cannot use `__nonzero__` on `Formula`. Consider using hash proxy for using within a `dict`.");
       })
       .def("__cmp__", [](const Formula& a, const Formula& b) {
         // For dict, `PyObject_RichCompare`, to avoid the need for `nonzero`.
@@ -363,6 +363,8 @@ from pydrake.math import (
   // which defines equality and inequality based on hashing, not rich comparison
   // (__eq__, etc.). We cannot use `__cmp__`, as `__eq__` is used in its place
   // if defined.
+  // NOTE: Sympy does overload < <= > >= to provide formulas, but not == !=
+  // Most likely to make the variables directly hashable.
 
   m.def("trigger", []() {
     py::print("triggered");
@@ -374,6 +376,7 @@ from pydrake.math import (
   // https://docs.python.org/2/library/operator.html#operator.__and__
   // However, this may reduce clarity and introduces constraints on order of
   // operations.
+  // NOTE: Sympy
   m
       // Hide AND and OR to permit us to make it accept 1 or more arguments in
       // Python (and not have to handle type safety within C++).
