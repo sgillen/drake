@@ -33,6 +33,7 @@ class BaseSymbolicTest(unittest.TestCase):
             self.assertEqual(actual.shape, ())
             actual = actual.item()
         valid_types = [
+            int,
             float,
             sym.Expression,
             sym.Formula,
@@ -41,7 +42,7 @@ class BaseSymbolicTest(unittest.TestCase):
             sym.Variable,
         ]
         T = type(actual)
-        self.assertTrue(T in valid_types, "Invalid type")
+        self.assertTrue(T in valid_types, "Invalid type {}".format(T))
         # Chain conversion to ensure equivalent treatment.
         if isinstance(expected, float) or isinstance(expected, int):
             expected = T(expected)
@@ -700,8 +701,9 @@ class TestSymbolicPolynomial(BaseSymbolicTest):
     def test_meta(self):
         p0 = sym.Polynomial()
         px2 = sym.Polynomial(x**2)
-        # TODO(soonho): Figure out why this happens.
-        self.assertFalse(p0 == px2)
+        # TODO(eric.cousineau): Resolve via #8491.
+        self.assertEqual(p0, px2)
+        self.assertNotEqual(p0, px2)
 
     def test_constructor_maptype(self):
         m = {sym.Monomial(x): sym.Expression(3),
@@ -774,10 +776,6 @@ class TestSymbolicPolynomial(BaseSymbolicTest):
         self.assertEqual(p - m, sym.Polynomial(-1 * x))
         a = p - 0
         b = sym.Polynomial(x**2)
-        print(p - 0)
-        print(sym.Polynomial(x**2))
-        print(p - 0 == sym.Polynomial(x**2))
-        self.assertEqual(p - 0, sym.Polynomial(x**2))
         self.assertEqual(p - 0, sym.Polynomial(x**2))
         self.assertEqual(0 - p, -p)
 
