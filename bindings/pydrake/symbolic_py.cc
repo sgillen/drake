@@ -19,20 +19,6 @@ namespace pydrake {
 using std::map;
 using std::string;
 
-int int_cmp(int a, int b) {
-  if (a == b)
-    return 0;
-  else if (a < b)
-    return -1;
-  else
-    return 1;
-}
-
-template <typename T>
-int hash_cmp(const T& a, const T& b) {
-  return int_cmp(std::hash<T>{}(a), std::hash<T>{}(b));
-}
-
 // TODO(eric.cousineau): Use py::self for operator overloads?
 PYBIND11_MODULE(_symbolic_py, m) {
   // NOLINTNEXTLINE(build/namespaces): Emulate placement in namespace.
@@ -155,11 +141,7 @@ PYBIND11_MODULE(_symbolic_py, m) {
       .def(py::self + Variable())
       .def(Variable() + py::self)
       .def(py::self - py::self)
-      .def(py::self - Variable())
-      .def("__cmp__", [](const Variable& a, const Variable& b) {
-        // For dict, `PyObject_RichCompare`, to avoid the need for `nonzero`.
-        return hash_cmp(a, b);
-      });
+      .def(py::self - Variable());
 
   m.def("intersect", [](const Variables& vars1, const Variables& vars2) {
     return intersect(vars1, vars2);
@@ -349,26 +331,7 @@ from pydrake.math import (
       .def("__hash__",
            [](const Formula& self) { return std::hash<Formula>{}(self); })
       .def_static("True", &Formula::True)
-      .def_static("False", &Formula::False)
-      .def("__nonzero__", [](const Formula&) {
-        throw py::cast_error("Cannot use `__nonzero__` on `Formula`. Consider using hash proxy for using within a `dict`.");
-      })
-      .def("__cmp__", [](const Formula& a, const Formula& b) {
-        // For dict, `PyObject_RichCompare`, to avoid the need for `nonzero`.
-        return hash_cmp(a, b);
-      });
-
-  // Cannot hash Symbolic types if we want to disable `nonzero`, which we should.
-  // Solution is to wrap `dict` and use a HashProxy key object, HashProxyDict,
-  // which defines equality and inequality based on hashing, not rich comparison
-  // (__eq__, etc.). We cannot use `__cmp__`, as `__eq__` is used in its place
-  // if defined.
-  // NOTE: Sympy does overload < <= > >= to provide formulas, but not == !=
-  // Most likely to make the variables directly hashable.
-
-  m.def("trigger", []() {
-    py::print("triggered");
-  });
+      .def_static("False", &Formula::False);
 
   // Cannot overload logical operators: http://stackoverflow.com/a/471561
   // Defining custom function for clarity.
@@ -376,7 +339,6 @@ from pydrake.math import (
   // https://docs.python.org/2/library/operator.html#operator.__and__
   // However, this may reduce clarity and introduces constraints on order of
   // operations.
-  // NOTE: Sympy
   m
       // Hide AND and OR to permit us to make it accept 1 or more arguments in
       // Python (and not have to handle type safety within C++).
@@ -456,15 +418,7 @@ from pydrake.math import (
       .def(double() * py::self)
       .def(-py::self)
       .def("EqualTo", &Polynomial::EqualTo)
-      // .def(py::self == py::self)
-      .def("__eq__", [](const Polynomial& a, const Polynomial& b) {
-        using namespace std;
-        cerr << "compare:" << endl;
-        cerr << "  a: " << a << endl;
-        cerr << "  b: " << b << endl;
-        cout << "  a == b: " << (a == b) << endl;
-        return a == b;
-      })
+      .def(py::self == py::self)
       .def(py::self != py::self)
       .def("__hash__",
            [](const Polynomial& self) { return std::hash<Polynomial>{}(self); })
