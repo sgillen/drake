@@ -22,7 +22,19 @@ e_x = sym.Expression(x)
 e_y = sym.Expression(y)
 
 
-class TestSymbolicVariable(unittest.TestCase):
+class SymbolicTestCase(unittest.TestCase):
+    def assertSame(self, lhs, rhs):
+        if not isinstance(rhs, sym.Expression):
+            rhs = sym.Expression(rhs)
+        self.assertEqual(str(lhs), str(rhs))
+
+    def assertNotSame(self, lhs, rhs):
+        if not isinstance(rhs, sym.Expression):
+            rhs = sym.Expression(rhs)
+        self.assertNotEqual(str(lhs), str(rhs))
+
+
+class TestSymbolicVariable(SymbolicTestCase):
     def test_addition(self):
         self.assertEqual(str(x + y), "(x + y)")
         self.assertEqual(str(x + 1), "(1 + x)")
@@ -135,7 +147,7 @@ class TestSymbolicVariable(unittest.TestCase):
                          "(if (x > y) then x else y)")
 
 
-class TestSymbolicVariables(unittest.TestCase):
+class TestSymbolicVariables(SymbolicTestCase):
     def test_default_constructor(self):
         vars = sym.Variables()
         self.assertEqual(vars.size(), 0)
@@ -244,7 +256,7 @@ class TestSymbolicVariables(unittest.TestCase):
         self.assertEqual(vars3, sym.Variables([y]))
 
 
-class TestSymbolicExpression(unittest.TestCase):
+class TestSymbolicExpression(SymbolicTestCase):
     def _check_scalar(self, actual, expected):
         self.assertIsInstance(actual, sym.Expression)
         # Chain conversion to ensure equivalent treatment.
@@ -435,8 +447,13 @@ class TestSymbolicExpression(unittest.TestCase):
         e_yv = np.array([e_y, e_y])
         # N.B. In some versions of NumPy, `!=` for dtype=object implies ID
         # comparison (e.g. `is`).
-        value = (e_xv == e_yv)
+        # value = (e_xv == e_yv)
+        value = (e_xv == e_xv)
         # Ideally, this would be an array of formulas.
+        print(value)
+        print(type(value))
+        with self.assertRaises(RuntimeError):
+            value = bool(e_x == e_x)
         self.assertEqual(value.dtype, bool)
         self.assertFalse(isinstance(value[0], sym.Formula))
         self.assertTrue(value.all())
@@ -446,14 +463,8 @@ class TestSymbolicExpression(unittest.TestCase):
         # supported.
         v_x = 1.0
         v_y = 1.0
-        # WARNING: If these math functions have `float` overloads that return
-        # `float`, then `assertEqual`-like tests are meaningful (current state,
-        # and before `math` overloads were introduced).
-        # If these math functions implicitly cast `float` to `Expression`, then
-        # `assertEqual` tests are meaningless, as it tests `__nonzero__` for
-        # `Formula`, which will always be True.
-        self.assertEqual(sym.abs(v_x), 0.5*np.abs(v_x))
-        self.assertNotEqual(str(sym.abs(v_x)), str(0.5*np.abs(v_x)))
+        self.assertSame(sym.abs(v_x), np.abs(v_x))
+        self.assertNotSame(sym.abs(v_x), 0.5*np.abs(v_x))
         self._check_scalar(sym.abs(v_x), np.abs(v_x))
         self._check_scalar(sym.abs(v_x), np.abs(v_x))
         self._check_scalar(sym.exp(v_x), np.exp(v_x))
@@ -527,7 +538,7 @@ class TestSymbolicExpression(unittest.TestCase):
     # functions.
 
 
-class TestSymbolicFormula(unittest.TestCase):
+class TestSymbolicFormula(SymbolicTestCase):
     def test_get_free_variables(self):
         f = x > y
         self.assertEqual(f.GetFreeVariables(), sym.Variables([x, y]))
@@ -585,7 +596,7 @@ class TestSymbolicFormula(unittest.TestCase):
             (x > 1).Evaluate(env)
 
 
-class TestSymbolicMonomial(unittest.TestCase):
+class TestSymbolicMonomial(SymbolicTestCase):
     def test_constructor_variable(self):
         m = sym.Monomial(x)  # m = x¹
         self.assertEqual(m.degree(x), 1)
@@ -719,7 +730,7 @@ class TestSymbolicMonomial(unittest.TestCase):
             m.Evaluate(env)
 
 
-class TestSymbolicPolynomial(unittest.TestCase):
+class TestSymbolicPolynomial(SymbolicTestCase):
     def test_default_constructor(self):
         p = sym.Polynomial()
         self.assertEqual(p.ToExpression(), sym.Expression())
