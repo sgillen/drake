@@ -640,6 +640,7 @@ class TestSymbolicMonomial(SymbolicTestCase):
         m3 = sym.Monomial(x, 1)
         m4 = sym.Monomial(y, 2)
         # Test operator==
+        self.assertIsInstance(m1 == m2, bool)
         self.assertTrue(m1 == m2)
         self.assertFalse(m1 == m3)
         self.assertFalse(m1 == m4)
@@ -647,6 +648,7 @@ class TestSymbolicMonomial(SymbolicTestCase):
         self.assertFalse(m2 == m4)
         self.assertFalse(m3 == m4)
         # Test operator!=
+        self.assertIsInstance(m1 != m2, bool)
         self.assertFalse(m1 != m2)
         self.assertTrue(m1 != m3)
         self.assertTrue(m1 != m4)
@@ -802,7 +804,13 @@ class TestSymbolicPolynomial(SymbolicTestCase):
         p = sym.Polynomial()
         self.assertSame(p, p)
         self.assertIsInstance(p == p, sym.Formula)
+        self.assertEqual(p == p, sym.Formula.True())
         self.assertTrue(p.EqualTo(p))
+        q = sym.Polynomial(sym.Expression(10))
+        self.assertNotSame(p, q)
+        self.assertIsInstance(p != q, sym.Formula)
+        self.assertEqual(p != q, sym.Formula.True())
+        self.assertFalse(p.EqualTo(q))
 
     def test_repr(self):
         p = sym.Polynomial()
