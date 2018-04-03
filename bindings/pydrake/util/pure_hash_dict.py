@@ -1,5 +1,10 @@
-class PureHashProxy(object):
-    # TODO: Copy input object?
+"""
+Provides accomodations for types which should rely only on hash, rather than
+equality comparison.
+"""
+
+class _PureHashProxy(object):
+    # TODO(eric.cousineau): Copy input object?
     def __init__(self, value):
         self._value = value
 
@@ -18,10 +23,12 @@ class PureHashProxy(object):
     value = property(_get_value)
 
 
-class DictWrap(dict):
-    def __init__(self, tmp, key_wrappers):
+class _DictKeyWrap(dict):
+    # Wraps a dictionary's key access.
+    def __init__(self, tmp, key_wrap, key_unwrap):
         dict.__init__(self)
-        self._key_wrap, self._key_unwrap = key_wrappers
+        self._key_wrap = key_wrap
+        self._key_unwrap = key_unwrap
         for key, value in tmp.iteritems():
             self[key] = value
 
@@ -41,15 +48,24 @@ class DictWrap(dict):
         return map(self._key_unwrap, dict.keys(self))
 
     def iterkeys(self):
+        # Non-performant, but sufficient for now.
         return self.keys()
 
     def iteritems(self):
-        # For now, just return everything.
+        # Non-performant, but sufficient for now.
         return self.items()
 
 
-class PureHashDict(DictWrap):
+class PureHashDict(_DictKeyWrap):
+    """Implements a dictionary where entries are keyed only by hash value.
+
+    By default, `dict` will use `==` to account for hash collisions. This is
+    useful when key comparison via `==` yields a value which is not convertible
+    to bool via `__nonzero__`.
+
+    WARNING: This does not constrain key types, so hash collisions are a
+    greater possibility if types are mixed.
+    """
     def __init__(self, *args, **kwargs):
         tmp = dict(*args, **kwargs)
-        DictWrap.__init__(
-            self, tmp, key_wrappers=(PureHashProxy, PureHashProxy.value))
+        _DictKeyWrap.__init__(self, tmp, _PureHashProxy, _PureHashProxy.value)
