@@ -640,21 +640,19 @@ class TestSymbolicMonomial(SymbolicTestCase):
         m3 = sym.Monomial(x, 1)
         m4 = sym.Monomial(y, 2)
         # Test operator==
-        print(m1 == m2)
-        print(type(m1 == m2))
-        self.assertEqual(m1 == m2, sym.Formula.True())
-        self.assertEqual(m1 == m3, sym.Formula.False())
-        self.assertEqual(m1 == m4, sym.Formula.False())
-        self.assertEqual(m2 == m3, sym.Formula.False())
-        self.assertEqual(m2 == m4, sym.Formula.False())
-        self.assertEqual(m3 == m4, sym.Formula.False())
+        self.assertTrue(m1 == m2)
+        self.assertFalse(m1 == m3)
+        self.assertFalse(m1 == m4)
+        self.assertFalse(m2 == m3)
+        self.assertFalse(m2 == m4)
+        self.assertFalse(m3 == m4)
         # Test operator!=
-        self.assertEqual(m1 != m2, sym.Formula.False())
-        self.assertEqual(m1 != m3, sym.Formula.True())
-        self.assertEqual(m1 != m4, sym.Formula.True())
-        self.assertEqual(m2 != m3, sym.Formula.True())
-        self.assertEqual(m2 != m4, sym.Formula.True())
-        self.assertEqual(m3 != m4, sym.Formula.True())
+        self.assertFalse(m1 != m2)
+        self.assertTrue(m1 != m3)
+        self.assertTrue(m1 != m4)
+        self.assertTrue(m2 != m3)
+        self.assertTrue(m2 != m4)
+        self.assertTrue(m3 != m4)
 
     def test_str(self):
         m1 = sym.Monomial(x, 2)
@@ -857,7 +855,9 @@ class TestSymbolicPolynomial(SymbolicTestCase):
         p -= sym.Monomial(x)
         self.assertSame(p, sym.Polynomial(-1 * x))
         p -= 3
-        self.assertSame(p, sym.Polynomial(-1 * x - 3))
+        # N.B. Same as above; use `ToExpression` to normalize order.
+        self.assertSame(
+            p.ToExpression(), sym.Polynomial(-1 * x - 3).ToExpression())
 
     def test_multiplication_assignment(self):
         p = sym.Polynomial()
