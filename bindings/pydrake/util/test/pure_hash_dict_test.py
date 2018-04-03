@@ -32,7 +32,9 @@ b = Item(2)
 class TestPureHashDict(unittest.TestCase):
     def test_normal_dict(self):
         d = {a: "a", b: "b"}
-        # TODO(eric.cousineau): Figure out how to reproduce failure in this case.
+        # TODO(eric.cousineau): Figure out how to reproduce failure when `dict`
+        # attempts to use `__eq__`, similar to what happens when using
+        # `Polynomial` as a key in a dictionary.
         self.assertEqual(d[a], "a")
         with self.assertRaises(ValueError):
             value = bool(a == b)

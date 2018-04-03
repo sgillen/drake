@@ -5,9 +5,9 @@ import unittest
 import numpy as np
 import pydrake.symbolic as sym
 from pydrake.test.algebra_test_util import ScalarAlgebra, VectorizedAlgebra
+from pydrake.util.pure_hash_dict import PureHashDict
 from copy import copy
 
-from pydrake.util.pure_hash_dict import PureHashDict
 
 # TODO(eric.cousineau): Replace usages of `sym` math functions with the
 # overloads from `pydrake.math`.
@@ -22,7 +22,6 @@ b = sym.Variable("b")
 c = sym.Variable("c")
 e_x = sym.Expression(x)
 e_y = sym.Expression(y)
-
 
 TYPES = [
     sym.Variable,
@@ -467,7 +466,8 @@ class TestSymbolicExpression(SymbolicTestCase):
         # N.B. In some versions of NumPy, `!=` for dtype=object implies ID
         # comparison (e.g. `is`).
         # N.B. If `__nonzero__` throws, then NumPy returns a scalar boolean if
-        # everything's false, vs. an array of `True` otherwise. No errors shown?
+        # everything's false, vs. an array of `True` otherwise. No errors
+        # shown?
         value = (e_xv == e_yv)
         self.assertIsInstance(value, bool)
         self.assertFalse(value)

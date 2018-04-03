@@ -322,7 +322,10 @@ PYBIND11_MODULE(_symbolic_py, m) {
       .def_static("True", &Formula::True)
       .def_static("False", &Formula::False)
       .def("__nonzero__", [](const Formula& self) {
-        throw std::runtime_error("Should not call `__nonzero__`.");
+        throw std::runtime_error(
+            "Should not call `__nonzero__` on `Formula`. If you are trying to "
+            "make a map with `Variable`, `Expression`, or `Polynomial` as "
+            "keys, please use `PureHashDict`.");
       });
 
   // Cannot overload logical operators: http://stackoverflow.com/a/471561

@@ -3,6 +3,7 @@ Provides accomodations for types which should rely only on hash, rather than
 equality comparison.
 """
 
+
 class _PureHashProxy(object):
     # TODO(eric.cousineau): Copy input object?
     def __init__(self, value):
