@@ -21,6 +21,7 @@ class Item(object):
         return hash(self.value)
 
     def __eq__(self, other):
+        print("COMP")
         # Non-boolean return value.
         return Comparison(self.value, other.value)
 
@@ -33,6 +34,7 @@ class TestPureHashDict(unittest.TestCase):
     def test_normal_dict(self):
         d = {a: "a", b: "b"}
         print(d[a])
+        print(a == b)
 
     # def test_pure_hash_dict(self):
     #     d = PureHashDict({a: "a", b: "b"})

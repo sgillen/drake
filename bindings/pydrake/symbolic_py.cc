@@ -320,7 +320,10 @@ PYBIND11_MODULE(_symbolic_py, m) {
       .def("__hash__",
            [](const Formula& self) { return std::hash<Formula>{}(self); })
       .def_static("True", &Formula::True)
-      .def_static("False", &Formula::False);
+      .def_static("False", &Formula::False)
+      .def("__nonzero__", [](const Formula& self) {
+        throw std::runtime_error("Should not call `__nonzero__`.");
+      });
 
   // Cannot overload logical operators: http://stackoverflow.com/a/471561
   // Defining custom function for clarity.
