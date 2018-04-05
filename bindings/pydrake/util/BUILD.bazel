@@ -299,7 +299,7 @@ drake_py_unittest(
 )
 
 drake_py_unittest(
-    name = "pure_hash_dict_test",
+    name = "containers_test",
     deps = [
         ":containers_py",
     ],

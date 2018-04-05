@@ -1,6 +1,5 @@
 """
-Provides accomodations for types which should rely only on hash, rather than
-equality comparison.
+Provides extensions for containers of Drake-related objects.
 """
 
 
@@ -16,14 +15,10 @@ class _EqualityProxy(object):
         return hash(self._value)
 
     def __eq__(self, other):
-        raise NotImplemented
+        return type(self) == type(other) and hash(self) == hash(other)
 
     def __nonzero__(self):
         return bool(self._value)
-
-    @staticmethod
-    def default_eq(lhs, rhs):
-        return type(lhs) == type(rhs) and hash(lhs) == hash(rhs)
 
     value = property(_get_value)
 
@@ -46,6 +41,9 @@ class _DictKeyWrap(dict):
     def __delitem__(self, key):
         return dict.__delitem__(self, self._key_wrap(key))
 
+    def __contains__(self, key):
+        return dict.__contains__(self, self._key_wrap(key))
+
     def items(self):
         return zip(self.keys(), self.values())
 
@@ -67,16 +65,19 @@ class EqualityProxyDict(_DictKeyWrap):
     By default, equality is based on type and hash. This may be overridden using
     the `eq` kwarg.
     """
-    def __init__(self, *args, eq=None, **kwargs):
+    def __init__(self, *args, **kwargs):
+        if "eq" not in kwargs:
+            cls = _EqualityProxy
+        else:
+            eq = kwargs.pop("eq")
+
+            class Proxy(_EqualityProxy):
+                def __eq__(self, other):
+                    return eq(self.value, other.value)
+
+            cls = Proxy
         tmp = dict(*args, **kwargs)
-        if _eq is None:
-            _eq = _EqualityProxy.default_eq
-
-        class Proxy(_EqualityProxy):
-            def __eq__(self, other):
-                return _eq(self, other)
-
-        _DictKeyWrap.__init__(self, tmp, Proxy, Proxy.value)
+        _DictKeyWrap.__init__(self, tmp, cls, cls.value)
 
 
 class EqualToDict(EqualityProxyDict):
@@ -85,4 +86,4 @@ class EqualToDict(EqualityProxyDict):
     """
     def __init__(self, *args, **kwargs):
         eq = lambda lhs, rhs: lhs.EqualTo(rhs)
-        EqualityProxyDict.__init__(*args, eq=eq, **kwargs)
+        EqualityProxyDict.__init__(self, *args, eq=eq, **kwargs)

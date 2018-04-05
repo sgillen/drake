@@ -1,4 +1,4 @@
-from pydrake.util.containers import PureHashDict
+from pydrake.util.containers import EqualityProxyDict, EqualToDict
 
 import unittest
 
@@ -23,6 +23,9 @@ class Item(object):
         # Non-boolean return value.
         return Comparison(self.value, other.value)
 
+    def EqualTo(self, other):
+        return hash(self) == hash(other)
+
 
 # Globals for testing.
 a = Item(1)
@@ -39,7 +42,14 @@ class TestPureHashDict(unittest.TestCase):
         with self.assertRaises(ValueError):
             value = bool(a == b)
 
-    def test_pure_hash_dict(self):
-        d = PureHashDict({a: "a", b: "b"})
+    def test_equality_proxy_dict(self):
+        d = EqualityProxyDict({a: "a", b: "b"})
+        self.assertEquals(d[a], "a")
+        self.assertEquals(d[b], "b")
+        self.assertTrue(a in d)
+        self.assertFalse(1 in d)  # Ensure hash collision does not occur.
+
+    def test_equal_to_dict(self):
+        d = EqualToDict({a: "a", b: "b"})
         self.assertEquals(d[a], "a")
         self.assertEquals(d[b], "b")
