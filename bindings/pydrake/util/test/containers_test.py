@@ -47,9 +47,9 @@ class TestPureHashDict(unittest.TestCase):
         self.assertEquals(d[a], "a")
         self.assertEquals(d[b], "b")
         self.assertTrue(a in d)
-        self.assertFalse(1 in d)  # Ensure hash collision does not occur.
+        self.assertEquals(hash(a.value), hash(a))
+        self.assertFalse(a.value in d)  # Ensure hash collision does not occur.
 
     def test_equal_to_dict(self):
         d = EqualToDict({a: "a", b: "b"})
         self.assertEquals(d[a], "a")
-        self.assertEquals(d[b], "b")

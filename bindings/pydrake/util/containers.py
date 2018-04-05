@@ -4,7 +4,7 @@ Provides extensions for containers of Drake-related objects.
 
 
 class _EqualityProxy(object):
-    # TODO(eric.cousineau): Copy input object?
+    # TODO(eric.cousineau): Copy input object to preserve key immutability?
     def __init__(self, value):
         self._value = value
 
@@ -15,7 +15,9 @@ class _EqualityProxy(object):
         return hash(self._value)
 
     def __eq__(self, other):
-        return type(self) == type(other) and hash(self) == hash(other)
+        lhs = self._value
+        rhs = other._value
+        return type(lhs) == type(rhs) and hash(lhs) == hash(rhs)
 
     def __nonzero__(self):
         return bool(self._value)
