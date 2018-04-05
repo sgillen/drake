@@ -473,8 +473,11 @@ class TestSymbolicExpression(SymbolicTestCase):
     def test_relational_operators_nonzero(self):
         # For issues #8135 and #8491.
         # Ensure that we throw on `__nonzero__`.
-        with self.assertRaises(RuntimeError):
+        with self.assertRaises(RuntimeError) as cm:
             value = bool(e_x == e_x)
+        msg = cm.exception.message
+        self.assertTrue(
+            all([s in msg for s in ["__nonzero__", "EqualToDict"]]), msg)
         # Indication of #8135. Ideally, these would all be arrays of formulas.
         e_xv = np.array([e_x, e_x])
         e_yv = np.array([e_y, e_y])
