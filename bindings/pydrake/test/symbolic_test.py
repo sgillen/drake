@@ -120,6 +120,10 @@ class TestSymbolicVariable(SymbolicTestCase):
     def test_neg(self):
         self.assertEqual(str(-(x + 1)), "(-1 - x)")
 
+    def test_equalto(self):
+        self.assertTrue(x.EqualTo(x))
+        self.assertFalse(x.EqualTo(y))
+
     def test_logical(self):
         self.assertEqual(str(sym.logical_not(x == 0)),
                          "!((x = 0))")
@@ -205,6 +209,13 @@ class TestSymbolicVariables(SymbolicTestCase):
     def test_include(self):
         vars = sym.Variables([x, y, z])
         self.assertTrue(vars.include(y))
+
+    def test_equalto(self):
+        vars1 = sym.Variables([x, y, z])
+        vars2 = sym.Variables([y, z])
+        vars3 = sym.Variables([x, y, z])
+        self.assertTrue(vars1.EqualTo(vars3))
+        self.assertFalse(vars1.EqualTo(vars2))
 
     def test_to_string(self):
         vars = sym.Variables()
@@ -411,6 +422,10 @@ class TestSymbolicExpression(SymbolicTestCase):
         self.assertIsInstance(xv[0], sym.Variable)
         self.assertEquals(e_xv.shape, (2,))
         self.assertIsInstance(e_xv[0], sym.Expression)
+
+    def test_equalto(self):
+        self.assertTrue((x + y).EqualTo(x + y))
+        self.assertFalse((x + y).EqualTo(x - y))
 
     def test_relational_operators(self):
         # TODO(eric.cousineau): Use `VectorizedAlgebra` overloads once #8315 is
@@ -655,6 +670,13 @@ class TestSymbolicMonomial(SymbolicTestCase):
         self.assertTrue(m2 != m3)
         self.assertTrue(m2 != m4)
         self.assertTrue(m3 != m4)
+
+    def test_equalto(self):
+        m1 = sym.Monomial(x, 2)
+        m2 = sym.Monomial(x, 1)
+        m3 = sym.Monomial(x, 2)
+        self.assertTrue(m1.EqualTo(m3))
+        self.assertFalse(m1.EqualTo(m2))
 
     def test_str(self):
         m1 = sym.Monomial(x, 2)
