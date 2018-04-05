@@ -50,6 +50,17 @@ class TestPureHashDict(unittest.TestCase):
         self.assertEquals(hash(a.value), hash(a))
         self.assertFalse(a.value in d)  # Ensure hash collision does not occur.
 
+        # This will not be what is desired.
+        # TODO(eric.cousineau): See if there is a way to override this
+        # behavior, which is done via `dict.update`. At present, though, this
+        # does not seem possible.
+        raw_attempt = dict(d)
+        self.assertFalse(isinstance(raw_attempt.keys()[0], Item))
+
+        # This should be what is desired.
+        raw = d.raw()
+        self.assertTrue(isinstance(raw.keys()[0], Item))
+
     def test_equal_to_dict(self):
         d = EqualToDict({a: "a", b: "b"})
         self.assertEquals(d[a], "a")

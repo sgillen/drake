@@ -29,6 +29,8 @@ class _DictKeyWrap(dict):
     # Wraps a dictionary's key access.
     def __init__(self, tmp, key_wrap, key_unwrap):
         dict.__init__(self)
+        # N.B. Passing properties to these will cause an issue. This can be
+        # sidestepped by storing the properties in a `dict`.
         self._key_wrap = key_wrap
         self._key_unwrap = key_unwrap
         for key, value in tmp.iteritems():
@@ -50,7 +52,7 @@ class _DictKeyWrap(dict):
         return zip(self.keys(), self.values())
 
     def keys(self):
-        return map(self._key_unwrap, dict.keys(self))
+        return [self._key_unwrap(key) for key in dict.iterkeys(self)]
 
     def iterkeys(self):
         # Non-performant, but sufficient for now.
@@ -60,9 +62,15 @@ class _DictKeyWrap(dict):
         # Non-performant, but sufficient for now.
         return self.items()
 
+    def raw(self):
+        """Returns a dict with the original keys.
+        N.B. Copying to a `dict` will maintain the proxy keys."""
+        return dict(self.iteritems())
+
 
 class EqualityProxyDict(_DictKeyWrap):
-    """Implements a dictionary where entries are keyed only by hash value.
+    """Implements a dictionary where key equality is overridden, but proxied so
+    as to generally be transparent to the user.
 
     By default, equality is based on type and hash. This may be overridden using
     the `eq` kwarg.
@@ -79,7 +87,7 @@ class EqualityProxyDict(_DictKeyWrap):
 
             cls = Proxy
         tmp = dict(*args, **kwargs)
-        _DictKeyWrap.__init__(self, tmp, cls, cls.value)
+        _DictKeyWrap.__init__(self, tmp, cls, cls._get_value)
 
 
 class EqualToDict(EqualityProxyDict):
