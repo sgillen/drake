@@ -5,7 +5,7 @@ import unittest
 import numpy as np
 import pydrake.symbolic as sym
 from pydrake.test.algebra_test_util import ScalarAlgebra, VectorizedAlgebra
-from pydrake.util.pure_hash_dict import EqualToDict
+from pydrake.util.equality_proxy_dict import EqualToDict
 from copy import copy
 
 

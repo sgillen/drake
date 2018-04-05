@@ -1,4 +1,4 @@
-from pydrake.util.pure_hash_dict import PureHashDict
+from pydrake.util.equality_proxy_dict import PureHashDict
 
 import unittest
 
