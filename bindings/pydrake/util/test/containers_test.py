@@ -13,6 +13,8 @@ class Comparison(object):
 
 
 class Item(object):
+    equal_to_called = False
+
     def __init__(self, value):
         self.value = value
 
@@ -24,6 +26,7 @@ class Item(object):
         return Comparison(self.value, other.value)
 
     def EqualTo(self, other):
+        Item.equal_to_called = True
         return hash(self) == hash(other)
 
 
@@ -32,7 +35,7 @@ a = Item(1)
 b = Item(2)
 
 
-class TestPureHashDict(unittest.TestCase):
+class TestEqualityProxyDict(unittest.TestCase):
     def test_normal_dict(self):
         d = {a: "a", b: "b"}
         # TODO(eric.cousineau): Figure out how to reproduce failure when `dict`
@@ -63,4 +66,6 @@ class TestPureHashDict(unittest.TestCase):
 
     def test_equal_to_dict(self):
         d = EqualToDict({a: "a", b: "b"})
+        self.assertFalse(Item.equal_to_called)
         self.assertEquals(d[a], "a")
+        self.assertTrue(Item.equal_to_called)
