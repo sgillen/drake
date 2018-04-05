@@ -72,8 +72,8 @@ class EqualityProxyDict(_DictKeyWrap):
     """Implements a dictionary where key equality is overridden, but proxied so
     as to generally be transparent to the user.
 
-    By default, equality is based on type and hash. This may be overridden using
-    the `eq` kwarg.
+    By default, equality is based on type and hash. This may be overridden
+    using the `eq` kwarg.
     """
     def __init__(self, *args, **kwargs):
         if "eq" not in kwargs:
@@ -95,5 +95,5 @@ class EqualToDict(EqualityProxyDict):
     where `lhs` and `rhs` are of compatible types.
     """
     def __init__(self, *args, **kwargs):
-        eq = lambda lhs, rhs: lhs.EqualTo(rhs)
-        EqualityProxyDict.__init__(self, *args, eq=eq, **kwargs)
+        EqualityProxyDict.__init__(
+            self, *args, eq=lambda lhs, rhs: lhs.EqualTo(rhs), **kwargs)
