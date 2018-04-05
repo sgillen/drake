@@ -5,7 +5,7 @@ import unittest
 import numpy as np
 import pydrake.symbolic as sym
 from pydrake.test.algebra_test_util import ScalarAlgebra, VectorizedAlgebra
-from pydrake.util.pure_hash_dict import PureHashDict
+from pydrake.util.pure_hash_dict import EqualToDict
 from copy import copy
 
 
@@ -628,7 +628,7 @@ class TestSymbolicMonomial(SymbolicTestCase):
     def test_constructor_map(self):
         powers_in = {x: 2, y: 3, z: 4}
         m = sym.Monomial(powers_in)
-        powers_out = PureHashDict(m.get_powers())
+        powers_out = EqualToDict(m.get_powers())
         self.assertEqual(powers_out[x], 2)
         self.assertEqual(powers_out[y], 3)
         self.assertEqual(powers_out[z], 4)
@@ -709,7 +709,7 @@ class TestSymbolicMonomial(SymbolicTestCase):
 
     def test_get_powers(self):
         m = sym.Monomial(x, 2) * sym.Monomial(y)  # m = x²y
-        powers = PureHashDict(m.get_powers())
+        powers = EqualToDict(m.get_powers())
         self.assertEqual(powers[x], 2)
         self.assertEqual(powers[y], 1)
 

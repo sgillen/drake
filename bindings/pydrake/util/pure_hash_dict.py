@@ -4,7 +4,7 @@ equality comparison.
 """
 
 
-class _PureHashProxy(object):
+class _EqualityProxy(object):
     # TODO(eric.cousineau): Copy input object?
     def __init__(self, value):
         self._value = value
@@ -16,10 +16,14 @@ class _PureHashProxy(object):
         return hash(self._value)
 
     def __eq__(self, other):
-        return hash(self._value) == hash(other)
+        raise NotImplemented
 
     def __nonzero__(self):
         return bool(self._value)
+
+    @staticmethod
+    def default_eq(lhs, rhs):
+        return type(lhs) == type(rhs) and hash(lhs) == hash(rhs)
 
     value = property(_get_value)
 
@@ -57,16 +61,28 @@ class _DictKeyWrap(dict):
         return self.items()
 
 
-class PureHashDict(_DictKeyWrap):
+class EqualityProxyDict(_DictKeyWrap):
     """Implements a dictionary where entries are keyed only by hash value.
 
-    By default, `dict` will use `==` to account for hash collisions. This is
-    useful when key comparison via `==` yields a value which is not convertible
-    to bool via `__nonzero__`.
+    By default, equality is based on type and hash. This may be overridden using
+    the `eq` kwarg.
+    """
+    def __init__(self, *args, eq=None, **kwargs):
+        tmp = dict(*args, **kwargs)
+        if _eq is None:
+            _eq = _EqualityProxy.default_eq
 
-    WARNING: This does not constrain key types, so hash collisions are a
-    greater possibility if types are mixed.
+        class Proxy(_EqualityProxy):
+            def __eq__(self, other):
+                return _eq(self, other)
+
+        _DictKeyWrap.__init__(self, tmp, Proxy, Proxy.value)
+
+
+class EqualToDict(EqualityProxyDict):
+    """Implements a dictionary where keys are compared using `lhs.EqualTo(rhs)`,
+    where `lhs` and `rhs` are of compatible types.
     """
     def __init__(self, *args, **kwargs):
-        tmp = dict(*args, **kwargs)
-        _DictKeyWrap.__init__(self, tmp, _PureHashProxy, _PureHashProxy.value)
+        eq = lambda lhs, rhs: lhs.EqualTo(rhs)
+        EqualityProxyDict.__init__(*args, eq=eq, **kwargs)
