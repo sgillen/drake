@@ -157,8 +157,8 @@ drake_py_library(
 )
 
 drake_py_library(
-    name = "equality_proxy_dict_py",
-    srcs = ["equality_proxy_dict.py"],
+    name = "containers_py",
+    srcs = ["containers.py"],
     deps = [
         ":module_py",
     ],
@@ -174,7 +174,7 @@ PY_LIBRARIES = [
     ":cpp_template_py",
     ":deprecation_py",
     ":module_py",
-    ":equality_proxy_dict_py",
+    ":containers_py",
     ":pybind11_version_py",
 ]
 
@@ -301,7 +301,7 @@ drake_py_unittest(
 drake_py_unittest(
     name = "pure_hash_dict_test",
     deps = [
-        ":equality_proxy_dict_py",
+        ":containers_py",
     ],
 )
 

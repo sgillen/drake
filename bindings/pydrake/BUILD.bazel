@@ -280,7 +280,7 @@ drake_py_unittest(
     deps = [
         ":algebra_test_util_py",
         ":symbolic_py",
-        "//bindings/pydrake/util:equality_proxy_dict_py",
+        "//bindings/pydrake/util:containers_py",
     ],
 )
 
