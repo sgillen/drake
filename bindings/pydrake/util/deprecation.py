@@ -141,6 +141,9 @@ def install_numpy_warning_filters(force=False):
         return
     installed_numpy_warning_filters = True
     # Warnings specific to comparison with `dtype=object`.
+    # N.B. Using a `module=` regex filter does not work, as the warning is
+    # raised from C code, and thus inherits the calling module (which may not
+    # be "numpy\..*").
     warnings.filterwarnings(
         "error", category=DeprecationWarning, message="numpy equal will not")
     warnings.filterwarnings("error", category=DeprecationWarning,
