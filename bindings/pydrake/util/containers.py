@@ -3,7 +3,7 @@ Provides extensions for containers of Drake-related objects.
 """
 
 
-class _EqualityProxy(object):
+class _EqualityProxyBase(object):
     # TODO(eric.cousineau): Copy input object to preserve key immutability?
     def __init__(self, value):
         self._value = value
@@ -15,9 +15,7 @@ class _EqualityProxy(object):
         return hash(self._value)
 
     def __eq__(self, other):
-        lhs = self._value
-        rhs = other._value
-        return type(lhs) == type(rhs) and hash(lhs) == hash(rhs)
+        raise NotImplemented
 
     def __nonzero__(self):
         return bool(self._value)
@@ -68,29 +66,16 @@ class _DictKeyWrap(dict):
         return dict(self.iteritems())
 
 
-class _EqualityProxyDict(_DictKeyWrap):
-    # Implements a dictionary where key equality is overridden, but proxied so
-    # as to generally be transparent to the user.
-    def __init__(self, *args, **kwargs):
-        if "eq" not in kwargs:
-            cls = _EqualityProxy
-        else:
-            eq = kwargs.pop("eq")
-
-            cls = Proxy
-
-
-class EqualToDict(_EqualityProxyDict):
-    """Implements a dictionary where keys are compared using `lhs.EqualTo(rhs)`,
-    where `lhs` and `rhs` are of compatible types.
+class EqualToDict(_DictKeyWrap):
+    """Implements a dictionary where keys are compared using type and
+    `lhs.EqualTo(rhs)`.
     """
     def __init__(self, *args, **kwargs):
 
-        class Proxy(_EqualityProxy):
+        class Proxy(_EqualityProxyBase):
             def __eq__(self, other):
-                return self.value.EqualTo(other.value)
+                return (type(self) == type(other)
+                        and self.value.EqualTo(other.value))
 
         tmp = dict(*args, **kwargs)
         _DictKeyWrap.__init__(self, tmp, Proxy, Proxy._get_value)
-        _EqualityProxyDict.__init__(
-            self, *args, eq=lambda lhs, rhs: lhs.EqualTo(rhs), **kwargs)

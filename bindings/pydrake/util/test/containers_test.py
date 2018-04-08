@@ -1,4 +1,4 @@
-from pydrake.util.containers import EqualityProxyDict, EqualToDict
+from pydrake.util.containers import EqualToDict
 
 import unittest
 
@@ -35,7 +35,7 @@ a = Item(1)
 b = Item(2)
 
 
-class TestEqualityProxyDict(unittest.TestCase):
+class TestEqualToDict(unittest.TestCase):
     def test_normal_dict(self):
         d = {a: "a", b: "b"}
         # TODO(eric.cousineau): Figure out how to reproduce failure when `dict`
@@ -45,13 +45,19 @@ class TestEqualityProxyDict(unittest.TestCase):
         with self.assertRaises(ValueError):
             value = bool(a == b)
 
-    def test_equality_proxy_dict(self):
-        d = EqualityProxyDict({a: "a", b: "b"})
+    def test_equal_to_dict(self):
+        d = EqualToDict({a: "a", b: "b"})
+        # Ensure that we call `EqualTo`.
+        self.assertFalse(Item.equal_to_called)
         self.assertEquals(d[a], "a")
+        self.assertTrue(Item.equal_to_called)
+
         self.assertEquals(d[b], "b")
         self.assertTrue(a in d)
+
+        # Ensure hash collision does not occur.
         self.assertEquals(hash(a.value), hash(a))
-        self.assertFalse(a.value in d)  # Ensure hash collision does not occur.
+        self.assertFalse(a.value in d)
 
         # This will not be what is desired.
         # TODO(eric.cousineau): See if there is a way to override this
@@ -63,9 +69,3 @@ class TestEqualityProxyDict(unittest.TestCase):
         # This should be what is desired.
         raw = d.raw()
         self.assertTrue(isinstance(raw.keys()[0], Item))
-
-    def test_equal_to_dict(self):
-        d = EqualToDict({a: "a", b: "b"})
-        self.assertFalse(Item.equal_to_called)
-        self.assertEquals(d[a], "a")
-        self.assertTrue(Item.equal_to_called)
