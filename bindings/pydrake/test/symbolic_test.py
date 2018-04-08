@@ -6,7 +6,6 @@ import numpy as np
 import pydrake.symbolic as sym
 from pydrake.test.algebra_test_util import ScalarAlgebra, VectorizedAlgebra
 from pydrake.util.containers import EqualToDict
-from pydrake.util.deprecation import install_numpy_warning_filters
 from copy import copy
 
 
@@ -30,8 +29,6 @@ TYPES = [
     sym.Polynomial,
     sym.Monomial,
 ]
-
-install_numpy_warning_filters()
 
 
 class SymbolicTestCase(unittest.TestCase):
