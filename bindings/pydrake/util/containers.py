@@ -74,7 +74,8 @@ class EqualToDict(_DictKeyWrap):
 
         class Proxy(_EqualityProxyBase):
             def __eq__(self, other):
-                return (type(self) == type(other)
+                T = type(self.value)
+                return (isinstance(other.value, T)
                         and self.value.EqualTo(other.value))
 
         tmp = dict(*args, **kwargs)

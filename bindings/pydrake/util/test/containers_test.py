@@ -59,13 +59,15 @@ class TestEqualToDict(unittest.TestCase):
         self.assertEquals(hash(a.value), hash(a))
         self.assertFalse(a.value in d)
 
-        # This will not be what is desired.
-        # TODO(eric.cousineau): See if there is a way to override this
-        # behavior, which is done via `dict.update`. At present, though, this
-        # does not seem possible.
+        # Obtaining the original representation (e.g. for `pybind11`):
+        # - Constructing using `dict` will not be what is desired; the keys at
+        # present are not directly convertible, thus would create an error.
+        # N.B. At present, this behavior may not be overridable via Python, as
+        # copying is done via `dict.update`, which has a special case for
+        # `dict`-inheriting types which does not have any hooks for key
+        # transformations.
         raw_attempt = dict(d)
         self.assertFalse(isinstance(raw_attempt.keys()[0], Item))
-
-        # This should be what is desired.
+        # - Calling `raw()` should provide the desired behavior.
         raw = d.raw()
         self.assertTrue(isinstance(raw.keys()[0], Item))
