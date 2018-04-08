@@ -146,7 +146,8 @@ def install_numpy_warning_filters(force=False):
     # be "numpy\..*").
     warnings.filterwarnings(
         "error", category=DeprecationWarning, message="numpy equal will not")
-    warnings.filterwarnings("error", category=DeprecationWarning,
+    warnings.filterwarnings(
+        "error", category=DeprecationWarning,
         message="elementwise == comparison failed")
 
 

@@ -488,7 +488,8 @@ class TestSymbolicExpression(SymbolicTestCase):
         # comparison (e.g. `is`).
         # N.B. If `__nonzero__` throws, then NumPy swallows the error and
         # produces a DeprecationWarning, in addition to effectively garbage
-        # values.
+        # values. For this reason, `pydrake.symbolic` will automatically
+        # promote these warnings to errors.
         # - All false.
         with self.assertRaises(DeprecationWarning):
             value = (e_xv == e_yv)
