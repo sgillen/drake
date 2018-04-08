@@ -68,32 +68,29 @@ class _DictKeyWrap(dict):
         return dict(self.iteritems())
 
 
-class EqualityProxyDict(_DictKeyWrap):
-    """Implements a dictionary where key equality is overridden, but proxied so
-    as to generally be transparent to the user.
-
-    By default, equality is based on type and hash. This may be overridden
-    using the `eq` kwarg.
-    """
+class _EqualityProxyDict(_DictKeyWrap):
+    # Implements a dictionary where key equality is overridden, but proxied so
+    # as to generally be transparent to the user.
     def __init__(self, *args, **kwargs):
         if "eq" not in kwargs:
             cls = _EqualityProxy
         else:
             eq = kwargs.pop("eq")
 
-            class Proxy(_EqualityProxy):
-                def __eq__(self, other):
-                    return eq(self.value, other.value)
-
             cls = Proxy
-        tmp = dict(*args, **kwargs)
-        _DictKeyWrap.__init__(self, tmp, cls, cls._get_value)
 
 
-class EqualToDict(EqualityProxyDict):
+class EqualToDict(_EqualityProxyDict):
     """Implements a dictionary where keys are compared using `lhs.EqualTo(rhs)`,
     where `lhs` and `rhs` are of compatible types.
     """
     def __init__(self, *args, **kwargs):
-        EqualityProxyDict.__init__(
+
+        class Proxy(_EqualityProxy):
+            def __eq__(self, other):
+                return self.value.EqualTo(other.value)
+
+        tmp = dict(*args, **kwargs)
+        _DictKeyWrap.__init__(self, tmp, Proxy, Proxy._get_value)
+        _EqualityProxyDict.__init__(
             self, *args, eq=lambda lhs, rhs: lhs.EqualTo(rhs), **kwargs)
