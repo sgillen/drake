@@ -486,16 +486,30 @@ class TestSymbolicExpression(SymbolicTestCase):
         e_yv = np.array([e_y, e_y])
         # N.B. In some versions of NumPy, `!=` for dtype=object implies ID
         # comparison (e.g. `is`).
-        # N.B. If `__nonzero__` throws, then NumPy returns a scalar boolean if
-        # everything's false, vs. an array of `True` otherwise. No errors
-        # shown?
+        # N.B. If `__nonzero__` throws, then NumPy swallows the error, and
+        # either returns a scalar or vector boolean (behavior changes based
+        # on version).
+        # - All false.
         value = (e_xv == e_yv)
         self.assertIsInstance(value, bool)
         self.assertFalse(value)
+        # - True + False.
+        e_xyv = np.array([e_x, e_y])
+        value = (e_xv == e_xyv)
+        print(repr(value))
+        self.assertIsInstance(value, bool)
+        self.assertFalse(value)
+        # - All true.
         value = (e_xv == e_xv)
-        self.assertEqual(value.dtype, bool)
-        self.assertFalse(isinstance(value[0], sym.Formula))
-        self.assertTrue(value.all())
+        np_major, np_minor = np.__version__.split('.')[:2]
+        if int(np_major) >= 1 and int(np_minor) >= 13:
+            print("Using v1.13 branch")
+            self.assertIsInstance(value, bool)
+            self.assertTrue(value)
+        else:
+            self.assertEqual(value.dtype, bool)
+            self.assertFalse(isinstance(value[0], sym.Formula))
+            self.assertTrue(value.all())
 
     def test_functions_with_float(self):
         # TODO(eric.cousineau): Use concrete values once vectorized methods are
