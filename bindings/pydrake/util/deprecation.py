@@ -134,4 +134,18 @@ def deprecated(message):
     return wrapped
 
 
+def install_numpy_warning_filters(force=False):
+    """Install warnings filters specific to NumPy."""
+    global installed_numpy_warning_filters
+    if installed_numpy_warning_filters and not force:
+        return
+    installed_numpy_warning_filters = True
+    # Warnings specific to comparison with `dtype=object`.
+    warnings.filterwarnings(
+        "error", category=DeprecationWarning, message="numpy equal will not")
+    warnings.filterwarnings("error", category=DeprecationWarning,
+        message="elementwise == comparison failed")
+
+
 warnings.simplefilter('once', DrakeDeprecationWarning)
+installed_numpy_warning_filters = False

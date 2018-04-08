@@ -6,6 +6,7 @@ import numpy as np
 import pydrake.symbolic as sym
 from pydrake.test.algebra_test_util import ScalarAlgebra, VectorizedAlgebra
 from pydrake.util.containers import EqualToDict
+from pydrake.util.deprecation import install_numpy_warning_filters
 from copy import copy
 
 
@@ -29,6 +30,8 @@ TYPES = [
     sym.Polynomial,
     sym.Monomial,
 ]
+
+install_numpy_warning_filters()
 
 
 class SymbolicTestCase(unittest.TestCase):
@@ -486,30 +489,19 @@ class TestSymbolicExpression(SymbolicTestCase):
         e_yv = np.array([e_y, e_y])
         # N.B. In some versions of NumPy, `!=` for dtype=object implies ID
         # comparison (e.g. `is`).
-        # N.B. If `__nonzero__` throws, then NumPy swallows the error, and
-        # either returns a scalar or vector boolean (behavior changes based
-        # on version).
+        # N.B. If `__nonzero__` throws, then NumPy swallows the error and
+        # produces a DeprecationWarning, in addition to effectively garbage
+        # values.
         # - All false.
-        value = (e_xv == e_yv)
-        self.assertIsInstance(value, bool)
-        self.assertFalse(value)
+        with self.assertRaises(DeprecationWarning):
+            value = (e_xv == e_yv)
         # - True + False.
-        e_xyv = np.array([e_x, e_y])
-        value = (e_xv == e_xyv)
-        print(repr(value))
-        self.assertIsInstance(value, bool)
-        self.assertFalse(value)
+        with self.assertRaises(DeprecationWarning):
+            e_xyv = np.array([e_x, e_y])
+            value = (e_xv == e_xyv)
         # - All true.
-        value = (e_xv == e_xv)
-        np_major, np_minor = np.__version__.split('.')[:2]
-        if int(np_major) >= 1 and int(np_minor) >= 13:
-            print("Using v1.13 branch")
-            self.assertIsInstance(value, bool)
-            self.assertTrue(value)
-        else:
-            self.assertEqual(value.dtype, bool)
-            self.assertFalse(isinstance(value[0], sym.Formula))
-            self.assertTrue(value.all())
+        with self.assertRaises(DeprecationWarning):
+            value = (e_xv == e_xv)
 
     def test_functions_with_float(self):
         # TODO(eric.cousineau): Use concrete values once vectorized methods are
