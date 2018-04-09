@@ -146,8 +146,8 @@ def install_numpy_warning_filters(force=False):
     # or an array of bools (based on what objects are present and the NumPy
     # version).
     # N.B. Using a `module=` regex filter does not work, as the warning is
-    # raised from C code, and thus inherits the calling module (which may not
-    # be "numpy\..*"). (numpy/numpy#10861).
+    # raised from C code, and thus inherits the calling module, which may not
+    # be "numpy\..*" (numpy/numpy#10861).
     warnings.filterwarnings(
         "error", category=DeprecationWarning, message="numpy equal will not")
     warnings.filterwarnings(

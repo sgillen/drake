@@ -1,11 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, division, print_function
 
-import subprocess
-subprocess.Popen(
-    "export -p | sed 's# PWD=# OLD_PWD=#g' > /tmp/env.sh",
-    shell=True)
-
 import unittest
 import numpy as np
 import pydrake.symbolic as sym
@@ -66,6 +61,7 @@ class SymbolicTestCase(unittest.TestCase):
         self.assertEqual(actual.shape, expected.shape)
         for a, b in zip(actual.flat, expected.flat):
             self.assertSame(a, b)
+
 
 class TestSymbolicVariable(SymbolicTestCase):
     def test_addition(self):
@@ -144,22 +140,20 @@ class TestSymbolicVariable(SymbolicTestCase):
         self.assertFalse(x.EqualTo(y))
 
     def test_logical(self):
-        self.assertSame((sym.logical_not(x == 0)),
-                         "!((x = 0))")
-
+        self.assertSame((sym.logical_not(x == 0)), "!((x = 0))")
         # Test single-operand logical statements
         self.assertSame((sym.logical_and(x >= 1)), "(x >= 1)")
         self.assertSame((sym.logical_or(x >= 1)), "(x >= 1)")
         # Test binary operand logical statements
         self.assertSame((sym.logical_and(x >= 1, x <= 2)),
-                         "((x >= 1) and (x <= 2))")
+                        "((x >= 1) and (x <= 2))")
         self.assertSame((sym.logical_or(x <= 1, x >= 2)),
-                         "((x >= 2) or (x <= 1))")
+                        "((x >= 2) or (x <= 1))")
         # Test multiple operand logical statements
         self.assertSame((sym.logical_and(x >= 1, x <= 2, y == 2)),
-                         "((y = 2) and (x >= 1) and (x <= 2))")
+                        "((y = 2) and (x >= 1) and (x <= 2))")
         self.assertSame((sym.logical_or(x >= 1, x <= 2, y == 2)),
-                         "((y = 2) or (x >= 1) or (x <= 2))")
+                        "((y = 2) or (x >= 1) or (x <= 2))")
 
     def test_functions_with_variable(self):
         # TODO(eric.cousineau): Ensure that this works with NumPy stuff.
@@ -185,7 +179,7 @@ class TestSymbolicVariable(SymbolicTestCase):
         self.assertSame((sym.ceil(x)), "ceil(x)")
         self.assertSame((sym.floor(x)), "floor(x)")
         self.assertSame((sym.if_then_else(x > y, x, y)),
-                         "(if (x > y) then x else y)")
+                        "(if (x > y) then x else y)")
 
 
 class TestSymbolicVariables(SymbolicTestCase):
@@ -315,8 +309,6 @@ class TestSymbolicExpression(SymbolicTestCase):
         cv = algebra.to_algebra(c)
         e_xv = algebra.to_algebra(e_x)
         e_yv = algebra.to_algebra(e_y)
-
-        algebra.check_value(xv < yv, "(x < y)")
 
         # Addition.
         algebra.check_value(e_xv + e_yv, "(x + y)")
@@ -599,7 +591,7 @@ class TestSymbolicFormula(SymbolicTestCase):
     def test_substitute_with_dict(self):
         f = x + y > z
         self.assertSame(f.Substitute({x: x + 2, y:  y + 3}),
-                         x + y + 5 > z)
+                        x + y + 5 > z)
 
     def test_to_string(self):
         f = x > y
@@ -951,7 +943,3 @@ class TestSymbolicPolynomial(SymbolicTestCase):
         env = {x: float('nan')}
         with self.assertRaises(RuntimeError):
             p.Evaluate(env)
-
-
-import sys
-sys.stdout = sys.stderr

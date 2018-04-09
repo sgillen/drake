@@ -76,7 +76,9 @@ PYBIND11_MODULE(_autodiffutils_py, m) {
     .def_loop(py::dtype_method::dot())
     // Casting
     // - Downcasting must be explicit, to prevent inadvertent information loss.
-    .def_loop_cast([](const AutoDiffXd& self) -> double { return self.value(); })
+    .def_loop_cast([](const AutoDiffXd& self) -> double {
+      return self.value();
+    })
     // - Upcasting can be implicit, especially for matrix multiplication.
     .def_loop_cast([](double x) -> AutoDiffXd { return x; }, true);
 
