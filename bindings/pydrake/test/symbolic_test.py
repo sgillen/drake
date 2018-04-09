@@ -885,7 +885,7 @@ class TestSymbolicPolynomial(SymbolicTestCase):
         # same. Without `ToExpression`, we get an erorr that
         # '3*1 + 1*x' != '1*x + 3*1'.
         self.assertSame(
-            p.ToExpression(), sym.Polynomial(3 + 1 * x).ToExpression())
+            p, sym.Polynomial(3 + 1 * x))
 
     def test_subtraction_assignment(self):
         p = sym.Polynomial()
@@ -894,9 +894,7 @@ class TestSymbolicPolynomial(SymbolicTestCase):
         p -= sym.Monomial(x)
         self.assertSame(p, sym.Polynomial(-1 * x))
         p -= 3
-        # N.B. Same as above; use `ToExpression` to normalize order.
-        self.assertSame(
-            p.ToExpression(), sym.Polynomial(-1 * x - 3).ToExpression())
+        self.assertSame(p, sym.Polynomial(-1 * x - 3))
 
     def test_multiplication_assignment(self):
         p = sym.Polynomial()
@@ -920,9 +918,8 @@ class TestSymbolicPolynomial(SymbolicTestCase):
         p_dy = sym.Polynomial(8 * y + 8 * x, [x, y])   # ∂p/∂y =  8y + 8x
 
         J = p.Jacobian([x, y])
-        # N.B. Same as in other places: Use `ToExpression` to normalize order.
-        self.assertSame(J[0].ToExpression(), p_dx.ToExpression())
-        self.assertSame(J[1].ToExpression(), p_dy.ToExpression())
+        self.assertSame(J[0], p_dx)
+        self.assertSame(J[1], p_dy)
 
     def test_hash(self):
         p1 = sym.Polynomial(x * x, [x])
