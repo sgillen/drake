@@ -467,6 +467,10 @@ class TestSymbolicExpression(SymbolicTestCase):
         self.assertEquals(e_xv.shape, (2,))
         self.assertIsInstance(e_xv[0], sym.Expression)
 
+    def test_equalto(self):
+        self.assertTrue((x + y).EqualTo(x + y))
+        self.assertFalse((x + y).EqualTo(x - y))
+
     def test_relational_operators_nonzero(self):
         # For issues #8135 and #8491.
         # Ensure that we throw on `__nonzero__`.
@@ -485,6 +489,7 @@ class TestSymbolicExpression(SymbolicTestCase):
         self.assertEqual(value.dtype, sym.Formula)
         self.assertTrue(isinstance(value[0], sym.Formula))
         self._check_array(value, ["(x = y)", "(x = y)"])
+
         # N.B. In some versions of NumPy, `!=` for dtype=object implies ID
         # comparison (e.g. `is`).
         # N.B. If `__nonzero__` throws, then NumPy swallows the error and
@@ -890,11 +895,7 @@ class TestSymbolicPolynomial(SymbolicTestCase):
         p += sym.Monomial(x)
         self.assertSame(p, sym.Polynomial(1 * x))
         p += 3
-        # N.B. For whatever reason, the ordering between these two is not the
-        # same. Without `ToExpression`, we get an erorr that
-        # '3*1 + 1*x' != '1*x + 3*1'.
-        self.assertSame(
-            p, sym.Polynomial(3 + 1 * x))
+        self.assertSame(p, sym.Polynomial(3 + 1 * x))
 
     def test_subtraction_assignment(self):
         p = sym.Polynomial()
