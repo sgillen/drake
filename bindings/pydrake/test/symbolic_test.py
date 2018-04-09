@@ -40,8 +40,8 @@ RHS_TYPES = TYPES + [float, np.float64]
 
 class SymbolicTestCase(unittest.TestCase):
     def _coerce_value(self, lhs, rhs):
-        self.assertTrue(type(lhs) in TYPES)
-        self.assertTrue(type(rhs) in RHS_TYPES)
+        self.assertTrue(type(lhs) in TYPES, type(lhs))
+        self.assertTrue(type(rhs) in RHS_TYPES, type(rhs))
 
     def assertSame(self, lhs, rhs):
         self._coerce_value(lhs, rhs)
@@ -50,6 +50,9 @@ class SymbolicTestCase(unittest.TestCase):
     def assertNotSame(self, lhs, rhs):
         self._coerce_value(lhs, rhs)
         self.assertFalse(lhs.EqualTo(rhs), "{} == {}".format(lhs, rhs))
+
+    def _check_scalar(self, actual, expected):
+        self.assertSame(actual, expected)
 
     def _check_array(self, actual, expected):
         expected = np.array(expected)
@@ -792,13 +795,6 @@ class TestSymbolicPolynomial(SymbolicTestCase):
     def test_default_constructor(self):
         p = sym.Polynomial()
         self.assertSame(p.ToExpression(), sym.Expression())
-
-    def test_meta(self):
-        p0 = sym.Polynomial()
-        px2 = sym.Polynomial(x**2)
-        # TODO(eric.cousineau): Resolve via #8491.
-        self.assertEqual(p0, px2)
-        self.assertNotEqual(p0, px2)
 
     def test_constructor_maptype(self):
         m = {sym.Monomial(x): sym.Expression(3),
