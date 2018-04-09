@@ -40,8 +40,13 @@ RHS_TYPES = TYPES + [float, np.float64, int]
 
 class SymbolicTestCase(unittest.TestCase):
     def _check_operands(self, lhs, rhs):
+        if isinstance(lhs, np.ndarray):
+            # Check and unpack scalar ndarray.
+            self.assertEqual(lhs.shape, ())
+            lhs = lhs.item(0)
         self.assertTrue(type(lhs) in TYPES, type(lhs))
         self.assertTrue(type(rhs) in RHS_TYPES, type(rhs))
+        return lhs, rhs
 
     def assertSame(self, lhs, rhs):
         if isinstance(rhs, str):
@@ -49,11 +54,11 @@ class SymbolicTestCase(unittest.TestCase):
         elif isinstance(lhs, sym.Formula):
             self.assertEqual(lhs, rhs)
         else:
-            self._check_operands(lhs, rhs)
+            lhs, rhs = self._check_operands(lhs, rhs)
             self.assertTrue(lhs.EqualTo(rhs), "{} != {}".format(lhs, rhs))
 
     def assertNotSame(self, lhs, rhs):
-        self._check_operands(lhs, rhs)
+        lhs, rhs = self._check_operands(lhs, rhs)
         self.assertFalse(lhs.EqualTo(rhs), "{} == {}".format(lhs, rhs))
 
     def assertSameArray(self, actual, expected):
@@ -492,25 +497,14 @@ class TestSymbolicExpression(SymbolicTestCase):
         e_yv = np.array([e_y, e_y])
         value = (e_xv == e_yv)
         self.assertEqual(value.dtype, sym.Formula)
-        self.assertTrue(isinstance(value[0], sym.Formula))
         self.assertSameArray(value, ["(x = y)", "(x = y)"])
-
-        # N.B. In some versions of NumPy, `!=` for dtype=object implies ID
-        # comparison (e.g. `is`).
-        # N.B. If `__nonzero__` throws, then NumPy swallows the error and
-        # produces a DeprecationWarning, in addition to effectively garbage
-        # values. For this reason, `pydrake.symbolic` will automatically
-        # promote these warnings to errors.
-        # - All false.
-        with self.assertRaises(DeprecationWarning):
-            value = (e_xv == e_yv)
         # - True + False.
-        with self.assertRaises(DeprecationWarning):
-            e_xyv = np.array([e_x, e_y])
-            value = (e_xv == e_xyv)
+        e_xyv = np.array([e_x, e_y])
+        value = (e_xv == e_xyv)
+        self.assertSameArray(value, [sym.Formula.True(), "(x = y)"])
         # - All true.
-        with self.assertRaises(DeprecationWarning):
-            value = (e_xv == e_xv)
+        value = (e_xv == e_xv)
+        self.assertSameArray(value, ["True", "True"])
 
     def test_functions_with_float(self):
         # TODO(eric.cousineau): Use concrete values once vectorized methods are
