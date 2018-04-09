@@ -1,7 +1,6 @@
 #pragma once
 
 #include <Eigen/Core>
-
 #include "pybind11/numpy_dtypes_user.h"
 #include "pybind11/pybind11.h"
 
