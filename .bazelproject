@@ -14,5 +14,6 @@ directories:
   -build
 
 targets:
-  //...:all
-
+  //common:all
+  //bindings/pydrake:symbolic_test
+  //bindings/pydrake:autodiffutils_test
