@@ -106,7 +106,7 @@ environment variables by adding these lines to your Python script:
 
     import subprocess
     subprocess.Popen(
-        "export -p | sed 's# PWD=# OLD_PWD=#g' | tee /tmp/env.sh",
+        "export -p | sed 's# PWD=# OLD_PWD=#g' > /tmp/env.sh",
         shell=True)
 
 Run your target once from Bazel, and then source the generated `/tmp/env.sh` in
@@ -118,14 +118,17 @@ This is a brief recipe for debugging with GDB
 (note the usage of subshell `(...)` to keep the variables scoped):
 
     (
-        target=//bindings/pydrake/systems:lifetime_test
-        target_bin=$(echo ${target} | sed -e 's#//##' -e 's#:#/#')
-        bazel run -c dbg ${target}
+        set -x -e -u
+        target=//bindings/pydrake:symbolic_test
+        target_bin=$(echo ${target} | sed -e 's#//##' -e 's#:#/_isolated/#')
+        bazel run -c dbg ${target} -j 8 || :
         workspace=$(bazel info workspace)
         name=$(basename ${workspace})
-        cd ${workspace}/bazel-${name}
+        target_bin_path=${workspace}/bazel-bin/${target_bin}
+        source_dir=${workspace}/bazel-${name}
         source /tmp/env.sh
-        gdb --args python ${workspace}/bazel-bin/${target_bin}
+        cd ${target_bin_path}.runfiles/${name}
+        gdb --directory ${source_dir} --args python ${target_bin_path}
     )
 
 This allows you to use GDB from the terminal, while being able to inspect the
