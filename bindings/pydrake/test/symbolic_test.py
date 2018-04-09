@@ -35,26 +35,28 @@ TYPES = [
     sym.Monomial,
 ]
 
-RHS_TYPES = TYPES + [float, np.float64]
+RHS_TYPES = TYPES + [float, np.float64, int]
 
 
 class SymbolicTestCase(unittest.TestCase):
     def _check_operands(self, lhs, rhs):
-        self.assertTrue(type(lhs) in TYPES)
-        self.assertTrue(type(rhs) in RHS_TYPES)
+        self.assertTrue(type(lhs) in TYPES, type(lhs))
+        self.assertTrue(type(rhs) in RHS_TYPES, type(rhs))
 
     def assertSame(self, lhs, rhs):
-        self._check_operands(lhs, rhs)
-        self.assertTrue(lhs.EqualTo(rhs), "{} != {}".format(lhs, rhs))
+        if isinstance(rhs, str):
+            self.assertEqual(str(lhs), rhs)
+        elif isinstance(lhs, sym.Formula):
+            self.assertEqual(lhs, rhs)
+        else:
+            self._check_operands(lhs, rhs)
+            self.assertTrue(lhs.EqualTo(rhs), "{} != {}".format(lhs, rhs))
 
     def assertNotSame(self, lhs, rhs):
         self._check_operands(lhs, rhs)
         self.assertFalse(lhs.EqualTo(rhs), "{} == {}".format(lhs, rhs))
 
-    def _check_scalar(self, actual, expected):
-        self.assertSame(actual, expected)
-
-    def _check_array(self, actual, expected):
+    def assertSameArray(self, actual, expected):
         expected = np.array(expected)
         self.assertEqual(actual.shape, expected.shape)
         for a, b in zip(actual.flat, expected.flat):
@@ -62,96 +64,96 @@ class SymbolicTestCase(unittest.TestCase):
 
 class TestSymbolicVariable(SymbolicTestCase):
     def test_addition(self):
-        self._check_scalar((x + y), "(x + y)")
-        self._check_scalar((x + 1), "(1 + x)")
-        self._check_scalar((1 + x), "(1 + x)")
+        self.assertSame((x + y), "(x + y)")
+        self.assertSame((x + 1), "(1 + x)")
+        self.assertSame((1 + x), "(1 + x)")
 
     def test_subtraction(self):
-        self._check_scalar((x - y), "(x - y)")
-        self._check_scalar((x - 1), "(-1 + x)")
-        self._check_scalar((1 - x), "(1 - x)")
+        self.assertSame((x - y), "(x - y)")
+        self.assertSame((x - 1), "(-1 + x)")
+        self.assertSame((1 - x), "(1 - x)")
 
     def test_multiplication(self):
-        self._check_scalar((x * y), "(x * y)")
-        self._check_scalar((x * 1), "x")
-        self._check_scalar((1 * x), "x")
+        self.assertSame((x * y), "(x * y)")
+        self.assertSame((x * 1), "x")
+        self.assertSame((1 * x), "x")
 
     def test_division(self):
-        self._check_scalar((x / y), "(x / y)")
-        self._check_scalar((x / 1), "x")
-        self._check_scalar((1 / x), "(1 / x)")
+        self.assertSame((x / y), "(x / y)")
+        self.assertSame((x / 1), "x")
+        self.assertSame((1 / x), "(1 / x)")
 
     def test_unary_operators(self):
-        self._check_scalar((+x), "x")
-        self._check_scalar((-x), "(-1 * x)")
+        self.assertSame((+x), "x")
+        self.assertSame((-x), "(-1 * x)")
 
     def test_relational_operators(self):
         # Variable rop float
-        self._check_scalar((x >= 1), "(x >= 1)")
-        self._check_scalar((x > 1), "(x > 1)")
-        self._check_scalar((x <= 1), "(x <= 1)")
-        self._check_scalar((x < 1), "(x < 1)")
-        self._check_scalar((x == 1), "(x = 1)")
-        self._check_scalar((x != 1), "(x != 1)")
+        self.assertSame((x >= 1), "(x >= 1)")
+        self.assertSame((x > 1), "(x > 1)")
+        self.assertSame((x <= 1), "(x <= 1)")
+        self.assertSame((x < 1), "(x < 1)")
+        self.assertSame((x == 1), "(x = 1)")
+        self.assertSame((x != 1), "(x != 1)")
 
         # float rop Variable
-        self._check_scalar((1 < y), "(y > 1)")
-        self._check_scalar((1 <= y), "(y >= 1)")
-        self._check_scalar((1 > y), "(y < 1)")
-        self._check_scalar((1 >= y), "(y <= 1)")
-        self._check_scalar((1 == y), "(y = 1)")
-        self._check_scalar((1 != y), "(y != 1)")
+        self.assertSame((1 < y), "(y > 1)")
+        self.assertSame((1 <= y), "(y >= 1)")
+        self.assertSame((1 > y), "(y < 1)")
+        self.assertSame((1 >= y), "(y <= 1)")
+        self.assertSame((1 == y), "(y = 1)")
+        self.assertSame((1 != y), "(y != 1)")
 
         # Variable rop Variable
-        self._check_scalar((x < y), "(x < y)")
-        self._check_scalar((x <= y), "(x <= y)")
-        self._check_scalar((x > y), "(x > y)")
-        self._check_scalar((x >= y), "(x >= y)")
-        self._check_scalar((x == y), "(x = y)")
-        self._check_scalar((x != y), "(x != y)")
+        self.assertSame((x < y), "(x < y)")
+        self.assertSame((x <= y), "(x <= y)")
+        self.assertSame((x > y), "(x > y)")
+        self.assertSame((x >= y), "(x >= y)")
+        self.assertSame((x == y), "(x = y)")
+        self.assertSame((x != y), "(x != y)")
 
     def test_repr(self):
         self.assertEqual(repr(x), "Variable('x')")
 
     def test_simplify(self):
-        self._check_scalar((0 * (x + y)), "0")
-        self._check_scalar((x + y - x - y), "0")
-        self._check_scalar((x / x - 1), "0")
-        self._check_scalar((x / x), "1")
+        self.assertSame((0 * (x + y)), "0")
+        self.assertSame((x + y - x - y), "0")
+        self.assertSame((x / x - 1), "0")
+        self.assertSame((x / x), "1")
 
     def test_expand(self):
         ex = 2 * (x + y)
-        self._check_scalar((ex), "(2 * (x + y))")
-        self._check_scalar((ex.Expand()), "(2 * x + 2 * y)")
+        self.assertSame((ex), "(2 * (x + y))")
+        self.assertSame((ex.Expand()), "(2 * x + 2 * y)")
 
     def test_pow(self):
-        self._check_scalar((x**2), "pow(x, 2)")
-        self._check_scalar((x**y), "pow(x, y)")
-        self._check_scalar(((x + 1)**(y - 1)), "pow((1 + x), (-1 + y))")
+        self.assertSame((x**2), "pow(x, 2)")
+        self.assertSame((x**y), "pow(x, y)")
+        self.assertSame(((x + 1)**(y - 1)), "pow((1 + x), (-1 + y))")
 
     def test_neg(self):
-        self._check_scalar((-(x + 1)), "(-1 - x)")
+        self.assertSame((-(x + 1)), "(-1 - x)")
 
     def test_equalto(self):
         self.assertTrue(x.EqualTo(x))
         self.assertFalse(x.EqualTo(y))
 
     def test_logical(self):
-        self._check_scalar((sym.logical_not(x == 0)),
+        self.assertSame((sym.logical_not(x == 0)),
                          "!((x = 0))")
 
         # Test single-operand logical statements
-        self._check_scalar((sym.logical_and(x >= 1)), "(x >= 1)")
-        self._check_scalar((sym.logical_or(x >= 1)), "(x >= 1)")
+        self.assertSame((sym.logical_and(x >= 1)), "(x >= 1)")
+        self.assertSame((sym.logical_or(x >= 1)), "(x >= 1)")
         # Test binary operand logical statements
-        self._check_scalar((sym.logical_and(x >= 1, x <= 2)),
+        self.assertSame((sym.logical_and(x >= 1, x <= 2)),
                          "((x >= 1) and (x <= 2))")
-        self._check_scalar((sym.logical_or(x <= 1, x >= 2)),
+        self.assertSame((sym.logical_or(x <= 1, x >= 2)),
                          "((x >= 2) or (x <= 1))")
         # Test multiple operand logical statements
-        self._check_scalar((sym.logical_and(x >= 1, x <= 2, y == 2)),
+        self.assertSame((sym.logical_and(x >= 1, x <= 2, y == 2)),
                          "((y = 2) and (x >= 1) and (x <= 2))")
-        self._check_scalar((sym.logical_or(x >= 1, x <= 2, y == 2)),
+        self.assertSame((sym.logical_or(x >= 1, x <= 2, y == 2)),
                          "((y = 2) or (x >= 1) or (x <= 2))")
 
     def test_functions_with_variable(self):
@@ -159,25 +161,25 @@ class TestSymbolicVariable(SymbolicTestCase):
         # Unfortunately, since NumPy does not coerce user-dtype conversions,
         # we may need to explicitly spell out the unary overloads, and any
         # binary overloads that have pure-Variable expressions.
-        self._check_scalar((sym.abs(x)), "abs(x)")
-        self._check_scalar((sym.exp(x)), "exp(x)")
-        self._check_scalar((sym.sqrt(x)), "sqrt(x)")
-        self._check_scalar((sym.pow(x, y)), "pow(x, y)")
-        self._check_scalar((sym.sin(x)), "sin(x)")
-        self._check_scalar((sym.cos(x)), "cos(x)")
-        self._check_scalar((sym.tan(x)), "tan(x)")
-        self._check_scalar((sym.asin(x)), "asin(x)")
-        self._check_scalar((sym.acos(x)), "acos(x)")
-        self._check_scalar((sym.atan(x)), "atan(x)")
-        self._check_scalar((sym.atan2(x, y)), "atan2(x, y)")
-        self._check_scalar((sym.sinh(x)), "sinh(x)")
-        self._check_scalar((sym.cosh(x)), "cosh(x)")
-        self._check_scalar((sym.tanh(x)), "tanh(x)")
-        self._check_scalar((sym.min(x, y)), "min(x, y)")
-        self._check_scalar((sym.max(x, y)), "max(x, y)")
-        self._check_scalar((sym.ceil(x)), "ceil(x)")
-        self._check_scalar((sym.floor(x)), "floor(x)")
-        self._check_scalar((sym.if_then_else(x > y, x, y)),
+        self.assertSame((sym.abs(x)), "abs(x)")
+        self.assertSame((sym.exp(x)), "exp(x)")
+        self.assertSame((sym.sqrt(x)), "sqrt(x)")
+        self.assertSame((sym.pow(x, y)), "pow(x, y)")
+        self.assertSame((sym.sin(x)), "sin(x)")
+        self.assertSame((sym.cos(x)), "cos(x)")
+        self.assertSame((sym.tan(x)), "tan(x)")
+        self.assertSame((sym.asin(x)), "asin(x)")
+        self.assertSame((sym.acos(x)), "acos(x)")
+        self.assertSame((sym.atan(x)), "atan(x)")
+        self.assertSame((sym.atan2(x, y)), "atan2(x, y)")
+        self.assertSame((sym.sinh(x)), "sinh(x)")
+        self.assertSame((sym.cosh(x)), "cosh(x)")
+        self.assertSame((sym.tanh(x)), "tanh(x)")
+        self.assertSame((sym.min(x, y)), "min(x, y)")
+        self.assertSame((sym.max(x, y)), "max(x, y)")
+        self.assertSame((sym.ceil(x)), "ceil(x)")
+        self.assertSame((sym.floor(x)), "floor(x)")
+        self.assertSame((sym.if_then_else(x > y, x, y)),
                          "(if (x > y) then x else y)")
 
 
@@ -456,14 +458,14 @@ class TestSymbolicExpression(SymbolicTestCase):
     def test_scalar_algebra(self):
         xv, e_xv = self._check_algebra(
             ScalarAlgebra(
-                self._check_scalar, scalar_to_float=lambda x: x.Evaluate()))
+                self.assertSame, scalar_to_float=lambda x: x.Evaluate()))
         self.assertIsInstance(xv, sym.Variable)
         self.assertIsInstance(e_xv, sym.Expression)
 
     def test_array_algebra(self):
         xv, e_xv = self._check_algebra(
             VectorizedAlgebra(
-                self._check_array,
+                self.assertSameArray,
                 scalar_to_float=lambda x: x.Evaluate()))
         self.assertEquals(xv.shape, (2,))
         self.assertIsInstance(xv[0], sym.Variable)
@@ -491,7 +493,7 @@ class TestSymbolicExpression(SymbolicTestCase):
         value = (e_xv == e_yv)
         self.assertEqual(value.dtype, sym.Formula)
         self.assertTrue(isinstance(value[0], sym.Formula))
-        self._check_array(value, ["(x = y)", "(x = y)"])
+        self.assertSameArray(value, ["(x = y)", "(x = y)"])
 
         # N.B. In some versions of NumPy, `!=` for dtype=object implies ID
         # comparison (e.g. `is`).
@@ -517,26 +519,26 @@ class TestSymbolicExpression(SymbolicTestCase):
         v_y = 1.0
         self.assertSame(sym.abs(v_x), np.abs(v_x))
         self.assertNotSame(sym.abs(v_x), 0.5*np.abs(v_x))
-        self._check_scalar(sym.abs(v_x), np.abs(v_x))
-        self._check_scalar(sym.abs(v_x), np.abs(v_x))
-        self._check_scalar(sym.exp(v_x), np.exp(v_x))
-        self._check_scalar(sym.sqrt(v_x), np.sqrt(v_x))
-        self._check_scalar(sym.pow(v_x, v_y), v_x ** v_y)
-        self._check_scalar(sym.sin(v_x), np.sin(v_x))
-        self._check_scalar(sym.cos(v_x), np.cos(v_x))
-        self._check_scalar(sym.tan(v_x), np.tan(v_x))
-        self._check_scalar(sym.asin(v_x), np.arcsin(v_x))
-        self._check_scalar(sym.acos(v_x), np.arccos(v_x))
-        self._check_scalar(sym.atan(v_x), np.arctan(v_x))
-        self._check_scalar(sym.atan2(v_x, v_y), np.arctan2(v_x, v_y))
-        self._check_scalar(sym.sinh(v_x), np.sinh(v_x))
-        self._check_scalar(sym.cosh(v_x), np.cosh(v_x))
-        self._check_scalar(sym.tanh(v_x), np.tanh(v_x))
-        self._check_scalar(sym.min(v_x, v_y), min(v_x, v_y))
-        self._check_scalar(sym.max(v_x, v_y), max(v_x, v_y))
-        self._check_scalar(sym.ceil(v_x), np.ceil(v_x))
-        self._check_scalar(sym.floor(v_x), np.floor(v_x))
-        self._check_scalar(
+        self.assertSame(sym.abs(v_x), np.abs(v_x))
+        self.assertSame(sym.abs(v_x), np.abs(v_x))
+        self.assertSame(sym.exp(v_x), np.exp(v_x))
+        self.assertSame(sym.sqrt(v_x), np.sqrt(v_x))
+        self.assertSame(sym.pow(v_x, v_y), v_x ** v_y)
+        self.assertSame(sym.sin(v_x), np.sin(v_x))
+        self.assertSame(sym.cos(v_x), np.cos(v_x))
+        self.assertSame(sym.tan(v_x), np.tan(v_x))
+        self.assertSame(sym.asin(v_x), np.arcsin(v_x))
+        self.assertSame(sym.acos(v_x), np.arccos(v_x))
+        self.assertSame(sym.atan(v_x), np.arctan(v_x))
+        self.assertSame(sym.atan2(v_x, v_y), np.arctan2(v_x, v_y))
+        self.assertSame(sym.sinh(v_x), np.sinh(v_x))
+        self.assertSame(sym.cosh(v_x), np.cosh(v_x))
+        self.assertSame(sym.tanh(v_x), np.tanh(v_x))
+        self.assertSame(sym.min(v_x, v_y), min(v_x, v_y))
+        self.assertSame(sym.max(v_x, v_y), max(v_x, v_y))
+        self.assertSame(sym.ceil(v_x), np.ceil(v_x))
+        self.assertSame(sym.floor(v_x), np.floor(v_x))
+        self.assertSame(
             sym.if_then_else(
                 sym.Expression(v_x) > sym.Expression(v_y),
                 v_x, v_y),
@@ -550,22 +552,22 @@ class TestSymbolicExpression(SymbolicTestCase):
         #    |sin(y)    x * cos(y)|
         #    | 2 * x             0|
         J = sym.Jacobian([x * sym.cos(y), x * sym.sin(y), x ** 2], [x, y])
-        self._check_scalar(J[0, 0], sym.cos(y))
-        self._check_scalar(J[1, 0], sym.sin(y))
-        self._check_scalar(J[2, 0], 2 * x)
-        self._check_scalar(J[0, 1], - x * sym.sin(y))
-        self._check_scalar(J[1, 1], x * sym.cos(y))
-        self._check_scalar(J[2, 1], 0)
+        self.assertSame(J[0, 0], sym.cos(y))
+        self.assertSame(J[1, 0], sym.sin(y))
+        self.assertSame(J[2, 0], 2 * x)
+        self.assertSame(J[0, 1], - x * sym.sin(y))
+        self.assertSame(J[1, 1], x * sym.cos(y))
+        self.assertSame(J[2, 1], 0)
 
     def test_method_jacobian(self):
         # (x * cos(y)).Jacobian([x, y]) returns [cos(y), -x * sin(y)].
         J = (x * sym.cos(y)).Jacobian([x, y])
-        self._check_scalar(J[0], sym.cos(y))
-        self._check_scalar(J[1], -x * sym.sin(y))
+        self.assertSame(J[0], sym.cos(y))
+        self.assertSame(J[1], -x * sym.sin(y))
 
     def test_differentiate(self):
         e = x * x
-        self._check_scalar(e.Differentiate(x), 2 * x)
+        self.assertSame(e.Differentiate(x), 2 * x)
 
     def test_repr(self):
         self.assertEqual(repr(e_x), '<Expression "x">')
@@ -597,13 +599,13 @@ class TestSymbolicFormula(SymbolicTestCase):
 
     def test_substitute_with_pair(self):
         f = x > y
-        self._check_scalar(f.Substitute(y, y + 5), x > y + 5)
-        self._check_scalar(f.Substitute(y, z), x > z)
-        self._check_scalar(f.Substitute(y, 3), x > 3)
+        self.assertSame(f.Substitute(y, y + 5), x > y + 5)
+        self.assertSame(f.Substitute(y, z), x > z)
+        self.assertSame(f.Substitute(y, 3), x > 3)
 
     def test_substitute_with_dict(self):
         f = x + y > z
-        self._check_scalar(f.Substitute({x: x + 2, y:  y + 3}),
+        self.assertSame(f.Substitute({x: x + 2, y:  y + 3}),
                          x + y + 5 > z)
 
     def test_to_string(self):
@@ -699,9 +701,9 @@ class TestSymbolicMonomial(SymbolicTestCase):
 
     def test_str(self):
         m1 = sym.Monomial(x, 2)
-        self._check_scalar((m1), "x^2")
+        self.assertSame((m1), "x^2")
         m2 = m1 * sym.Monomial(y)
-        self._check_scalar((m2), "x^2 * y")
+        self.assertSame((m2), "x^2 * y")
 
     def test_repr(self):
         m = sym.Monomial(x, 2)
@@ -757,7 +759,7 @@ class TestSymbolicMonomial(SymbolicTestCase):
     def test_to_expression(self):
         m = sym.Monomial(x, 3) * sym.Monomial(y)  # m = x³y
         e = m.ToExpression()
-        self._check_scalar((e), "(pow(x, 3) * y)")
+        self.assertSame((e), "(pow(x, 3) * y)")
 
     def test_get_variables(self):
         m = sym.Monomial(x, 3) * sym.Monomial(y)  # m = x³y
