@@ -4,7 +4,9 @@ Provides extensions for containers of Drake-related objects.
 
 
 class _EqualityProxyBase(object):
-    # TODO(eric.cousineau): Copy input object to preserve key immutability?
+    # Wraps an object with a non-compliant `__eq__` operator (returns a
+    # non-bool convertible expression) with a custom compliant `__eq__`
+    # operator.
     def __init__(self, value):
         self._value = value
 
@@ -15,7 +17,7 @@ class _EqualityProxyBase(object):
         return hash(self._value)
 
     def __eq__(self, other):
-        raise NotImplemented
+        raise NotImplemented("Abstract method")
 
     def __nonzero__(self):
         return bool(self._value)
@@ -24,14 +26,20 @@ class _EqualityProxyBase(object):
 
 
 class _DictKeyWrap(dict):
-    # Wraps a dictionary's key access.
-    def __init__(self, tmp, key_wrap, key_unwrap):
+    # Wraps a dictionary's key access. For a key of a type `TOrig`, this
+    # dictionary will provide a key of type `TProxy`, that should proxy the
+    # original key.
+    def __init__(self, dict_in, key_wrap, key_unwrap):
+        # @param dict_in Dictionary with keys of types TOrig (not necessarily
+        # homogeneous).
+        # @param key_wrap Functor that maps from TOrig -> TProxy.
+        # @param key_unwrap Functor that maps from TProxy -> TOrig.
         dict.__init__(self)
         # N.B. Passing properties to these will cause an issue. This can be
         # sidestepped by storing the properties in a `dict`.
         self._key_wrap = key_wrap
         self._key_unwrap = key_unwrap
-        for key, value in tmp.iteritems():
+        for key, value in dict_in.iteritems():
             self[key] = value
 
     def __setitem__(self, key, value):
@@ -78,5 +86,5 @@ class EqualToDict(_DictKeyWrap):
                 return (isinstance(other.value, T)
                         and self.value.EqualTo(other.value))
 
-        tmp = dict(*args, **kwargs)
-        _DictKeyWrap.__init__(self, tmp, Proxy, Proxy._get_value)
+        dict_in = dict(*args, **kwargs)
+        _DictKeyWrap.__init__(self, dict_in, Proxy, Proxy._get_value)

@@ -140,7 +140,8 @@ def install_numpy_warning_filters(force=False):
     if installed_numpy_warning_filters and not force:
         return
     installed_numpy_warning_filters = True
-    # Warnings specific to comparison with `dtype=object`.
+    # Warnings specific to comparison with `dtype=object` should be raised to
+    # errors.
     # N.B. Using a `module=` regex filter does not work, as the warning is
     # raised from C code, and thus inherits the calling module (which may not
     # be "numpy\..*").
