@@ -517,31 +517,30 @@ class TestSymbolicExpression(SymbolicTestCase):
         # supported.
         v_x = 1.0
         v_y = 1.0
-        self.assertSame(sym.abs(v_x), np.abs(v_x))
-        self.assertNotSame(sym.abs(v_x), 0.5*np.abs(v_x))
-        self.assertSame(sym.abs(v_x), np.abs(v_x))
-        self.assertSame(sym.abs(v_x), np.abs(v_x))
-        self.assertSame(sym.exp(v_x), np.exp(v_x))
-        self.assertSame(sym.sqrt(v_x), np.sqrt(v_x))
-        self.assertSame(sym.pow(v_x, v_y), v_x ** v_y)
-        self.assertSame(sym.sin(v_x), np.sin(v_x))
-        self.assertSame(sym.cos(v_x), np.cos(v_x))
-        self.assertSame(sym.tan(v_x), np.tan(v_x))
-        self.assertSame(sym.asin(v_x), np.arcsin(v_x))
-        self.assertSame(sym.acos(v_x), np.arccos(v_x))
-        self.assertSame(sym.atan(v_x), np.arctan(v_x))
-        self.assertSame(sym.atan2(v_x, v_y), np.arctan2(v_x, v_y))
-        self.assertSame(sym.sinh(v_x), np.sinh(v_x))
-        self.assertSame(sym.cosh(v_x), np.cosh(v_x))
-        self.assertSame(sym.tanh(v_x), np.tanh(v_x))
-        self.assertSame(sym.min(v_x, v_y), min(v_x, v_y))
-        self.assertSame(sym.max(v_x, v_y), max(v_x, v_y))
-        self.assertSame(sym.ceil(v_x), np.ceil(v_x))
-        self.assertSame(sym.floor(v_x), np.floor(v_x))
-        self.assertSame(
-            sym.if_then_else(
-                sym.Expression(v_x) > sym.Expression(v_y),
-                v_x, v_y),
+        self.assertIsInstance(sym.abs(v_x), float)
+        self.assertEqual(sym.abs(v_x), np.abs(v_x))
+        self.assertNotEqual(sym.abs(v_x), 0.5*np.abs(v_x))
+        self.assertEqual(sym.abs(v_x), np.abs(v_x))
+        self.assertEqual(sym.abs(v_x), np.abs(v_x))
+        self.assertEqual(sym.exp(v_x), np.exp(v_x))
+        self.assertEqual(sym.sqrt(v_x), np.sqrt(v_x))
+        self.assertEqual(sym.pow(v_x, v_y), v_x ** v_y)
+        self.assertEqual(sym.sin(v_x), np.sin(v_x))
+        self.assertEqual(sym.cos(v_x), np.cos(v_x))
+        self.assertEqual(sym.tan(v_x), np.tan(v_x))
+        self.assertEqual(sym.asin(v_x), np.arcsin(v_x))
+        self.assertEqual(sym.acos(v_x), np.arccos(v_x))
+        self.assertEqual(sym.atan(v_x), np.arctan(v_x))
+        self.assertEqual(sym.atan2(v_x, v_y), np.arctan2(v_x, v_y))
+        self.assertEqual(sym.sinh(v_x), np.sinh(v_x))
+        self.assertEqual(sym.cosh(v_x), np.cosh(v_x))
+        self.assertEqual(sym.tanh(v_x), np.tanh(v_x))
+        self.assertEqual(sym.min(v_x, v_y), min(v_x, v_y))
+        self.assertEqual(sym.max(v_x, v_y), max(v_x, v_y))
+        self.assertEqual(sym.ceil(v_x), np.ceil(v_x))
+        self.assertEqual(sym.floor(v_x), np.floor(v_x))
+        self.assertEqual(
+            sym.if_then_else(v_x > v_y, v_x, v_y),
             v_x if v_x > v_y else v_y)
 
     def test_non_method_jacobian(self):

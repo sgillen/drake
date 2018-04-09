@@ -313,6 +313,9 @@ from pydrake.math import (
 )
 )""");
 
+  m.def("if_then_else", [](bool cond, double true_value, double false_value) {
+    return cond ? true_value : false_value;
+  });
   m.def("if_then_else", &symbolic::if_then_else);
 
   m.def("Jacobian", [](const Eigen::Ref<const VectorX<Expression>>& f,
