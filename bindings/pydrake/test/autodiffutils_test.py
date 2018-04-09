@@ -10,6 +10,7 @@ import numpy as np
 import pydrake.math as drake_math
 
 from pydrake.test.algebra_test_util import ScalarAlgebra, VectorizedAlgebra
+from pydrake.test.math_test_util import AutoDiffContainer, autodiff_increment
 
 # Use convenience abbreviation.
 AD = AutoDiffXd
@@ -160,3 +161,17 @@ class TestAutoDiffXd(unittest.TestCase):
         Bf = np.array([[2., 2]]).T
         C2 = np.dot(A, Bf)  # Leverages implicit casting.
         self._check_array(C, [[AD(4, [4., 2])]])
+
+    def test_array_reference(self):
+        # Test referencing from Python to C++.
+        x = np.array([
+            AD(1, [1., 0]),
+            AD(2, [0, 1.])])
+        autodiff_increment(x)
+        self._check_array(x, [AD(2, [1., 0]), AD(3, [0, 1.])])
+        # Test referencing from C++ to Python.
+        c = AutoDiffContainer()
+        self._check_array(c.value(), [[AD(10, [1., 0]), AD(100, [0, 1.])]])
+        xc = c.value()
+        xc *= 2
+        self._check_array(c.value(), [[AD(20, [2., 0]), AD(200, [0, 2.])]])
