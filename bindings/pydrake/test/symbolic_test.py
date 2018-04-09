@@ -30,22 +30,21 @@ TYPES = [
     sym.Monomial,
 ]
 
+RHS_TYPES = TYPES + [float, np.float64]
+
 
 class SymbolicTestCase(unittest.TestCase):
-    def _coerce_value(self, value):
-        # Coerce value for string comparison.
-        for T in TYPES:
-            if isinstance(value, T):
-                return value
-        return sym.Expression(value)
+    def _coerce_value(self, lhs, rhs):
+        self.assertTrue(type(lhs) in TYPES)
+        self.assertTrue(type(rhs) in RHS_TYPES)
 
     def assertSame(self, lhs, rhs):
-        rhs = self._coerce_value(rhs)
-        self.assertEqual(str(lhs), str(rhs))
+        self._coerce_value(lhs, rhs)
+        self.assertTrue(lhs.EqualTo(rhs), "{} != {}".format(lhs, rhs))
 
     def assertNotSame(self, lhs, rhs):
-        rhs = self._coerce_value(rhs)
-        self.assertNotEqual(str(lhs), str(rhs))
+        self._coerce_value(lhs, rhs)
+        self.assertFalse(lhs.EqualTo(rhs), "{} == {}".format(lhs, rhs))
 
 
 class TestSymbolicVariable(SymbolicTestCase):

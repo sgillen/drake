@@ -336,9 +336,10 @@ PYBIND11_MODULE(_symbolic_py, m) {
       .def_static("False", &Formula::False)
       .def("__nonzero__", [](const Formula&) {
         throw std::runtime_error(
-            "Should not call `__nonzero__` on `Formula`. If you are trying to "
-            "make a map with `Variable`, `Expression`, or `Polynomial` as "
-            "keys, please use `EqualToDict`.");
+            "You should not call `__nonzero__` on `Formula`. If you are trying "
+            "to make a map with `Variable`, `Expression`, or `Polynomial` as "
+            "keys and access the keys, please use "
+            "`pydrake.util.containers.EqualToDict`.");
       });
 
   // Cannot overload logical operators: http://stackoverflow.com/a/471561
