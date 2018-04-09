@@ -69,6 +69,9 @@ PYBIND11_MODULE(_symbolic_py, m) {
       .def_loop(py::self / py::self)
       .def_loop(py::self / double())
       .def_loop(double() / py::self)
+      // N.B. Since arithmetic is not closed for `Variable`, we cannot define
+      // `dot` for NumPy since it expects a closed operation.
+      // TODO(eric.cousineau): See if `dot` can be defined at some point.
       // Pow.
       .def_loop("__pow__",
            [](const Variable& self, double other) { return pow(self, other); })
@@ -217,6 +220,8 @@ PYBIND11_MODULE(_symbolic_py, m) {
       .def(py::self /= py::self)
       .def(py::self /= Variable())
       .def(py::self /= double())
+      // Dot-product.
+      .def_loop(py::dtype_method::dot())
       // Unary Plus.
       .def(+py::self)  // Not present in NumPy?
       // Unary Minus.
