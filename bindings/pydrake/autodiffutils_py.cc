@@ -73,7 +73,7 @@ PYBIND11_MODULE(_autodiffutils_py, m) {
     .def_loop(py::self >= double())
     .def_loop(double() >= py::self)
     // Dot-product
-    .def_dot()
+    .def_loop(py::dtype_method::dot())
     // Casting
     // - Downcasting must be explicit, to prevent inadvertent information loss.
     .def_loop_cast([](const AutoDiffXd& self) -> double { return self.value(); })
