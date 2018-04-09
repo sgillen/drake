@@ -284,6 +284,9 @@ PYBIND11_MODULE(_symbolic_py, m) {
       .def_loop("ceil", &symbolic::ceil)
       .def_loop("floor", &symbolic::floor);
 
+  MirrorDef<decltype(expr), py::module>(&expr, &math)
+      .def("atan", &symbolic::atan);
+
   // Import aliases.
   // TODO(eric.cousineau): Deprecate, then remove these in lieu of `np.{func}`
   py::exec(R"""(
@@ -298,6 +301,7 @@ from pydrake.math import (
     tan,
     asin,
     acos,
+    atan,
     atan2,
     sinh,
     cosh,
@@ -308,7 +312,6 @@ from pydrake.math import (
     floor
 )
 )""");
-  m.def("atan", &symbolic::atan);
 
   m.def("if_then_else", &symbolic::if_then_else);
 
