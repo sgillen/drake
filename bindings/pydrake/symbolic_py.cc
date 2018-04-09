@@ -79,8 +79,7 @@ PYBIND11_MODULE(_symbolic_py, m) {
       .def_loop("__pow__",
            [](const Variable& self, const Expression& other) {
              return pow(self, other);
-           },
-           py::is_operator())
+           })
       // We add `EqualTo` instead of `equal_to` to maintain consistency among
       // symbolic classes (Variable, Expression, Formula, Polynomial) on Python
       // side. This enables us to achieve polymorphism via ducktyping in Python.
@@ -350,8 +349,6 @@ from pydrake.math import (
                         const Formula& other) { return !self.EqualTo(other); })
       .def("__hash__",
            [](const Formula& self) { return std::hash<Formula>{}(self); })
-      .def_static("True", &Formula::True)
-      .def_static("False", &Formula::False)
       .def("__nonzero__", [](const Formula&) {
         throw std::runtime_error(
             "You should not call `__nonzero__` on `Formula`. If you are trying "
@@ -359,6 +356,9 @@ from pydrake.math import (
             "keys and access the keys, please use "
             "`pydrake.util.containers.EqualToDict`.");
       });
+  formula.cls()
+      .def_static("True", &Formula::True)
+      .def_static("False", &Formula::False);
 
   // Cannot overload logical operators: http://stackoverflow.com/a/471561
   // Defining custom function for clarity.
