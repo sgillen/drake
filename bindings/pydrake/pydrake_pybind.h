@@ -121,14 +121,14 @@ This is a brief recipe for debugging with GDB
         set -x -e -u
         target=//bindings/pydrake:symbolic_test
         target_bin=$(echo ${target} | sed -e 's#//##' -e 's#:#/_isolated/#')
-        bazel run -c dbg ${target} -j 8 || :
+        bazel run -c dbg ${target} -j 8 --trace=user -f || :
         workspace=$(bazel info workspace)
         name=$(basename ${workspace})
         target_bin_path=${workspace}/bazel-bin/${target_bin}
         source_dir=${workspace}/bazel-${name}
         source /tmp/env.sh
         cd ${target_bin_path}.runfiles/${name}
-        gdb --directory ${source_dir} --args python ${target_bin_path}
+        gdb --directory ${source_dir} --args python ${target_bin_path} --trace=user -f
     )
 
 This allows you to use GDB from the terminal, while being able to inspect the
