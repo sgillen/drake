@@ -1,12 +1,11 @@
+import matplotlib as mpl
+import matplotlib.pyplot as plt
 import numpy as np
 import time
-import matplotlib.pyplot as plt
-
-import sys; sys.stdout = sys.stderr
 
 from pydrake.common import FindResourceOrThrow
 from pydrake.multibody.rigid_body_tree import (
-    AddModelInstancesFromSdfString,
+    AddModelInstanceFromUrdfFile,
     FloatingBaseType,
     RigidBodyTree,
     RigidBodyFrame,
@@ -18,50 +17,52 @@ from pydrake.systems.sensors import (
     CameraInfo,
     RgbdCamera,
     )
-from pydrake.util.eigen_geometry import Isometry3
 
-sdf_path = FindResourceOrThrow(
-    "drake/systems/sensors/test/models/box.sdf")
+# Create tree describing scene.
+urdf_path = FindResourceOrThrow(
+    "drake/multibody/models/box.urdf")
 tree = RigidBodyTree()
-with open(sdf_path) as f:
-    sdf_string = f.read()
-AddModelInstancesFromSdfString(
-    sdf_string, FloatingBaseType.kFixed, None, tree)
+AddModelInstanceFromUrdfFile(
+    urdf_path, FloatingBaseType.kFixed, None, tree)
+# - Add frame for camera fixture.
 frame = RigidBodyFrame(
     name="rgbd camera frame",
     body=tree.world(),
-    xyz=[-20, 0, 0],
-    rpy=[0, 0, 0])
+    xyz=[-2, 0, 2],  # Ensure that the box is within range.
+    rpy=[0, np.pi / 4, 0])
 tree.addFrame(frame)
 
+# Create camera.
 camera = RgbdCamera(
     name="camera", tree=tree, frame=frame,
     z_near=0.5, z_far=5.0,
     fov_y=np.pi / 4, show_window=True)
 
-print(camera.depth_camera_info().intrinsic_matrix())
+# - Describe state.
+x = np.zeros(tree.get_num_positions() + tree.get_num_velocities())
 
-import subprocess
-subprocess.Popen(
-    "export -p | sed 's# PWD=# OLD_PWD=#g' > /tmp/env.sh",
-    shell=True)
-
-# That we can access the state as images.
+# Allocate context and render.
 context = camera.CreateDefaultContext()
-x0 = np.zeros(tree.get_num_positions() + tree.get_num_velocities())
-context.FixInputPort(0, BasicVector(x0))
+context.FixInputPort(0, BasicVector(x))
 output = camera.AllocateOutput(context)
 camera.CalcOutput(context, output)
+
+# Get images from computed output.
+color_index = camera.color_image_output_port().get_index()
+color_image = output.get_data(color_index).get_value()
+color_array = color_image.data
+
 depth_index = camera.depth_image_output_port().get_index()
 depth_image = output.get_data(depth_index).get_value()
-print(depth_image)
+depth_array = depth_image.data
 
-print(depth_image.data.shape)
-print(depth_image.data.dtype)
-print("Show")
-depth_image.mutable_data[:] = 0.5
-plt.imshow(np.squeeze(depth_image.data))
+# Show camera info and images.
+print("Intrinsics:\n{}".format(camera.depth_camera_info().intrinsic_matrix()))
+dpi = mpl.rcParams['figure.dpi']
+figsize = np.array([color_image.width(), color_image.height()*2]) / dpi
+plt.figure(1, figsize=figsize)
+plt.subplot(2, 1, 1)
+plt.imshow(color_array)
+plt.subplot(2, 1, 2)
+plt.imshow(np.squeeze(depth_array))
 plt.show()
-# In Bazel, we cannot connect to `stdin` due to the server/client running
-# setup, so `cv.waitKey(...)` does not work. Sleep instead.
-time.sleep(10)
