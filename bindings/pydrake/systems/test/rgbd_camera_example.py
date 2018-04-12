@@ -1,9 +1,6 @@
 import numpy as np
 import time
-try:
-    import cv2
-except ImportError:
-    cv2 = None
+import matplotlib.pyplot as plt
 
 import sys; sys.stdout = sys.stderr
 
@@ -59,11 +56,12 @@ depth_index = camera.depth_image_output_port().get_index()
 depth_image = output.get_data(depth_index).get_value()
 print(depth_image)
 
-if cv2 is not None:
-    print(depth_image.data.shape)
-    print(depth_image.data.dtype)
-    print("Show cv2")
-    cv2.imshow("Depth Image", depth_image.data)
-    # In Bazel, we cannot connect to `stdin` due to the server/client running
-    # setup, so `cv.waitKey(...)` does not work. Sleep instead.
-    time.sleep(10)
+print(depth_image.data.shape)
+print(depth_image.data.dtype)
+print("Show")
+depth_image.mutable_data[:] = 0.5
+plt.imshow(np.squeeze(depth_image.data))
+plt.show()
+# In Bazel, we cannot connect to `stdin` due to the server/client running
+# setup, so `cv.waitKey(...)` does not work. Sleep instead.
+time.sleep(10)
