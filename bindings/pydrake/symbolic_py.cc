@@ -168,6 +168,8 @@ PYBIND11_MODULE(_symbolic_py, m) {
       .def(py::init<const Variable&>())
       .def_loop_cast([](double in) -> Expression { return in; }, true)
       .def_loop_cast([](int in) -> Expression { return in; }, true)
+      // See https://github.com/numpy/numpy/issues/10904
+      .def_loop_cast([](bool in) -> Expression { return in; }, true)
       .def_loop_cast([](const Variable& in) -> Expression { return in; }, true)
       .def("__str__", &Expression::to_string)
       .def("__repr__",
