@@ -205,6 +205,7 @@ class TestMathematicalProgram(unittest.TestCase):
         prog.AddLinearConstraint(S[0, 1] >= 1)
         prog.AddPositiveSemidefiniteConstraint(S)
         prog.AddPositiveSemidefiniteConstraint(S+S)
+        # Triggers: https://github.com/numpy/numpy/issues/9351
         prog.AddLinearCost(np.trace(S))
         result = prog.Solve()
         self.assertEqual(result, mp.SolutionResult.kSolutionFound)
