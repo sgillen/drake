@@ -43,10 +43,11 @@ class TestMathematicalProgram(unittest.TestCase):
     def test_mixed_integer_optimization(self):
         prog = mp.MathematicalProgram()
         x = prog.NewBinaryVariables(3, "x")
+        xe = x.astype(sym.Expression)
         c = np.array([-1.0, -1.0, -2.0])
-        prog.AddLinearCost(c.dot(x))
+        prog.AddLinearCost(c.dot(xe))
         a = np.array([1.0, 2.0, 3.0])
-        prog.AddLinearConstraint(a.dot(x) <= 4)
+        prog.AddLinearConstraint(a.dot(xe) <= 4)
         prog.AddLinearConstraint(x[0] + x[1], 1, np.inf)
         self.assertIsNone(prog.GetSolverId())
         result = prog.Solve()
@@ -205,8 +206,9 @@ class TestMathematicalProgram(unittest.TestCase):
         prog.AddLinearConstraint(S[0, 1] >= 1)
         prog.AddPositiveSemidefiniteConstraint(S)
         prog.AddPositiveSemidefiniteConstraint(S+S)
-        # Triggers: https://github.com/numpy/numpy/issues/9351
-        prog.AddLinearCost(np.trace(S))
+        # Triggers: https://github.com/numpy/numpy/issues/9351 (fixed in v1.14.0)
+        Se = S.astype(sym.Expression)
+        prog.AddLinearCost(np.trace(Se))
         result = prog.Solve()
         self.assertEqual(result, mp.SolutionResult.kSolutionFound)
         S = prog.GetSolution(S)
@@ -224,14 +226,16 @@ class TestMathematicalProgram(unittest.TestCase):
         # d(1)*x^2 is SOS.
         prog = mp.MathematicalProgram()
         x = prog.NewIndeterminates(1, "x")
+        xe = x.astype(sym.Expression)
         poly = prog.NewFreePolynomial(sym.Variables(x), 1)
         (poly, binding) = prog.NewSosPolynomial(sym.Variables(x), 2)
         y = prog.NewIndeterminates(1, "y")
+        ye = y.astype(sym.Expression)
         (poly, binding) = prog.NewSosPolynomial((sym.Monomial(x[0]),
                                                  sym.Monomial(y[0])))
         d = prog.NewContinuousVariables(2, "d")
-        prog.AddSosConstraint(d[0]*x.dot(x))
-        prog.AddSosConstraint(d[1]*x.dot(x), [sym.Monomial(x[0])])
+        prog.AddSosConstraint(d[0]*xe.dot(xe))
+        prog.AddSosConstraint(d[1]*xe.dot(xe), [sym.Monomial(x[0])])
         result = prog.Solve()
         self.assertEqual(result, mp.SolutionResult.kSolutionFound)
 
@@ -269,3 +273,9 @@ class TestMathematicalProgram(unittest.TestCase):
         prog.AddConstraint(constraint, [0.], [2.], x)
         prog.Solve()
         self.assertAlmostEquals(prog.GetSolution(x)[0], 1.)
+
+
+# print("-----")
+# import os; print("PID: ", os.getpid())
+# import sys; sys.stdout.flush()
+# import time; time.sleep(2)
