@@ -180,7 +180,7 @@ PYBIND11_MODULE(_symbolic_py, m) {
       .def_loop(py::dtype_method::implicit_conversion<int, Expression>())
       .def_loop(py::dtype_method::implicit_conversion<Variable, Expression>())
       // See https://github.com/numpy/numpy/issues/10904 for next 2 casts.
-      // NOLINTNEXTLINE(runtime/int): Use platform-dependent name.
+      // NOLINTNEXTLINE(runtime/int): Use platform-dependent name for NumPy.
       .def_loop(py::dtype_method::implicit_conversion<long, Expression>())
       .def_loop(py::dtype_method::implicit_conversion<bool, Expression>())
       // Methods
