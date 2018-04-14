@@ -29,16 +29,15 @@ PYBIND11_MODULE(_autodiffutils_py, m) {
     .def(py::init<const double&, const Eigen::VectorXd&>())
     // Casting
     // - Upcasting can be implicit, especially for matrix multiplication.
-    .def_loop_cast([](double x) -> AutoDiffXd { return x; }, true)
-    .def_loop_cast([](int in) -> AutoDiffXd { return in; }, true)
+    .def_loop(py::dtype_method::implicit_conversion<double, AutoDiffXd>())
+    .def_loop(py::dtype_method::implicit_conversion<int, AutoDiffXd>())
     // See https://github.com/numpy/numpy/issues/10904 for next 2 casts.
-    // NOLINTNEXTLINE(runtime/int): Use platform-dependent name.
-    .def_loop_cast([](long in) -> AutoDiffXd { return in; }, true)
-    .def_loop_cast([](bool in) -> AutoDiffXd { return in; }, true)
+    // NOLINTNEXTLINE(runtime/int): Use platform-dependent name for NumPy.
+    .def_loop(py::dtype_method::implicit_conversion<long, AutoDiffXd>())
+    .def_loop(py::dtype_method::implicit_conversion<bool, AutoDiffXd>())
     // - Downcasting must be explicit, to prevent inadvertent information loss.
-    .def_loop_cast([](const AutoDiffXd& self) -> double {
-      return self.value();
-    })
+    .def_loop(py::dtype_method::explicit_conversion(
+        [](const AutoDiffXd& self) -> double { return self.value(); }))
     // General methods.
     .def("value", [](const AutoDiffXd& self) {
       return self.value();
