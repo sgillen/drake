@@ -1,14 +1,16 @@
 #!/bin/bash
 set -e -x -u
 
-# Builds NumPy in docker
-output_dir=${1}
-repo=${2}
-commit=${3}
-shift; shift; shift
+# Script to build NumPy directly.
 
-git clone ${repo} /numpy
-cd /numpy
+output_dir=${1}
+shift
+
+repo=https://github.com/numpy/numpy
+commit=pull/10898/head
+
+git clone ${repo} numpy
+cd numpy
 
 # Checkout specified commit, accommodating a PR if specified.
 if [[ ${commit} =~ ^pull/.*$ ]]; then
@@ -18,8 +20,9 @@ else
     git checkout -f ${commit}
 fi
 
+# Build NumPy, record the generated wheel file (assuming there is only one).
 python setup.py bdist_wheel "$@"
-wheel_file=${PWD}/dist/numpy*.whl
+wheel_file=$(echo ${PWD}/dist/numpy*.whl)
 
 # Briefly print out NumPy version:
 python -m virtualenv env
@@ -32,3 +35,12 @@ python -c 'import numpy; print(numpy.version.full_version)'
 
 # Copy to directory, which should be a mounted volume.
 cp ${wheel_file} ${output_dir}
+
+cat <<EOF
+
+NumPy wheel file built: ${wheel_file}
+
+As an example to install to a prefix to manually test:
+    pip install --prefix \${PWD}/tmp ${wheel_file} --ignore-installed
+
+EOF

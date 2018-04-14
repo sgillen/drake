@@ -8,5 +8,3 @@ RUN apt update -y \
         python-pip python-setuptools python-wheel python-virtualenv \
         cython gfortran liblapack-dev libblas-dev \
     && rm -rf /var/lib/apt/lists/* && apt-get clean all
-
-COPY ./build_in_docker.sh /
