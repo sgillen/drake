@@ -68,6 +68,11 @@ class TestAutoDiffXd(unittest.TestCase):
         xI = np.eye(3).astype(AD)
         self.assertTrue(isinstance(xI[0, 0], AD))
 
+        # Promotion (upcasting? downcasting?) is implicitly castable.
+        # x[0] = 0
+        x[0] = 0.
+        x[0] = False
+
         # Assigning via slicing is an explicit cast.
         xf = np.zeros(2, dtype=np.float)
         xf[:] = x
@@ -161,6 +166,14 @@ class TestAutoDiffXd(unittest.TestCase):
         Bf = np.array([[2., 2]]).T
         C2 = np.dot(A, Bf)  # Leverages implicit casting.
         self._check_array(C, [[AD(4, [4., 2])]])
+
+        # Other methods.
+        X = np.array([[a_scalar, b_scalar], [b_scalar, a_scalar]])
+        self._check_scalar(np.trace(X), AD(2, [2., 0]))
+
+        # `inv` is a ufunc that we must implement, if that is possible.
+        with self.assertRaises(TypeError):
+            Y = np.linalg.inv(X)
 
     def test_array_reference(self):
         # Test referencing from Python to C++.

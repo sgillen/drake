@@ -490,6 +490,14 @@ class TestSymbolicExpression(SymbolicTestCase):
         self.assertEquals(e_xv.shape, (2,))
         self.assertIsInstance(e_xv[0], sym.Expression)
 
+    def test_array_cast(self):
+        # Implicit casts.
+        v = np.array([e_x])
+        v[0] = 0
+        v[0] = 0.
+        v[0] = False
+        self.assertEquals(v.dtype, sym.Expression)
+
     def test_equalto(self):
         self.assertTrue((x + y).EqualTo(x + y))
         self.assertFalse((x + y).EqualTo(x - y))
