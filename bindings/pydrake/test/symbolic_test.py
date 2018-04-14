@@ -158,15 +158,17 @@ class TestSymbolicVariable(SymbolicTestCase):
         self.assertEqualStructure((sym.logical_and(x >= 1)), "(x >= 1)")
         self.assertEqualStructure((sym.logical_or(x >= 1)), "(x >= 1)")
         # Test binary operand logical statements
-        self.assertEqualStructure((sym.logical_and(x >= 1, x <= 2)),
-                        "((x >= 1) and (x <= 2))")
-        self.assertEqualStructure((sym.logical_or(x <= 1, x >= 2)),
-                        "((x >= 2) or (x <= 1))")
+        self.assertEqualStructure(
+            (sym.logical_and(x >= 1, x <= 2)), "((x >= 1) and (x <= 2))")
+        self.assertEqualStructure(
+            (sym.logical_or(x <= 1, x >= 2)), "((x >= 2) or (x <= 1))")
         # Test multiple operand logical statements
-        self.assertEqualStructure((sym.logical_and(x >= 1, x <= 2, y == 2)),
-                        "((y = 2) and (x >= 1) and (x <= 2))")
-        self.assertEqualStructure((sym.logical_or(x >= 1, x <= 2, y == 2)),
-                        "((y = 2) or (x >= 1) or (x <= 2))")
+        self.assertEqualStructure(
+            (sym.logical_and(x >= 1, x <= 2, y == 2)),
+            "((y = 2) and (x >= 1) and (x <= 2))")
+        self.assertEqualStructure(
+            (sym.logical_or(x >= 1, x <= 2, y == 2)),
+            "((y = 2) or (x >= 1) or (x <= 2))")
 
     def test_functions_with_variable(self):
         self.assertEqual(str(sym.abs(x)), "abs(x)")
@@ -476,7 +478,8 @@ class TestSymbolicExpression(SymbolicTestCase):
     def test_scalar_algebra(self):
         xv, e_xv = self._check_algebra(
             ScalarAlgebra(
-                self.assertEqualStructure, scalar_to_float=lambda x: x.Evaluate()))
+                self.assertEqualStructure,
+                scalar_to_float=lambda x: x.Evaluate()))
         self.assertIsInstance(xv, sym.Variable)
         self.assertIsInstance(e_xv, sym.Expression)
 

@@ -37,7 +37,7 @@ wheels = {
     },
     "mac": {
         "url": "https://github.com/EricCousineau-TRI/experimental/raw/3211d6dd6aee9e8dd70a19ef86b961a2de3bf821/numpy/numpy-1.15.0.dev0%2B7d247f4-cp27-cp27m-macosx_10_13_x86_64.whl",  # noqa
-        "sha256": "1b3cee66ff92e2e0dc1c97d167b5b13873c3e97a87829a1c7830964ab48b2648",
+        "sha256": "1b3cee66ff92e2e0dc1c97d167b5b13873c3e97a87829a1c7830964ab48b2648",  # noqa
     },
 }
 
@@ -49,8 +49,8 @@ def _impl(repository_ctx):
     # the wrong path, which will shadow the real `numpy`.
     # See https://github.com/bazelbuild/bazel/issues/3998
     if repository_ctx.name == "numpy":
-        fail("Do not name this repository `numpy`. Please name it `numpy_py` " +
-             "or something else.")
+        fail("Do not name this repository `numpy`. Please name it " +
+             "`numpy_py` or something else.")
 
     os_result = determine_os(repository_ctx)
     if os_result.error != None:
