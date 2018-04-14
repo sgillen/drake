@@ -65,7 +65,7 @@ print(glob(["**/*"]))
 
 py_library(
     name = "numpy",
-    imports = [".."],
+    # imports = [".."],
     visibility = ["//visibility:public"],
     data = [":data"],
 )
