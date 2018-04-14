@@ -98,22 +98,22 @@ PYBIND11_MODULE(_symbolic_py, m) {
       .def_loop(py::self < Expression())
       .def_loop(py::self < py::self)
       .def_loop(py::self < double())
-      .def_loop(double() < py::self, false)
+      .def_loop(double() < py::self, py::dtype_method::ufunc_only())
       // LE(<=).
       .def_loop(py::self <= Expression())
       .def_loop(py::self <= py::self)
       .def_loop(py::self <= double())
-      .def_loop(double() <= py::self, false)
+      .def_loop(double() <= py::self, py::dtype_method::ufunc_only())
       // GT(>).
       .def_loop(py::self > Expression())
       .def_loop(py::self > py::self)
       .def_loop(py::self > double())
-      .def_loop(double() > py::self, false)
+      .def_loop(double() > py::self, py::dtype_method::ufunc_only())
       // GE(>=).
       .def_loop(py::self >= Expression())
       .def_loop(py::self >= py::self)
       .def_loop(py::self >= double())
-      .def_loop(double() >= py::self, false)
+      .def_loop(double() >= py::self, py::dtype_method::ufunc_only())
       // EQ(==).
       .def_loop(py::self == Expression())
       .def_loop(py::self == py::self)
@@ -257,22 +257,22 @@ PYBIND11_MODULE(_symbolic_py, m) {
       .def_loop(py::self < py::self)
       .def_loop(py::self < Variable())
       .def_loop(py::self < double())
-      .def_loop(double() < py::self, false)
+      .def_loop(double() < py::self, py::dtype_method::ufunc_only())
       // LE(<=).
       .def_loop(py::self <= py::self)
       .def_loop(py::self <= Variable())
       .def_loop(py::self <= double())
-      .def_loop(double() <= py::self, false)
+      .def_loop(double() <= py::self, py::dtype_method::ufunc_only())
       // GT(>).
       .def_loop(py::self > py::self)
       .def_loop(py::self > Variable())
       .def_loop(py::self > double())
-      .def_loop(double() > py::self, false)
+      .def_loop(double() > py::self, py::dtype_method::ufunc_only())
       // GE(>=).
       .def_loop(py::self >= py::self)
       .def_loop(py::self >= Variable())
       .def_loop(py::self >= double())
-      .def_loop(double() >= py::self, false)
+      .def_loop(double() >= py::self, py::dtype_method::ufunc_only())
       // EQ(==).
       .def_loop(py::self == py::self)
       .def_loop(py::self == Variable())
