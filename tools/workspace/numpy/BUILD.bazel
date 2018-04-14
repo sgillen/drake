@@ -8,7 +8,7 @@ load("//tools/skylark:drake_py.bzl", "drake_py_test")
 
 drake_py_test(
     name = "numpy_test",
-    deps = ["@numpy"],
+    deps = ["@numpy_py"],
     allow_import_unittest = True,
 )
 

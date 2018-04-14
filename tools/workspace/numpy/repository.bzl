@@ -33,15 +33,20 @@ wheels = {
 }
 
 def _impl(repository_ctx):
+    # Do not name this `numpy`, as Bazel will try and inject PYTHONPATH in
+    # the absolutely wrong locations, and will end up shadowing `random`
+    # with `numpy.random` if `numpy` is installed at root, and will shadow
+    # `numpy` if it is installed under root.
+    # See https://github.com/bazelbuild/bazel/issues/3998
+    if repository_ctx.name == "numpy":
+        fail("Do not name this repository `numpy`. Please name it `numpy_py` " +
+             "or something else.")
+
     wheel = wheels["ubuntu"]
     repository_ctx.download_and_extract(
         url = wheel["url"],
         sha256 = wheel["sha256"],
         type = "zip",
-        # It is *vital* to strip the prefix; otherwise, Bazel's stilly
-        # automatic `__init__.py` files will litter the tree and shadow the
-        # real NumPy.
-        stripPrefix = "numpy",
     )
 
     file_content = """# -*- python -*-
@@ -58,14 +63,13 @@ licenses([
 # Interpret `numpy` sources as data to simplify handling.
 filegroup(
     name = "data",
-    srcs = glob(["**/*"]),
+    srcs = glob(["numpy/**/*"]),
     visibility = ["//visibility:private"],
 )
-print(glob(["**/*"]))
 
 py_library(
-    name = "numpy",
-    # imports = [".."],
+    name = "numpy_py",
+    imports = ["."],
     visibility = ["//visibility:public"],
     data = [":data"],
 )
