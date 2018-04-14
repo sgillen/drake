@@ -1,13 +1,21 @@
 #!/bin/bash
-set -e -x -u
+set -e -u -x
 
-output_dir=${1}
-repo=${2}
-commit=${3}
+# Creates and runs a Docker container which builds NumPy for Ubuntu 16.04.
 
-git clone ${repo} /numpy
+cd $(dirname $0)
 
-cd /numpy
-git checkout -f ${commit}
-python setup.py bdist_wheel
-cp ./dist/numpy*.whl ${output_dir}
+docker build -t numpy_builder .
+
+mkdir -p build
+docker run --rm \
+    -v ${PWD}/build:/output \
+    numpy_builder \
+    /build_in_docker.sh /output https://github.com/numpy/numpy pull/10898/head
+
+cat <<EOF
+NumPy wheel file built.
+
+To install to a prefix for direct testing:
+    pip install --prefix \${PWD}/tmp numpy*.whl --ignore-installed
+EOF
