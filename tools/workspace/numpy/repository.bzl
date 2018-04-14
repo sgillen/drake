@@ -28,6 +28,8 @@ load("@drake//tools/workspace:os.bzl", "determine_os")
 
 # Generated from Git revision 7d247f4 from numpy/numpy#10898.
 # See `./builder/README.md` for instructions to generate these binaries.
+# PR DRAFT(eric.cousineau): Upload these to S3 or whatevs if/when they pass
+# review.
 wheels = {
     "ubuntu_1604": {
         "url": "https://github.com/EricCousineau-TRI/experimental/raw/e84664659a7ceeac016f626b4d77f5a89c4cad62/numpy/numpy-1.15.0.dev0%2B7d247f4-cp27-cp27mu-linux_x86_64.whl",  # noqa
@@ -40,10 +42,11 @@ wheels = {
 }
 
 def _impl(repository_ctx):
-    # Do not name this `numpy`, as Bazel will try and inject PYTHONPATH in
-    # the absolutely wrong locations, and will end up shadowing `random`
-    # with `numpy.random` if `numpy` is installed at root, and will shadow
-    # `numpy` if it is installed under root.
+    # Do not name this `numpy`, as Bazel will make PYTHONPATH look for love in
+    # all the wrong places. If `numpy` is located in the repo root,
+    # `random` will be shadowed by `numpy.random`, causing everything to fail.
+    # If installed elsewhere, Bazel will put its silly `__init__.py` and leak
+    # the wrong path, which will shadow the real `numpy`.
     # See https://github.com/bazelbuild/bazel/issues/3998
     if repository_ctx.name == "numpy":
         fail("Do not name this repository `numpy`. Please name it `numpy_py` " +
