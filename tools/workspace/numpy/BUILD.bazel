@@ -9,6 +9,7 @@ load("//tools/skylark:drake_py.bzl", "drake_py_test")
 drake_py_test(
     name = "numpy_test",
     deps = ["@numpy"],
+    allow_import_unittest = True,
 )
 
 add_lint_tests()

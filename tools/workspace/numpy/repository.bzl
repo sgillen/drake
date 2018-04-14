@@ -38,6 +38,10 @@ def _impl(repository_ctx):
         url = wheel["url"],
         sha256 = wheel["sha256"],
         type = "zip",
+        # It is *vital* to strip the prefix; otherwise, Bazel's stilly
+        # automatic `__init__.py` files will litter the tree and shadow the
+        # real NumPy.
+        stripPrefix = "numpy",
     )
 
     file_content = """# -*- python -*-
@@ -54,14 +58,14 @@ licenses([
 # Interpret `numpy` sources as data to simplify handling.
 filegroup(
     name = "data",
-    srcs = glob(["numpy/**/*"]),
+    srcs = glob(["**/*"]),
     visibility = ["//visibility:private"],
 )
-print(glob(["numpy/**/*"]))
+print(glob(["**/*"]))
 
 py_library(
     name = "numpy",
-    imports = ["."],
+    imports = [".."],
     visibility = ["//visibility:public"],
     data = [":data"],
 )
