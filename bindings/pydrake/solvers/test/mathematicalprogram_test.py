@@ -244,11 +244,11 @@ class TestMathematicalProgram(unittest.TestCase):
             prog.SubstituteSolution(d[0] + d[1]).Evaluate(),
             prog.GetSolution(d[0]) + prog.GetSolution(d[1]))
         # Test SubstituteSolution(sym.Polynomial)
-        poly = d[0]*x.dot(x)
+        poly = d[0]*xe.dot(xe)
         poly_sub_actual = prog.SubstituteSolution(
             sym.Polynomial(poly, sym.Variables(x)))
         poly_sub_expected = sym.Polynomial(
-            prog.SubstituteSolution(d[0])*x.dot(x), sym.Variables(x))
+            prog.SubstituteSolution(d[0])*xe.dot(xe), sym.Variables(x))
         # TODO(soonho): At present, these must be converted to `Expression` to
         # compare, because as `Polynomial`s the comparison fails with
         # `0*x(0)^2` != `0`, which indicates that simplification is not
