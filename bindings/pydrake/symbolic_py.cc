@@ -83,6 +83,10 @@ PYBIND11_MODULE(_symbolic_py, m) {
            [](const Variable& self, const Expression& other) {
              return pow(self, other);
            })
+      // See comment about `np.square` in AutoDiff<> bindings.
+      .def_loop("square", [](const Variable& self) {
+        return self * self;
+      })
       // We add `EqualTo` instead of `equal_to` to maintain consistency among
       // symbolic classes (Variable, Expression, Formula, Polynomial) on Python
       // side. This enables us to achieve polymorphism via ducktyping in Python.
@@ -257,6 +261,10 @@ PYBIND11_MODULE(_symbolic_py, m) {
       .def_loop(py::self != py::self)
       .def_loop(py::self != Variable())
       .def_loop(py::self != double())
+      // See comment about `np.square` in AutoDiff<> bindings.
+      .def_loop("square", [](const Expression& self) {
+        return self * self;
+      })
       .def("Differentiate", &Expression::Differentiate)
       .def("Jacobian", &Expression::Jacobian);
 

@@ -386,6 +386,8 @@ class TestSymbolicExpression(SymbolicTestCase):
         algebra.check_value((algebra.exp(e_xv)), "exp(x)")
         algebra.check_value((algebra.sqrt(e_xv)), "sqrt(x)")
         algebra.check_value((algebra.pow(e_xv, e_yv)), "pow(x, y)")
+        algebra.check_value((e_xv**2), "pow(x, 2)")
+        algebra.check_value((e_xv**e_yv), "pow(x, y)")
         algebra.check_value((algebra.sin(e_xv)), "sin(x)")
         algebra.check_value((algebra.cos(e_xv)), "cos(x)")
         algebra.check_value((algebra.tan(e_xv)), "tan(x)")

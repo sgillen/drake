@@ -74,6 +74,11 @@ PYBIND11_MODULE(_autodiffutils_py, m) {
     .def_loop(double() >= py::self)
     // Dot-product
     .def_loop(py::dtype_method::dot())
+    // N.B. Certain versions of NumPy require `square` be specifically
+    // defined.
+    .def_loop("square", [](const AutoDiffXd& self) {
+      return self * self;
+    })
     // Casting
     // - Downcasting must be explicit, to prevent inadvertent information loss.
     .def_loop_cast([](const AutoDiffXd& self) -> double {
