@@ -35,11 +35,11 @@ PYBIND11_MODULE(_symbolic_py, m) {
       "formula";
 
   // Predeclare all custom dtypes.
-  py::dtype_user<Variable> var(m, "Variable");
-  py::dtype_user<Expression> expr(m, "Expression");
-  py::dtype_user<Formula> formula(m, "Formula");
+  py::dtype_user<Variable> var_cls(m, "Variable");
+  py::dtype_user<Expression> expr_cls(m, "Expression");
+  py::dtype_user<Formula> formula_cls(m, "Formula");
 
-  var
+  var_cls
       .def(py::init<const string&>())
       .def("get_id", &Variable::get_id)
       .def("__str__", &Variable::to_string)
@@ -166,7 +166,7 @@ PYBIND11_MODULE(_symbolic_py, m) {
     return intersect(vars1, vars2);
   });
 
-  expr
+  expr_cls
       .def(py::init<>())
       .def(py::init<double>())
       .def(py::init<const Variable&>())
@@ -271,7 +271,7 @@ PYBIND11_MODULE(_symbolic_py, m) {
 
   // TODO(eric.cousineau): Consider deprecating the aliases in `math`?
   auto math = py::module::import("pydrake.math");
-  UfuncMirrorDef<decltype(expr)>(&expr, math)
+  UfuncMirrorDef<decltype(expr_cls)>(&expr_cls, math)
       // TODO(eric.cousineau): Figure out how to consolidate with the below
       // methods.
       // Pow.
@@ -300,7 +300,7 @@ PYBIND11_MODULE(_symbolic_py, m) {
       .def_loop("ceil", &symbolic::ceil)
       .def_loop("floor", &symbolic::floor);
 
-  MirrorDef<decltype(expr), py::module>(&expr, &math)
+  MirrorDef<decltype(expr_cls), py::module>(&expr_cls, &math)
       .def("atan", &symbolic::atan);
 
   // Import aliases.
@@ -339,7 +339,7 @@ from pydrake.math import (
     return Jacobian(f, vars);
   });
 
-  formula
+  formula_cls
       .def("GetFreeVariables", &Formula::GetFreeVariables)
       .def("EqualTo", &Formula::EqualTo)
       .def("Evaluate",
@@ -379,7 +379,7 @@ from pydrake.math import (
             "keys and access the keys, please use "
             "`pydrake.util.containers.EqualToDict`.");
       });
-  formula.cls()
+  formula_cls.cls()
       .def_static("True", &Formula::True)
       .def_static("False", &Formula::False);
 
