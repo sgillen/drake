@@ -2,53 +2,43 @@
 # vi: set ft=python :
 
 """
-Finds local system NumPy headers and makes them available to be used as a
-C/C++ dependency.
+Provides NumPy from a wheel file.
 
 Example:
     WORKSPACE:
         load("@drake//tools/workspace/numpy:repo.bzl", "numpy_repository")
         numpy_repository(
             name = "foo",
-            python_version = "2",
         )
 
     BUILD:
-        cc_library(
+        py_library(
             name = "foobar",
             deps = ["@foo//:numpy"],
-            srcs = ["bar.cc"],
+            srcs = ["bar.py"],
         )
 
 Arguments:
     name: A unique name for this rule.
-    python_version: The major or major.minor version of Python for which NumPy
-                    headers are to be found.
 """
 
+# TODO(eric.cousineau): Add a configuration option to *not* use / install a
+# custom NumPy (for development or other conflicts).
+
+wheels = {
+    "ubuntu": {
+        "url": "https://github.com/EricCousineau-TRI/experimental/raw/e84664659a7ceeac016f626b4d77f5a89c4cad62/numpy/numpy-1.15.0.dev0%2B7d247f4-cp27-cp27mu-linux_x86_64.whl",  # noqa
+        "sha256": "643f7e11c5f0213ae171d91e5759da51e4f39a0a9ba912f42189b3004507c21c",  # noqa
+    },
+}
+
 def _impl(repository_ctx):
-    python = repository_ctx.which("python{}".format(
-        repository_ctx.attr.python_version))
-
-    if not python:
-        fail("Could NOT find python{}".format(repository_ctx.attr.version))
-
-    result = repository_ctx.execute([
-        python,
-        "-c",
-        "; ".join([
-            "from __future__ import print_function",
-            "import numpy",
-            "print(numpy.get_include())",
-        ]),
-    ])
-
-    if result.return_code != 0:
-        fail("Could NOT determine NumPy include", attr = result.stderr)
-
-    source = repository_ctx.path(result.stdout.strip())
-    destination = repository_ctx.path("include")
-    repository_ctx.symlink(source, destination)
+    wheel = wheels["ubuntu"]
+    repository_ctx.download_and_extract(
+        url = wheel["url"],
+        sha256 = wheel["sha256"],
+        type = "zip",
+    )
 
     file_content = """# -*- python -*-
 
@@ -59,11 +49,11 @@ licenses([
     "unencumbered",  # Public-Domain
 ])
 
-cc_library(
+py_library(
     name = "numpy",
-    hdrs = glob(["include/**"]),
-    includes = ["include"],
+    imports = ["."],
     visibility = ["//visibility:public"],
+    data = glob(["numpy/**/*"]),
 )
     """
 
@@ -72,6 +62,4 @@ cc_library(
 
 numpy_repository = repository_rule(
     _impl,
-    attrs = {"python_version": attr.string(default = "2")},
-    local = True,
 )
