@@ -2,7 +2,8 @@
 # vi: set ft=python :
 
 """
-Provides NumPy from a wheel file.
+Provides NumPy from a wheel file, or provides a no-op to pass NumPy through
+from the system.
 
 Example:
     WORKSPACE:
@@ -25,9 +26,8 @@ Arguments:
 
 load("@drake//tools/workspace:os.bzl", "determine_os")
 
-# TODO(eric.cousineau): Add a configuration option to *not* use / install a
-# custom NumPy (for development or other conflicts).
-
+# Generated from Git revision 7d247f4 from numpy/numpy#10898.
+# See `./builder/README.md` for instructions to generate these binaries.
 wheels = {
     "ubuntu_1604": {
         "url": "https://github.com/EricCousineau-TRI/experimental/raw/e84664659a7ceeac016f626b4d77f5a89c4cad62/numpy/numpy-1.15.0.dev0%2B7d247f4-cp27-cp27mu-linux_x86_64.whl",  # noqa
@@ -97,6 +97,7 @@ install(
     name = "install",
     data = [":data"],
     data_dest = "lib/python2.7/site-packages",
+    visibility = ["//visibility:public"],
 )
     """
 
@@ -138,6 +139,9 @@ py_library(
     visibility = ["//visibility:public"],
 )
 
-install(name = "install")
+install(
+    name = "install",
+    visibility = ["//visibility:public"],
+)
 """
         )

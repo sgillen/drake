@@ -68,6 +68,9 @@ drake_py_library(
 install(
     name = "install",
     targets = PY_LIBRARIES,
+    deps = [
+        "@numpy_py//:install",
+    ],
     py_dest = PACKAGE_INFO.py_dest,
     docs = ["wrapt/LICENSE"],
     doc_dest = "share/doc",
