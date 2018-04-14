@@ -27,7 +27,7 @@ Arguments:
 load("@drake//tools/workspace:os.bzl", "determine_os")
 
 # Generated from Git revision 7d247f4 from numpy/numpy#10898.
-# See `./builder/README.md` for instructions to generate these binaries.
+# See `./experimental/README.md` for instructions to generate these binaries.
 # PR DRAFT(eric.cousineau): Upload these to S3 or whatevs if/when they pass
 # review.
 wheels = {
