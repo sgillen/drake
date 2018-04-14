@@ -26,117 +26,146 @@ e_y = sym.Expression(y)
 TYPES = [
     sym.Variable,
     sym.Expression,
+    sym.Formula,
     sym.Polynomial,
     sym.Monomial,
 ]
 
-RHS_TYPES = TYPES + [float, np.float64]
+RHS_TYPES = TYPES + [float, int, str]
+
+
+def to_scalar(x):
+    if isinstance(x, np.ndarray):
+        assert len(x.shape) == 0
+        s = x.item(0)
+    else:
+        s = x
+    if isinstance(s, np.string_):
+        s = str(s)
+    elif isinstance(s, np.float64):
+        s = float(s)
+    return s
 
 
 class SymbolicTestCase(unittest.TestCase):
     def _check_operand_types(self, lhs, rhs):
+        lhs = to_scalar(lhs)
+        rhs = to_scalar(rhs)
         self.assertTrue(type(lhs) in TYPES, type(lhs))
         self.assertTrue(type(rhs) in RHS_TYPES, type(rhs))
+        return lhs, rhs
 
     def assertEqualStructure(self, lhs, rhs):
-        self._check_operand_types(lhs, rhs)
-        self.assertTrue(lhs.EqualTo(rhs), "{} != {}".format(lhs, rhs))
+        lhs, rhs = self._check_operand_types(lhs, rhs)
+        if isinstance(rhs, str):
+            self.assertEqual(str(lhs), rhs)
+        else:
+            self.assertTrue(lhs.EqualTo(rhs), "{} != {}".format(lhs, rhs))
 
     def assertNotEqualStructure(self, lhs, rhs):
-        self._check_operand_types(lhs, rhs)
-        self.assertFalse(lhs.EqualTo(rhs), "{} == {}".format(lhs, rhs))
+        lhs, rhs = self._check_operand_types(lhs, rhs)
+        if isinstance(rhs, str):
+            self.assertNotEqual(str(lhs), rhs)
+        else:
+            self.assertFalse(lhs.EqualTo(rhs), "{} == {}".format(lhs, rhs))
+
+    def assertEqualStructureArray(self, actual, expected):
+        expected = np.array(expected)
+        self.assertEqual(actual.shape, expected.shape)
+        for a, b in zip(actual.flat, expected.flat):
+            self.assertEqualStructure(a, b)
 
 
 class TestSymbolicVariable(SymbolicTestCase):
     def test_addition(self):
-        self.assertSame((x + y), "(x + y)")
-        self.assertSame((x + 1), "(1 + x)")
-        self.assertSame((1 + x), "(1 + x)")
+        self.assertEqualStructure((x + y), "(x + y)")
+        self.assertEqualStructure((x + 1), "(1 + x)")
+        self.assertEqualStructure((1 + x), "(1 + x)")
 
     def test_subtraction(self):
-        self.assertSame((x - y), "(x - y)")
-        self.assertSame((x - 1), "(-1 + x)")
-        self.assertSame((1 - x), "(1 - x)")
+        self.assertEqualStructure((x - y), "(x - y)")
+        self.assertEqualStructure((x - 1), "(-1 + x)")
+        self.assertEqualStructure((1 - x), "(1 - x)")
 
     def test_multiplication(self):
-        self.assertSame((x * y), "(x * y)")
-        self.assertSame((x * 1), "x")
-        self.assertSame((1 * x), "x")
+        self.assertEqualStructure((x * y), "(x * y)")
+        self.assertEqualStructure((x * 1), "x")
+        self.assertEqualStructure((1 * x), "x")
 
     def test_division(self):
-        self.assertSame((x / y), "(x / y)")
-        self.assertSame((x / 1), "x")
-        self.assertSame((1 / x), "(1 / x)")
+        self.assertEqualStructure((x / y), "(x / y)")
+        self.assertEqualStructure((x / 1), "x")
+        self.assertEqualStructure((1 / x), "(1 / x)")
 
     def test_unary_operators(self):
-        self.assertSame((+x), "x")
-        self.assertSame((-x), "(-1 * x)")
+        self.assertEqualStructure((+x), "x")
+        self.assertEqualStructure((-x), "(-1 * x)")
 
     def test_relational_operators(self):
         # Variable rop float
-        self.assertSame((x >= 1), "(x >= 1)")
-        self.assertSame((x > 1), "(x > 1)")
-        self.assertSame((x <= 1), "(x <= 1)")
-        self.assertSame((x < 1), "(x < 1)")
-        self.assertSame((x == 1), "(x = 1)")
-        self.assertSame((x != 1), "(x != 1)")
+        self.assertEqualStructure((x >= 1), "(x >= 1)")
+        self.assertEqualStructure((x > 1), "(x > 1)")
+        self.assertEqualStructure((x <= 1), "(x <= 1)")
+        self.assertEqualStructure((x < 1), "(x < 1)")
+        self.assertEqualStructure((x == 1), "(x = 1)")
+        self.assertEqualStructure((x != 1), "(x != 1)")
 
         # float rop Variable
-        self.assertSame((1 < y), "(y > 1)")
-        self.assertSame((1 <= y), "(y >= 1)")
-        self.assertSame((1 > y), "(y < 1)")
-        self.assertSame((1 >= y), "(y <= 1)")
-        self.assertSame((1 == y), "(y = 1)")
-        self.assertSame((1 != y), "(y != 1)")
+        self.assertEqualStructure((1 < y), "(y > 1)")
+        self.assertEqualStructure((1 <= y), "(y >= 1)")
+        self.assertEqualStructure((1 > y), "(y < 1)")
+        self.assertEqualStructure((1 >= y), "(y <= 1)")
+        self.assertEqualStructure((1 == y), "(y = 1)")
+        self.assertEqualStructure((1 != y), "(y != 1)")
 
         # Variable rop Variable
-        self.assertSame((x < y), "(x < y)")
-        self.assertSame((x <= y), "(x <= y)")
-        self.assertSame((x > y), "(x > y)")
-        self.assertSame((x >= y), "(x >= y)")
-        self.assertSame((x == y), "(x = y)")
-        self.assertSame((x != y), "(x != y)")
+        self.assertEqualStructure((x < y), "(x < y)")
+        self.assertEqualStructure((x <= y), "(x <= y)")
+        self.assertEqualStructure((x > y), "(x > y)")
+        self.assertEqualStructure((x >= y), "(x >= y)")
+        self.assertEqualStructure((x == y), "(x = y)")
+        self.assertEqualStructure((x != y), "(x != y)")
 
     def test_repr(self):
         self.assertEqual(repr(x), "Variable('x')")
 
     def test_simplify(self):
-        self.assertSame((0 * (x + y)), "0")
-        self.assertSame((x + y - x - y), "0")
-        self.assertSame((x / x - 1), "0")
-        self.assertSame((x / x), "1")
+        self.assertEqualStructure((0 * (x + y)), "0")
+        self.assertEqualStructure((x + y - x - y), "0")
+        self.assertEqualStructure((x / x - 1), "0")
+        self.assertEqualStructure((x / x), "1")
 
     def test_expand(self):
         ex = 2 * (x + y)
-        self.assertSame((ex), "(2 * (x + y))")
-        self.assertSame((ex.Expand()), "(2 * x + 2 * y)")
+        self.assertEqualStructure((ex), "(2 * (x + y))")
+        self.assertEqualStructure((ex.Expand()), "(2 * x + 2 * y)")
 
     def test_pow(self):
-        self.assertSame((x**2), "pow(x, 2)")
-        self.assertSame((x**y), "pow(x, y)")
-        self.assertSame(((x + 1)**(y - 1)), "pow((1 + x), (-1 + y))")
+        self.assertEqualStructure((x**2), "pow(x, 2)")
+        self.assertEqualStructure((x**y), "pow(x, y)")
+        self.assertEqualStructure(((x + 1)**(y - 1)), "pow((1 + x), (-1 + y))")
 
     def test_neg(self):
-        self.assertSame((-(x + 1)), "(-1 - x)")
+        self.assertEqualStructure((-(x + 1)), "(-1 - x)")
 
     def test_equalto(self):
         self.assertTrue(x.EqualTo(x))
         self.assertFalse(x.EqualTo(y))
 
     def test_logical(self):
-        self.assertSame((sym.logical_not(x == 0)), "!((x = 0))")
+        self.assertEqualStructure((sym.logical_not(x == 0)), "!((x = 0))")
         # Test single-operand logical statements
-        self.assertSame((sym.logical_and(x >= 1)), "(x >= 1)")
-        self.assertSame((sym.logical_or(x >= 1)), "(x >= 1)")
+        self.assertEqualStructure((sym.logical_and(x >= 1)), "(x >= 1)")
+        self.assertEqualStructure((sym.logical_or(x >= 1)), "(x >= 1)")
         # Test binary operand logical statements
-        self.assertSame((sym.logical_and(x >= 1, x <= 2)),
+        self.assertEqualStructure((sym.logical_and(x >= 1, x <= 2)),
                         "((x >= 1) and (x <= 2))")
-        self.assertSame((sym.logical_or(x <= 1, x >= 2)),
+        self.assertEqualStructure((sym.logical_or(x <= 1, x >= 2)),
                         "((x >= 2) or (x <= 1))")
         # Test multiple operand logical statements
-        self.assertSame((sym.logical_and(x >= 1, x <= 2, y == 2)),
+        self.assertEqualStructure((sym.logical_and(x >= 1, x <= 2, y == 2)),
                         "((y = 2) and (x >= 1) and (x <= 2))")
-        self.assertSame((sym.logical_or(x >= 1, x <= 2, y == 2)),
+        self.assertEqualStructure((sym.logical_or(x >= 1, x <= 2, y == 2)),
                         "((y = 2) or (x >= 1) or (x <= 2))")
 
     def test_functions_with_variable(self):
@@ -289,21 +318,6 @@ class TestSymbolicVariables(SymbolicTestCase):
 
 
 class TestSymbolicExpression(SymbolicTestCase):
-    def _check_scalar(self, actual, expected):
-        self.assertIsInstance(actual, sym.Expression)
-        # Chain conversion to ensure equivalent treatment.
-        if isinstance(expected, float) or isinstance(expected, int):
-            expected = sym.Expression(expected)
-        if isinstance(expected, sym.Expression):
-            expected = str(expected)
-        self.assertIsInstance(expected, str)
-        self.assertEqual(str(actual), expected)
-
-    def _check_array(self, actual, expected):
-        self.assertEqual(actual.shape, expected.shape)
-        for a, b in zip(actual.flat, expected.flat):
-            self._check_scalar(a, b)
-
     def _check_algebra(self, algebra):
         xv = algebra.to_algebra(x)
         yv = algebra.to_algebra(y)
@@ -462,14 +476,14 @@ class TestSymbolicExpression(SymbolicTestCase):
     def test_scalar_algebra(self):
         xv, e_xv = self._check_algebra(
             ScalarAlgebra(
-                self.assertSame, scalar_to_float=lambda x: x.Evaluate()))
+                self.assertEqualStructure, scalar_to_float=lambda x: x.Evaluate()))
         self.assertIsInstance(xv, sym.Variable)
         self.assertIsInstance(e_xv, sym.Expression)
 
     def test_array_algebra(self):
         xv, e_xv = self._check_algebra(
             VectorizedAlgebra(
-                self.assertSameArray,
+                self.assertEqualStructureArray,
                 scalar_to_float=lambda x: x.Evaluate()))
         self.assertEquals(xv.shape, (2,))
         self.assertIsInstance(xv[0], sym.Variable)
@@ -540,14 +554,14 @@ class TestSymbolicExpression(SymbolicTestCase):
         e_yv = np.array([e_y, e_y])
         value = (e_xv == e_yv)
         self.assertEqual(value.dtype, sym.Formula)
-        self.assertSameArray(value, ["(x = y)", "(x = y)"])
+        self.assertEqualStructureArray(value, ["(x = y)", "(x = y)"])
         # - True + False.
         e_xyv = np.array([e_x, e_y])
         value = (e_xv == e_xyv)
-        self.assertSameArray(value, [sym.Formula.True(), "(x = y)"])
+        self.assertEqualStructureArray(value, [sym.Formula.True(), "(x = y)"])
         # - All true.
         value = (e_xv == e_xv)
-        self.assertSameArray(value, ["True", "True"])
+        self.assertEqualStructureArray(value, ["True", "True"])
 
     def test_functions_with_float(self):
         # TODO(eric.cousineau): Use concrete values once vectorized methods are
@@ -588,22 +602,22 @@ class TestSymbolicExpression(SymbolicTestCase):
         #    |sin(y)    x * cos(y)|
         #    | 2 * x             0|
         J = sym.Jacobian([x * sym.cos(y), x * sym.sin(y), x ** 2], [x, y])
-        self.assertSame(J[0, 0], sym.cos(y))
-        self.assertSame(J[1, 0], sym.sin(y))
-        self.assertSame(J[2, 0], 2 * x)
-        self.assertSame(J[0, 1], - x * sym.sin(y))
-        self.assertSame(J[1, 1], x * sym.cos(y))
-        self.assertSame(J[2, 1], 0)
+        self.assertEqualStructure(J[0, 0], sym.cos(y))
+        self.assertEqualStructure(J[1, 0], sym.sin(y))
+        self.assertEqualStructure(J[2, 0], 2 * x)
+        self.assertEqualStructure(J[0, 1], - x * sym.sin(y))
+        self.assertEqualStructure(J[1, 1], x * sym.cos(y))
+        self.assertEqualStructure(J[2, 1], 0)
 
     def test_method_jacobian(self):
         # (x * cos(y)).Jacobian([x, y]) returns [cos(y), -x * sin(y)].
         J = (x * sym.cos(y)).Jacobian([x, y])
-        self.assertSame(J[0], sym.cos(y))
-        self.assertSame(J[1], -x * sym.sin(y))
+        self.assertEqualStructure(J[0], sym.cos(y))
+        self.assertEqualStructure(J[1], -x * sym.sin(y))
 
     def test_differentiate(self):
         e = x * x
-        self.assertSame(e.Differentiate(x), 2 * x)
+        self.assertEqualStructure(e.Differentiate(x), 2 * x)
 
     def test_repr(self):
         self.assertEqual(repr(e_x), '<Expression "x">')
@@ -755,9 +769,9 @@ class TestSymbolicMonomial(SymbolicTestCase):
 
     def test_str(self):
         m1 = sym.Monomial(x, 2)
-        self.assertSame((m1), "x^2")
+        self.assertEqualStructure((m1), "x^2")
         m2 = m1 * sym.Monomial(y)
-        self.assertSame((m2), "x^2 * y")
+        self.assertEqualStructure((m2), "x^2 * y")
 
     def test_repr(self):
         m = sym.Monomial(x, 2)
