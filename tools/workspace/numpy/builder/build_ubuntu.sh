@@ -9,6 +9,6 @@ cd $(dirname $0)
 docker build -t numpy_builder .
 
 mkdir -p build
-cp ./build_in_docker.sh build
+cp ./build_direct.sh build
 docker run --rm -v ${PWD}/build:/build numpy_builder \
-    /build/build_in_docker.sh /build
+    /build/build_direct.sh /build
