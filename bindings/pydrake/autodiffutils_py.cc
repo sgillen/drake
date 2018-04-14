@@ -85,7 +85,10 @@ PYBIND11_MODULE(_autodiffutils_py, m) {
       return self.value();
     })
     // - Upcasting can be implicit, especially for matrix multiplication.
-    .def_loop_cast([](double x) -> AutoDiffXd { return x; }, true);
+    .def_loop_cast([](double x) -> AutoDiffXd { return x; }, true)
+    // See https://github.com/numpy/numpy/issues/10904 for next 2 casts.
+    .def_loop_cast([](long in) -> AutoDiffXd { return in; }, true)
+    .def_loop_cast([](bool in) -> AutoDiffXd { return in; }, true);
 
   // Add overloads for `math` functions.
   auto math = py::module::import("pydrake.math");
