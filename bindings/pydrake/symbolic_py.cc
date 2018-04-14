@@ -175,13 +175,15 @@ PYBIND11_MODULE(_symbolic_py, m) {
       .def(py::init<>())
       .def(py::init<double>())
       .def(py::init<const Variable&>())
-      .def_loop_cast([](double in) -> Expression { return in; }, true)
-      .def_loop_cast([](int in) -> Expression { return in; }, true)
-      .def_loop_cast([](const Variable& in) -> Expression { return in; }, true)
+      // Casting
+      .def_loop(py::dtype_method::implicit_conversion<double, Expression>())
+      .def_loop(py::dtype_method::implicit_conversion<int, Expression>())
+      .def_loop(py::dtype_method::implicit_conversion<Variable, Expression>())
       // See https://github.com/numpy/numpy/issues/10904 for next 2 casts.
       // NOLINTNEXTLINE(runtime/int): Use platform-dependent name.
-      .def_loop_cast([](long in) -> Expression { return in; }, true)
-      .def_loop_cast([](bool in) -> Expression { return in; }, true)
+      .def_loop(py::dtype_method::implicit_conversion<long, Expression>())
+      .def_loop(py::dtype_method::implicit_conversion<bool, Expression>())
+      // Methods
       .def("__str__", &Expression::to_string)
       .def("__repr__",
            [](const Expression& self) {
