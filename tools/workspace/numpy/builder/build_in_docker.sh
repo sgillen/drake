@@ -9,18 +9,20 @@ shift; shift; shift
 
 git clone ${repo} /numpy
 cd /numpy
-if [[ ${commit} ~= ^pull/.*$ ]]; then
+
+# Checkout specified commit, accommodating a PR if specified.
+if [[ ${commit} =~ ^pull/.*$ ]]; then
     git fetch origin ${commit}
     git checkout FETCH_HEAD
 else
     git checkout -f ${commit}
 fi
+
 python setup.py bdist_wheel "$@"
 wheel_file=./dist/numpy*.whl
 
 # Briefly print out NumPy version:
-mkdir env
-virtualenv env
+python -m virtualenv env
 source env/bin/activate
 python -m pip install ${wheel_file}
 python -c 'import numpy; print(numpy.version.full_version)'
