@@ -20,6 +20,7 @@ Example:
 
 Arguments:
     name: A unique name for this rule.
+    use_local: Use a locally installed version of NumPy. Use at your own risk!
 """
 
 load("@drake//tools/workspace:os.bzl", "determine_os")
@@ -102,6 +103,41 @@ install(
     repository_ctx.file("BUILD.bazel", content = file_content,
                         executable = False)
 
-numpy_repository = repository_rule(
+_numpy_repository = repository_rule(
     _impl,
 )
+
+def _fake_impl(repository_ctx):
+    repository_ctx.file(
+        "BUILD.bazel",
+        content = repository_ctx.attr.build_file_content,
+        executable = False)
+
+_fake_repository = repository_rule(
+    attrs = {
+        "build_file_content": attr.string(mandatory = True),
+    },
+    implementation = _fake_impl,
+)
+
+def numpy_repository(
+        name = None,
+        use_local = False):
+    if name == None:
+        fail("Must supply name")
+    if not use_local:
+        _numpy_repository(name = name)
+    else:
+        _fake_repository(
+            name = name,
+            build_file_content = """
+load("@drake//tools/install:install.bzl", "install")
+
+py_library(
+    name = "numpy_py",
+    visibility = ["//visibility:public"],
+)
+
+install(name = "install")
+"""
+        )
