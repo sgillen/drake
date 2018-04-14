@@ -292,9 +292,3 @@ class TestMathematicalProgram(unittest.TestCase):
         prog.AddConstraint(constraint, [0.], [2.], x)
         prog.Solve()
         self.assertAlmostEquals(prog.GetSolution(x)[0], 1.)
-
-
-# print("-----")
-# import os; print("PID: ", os.getpid())
-# import sys; sys.stdout.flush()
-# import time; time.sleep(2)
