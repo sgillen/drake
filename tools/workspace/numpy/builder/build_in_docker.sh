@@ -19,11 +19,14 @@ else
 fi
 
 python setup.py bdist_wheel "$@"
-wheel_file=./dist/numpy*.whl
+wheel_file=${PWD}/dist/numpy*.whl
 
 # Briefly print out NumPy version:
 python -m virtualenv env
-source env/bin/activate
+cd env
+set +e +x +u
+source bin/activate
+set -e -x -u
 python -m pip install ${wheel_file}
 python -c 'import numpy; print(numpy.version.full_version)'
 
