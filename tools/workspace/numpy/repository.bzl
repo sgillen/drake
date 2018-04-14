@@ -22,13 +22,19 @@ Arguments:
     name: A unique name for this rule.
 """
 
+load("@drake//tools/workspace:os.bzl", "determine_os")
+
 # TODO(eric.cousineau): Add a configuration option to *not* use / install a
 # custom NumPy (for development or other conflicts).
 
 wheels = {
-    "ubuntu": {
+    "ubuntu_1604": {
         "url": "https://github.com/EricCousineau-TRI/experimental/raw/e84664659a7ceeac016f626b4d77f5a89c4cad62/numpy/numpy-1.15.0.dev0%2B7d247f4-cp27-cp27mu-linux_x86_64.whl",  # noqa
         "sha256": "643f7e11c5f0213ae171d91e5759da51e4f39a0a9ba912f42189b3004507c21c",  # noqa
+    },
+    "mac": {
+        "url": "https://github.com/EricCousineau-TRI/experimental/raw/3211d6dd6aee9e8dd70a19ef86b961a2de3bf821/numpy/numpy-1.15.0.dev0%2B7d247f4-cp27-cp27m-macosx_10_13_x86_64.whl",  # noqa
+        "sha256": "1b3cee66ff92e2e0dc1c97d167b5b13873c3e97a87829a1c7830964ab48b2648",
     },
 }
 
@@ -42,7 +48,19 @@ def _impl(repository_ctx):
         fail("Do not name this repository `numpy`. Please name it `numpy_py` " +
              "or something else.")
 
-    wheel = wheels["ubuntu"]
+    os_result = determine_os(repository_ctx)
+    if os_result.error != None:
+        fail(os_result.error)
+
+    wheel = None
+    if os_result.is_macos:
+        wheel = wheels["mac"]
+    elif os_result.is_ubuntu:
+        if os_result.ubuntu_release == "16.04":
+            wheel = wheels["ubuntu_1604"]
+    if wheel == None:
+        fail("Unsupported platform")
+
     repository_ctx.download_and_extract(
         url = wheel["url"],
         sha256 = wheel["sha256"],
