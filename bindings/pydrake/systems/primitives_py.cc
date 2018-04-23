@@ -29,10 +29,12 @@ PYBIND11_MODULE(primitives, m) {
 
   py::module::import("pydrake.systems.framework");
 
-  using T = double;
+  auto bind_common_scalar_types = [m](auto dummy) {
+    using T = decltype(dummy);
 
-  auto bind_common_scalar_types = [m](auto param) {
-    py::class_<Adder<T>, LeafSystem<T>>(m, "Adder").def(py::init<int, int>());
+    DefineTemplateClassWithDefault<Adder<T>, LeafSystem<T>>(
+        m, "Adder", type_pack<T>{})
+        .def(py::init<int, int>());
 
     py::class_<AffineSystem<T>, LeafSystem<T>>(m, "AffineSystem")
         .def(py::init<const Eigen::Ref<const Eigen::MatrixXd>&,
@@ -120,6 +122,8 @@ PYBIND11_MODULE(primitives, m) {
           ZeroOrderHold,
           Multiplexer
       >{});
+
+  using T = double;
 
   py::class_<BarycentricMeshSystem<T>, LeafSystem<T>>(m,
                                                       "BarycentricMeshSystem")

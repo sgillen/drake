@@ -8,9 +8,9 @@
 #include "drake/bindings/pydrake/pydrake_pybind.h"
 #include "drake/bindings/pydrake/util/cpp_param_pybind.h"
 #include "drake/bindings/pydrake/util/cpp_template_pybind.h"
-#include "drake/common/autodiff.h"
+#include "drake/bindings/pydrake/symbolic_types_pybind.h"
+#include "drake/bindings/pydrake/autodiff_types_pybind.h"
 #include "drake/common/drake_throw.h"
-#include "drake/common/symbolic.h"
 #include "drake/systems/framework/value.h"
 #include "drake/systems/framework/scalar_conversion_traits.h"
 #include "drake/systems/framework/system_type_tag.h"
@@ -103,22 +103,26 @@ using SystemTypeTagPack = type_pack<systems::SystemTypeTag<S>...>;
 
 namespace detail {
 
+using DummyList = drake::detail::DummyList;
+
 template <template <typename> class S, typename T>
-void assert_compatible_scalar_type() {
+bool assert_compatible_scalar_type() {
   static_assert(systems::scalar_conversion::has_instantiation<S, T>::value,
       "Unsupported scalar type `T` for `S`!");
+  return true;
 }
 
 template <template <typename> class S, typename ... Ts>
-void assert_compatible_scalar_types(type_pack<Ts...> = {}) {
-  assert_compatible_scalar_type<S, Ts>()...;
+bool assert_compatible_scalar_types(type_pack<Ts...> = {}) {
+  (void)DummyList{assert_compatible_scalar_type<S, Ts>()...};
+  return true;
 }
 
 template <template <typename> class ... SystemTypes, typename ScalarPack>
 void assert_all_compatible(
     SystemTypeTagPack<SystemTypes...> = {},
     ScalarPack scalar_pack = {}) {
-  assert_compatible_scalar_types<SystemTypes>(scalar_pack)...;
+  (void)DummyList{assert_compatible_scalar_types<SystemTypes>(scalar_pack)...};
 }
 
 }  // namespace detail
@@ -131,10 +135,10 @@ template <
     typename SystemPack,
     typename Visitor = void>
 void system_scalar_visit(
-    Vistor&& visitor,
+    Visitor&& visitor,
     ScalarPack scalar_type_pack = {},
     SystemPack system_type_pack = {}) {
-  assert_all_compatible(system_type_pack, scalar_type_pack);
+  detail::assert_all_compatible(system_type_pack, scalar_type_pack);
   type_visit(visitor, scalar_type_pack);
 }
 
