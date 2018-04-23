@@ -8,8 +8,12 @@
 #include "drake/bindings/pydrake/pydrake_pybind.h"
 #include "drake/bindings/pydrake/util/cpp_param_pybind.h"
 #include "drake/bindings/pydrake/util/cpp_template_pybind.h"
+#include "drake/common/autodiff.h"
 #include "drake/common/drake_throw.h"
+#include "drake/common/symbolic.h"
 #include "drake/systems/framework/value.h"
+#include "drake/systems/framework/scalar_conversion_traits.h"
+#include "drake/systems/framework/system_type_tag.h"
 
 namespace drake {
 namespace pydrake {
@@ -84,6 +88,54 @@ be destroyed when it is replaced, since it is stored using `unique_ptr<>`.
   py::module py_module = py::module::import("pydrake.systems.framework");
   AddTemplateClass(py_module, "Value", py_class, GetPyParam<T>());
   return py_class;
+}
+
+/// Type pack defining common scalar types. See `default_scalars.h` for more
+/// information.
+using CommonScalarPack = type_pack<
+    double,
+    AutoDiffXd,
+    symbolic::Expression
+    >;
+
+template <template <typename> class ... S>
+using SystemTypeTagPack = type_pack<systems::SystemTypeTag<S>...>;
+
+namespace detail {
+
+template <template <typename> class S, typename T>
+void assert_compatible_scalar_type() {
+  static_assert(systems::scalar_conversion::has_instantiation<S, T>::value,
+      "Unsupported scalar type `T` for `S`!");
+}
+
+template <template <typename> class S, typename ... Ts>
+void assert_compatible_scalar_types(type_pack<Ts...> = {}) {
+  assert_compatible_scalar_type<S, Ts>()...;
+}
+
+template <template <typename> class ... SystemTypes, typename ScalarPack>
+void assert_all_compatible(
+    SystemTypeTagPack<SystemTypes...> = {},
+    ScalarPack scalar_pack = {}) {
+  assert_compatible_scalar_types<SystemTypes>(scalar_pack)...;
+}
+
+}  // namespace detail
+
+/// Calls a lambda for all types of a given `ScalarPack`, with a preceeding
+/// check that all specified types with `SystemPack` have instantiations for
+/// the given type.
+template <
+    typename ScalarPack,
+    typename SystemPack,
+    typename Visitor = void>
+void system_scalar_visit(
+    Vistor&& visitor,
+    ScalarPack scalar_type_pack = {},
+    SystemPack system_type_pack = {}) {
+  assert_all_compatible(system_type_pack, scalar_type_pack);
+  type_visit(visitor, scalar_type_pack);
 }
 
 }  // namespace pysystems
