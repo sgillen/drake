@@ -36,7 +36,8 @@ PYBIND11_MODULE(primitives, m) {
         m, "Adder", type_pack<T>{})
         .def(py::init<int, int>());
 
-    py::class_<AffineSystem<T>, LeafSystem<T>>(m, "AffineSystem")
+    DefineTemplateClassWithDefault<AffineSystem<T>, LeafSystem<T>>(
+        m, "AffineSystem", type_pack<T>{})
         .def(py::init<const Eigen::Ref<const Eigen::MatrixXd>&,
                       const Eigen::Ref<const Eigen::MatrixXd>&,
                       const Eigen::Ref<const Eigen::VectorXd>&,
@@ -61,16 +62,19 @@ PYBIND11_MODULE(primitives, m) {
             &AffineSystem<T>::y0))
         .def("time_period", &AffineSystem<T>::time_period);
 
-    py::class_<ConstantValueSource<T>, LeafSystem<T>>(m, "ConstantValueSource");
+    DefineTemplateClassWithDefault<ConstantValueSource<T>, LeafSystem<T>>(
+        m, "ConstantValueSource", type_pack<T>{});
 
-    py::class_<ConstantVectorSource<T>, LeafSystem<T>>(
-        m, "ConstantVectorSource")
+    DefineTemplateClassWithDefault<ConstantVectorSource<T>, LeafSystem<T>>(
+        m, "ConstantVectorSource", type_pack<T>{})
         .def(py::init<VectorX<T>>());
 
-    py::class_<Integrator<T>, LeafSystem<T>>(m, "Integrator")
+    DefineTemplateClassWithDefault<Integrator<T>, LeafSystem<T>>(
+        m, "Integrator", type_pack<T>{})
         .def(py::init<int>());
 
-    py::class_<LinearSystem<T>, AffineSystem<T>>(m, "LinearSystem")
+    DefineTemplateClassWithDefault<LinearSystem<T>, AffineSystem<T>>(
+        m, "LinearSystem", type_pack<T>{})
         .def(py::init<const Eigen::Ref<const Eigen::MatrixXd>&,
                       const Eigen::Ref<const Eigen::MatrixXd>&,
                       const Eigen::Ref<const Eigen::MatrixXd>&,
@@ -78,50 +82,40 @@ PYBIND11_MODULE(primitives, m) {
              py::arg("A"), py::arg("B"), py::arg("C"), py::arg("D"),
              py::arg("time_period") = 0.0);
 
-    py::class_<PassThrough<T>, LeafSystem<T>>(m, "PassThrough")
+    DefineTemplateClassWithDefault<PassThrough<T>, LeafSystem<T>>(
+        m, "PassThrough", type_pack<T>{})
         .def(py::init<int>())
         .def(py::init<const AbstractValue&>());
 
-    py::class_<Saturation<T>, LeafSystem<T>>(m, "Saturation")
+    DefineTemplateClassWithDefault<Saturation<T>, LeafSystem<T>>(
+        m, "Saturation", type_pack<T>{})
         .def(py::init<const VectorX<T>&, const VectorX<T>&>(), py::arg
       ("min_value"), py::arg("max_value"));
 
-    py::class_<SignalLogger<T>, LeafSystem<T>>(m, "SignalLogger")
+    DefineTemplateClassWithDefault<SignalLogger<T>, LeafSystem<T>>(
+        m, "SignalLogger", type_pack<T>{})
         .def(py::init<int>())
         .def(py::init<int, int>())
         .def("sample_times", &SignalLogger<T>::sample_times)
         .def("data", &SignalLogger<T>::data)
         .def("reset", &SignalLogger<T>::reset);
 
-    py::class_<WrapToSystem<T>, LeafSystem<T>>(m, "WrapToSystem")
+    DefineTemplateClassWithDefault<WrapToSystem<T>, LeafSystem<T>>(
+        m, "WrapToSystem", type_pack<T>{})
         .def(py::init<int>())
         .def("set_interval", &WrapToSystem<T>::set_interval);
 
-    py::class_<ZeroOrderHold<T>, LeafSystem<T>>(m, "ZeroOrderHold")
+    DefineTemplateClassWithDefault<ZeroOrderHold<T>, LeafSystem<T>>(
+        m, "ZeroOrderHold", type_pack<T>{})
         .def(py::init<double, int>());
 
-    py::class_<Multiplexer<T>, LeafSystem<T>>(m, "Multiplexer")
+    DefineTemplateClassWithDefault<Multiplexer<T>, LeafSystem<T>>(
+        m, "Multiplexer", type_pack<T>{})
         .def(py::init<int>(), py::arg("num_scalar_inputs"))
         .def(py::init<std::vector<int>>(), py::arg("input_sizes"))
         .def(py::init<const BasicVector<T>&>(), py::arg("model_vector"));
   };
-  pysystems::system_scalar_visit(
-      bind_common_scalar_types,
-      pysystems::CommonScalarPack{},
-      pysystems::SystemTypeTagPack<
-          Adder,
-          AffineSystem,
-          ConstantValueSource,
-          ConstantVectorSource,
-          Integrator,
-          LinearSystem,
-          PassThrough,
-          Saturation,
-          SignalLogger,
-          WrapToSystem,
-          ZeroOrderHold,
-          Multiplexer
-      >{});
+  type_visit(bind_common_scalar_types, pysystems::CommonScalarPack{});
 
   using T = double;
 
