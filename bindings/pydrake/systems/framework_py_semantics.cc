@@ -9,11 +9,15 @@
 #include "drake/bindings/pydrake/util/drake_optional_pybind.h"
 #include "drake/bindings/pydrake/util/eigen_pybind.h"
 #include "drake/bindings/pydrake/util/type_safe_index_pybind.h"
-#include "drake/systems/framework/basic_vector.h"
-#include "drake/systems/framework/subvector.h"
-#include "drake/systems/framework/supervector.h"
+#include "drake/systems/framework/context.h"
+#include "drake/systems/framework/diagram_builder.h"
+#include "drake/systems/framework/event.h"
+#include "drake/systems/framework/leaf_context.h"
+#include "drake/systems/framework/output_port_value.h"
 
 using std::string;
+using std::unique_ptr;
+using std::vector;
 
 namespace drake {
 namespace pydrake {
