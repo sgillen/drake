@@ -17,11 +17,6 @@ using std::string;
 namespace drake {
 namespace pydrake {
 
-// TODO(eric.cousineau): At present, we only bind doubles.
-// In the future, we will bind more scalar types, and enable scalar
-// conversion.
-using T = double;
-
 using pysystems::AddValueInstantiation;
 using pysystems::DefClone;
 
