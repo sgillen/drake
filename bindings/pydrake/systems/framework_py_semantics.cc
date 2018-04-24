@@ -156,9 +156,6 @@ void DefineFrameworkPySemantics(py::module m) {
            // Keep alive, transitive: `Diagram` keeps `self` alive.
            py::keep_alive<2, 1>());
 
-    DefineTemplateClassWithDefault<FreestandingInputPortValue>(
-        m, "FreestandingInputPortValue", GetPyParam<T>());
-
     DefineTemplateClassWithDefault<OutputPort<T>>(
         m, "OutputPort", GetPyParam<T>())
       .def("size", &OutputPort<T>::size)
@@ -274,6 +271,8 @@ void DefineFrameworkPySemantics(py::module m) {
            py_reference_internal, py::arg("index") = 0);
   };
   type_visit(bind_common_scalar_types, pysystems::CommonScalarPack{});
+
+  py::class_<FreestandingInputPortValue>(m, "FreestandingInputPortValue");
 
   // N.B. `AbstractValues` provides the ability to reference non-owned values,
   // without copying them. For consistency with other model-value Python
