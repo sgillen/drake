@@ -277,7 +277,16 @@ struct Impl {
         // Events.
         .def("Publish",
              overload_cast_explicit<void, const Context<T>&>(
-                 &System<T>::Publish));
+                 &System<T>::Publish))
+        // Scalar types.
+        .def("ToAutoDiffXd", [](const System<T>& self) {
+           return self.ToAutoDiffXd();
+        })
+        .def("ToAutoDiffXdMaybe", &System<T>::ToAutoDiffXdMaybe)
+        .def("ToSymbolic", [](const System<T>& self) {
+           return self.ToSymbolic();
+        })
+        .def("ToSymbolicMaybe", &System<T>::ToSymbolicMaybe);
 
     // Don't use a const-rvalue as a function handle parameter, as pybind11
     // wants to copy it?

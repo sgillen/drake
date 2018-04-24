@@ -20,15 +20,16 @@ from pydrake.systems.framework import (
     BasicVector, BasicVector_,
     Diagram, Diagram_,
     DiagramBuilder, DiagramBuilder_,
+    System_,
     )
 from pydrake.systems import primitives
 from pydrake.systems.primitives import (
     Adder, Adder_,
-    AffineSystem, AffineSystem_,
+    AffineSystem,
     ConstantVectorSource, ConstantVectorSource_,
-    Integrator, Integrator_,
-    LinearSystem, LinearSystem_,
-    SignalLogger, SignalLogger_,
+    Integrator,
+    LinearSystem,
+    SignalLogger,
     )
 
 
@@ -46,12 +47,18 @@ class TestGeneral(unittest.TestCase):
         self._check_instantiations(BasicVector_)
         self._check_instantiations(Diagram_)
         self._check_instantiations(DiagramBuilder_)
-        self._check_instantiations(Adder_)
-        self._check_instantiations(AffineSystem_)
-        self._check_instantiations(ConstantVectorSource_)
-        self._check_instantiations(Integrator_)
-        self._check_instantiations(LinearSystem_)
-        self._check_instantiations(SignalLogger_)
+
+    def test_scalar_type_conversion(self):
+        for T in [float, AutoDiffXd, Expression]:
+            system = Adder_[T](1, 1)
+            # N.B. Current scalar conversion does not auto-register idempotent
+            # conversions.
+            if T != AutoDiffXd:
+                system_ad = system.ToAutoDiffXd()
+                self.assertIsInstance(system_ad, System_[AutoDiffXd])
+            if T != Expression:
+                system_sym = system.ToSymbolic()
+                self.assertIsInstance(system_sym, System_[Expression])
 
     def test_simular_ctor(self):
         # Tests a simple simulation for supported scalar types.
