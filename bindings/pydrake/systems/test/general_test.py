@@ -71,10 +71,11 @@ class TestGeneral(unittest.TestCase):
                 output = system.AllocateOutput(context)
                 self.assertEquals(output.get_num_ports(), 1)
                 system.CalcOutput(context, output)
-                value = output.get_vector_data(0).get_value()
                 if T == float:
+                    value = output.get_vector_data(0).get_value()
                     self.assertTrue(np.allclose([1], value))
                 elif T == AutoDiffXd:
+                    value = output.get_vector_data(0)._get_value_copy()
                     # TODO(eric.cousineau): Define `isfinite` ufunc, if
                     # possible, to use for `np.allclose`.
                     self.assertEqual(value.shape, (1,))
