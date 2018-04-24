@@ -78,11 +78,6 @@ struct FromDoubleTraits {
     std::true_type, std::false_type>::type;
 };
 
-/// Indicates that an instantiation of scalar type `T` is supported for a given
-/// system `S`.
-template <template <typename> class S, typename T>
-struct has_instantiation : public Traits<S>::template supported<T, T> {};
-
 }  // namespace scalar_conversion
 }  // namespace systems
 }  // namespace drake

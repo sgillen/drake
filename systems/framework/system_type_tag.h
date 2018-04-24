@@ -31,9 +31,6 @@ struct SystemTypeTag {
     static_assert(std::is_base_of<System<double>, S<double>>::value,
                   "The type argument to SystemTypeTag must be a System");
   }
-
-  template <typename T>
-  using bind = S<T>;
 };
 
 }  // namespace systems

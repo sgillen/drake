@@ -11,8 +11,6 @@
 #include "drake/bindings/pydrake/util/cpp_param_pybind.h"
 #include "drake/bindings/pydrake/util/cpp_template_pybind.h"
 #include "drake/common/drake_throw.h"
-#include "drake/systems/framework/scalar_conversion_traits.h"
-#include "drake/systems/framework/system_type_tag.h"
 #include "drake/systems/framework/value.h"
 
 namespace drake {
