@@ -38,7 +38,8 @@ void DefineFrameworkPyValues(py::module m) {
       .def("SetFromVector", &VectorBase<T>::SetFromVector)
       .def("size", &VectorBase<T>::size);
 
-    // TODO(eric.cousineau): Make a helper function for the Eigen::Ref<> patterns.
+    // TODO(eric.cousineau): Make a helper function for the Eigen::Ref<>
+    // patterns.
     auto basic_vector =
         DefineTemplateClassWithDefault<BasicVector<T>, VectorBase<T>>(
             m, "BasicVector", GetPyParam<T>());
