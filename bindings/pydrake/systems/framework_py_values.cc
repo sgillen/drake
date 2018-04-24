@@ -33,7 +33,7 @@ void DefineFrameworkPyValues(py::module m) {
     using T = decltype(dummy);
     // Value types.
     DefineTemplateClassWithDefault<VectorBase<T>>(
-      m, "VectorBase", type_pack<T>{})
+      m, "VectorBase", GetPyParam<T>())
       .def("CopyToVector", &VectorBase<T>::CopyToVector)
       .def("SetFromVector", &VectorBase<T>::SetFromVector)
       .def("size", &VectorBase<T>::size);
@@ -41,7 +41,7 @@ void DefineFrameworkPyValues(py::module m) {
     // TODO(eric.cousineau): Make a helper function for the Eigen::Ref<> patterns.
     auto basic_vector =
         DefineTemplateClassWithDefault<BasicVector<T>, VectorBase<T>>(
-            m, "BasicVector", type_pack<T>{});
+            m, "BasicVector", GetPyParam<T>());
     DefClone(&basic_vector);
     basic_vector
       // N.B. Place `init<VectorX<T>>` `init<int>` so that we do not implicitly
@@ -59,10 +59,10 @@ void DefineFrameworkPyValues(py::module m) {
           }, py_reference_internal);
 
     DefineTemplateClassWithDefault<Supervector<T>, VectorBase<T>>(
-        m, "Supervector", type_pack<T>{});
+        m, "Supervector", GetPyParam<T>());
 
     DefineTemplateClassWithDefault<Subvector<T>, VectorBase<T>>(
-        m, "Subvector", type_pack<T>{});
+        m, "Subvector", GetPyParam<T>());
   };
   type_visit(bind_common_scalar_types, pysystems::CommonScalarPack{});
 

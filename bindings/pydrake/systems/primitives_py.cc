@@ -33,11 +33,11 @@ PYBIND11_MODULE(primitives, m) {
     using T = decltype(dummy);
 
     DefineTemplateClassWithDefault<Adder<T>, LeafSystem<T>>(
-        m, "Adder", type_pack<T>{})
+        m, "Adder", GetPyParam<T>())
         .def(py::init<int, int>());
 
     DefineTemplateClassWithDefault<AffineSystem<T>, LeafSystem<T>>(
-        m, "AffineSystem", type_pack<T>{})
+        m, "AffineSystem", GetPyParam<T>())
         .def(py::init<const Eigen::Ref<const Eigen::MatrixXd>&,
                       const Eigen::Ref<const Eigen::MatrixXd>&,
                       const Eigen::Ref<const Eigen::VectorXd>&,
@@ -63,18 +63,18 @@ PYBIND11_MODULE(primitives, m) {
         .def("time_period", &AffineSystem<T>::time_period);
 
     DefineTemplateClassWithDefault<ConstantValueSource<T>, LeafSystem<T>>(
-        m, "ConstantValueSource", type_pack<T>{});
+        m, "ConstantValueSource", GetPyParam<T>());
 
     DefineTemplateClassWithDefault<ConstantVectorSource<T>, LeafSystem<T>>(
-        m, "ConstantVectorSource", type_pack<T>{})
+        m, "ConstantVectorSource", GetPyParam<T>())
         .def(py::init<VectorX<T>>());
 
     DefineTemplateClassWithDefault<Integrator<T>, LeafSystem<T>>(
-        m, "Integrator", type_pack<T>{})
+        m, "Integrator", GetPyParam<T>())
         .def(py::init<int>());
 
     DefineTemplateClassWithDefault<LinearSystem<T>, AffineSystem<T>>(
-        m, "LinearSystem", type_pack<T>{})
+        m, "LinearSystem", GetPyParam<T>())
         .def(py::init<const Eigen::Ref<const Eigen::MatrixXd>&,
                       const Eigen::Ref<const Eigen::MatrixXd>&,
                       const Eigen::Ref<const Eigen::MatrixXd>&,
@@ -83,17 +83,17 @@ PYBIND11_MODULE(primitives, m) {
              py::arg("time_period") = 0.0);
 
     DefineTemplateClassWithDefault<PassThrough<T>, LeafSystem<T>>(
-        m, "PassThrough", type_pack<T>{})
+        m, "PassThrough", GetPyParam<T>())
         .def(py::init<int>())
         .def(py::init<const AbstractValue&>());
 
     DefineTemplateClassWithDefault<Saturation<T>, LeafSystem<T>>(
-        m, "Saturation", type_pack<T>{})
+        m, "Saturation", GetPyParam<T>())
         .def(py::init<const VectorX<T>&, const VectorX<T>&>(), py::arg
       ("min_value"), py::arg("max_value"));
 
     DefineTemplateClassWithDefault<SignalLogger<T>, LeafSystem<T>>(
-        m, "SignalLogger", type_pack<T>{})
+        m, "SignalLogger", GetPyParam<T>())
         .def(py::init<int>())
         .def(py::init<int, int>())
         .def("sample_times", &SignalLogger<T>::sample_times)
@@ -101,16 +101,16 @@ PYBIND11_MODULE(primitives, m) {
         .def("reset", &SignalLogger<T>::reset);
 
     DefineTemplateClassWithDefault<WrapToSystem<T>, LeafSystem<T>>(
-        m, "WrapToSystem", type_pack<T>{})
+        m, "WrapToSystem", GetPyParam<T>())
         .def(py::init<int>())
         .def("set_interval", &WrapToSystem<T>::set_interval);
 
     DefineTemplateClassWithDefault<ZeroOrderHold<T>, LeafSystem<T>>(
-        m, "ZeroOrderHold", type_pack<T>{})
+        m, "ZeroOrderHold", GetPyParam<T>())
         .def(py::init<double, int>());
 
     DefineTemplateClassWithDefault<Multiplexer<T>, LeafSystem<T>>(
-        m, "Multiplexer", type_pack<T>{})
+        m, "Multiplexer", GetPyParam<T>())
         .def(py::init<int>(), py::arg("num_scalar_inputs"))
         .def(py::init<std::vector<int>>(), py::arg("input_sizes"))
         .def(py::init<const BasicVector<T>&>(), py::arg("model_vector"));
