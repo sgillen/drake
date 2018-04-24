@@ -284,7 +284,8 @@ struct Impl {
     using CalcVectorPtrCallback =
         std::function<void(const Context<T>*, BasicVector<T>*)>;
 
-    py::class_<LeafSystem<T>, PyLeafSystem, System<T>>(m, "LeafSystem")
+    DefineTemplateClassWithDefault<LeafSystem<T>, PyLeafSystem, System<T>>(
+      m, "LeafSystem", GetPyParam<T>())
       .def(py::init<>())
       .def(
           "_DeclareVectorOutputPort",
@@ -335,7 +336,8 @@ struct Impl {
            // Keep alive, ownership: `AbstractValue` keeps `self` alive.
            py::keep_alive<2, 1>());
 
-    py::class_<Diagram<T>, System<T>>(m, "Diagram")
+    DefineTemplateClassWithDefault<Diagram<T>, System<T>>(
+        m, "Diagram", GetPyParam<T>())
       .def("GetMutableSubsystemState",
           [](Diagram<T>* self, const System<T>& arg1, Context<T>* arg2)
           -> auto& {
@@ -356,11 +358,12 @@ struct Impl {
     // override `LeafSystem` methods, disrespecting `final`-ity.
     // This could be changed (see https://stackoverflow.com/a/2425785), but meh,
     // we're already abusing Python and C++ enough.
-    py::class_<VectorSystem<T>, PyVectorSystem, LeafSystem<T>>(
-        m, "VectorSystem")
-      .def(py::init([](int inputs, int outputs) {
-        return new PyVectorSystem(inputs, outputs);
-      }));
+    DefineTemplateClassWithDefault<
+        VectorSystem<T>, PyVectorSystem, LeafSystem<T>>(
+        m, "VectorSystem", GetPyParam<T>())
+        .def(py::init([](int inputs, int outputs) {
+          return new PyVectorSystem(inputs, outputs);
+        }));
     // TODO(eric.cousineau): Bind virtual methods once we provide a function
     // wrapper to convert `Map<Derived>*` arguments.
     // N.B. This could be mitigated by using `EigenPtr` in public interfaces in
