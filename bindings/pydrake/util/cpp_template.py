@@ -157,26 +157,27 @@ class TemplateBase(object):
         # To be overridden by child classes.
         pass
 
-    @classmethod
-    def define(cls, name, param_list, *args, **kwargs):
-        """Provides a decorator for functions that defines a template using
-        `name`. The template instantiations are added using
-        `add_instantiations`, where the instantiation function is the decorated
-        function.
+    def decorated_instantiations(self, param_list):
+        """Provides a decorator for functions that defines instantiations given
+        the decorate function. The template instantiations are added using
+        `add_instantiations`, where the instantiation function is the
+        decorated function.
 
-        @param name Name of the template. This should generally match the name
-        of the object being decorated for clarity.
         @param param_list Ordered container of parameter sets. For more
         information, see `add_instantiations`.
 
         Note that the name of the inner class will not matter as it will be
-        overritten with the template instantiation name.
+        overritten with the template instantiation name. Additionally, the name
+        of the local variable (`_instantiation_func`) will not matter unless
+        you wish to publicly expose it for reuse.
         In the below example, ``MyTemplateInstantiation` will be renamed to
         `MyTemplate[int]` when `param=(int,)`.
 
         Example:
-        @TemplateClass.define("MyTemplate", param_list=[(int,), (float,)])
-        def MyTemplate(param):
+
+        MyTemplate = TemplateClass("MyTemplate")
+        @MyTemplate.decorated_instantations(param_list=[(int,), (float,)])
+        def _instantiation_func(param):
             T, = param
             class MyTemplateInstantiation(object):
                 def __init__(self):
@@ -185,9 +186,8 @@ class TemplateBase(object):
         """
 
         def decorator(instantiation_func):
-            tpl = cls(name, *args, **kwargs)
-            tpl.add_instantiations(instantiation_func, param_list)
-            return tpl
+            self.add_instantiations(instantiation_func, param_list)
+            return None
 
         return decorator
 

@@ -99,8 +99,10 @@ class TestCppTemplate(unittest.TestCase):
 
     def test_user_class(self):
 
-        @m.TemplateClass.define("MyTemplate", param_list=((int,), (float,)))
-        def MyTemplate(param):
+        MyTemplate = m.TemplateClass("MyTemplate")
+
+        @MyTemplate.decorated_instantiations(param_list=((int,), (float,)))
+        def _instantiation_func(param):
             T, = param
 
             class MyTemplateInstantiation(object):
