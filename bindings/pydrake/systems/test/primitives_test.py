@@ -51,8 +51,8 @@ class TestGeneral(unittest.TestCase):
             self.assertTrue(template[Expression] is not default_cls)
 
     def test_instantiations(self):
-        # TODO(eric.cousineau): Refine tests once NumPy functionality is refined
-        # for dtype=object.
+        # TODO(eric.cousineau): Refine tests once NumPy functionality is
+        # resolved for dtype=object, or dtype=custom is used.
         self._check_instantiations(Adder_)
         self._check_instantiations(AffineSystem_)
         self._check_instantiations(ConstantVectorSource_)

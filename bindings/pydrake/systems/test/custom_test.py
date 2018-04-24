@@ -295,7 +295,8 @@ class TestCustom(unittest.TestCase):
                         self._DeclareContinuousState(
                             num_q=num_q, num_v=num_v, num_z=num_z)
                     elif index == 2:
-                        self._DeclareContinuousState(BasicVector_[T](num_state))
+                        self._DeclareContinuousState(
+                            BasicVector_[T](num_state))
                     elif index == 3:
                         self._DeclareContinuousState(
                             BasicVector_[T](num_state),
