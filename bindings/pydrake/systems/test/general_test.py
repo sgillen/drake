@@ -7,18 +7,27 @@ import copy
 import unittest
 import numpy as np
 
+from pydrake.autodiffutils import (
+    AutoDiffXd,
+    )
+from pydrake.symbolic import (
+    Expression,
+    )
 from pydrake.systems.analysis import (
     Simulator,
+    Simulator_,
     )
 from pydrake.systems.framework import (
     BasicVector,
     Diagram,
     DiagramBuilder,
     )
+from pydrake.systems import primitives
 from pydrake.systems.primitives import (
     Adder,
     AffineSystem,
     ConstantVectorSource,
+    ConstantVectorSource_,
     Integrator,
     LinearSystem,
     SignalLogger,
@@ -26,40 +35,44 @@ from pydrake.systems.primitives import (
 
 
 class TestGeneral(unittest.TestCase):
-    def test_simulator_ctor(self):
-        # Create simple system.
-        system = ConstantVectorSource([1])
+    def test_simulator_scalar_type(self):
+        self.assertTrue(Simulator is Simulator_[float])
+        self.assertFalse(Simulator is Simulator_[AutoDiffXd])
 
-        def check_output(context):
-            # Check number of output ports and value for a given context.
-            output = system.AllocateOutput(context)
-            self.assertEquals(output.get_num_ports(), 1)
-            system.CalcOutput(context, output)
-            value = output.get_vector_data(0).get_value()
-            self.assertTrue(np.allclose([1], value))
+    def test_simular_ctor_float(self):
+        for T in [float, AutoDiffXd]:
+            # Create simple system.
+            system = ConstantVectorSource_[T]([1.])
+            def check_output(context):
+                # Check number of output ports and value for a given context.
+                output = system.AllocateOutput(context)
+                self.assertEquals(output.get_num_ports(), 1)
+                system.CalcOutput(context, output)
+                value = output.get_vector_data(0).get_value()
+                self.assertTrue(np.allclose([1], value))
 
-        # Create simulator with basic constructor.
-        simulator = Simulator(system)
-        simulator.Initialize()
-        simulator.set_target_realtime_rate(0)
-        simulator.set_publish_every_time_step(True)
-        self.assertTrue(simulator.get_context() is
-                        simulator.get_mutable_context())
-        check_output(simulator.get_context())
-        simulator.StepTo(1)
+            # Create simulator with basic constructor.
+            simulator = Simulator_[T](system)
+            simulator.Initialize()
+            simulator.set_target_realtime_rate(0)
+            simulator.set_publish_every_time_step(True)
+            self.assertTrue(simulator.get_context() is
+                            simulator.get_mutable_context())
+            check_output(simulator.get_context())
+            simulator.StepTo(1)
 
-        # Create simulator specifying context.
-        context = system.CreateDefaultContext()
-        context.set_time(0.)
+            # Create simulator specifying context.
+            context = system.CreateDefaultContext()
+            context.set_time(0.)
 
-        context.set_accuracy(1e-4)
-        self.assertEquals(context.get_accuracy(), 1e-4)
+            context.set_accuracy(1e-4)
+            self.assertEquals(context.get_accuracy(), 1e-4)
 
-        # @note `simulator` now owns `context`.
-        simulator = Simulator(system, context)
-        self.assertTrue(simulator.get_context() is context)
-        check_output(context)
-        simulator.StepTo(1)
+            # @note `simulator` now owns `context`.
+            simulator = Simulator(system, context)
+            self.assertTrue(simulator.get_context() is context)
+            check_output(context)
+            simulator.StepTo(1)
 
     def test_copy(self):
         # Copy a context using `deepcopy` or `clone`.
