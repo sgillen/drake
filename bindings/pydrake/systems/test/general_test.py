@@ -14,42 +14,64 @@ from pydrake.symbolic import (
     Expression,
     )
 from pydrake.systems.analysis import (
-    Simulator,
-    Simulator_,
+    Simulator, Simulator_,
     )
 from pydrake.systems.framework import (
-    BasicVector,
-    Diagram,
-    DiagramBuilder,
+    BasicVector, BasicVector_,
+    Diagram, Diagram_,
+    DiagramBuilder, DiagramBuilder_,
     )
 from pydrake.systems import primitives
 from pydrake.systems.primitives import (
-    Adder,
-    AffineSystem,
-    ConstantVectorSource,
-    ConstantVectorSource_,
-    Integrator,
-    LinearSystem,
-    SignalLogger,
+    Adder, Adder_,
+    AffineSystem, AffineSystem_,
+    ConstantVectorSource, ConstantVectorSource_,
+    Integrator, Integrator_,
+    LinearSystem, LinearSystem_,
+    SignalLogger, SignalLogger_,
     )
 
 
 class TestGeneral(unittest.TestCase):
-    def test_simulator_scalar_type(self):
-        self.assertTrue(Simulator is Simulator_[float])
-        self.assertFalse(Simulator is Simulator_[AutoDiffXd])
+    def _check_instantiations(self, template, supports_symbolic=True):
+        default_cls = template[None]
+        self.assertTrue(template[float] is default_cls)
+        self.assertTrue(template[AutoDiffXd] is not default_cls)
+        if supports_symbolic:
+            self.assertTrue(template[Expression] is not default_cls)
 
-    def test_simular_ctor_float(self):
+    def test_instantiations(self):
+        # Quick check of instantions for given types.
+        self._check_instantiations(Simulator_, False)
+        self._check_instantiations(BasicVector_)
+        self._check_instantiations(Diagram_)
+        self._check_instantiations(DiagramBuilder_)
+        self._check_instantiations(Adder_)
+        self._check_instantiations(AffineSystem_)
+        self._check_instantiations(ConstantVectorSource_)
+        self._check_instantiations(Integrator_)
+        self._check_instantiations(LinearSystem_)
+        self._check_instantiations(SignalLogger_)
+
+    def test_simular_ctor(self):
+        # Tests a simple simulation for supported scalar types.
         for T in [float, AutoDiffXd]:
             # Create simple system.
             system = ConstantVectorSource_[T]([1.])
+
             def check_output(context):
                 # Check number of output ports and value for a given context.
                 output = system.AllocateOutput(context)
                 self.assertEquals(output.get_num_ports(), 1)
                 system.CalcOutput(context, output)
                 value = output.get_vector_data(0).get_value()
-                self.assertTrue(np.allclose([1], value))
+                if T == float:
+                    self.assertTrue(np.allclose([1], value))
+                elif T == AutoDiffXd:
+                    # TODO(eric.cousineau): Define `isfinite` ufunc, if
+                    # possible, to use for `np.allclose`.
+                    self.assertEqual(value.shape, (1,))
+                    self.assertEqual(value[0], AutoDiffXd(1.))
 
             # Create simulator with basic constructor.
             simulator = Simulator_[T](system)
@@ -69,7 +91,7 @@ class TestGeneral(unittest.TestCase):
             self.assertEquals(context.get_accuracy(), 1e-4)
 
             # @note `simulator` now owns `context`.
-            simulator = Simulator(system, context)
+            simulator = Simulator_[T](system, context)
             self.assertTrue(simulator.get_context() is context)
             check_output(context)
             simulator.StepTo(1)
