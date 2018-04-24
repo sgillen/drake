@@ -98,50 +98,6 @@ using CommonScalarPack = type_pack<
     symbolic::Expression
     >;
 
-template <template <typename> class ... S>
-using SystemTypeTagPack = type_pack<systems::SystemTypeTag<S>...>;
-
-namespace detail {
-
-using DummyList = drake::detail::DummyList;
-
-template <template <typename> class S, typename T>
-bool assert_compatible_scalar_type() {
-  static_assert(systems::scalar_conversion::has_instantiation<S, T>::value,
-      "Unsupported scalar type `T` for `S`!");
-  return true;
-}
-
-template <template <typename> class S, typename ... Ts>
-bool assert_compatible_scalar_types(type_pack<Ts...> = {}) {
-  (void)DummyList{assert_compatible_scalar_type<S, Ts>()...};
-  return true;
-}
-
-template <template <typename> class ... SystemTypes, typename ScalarPack>
-void assert_all_compatible(
-    SystemTypeTagPack<SystemTypes...> = {},
-    ScalarPack scalar_pack = {}) {
-  (void)DummyList{assert_compatible_scalar_types<SystemTypes>(scalar_pack)...};
-}
-
-}  // namespace detail
-
-/// Calls a lambda for all types of a given `ScalarPack`, with a preceeding
-/// check that all specified types with `SystemPack` have instantiations for
-/// the given type.
-template <
-    typename ScalarPack,
-    typename SystemPack,
-    typename Visitor = void>
-void system_scalar_visit(
-    Visitor&& visitor,
-    ScalarPack scalar_type_pack = {},
-    SystemPack system_type_pack = {}) {
-  detail::assert_all_compatible(system_type_pack, scalar_type_pack);
-  type_visit(visitor, scalar_type_pack);
-}
-
 }  // namespace pysystems
 }  // namespace pydrake
 }  // namespace drake
