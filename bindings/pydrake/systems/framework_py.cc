@@ -1,16 +1,10 @@
-#include "pybind11/pybind11.h"
-
 #include "drake/bindings/pydrake/pydrake_pybind.h"
+#include "drake/bindings/pydrake/systems/framework_py_semantics.h"
+#include "drake/bindings/pydrake/systems/framework_py_systems.h"
+#include "drake/bindings/pydrake/systems/framework_py_values.h"
 
 namespace drake {
 namespace pydrake {
-
-// Defined in `framework_py_systems.cc`.
-void DefineFrameworkPySystems(py::module m);
-// Defined in `framework_py_semantics.cc`.
-void DefineFrameworkPySemantics(py::module m);
-// Defined in `framework_py_values.cc`.
-void DefineFrameworkPyValues(py::module m);
 
 PYBIND11_MODULE(framework, m) {
   m.doc() = "Bindings for the core Systems framework.";
@@ -20,7 +14,7 @@ PYBIND11_MODULE(framework, m) {
   py::module::import("pydrake.autodiffutils");
   py::module::import("pydrake.symbolic");
 
-  // Incorporate definitinos as pieces (to speed up compilation).
+  // Incorporate definitions as pieces (to speed up compilation).
   DefineFrameworkPySystems(m);
   DefineFrameworkPySemantics(m);
   DefineFrameworkPyValues(m);

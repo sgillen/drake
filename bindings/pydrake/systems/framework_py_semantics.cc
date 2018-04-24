@@ -1,6 +1,6 @@
+#include "drake/bindings/pydrake/systems/framework_py_semantics.h"
+
 #include "pybind11/eigen.h"
-#include "pybind11/eval.h"
-#include "pybind11/functional.h"
 #include "pybind11/pybind11.h"
 #include "pybind11/stl.h"
 

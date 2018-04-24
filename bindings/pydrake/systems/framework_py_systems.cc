@@ -1,3 +1,5 @@
+#include "drake/bindings/pydrake/systems/framework_py_systems.h"
+
 #include "pybind11/eigen.h"
 #include "pybind11/eval.h"
 #include "pybind11/functional.h"
