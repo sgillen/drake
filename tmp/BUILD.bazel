@@ -1,0 +1,8 @@
+cc_binary(
+    name = "yaml_shenanigans",
+    srcs = ["yaml_shenanigans.cc"],
+    deps = [
+        "@eigen",
+        "@yaml_cpp"
+    ],
+)
