@@ -98,6 +98,12 @@ using CommonScalarPack = type_pack<
     symbolic::Expression
     >;
 
+/// Type pack for non-symbolic common scalar types.
+using NonSymbolicScalarPack = type_pack<
+    double,
+    AutoDiffXd
+    >;
+
 }  // namespace pysystems
 }  // namespace pydrake
 }  // namespace drake

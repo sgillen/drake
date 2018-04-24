@@ -81,7 +81,7 @@ drake_pybind_library(
 drake_pybind_library(
     name = "primitives_py",
     cc_deps = [
-        "//bindings/pydrake/systems:systems_pybind",
+        ":systems_pybind",
         "//bindings/pydrake/util:drake_optional_pybind",
     ],
     cc_so_name = "primitives",
@@ -95,6 +95,9 @@ drake_pybind_library(
 
 drake_pybind_library(
     name = "analysis_py",
+    cc_deps = [
+        ":systems_pybind",
+    ],
     cc_so_name = "analysis",
     cc_srcs = ["analysis_py.cc"],
     package_info = PACKAGE_INFO,
