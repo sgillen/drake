@@ -16,6 +16,7 @@ from pydrake.systems.test.test_util import (
 from pydrake.systems.primitives import (
     Adder, Adder_,
     AffineSystem, AffineSystem_,
+    ConstantValueSource_,
     ConstantVectorSource, ConstantVectorSource_,
     ControllabilityMatrix,
     FirstOrderTaylorApproximation,
@@ -30,6 +31,7 @@ from pydrake.systems.primitives import (
     Saturation, Saturation_,
     SignalLogger, SignalLogger_,
     WrapToSystem, WrapToSystem_,
+    ZeroOrderHold_,
 )
 
 
@@ -55,6 +57,7 @@ class TestGeneral(unittest.TestCase):
         # resolved for dtype=object, or dtype=custom is used.
         self._check_instantiations(Adder_)
         self._check_instantiations(AffineSystem_)
+        self._check_instantiations(ConstantValueSource_)
         self._check_instantiations(ConstantVectorSource_)
         self._check_instantiations(Integrator_)
         self._check_instantiations(LinearSystem_)
@@ -63,6 +66,7 @@ class TestGeneral(unittest.TestCase):
         self._check_instantiations(Saturation_)
         self._check_instantiations(SignalLogger_)
         self._check_instantiations(WrapToSystem_)
+        self._check_instantiations(ZeroOrderHold_)
 
     def test_signal_logger(self):
         # Log the output of a simple diagram containing a constant

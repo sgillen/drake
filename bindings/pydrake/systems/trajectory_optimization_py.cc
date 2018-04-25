@@ -27,8 +27,9 @@ PYBIND11_MODULE(trajectory_optimization, m) {
       .def("time", &MultipleShooting::time)
       .def("timestep", &MultipleShooting::timestep)
       .def("fixed_timestep", &MultipleShooting::fixed_timestep)
-      // TODO(eric.cousineau): Restore original bindings (using VectorXBlock)
-      // once dtype=custom is resolved.
+      // TODO(eric.cousineau): The original bindings returned references
+      // instead of copies using VectorXBlock. Restore this once dtype=custom
+      // is resolved.
       .def("state",
            [](const MultipleShooting& self) -> VectorXDecisionVariable {
              return self.state();

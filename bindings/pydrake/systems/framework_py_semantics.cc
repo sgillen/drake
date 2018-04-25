@@ -49,7 +49,22 @@ void DefineFrameworkPySemantics(py::module m) {
   BindTypeSafeIndex<NumericParameterIndex>(m, "NumericParameterIndex");
   BindTypeSafeIndex<AbstractParameterIndex>(m, "AbstractParameterIndex");
 
+  py::class_<FreestandingInputPortValue>(m, "FreestandingInputPortValue");
+
   using AbstractValuePtrList = vector<unique_ptr<AbstractValue>>;
+  // N.B. `AbstractValues` provides the ability to reference non-owned values,
+  // without copying them. For consistency with other model-value Python
+  // bindings, only the ownership variant is exposed.
+  py::class_<AbstractValues> abstract_values(m, "AbstractValues");
+  DefClone(&abstract_values);
+  abstract_values
+    .def(py::init<>())
+    .def(py::init<AbstractValuePtrList>())
+    .def("size", &AbstractValues::size)
+    .def("get_value", &AbstractValues::get_value, py_reference_internal)
+    .def("get_mutable_value",
+         &AbstractValues::get_mutable_value, py_reference_internal)
+    .def("CopyFrom", &AbstractValues::CopyFrom);
 
   auto bind_common_scalar_types = [m](auto dummy) {
     using T = decltype(dummy);
@@ -271,22 +286,6 @@ void DefineFrameworkPySemantics(py::module m) {
            py_reference_internal, py::arg("index") = 0);
   };
   type_visit(bind_common_scalar_types, pysystems::CommonScalarPack{});
-
-  py::class_<FreestandingInputPortValue>(m, "FreestandingInputPortValue");
-
-  // N.B. `AbstractValues` provides the ability to reference non-owned values,
-  // without copying them. For consistency with other model-value Python
-  // bindings, only the ownership variant is exposed.
-  py::class_<AbstractValues> abstract_values(m, "AbstractValues");
-  DefClone(&abstract_values);
-  abstract_values
-    .def(py::init<>())
-    .def(py::init<AbstractValuePtrList>())
-    .def("size", &AbstractValues::size)
-    .def("get_value", &AbstractValues::get_value, py_reference_internal)
-    .def("get_mutable_value",
-         &AbstractValues::get_mutable_value, py_reference_internal)
-    .def("CopyFrom", &AbstractValues::CopyFrom);
 }
 
 }  // namespace pydrake

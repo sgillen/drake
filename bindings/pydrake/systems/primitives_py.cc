@@ -82,6 +82,12 @@ PYBIND11_MODULE(primitives, m) {
              py::arg("A"), py::arg("B"), py::arg("C"), py::arg("D"),
              py::arg("time_period") = 0.0);
 
+    DefineTemplateClassWithDefault<Multiplexer<T>, LeafSystem<T>>(
+        m, "Multiplexer", GetPyParam<T>())
+        .def(py::init<int>(), py::arg("num_scalar_inputs"))
+        .def(py::init<std::vector<int>>(), py::arg("input_sizes"))
+        .def(py::init<const BasicVector<T>&>(), py::arg("model_vector"));
+
     DefineTemplateClassWithDefault<PassThrough<T>, LeafSystem<T>>(
         m, "PassThrough", GetPyParam<T>())
         .def(py::init<int>())
@@ -108,23 +114,16 @@ PYBIND11_MODULE(primitives, m) {
     DefineTemplateClassWithDefault<ZeroOrderHold<T>, LeafSystem<T>>(
         m, "ZeroOrderHold", GetPyParam<T>())
         .def(py::init<double, int>());
-
-    DefineTemplateClassWithDefault<Multiplexer<T>, LeafSystem<T>>(
-        m, "Multiplexer", GetPyParam<T>())
-        .def(py::init<int>(), py::arg("num_scalar_inputs"))
-        .def(py::init<std::vector<int>>(), py::arg("input_sizes"))
-        .def(py::init<const BasicVector<T>&>(), py::arg("model_vector"));
   };
   type_visit(bind_common_scalar_types, pysystems::CommonScalarPack{});
 
-  using T = double;
-
-  py::class_<BarycentricMeshSystem<T>, LeafSystem<T>>(m,
-                                                      "BarycentricMeshSystem")
-      .def(py::init<math::BarycentricMesh<T>,
-                    const Eigen::Ref<const MatrixX<T>>&>())
-      .def("get_mesh", &BarycentricMeshSystem<T>::get_mesh)
-      .def("get_output_values", &BarycentricMeshSystem<T>::get_output_values);
+  py::class_<BarycentricMeshSystem<double>, LeafSystem<double>>(
+      m, "BarycentricMeshSystem")
+      .def(py::init<math::BarycentricMesh<double>,
+                    const Eigen::Ref<const MatrixX<double>>&>())
+      .def("get_mesh", &BarycentricMeshSystem<double>::get_mesh)
+      .def("get_output_values",
+           &BarycentricMeshSystem<double>::get_output_values);
 
   m.def("Linearize", &Linearize, py::arg("system"), py::arg("context"),
         py::arg("input_port_index") = systems::kUseFirstInputIfItExists,

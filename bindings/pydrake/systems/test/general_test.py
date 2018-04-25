@@ -20,7 +20,10 @@ from pydrake.systems.framework import (
     BasicVector, BasicVector_,
     Diagram, Diagram_,
     DiagramBuilder, DiagramBuilder_,
+    Subvector_,
+    Supervector_,
     System_,
+    VectorBase_,
     )
 from pydrake.systems import primitives
 from pydrake.systems.primitives import (
@@ -41,26 +44,42 @@ class TestGeneral(unittest.TestCase):
         if supports_symbolic:
             self.assertTrue(template[Expression] is not default_cls)
 
+    def _compare_system_instances(self, lhs, rhs):
+        # Compares two different scalar type instantiation instances of a
+        # system.
+        self.assertEqual(lhs.get_num_input_ports(), rhs.get_num_input_ports())
+        self.assertEqual(
+            lhs.get_num_output_ports(), rhs.get_num_output_ports())
+
     def test_instantiations(self):
         # Quick check of instantions for given types.
         self._check_instantiations(Simulator_, False)
         self._check_instantiations(BasicVector_)
         self._check_instantiations(Diagram_)
         self._check_instantiations(DiagramBuilder_)
+        self._check_instantiations(Subvector_)
+        self._check_instantiations(Supervector_)
+        self._check_instantiations(VectorBase_)
 
     def test_scalar_type_conversion(self):
         for T in [float, AutoDiffXd, Expression]:
             system = Adder_[T](1, 1)
-            # N.B. Current scalar conversion does not auto-register idempotent
-            # conversions.
+            # N.B. Current scalar conversion does not permit conversion to and
+            # from the same type.
             if T != AutoDiffXd:
-                system_ad = system.ToAutoDiffXd()
-                self.assertIsInstance(system_ad, System_[AutoDiffXd])
+                methods = [Adder_[T].ToAutoDiffXd, Adder_[T].ToAutoDiffXdMaybe]
+                for method in methods:
+                    system_ad = method(system)
+                    self.assertIsInstance(system_ad, System_[AutoDiffXd])
+                    self._compare_system_instances(system, system_ad)
             if T != Expression:
-                system_sym = system.ToSymbolic()
-                self.assertIsInstance(system_sym, System_[Expression])
+                methods = [Adder_[T].ToSymbolic, Adder_[T].ToSymbolicMaybe]
+                for method in methods:
+                    system_sym = method(system)
+                    self.assertIsInstance(system_sym, System_[Expression])
+                    self._compare_system_instances(system, system_sym)
 
-    def test_simular_ctor(self):
+    def test_simulator_ctor(self):
         # Tests a simple simulation for supported scalar types.
         for T in [float, AutoDiffXd]:
             # Create simple system.
@@ -80,6 +99,8 @@ class TestGeneral(unittest.TestCase):
                     # possible, to use for `np.allclose`.
                     self.assertEqual(value.shape, (1,))
                     self.assertEqual(value[0], AutoDiffXd(1.))
+                else:
+                    raise RuntimeError("Bad T: {}".format(T))
 
             # Create simulator with basic constructor.
             simulator = Simulator_[T](system)

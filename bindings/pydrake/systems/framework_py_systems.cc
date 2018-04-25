@@ -172,8 +172,8 @@ struct Impl {
         const Eigen::VectorBlock<const VectorX<T>>& state,
         Eigen::VectorBlock<VectorX<T>>* output) const override {
       // WARNING: Mutating `output` will not work when T is AutoDiffXd,
-      // Expression, etc.
-      // @see https://github.com/pybind/pybind11/pull/1152#issuecomment-340091423  // NOLINT
+      // Expression, etc. See
+      // https://github.com/pybind/pybind11/pull/1152#issuecomment-340091423
       // TODO(eric.cousineau): Either wrap to have this return a value (blech),
       // or solve the upstream issue.
       PYBIND11_OVERLOAD_INT(
@@ -229,8 +229,10 @@ struct Impl {
         m, "System", GetPyParam<T>())
         .def("set_name", &System<T>::set_name)
         // Topology.
+        .def("get_num_input_ports", &System<T>::get_num_input_ports)
         .def("get_input_port",
              &System<T>::get_input_port, py_reference_internal)
+        .def("get_num_output_ports", &System<T>::get_num_input_ports)
         .def("get_output_port",
              &System<T>::get_output_port, py_reference_internal)
         .def(
