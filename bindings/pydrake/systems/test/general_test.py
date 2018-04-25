@@ -69,6 +69,14 @@ class TestGeneral(unittest.TestCase):
         self.assertEqual(lhs.get_num_input_ports(), rhs.get_num_input_ports())
         self.assertEqual(
             lhs.get_num_output_ports(), rhs.get_num_output_ports())
+        for i in range(lhs.get_num_input_ports()):
+            lhs_port = lhs.get_input_port(i)
+            rhs_port = rhs.get_input_port(i)
+            self.assertEqual(lhs_port.size(), rhs_port.size())
+        for i in range(lhs.get_num_output_ports()):
+            lhs_port = lhs.get_output_port(i)
+            rhs_port = rhs.get_output_port(i)
+            self.assertEqual(lhs_port.size(), rhs_port.size())
 
     def test_instantiations(self):
         # Quick check of instantions for given types.
