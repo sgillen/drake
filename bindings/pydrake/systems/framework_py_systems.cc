@@ -174,8 +174,8 @@ struct Impl {
       // WARNING: Mutating `output` will not work when T is AutoDiffXd,
       // Expression, etc. See
       // https://github.com/pybind/pybind11/pull/1152#issuecomment-340091423
-      // TODO(eric.cousineau): Either wrap to have this return a value (blech),
-      // or solve the upstream issue.
+      // TODO(eric.cousineau): This will be resolved once dtype=custom is
+      // resolved.
       PYBIND11_OVERLOAD_INT(
           void, VectorSystem<T>, "_DoCalcVectorOutput",
           // N.B. Passing `Eigen::Map<>` derived classes by reference rather
