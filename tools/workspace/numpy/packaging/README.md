@@ -38,7 +38,8 @@ When updating this build of NumPy, please do the following:
 ### Developing
 
 1. In `./build_direct.sh`, set `repo` to your fork of NumPy, and `commit` to
-whatever commmit you're experimenting with.
+whatever commmit you're experimenting with. Then use the above steps to
+generate archives.
     * **NOTE**: If you want more rapid prototyping / debugging, you should
     build and install `numpy` to a local directory (e.g.
     `~/.local/numpy_debug/{whatever}`), update your `PYTHONPATH`, and then
