@@ -6,9 +6,9 @@ load("@drake//tools/workspace:github.bzl", "github_archive")
 _REPOSITORY = "RobotLocomotion/pybind11"
 
 # PR DRAFT(eric.cousineau): Change this once RobotLocomotion/pybind11#17 lands.
-_COMMIT = "891c2538e7226314c4b1d0e3bd263070a7e9da4c"
+_COMMIT = "14c31ad56c48c5afa420602632967c4cfc6563e2"
 
-_SHA256 = "0a3a6092c28006ea17e9743ff02f187193c14bf6a2c45bb6eeed2d510bb3180e"
+_SHA256 = "b2baf39084a89c0e21b5573e6e4799fb8f01fe2c5b1d77f0835c005a8ea5eaac"
 
 def pybind11_repository(
         name,
