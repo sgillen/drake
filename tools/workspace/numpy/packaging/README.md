@@ -35,21 +35,29 @@ Then run:
 
 When updating this build of NumPy, please do the following:
 
+### Developing
+
 1. In `./build_direct.sh`, set `repo` to your fork of NumPy, and `commit` to
 whatever commmit you're experimenting with.
     * **NOTE**: If you want more rapid prototyping / debugging, you should
     build and install `numpy` to a local directory (e.g.
-    `~/.local/numpy/{whatever}`), update your `PYTHONPATH`, and then change
-    `numpy_py_repository` in `.../numpy/repository.bzl` to be effectively be a
-    no-op so the library is used from your `PYTHONPATH`. In this way, you can
-    build with [debug versions of CPython + NumPy](https://gist.github.com/EricCousineau-TRI/ce79d3265bb72934267e24ddc8c623bc#file-cpython_dbg_valgrind-sh).
+    `~/.local/numpy_debug/{whatever}`), update your `PYTHONPATH`, and then
+    change `numpy_py_repository` in `.../numpy/repository.bzl` to be
+    effectively be a no-op so the library is used from your `PYTHONPATH`. In
+    this way, you can build with debug versions of CPython + NumPy
+    ([example for Ubuntu 16.04](https://gist.github.com/EricCousineau-TRI/ce79d3265bb72934267e24ddc8c623bc#file-cpython_dbg_valgrind-sh)).
 1. Test your code locally on your machine, using these build steps to produce an
 archive.
 1. Upload your *temporary* archives to something like a temporary Git
 repository, so you can update `.../numpy/repository.bzl` with the versions you
 need.
-1. Submit your PR to Drake, and ensure you test on the Drake CI for both Ubuntu
-*and* Mac.
+1. Submit your PR to Drake, and ensure your PR passes on the Drake CI for both
+Ubuntu *and* Mac.
+    * You will need to also update the variable `expected_version` in
+    `.../numpy/test/numpy_install_test.py` for the install tests to all pass.
+
+### Deploying
+
 1. Once you are confident that these are the NumPy changes necessary, submit an
 upstream PR to [`numpy`](https://github.com/numpy/numpy), and work with the
 authors to ensure it is something that can land on `master`.
