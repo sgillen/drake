@@ -24,18 +24,12 @@ py_library(
     visibility = ["//visibility:public"],
 )
 
-install_test_src = "@drake//tools/workspace/numpy:test/numpy_install_test.py"
-
 install(
     name = "install",
-    install_tests = [install_test_src],
+    install_tests = [
+        "@drake//tools/workspace/numpy:test/numpy_install_test.py",
+    ],
     data = [":data"],
     data_dest = "lib/python2.7/site-packages",
     visibility = ["//visibility:public"],
-)
-
-filegroup(
-    name = "install_test_data",
-    testonly = 1,
-    data = [install_test_src],
 )

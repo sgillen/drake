@@ -1,7 +1,11 @@
 # Packaging NumPy
 
-At present, the following issues / pull requests are needed in order to
-enable providing user-defined dtypes for `AutoDiffXd`, `Expression`, etc:
+In order for `pydrake` to support `numpy` arrays of non-doubles in a way
+semantically similar to arrays of doubles, we need to use `numpy` upstream
+releases of at least version 1.15.0. Because it is not generally available in
+binary form, Drake distributes its own binary `*.whl`s as a convenience.
+
+The required issues / pull requests for these features are:
 
 *   [Pull numpy/numpy#10898](https://github.com/numpy/numpy/pull/10898)
 Required so that a non-trivial copy constructor is used. Prevents aliasing
@@ -12,8 +16,8 @@ resolve this were incorporated into `>= v1.13.1`.
 
 ## Building
 
-To generate a `*.whl` file in `./build/`, that can then be redistributed
-/ used in Bazel.
+The following sections show platform-specific instructions to generate a `*.whl`
+file in `./build/`, that can then be used via Bazel.
 
 ### Ubuntu
 
@@ -51,14 +55,14 @@ generate archives.
 archive.
 1. Upload your *temporary* archives to something like a temporary Git
 repository, so you can update `.../numpy/repository.bzl` with the versions you
-need.
+need. Update your branch to use these archives.
+
+### Submitting
+
 1. Submit your PR to Drake, and ensure your PR passes on the Drake CI for both
 Ubuntu *and* Mac.
     * You will need to also update the variable `expected_version` in
     `.../numpy/test/numpy_install_test.py` for the install tests to all pass.
-
-### Deploying
-
 1. Once you are confident that these are the NumPy changes necessary, submit an
 upstream PR to [`numpy`](https://github.com/numpy/numpy), and work with the
 authors to ensure it is something that can land on `master`.
