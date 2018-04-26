@@ -147,8 +147,8 @@ There is not yet a comprehensive API documentation for the Python bindings
 In general, the Python API should be close to the
 `C++ API <doxygen_cxx/index.html#://>`_. There are some exceptions:
 
-Accessing C++ Template Instantiations in Python
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C++ Template Instantiations in Python
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 When you define a general class template, e.g.
 ``template <typename T> class Value``, something like ``Value<std::string>`` is
@@ -180,7 +180,7 @@ Scalar Types
 Most classes in the Systems framework and in the multibody dynamics
 computational framework are templated on a scalar type, ``T``.
 For convenience (and backwards compatibility) in Python, a slightly different
-binding convention is used:
+binding convention is used.
 
 For example, ``Adder<T>`` is a Systems primitive which has user-defined number
 of inputs, and outputs a single port which is the summation of all of the
@@ -189,14 +189,15 @@ inputs.
 In C++, you would access ``Adder<double>``, ``Adder<AutoDiffXd>``, and
 ``Adder<Expression>`` for the instantiations of the common scalar types.
 
-In Python, ``Adder`` actually refers to the default instantiation,  C++
-``Adder<double>`` class (the default instantiation). To access other types, you
-should add an ``_`` to the end of the name to get the template.
+In Python, ``Adder`` actually refers to the "default" instantiation, the
+``Adder<double>`` C++ class. To access the template, to then access other
+instantiations, you should add an ``_`` to the end of the C++ class name to get
+the Python template; in this case, use ``Adder_``.
 
 To illustrate, you can print out the string representations ``Adder`` and
 ``Adder_``, and some of the instantiations in Python:
 
-.. code-block::
+.. code-block:: pycon
 
     >>> from pydrake.systems.primitives import Adder, Adder_
     >>> print(Adder)
