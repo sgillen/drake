@@ -54,7 +54,7 @@ struct Impl {
     // Explicit forward constructors, as we want the protected
     // `SystemScalarConverter` constructor as well.
     LeafSystemPublic() {}
-    LeafSystemPublic(SystemScalarConverter converter)
+    explicit LeafSystemPublic(SystemScalarConverter converter)
         : Base(std::move(converter)) {}
 
     // N.B. These function methods are still typed as (LeafSystem<T>::*)(...),
@@ -440,7 +440,7 @@ void DefineFrameworkPySystems(py::module m) {
         type_pack<AutoDiffXd, Expression>
         >;
     type_visit(add_instantiation, ConversionPairs{});
-  };
+  }
   // Add mention of what scalars are supported via `SystemScalarConverter`
   // through Python.
   converter.attr("SupportedScalars") =

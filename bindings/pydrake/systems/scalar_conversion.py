@@ -41,6 +41,7 @@ def _make_converter(template, param_pairs=None, use_cache=True):
 
     # Generate and register each conversion.
     converter = SystemScalarConverter()
+
     # Define capture to ensure the current values are bound, and do not change
     # through iteration.
     def add_captured(param):
