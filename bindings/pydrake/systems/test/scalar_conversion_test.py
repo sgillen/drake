@@ -1,5 +1,6 @@
 import pydrake.systems.scalar_conversion as mut
 
+import copy
 import unittest
 
 from pydrake.autodiffutils import AutoDiffXd
@@ -34,7 +35,7 @@ def ExplicitlyConverted(ExplicitlyConverted, param):
 
         def __init__(self, *args, **kwargs):
             other = mut.check_scalar_type_copy_constructor(
-                ExplicitlyConverted, self, args, kwargs)
+                ExplicitlyConverted, args, kwargs)
             if other:
                 # Copy constructor; record input type.
                 assert is_instantiation_of(type(other), ExplicitlyConverted)
@@ -42,7 +43,7 @@ def ExplicitlyConverted(ExplicitlyConverted, param):
                 self.value = other.value
                 self.from_scalar_type = type(other).scalar_type
             else:
-                self._construct(self, *args, **kwargs)
+                self._construct(*args, **kwargs)
 
         def _construct(self, value, converter=None):
             if converter is None:
@@ -60,22 +61,27 @@ def DefaultConverted(DefaultConverted, param):
     """Defines a simple templated class which defines a default converter."""
     T, = param
     LeafSystem = LeafSystem_[T]
-    converter = mut.create_system_scalar_converter(DefaultConverted)
+    # N.B. Due to evaluation order on `add_instantiations`, defer creating the
+    # converter until the full parameter list has been defined.
+    # TODO(eric.cousineau): Alot of this stuff is annoying. Consider making
+    # deferred template instantiations.
+    make_converter = lambda: mut.create_system_scalar_converter(
+        DefaultConverted)
 
     class DefaultConvertedInstantiation(LeafSystem):
         scalar_type = T
 
         def __init__(self, *args, **kwargs):
             other = mut.check_scalar_type_copy_constructor(
-                DefaultConverted, self, args, kwargs)
+                DefaultConverted, args, kwargs)
             if other:
-                LeafSystem.__init__(self, converter)
+                LeafSystem.__init__(self, make_converter())
                 self.value = other.value
             else:
-                self._construct(self, *args, **kwargs)
+                self._construct(*args, **kwargs)
 
         def _construct(self, value):
-            LeafSystem.__init__(self, converter)
+            LeafSystem.__init__(self, make_converter())
             self.value = value
 
     return DefaultConvertedInstantiation
@@ -127,9 +133,9 @@ class TestScalarConversion(unittest.TestCase):
             # can pass the converter.
             method = None
             if T == AutoDiffXd:
-                method = System_[U].ToAutoDiffXd
+                method = LeafSystem_[U].ToAutoDiffXd
             elif T == Expression:
-                method = System_[U].ToSymbolic
+                method = LeafSystem_[U].ToSymbolic
             if method:
                 # Reset closure.
                 closure_mutables = copy.copy(closure_mutables_none)
@@ -146,12 +152,14 @@ class TestScalarConversion(unittest.TestCase):
 
     def test_default_type_converter(self):
         # Test calls that we have available for scalar conversion.
+        converter = mut.create_system_scalar_converter(DefaultConverted)
         for T, U in conversion_pairs:
+            print(T, U)
             system_U = DefaultConverted[U](100)
             if T == AutoDiffXd:
-                method = System_[U].ToAutoDiffXd
+                method = LeafSystem_[U].ToAutoDiffXd
             elif T == Expression:
-                method = System_[U].ToSymbolic
+                method = LeafSystem_[U].ToSymbolic
             else:
                 continue
             system_T = method(system_U)

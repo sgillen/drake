@@ -53,7 +53,10 @@ def create_system_scalar_converter(template, param_pairs=None, use_cache=True):
 
     # Generate and register each conversion.
     converter = SystemScalarConverter()
-    for T, U in param_pairs:
+    # Define capture to ensure the current values are bound, and do not change
+    # through iteration.
+    def add_captured(param):
+        T, U = param
 
         def conversion(system):
             assert isinstance(system, template[U])
@@ -61,23 +64,25 @@ def create_system_scalar_converter(template, param_pairs=None, use_cache=True):
 
         converter.Add[T, U](conversion)
 
+    map(add_captured, param_pairs)
+
     if use_cache:
         _converter_cache[cache_key] = copy.copy(converter)
     return converter
 
 
-def check_scalar_type_copy_constructor(template, obj, args, kwargs):
+def check_scalar_type_copy_constructor(template, args, kwargs):
     """Determines if constructor call has one parameter which is an
     instantiation of the current template, indicating that this is a System
     scalar type conversion copy constructor.
 
-    @param template TemplateClass instance.s
-    @param obj Instance of current object (`self`)
+    @param template TemplateClass instance.
     @param args Positional arguments to function.
     @param kwargs Keyword arguments to constructor.
     @return The first argument (other system) if it is, None otherwise.
     """
     if len(args) == 1 and len(kwargs) == 0:
-        if is_instantiation_of(type(obj), template):
-            return True
-    return False
+        if is_instantiation_of(type(args[0]), template):
+            return args[0]
+    return None
+
