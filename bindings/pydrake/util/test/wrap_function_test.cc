@@ -377,7 +377,6 @@ auto WrapChangeCallbackOnly(Func&& func) {
 Callback ChangeCallbackOnly(
     double*, Callback, const Callback&);
 
-
 GTEST_TEST(WrapFunction, ChangeCallbackOnly) {
   auto wrapped = WrapChangeCallbackOnly(ChangeCallbackOnly);
   using check_expected =
