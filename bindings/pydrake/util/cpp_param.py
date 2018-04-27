@@ -50,6 +50,7 @@ class _ParamAliases(object):
         self.register(np.int64, [ctypes.c_int64])
 
     def register(self, canonical, aliases):
+        print("py REGISTER: {} -> {}".format(canonical, aliases))
         # Registers a set of aliases to a canonical value.
         for alias in aliases:
             self._to_canonical.add(alias, canonical)
