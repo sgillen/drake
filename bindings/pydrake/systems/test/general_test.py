@@ -36,6 +36,7 @@ from pydrake.systems.framework import (
     Subvector_,
     Supervector_,
     System_,
+    SystemScalarConverter,
     SystemOutput_,
     VectorBase_,
     VectorSystem_,
@@ -127,6 +128,53 @@ class TestGeneral(unittest.TestCase):
                     system_sym = method(system)
                     self.assertIsInstance(system_sym, System_[Expression])
                     self._compare_system_instances(system, system_sym)
+
+    def test_scalar_type_converter(self):
+        # Tests bare basics.
+        converter = SystemScalarConverter()
+        pairs = [
+            # Synchronize with `ConversionPairs` `framework_py_systems.cc`.
+            (AutoDiffXd, float),
+            (Expression, float),
+            (float, AutoDiffXd),
+            (Expression, AutoDiffXd),
+            (float, Expression),
+            (AutoDiffXd, Expression),
+        ]
+        num_inputs = 1
+        size = 1
+        for T, U in pairs:
+            self.assertFalse(converter.IsConvertible[T, U]())
+            system_U = Adder_[U](num_inputs, size)
+            # Make a `dict` so we can mutate the values via closure and then
+            # check their values.
+            closure_mutables = dict(
+                param=None,
+                system_in=None,
+                system_out=None)
+
+            def conversion(system_in):
+                # Trivial and meaningless conversion.
+                self.assertIsInstance(system_in, Adder_[U])
+                # Ensure we're seeing the same system we provided.
+                self.assertIs(system_in, system_U)
+                system_out = Adder_[T](num_inputs, size)
+                closure_mutables.update(
+                    param=(T, U),
+                    system_in=system_in,
+                    system_out=system_out)
+                return system_out
+
+            converter.Add[T, U](conversion)
+            # Check conversion.
+            system_T = converter.Convert[T, U](system_U)
+            self.assertIsInstance(system_T, Adder_[T])
+            self._compare_system_instances(system_U, system_T)
+            # Check closure.
+            self.assertEqual(closure_mutables["param"], (T, U))
+            self.assertIs(closure_mutables["system_in"], system_U)
+            self.assertIs(closure_mutables["system_out"], system_T)
+
 
     def test_simulator_ctor(self):
         # Tests a simple simulation for supported scalar types.
