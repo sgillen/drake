@@ -5,10 +5,8 @@ import unittest
 
 from pydrake.autodiffutils import AutoDiffXd
 from pydrake.symbolic import Expression
-from pydrake.systems.framework import (
-    LeafSystem_,
-)
-from pydrake.util.cpp_template import is_instantiation_of, TemplateClass
+from pydrake.systems.framework import LeafSystem_
+from pydrake.util.cpp_template import TemplateClass
 
 # N.B. Synchronize this with `ConversionPairs` `framework_py_systems.cc`.
 conversion_pairs = [

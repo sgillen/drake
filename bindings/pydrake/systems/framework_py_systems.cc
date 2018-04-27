@@ -404,43 +404,38 @@ void DefineFrameworkPySystems(py::module m) {
          [](const SystemScalarConverter& in) -> SystemScalarConverter {
            return in;
          });
-  // Bind templated `Add` instantiations.
-  {
-    auto add_instantiation = [converter](auto pack) {
-      using Pack = decltype(pack);
-      using T = typename Pack::template type_at<0>;
-      using U = typename Pack::template type_at<1>;
-      using ConverterFunction = SystemScalarConverter::ConverterFunction<T, U>;
-      using WrappedConverterFunction =
-          std::function<std::unique_ptr<System<T>>(const System<U>*)>;
-      AddTemplateMethod(
-          converter, "Add",
-          [](SystemScalarConverter* self, WrappedConverterFunction wrapped) {
-            ConverterFunction unwrapped = [wrapped](const System<U>& system) {
-              return wrapped(&system);
-            };
-            self->Add(unwrapped);
-          },
-          GetPyParam<T, U>());
-      AddTemplateMethod(
-          converter, "IsConvertible",
-          &SystemScalarConverter::IsConvertible<T, U>, GetPyParam<T, U>());
-      AddTemplateMethod(
-          converter, "Convert",
-          &SystemScalarConverter::Convert<T, U>, GetPyParam<T, U>());
-    };
-    // N.B. Synchronize this with the instantiations in `AddIfSupported(...)`
-    // stanzas for the advanced constructor of `SystemScalarConverter`.
-    using ConversionPairs = type_pack<
-        type_pack<AutoDiffXd, double>,
-        type_pack<Expression, double>,
-        type_pack<double, AutoDiffXd>,
-        type_pack<Expression, AutoDiffXd>,
-        type_pack<double, Expression>,
-        type_pack<AutoDiffXd, Expression>
-        >;
-    type_visit(add_instantiation, ConversionPairs{});
-  }
+  // Bind templated instantiations.
+  auto converter_methods = [converter](auto pack) {
+    using Pack = decltype(pack);
+    using T = typename Pack::template type_at<0>;
+    using U = typename Pack::template type_at<1>;
+    using ConverterFunction = SystemScalarConverter::ConverterFunction<T, U>;
+    using WrappedConverterFunction =
+        std::function<std::unique_ptr<System<T>>(const System<U>*)>;
+    AddTemplateMethod(
+        converter, "Add",
+        [](SystemScalarConverter* self, WrappedConverterFunction wrapped) {
+          ConverterFunction unwrapped = [wrapped](const System<U>& system) {
+            return wrapped(&system);
+          };
+          self->Add(unwrapped);
+        },
+        GetPyParam<T, U>());
+    AddTemplateMethod(
+        converter, "IsConvertible",
+        &SystemScalarConverter::IsConvertible<T, U>, GetPyParam<T, U>());
+  };
+  // N.B. Synchronize this with the instantiations in `AddIfSupported(...)`
+  // stanzas for the advanced constructor of `SystemScalarConverter`.
+  using ConversionPairs = type_pack<
+      type_pack<AutoDiffXd, double>,
+      type_pack<Expression, double>,
+      type_pack<double, AutoDiffXd>,
+      type_pack<Expression, AutoDiffXd>,
+      type_pack<double, Expression>,
+      type_pack<AutoDiffXd, Expression>
+      >;
+  type_visit(converter_methods, ConversionPairs{});
   // Add mention of what scalars are supported via `SystemScalarConverter`
   // through Python.
   converter.attr("SupportedScalars") =

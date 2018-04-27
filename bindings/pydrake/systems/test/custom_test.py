@@ -27,7 +27,6 @@ from pydrake.systems.test.test_util import (
     call_leaf_system_overrides,
     call_vector_system_overrides,
     )
-from pydrake.util.cpp_template import TemplateClass
 
 
 def noop(*args, **kwargs):
@@ -35,64 +34,23 @@ def noop(*args, **kwargs):
     pass
 
 
-# This provides an example of defining a custom Python "template" with
-# instantiations derived from the C++ `LeafSystem<T>` (`LeafSystem_[T]` in
-# Python). This follows the conventions outlined in `doc/python_bindings.rst`.
-# See `cpp_template_test` for the simplest usage of `@TemplateClass.define`.
-# N.B. Due to limitations with current API, the unsupported
-# method `BasicVector_[T]._get_value_copy()` is used. This should be resolved
-# by #8452, or with a rewrite of the API failing that.
-@TemplateClass.define("CustomAdder_", param_list=LeafSystem_.param_list)
-def CustomAdder_(template, param):
-    # The following variables are bound to the current
-    # `CustomAdderInstantiation` by means of a nested closure. For more
-    # inormation on this, see the PEP-227, starting with its examples:
-    # https://www.python.org/dev/peps/pep-0227/#examples
-    T, = param
-    LeafSystem = LeafSystem_[T]
-    BasicVector = BasicVector_[T]
+class CustomAdder(LeafSystem):
+    # Reimplements `Adder`.
+    def __init__(self, num_inputs, size):
+        LeafSystem.__init__(self)
+        for i in xrange(num_inputs):
+            self._DeclareInputPort(PortDataType.kVectorValued, size)
+        self._DeclareVectorOutputPort(BasicVector(size), self._calc_sum)
 
-    class CustomAdderInstantiation(LeafSystem):
-        # Reimplements `Adder`.
-        def __init__(self, num_inputs, size):
-            LeafSystem.__init__(self)
-            for i in xrange(num_inputs):
-                self._DeclareInputPort(PortDataType.kVectorValued, size)
-            self._DeclareVectorOutputPort(BasicVector(size), self._calc_sum)
-            self._size = size
-            # For testing which method got called.
-            self.calc_sum_method_called = None
+    def _calc_sum(self, context, sum_data):
+        # @note This will NOT work if the scalar type is AutoDiff or symbolic,
+        # since they are not stored densely.
+        sum = sum_data.get_mutable_value()
+        sum[:] = 0
+        for i in xrange(context.get_num_input_ports()):
+            input_vector = self.EvalVectorInput(context, i)
+            sum += input_vector.get_value()
 
-        # N.B. This defines different methods based on the scalar type, thanks
-        # to the richness of the `class ...:` scope syntax in Python.
-        if T == float:
-            def _calc_sum(self, context, sum_data):
-                self.calc_sum_method_called = "float"
-                sum = sum_data.get_mutable_value()
-                sum[:] = 0
-                for i in xrange(context.get_num_input_ports()):
-                    input_vector = self.EvalVectorInput(context, i)
-                    sum += input_vector.get_value()
-        else:
-            # @note This will NOT work if the scalar type is AutoDiff or
-            # symbolic, since they are not stored densely.
-            # TODO(eric.cousineau): This will not be necessary if/when #8452
-            # lands.
-            def _calc_sum(self, context, sum_data):
-                self.calc_sum_method_called = "dtype=object"
-                sum = np.array([0] * self._size, dtype=object)
-                for i in xrange(context.get_num_input_ports()):
-                    input_vector = self.EvalVectorInput(context, i)
-                    # N.B. This is not yet fully supported, and thus is using a
-                    # temporary API.
-                    sum += input_vector._get_value_copy()
-                sum_data.SetFromVector(sum)
-
-    return CustomAdderInstantiation
-
-
-# Define default instantiation.
-CustomAdder = CustomAdder_[None]
 
 # TODO(eric.cousineau): Make this class work with custom scalar types once
 # referencing with custom dtypes lands.
@@ -132,43 +90,24 @@ class CustomVectorSystem(VectorSystem):
 
 
 class TestCustom(unittest.TestCase):
-    def _create_adder_system(self, T=float):
-        system = CustomAdder_[T](2, 3)
+    def _create_adder_system(self):
+        system = CustomAdder(2, 3)
         return system
 
-    def _fix_adder_inputs(self, context, T=float):
-        BasicVector = BasicVector_[T]
+    def _fix_adder_inputs(self, context):
         self.assertEquals(context.get_num_input_ports(), 2)
         context.FixInputPort(0, BasicVector([1, 2, 3]))
         context.FixInputPort(1, BasicVector([4, 5, 6]))
 
     def test_adder_execution(self):
-        self.assertEqual(CustomAdder, CustomAdder_[float])
-
-        for T in [float, AutoDiffXd, Expression]:
-            system = self._create_adder_system(T)
-            context = system.CreateDefaultContext()
-            self._fix_adder_inputs(context, T)
-            output = system.AllocateOutput(context)
-            self.assertEquals(output.get_num_ports(), 1)
-            system.CalcOutput(context, output)
-            value = output.get_vector_data(0)._get_value_copy()
-            value_expected = [5, 7, 9]
-            value_expected_T = [T(x) for x in value_expected]
-            if T == float:
-                self.assertEqual(system.calc_sum_method_called, "float")
-                self.assertTrue(np.allclose(value_expected, value))
-            elif T == AutoDiffXd:
-                self.assertEqual(system.calc_sum_method_called, "dtype=object")
-                for (expected, actual) in zip(value_expected_T, value):
-                    self.assertEqual(expected.value(), actual.value())
-                    self.assertTrue(
-                        np.allclose(
-                            expected.derivatives(), actual.derivatives()))
-            elif T == Expression:
-                self.assertEqual(system.calc_sum_method_called, "dtype=object")
-                for (expected, actual) in zip(value_expected_T, value):
-                    self.assertTrue(expected.EqualTo(actual))
+        system = self._create_adder_system()
+        context = system.CreateDefaultContext()
+        self._fix_adder_inputs(context)
+        output = system.AllocateOutput(context)
+        self.assertEquals(output.get_num_ports(), 1)
+        system.CalcOutput(context, output)
+        value = output.get_vector_data(0).get_value()
+        self.assertTrue(np.allclose([5, 7, 9], value))
 
     def test_adder_simulation(self):
         builder = DiagramBuilder()
