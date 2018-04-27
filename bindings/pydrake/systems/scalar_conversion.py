@@ -6,14 +6,6 @@ from pydrake.systems.framework import SystemScalarConverter
 from pydrake.util.cpp_template import is_instantiation_of
 
 
-def _to_scalar(item):
-    assert len(item) == 1
-    return item[0]
-
-
-_converter_cache = {}
-
-
 def _get_conversion_pairs(param_list):
     # Intersect.
     T_compat = []
@@ -29,42 +21,14 @@ def _get_conversion_pairs(param_list):
     return param_pairs
 
 
-def _make_converter(template, param_pairs=None, use_cache=True):
-    cache_key = (template, param_pairs)
-    if use_cache:
-        cache_entry = _converter_cache.get(cache_key)
-        if cache_entry:
-            return copy.copy(cache_entry)
-
-    if param_pairs is None:
-        param_pairs = _get_conversion_pairs(template.param_list)
-
-    # Generate and register each conversion.
-    converter = SystemScalarConverter()
-
-    # Define capture to ensure the current values are bound, and do not change
-    # through iteration.
-    def add_captured(param):
-        T, U = param
-
-        def conversion(system):
-            assert isinstance(system, template[U])
-            return template[T](system)
-
-        converter.Add[T, U](conversion)
-
-    map(add_captured, param_pairs)
-
-    if use_cache:
-        _converter_cache[cache_key] = copy.copy(converter)
-    return converter
-
-
 class ScalarHelper(object):
     """A helper to handle dispatching constructors and help creating
     converters."""
     def __init__(self, template, ):
         self._template = template
+
+    # Global cache.
+    _converter_cache = {}
 
     def make_converter(self, param_pairs=None, use_cache=True):
         """Creates system scalar converter for a given template, assuming that
@@ -76,10 +40,36 @@ class ScalarHelper(object):
             scalar type of U to T.
             If None, this will use all possible pairs that the Python bindings
             of `SystemScalarConverter` support.
-        @param use_cache Use cache from a global store, returning a copy on a
-            cache hit.
+        @param use_cache Return copy from global cache if available.
         """
-        return _make_converter(self._template, param_pairs, use_cache)
+        cache_key = (self._template, param_pairs)
+        if use_cache:
+            cache_entry = self._converter_cache.get(cache_key)
+            if cache_entry:
+                return copy.copy(cache_entry)
+
+        if param_pairs is None:
+            param_pairs = _get_conversion_pairs(self._template.param_list)
+
+        # Generate and register each conversion.
+        converter = SystemScalarConverter()
+
+        # Define capture to ensure the current values are bound, and do not
+        # change through iteration.
+        def add_captured(param):
+            T, U = param
+
+            def conversion(system):
+                assert isinstance(system, self._template[U])
+                return self._template[T](system)
+
+            converter.Add[T, U](conversion)
+
+        map(add_captured, param_pairs)
+
+        if use_cache:
+            self._converter_cache[cache_key] = copy.copy(converter)
+        return converter
 
     def check_if_copying(self, args, kwargs):
         """Determines if constructor call has one parameter which is an
