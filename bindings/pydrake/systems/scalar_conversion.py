@@ -22,18 +22,44 @@ def _get_conversion_pairs(param_list):
 
 
 class ScalarHelper(object):
+    """A helper to handle dispatching constructors and help creating
+    converters."""
+
     # Global cache.
     _converter_cache = {}
 
-    """A helper to handle dispatching constructors and help creating
-    converters."""
-    def __init__(self, template, ):
+    def __init__(self, template):
         self._template = template
 
     def check_if_copying(self, *args, **kwargs):
-        """Determines if constructor call has one parameter which is an
+        """Checks if a function signature implies a copy constructor.
+
+        Determines if constructor call has one parameter which is an
         instantiation of the current template, indicating that this is a System
         scalar type conversion copy constructor.
+
+        For example, if you have template `MyClass`, and you are defining your
+        instantiations, you should do the following:
+
+            @TemplateClass.define("MyClass", param_list=LeafSystem_.param_list)
+            def MyClass(MyClass, param):
+                T, = param
+                LeafSystem = LeafSystem_[T]
+                scalar_helper = ScalarHelper(MyClass)
+
+                class MyClassInstantiation(LeafSystem):
+                    def __init__(self, *args, **kwargs):
+                        # Check if this is a copy constructor.
+                        other = scalar_helper.check_if_copying(*args, **kwargs)
+                        if other:
+                            # Implement copy constructor.
+                        else:
+                            # Implement normal constructor.
+                            # Note: It may be best to redirect to another
+                            # function, to make it easier to use named
+                            parameters.
+
+                return MyClassInstantiation
 
         @return The first argument (other system) if it is, None otherwise.
         """
@@ -43,9 +69,18 @@ class ScalarHelper(object):
         return None
 
     def make_converter(self, param_pairs=None):
-        """Creates system scalar converter for a given template, assuming that
-        the System class has a scalar-type-converting copy constructing.
-        @see check_if_copy_constructor
+        """Creates system scalar converter for the template class.
+
+        Conversion is implemented using the copy constructor of the
+        class instantiations.
+        For example, if you have template `Class`, and you wish to convert from
+        `Class[U]` to `Class[T]`, you must ensure the copy constructed portion
+        of the following code works:
+
+            system_U = Class[U](...)  # Normally constructed.
+            system_T = Class[T](system_U)  # Copy constructed.
+
+        See `check_if_copy_constructor` for how to implement this.
 
         @param template TemplateClass instance.
         @param param_pairs List of pairs, (T, U), defining a conversion from a

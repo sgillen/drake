@@ -387,6 +387,11 @@ struct Impl {
   }
 };
 
+template <typename ... Packs>
+py::tuple GetPyParamList(type_pack<Packs...> = {}) {
+  return py::make_tuple(GetPyParam(Packs{})...);
+}
+
 }  // namespace
 
 void DefineFrameworkPySystems(py::module m) {
@@ -410,8 +415,9 @@ void DefineFrameworkPySystems(py::module m) {
         converter, "IsConvertible",
         &SystemScalarConverter::IsConvertible<T, U>, GetPyParam<T, U>());
   };
-  // N.B. Synchronize this with the instantiations in `AddIfSupported(...)`
-  // stanzas for the advanced constructor of `SystemScalarConverter`.
+  // N.B. When changing the pairs of supported types below, ensure that these
+  // reflect the stanzas for the advanced constructor of
+  // `SystemScalarConverter`.
   using ConversionPairs = type_pack<
       type_pack<AutoDiffXd, double>,
       type_pack<Expression, double>,
@@ -425,6 +431,8 @@ void DefineFrameworkPySystems(py::module m) {
   // through Python.
   converter.attr("SupportedScalars") =
       GetPyParam(pysystems::CommonScalarPack{});
+  converter.attr("SupportedConversionPairs") =
+      GetPyParamList(ConversionPairs{});
 
   // Do templated instantiations of system types.
   auto bind_common_scalar_types = [m](auto dummy) {
