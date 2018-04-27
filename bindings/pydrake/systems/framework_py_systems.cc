@@ -403,17 +403,8 @@ void DefineFrameworkPySystems(py::module m) {
     using Pack = decltype(pack);
     using T = typename Pack::template type_at<0>;
     using U = typename Pack::template type_at<1>;
-    using ConverterFunction = SystemScalarConverter::ConverterFunction<T, U>;
-    using WrappedConverterFunction =
-        std::function<std::unique_ptr<System<T>>(const System<U>*)>;
     AddTemplateMethod(
-        converter, "Add",
-        [](SystemScalarConverter* self, WrappedConverterFunction wrapped) {
-          ConverterFunction unwrapped = [wrapped](const System<U>& system) {
-            return wrapped(&system);
-          };
-          self->Add(unwrapped);
-        },
+        converter, "Add", WrapRefPtr(&SystemScalarConverter::Add<T, U>),
         GetPyParam<T, U>());
     AddTemplateMethod(
         converter, "IsConvertible",
