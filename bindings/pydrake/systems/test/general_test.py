@@ -50,6 +50,7 @@ from pydrake.systems.primitives import (
     LinearSystem,
     SignalLogger,
     )
+from pydrake.util.cpp_template import is_instantiation_of, TemplateClass
 
 # TODO(eric.cousineau): The scope of this test file and and `custom_test.py`
 # is poor. Move these tests into `framework_test` and `analysis_test`, and
@@ -141,24 +142,55 @@ class TestGeneral(unittest.TestCase):
             (float, Expression),
             (AutoDiffXd, Expression),
         ]
-        num_inputs = 1
-        size = 1
+        value = 10
+        test = self
+
+        @TemplateClass.define("DummyClass_", param_list=System_.param_list)
+        def DummyClass_(DummyClass_, param):
+            T, = param
+            LeafSystem = LeafSystem_[T]
+
+            class DummyClassInstantiation(LeafSystem):
+                scalar_type = T
+                def __init__(self, arg, converter=None):
+                    if isinstance(arg, int):
+                        # Constructor.
+                        if converter is None:
+                            LeafSystem.__init__(self)
+                        else:
+                            LeafSystem.__init__(self, converter)
+                        self.value = arg
+                        self.from_scalar_type = None
+                    else:
+                        # Copy constructor; record input type.
+                        test.assertTrue(converter is None)
+                        LeafSystem.__init__(self)
+                        test.assertTrue(
+                            is_instantiation_of(type(arg), DummyClass_))
+                        self.value = arg.value
+                        self.from_scalar_type = type(arg).scalar_type
+
+            return DummyClassInstantiation
+
         for T, U in pairs:
             self.assertFalse(converter.IsConvertible[T, U]())
-            system_U = Adder_[U](num_inputs, size)
+            system_U = DummyClass_[U](value)
+            self.assertEqual(system_U.value, value)
+            self.assertTrue(system_U.from_scalar_type is None)
             # Make a `dict` so we can mutate the values via closure and then
             # check their values.
             closure_mutables = dict(
                 param=None,
                 system_in=None,
                 system_out=None)
+            closure_mutables_none = copy.copy(closure_mutables)
 
             def conversion(system_in):
                 # Trivial and meaningless conversion.
-                self.assertIsInstance(system_in, Adder_[U])
+                self.assertIsInstance(system_in, DummyClass_[U])
                 # Ensure we're seeing the same system we provided.
                 self.assertIs(system_in, system_U)
-                system_out = Adder_[T](num_inputs, size)
+                system_out = DummyClass_[T](system_in)
                 closure_mutables.update(
                     param=(T, U),
                     system_in=system_in,
@@ -168,13 +200,34 @@ class TestGeneral(unittest.TestCase):
             converter.Add[T, U](conversion)
             # Check conversion.
             system_T = converter.Convert[T, U](system_U)
-            self.assertIsInstance(system_T, Adder_[T])
-            self._compare_system_instances(system_U, system_T)
+            self.assertIsInstance(system_T, DummyClass_[T])
+            self.assertEqual(system_T.value, system_U.value)
+            self.assertEqual(system_T.from_scalar_type, U)
             # Check closure.
             self.assertEqual(closure_mutables["param"], (T, U))
             self.assertIs(closure_mutables["system_in"], system_U)
             self.assertIs(closure_mutables["system_out"], system_T)
 
+            # Check conversion (if it's an exposed method) to ensure that we
+            # can pass the converter.
+            method = None
+            if T == AutoDiffXd:
+                method = System_[U].ToAutoDiffXd
+            elif T == Expression:
+                method = System_[U].ToSymbolic
+            if method:
+                # Reset closure.
+                closure_mutables = copy.copy(closure_mutables_none)
+                self.assertIs(closure_mutables["param"], None)
+                system_U = DummyClass_[U](100, converter=converter)
+                # N.B. With this structure, `system_T` is not actually
+                # convertible since it has not converter.
+                system_T = method(system_U)
+                self.assertEqual(system_T.value, 100)
+                self.assertEqual(system_T.from_scalar_type, U)
+                self.assertEqual(closure_mutables["param"], (T, U))
+                self.assertIs(closure_mutables["system_in"], system_U)
+                self.assertIs(closure_mutables["system_out"], system_T)
 
     def test_simulator_ctor(self):
         # Tests a simple simulation for supported scalar types.
