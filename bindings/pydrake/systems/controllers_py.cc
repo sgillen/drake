@@ -36,10 +36,10 @@ PYBIND11_MODULE(controllers, m) {
       .def_readwrite("visualization_callback",
                      &DynamicProgrammingOptions::visualization_callback);
 
-  m.def("FittedValueIteration", WrapRefPtr(&FittedValueIteration));
+  m.def("FittedValueIteration", WrapCallbacks(&FittedValueIteration));
 
   m.def("LinearProgrammingApproximateDynamicProgramming",
-        WrapRefPtr(&LinearProgrammingApproximateDynamicProgramming));
+        WrapCallbacks(&LinearProgrammingApproximateDynamicProgramming));
 
   m.def("LinearQuadraticRegulator",
         [](const Eigen::Ref<const Eigen::MatrixXd>& A,

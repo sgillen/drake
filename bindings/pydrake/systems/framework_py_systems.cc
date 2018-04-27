@@ -307,7 +307,7 @@ struct Impl {
       .def(py::init<SystemScalarConverter>())
       .def(
           "_DeclareVectorOutputPort",
-          WrapRefPtr(
+          WrapCallbacks(
               [](PyLeafSystem* self, const BasicVector<T>& arg1,
                  CalcVectorCallback arg2) -> auto& {
                 return self->DeclareVectorOutputPort(arg1, arg2);
@@ -404,7 +404,7 @@ void DefineFrameworkPySystems(py::module m) {
     using T = typename Pack::template type_at<0>;
     using U = typename Pack::template type_at<1>;
     AddTemplateMethod(
-        converter, "Add", WrapRefPtr(&SystemScalarConverter::Add<T, U>),
+        converter, "Add", WrapCallbacks(&SystemScalarConverter::Add<T, U>),
         GetPyParam<T, U>());
     AddTemplateMethod(
         converter, "IsConvertible",

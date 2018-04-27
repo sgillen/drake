@@ -51,16 +51,29 @@ struct wrap_ref_ptr<T&> {
   static T& unwrap(T* arg_wrapped) { return *arg_wrapped; }
 };
 
+template <typename T, typename = void>
+struct wrap_callback : public wrap_arg_default<T> {};
+
+template <typename Signature>
+struct wrap_callback<const std::function<Signature>&>
+    : public wrap_arg_function<wrap_ref_ptr, Signature> {};
+
+template <typename Signature>
+struct wrap_callback<std::function<Signature>>
+    : public wrap_callback<const std::function<Signature>&> {};
+
 }  // namespace detail
 
-/// Ensures that any `T&` (which can infer for `T = const U`) is wrapped as
-/// `U*`. Most useful for functions which take `std::function<>` arguments with
-/// const or mutable references to objects that may only exist in C++, and not
-/// yet in Python.
+/// Ensures that any `std::function<>` arguments are wrapped such that any `T&`
+/// (which can infer for `T = const U`) is wrapped as `U*` (and conversely
+/// unwrapped when returned).
+/// Arguments with const or mutable references to objects that may only exist
+/// in C++, and not yet in Python, may cause `pybind11` to trigger a copy, when
+/// it's only valid to use a reference.
 /// For more information, see: https://github.com/pybind/pybind11/issues/1241
 template <typename Func>
-auto WrapRefPtr(Func&& func) {
-  return WrapFunction<detail::wrap_ref_ptr>(std::forward<Func>(func));
+auto WrapCallbacks(Func&& func) {
+  return WrapFunction<detail::wrap_callback>(std::forward<Func>(func));
 }
 
 }  // namespace pydrake

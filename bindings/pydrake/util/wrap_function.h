@@ -243,5 +243,11 @@ struct wrap_arg_default {
   // with primitve types, such as `int`.
 };
 
+/// Policy for explicitly wrapping functions for a given policy.
+template <template <typename...> class wrap_arg_policy, typename Signature>
+using wrap_arg_function =
+    typename detail::wrap_function_impl<wrap_arg_policy>::
+        template wrap_arg<std::function<Signature>>;
+
 }  // namespace pydrake
 }  // namespace drake
