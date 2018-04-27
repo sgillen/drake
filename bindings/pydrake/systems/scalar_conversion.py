@@ -1,4 +1,4 @@
-"""Provides simple utilities to aid in scalar type conversion."""
+"""Provides utilities to aid in scalar type conversion."""
 
 import copy
 
@@ -22,15 +22,27 @@ def _get_conversion_pairs(param_list):
 
 
 class ScalarHelper(object):
+    # Global cache.
+    _converter_cache = {}
+
     """A helper to handle dispatching constructors and help creating
     converters."""
     def __init__(self, template, ):
         self._template = template
 
-    # Global cache.
-    _converter_cache = {}
+    def check_if_copying(self, *args, **kwargs):
+        """Determines if constructor call has one parameter which is an
+        instantiation of the current template, indicating that this is a System
+        scalar type conversion copy constructor.
 
-    def make_converter(self, param_pairs=None, use_cache=True):
+        @return The first argument (other system) if it is, None otherwise.
+        """
+        if len(args) == 1 and len(kwargs) == 0:
+            if is_instantiation_of(type(args[0]), self._template):
+                return args[0]
+        return None
+
+    def make_converter(self, param_pairs=None):
         """Creates system scalar converter for a given template, assuming that
         the System class has a scalar-type-converting copy constructing.
         @see check_if_copy_constructor
@@ -40,16 +52,15 @@ class ScalarHelper(object):
             scalar type of U to T.
             If None, this will use all possible pairs that the Python bindings
             of `SystemScalarConverter` support.
-        @param use_cache Return copy from global cache if available.
+        @note This copies values from a global cache when possible.
         """
-        cache_key = (self._template, param_pairs)
-        if use_cache:
-            cache_entry = self._converter_cache.get(cache_key)
-            if cache_entry:
-                return copy.copy(cache_entry)
-
         if param_pairs is None:
             param_pairs = _get_conversion_pairs(self._template.param_list)
+
+        cache_key = (self._template, tuple(param_pairs))
+        cache_entry = self._converter_cache.get(cache_key)
+        if cache_entry:
+            return copy.copy(cache_entry)
 
         # Generate and register each conversion.
         converter = SystemScalarConverter()
@@ -67,20 +78,5 @@ class ScalarHelper(object):
 
         map(add_captured, param_pairs)
 
-        if use_cache:
-            self._converter_cache[cache_key] = copy.copy(converter)
+        self._converter_cache[cache_key] = copy.copy(converter)
         return converter
-
-    def check_if_copying(self, args, kwargs):
-        """Determines if constructor call has one parameter which is an
-        instantiation of the current template, indicating that this is a System
-        scalar type conversion copy constructor.
-
-        @param args Positional arguments to function.
-        @param kwargs Keyword arguments to constructor.
-        @return The first argument (other system) if it is, None otherwise.
-        """
-        if len(args) == 1 and len(kwargs) == 0:
-            if is_instantiation_of(type(args[0]), self._template):
-                return args[0]
-        return None
