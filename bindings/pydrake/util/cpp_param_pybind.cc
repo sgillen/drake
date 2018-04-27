@@ -17,6 +17,7 @@ py::object GetPyHash(const std::type_info& tinfo) {
 template <typename T>
 void RegisterType(
     py::module m, py::object param_aliases, const std::string& canonical_str) {
+  py::print("REGISTER: ", typeid(T).name());
   // Create an object that is a unique hash.
   py::object canonical = py::eval(canonical_str, m.attr("__dict__"));
   py::list aliases(1);
@@ -26,6 +27,7 @@ void RegisterType(
 
 // Registers common C++ types.
 void RegisterCommon(py::module m, py::object param_aliases) {
+  py::print("REGISTER ALIASES");
   // Make mappings for C++ RTTI to Python types.
   // Unfortunately, this is hard to obtain from `pybind11`.
   RegisterType<bool>(m, param_aliases, "bool");
@@ -44,6 +46,7 @@ void RegisterCommon(py::module m, py::object param_aliases) {
 }  // namespace
 
 py::object GetParamAliases() {
+  py::print("GET ALIASES");
   py::module m = py::module::import("pydrake.util.cpp_param");
   py::object param_aliases = m.attr("_param_aliases");
   const char registered_check[] = "_register_common_cpp";
@@ -55,6 +58,7 @@ py::object GetParamAliases() {
 }
 
 py::object GetPyParamScalarImpl(const std::type_info& tinfo) {
+  py::print("CHECK TYPE INFO: ", tinfo.name());
   py::object param_aliases = GetParamAliases();
   py::object py_hash = GetPyHash(tinfo);
   if (param_aliases.attr("is_aliased")(py_hash).cast<bool>()) {
