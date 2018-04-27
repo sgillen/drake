@@ -43,10 +43,15 @@ namespace detail {
 template <typename T, typename = void>
 struct wrap_ref_ptr : public wrap_arg_default<T> {};
 
+template <typename T>
+using is_generic_pybind =
+  std::is_base_of<py::detail::make_caster<T>, py::detail::type_caster_generic>;
+
 // TODO(eric.cousineau): Only use this on non-primitive types (e.g. types whose
 // `type_caster`s are generic).
 template <typename T>
-struct wrap_ref_ptr<T&> {
+struct wrap_ref_ptr<T&, std::enable_if_t<is_generic_pybind<T>::value>> {
+  // NOLINTNEXTLINE[runtime/references]: Intentional.
   static T* wrap(T& arg) { return &arg; }
   static T& unwrap(T* arg_wrapped) { return *arg_wrapped; }
 };
@@ -73,7 +78,7 @@ struct wrap_callback<std::function<Signature>>
 /// For more information, see: https://github.com/pybind/pybind11/issues/1241
 template <typename Func>
 auto WrapCallbacks(Func&& func) {
-  return WrapFunction<detail::wrap_callback>(std::forward<Func>(func));
+  return WrapFunction<detail::wrap_callback, false>(std::forward<Func>(func));
 }
 
 }  // namespace pydrake
