@@ -399,7 +399,11 @@ void DefineFrameworkPySystems(py::module m) {
   // System scalar conversion.
   py::class_<SystemScalarConverter> converter(m, "SystemScalarConverter");
   converter
-    .def(py::init());
+    .def(py::init())
+    .def("__copy__",
+         [](const SystemScalarConverter& in) -> SystemScalarConverter {
+           return in;
+         });
   // Bind templated `Add` instantiations.
   {
     auto add_instantiation = [converter](auto pack) {
@@ -437,13 +441,17 @@ void DefineFrameworkPySystems(py::module m) {
         >;
     type_visit(add_instantiation, ConversionPairs{});
   };
+  // Add mention of what scalars are supported via `SystemScalarConverter`
+  // through Python.
+  converter.attr("SupportedScalars") =
+      GetPyParam(pysystems::CommonScalarPack{});
 
+  // Do templated instantiations of system types.
   auto bind_common_scalar_types = [m](auto dummy) {
     using T = decltype(dummy);
     Impl<T>::DoDefinitions(m);
   };
   type_visit(bind_common_scalar_types, pysystems::CommonScalarPack{});
-
 }
 
 }  // namespace pydrake
