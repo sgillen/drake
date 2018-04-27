@@ -50,7 +50,7 @@ using is_generic_pybind =
 // TODO(eric.cousineau): Only use this on non-primitive types (e.g. types whose
 // `type_caster`s are generic).
 template <typename T>
-struct wrap_ref_ptr<T&, std::enable_if_t<is_generic_pybind<T>::value>> {
+struct wrap_ref_ptr<T&> { //, std::enable_if_t<is_generic_pybind<T>::value>> {
   // NOLINTNEXTLINE[runtime/references]: Intentional.
   static T* wrap(T& arg) { return &arg; }
   static T& unwrap(T* arg_wrapped) { return *arg_wrapped; }
@@ -78,7 +78,7 @@ struct wrap_callback<std::function<Signature>>
 /// For more information, see: https://github.com/pybind/pybind11/issues/1241
 template <typename Func>
 auto WrapCallbacks(Func&& func) {
-  return WrapFunction<detail::wrap_callback, false>(std::forward<Func>(func));
+  return WrapFunction<detail::wrap_ref_ptr>(std::forward<Func>(func));
 }
 
 }  // namespace pydrake
