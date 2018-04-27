@@ -182,20 +182,21 @@ computational framework are templated on a scalar type, ``T``.
 For convenience (and backwards compatibility) in Python, a slightly different
 binding convention is used.
 
-For example, ``Adder<T>`` is a Systems primitive which has user-defined number
-of inputs, and outputs a single port which is the summation of all of the
+For example, ``Adder<T>`` is a Systems primitive which has a user-defined
+number of inputs and outputs a single port which is the sum of all of the
 inputs.
 
-In C++, you would access ``Adder<double>``, ``Adder<AutoDiffXd>``, and
-``Adder<Expression>`` for the instantiations of the common scalar types.
+In C++, you would access the instantiations using ``Adder<double>``,
+``Adder<AutoDiffXd>``, and ``Adder<Expression>`` for common scalar types.
 
 In Python, ``Adder`` actually refers to the "default" instantiation, the
-``Adder<double>`` C++ class. To access the template, to then access other
-instantiations, you should add an ``_`` to the end of the C++ class name to get
-the Python template; in this case, use ``Adder_``.
+``Adder<double>`` C++ class. To access other instantiations, you should add an
+``_`` to the end of the C++ class name to get the Python template and then
+provide the parameters in square braces, ``[...]``. In this example, you should
+use ``Adder_[T]``.
 
-To illustrate, you can print out the string representations ``Adder`` and
-``Adder_``, and some of the instantiations in Python:
+To illustrate, you can print out the string representations of ``Adder``,
+``Adder_``, and some of its instantiations in Python:
 
 .. code-block:: pycon
 
