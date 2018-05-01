@@ -97,7 +97,7 @@ def define_convertible_system(name, T_list=None, T_pairs=None):
 
             return instantiation
 
-        # Tack on converter and types for ease of testing.
+        # Add converter for later access; add types for ease of testing.
         template._converter = _make_converter(template, T_pairs)
         template._T_list = T_list
         template._T_pairs = T_pairs
