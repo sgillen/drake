@@ -111,14 +111,15 @@ class TemplateBase(object):
 
     def add_instantiation(self, param, instantiation):
         """Adds a unique instantiation. """
-        # Ensure that we do not already have this tuple (or it is deferred).
+        assert instantiation is not None
+        # Ensure that we do not already have this tuple.
         param = get_param_canonical(self._param_resolve(param))
         if param in self._instantiation_map:
             raise RuntimeError(
                 "Parameter instantiation already registered: {}".format(param))
         # Register it.
-        self._add_instantiation_internal(param, instantiation)
         self.param_list.append(param)
+        self._add_instantiation_internal(param, instantiation)
         return param
 
     def add_instantiations(self, instantiation_func, param_list):
@@ -250,7 +251,8 @@ class TemplateClass(TemplateBase):
     def is_subclass_of_instantiation(self, obj):
         """Determines if `obj` is a subclass of one of the instantiations.
 
-        @return The first instantiation of which `obj` is a subclass."""
+        @return The first instantiation of which `obj` is a subclass.
+        """
         for param in self.param_list:
             instantiation, _ = self.get_instantiation(param)
             if issubclass(obj, instantiation):
