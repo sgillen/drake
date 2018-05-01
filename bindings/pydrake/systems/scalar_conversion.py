@@ -15,23 +15,44 @@ def _get_conversion_pairs(T_list):
     for T in T_list:
         if T in SystemScalarConverter.SupportedScalars:
             T_compat.append(T)
-    # Outer join without duplicates.
+    # Take subset from supported conversions.
     T_pairs = []
-    for T in T_compat:
-        for U in T_compat:
-            if T != U:
-                T_pairs.append((T, U))
+    for T, U in SystemScalarConverter.SupportedConversionPairs:
+        if T in T_compat and U in T_compat:
+            T_pairs.append((T, U))
     return T_pairs
 
 
 def define_convertible_system(name, T_list=None, T_pairs=None):
     """Provides a decorator which can be used define a scalar-type convertible
-    System.
+    System as a template.
+
+    Example:
+
+        @define_convertible_system("MySystem_")
+        def MySystem_(T):
+
+            class MySystemInstantiation(LeafSystem_[T]):
+                # N.B. Do not define `__init__`, as this will be overridden.
+                # Define `_construct` and `_construct_copy` instead.
+                # You must define `converter` as an argument to ensure that it
+                # propagates properly.
+                def _construct(self, value, converter=None):
+                    LeafSystem_[T].__init__(self, converter)
+                    self.value = value
+
+                def _construct_copy(self, other, converter=None):
+                    LeafSystem_[T].__init__(self, converter)
+                    self.value = other.value
+
+            return MySystemInstantiation
+
+        # Define default instantiation.
+        MySystem = MySystem[None]
 
     @param T_list
         List of T's that the given system supports. By default, it is all types
         supported by `LeafSystem`.
-    @param template TemplateClass instance.
     @param T_pairs List of pairs, (T, U), defining a conversion from a
         scalar type of U to T.
         If None, this will use all possible pairs that the Python bindings

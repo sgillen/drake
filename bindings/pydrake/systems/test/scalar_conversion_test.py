@@ -6,18 +6,15 @@ import unittest
 from pydrake.autodiffutils import AutoDiffXd
 from pydrake.symbolic import Expression
 from pydrake.systems.framework import LeafSystem_, SystemScalarConverter
+from pydrake.util.cpp_template import TemplateClass
 
 
-@mut.define_convertible_system("DefaultConverted")
-def DefaultConverted(T):
-    """Defines a simple templated class which defines a default
-    converter."""
+@mut.define_convertible_system("Example_")
+def Example_(T):
 
-    class DefaultConvertedInstantiation(LeafSystem_[T]):
-        # N.B. Do not define `__init__`, as this will be overridden.
-        # Define `_construct` and `_construct_copy` instead.
-        # You must define `converter` as an argument to ensure that it
-        # propagates properly.
+    class ExampleInstantiation(LeafSystem_[T]):
+        """Testing example."""
+
         def _construct(self, value, converter=None):
             LeafSystem_[T].__init__(self, converter)
             self.value = value
@@ -28,7 +25,7 @@ def DefaultConverted(T):
             self.value = other.value
             self.copied_from = other
 
-    return DefaultConvertedInstantiation
+    return ExampleInstantiation
 
 
 class TestScalarConversion(unittest.TestCase):
@@ -51,19 +48,28 @@ class TestScalarConversion(unittest.TestCase):
             SystemScalarConverter.SupportedConversionPairs,
             conversion_pairs)
 
-    def test_convertible_system(self):
-        # Test paramters.
-        param_list = [(T,) for T in SystemScalarConverter.SupportedScalars]
-        self.assertEqual(DefaultConverted.param_list, param_list)
+    def test_example_system(self):
+        """Tests the Example_ system."""
+        # Test template.
+        self.assertIsInstance(Example_, TemplateClass)
 
-        # Test private converter.
-        converter = DefaultConverted._converter
+        # Test parameters.
+        param_list = [(T,) for T in SystemScalarConverter.SupportedScalars]
+        self.assertEqual(Example_.param_list, param_list)
+
+        # Test private properties (do NOT use these in your code!).
+        self.assertEqual(
+            tuple(Example_._T_list), SystemScalarConverter.SupportedScalars)
+        self.assertEqual(
+            tuple(Example_._T_pairs),
+            SystemScalarConverter.SupportedConversionPairs)
+        converter = Example_._converter
         for T, U in SystemScalarConverter.SupportedConversionPairs:
             self.assertTrue(converter.IsConvertible[T, U]())
 
         # Test calls that we have available for scalar conversion.
         for T, U in SystemScalarConverter.SupportedConversionPairs:
-            system_U = DefaultConverted[U](100)
+            system_U = Example_[U](100)
             self.assertIs(system_U.copied_from, None)
             if T == AutoDiffXd:
                 method = LeafSystem_[U].ToAutoDiffXd
@@ -72,7 +78,7 @@ class TestScalarConversion(unittest.TestCase):
             else:
                 continue
             system_T = method(system_U)
-            self.assertIsInstance(system_T, DefaultConverted[T])
+            self.assertIsInstance(system_T, Example_[T])
             self.assertEqual(system_T.value, 100)
             self.assertIs(system_T.copied_from, system_U)
 
@@ -95,8 +101,8 @@ class TestScalarConversion(unittest.TestCase):
         # - Implicit conversion pairs.
         T_list = [float, AutoDiffXd]
         T_pairs_full = [
-            (float, AutoDiffXd),
             (AutoDiffXd, float),
+            (float, AutoDiffXd),
         ]
         A = mut.define_convertible_system("A", T_list=T_list)(
             generic_instantiation_func)
@@ -135,49 +141,59 @@ class TestScalarConversion(unittest.TestCase):
         """Tests bad class definitions."""
         bad_init = "Convertible systems should not define"
 
-        # No `__init__`.
-        @mut.define_convertible_system("NoInit")
-        def NoInit(T):
+        # Should not define `__init__`.
+        @mut.define_convertible_system("NoInit_")
+        def NoInit_(T):
 
             class NoInitInstantiation(LeafSystem_[T]):
                 def __init__(self):
                     pass
 
+                def _construct(self, converter=None):
+                    pass
+
+                def _construct_copy(self, converter=None):
+                    pass
+
             return NoInitInstantiation
 
         with self.assertRaises(RuntimeError) as cm:
-            NoInit[float]
+            NoInit_[float]
         self.assertIn(bad_init, str(cm.exception))
 
-        # No `_construct_copy`.
-        @mut.define_convertible_system("NoConstructCopy")
-        def NoConstructCopy(T):
+        # Should define `_construct_copy`.
+        @mut.define_convertible_system("NoConstructCopy_")
+        def NoConstructCopy_(T):
 
             class NoConstructCopyInstantiation(LeafSystem_[T]):
-                def _construct(self):
+                def _construct(self, converter=None):
                     pass
 
             return NoConstructCopyInstantiation
 
         with self.assertRaises(RuntimeError) as cm:
-            NoConstructCopy[float]
+            NoConstructCopy_[float]
         self.assertIn(bad_init, str(cm.exception))
 
-        # Does not inherit from `LeafSystem_[T]`.
-        @mut.define_convertible_system("BadParenting")
-        def BadParenting(T):
+        # Should inherit from `LeafSystem_[T]`.
+        @mut.define_convertible_system("BadParenting_")
+        def BadParenting_(T):
 
             class BadParentingInstantiation(object):
                 def __init__(self):
                     pass
 
-                def _construct(self):
+                def _construct(self, converter=None):
                     pass
+
+                def _construct_copy(self, converter=None):
+                    pass
+
 
             return BadParentingInstantiation
 
         with self.assertRaises(RuntimeError) as cm:
-            BadParenting[float]
+            BadParenting_[float]
         # N.B. Since we check the class before the instantiation has completed,
         # we will not have the templated name.
         self.assertIn("BadParentingInstantiation", str(cm.exception))
