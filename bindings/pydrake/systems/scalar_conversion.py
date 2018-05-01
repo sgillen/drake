@@ -29,6 +29,10 @@ def _get_conversion_pairs(T_list):
 class TemplateSystem(TemplateClass):
     """Provides a means to define templated systems.
 
+    This differs from `TemplateClass` in that (a) you must pre-specify
+    parameters at construction time and (b) `.define` is overridden to allow
+    defining `f(T)` for convenience.
+
     Any class that is added must:
     - Not define `__init__`, as this will be overridden.
     - Define `_construct(self, *args, converter=None)` and
@@ -60,10 +64,6 @@ class TemplateSystem(TemplateClass):
     """
     def __init__(self, name, T_list=None, T_pairs=None, module_name=None):
         """Constructs `TemplateSystem`.
-
-        This differs from `TemplateClass` in that (a) you must pre-specify
-        parameters and (b) `.define` is overridden to allow defining `f(T)` for
-        convenience.
 
         @param T_list
             List of T's that the given system supports. By default, it is all
@@ -127,11 +127,13 @@ class TemplateSystem(TemplateClass):
     def _on_add(self, param, cls):
         TemplateClass._on_add(self, param, cls)
         T, = param
+
         # Check that the user has not defined `__init__`, nad has defined
         # `_construct` and `_construct_copy`.
         if not issubclass(cls, LeafSystem_[T]):
             raise RuntimeError(
                 "{} must inherit from {}".format(cls, LeafSystem_[T]))
+
         # Use the immediate `__dict__`, rather than querying the attributes, so
         # that we don't get spillover from inheritance.
         d = cls.__dict__
@@ -142,6 +144,7 @@ class TemplateSystem(TemplateClass):
                 "Convertible systems should not define `__init__`, but must "
                 "define `_construct` and `_construct_copy` instead.")
 
+        # Patch `__init__`.
         template = self
 
         def system_init(self, *args, **kwargs):
@@ -173,8 +176,8 @@ class TemplateSystem(TemplateClass):
 
         # Define capture to ensure the current values are bound, and do not
         # change through iteration.
-        # N.B. This does not directly instantiation the template; it is
-        # deferred to when the conversion is called.
+        # N.B. This does not directly instantiate the template; it is deferred
+        # to when the conversion is called.
         def add_captured(T_pair):
             T, U = T_pair
 
