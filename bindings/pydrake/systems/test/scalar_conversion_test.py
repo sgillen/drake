@@ -9,7 +9,7 @@ from pydrake.systems.framework import LeafSystem_, SystemScalarConverter
 from pydrake.util.cpp_template import TemplateClass
 
 
-@mut.define_convertible_system("Example_")
+@mut.TemplateSystem.define("Example_")
 def Example_(T):
 
     class ExampleInstantiation(LeafSystem_[T]):
@@ -87,7 +87,7 @@ class TestScalarConversion(unittest.TestCase):
             self.assertIs(system_T.copied_from, system_U)
 
     def test_define_convertible_system_api(self):
-        """Tests more advanced API of `define_convertible_system`, both
+        """Tests more advanced API of `TemplateSystem.define`, both
         positive and negative tests."""
 
         def generic_instantiation_func(T):
@@ -108,7 +108,7 @@ class TestScalarConversion(unittest.TestCase):
             (AutoDiffXd, float),
             (float, AutoDiffXd),
         ]
-        A = mut.define_convertible_system("A", T_list=T_list)(
+        A = mut.TemplateSystem.define("A", T_list=T_list)(
             generic_instantiation_func)
         self.assertEqual(A._T_list, T_list)
         self.assertEqual(A._T_pairs, T_pairs_full)
@@ -117,7 +117,7 @@ class TestScalarConversion(unittest.TestCase):
         T_pairs = [
             (float, AutoDiffXd),
         ]
-        B = mut.define_convertible_system("B", T_list=T_list, T_pairs=T_pairs)(
+        B = mut.TemplateSystem.define("B", T_list=T_list, T_pairs=T_pairs)(
             generic_instantiation_func)
         self.assertEqual(B._T_list, T_list)
         self.assertEqual(B._T_pairs, T_pairs)
@@ -126,24 +126,24 @@ class TestScalarConversion(unittest.TestCase):
         # - Not a supported scalar.
         T_list_bad = [int, float]
         with self.assertRaises(AssertionError):
-            mut.define_convertible_system("C", T_list=T_list_bad)
+            mut.TemplateSystem.define("C", T_list=T_list_bad)
         # - Not in original param list.
         T_pairs_bad = [
             (float, Expression),
         ]
         with self.assertRaises(AssertionError):
-            mut.define_convertible_system(
+            mut.TemplateSystem.define(
                 "C", T_list=T_list, T_pairs=T_pairs_bad)
         # - Unsupported conversion.
         T_pairs_unsupported = [
             (float, float),
         ]
         with self.assertRaises(AssertionError):
-            mut.define_convertible_system("C", T_pairs=T_pairs_unsupported)
+            mut.TemplateSystem.define("C", T_pairs=T_pairs_unsupported)
 
     def test_inheritance(self):
 
-        @mut.define_convertible_system("Child_")
+        @mut.TemplateSystem.define("Child_")
         def Child_(T):
 
             class ChildInstantiation(Example_[T]):
@@ -171,7 +171,7 @@ class TestScalarConversion(unittest.TestCase):
         bad_init = "Convertible systems should not define"
 
         # Should not define `__init__`.
-        @mut.define_convertible_system("NoInit_")
+        @mut.TemplateSystem.define("NoInit_")
         def NoInit_(T):
 
             class NoInitInstantiation(LeafSystem_[T]):
@@ -191,7 +191,7 @@ class TestScalarConversion(unittest.TestCase):
         self.assertIn(bad_init, str(cm.exception))
 
         # Should define `_construct_copy`.
-        @mut.define_convertible_system("NoConstructCopy_")
+        @mut.TemplateSystem.define("NoConstructCopy_")
         def NoConstructCopy_(T):
 
             class NoConstructCopyInstantiation(LeafSystem_[T]):
@@ -205,7 +205,7 @@ class TestScalarConversion(unittest.TestCase):
         self.assertIn(bad_init, str(cm.exception))
 
         # Should inherit from `LeafSystem_[T]`.
-        @mut.define_convertible_system("BadParenting_")
+        @mut.TemplateSystem.define("BadParenting_")
         def BadParenting_(T):
 
             class BadParentingInstantiation(object):
@@ -222,8 +222,5 @@ class TestScalarConversion(unittest.TestCase):
 
         with self.assertRaises(RuntimeError) as cm:
             BadParenting_[float]
-        # N.B. Since we check the class before the instantiation has completed,
-        # we will not have the templated name.
-        self.assertIn("BadParentingInstantiation", str(cm.exception))
-        self.assertIn("LeafSystem_[T]", str(cm.exception))
-        self.assertIn("T=float", str(cm.exception))
+        self.assertIn("BadParenting_[float]", str(cm.exception))
+        self.assertIn("LeafSystem_[float]", str(cm.exception))

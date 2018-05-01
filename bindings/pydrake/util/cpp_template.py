@@ -213,9 +213,9 @@ class TemplateBase(object):
                     self.T = T
             return MyTemplateInstantiation
         """
+        template = cls(name, *args, **kwargs)
 
         def decorator(instantiation_func):
-            template = cls(name, *args, **kwargs)
             template.add_instantiations(instantiation_func, param_list)
             return template
 
