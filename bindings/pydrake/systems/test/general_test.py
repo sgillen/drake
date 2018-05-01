@@ -36,7 +36,6 @@ from pydrake.systems.framework import (
     Subvector_,
     Supervector_,
     System_,
-    SystemScalarConverter,
     SystemOutput_,
     VectorBase_,
     VectorSystem_,
