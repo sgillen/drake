@@ -129,9 +129,11 @@ class TemplateBase(object):
         set for the current instantiation.
         @param param_list Ordered container of parameter sets that these
         instantiations should be produced for.
-        @pre The instantiation func cannot have been set before.
         """
-        assert self._instantiation_func is None
+        if self._instantiation_func is not None:
+            # Ensure that we have all instantiations for the old function.
+            for param in self.param_list:
+                self.get_instantiation(param)
         self._instantiation_func = instantiation_func
         for param in param_list:
             self.add_instantiation(param, TemplateBase._deferred)
@@ -148,9 +150,9 @@ class TemplateBase(object):
 
     def is_instantiation(self, obj):
         """Determines if an object is an instantion of the given template."""
-        for param, instantiation in self._instantiation_map.iteritems():
-            if instantiation is TemplateBase._deferred:
-                instantiation, _ = self.get_instantiation(param)
+        # Use `get_instantiation` so that we can handled deferred cases.
+        for param in self.param_list:
+            instantiation, _ = self.get_instantiation(param)
             if instantiation == obj:
                 return True
         return False
