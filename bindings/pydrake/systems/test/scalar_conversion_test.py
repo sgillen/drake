@@ -148,7 +148,7 @@ class TestScalarConversion(unittest.TestCase):
 
             class ChildInstantiation(Example_[T]):
                 def _construct(self, converter=None):
-                    Example_[T].__init__(self, 1000, converter=None)
+                    Example_[T].__init__(self, 1000, converter=converter)
 
                 def _construct_copy(self, other, converter=None):
                     Example_[T].__init__(self, other, converter=converter)
