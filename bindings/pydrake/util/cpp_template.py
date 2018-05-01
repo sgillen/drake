@@ -125,11 +125,13 @@ class TemplateBase(object):
         """Adds a set of instantiations given a function and a list of
         parameter sets.
 
-        @param instantiation_func Function of the form `f(template, param)`,
-        where `template` is the current template and `param` is the parameter
-        set for the current instantiation.
-        @param param_list Ordered container of parameter sets that these
-        instantiations should be produced for.
+        @param instantiation_func
+            Function of the form `f(template, param)`, where `template` is the
+            current template and `param` is the parameter set for the current
+            instantiation.
+        @param param_list
+            Ordered container of parameter sets that these instantiations
+            should be produced for.
         """
         if self._instantiation_func is not None:
             # Ensure that we have all instantiations for the old function.
@@ -194,10 +196,12 @@ class TemplateBase(object):
         `add_instantiations`, where the instantiation function is the decorated
         function.
 
-        @param name Name of the template. This should generally match the name
-        of the object being decorated for clarity.
-        @param param_list Ordered container of parameter sets. For more
-        information, see `add_instantiations`.
+        @param name
+            Name of the template. This should generally match the name of the
+            object being decorated for clarity.
+        @param param_list
+            Ordered container of parameter sets. For more information, see
+            `add_instantiations`.
 
         Note that the name of the inner class will not matter as it will be
         overritten with the template instantiation name.

@@ -109,6 +109,12 @@ class TemplateSystem(TemplateClass):
         The decorated function must be of the from `f(T)`, which returns a
         class which will be the instantation for type `T` of the given
         template.
+
+        @param name
+            Name of the system template. This should match the name of the
+            object being decorated.
+        @param args, kwargs
+            These are passed to the constructor of `TemplateSystem`.
         """
         template = cls(name, *args, **kwargs)
         param_list = [(T,) for T in template._T_list]
