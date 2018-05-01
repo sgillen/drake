@@ -8,9 +8,6 @@ from pydrake.symbolic import Expression
 from pydrake.systems.framework import LeafSystem_, SystemScalarConverter
 from pydrake.util.cpp_template import TemplateClass
 
-# N.B. This should be the same as `ConversionPairs` in
-# `framework_py_systems.cc`.
-
 
 @TemplateClass.define("DefaultConverted", param_list=LeafSystem_.param_list)
 def DefaultConverted(DefaultConverted, param):
