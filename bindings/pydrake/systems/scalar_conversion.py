@@ -53,7 +53,7 @@ def define_convertible_system(name, T_list=None, T_pairs=None):
             .format(T_pair))
         assert T_pair in \
             SystemScalarConverter.SupportedConversionPairs, (
-            "Conversion {} is not supported".format(T_pair))
+                "Conversion {} is not supported".format(T_pair))
 
     def decorator(instantiation_func):
 
@@ -90,8 +90,8 @@ def _patch_system_init(template, T, instantiation):
     has_custom_init = ("_construct" in d) and ("_construct_copy" in d)
     if not (no_init and has_custom_init):
         raise RuntimeError(
-            "Convertible systems should not define `__init__`, but must define "
-            "`_construct` and `_construct_copy` instead.")
+            "Convertible systems should not define `__init__`, but must "
+            "define `_construct` and `_construct_copy` instead.")
 
     def system_init(self, *args, **kwargs):
         converter = None
