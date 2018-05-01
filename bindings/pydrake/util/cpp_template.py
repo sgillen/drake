@@ -242,6 +242,16 @@ class TemplateClass(TemplateBase):
             cls.__qualname__ = cls.__name__
             cls.__module__ = self._module_name
 
+    def is_subclass_of_instantiation(self, obj):
+        """Determines if `obj` is a subclass of one of the instantiations.
+
+        @return The first instantiation of which `obj` is a subclass."""
+        for param in self.param_list:
+            instantiation, _ = self.get_instantiation(param)
+            if issubclass(obj, instantiation):
+                return instantiation
+        return None
+
 
 class TemplateFunction(TemplateBase):
     """Extension of `TemplateBase` for functions. """

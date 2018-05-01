@@ -129,6 +129,16 @@ class TestCppTemplate(unittest.TestCase):
         MyFloat = MyTemplate[float]
         self.assertEqual(MyFloat().T, float)
 
+        # Test subclass checks.
+        class Subclass(MyTemplate[float]):
+            pass
+
+        self.assertFalse(MyTemplate.is_instantiation(Subclass))
+        self.assertFalse(MyTemplate.is_subclass_of_instantiation(object))
+        result = MyTemplate.is_subclass_of_instantiation(Subclass)
+        self.assertTrue(result)
+        self.assertEqual(result, MyTemplate[float])
+
     def test_function(self):
         template = m.TemplateFunction("func")
 
