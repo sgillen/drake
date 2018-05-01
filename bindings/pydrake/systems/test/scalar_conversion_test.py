@@ -28,14 +28,17 @@ def Example_(T):
     return ExampleInstantiation
 
 
+Example = Example_[None]
+
+
 class TestScalarConversion(unittest.TestCase):
     def test_converter_attributes(self):
-        covnersion_scalars = (
+        conversion_scalars = (
             float, AutoDiffXd, Expression,
         )
         self.assertEqual(
             SystemScalarConverter.SupportedScalars,
-            covnersion_scalars)
+            conversion_scalars)
         conversion_pairs = (
             (AutoDiffXd, float),
             (Expression, float),
@@ -52,6 +55,7 @@ class TestScalarConversion(unittest.TestCase):
         """Tests the Example_ system."""
         # Test template.
         self.assertIsInstance(Example_, TemplateClass)
+        self.assertIs(Example_[float], Example)
 
         # Test parameters.
         param_list = [(T,) for T in SystemScalarConverter.SupportedScalars]
@@ -188,7 +192,6 @@ class TestScalarConversion(unittest.TestCase):
 
                 def _construct_copy(self, converter=None):
                     pass
-
 
             return BadParentingInstantiation
 

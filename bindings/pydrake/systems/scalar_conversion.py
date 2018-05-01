@@ -27,16 +27,33 @@ def define_convertible_system(name, T_list=None, T_pairs=None):
     """Provides a decorator which can be used define a scalar-type convertible
     System as a template.
 
+    The decorated function must be of the from `f(T)`, which returns a class
+    which will be the instantation for type `T` of the given template.
+
+    The class must:
+    - Not define `__init__`, as this will be overridden.
+    - Define `_construct(self, *args, converter=None)` and
+      `_construct_copy(self, *args, converter=None)` instead.
+      - `converter` must be present as an argument to ensure that it propagates
+        properly.
+
+    If any of these constraints are violated, then an error will be thrown at
+    the time of the first class instantiation.
+
+    @param T_list
+        List of T's that the given system supports. By default, it is all types
+        supported by `LeafSystem`.
+    @param T_pairs List of pairs, (T, U), defining a conversion from a
+        scalar type of U to T.
+        If None, this will use all possible pairs that the Python bindings
+        of `SystemScalarConverter` support.
+
     Example:
 
         @define_convertible_system("MySystem_")
         def MySystem_(T):
 
             class MySystemInstantiation(LeafSystem_[T]):
-                # N.B. Do not define `__init__`, as this will be overridden.
-                # Define `_construct` and `_construct_copy` instead.
-                # You must define `converter` as an argument to ensure that it
-                # propagates properly.
                 def _construct(self, value, converter=None):
                     LeafSystem_[T].__init__(self, converter)
                     self.value = value
@@ -47,16 +64,8 @@ def define_convertible_system(name, T_list=None, T_pairs=None):
 
             return MySystemInstantiation
 
-        # Define default instantiation.
-        MySystem = MySystem[None]
+        MySystem = MySystem_[None]  # Default instantiation.
 
-    @param T_list
-        List of T's that the given system supports. By default, it is all types
-        supported by `LeafSystem`.
-    @param T_pairs List of pairs, (T, U), defining a conversion from a
-        scalar type of U to T.
-        If None, this will use all possible pairs that the Python bindings
-        of `SystemScalarConverter` support.
     """
     if T_list is None:
         T_list = SystemScalarConverter.SupportedScalars
