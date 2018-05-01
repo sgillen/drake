@@ -47,8 +47,6 @@ template <typename T>
 using is_generic_pybind =
   std::is_base_of<py::detail::type_caster_generic, py::detail::make_caster<T>>;
 
-// TODO(eric.cousineau): Only use this on non-primitive types (e.g. types whose
-// `type_caster`s are generic).
 template <typename T>
 struct wrap_ref_ptr<T&, std::enable_if_t<is_generic_pybind<T>::value>> {
   // NOLINTNEXTLINE[runtime/references]: Intentional.
@@ -72,9 +70,11 @@ struct wrap_callback<std::function<Signature>>
 /// Ensures that any `std::function<>` arguments are wrapped such that any `T&`
 /// (which can infer for `T = const U`) is wrapped as `U*` (and conversely
 /// unwrapped when returned).
-/// Arguments with const or mutable references to objects that may only exist
-/// in C++, and not yet in Python, may cause `pybind11` to trigger a copy, when
-/// it's only valid to use a reference.
+/// Use this when you have a callback in C++ that has a lvalue reference (const
+/// or mutable) to a C++ argument or return value.
+/// Otherwise, `pybind11` may try and copy the object, will be bad if either
+/// the type is a non-copyable or if you are trying to the mutate the object
+/// (in which case, the copy is mutated, but not the original you care about).
 /// For more information, see: https://github.com/pybind/pybind11/issues/1241
 template <typename Func>
 auto WrapCallbacks(Func&& func) {
