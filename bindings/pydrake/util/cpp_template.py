@@ -95,29 +95,30 @@ class TemplateBase(object):
         if instantiation is TemplateBase._deferred:
             assert self._instantiation_func is not None
             instantiation = self._instantiation_func(param)
-            param_added = self.add_instantiation(param, instantiation)
-            assert param_added == param
+            self._add_instantiation_internal(param, instantiation)
         elif instantiation is None and throw_error:
             raise RuntimeError("Invalid instantiation: {}".format(
                 self._instantiation_name(param)))
         return (instantiation, param)
 
-    def add_instantiation(self, param, instantiation):
-        """Adds a unique instantiation. """
+    def _add_instantiation_internal(self, param, instantiation):
+        # Adds a unique instantiation, but permits overwriting (for deferred
+        # cases).
         assert instantiation is not None
-        # Ensure that we do not already have this tuple (or it is deferred).
-        param = get_param_canonical(self._param_resolve(param))
-        original = self._instantiation_map.get(param)
-        if original is None:
-            # Unseen in parameter list; add it.
-            self.param_list.append(param)
-        elif original is not TemplateBase._deferred:
-            raise RuntimeError(
-                "Parameter instantiation already registered: {}".format(param))
-        # Register it.
         self._instantiation_map[param] = instantiation
         if instantiation is not TemplateBase._deferred:
             self._on_add(param, instantiation)
+
+    def add_instantiation(self, param, instantiation):
+        """Adds a unique instantiation. """
+        # Ensure that we do not already have this tuple (or it is deferred).
+        param = get_param_canonical(self._param_resolve(param))
+        if param in self._instantiation_map:
+            raise RuntimeError(
+                "Parameter instantiation already registered: {}".format(param))
+        # Register it.
+        self._add_instantiation_internal(param, instantiation)
+        self.param_list.append(param)
         return param
 
     def add_instantiations(self, instantiation_func, param_list):
