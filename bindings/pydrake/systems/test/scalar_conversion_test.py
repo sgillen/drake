@@ -55,6 +55,7 @@ class TestScalarConversion(unittest.TestCase):
         # Test paramters.
         param_list = [(T,) for T in SystemScalarConverter.SupportedScalars]
         self.assertEqual(DefaultConverted.param_list, param_list)
+
         # Test private converter.
         converter = DefaultConverted._converter
         for T, U in SystemScalarConverter.SupportedConversionPairs:
@@ -75,7 +76,63 @@ class TestScalarConversion(unittest.TestCase):
             self.assertEqual(system_T.value, 100)
             self.assertIs(system_T.copied_from, system_U)
 
-    def test_convertible_system_negative(self):
+    def test_define_convertible_system_api(self):
+        """Tests more advanced API of `define_convertible_system`, both
+        positive and negative tests."""
+
+        def generic_instantiation_func(T):
+
+            class GenericInstantiation(LeafSystem_[T]):
+                def _construct(self, converter=None):
+                    LeafSystem_[T].__init__(self, converter)
+
+                def _construct_copy(self, other, converter=None):
+                    LeafSystem_[T].__init__(self, converter)
+
+            return GenericInstantiation
+
+        # Non-symbolic
+        # - Implicit conversion pairs.
+        T_list = [float, AutoDiffXd]
+        T_pairs_full = [
+            (float, AutoDiffXd),
+            (AutoDiffXd, float),
+        ]
+        A = mut.define_convertible_system("A", T_list=T_list)(
+            generic_instantiation_func)
+        self.assertEqual(A._T_list, T_list)
+        self.assertEqual(A._T_pairs, T_pairs_full)
+
+        # - Explicit conversion pairs.
+        T_pairs = [
+            (float, AutoDiffXd),
+        ]
+        B = mut.define_convertible_system("B", T_list=T_list, T_pairs=T_pairs)(
+            generic_instantiation_func)
+        self.assertEqual(B._T_list, T_list)
+        self.assertEqual(B._T_pairs, T_pairs)
+
+        # Negative tests.
+        # - Not a supported scalar.
+        T_list_bad = [int, float]
+        with self.assertRaises(AssertionError):
+            mut.define_convertible_system("C", T_list=T_list_bad)
+        # - Not in original param list.
+        T_pairs_bad = [
+            (float, Expression),
+        ]
+        with self.assertRaises(AssertionError):
+            mut.define_convertible_system(
+                "C", T_list=T_list, T_pairs=T_pairs_bad)
+        # - Unsupported conversion.
+        T_pairs_unsupported = [
+            (float, float),
+        ]
+        with self.assertRaises(AssertionError):
+            mut.define_convertible_system("C", T_pairs=T_pairs_unsupported)
+
+    def test_bad_class_definitions(self):
+        """Tests bad class definitions."""
         bad_init = "Convertible systems should not define"
 
         # No `__init__`.

@@ -24,6 +24,58 @@ def _get_conversion_pairs(T_list):
     return T_pairs
 
 
+def define_convertible_system(name, T_list=None, T_pairs=None):
+    """Provides a decorator which can be used define a scalar-type convertible
+    System.
+
+    @param T_list
+        List of T's that the given system supports. By default, it is all types
+        supported by `LeafSystem`.
+    @param template TemplateClass instance.
+    @param T_pairs List of pairs, (T, U), defining a conversion from a
+        scalar type of U to T.
+        If None, this will use all possible pairs that the Python bindings
+        of `SystemScalarConverter` support.
+    """
+    if T_list is None:
+        T_list = SystemScalarConverter.SupportedScalars
+    param_list = []
+    for T in T_list:
+        assert T in SystemScalarConverter.SupportedScalars, (
+            "Type {} is not a supported scalar type".format(T))
+        param_list.append((T,))
+    if T_pairs is None:
+        T_pairs = _get_conversion_pairs(T_list)
+    for T_pair in T_pairs:
+        T, U = T_pair
+        assert T in T_list and U in T_list, (
+            "Conversion {} is not in the original parameter list"
+            .format(T_pair))
+        assert T_pair in \
+            SystemScalarConverter.SupportedConversionPairs, (
+            "Conversion {} is not supported".format(T_pair))
+
+    def decorator(instantiation_func):
+
+        # Define a template with the given parameter list.
+        @TemplateClass.define(name, param_list=param_list)
+        def template(param):
+            T, = param
+            instantiation = instantiation_func(T)
+            # Check and patch the class.
+            _patch_system_init(template, T, instantiation)
+
+            return instantiation
+
+        # Tack on converter and types for ease of testing.
+        template._converter = _make_converter(template, T_pairs)
+        template._T_list = T_list
+        template._T_pairs = T_pairs
+        return template
+
+    return decorator
+
+
 def _patch_system_init(template, T, instantiation):
     # Check that the user has not defined `__init__`, nad has defined
     # `_construct` and `_construct_copy`.
@@ -58,55 +110,6 @@ def _patch_system_init(template, T, instantiation):
     instantiation.__init__ = system_init
 
 
-def define_convertible_system(name, T_list=None, T_pairs=None):
-    """Provides a decorator which can be used define a scalar-type convertible
-    System.
-
-    @param T_list
-        List of T's that the given system supports. By default, it is all types
-        supported by `LeafSystem`.
-    @param template TemplateClass instance.
-    @param T_pairs List of pairs, (T, U), defining a conversion from a
-        scalar type of U to T.
-        If None, this will use all possible pairs that the Python bindings
-        of `SystemScalarConverter` support.
-    """
-    if T_list is None:
-        T_list = SystemScalarConverter.SupportedScalars
-    param_list = []
-    for T in T_list:
-        assert T in SystemScalarConverter.SupportedScalars, (
-            "Type {} is not a supported scalar type".format(T))
-        param_list.append((T,))
-    if T_pairs is None:
-        T_pairs = _get_conversion_pairs(T_list)
-    for T_pair in T_pairs:
-        assert T_pair in \
-            SystemScalarConverter.SupportedConversionPairs, (
-            "Conversion {} is not supported".format(T_pair))
-
-    def decorator(instantiation_func):
-
-        @TemplateClass.define(name, param_list=param_list)
-        def template(param):
-            T, = param
-            instantiation = instantiation_func(T)
-            # Check and patch the class.
-            _patch_system_init(template, T, instantiation)
-
-            return instantiation
-
-        # Tack on converer for ease of testing.
-        template._converter = _make_converter(template, T_pairs)
-        return template
-
-    return decorator
-
-
-# Global cache.
-_converter_cache = {}
-
-
 def _check_if_copying(template, obj, *args, **kwargs):
     # Checks if a function signature implies a copy constructor.
     if len(args) >= 1:
@@ -117,12 +120,6 @@ def _check_if_copying(template, obj, *args, **kwargs):
 
 def _make_converter(template, T_pairs):
     # Creates system scalar converter for the template class.
-    cache_key = (template, tuple(T_pairs))
-    cache_entry = _converter_cache.get(cache_key)
-    if cache_entry:
-        return copy.copy(cache_entry)
-
-    # Generate and register each conversion.
     converter = SystemScalarConverter()
 
     # Define capture to ensure the current values are bound, and do not
@@ -139,6 +136,4 @@ def _make_converter(template, T_pairs):
         converter.Add[T, U](conversion)
 
     map(add_captured, T_pairs)
-
-    _converter_cache[cache_key] = copy.copy(converter)
     return converter
