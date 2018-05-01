@@ -141,6 +141,31 @@ class TestScalarConversion(unittest.TestCase):
         with self.assertRaises(AssertionError):
             mut.define_convertible_system("C", T_pairs=T_pairs_unsupported)
 
+    def test_inheritance(self):
+
+        @mut.define_convertible_system("Child_")
+        def Child_(T):
+
+            class ChildInstantiation(Example_[T]):
+                def _construct(self, converter=None):
+                    Example_[T].__init__(self, 1000, converter=None)
+
+                def _construct_copy(self, other, converter=None):
+                    Example_[T].__init__(self, other, converter=converter)
+
+            return ChildInstantiation
+
+        c_float = Child_[float]()
+        self.assertIsInstance(c_float, Child_[float])
+        self.assertIsInstance(c_float, Example_[float])
+        self.assertEqual(c_float.value, 1000)
+        self.assertIs(c_float.copied_from, None)
+        c_ad = c_float.ToAutoDiffXd()
+        self.assertEqual(c_ad.value, 1000)
+        self.assertIs(c_ad.copied_from, c_float)
+        self.assertIsInstance(c_ad, Child_[AutoDiffXd])
+        self.assertIsInstance(c_ad, Example_[AutoDiffXd])
+
     def test_bad_class_definitions(self):
         """Tests bad class definitions."""
         bad_init = "Convertible systems should not define"
