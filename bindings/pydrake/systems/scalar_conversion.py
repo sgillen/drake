@@ -3,7 +3,6 @@
 import copy
 
 from pydrake.systems.framework import SystemScalarConverter
-from pydrake.util.cpp_template import is_instantiation_of
 
 
 def _get_conversion_pairs(param_list):
@@ -64,7 +63,7 @@ class ScalarHelper(object):
         @return The first argument (other system) if it is, None otherwise.
         """
         if len(args) == 1 and len(kwargs) == 0:
-            if is_instantiation_of(type(args[0]), self._template):
+            if self._template.is_instantiation(type(args[0])):
                 return args[0]
         return None
 

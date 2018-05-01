@@ -90,6 +90,10 @@ class TemplateBase(object):
                 self._instantiation_name(param)))
         return (instantiation, param)
 
+    def get_instantiation_pairs(self):
+        """Returns a list of ((param, instantiation), ...)."""
+        return zip(*self._instantiation_map.items())
+
     def add_instantiation(self, param, instantiation):
         """Adds a unique instantiation. """
         assert instantiation is not None
@@ -131,6 +135,10 @@ class TemplateBase(object):
             if check == instantiation:
                 param_list.append(param)
         return set(param_list)
+
+    def is_instantiation(self, obj):
+        if obj in self._instantiation_map.values():
+            return True
 
     def _param_resolve(self, param):
         # Resolves to canonical parameters, including default case.
@@ -260,8 +268,3 @@ class TemplateMethod(TemplateBase):
         def __str__(self):
             return '<bound TemplateMethod {} of {}>'.format(
                 self._tpl._full_name(), self._obj)
-
-
-def is_instantiation_of(obj, template):
-    """Determines of an object is registered as an instantiation. """
-    return obj in template._instantiation_map.values()

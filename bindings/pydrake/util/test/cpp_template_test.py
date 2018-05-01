@@ -47,8 +47,8 @@ class TestCppTemplate(unittest.TestCase):
         self.assertEquals(template[int], 1)
         self.assertEquals(template.get_instantiation(int), (1, (int,)))
         self.assertEquals(template.get_param_set(1), {(int,)})
-        self.assertTrue(m.is_instantiation_of(1, template))
-        self.assertFalse(m.is_instantiation_of(10, template))
+        self.assertTrue(template.is_instantiation(1))
+        self.assertFalse(template.is_instantiation(10))
         # Duplicate parameters.
         self.assertRaises(
             RuntimeError, lambda: template.add_instantiation(int, 4))
