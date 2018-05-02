@@ -102,8 +102,7 @@ class TemplateBase(object):
         return (instantiation, param)
 
     def _add_instantiation_internal(self, param, instantiation):
-        # Adds a unique instantiation, but permits overwriting (for deferred
-        # cases).
+        # Adds instantiation. Permits overwriting for deferred cases.
         assert instantiation is not None
         self._instantiation_map[param] = instantiation
         if instantiation is not TemplateBase._deferred:
@@ -111,7 +110,6 @@ class TemplateBase(object):
 
     def add_instantiation(self, param, instantiation):
         """Adds a unique instantiation. """
-        assert instantiation is not None
         # Ensure that we do not already have this tuple.
         param = get_param_canonical(self._param_resolve(param))
         if param in self._instantiation_map:
