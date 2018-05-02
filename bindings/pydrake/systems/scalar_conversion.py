@@ -46,7 +46,7 @@ class TemplateSystem(TemplateClass):
         @TemplateSystem.define("MySystem_")
         def MySystem_(T):
 
-            class MySystemT(LeafSystem_[T]):
+            class Impl(LeafSystem_[T]):
                 def _construct(self, value, converter=None):
                     LeafSystem_[T].__init__(self, converter)
                     self.value = value
@@ -54,7 +54,7 @@ class TemplateSystem(TemplateClass):
                 def _construct_copy(self, other, converter=None):
                     self._construct(other.value, converter=converter)
 
-            return MySystemT
+            return Impl
 
         MySystem = MySystem_[None]  # Default instantiation.
 
