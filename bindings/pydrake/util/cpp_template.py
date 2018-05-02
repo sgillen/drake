@@ -208,7 +208,7 @@ class TemplateBase(object):
 
         Note that the name of the inner class will not matter as it will be
         overritten with the template instantiation name.
-        In the below example, ``MyTemplateInstantiation` will be renamed to
+        In the below example, ``Impl` will be renamed to
         `MyTemplate[int]` when `param=(int,)`.
 
         Example:
@@ -216,10 +216,10 @@ class TemplateBase(object):
         @TemplateClass.define("MyTemplate", param_list=[(int,), (float,)])
         def MyTemplate(param):
             T, = param
-            class MyTemplateInstantiation(object):
+            class Impl(object):
                 def __init__(self):
                     self.T = T
-            return MyTemplateInstantiation
+            return Impl
         """
         template = cls(name, *args, **kwargs)
 

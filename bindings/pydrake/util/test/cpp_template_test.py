@@ -111,11 +111,11 @@ class TestCppTemplate(unittest.TestCase):
             # Ensure that we have deferred evaluation.
             test.assertEqual(MyTemplate.param_list, [(int,), (float,)])
 
-            class MyTemplateInstantiation(object):
+            class Impl(object):
                 def __init__(self):
                     self.T = T
 
-            return MyTemplateInstantiation
+            return Impl
 
         self.assertIsInstance(MyTemplate, m.TemplateClass)
         MyDefault = MyTemplate[None]

@@ -12,7 +12,7 @@ from pydrake.util.cpp_template import TemplateClass
 @mut.TemplateSystem.define("Example_")
 def Example_(T):
 
-    class ExampleT(LeafSystem_[T]):
+    class Impl(LeafSystem_[T]):
         """Testing example."""
 
         def _construct(self, value, converter=None):
@@ -25,7 +25,7 @@ def Example_(T):
             self.value = other.value
             self.copied_from = other
 
-    return ExampleT
+    return Impl
 
 
 Example = Example_[None]
@@ -110,8 +110,8 @@ class TestScalarConversion(unittest.TestCase):
         ]
         A = mut.TemplateSystem.define("A", T_list=T_list)(
             generic_instantiation_func)
-        self.assertEqual(A._T_list, T_list)
-        self.assertEqual(A._T_pairs, T_pairs_full)
+        self.assertListEqual(A._T_list, T_list)
+        self.assertListEqual(A._T_pairs, T_pairs_full)
 
         # - Explicit conversion pairs.
         T_pairs = [
@@ -119,15 +119,15 @@ class TestScalarConversion(unittest.TestCase):
         ]
         B = mut.TemplateSystem.define("B", T_list=T_list, T_pairs=T_pairs)(
             generic_instantiation_func)
-        self.assertEqual(B._T_list, T_list)
-        self.assertEqual(B._T_pairs, T_pairs)
+        self.assertListEqual(B._T_list, T_list)
+        self.assertListEqual(B._T_pairs, T_pairs)
 
         # Negative tests.
         # - Not a supported scalar.
         T_list_bad = [int, float]
         with self.assertRaises(AssertionError):
             mut.TemplateSystem.define("C", T_list=T_list_bad)
-        # - Not in original param list.
+        # - Not in original `T_list`.
         T_pairs_bad = [
             (float, Expression),
         ]
