@@ -101,15 +101,11 @@ class TemplateBase(object):
                 self._instantiation_name(param)))
         return (instantiation, param)
 
-    def _add_instantiation_internal(self, param, instantiation):
-        # Adds instantiation. Permits overwriting for deferred cases.
-        assert instantiation is not None
-        self._instantiation_map[param] = instantiation
-        if instantiation is not TemplateBase._deferred:
-            self._on_add(param, instantiation)
-
     def add_instantiation(self, param, instantiation):
-        """Adds a unique instantiation. """
+        """Adds a unique instantiation.
+
+        @pre `param` must not have already been added.
+        """
         # Ensure that we do not already have this tuple.
         param = get_param_canonical(self._param_resolve(param))
         if param in self._instantiation_map:
@@ -120,10 +116,18 @@ class TemplateBase(object):
         self._add_instantiation_internal(param, instantiation)
         return param
 
+    def _add_instantiation_internal(self, param, instantiation):
+        # Adds instantiation. Permits overwriting for deferred cases.
+        assert instantiation is not None
+        self._instantiation_map[param] = instantiation
+        if instantiation is not TemplateBase._deferred:
+            self._on_add(param, instantiation)
+
     def add_instantiations(self, instantiation_func, param_list):
         """Adds a set of instantiations given a function and a list of
         parameter sets.
 
+        @pre This method can only be called once.
         @param instantiation_func
             Function of the form `f(template, param)`, where `template` is the
             current template and `param` is the parameter set for the current
@@ -132,10 +136,10 @@ class TemplateBase(object):
             Ordered container of parameter sets that these instantiations
             should be produced for.
         """
+        assert instantiation_func is not None
         if self._instantiation_func is not None:
-            # Ensure that we have all instantiations for the old function.
-            for param in self.param_list:
-                self.get_instantiation(param)
+            raise RuntimeError(
+                "`add_instsantiations` cannot be called multiple times.")
         self._instantiation_func = instantiation_func
         for param in param_list:
             self.add_instantiation(param, TemplateBase._deferred)
@@ -155,7 +159,7 @@ class TemplateBase(object):
         # Use `get_instantiation` so that we can handled deferred cases.
         for param in self.param_list:
             instantiation, _ = self.get_instantiation(param)
-            if instantiation == obj:
+            if instantiation is obj:
                 return True
         return False
 

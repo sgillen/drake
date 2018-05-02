@@ -12,7 +12,7 @@ from pydrake.util.cpp_template import TemplateClass
 @mut.TemplateSystem.define("Example_")
 def Example_(T):
 
-    class ExampleInstantiation(LeafSystem_[T]):
+    class ExampleT(LeafSystem_[T]):
         """Testing example."""
 
         def _construct(self, value, converter=None):
@@ -25,7 +25,7 @@ def Example_(T):
             self.value = other.value
             self.copied_from = other
 
-    return ExampleInstantiation
+    return ExampleT
 
 
 Example = Example_[None]
@@ -36,7 +36,7 @@ class TestScalarConversion(unittest.TestCase):
         conversion_scalars = (
             float, AutoDiffXd, Expression,
         )
-        self.assertEqual(
+        self.assertTupleEqual(
             SystemScalarConverter.SupportedScalars,
             conversion_scalars)
         conversion_pairs = (
@@ -47,7 +47,7 @@ class TestScalarConversion(unittest.TestCase):
             (float, Expression),
             (AutoDiffXd, Expression),
         )
-        self.assertEqual(
+        self.assertTupleEqual(
             SystemScalarConverter.SupportedConversionPairs,
             conversion_pairs)
 
@@ -59,12 +59,12 @@ class TestScalarConversion(unittest.TestCase):
 
         # Test parameters.
         param_list = [(T,) for T in SystemScalarConverter.SupportedScalars]
-        self.assertEqual(Example_.param_list, param_list)
+        self.assertListEqual(Example_.param_list, param_list)
 
         # Test private properties (do NOT use these in your code!).
-        self.assertEqual(
+        self.assertTupleEqual(
             tuple(Example_._T_list), SystemScalarConverter.SupportedScalars)
-        self.assertEqual(
+        self.assertTupleEqual(
             tuple(Example_._T_pairs),
             SystemScalarConverter.SupportedConversionPairs)
         converter = Example_._converter
@@ -168,7 +168,6 @@ class TestScalarConversion(unittest.TestCase):
 
     def test_bad_class_definitions(self):
         """Tests bad class definitions."""
-        bad_init = "Convertible systems should not define"
 
         # Should not define `__init__`.
         @mut.TemplateSystem.define("NoInit_")
@@ -188,7 +187,9 @@ class TestScalarConversion(unittest.TestCase):
 
         with self.assertRaises(RuntimeError) as cm:
             NoInit_[float]
-        self.assertIn(bad_init, str(cm.exception))
+        self.assertIn(
+            "NoInit_[float] defines `__init__`, but should not",
+            str(cm.exception))
 
         # Should define `_construct_copy`.
         @mut.TemplateSystem.define("NoConstructCopy_")
@@ -202,7 +203,9 @@ class TestScalarConversion(unittest.TestCase):
 
         with self.assertRaises(RuntimeError) as cm:
             NoConstructCopy_[float]
-        self.assertIn(bad_init, str(cm.exception))
+        self.assertIn(
+            "NoConstructCopy_[float] does not define `_construct_copy`",
+            str(cm.exception))
 
         # Should inherit from `LeafSystem_[T]`.
         @mut.TemplateSystem.define("BadParenting_")

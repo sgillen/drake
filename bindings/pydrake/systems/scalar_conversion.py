@@ -13,15 +13,10 @@ from pydrake.util.cpp_template import (
 
 
 def _get_conversion_pairs(T_list):
-    # Intersect.
-    T_compat = []
-    for T in T_list:
-        if T in SystemScalarConverter.SupportedScalars:
-            T_compat.append(T)
     # Take subset from supported conversions.
     T_pairs = []
     for T, U in SystemScalarConverter.SupportedConversionPairs:
-        if T in T_compat and U in T_compat:
+        if T in T_list and U in T_list:
             T_pairs.append((T, U))
     return T_pairs
 
@@ -29,35 +24,37 @@ def _get_conversion_pairs(T_list):
 class TemplateSystem(TemplateClass):
     """Provides a means to define templated systems.
 
-    This differs from `TemplateClass` in that (a) you must pre-specify
+    This differs from `TemplateClass` in that (a) the template must specify its
     parameters at construction time and (b) `.define` is overridden to allow
     defining `f(T)` for convenience.
 
     Any class that is added must:
     - Not define `__init__`, as this will be overridden.
-    - Define `_construct(self, *args, converter=None)` and
-      `_construct_copy(self, *args, converter=None)` instead.
+    - Define `_construct(self, <args>, converter=None, <kwargs>)` and
+      `_construct_copy(self, other, converter=None)` instead.
       - `converter` must be present as an argument to ensure that it
         propagates properly.
 
     If any of these constraints are violated, then an error will be thrown
     at the time of the first class instantiation.
+    Note that `converter` should always be non-None, as guaranteed by the
+    overriding `__init__`. This is due to Python2 not having keyword-only
+    arguments.
 
     Example:
 
         @TemplateSystem.define("MySystem_")
         def MySystem_(T):
 
-            class MySystemInstantiation(LeafSystem_[T]):
+            class MySystemT(LeafSystem_[T]):
                 def _construct(self, value, converter=None):
                     LeafSystem_[T].__init__(self, converter)
                     self.value = value
 
                 def _construct_copy(self, other, converter=None):
-                    LeafSystem_[T].__init__(self, converter)
-                    self.value = other.value
+                    self._construct(other.value, converter=converter)
 
-            return MySystemInstantiation
+            return MySystemT
 
         MySystem = MySystem_[None]  # Default instantiation.
 
@@ -97,12 +94,12 @@ class TemplateSystem(TemplateClass):
                     "Conversion {} is not supported".format(T_pair))
 
         # Add converter for later access.
-        self._T_list = T_list
-        self._T_pairs = T_pairs
+        self._T_list = list(T_list)
+        self._T_pairs = list(T_pairs)
         self._converter = self._make_converter()
 
     @classmethod
-    def define(cls, name, *args, **kwargs):
+    def define(cls, name, T_list=None, T_pairs=None, *args, **kwargs):
         """Provides a decorator which can be used define a scalar-type
         convertible System as a template.
 
@@ -113,10 +110,14 @@ class TemplateSystem(TemplateClass):
         @param name
             Name of the system template. This should match the name of the
             object being decorated.
+        @param T_list
+            See `__init__` for more information.
+        @param T_pairs
+            See `__init__` for more information.
         @param args, kwargs
             These are passed to the constructor of `TemplateSystem`.
         """
-        template = cls(name, *args, **kwargs)
+        template = cls(name, T_list, T_pairs, *args, **kwargs)
         param_list = [(T,) for T in template._T_list]
 
         def decorator(instantiation_func):
@@ -134,7 +135,7 @@ class TemplateSystem(TemplateClass):
         TemplateClass._on_add(self, param, cls)
         T, = param
 
-        # Check that the user has not defined `__init__`, nad has defined
+        # Check that the user has not defined `__init__`, and has defined
         # `_construct` and `_construct_copy`.
         if not issubclass(cls, LeafSystem_[T]):
             raise RuntimeError(
@@ -144,11 +145,21 @@ class TemplateSystem(TemplateClass):
         # that we don't get spillover from inheritance.
         d = cls.__dict__
         no_init = "__init__" not in d
-        has_custom_init = ("_construct" in d) and ("_construct_copy" in d)
-        if not (no_init and has_custom_init):
+        has_construct = "_construct" in d
+        has_copy = "_construct_copy" in d
+        if not no_init:
             raise RuntimeError(
-                "Convertible systems should not define `__init__`, but must "
-                "define `_construct` and `_construct_copy` instead.")
+                "{} defines `__init__`, but should not. Please implement "
+                "`_construct` and `_construct_copy` instead."
+                .format(cls.__name__))
+        if not has_construct:
+            raise RuntimeError(
+                "{} does not define `_construct`. Pleaes ensure this is "
+                "defined.".format(cls.__name__))
+        if not has_copy:
+            raise RuntimeError(
+                "{} does not define `_construct_copy`. Please ensure this "
+                "is defined.".format(cls.__name__))
 
         # Patch `__init__`.
         template = self
@@ -161,8 +172,8 @@ class TemplateSystem(TemplateClass):
                 # Use default converter.
                 converter = template._converter
             if template._check_if_copying(self, *args, **kwargs):
-                cls._construct_copy(
-                    self, *args, converter=converter, **kwargs)
+                other = args[0]
+                cls._construct_copy(self, other, converter=converter)
             else:
                 cls._construct(
                     self, *args, converter=converter, **kwargs)
@@ -171,7 +182,9 @@ class TemplateSystem(TemplateClass):
 
     def _check_if_copying(self, obj, *args, **kwargs):
         # Checks if a function signature implies a copy constructor.
-        if len(args) >= 1:
+        # Since this is called once `converter` is invoked, we just ensure that
+        # there are no additional arguments.
+        if len(args) == 1 and len(kwargs) == 0:
             if self.is_subclass_of_instantiation(type(args[0])):
                 return True
         return False

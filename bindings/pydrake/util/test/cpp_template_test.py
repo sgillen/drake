@@ -80,16 +80,12 @@ class TestCppTemplate(unittest.TestCase):
         dummy_b = (str,) * 10
         template.add_instantiations(instantiation_func, [dummy_a, dummy_b])
         self.assertEquals(template[dummy_a], 105)
-
-        # Add more instantiations.
-        def instantiation_func_double(param):
-            return 200 + len(param)
-        dummy_c = (str,) * 15
-        template.add_instantiations(instantiation_func_double, [dummy_c])
-        self.assertEquals(template[dummy_c], 215)
-
-        # Ensure that the old instantiation function was "flushed".
         self.assertEquals(template[dummy_b], 110)
+
+        # Ensure that we can only call this once.
+        dummy_c = (str,) * 7
+        with self.assertRaises(RuntimeError):
+            template.add_instantiations(instantiation_func, [dummy_c])
 
     def test_class(self):
         template = m.TemplateClass("ClassTpl")
