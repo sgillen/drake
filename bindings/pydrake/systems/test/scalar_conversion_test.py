@@ -145,14 +145,14 @@ class TestScalarConversion(unittest.TestCase):
         @mut.TemplateSystem.define("Child_")
         def Child_(T):
 
-            class ChildInstantiation(Example_[T]):
+            class Impl(Example_[T]):
                 def _construct(self, converter=None):
                     Example_[T].__init__(self, 1000, converter=converter)
 
                 def _construct_copy(self, other, converter=None):
                     Example_[T].__init__(self, other, converter=converter)
 
-            return ChildInstantiation
+            return Impl
 
         c_float = Child_[float]()
         self.assertIsInstance(c_float, Child_[float])
