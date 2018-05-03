@@ -22,7 +22,7 @@ def _get_conversion_pairs(T_list):
 
 
 class TemplateSystem(TemplateClass):
-    """Provides a means to define templated systems.
+    """Defines templated systems enabling scalar type conversion in Python.
 
     This differs from `TemplateClass` in that (a) the template must specify its
     parameters at construction time and (b) `.define` is overridden to allow
@@ -45,20 +45,31 @@ class TemplateSystem(TemplateClass):
 
             class Impl(LeafSystem_[T]):
                 def _construct(self, value, converter=None):
-                    LeafSystem_[T].__init__(self, converter)
+                    LeafSystem_[T].__init__(self, converter=converter)
                     self.value = value
 
                 def _construct_copy(self, other, converter=None):
-                    self._construct(other.value, converter=converter)
+                    Impl._construct(self, other.value, converter=converter)
 
             return Impl
 
         MySystem = MySystem_[None]  # Default instantiation.
 
-    Note that `converter` should always be non-None, as guaranteed by the
-    overriding `__init__`. We use `converter=None` to imply it should be
-    positional, since Python2 does not have keyword-only arguments.
+    Things to note:
+    - When defining `_construct_copy`, if you are delegating to `_construct`
+      within the same class, you should use `Impl._construct(self, ...)`; if
+      you use `self._construct`, then you may get a child class's constructor
+      if you are inheriting.
+    - If you are delegating construction to a parent Python class for both
+      constructors, use the parent class's `__init__` method, not its
+      `_construct` or `_construct_copy` methods.
+    - `converter` should always be non-None, as guaranteed by the overriding
+      `__init__`. We use `converter=None` to imply it should be positional,
+       since Python2 does not have keyword-only arguments.
     """
+    # TODO(eric.cousineau): Figure out if there is a way to avoid needing to
+    # pass around converters in user code, avoiding the need to have Python
+    # users deal with `SystemScalarConverter`.
     def __init__(self, name, T_list=None, T_pairs=None, module_name=None):
         """Constructs `TemplateSystem`.
 
@@ -76,7 +87,7 @@ class TemplateSystem(TemplateClass):
             module_name = _get_module_name_from_stack()
         TemplateClass.__init__(self, name, module_name=module_name)
 
-        # Stub values to be defined.
+        # Check scalar types and conversions, using defaults if unspecified.
         if T_list is None:
             T_list = SystemScalarConverter.SupportedScalars
         for T in T_list:
@@ -93,7 +104,6 @@ class TemplateSystem(TemplateClass):
                 SystemScalarConverter.SupportedConversionPairs, (
                     "Conversion {} is not supported".format(T_pair))
 
-        # Add converter for later access.
         self._T_list = list(T_list)
         self._T_pairs = list(T_pairs)
         self._converter = self._make_converter()

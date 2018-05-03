@@ -304,7 +304,7 @@ struct Impl {
     DefineTemplateClassWithDefault<LeafSystem<T>, PyLeafSystem, System<T>>(
       m, "LeafSystem", GetPyParam<T>())
       .def(py::init<>())
-      .def(py::init<SystemScalarConverter>())
+      .def(py::init<SystemScalarConverter>(), py::arg("converter"))
       .def(
           "_DeclareVectorOutputPort",
           WrapCallbacks(

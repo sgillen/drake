@@ -16,13 +16,12 @@ def Example_(T):
         """Testing example."""
 
         def _construct(self, value, converter=None):
-            LeafSystem_[T].__init__(self, converter)
+            LeafSystem_[T].__init__(self, converter=converter)
             self.value = value
             self.copied_from = None
 
         def _construct_copy(self, other, converter=None):
-            LeafSystem_[T].__init__(self, converter)
-            self.value = other.value
+            Impl._construct(self, other.value, converter=converter)
             self.copied_from = other
 
     return Impl
