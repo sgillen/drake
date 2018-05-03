@@ -37,9 +37,6 @@ class TemplateSystem(TemplateClass):
 
     If any of these constraints are violated, then an error will be thrown
     at the time of the first class instantiation.
-    Note that `converter` should always be non-None, as guaranteed by the
-    overriding `__init__`. This is due to Python2 not having keyword-only
-    arguments.
 
     Example:
 
@@ -58,6 +55,9 @@ class TemplateSystem(TemplateClass):
 
         MySystem = MySystem_[None]  # Default instantiation.
 
+    Note that `converter` should always be non-None, as guaranteed by the
+    overriding `__init__`. We use `converter=None` to imply it should be
+    positional, since Python2 does not have keyword-only arguments.
     """
     def __init__(self, name, T_list=None, T_pairs=None, module_name=None):
         """Constructs `TemplateSystem`.
@@ -182,8 +182,8 @@ class TemplateSystem(TemplateClass):
 
     def _check_if_copying(self, obj, *args, **kwargs):
         # Checks if a function signature implies a copy constructor.
-        # Since this is called once `converter` is invoked, we just ensure that
-        # there are no additional arguments.
+        # Since this is called after `converter` has been removed from
+        # `kwargs`, we just ensure that there are no additional arguments.
         if len(args) == 1 and len(kwargs) == 0:
             if self.is_subclass_of_instantiation(type(args[0])):
                 return True
