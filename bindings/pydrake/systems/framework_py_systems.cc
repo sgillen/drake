@@ -304,6 +304,12 @@ struct Impl {
     DefineTemplateClassWithDefault<LeafSystem<T>, PyLeafSystem, System<T>>(
       m, "LeafSystem", GetPyParam<T>())
       .def(py::init<>())
+      // TODO(eric.cousineau): It'd be nice if we did not need the user to
+      // propagate scalar conversion information. Ideally, if we could
+      // intercept `self` at this point, when constructing `PyLeafSystem` for
+      // extending Python, we could figure out what user-defined template is
+      // being used, and pass that as the converter. However, that requires an
+      // old-style `py::init`, which is deprecated in Python...
       .def(py::init<SystemScalarConverter>(), py::arg("converter"))
       .def(
           "_DeclareVectorOutputPort",
