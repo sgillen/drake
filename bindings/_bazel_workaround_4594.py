@@ -1,7 +1,11 @@
 """
 Workaround for https://github.com/bazelbuild/bazel/issues/4594
 
-WARNING: This may leak in additional libraries, or not respect proper order!
+Caveats:
+* This may leak in additional libraries.
+* May not respect proper path ordering.
+* If `pydrake` is imported later in a program, it may change the overall
+program behavior.
 """
 
 import os
