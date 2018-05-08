@@ -4,10 +4,10 @@ from __future__ import absolute_import, division, print_function
 # N.B. This workaround is not installed, so we surround it with try / catch.
 import os
 try:
-    from _bazel_workaround_4594 import _fix_external_bazel_shared_libs
+    from _bazel_workaround_4594 import _reexec_with_new_environment
     runfiles_dir = os.environ.get("DRAKE_BAZEL_RUNFILES") or os.getcwd()
     if os.path.exists(os.path.join(runfiles_dir, "external/drake")):
-        _fix_external_bazel_shared_libs(__name__, runfiles_dir)
+        _reexec_with_new_environment(__name__, runfiles_dir)
 except ImportError:
     pass
 

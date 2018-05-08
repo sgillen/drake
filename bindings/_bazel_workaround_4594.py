@@ -1,37 +1,40 @@
 """
-Hacky workaround for https://github.com/bazelbuild/bazel/issues/4594
+Workaround for https://github.com/bazelbuild/bazel/issues/4594
 
 WARNING: This may leak in additional libraries, or not respect proper order!
 """
 
-from collections import OrderedDict
 import os
 import subprocess
 import sys
 
 
-def _fix_external_bazel_shared_libs(module, runfiles_dir):
-    """Ensures all shared libraries are loadable, even if they are incorrectly
-    RPATH linked by Bazel.
-    @see https://stackoverflow.com/a/25457751/7829525
-    """
-    key_workaround = "BAZEL_4594_WORKAROUND_" + module
-    if key_workaround in os.environ:
-        # Only do this hack workaround once.
+def _module_key(module):
+    return "BAZEL_4594_WORKAROUND_" + module
+
+
+def _reexec_with_new_environment(module, runfiles_dir):
+    # Ensures all shared libraries are loadable, even if they are incorrectly
+    # RPATH linked by Bazel.
+    # See https://stackoverflow.com/a/25457751/7829525
+    key = _module_key(module)
+    if key in os.environ:
+        # Only do this workaround once.
         return
-    _fix_library_path(runfiles_dir)
+    _add_library_paths(runfiles_dir)
     # Ensure that this only happens once.
-    os.environ[key_workaround] = "1"
+    os.environ[key] = "1"
     # N.B. `python` needs to have arg[0] be itself, not the script.
     args = [sys.executable] + sys.argv
     sys.stdout.flush()
     os.execv(args[0], args)
 
 
-def _fix_library_path(runfiles_dir):
-    # Find all libraries, and get the directories.
+def _add_library_paths(start_dir):
+    # Find all libraries, get the directories, and add to the appropriatve
+    # environment variable.
     out = subprocess.check_output(
-        "find {} -name *.so -o -name *.so.*".format(runfiles_dir).split())
+        "find {} -name *.so -o -name *.so.*".format(start_dir).split())
     lines = out.split("\n")
     # Collect all unique directories in order.
     dirs = []
