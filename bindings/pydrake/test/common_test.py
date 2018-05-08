@@ -4,9 +4,6 @@ import os
 import unittest
 import pydrake.common
 
-import subprocess
-subprocess.check_call(
-    "ldd {}".format(pydrake.common.__file__), shell=True)
 
 class TestCommon(unittest.TestCase):
     def test_drake_demand_throws(self):

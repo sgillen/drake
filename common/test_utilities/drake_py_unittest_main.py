@@ -24,12 +24,35 @@ if __name__ == '__main__':
     test_name, = match.groups()
     test_filename = test_name + ".py"
 
+    def is_external_alias(a, b):
+        prefix = "./external/drake"
+        if a.startswith(prefix):
+            external = a
+            local = b
+        elif b.startswith(prefix):
+            external = b
+            local = a
+        else:
+            return None
+        if local.startswith("./"):
+            local = local[2:]
+        if prefix + "/" + local == external:
+            return external
+        else:
+            return None
+
     # Find the test_filename and check it for a (misleading) __main__.
     found_filename = None
     for dirpath, dirs, files in os.walk("."):
         if test_filename in files:
-            assert not found_filename
-            found_filename = os.path.join(dirpath, test_filename)
+            cur_file = os.path.join(dirpath, test_filename)
+            if found_filename:
+                external_alias = is_external_alias(cur_file, found_filename)
+                assert external_alias is not None, "Bad pair: {}".format(
+                    (found_filename, test_filename))
+                found_filename = external_alias
+            else:
+                found_filename = cur_file
     if not found_filename:
         raise RuntimeError("No such file found {}!".format(
             test_filename))

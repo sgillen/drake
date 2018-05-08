@@ -9,7 +9,6 @@ import os
 import subprocess
 import sys
 
-sys.stdout = sys.stderr
 
 def _fix_external_bazel_shared_libs(module, runfiles_dir):
     """Ensures all shared libraries are loadable, even if they are incorrectly
@@ -20,6 +19,16 @@ def _fix_external_bazel_shared_libs(module, runfiles_dir):
     if key_workaround in os.environ:
         # Only do this hack workaround once.
         return
+    _fix_library_path(runfiles_dir)
+    # Ensure that this only happens once.
+    os.environ[key_workaround] = "1"
+    # N.B. `python` needs to have arg[0] be itself, not the script.
+    args = [sys.executable] + sys.argv
+    sys.stdout.flush()
+    os.execv(args[0], args)
+
+
+def _fix_library_path(runfiles_dir):
     # Find all libraries, and get the directories.
     out = subprocess.check_output(
         "find {} -name *.so -o -name *.so.*".format(runfiles_dir).split())
@@ -28,12 +37,12 @@ def _fix_external_bazel_shared_libs(module, runfiles_dir):
     dirs = []
     for line in lines:
         file = line.strip()
+        if not file:
+            continue
         d = os.path.dirname(file)
         if d not in dirs:
-            print(file)
-            print(d)
-            assert os.path.exists(d)
-            assert os.path.isabs(d)
+            assert os.path.exists(d), "{}\n{}".format(d, file)
+            assert os.path.isabs(d), "{}\n{}".format(d, file)
             dirs.append(d)
     # Append to path variable.
     is_mac = sys.platform.startswith("darwin")
@@ -41,9 +50,3 @@ def _fix_external_bazel_shared_libs(module, runfiles_dir):
     paths = os.environ.get(key, "").split(os.pathsep)
     paths = dirs + paths
     os.environ[key] = os.pathsep.join(paths)
-    # Ensure that this only happens once.
-    os.environ[key_workaround] = "1"
-    # N.B. `python` needs to have arg[0] be itself, not the script.
-    args = [sys.executable] + sys.argv
-    sys.stdout.flush()
-    os.execv(args[0], args)
