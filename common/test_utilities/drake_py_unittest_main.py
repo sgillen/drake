@@ -11,6 +11,27 @@ import sys
 import trace
 import unittest
 
+
+def is_external_alias(a, b):
+    # Checks if two files are the same, just duplicated as an external in
+    # Bazel's runfiles.
+    prefix = "./external/drake"
+    if a.startswith(prefix):
+        external = a
+        local = b
+    elif b.startswith(prefix):
+        external = b
+        local = a
+    else:
+        return None
+    if local.startswith("./"):
+        local = local[2:]
+    if prefix + "/" + local == external:
+        return external
+    else:
+        return None
+
+
 if __name__ == '__main__':
     # Obtain the full path for this test case; it looks a bit like this:
     # .../execroot/.../foo_test.runfiles/.../drake_py_unittest_main.py
@@ -24,23 +45,6 @@ if __name__ == '__main__':
     test_name, = match.groups()
     test_filename = test_name + ".py"
 
-    def is_external_alias(a, b):
-        prefix = "./external/drake"
-        if a.startswith(prefix):
-            external = a
-            local = b
-        elif b.startswith(prefix):
-            external = b
-            local = a
-        else:
-            return None
-        if local.startswith("./"):
-            local = local[2:]
-        if prefix + "/" + local == external:
-            return external
-        else:
-            return None
-
     # Find the test_filename and check it for a (misleading) __main__.
     found_filename = None
     for dirpath, dirs, files in os.walk("."):
@@ -48,7 +52,7 @@ if __name__ == '__main__':
             cur_file = os.path.join(dirpath, test_filename)
             if found_filename:
                 external_alias = is_external_alias(cur_file, found_filename)
-                assert external_alias is not None, "Bad pair: {}".format(
+                assert external_alias is not None, "Non-identical: {}".format(
                     (found_filename, test_filename))
                 found_filename = external_alias
             else:
