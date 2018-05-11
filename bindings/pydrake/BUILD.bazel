@@ -211,19 +211,6 @@ drake_py_library(
 )
 
 drake_pybind_library(
-    name = "math_test_util_py",
-    testonly = 1,
-    add_install = False,
-    cc_deps = [
-        ":autodiff_types_pybind",
-    ],
-    cc_so_name = "test/math_test_util",
-    cc_srcs = ["test/math_test_util_py.cc"],
-    package_info = PACKAGE_INFO,
-)
-
-# Test ODR (One Definition Rule).
-drake_pybind_library(
     name = "autodiffutils_test_util_py",
     testonly = 1,
     add_install = False,
