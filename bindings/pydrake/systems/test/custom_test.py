@@ -46,7 +46,8 @@ def CustomAdder_(T):
             self._size = size
             for i in xrange(num_inputs):
                 self._DeclareInputPort(PortDataType.kVectorValued, size)
-            self._DeclareVectorOutputPort(BasicVector_[T](size), self._calc_sum)
+            self._DeclareVectorOutputPort(
+                BasicVector_[T](size), self._calc_sum)
 
         def _construct_copy(self, other, converter=None):
             Impl._construct(
@@ -58,7 +59,7 @@ def CustomAdder_(T):
             for i in xrange(context.get_num_input_ports()):
                 input_vector = self.EvalVectorInput(context, i)
                 sum += input_vector.get_value()
-    
+
     return Impl
 
 
@@ -99,6 +100,7 @@ def CustomVectorSystem_(T):
             return True
 
     return Impl
+
 
 # Default instantiations.
 CustomAdder = CustomAdder_[None]

@@ -121,31 +121,34 @@ class UfuncMirrorDef {
 /// This solution comes from the posted workaround.
 template <typename T, typename Check = detail::greedy_arg_no_check>
 class greedy_arg {
-public:
-    greedy_arg(T&& value) : value_(std::move(value)) {}
-    // TODO(eric.cousineau): Figure out how to handle referencing properly.
-    T&& operator*() {
-        return std::move(value_);
-    }
-private:
-    T value_;
+ public:
+  // NOLINTNEXTLINE[runtime/explicit]: This is desirable.
+  greedy_arg(T&& value) : value_(std::move(value)) {}
+  // TODO(eric.cousineau): Figure out how to handle referencing properly.
+  T&& operator*() {
+    return std::move(value_);
+  }
+ private:
+  T value_;
 };
 
 }  // namespace pydrake
 }  // namespace drake
 
-namespace pybind11 { namespace detail {
+namespace pybind11 {
+namespace detail {
 
 template <typename T, typename Check>
 struct type_caster<drake::pydrake::greedy_arg<T, Check>> : type_caster<T> {
-    using base = type_caster<T>;
-    bool load(handle src, bool /*convert*/) {
-        if (!Check::run(src))
-            return false;
-        return base::load(src, true);
-    }
-    template <typename>
-    using cast_op_type = T&&;
+  using base = type_caster<T>;
+  bool load(handle src, bool /*convert*/) {
+    if (!Check::run(src))
+      return false;
+    return base::load(src, true);
+  }
+  template <typename>
+  using cast_op_type = T&&;
 };
 
-} }  // namespace pybind11::detail
+}  // namespace detail
+}  // namespace pybind11
