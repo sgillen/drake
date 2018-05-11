@@ -7,9 +7,10 @@ set -eux -o pipefail
 output_dir=${1}
 shift
 
-repo=https://github.com/numpy/numpy
-commit=7d247f44768b0935286d1034bedadffc0f5bdf40
-fetch_ref=pull/10898/head
+repo=https://github.com/EricCousineau-TRI/numpy
+# Requires NumPy PR #10898 and #11076
+commit=8b517bd2ccf37dd51191052e2b39be4f92d42bca
+fetch_ref=drake_tmp
 
 git clone ${repo} numpy
 cd numpy
