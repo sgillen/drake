@@ -1,3 +1,5 @@
+#include <cmath>
+
 #include "pybind11/eigen.h"
 #include "pybind11/operators.h"
 #include "pybind11/pybind11.h"
@@ -10,6 +12,7 @@
 using Eigen::AutoDiffScalar;
 using std::sin;
 using std::cos;
+using std::isfinite;
 
 namespace drake {
 namespace pydrake {
@@ -28,6 +31,11 @@ PYBIND11_MODULE(_autodiffutils_py, m) {
   py::module np = py::module::import("numpy");
   py::dtype np_int64 = py::reinterpret_borrow<py::dtype>(
       np.attr("dtype")(np.attr("int64")));
+  // Due to how `np.result_type` works, it promotes data type based on the
+  // scalar magnitude. For `np.allclose`, it uses `np.result_type(y, 1.)`, where
+  // `1.` resolves to `np.float16`.
+  py::dtype np_float16 = py::reinterpret_borrow<py::dtype>(
+        np.attr("dtype")(np.attr("float16")));
 
   py::dtype_user<AutoDiffXd> autodiff(m, "AutoDiffXd");
   autodiff
@@ -41,6 +49,11 @@ PYBIND11_MODULE(_autodiffutils_py, m) {
     // `np.array([<integers])`, which by default resolves to a dtype of int64.
     .def_loop(
         py::dtype_method::implicit_conversion<int64_t, AutoDiffXd>(), np_int64)
+    .def_loop(
+        py::dtype_method::implicit_conversion([](int16_t) -> AutoDiffXd {
+            throw std::runtime_error(
+                "No actual half float conversion available");
+        }), np_float16)
     // See https://github.com/numpy/numpy/issues/10904 for next 2 casts.
     // NOLINTNEXTLINE(runtime/int): Use platform-dependent name for NumPy.
     .def_loop(py::dtype_method::implicit_conversion<long, AutoDiffXd>())
@@ -101,6 +114,9 @@ PYBIND11_MODULE(_autodiffutils_py, m) {
     // defined.
     .def_loop("square", [](const AutoDiffXd& self) {
       return self * self;
+    })
+    .def_loop("isfinite", [](const AutoDiffXd& self) {
+      return isfinite(self.value());
     });
 
   // Add overloads for `math` functions.
