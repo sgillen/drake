@@ -87,6 +87,11 @@ class TestAutoDiffXd(unittest.TestCase):
         x[0] = 0
         x[0] = 0.
         x[0] = False
+        # Assign via slicing with implicit casting.
+        # N.B. This requires numpy/numpy#11076.
+        x[:] = 0
+        x[:] = 0.
+        x[:] = False
 
         # Assigning via slicing is an explicit cast.
         xf = np.zeros(2, dtype=np.float)
@@ -216,5 +221,3 @@ class TestAutoDiffXd(unittest.TestCase):
         xc = c.value()
         xc *= 2
         self._check_array(c.value(), [[AD(20, [2., 0]), AD(200, [0, 2.])]])
-        print(np.version.version)
-        xc[:] = 0  # Causes segfault (double-free)
