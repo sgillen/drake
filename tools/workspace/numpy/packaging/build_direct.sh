@@ -10,7 +10,7 @@ shift
 repo=https://github.com/EricCousineau-TRI/numpy
 # Requires NumPy PR #10898 and #11076
 commit=8b517bd2ccf37dd51191052e2b39be4f92d42bca
-fetch_ref=drake_tmp
+fetch_ref=drake_no_prune
 
 git clone ${repo} numpy
 cd numpy
