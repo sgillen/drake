@@ -55,7 +55,11 @@ def CustomAdder_(T):
         def _calc_sum(self, context, sum_data):
             sum = sum_data.get_mutable_value()
             print(sum)
-            sum[:] = 0
+            sum[:] = 0.
+            # sum[:] = np.zeros(sum.shape, dtype=T)
+            print(sum)
+            if T == AutoDiffXd:
+                exit(1)
             for i in xrange(context.get_num_input_ports()):
                 input_vector = self.EvalVectorInput(context, i)
                 sum += input_vector.get_value()

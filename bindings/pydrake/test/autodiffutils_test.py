@@ -216,3 +216,5 @@ class TestAutoDiffXd(unittest.TestCase):
         xc = c.value()
         xc *= 2
         self._check_array(c.value(), [[AD(20, [2., 0]), AD(200, [0, 2.])]])
+        print(np.version.version)
+        xc[:] = 0  # Causes segfault (double-free)
