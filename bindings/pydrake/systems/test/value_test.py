@@ -31,14 +31,12 @@ def int_list(x):
 
 class TestValue(unittest.TestCase):
     def assertArrayEqual(self, lhs, rhs):
-        lhs = np.array(lhs)
-        rhs = np.array(rhs)
+        # TODO(eric.cousineau): Place in `pydrake.test.unittest_mixins`.
+        lhs, rhs = np.array(lhs), np.array(rhs)
         if lhs.dtype == Expression or rhs.dtype == Expression:
             lhs, rhs = lhs.astype(Expression), rhs.astype(Expression)
             self.assertTrue(Expression.equal_to(lhs, rhs).all())
         else:
-            print(repr(lhs))
-            print(repr(rhs))
             self.assertTrue(np.allclose(lhs, rhs))
 
     def test_basic_vector(self):
@@ -60,8 +58,6 @@ class TestValue(unittest.TestCase):
                 self.assertArrayEqual(value, expected_init)
 
                 # Add value directly.
-                # TODO(eric.cousineau): Determine if there is a way to extract
-                # the pointer referred to by the buffer (e.g. `value.data`).
                 value[:] += 1
                 self.assertArrayEqual(value, expected_add)
                 self.assertArrayEqual(value_data.get_value(), expected_add)
