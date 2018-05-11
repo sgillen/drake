@@ -49,12 +49,6 @@ void DefineFrameworkPyValues(py::module m) {
           [](const BasicVector<T>* self) -> Eigen::Ref<const VectorX<T>> {
             return self->get_value();
           }, py_reference_internal)
-      // TODO(eric.cousineau): Remove this once `get_value` is changed, or
-      // reference semantics are changed for custom dtypes.
-      .def("_get_value_copy",
-          [](const BasicVector<T>* self) -> VectorX<T> {
-            return self->get_value();
-          })
       .def("get_mutable_value",
           [](BasicVector<T>* self) -> Eigen::Ref<VectorX<T>> {
             return self->get_mutable_value();

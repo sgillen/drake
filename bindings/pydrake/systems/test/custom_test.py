@@ -17,8 +17,9 @@ from pydrake.systems.framework import (
     DiagramBuilder,
     LeafSystem, LeafSystem_,
     PortDataType,
-    VectorSystem,
+    VectorSystem, VectorSystem_,
     )
+from pydrake.systems.scalar_conversion import TemplateSystem
 from pydrake.systems.primitives import (
     ZeroOrderHold,
     )
@@ -34,103 +35,123 @@ def noop(*args, **kwargs):
     pass
 
 
-class CustomAdder(LeafSystem):
-    # Reimplements `Adder`.
-    def __init__(self, num_inputs, size):
-        LeafSystem.__init__(self)
-        for i in xrange(num_inputs):
-            self._DeclareInputPort(PortDataType.kVectorValued, size)
-        self._DeclareVectorOutputPort(BasicVector(size), self._calc_sum)
+@TemplateSystem.define("CustomAdder_")
+def CustomAdder_(T):
 
-    def _calc_sum(self, context, sum_data):
-        # @note This will NOT work if the scalar type is AutoDiff or symbolic,
-        # since they are not stored densely.
-        sum = sum_data.get_mutable_value()
-        sum[:] = 0
-        for i in xrange(context.get_num_input_ports()):
-            input_vector = self.EvalVectorInput(context, i)
-            sum += input_vector.get_value()
+    class Impl(LeafSystem_[T]):
+        # Reimplements `Adder`.
+        def _construct(self, num_inputs, size, converter=None):
+            LeafSystem_[T].__init__(self, converter=converter)
+            self._num_inputs = num_inputs
+            self._size = size
+            for i in xrange(num_inputs):
+                self._DeclareInputPort(PortDataType.kVectorValued, size)
+            self._DeclareVectorOutputPort(BasicVector_[T](size), self._calc_sum)
+
+        def _construct_copy(self, other, converter=None):
+            Impl._construct(
+                self, other._num_inputs, other._size, converter=converter)
+
+        def _calc_sum(self, context, sum_data):
+            sum = sum_data.get_mutable_value()
+            sum[:] = 0
+            for i in xrange(context.get_num_input_ports()):
+                input_vector = self.EvalVectorInput(context, i)
+                sum += input_vector.get_value()
+    
+    return Impl
+
+CustomAdder = CustomAdder_[None]  # Default instantiation.
 
 
-# TODO(eric.cousineau): Make this class work with custom scalar types once
-# referencing with custom dtypes lands.
-# WARNING: At present, dtype=object matrices are NOT well supported, and may
-# produce unexecpted results (e.g. references not actually being respected).
+@TemplateSystem.define("CustomVectorSystem_")
+def CustomVectorSystem_(T):
 
+    class Impl(VectorSystem_[T]):
+        def _construct(self, is_discrete, converter=None):
+            # VectorSystem only supports pure Continuous or pure Discrete.
+            # Dimensions:
+            #   1 Input, 2 States, 3 Outputs.
+            VectorSystem_[T].__init__(self, 1, 3, converter=converter)
+            self._is_discrete = is_discrete
+            if self._is_discrete:
+                self._DeclareDiscreteState(2)
+            else:
+                self._DeclareContinuousState(2)
+            # Record calls for testing.
+            self.has_called = []
 
-class CustomVectorSystem(VectorSystem):
-    def __init__(self, is_discrete):
-        # VectorSystem only supports pure Continuous or pure Discrete.
-        # Dimensions:
-        #   1 Input, 2 States, 3 Outputs.
-        VectorSystem.__init__(self, 1, 3)
-        self._is_discrete = is_discrete
-        if self._is_discrete:
-            self._DeclareDiscreteState(2)
-        else:
-            self._DeclareContinuousState(2)
-        # Record calls for testing.
-        self.has_called = []
+        def _construct_copy(self, other, converter=None):
+            Impl._construct(self, other._is_discrete, converter=converter)
 
-    def _DoCalcVectorOutput(self, context, u, x, y):
-        y[:] = np.hstack([u, x])
-        self.has_called.append("output")
+        def _DoCalcVectorOutput(self, context, u, x, y):
+            y[:] = np.hstack([u, x])
+            self.has_called.append("output")
 
-    def _DoCalcVectorTimeDerivatives(self, context, u, x, x_dot):
-        x_dot[:] = x + u
-        self.has_called.append("continuous")
+        def _DoCalcVectorTimeDerivatives(self, context, u, x, x_dot):
+            x_dot[:] = x + u
+            self.has_called.append("continuous")
 
-    def _DoCalcVectorDiscreteVariableUpdates(self, context, u, x, x_n):
-        x_n[:] = x + 2*u
-        self.has_called.append("discrete")
+        def _DoCalcVectorDiscreteVariableUpdates(self, context, u, x, x_n):
+            x_n[:] = x + 2*u
+            self.has_called.append("discrete")
 
-    def _DoHasDirectFeedthrough(self, input_port, output_port):
-        self.has_called.append("feedthrough")
-        return True
+        def _DoHasDirectFeedthrough(self, input_port, output_port):
+            self.has_called.append("feedthrough")
+            return True
+
+    return Impl
+
+CustomVectorSystem = CustomVectorSystem_[None]  # Default instantiaton.
 
 
 class TestCustom(unittest.TestCase):
-    def _create_adder_system(self):
-        system = CustomAdder(2, 3)
+    def _create_adder_system(self, T):
+        system = CustomAdder_[T](2, 3)
         return system
 
-    def _fix_adder_inputs(self, context):
+    def _fix_adder_inputs(self, context, T):
         self.assertEquals(context.get_num_input_ports(), 2)
-        context.FixInputPort(0, BasicVector([1, 2, 3]))
-        context.FixInputPort(1, BasicVector([4, 5, 6]))
+        context.FixInputPort(0, BasicVector_[T]([1, 2, 3]))
+        context.FixInputPort(1, BasicVector_[T]([4, 5, 6]))
 
     def test_adder_execution(self):
-        system = self._create_adder_system()
-        context = system.CreateDefaultContext()
-        self._fix_adder_inputs(context)
-        output = system.AllocateOutput(context)
-        self.assertEquals(output.get_num_ports(), 1)
-        system.CalcOutput(context, output)
-        value = output.get_vector_data(0).get_value()
-        self.assertTrue(np.allclose([5, 7, 9], value))
+        for T in (float, AutoDiffXd, Expression):
+            system = self._create_adder_system(T)
+            context = system.CreateDefaultContext()
+            self._fix_adder_inputs(context, T)
+            output = system.AllocateOutput(context)
+            self.assertEquals(output.get_num_ports(), 1)
+            system.CalcOutput(context, output)
+            value = output.get_vector_data(0).get_value()
+            if T in (float, AutoDiffXd):
+                self.assertTrue(np.allclose([5, 7, 9], value))
+            else:
+                print("TODO: Fix")
 
     def test_adder_simulation(self):
-        builder = DiagramBuilder()
-        adder = builder.AddSystem(self._create_adder_system())
-        adder.set_name("custom_adder")
-        # Add ZOH so we can easily extract state.
-        zoh = builder.AddSystem(ZeroOrderHold(0.1, 3))
-        zoh.set_name("zoh")
+        for T in (float, AutoDiffXd):
+            builder = DiagramBuilder_[T]()
+            adder = builder.AddSystem(self._create_adder_system(float))
+            adder.set_name("custom_adder")
+            # Add ZOH so we can easily extract state.
+            zoh = builder.AddSystem(ZeroOrderHold_[T](0.1, 3))
+            zoh.set_name("zoh")
 
-        builder.ExportInput(adder.get_input_port(0))
-        builder.ExportInput(adder.get_input_port(1))
-        builder.Connect(adder.get_output_port(0), zoh.get_input_port(0))
-        diagram = builder.Build()
-        context = diagram.CreateDefaultContext()
-        self._fix_adder_inputs(context)
+            builder.ExportInput(adder.get_input_port(0))
+            builder.ExportInput(adder.get_input_port(1))
+            builder.Connect(adder.get_output_port(0), zoh.get_input_port(0))
+            diagram = builder.Build()
+            context = diagram.CreateDefaultContext()
+            self._fix_adder_inputs(context, T)
 
-        simulator = Simulator(diagram, context)
-        simulator.Initialize()
-        simulator.StepTo(1)
-        # Ensure that we have the outputs we want.
-        value = (diagram.GetMutableSubsystemContext(zoh, context)
-                 .get_discrete_state_vector().get_value())
-        self.assertTrue(np.allclose([5, 7, 9], value))
+            simulator = Simulator_[T](diagram, context)
+            simulator.Initialize()
+            simulator.StepTo(1)
+            # Ensure that we have the outputs we want.
+            value = (diagram.GetMutableSubsystemContext(zoh, context)
+                     .get_discrete_state_vector().get_value())
+            self.assertTrue(np.allclose([5, 7, 9], value))
 
     def test_leaf_system_overrides(self):
         test = self
