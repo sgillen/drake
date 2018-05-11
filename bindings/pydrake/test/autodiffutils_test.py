@@ -84,7 +84,7 @@ class TestAutoDiffXd(unittest.TestCase):
         self.assertTrue(isinstance(xI[0, 0], AD))
 
         # Promotion (upcasting? downcasting?) is implicitly castable.
-        # x[0] = 0
+        x[0] = 0
         x[0] = 0.
         x[0] = False
 
@@ -101,12 +101,16 @@ class TestAutoDiffXd(unittest.TestCase):
         # TODO(eric.cousineau): Fix this.
         with self.assertRaises(TypeError):
             xi[0] = x[0]
-        # Presently, does not convert.
+        # Converts.
         x = np.zeros((3, 3), dtype=AD)
-        self.assertFalse(isinstance(x[0, 0], AD))
+        self.assertTrue(isinstance(x[0, 0], AD))
         x = np.eye(3).astype(AD)
-        self.assertFalse(isinstance(x[0, 0], AD))
+        self.assertTrue(isinstance(x[0, 0], AD))
+
         # Test implicit conversion.
+        self._check_array(
+            autodiff_vector_pass_through(np.array([1, 2], dtype=np.int32)),  # int
+            [AD(1., []), AD(2., [])])
         self._check_array(
             autodiff_vector_pass_through([1, 2]),  # int
             [AD(1., []), AD(2., [])])
