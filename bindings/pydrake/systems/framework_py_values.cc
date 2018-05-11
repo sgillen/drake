@@ -11,6 +11,7 @@
 #include "drake/bindings/pydrake/pydrake_pybind.h"
 #include "drake/bindings/pydrake/systems/systems_pybind.h"
 #include "drake/bindings/pydrake/util/eigen_pybind.h"
+#include "drake/bindings/pydrake/util/wrap_pybind.h"
 #include "drake/systems/framework/basic_vector.h"
 #include "drake/systems/framework/subvector.h"
 #include "drake/systems/framework/supervector.h"
@@ -55,13 +56,16 @@ void DefineFrameworkPyValues(py::module m) {
             m, "BasicVector", GetPyParam<T>(), doc.BasicVector.doc);
     DefClone(&basic_vector);
     basic_vector
-        // N.B. Place `init<VectorX<T>>` `init<int>` so that we do not
-        // implicitly convert scalar-size `np.array` objects to `int` (since
-        // this is normally permitted).
-        .def(py::init<VectorX<T>>(), py::arg("data"),
-            doc.BasicVector.ctor.doc_1args_vec)
-        .def(py::init<int>(), py::arg("size"),
-            doc.BasicVector.ctor.doc_1args_size)
+      // N.B. Place `init<VectorX<T>>` `init<int>` so that we do not implicitly
+      // convert scalar-size `np.array` objects to `int` (since this is normally
+      // permitted).
+      // N.B. Also ensure that we use `greedy_arg` to prevent ambiguous
+      // overloads when using scalars vs. lists vs. numpy arrays. See
+      // `greedy_arg` for more information.
+      .def(py::init([](greedy_arg<VectorX<T>> in) {
+        return new BasicVector<T>(*in);
+      }), doc.BasicVector.ctor.doc_1args_vec, py::arg("data"))
+        .def(py::init<int>(), py::arg("size"), doc.BasicVector.ctor.doc_1args_size)
         .def("get_value",
             [](const BasicVector<T>* self) -> Eigen::Ref<const VectorX<T>> {
               return self->get_value();
