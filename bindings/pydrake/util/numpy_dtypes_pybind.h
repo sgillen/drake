@@ -11,9 +11,9 @@ namespace pydrake {
 /// NumPy dtype.
 template <typename Class>
 void DefImplicitConversionsFromNumericTypes(py::dtype_user<Class>* cls) {
+  py::module np = py::module::import("numpy");
   // TODO(eric.cousineau): Remove this once pybind/pybind11#1329 lands, and rely
   // on `py::dtype::of<int64_t>`.
-  py::module np = py::module::import("numpy");
   py::dtype np_int64 = py::reinterpret_borrow<py::dtype>(
       np.attr("dtype")(np.attr("int64")));
   // Due to how `np.result_type` works, it promotes data type based on the
@@ -28,7 +28,7 @@ void DefImplicitConversionsFromNumericTypes(py::dtype_user<Class>* cls) {
     .def_loop(py::dtype_method::implicit_conversion<double, Class>())
     .def_loop(py::dtype_method::implicit_conversion<int, Class>())
     // `int64` is needed for implicitly converting arguments from
-    // `np.array([<integers])`, which by default resolves to a dtype of int64.
+    // `np.array([<integers>])`, which by default resolves to this dtype.
     .def_loop(
         py::dtype_method::implicit_conversion<int64_t, Class>(), np_int64)
     .def_loop(
