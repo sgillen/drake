@@ -15,7 +15,7 @@ def pybind11_repository(
     github_archive(
         name = name,
         repository = _REPOSITORY,
-        # local_repository_override = "/home/eacousineau/proj/tri/repo/repro/externals/pybind11",
+        local_repository_override = "/home/eacousineau/proj/tri/repo/repro/externals/pybind11",
         commit = _COMMIT,
         sha256 = _SHA256,
         build_file = "@drake//tools/workspace/pybind11:package.BUILD.bazel",
