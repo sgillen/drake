@@ -87,11 +87,7 @@ def CustomVectorSystem_(T):
             self.has_called.append("output")
 
         def _DoCalcVectorTimeDerivatives(self, context, u, x, x_dot):
-            print("CALL CONT")
-            print(u)
-            print(x)
             x_dot[:] = x + u
-            print(x_dot)
             self.has_called.append("continuous")
 
         def _DoCalcVectorDiscreteVariableUpdates(self, context, u, x, x_n):
@@ -110,6 +106,15 @@ CustomVectorSystem = CustomVectorSystem_[None]
 
 
 class TestCustom(unittest.TestCase):
+    def assertArrayEqual(self, lhs, rhs):
+        # TODO(eric.cousineau): Place in `pydrake.test.unittest_mixins`.
+        lhs, rhs = np.array(lhs), np.array(rhs)
+        if lhs.dtype == Expression or rhs.dtype == Expression:
+            lhs, rhs = lhs.astype(Expression), rhs.astype(Expression)
+            self.assertTrue(Expression.equal_to(lhs, rhs).all())
+        else:
+            self.assertTrue(np.allclose(lhs, rhs))
+
     def _create_adder_system(self, T):
         system = CustomAdder_[T](2, 3)
         return system
@@ -121,7 +126,6 @@ class TestCustom(unittest.TestCase):
 
     def test_adder_execution(self):
         for T in (float, AutoDiffXd, Expression):
-            print(T)
             system = self._create_adder_system(T)
             context = system.CreateDefaultContext()
             self._fix_adder_inputs(context, T)
@@ -130,12 +134,7 @@ class TestCustom(unittest.TestCase):
             system.CalcOutput(context, output)
             value = output.get_vector_data(0).get_value()
             value_expected = np.array([5, 7, 9])
-            if T in (float, AutoDiffXd):
-                self.assertTrue(np.allclose(value_expected, value))
-            else:
-                sym_expected = value_expected.astype(Expression)
-                for actual, expected in zip(sym_expected, value):
-                    self.assertTrue(actual.EqualTo(expected))
+            self.assertArrayEqual(value_expected, value)
 
     def test_adder_simulation(self):
         for T in (float, AutoDiffXd):
@@ -227,20 +226,16 @@ class TestCustom(unittest.TestCase):
 
     def test_vector_system_overrides(self):
         map(self._check_vector_system_overrides,
-            (float, AutoDiffXd))
-            # (float, AutoDiffXd, Expression))
+            (float, AutoDiffXd, Expression))
 
     def _check_vector_system_overrides(self, T):
         dt = 0.5
-        for is_discrete in [False]: #[False, True]:
+        for is_discrete in [False, True]:
             system = CustomVectorSystem_[T](is_discrete)
             context = system.CreateDefaultContext()
 
             u = np.array([1])
-            u_vec = BasicVector_[T](u)
-            context.FixInputPort(0, u_vec)
-            print(u_vec)
-            print(u_vec.get_value())
+            context.FixInputPort(0, BasicVector_[T](u))
 
             # Dispatch virtual calls from C++.
             output = call_vector_system_overrides(
@@ -261,16 +256,12 @@ class TestCustom(unittest.TestCase):
             x0 = [0., 0.]
             c = is_discrete and 2 or 1*dt
             x_expected = x0 + c*u
-            print(is_discrete)
-            print(T)
-            print(x)
-            print(x_expected)
-            self.assertTrue(np.allclose(x, x_expected))
+            self.assertArrayEqual(x, x_expected)
 
             # Check output.
             y_expected = np.hstack([u, x])
             y = output.get_vector_data(0).get_value()
-            self.assertTrue(np.allclose(y, y_expected))
+            self.assertArrayEqual(y, y_expected)
 
     def test_context_api(self):
         # Capture miscellaneous functions not yet tested.

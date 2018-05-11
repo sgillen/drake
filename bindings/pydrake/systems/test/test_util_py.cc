@@ -184,7 +184,7 @@ PYBIND11_MODULE(test_util, m) {
       return output;
     });
   };
-  type_visit(bind_common_scalar_types, pysystems::NonSymbolicScalarPack{});
+  type_visit(bind_common_scalar_types, pysystems::CommonScalarPack{});
 }
 
 }  // namespace pydrake
