@@ -13,6 +13,9 @@ Required so that a non-trivial copy constructor is used. Prevents aliasing
 *   [Issue numpy/numpy#9351](https://github.com/numpy/numpy/issues/9351)
 Operations like `np.trace` may get caught in an infinite loop. The PRs that
 resolve this were incorporated into `>= v1.13.1`.
+*   [Pull numpy/numpy#11075](https://github.com/numpy/numpy/issues/11075)
+Required so that scalar-to-array assignment correctly initializes memory when
+casting (e.g. `x = np.zeros(2, dtype=AutoDiffXd); x[:] = 0.`).
 
 ## Building
 
