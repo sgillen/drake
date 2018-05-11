@@ -8,7 +8,7 @@ _REPOSITORY = "EricCousineau-TRI/pybind11"
 
 _COMMIT = "3a4d863c255e7c92bfd9aa19124487b7a7ba7484"
 
-_SHA256 = "237a462959e1eb0f5f94cf695edf8f61cb7359f27ff9efad4636b1cfbc9f5aca"
+_SHA256 = "237a462959e1eb0f5f94cf695edf8f61cb7359f27ff9efad4636b1cfbc9f5aca"  # noqa
 
 def pybind11_repository(
         name,
@@ -16,7 +16,7 @@ def pybind11_repository(
     github_archive(
         name = name,
         repository = _REPOSITORY,
-        local_repository_override = "/home/eacousineau/proj/tri/repo/repro/externals/pybind11",
+        local_repository_override = "/home/eacousineau/proj/tri/repo/repro/externals/pybind11",  # noqa
         commit = _COMMIT,
         sha256 = _SHA256,
         build_file = "@drake//tools/workspace/pybind11:package.BUILD.bazel",
