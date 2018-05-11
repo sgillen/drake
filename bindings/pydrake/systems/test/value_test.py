@@ -6,9 +6,11 @@ import copy
 import unittest
 import numpy as np
 
+from pydrake.autodiffutils import AutoDiffXd
+from pydrake.symbolic import Expression
 from pydrake.systems.framework import (
     AbstractValue,
-    BasicVector,
+    BasicVector, BasicVector_,
     Parameters,
     Value,
     VectorBase,
@@ -28,7 +30,10 @@ def pass_through(x):
 
 
 class TestValue(unittest.TestCase):
-    def test_basic_vector_double(self):
+    def test_basic_vector(self):
+        map(self._check_basic_vector, (float, AutoDiffXd, Expression))
+
+    def _check_basic_vector(self, T):
         # Test constructing vectors of sizes [0, 1, 2], and ensure that we can
         # construct from both lists and `np.array` objects with no ambiguity.
         for n in [0, 1, 2]:
@@ -39,7 +44,7 @@ class TestValue(unittest.TestCase):
                 expected_add = wrap([x + 1 for x in expected_init])
                 expected_set = wrap([x + 10 for x in expected_init])
 
-                value_data = BasicVector(expected_init)
+                value_data = BasicVector_[T](expected_init)
                 value = value_data.get_mutable_value()
                 self.assertTrue(np.allclose(value, expected_init))
 
@@ -54,6 +59,10 @@ class TestValue(unittest.TestCase):
                     np.allclose(value_data.get_mutable_value(), expected_add))
 
                 # Set value from `BasicVector`.
+                print(T, n, wrap)
+                print(value_data.size())
+                print(value_data.get_value())
+                print(expected_set)
                 value_data.SetFromVector(expected_set)
                 self.assertTrue(np.allclose(value, expected_set))
                 self.assertTrue(
@@ -61,7 +70,7 @@ class TestValue(unittest.TestCase):
                 self.assertTrue(
                     np.allclose(value_data.get_mutable_value(), expected_set))
                 # Ensure we can construct from size.
-                value_data = BasicVector(n)
+                value_data = BasicVector_[T](n)
                 self.assertEquals(value_data.size(), n)
                 # Ensure we can clone.
                 value_copies = [
