@@ -10,7 +10,12 @@ import numpy as np
 import pydrake.math as drake_math
 
 from pydrake.test.algebra_test_util import ScalarAlgebra, VectorizedAlgebra
-from pydrake.test.math_test_util import AutoDiffContainer, autodiff_increment
+from pydrake.test.autodiffutils_test_util import (
+    autodiff_scalar_pass_through,
+    autodiff_vector_pass_through,
+    AutoDiffContainer,
+    autodiff_increment,
+)
 
 # Use convenience abbreviation.
 AD = AutoDiffXd
@@ -47,6 +52,16 @@ class TestAutoDiffXd(unittest.TestCase):
         self.assertEquals(str(a), "AD{1.0, nderiv=2}")
         self.assertEquals(repr(a), "<AutoDiffXd 1.0 nderiv=2>")
         self._check_scalar(a, a)
+        # Test construction from `float` and `int`.
+        self._check_scalar(AD(1), AD(1., []))
+        self._check_scalar(AD(1.), AD(1., []))
+        # Test implicit conversion.
+        self._check_scalar(
+            autodiff_scalar_pass_through(1),  # int
+            AD(1., []))
+        self._check_scalar(
+            autodiff_scalar_pass_through(1.),  # float
+            AD(1., []))
 
     def test_array_api(self):
         a = AD(1, [1., 0])
@@ -86,6 +101,18 @@ class TestAutoDiffXd(unittest.TestCase):
         # TODO(eric.cousineau): Fix this.
         with self.assertRaises(TypeError):
             xi[0] = x[0]
+        # Presently, does not convert.
+        x = np.zeros((3, 3), dtype=AD)
+        self.assertFalse(isinstance(x[0, 0], AD))
+        x = np.eye(3).astype(AD)
+        self.assertFalse(isinstance(x[0, 0], AD))
+        # Test implicit conversion.
+        self._check_array(
+            autodiff_vector_pass_through([1, 2]),  # int
+            [AD(1., []), AD(2., [])])
+        self._check_array(
+            autodiff_vector_pass_through([1., 2.]),  # float
+            [AD(1., []), AD(2., [])])
 
     def _check_algebra(self, algebra):
         a_scalar = AD(1, [1., 0])
