@@ -87,7 +87,11 @@ def CustomVectorSystem_(T):
             self.has_called.append("output")
 
         def _DoCalcVectorTimeDerivatives(self, context, u, x, x_dot):
+            print("CALL CONT")
+            print(u)
+            print(x)
             x_dot[:] = x + u
+            print(x_dot)
             self.has_called.append("continuous")
 
         def _DoCalcVectorDiscreteVariableUpdates(self, context, u, x, x_n):
@@ -223,17 +227,20 @@ class TestCustom(unittest.TestCase):
 
     def test_vector_system_overrides(self):
         map(self._check_vector_system_overrides,
-            (AutoDiffXd,))
+            (float, AutoDiffXd))
             # (float, AutoDiffXd, Expression))
 
     def _check_vector_system_overrides(self, T):
         dt = 0.5
-        for is_discrete in [False, True]:
+        for is_discrete in [False]: #[False, True]:
             system = CustomVectorSystem_[T](is_discrete)
             context = system.CreateDefaultContext()
 
-            u = np.array([1.])
-            context.FixInputPort(0, BasicVector_[T](u))
+            u = np.array([1])
+            u_vec = BasicVector_[T](u)
+            context.FixInputPort(0, u_vec)
+            print(u_vec)
+            print(u_vec.get_value())
 
             # Dispatch virtual calls from C++.
             output = call_vector_system_overrides(
@@ -254,6 +261,7 @@ class TestCustom(unittest.TestCase):
             x0 = [0., 0.]
             c = is_discrete and 2 or 1*dt
             x_expected = x0 + c*u
+            print(is_discrete)
             print(T)
             print(x)
             print(x_expected)
