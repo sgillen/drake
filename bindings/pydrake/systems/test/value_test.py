@@ -31,13 +31,17 @@ def pass_through(x):
 
 class TestValue(unittest.TestCase):
     def test_basic_vector(self):
-        map(self._check_basic_vector, (float, AutoDiffXd, Expression))
+        map(self._check_basic_vector, (float, AutoDiffXd)) #, Expression))
 
     def _check_basic_vector(self, T):
         # Test constructing vectors of sizes [0, 1, 2], and ensure that we can
         # construct from both lists and `np.array` objects with no ambiguity.
-        for n in [0, 1, 2]:
-            for wrap in [pass_through, np.array]:
+        # for n in [0, 1, 2]:
+        for n in [1]:
+            for wrap in [np.array]:
+            # for wrap in [pass_through, np.array]:
+                print("---")
+                print(T, n, wrap)
                 # Ensure that we can get vectors templated on double by
                 # reference.
                 expected_init = wrap(map(float, range(n)))
@@ -59,7 +63,6 @@ class TestValue(unittest.TestCase):
                     np.allclose(value_data.get_mutable_value(), expected_add))
 
                 # Set value from `BasicVector`.
-                print(T, n, wrap)
                 print(value_data.size())
                 print(value_data.get_value())
                 print(expected_set)
