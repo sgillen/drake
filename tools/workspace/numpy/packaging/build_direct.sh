@@ -8,18 +8,13 @@ output_dir=${1}
 shift
 
 repo=https://github.com/numpy/numpy
-commit=pull/10898/head
+commit=7d247f44768b0935286d1034bedadffc0f5bdf40
+fetch_ref=pull/10898/head
 
 git clone ${repo} numpy
 cd numpy
-
-# Checkout specified commit, accommodating a PR if specified.
-if [[ ${commit} =~ ^pull/.*$ ]]; then
-    git fetch origin ${commit}
-    git checkout FETCH_HEAD
-else
-    git checkout -f ${commit}
-fi
+git fetch origin ${fetch_ref}
+git checkout -f ${commit}
 
 # Build NumPy, record the generated wheel file (assuming there is only one).
 python setup.py bdist_wheel "$@"
@@ -42,6 +37,6 @@ cat <<EOF
 NumPy wheel file built: ${wheel_file}
 
 As an example to install to a prefix to manually test:
-    pip install --prefix \${PWD}/tmp ${wheel_file} --ignore-installed
+    pip install --prefix \${PWD}/tmp $(basename ${wheel_file}) --ignore-installed
 
 EOF
