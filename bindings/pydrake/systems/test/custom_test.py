@@ -54,14 +54,13 @@ def CustomAdder_(T):
 
         def _calc_sum(self, context, sum_data):
             sum = sum_data.get_mutable_value()
+            print(sum)
             sum[:] = 0
             for i in xrange(context.get_num_input_ports()):
                 input_vector = self.EvalVectorInput(context, i)
                 sum += input_vector.get_value()
     
     return Impl
-
-CustomAdder = CustomAdder_[None]  # Default instantiation.
 
 
 @TemplateSystem.define("CustomVectorSystem_")
@@ -102,7 +101,9 @@ def CustomVectorSystem_(T):
 
     return Impl
 
-CustomVectorSystem = CustomVectorSystem_[None]  # Default instantiaton.
+# Default instantiations.
+CustomAdder = CustomAdder_[None]
+CustomVectorSystem = CustomVectorSystem_[None]
 
 
 class TestCustom(unittest.TestCase):
@@ -117,6 +118,7 @@ class TestCustom(unittest.TestCase):
 
     def test_adder_execution(self):
         for T in (float, AutoDiffXd, Expression):
+            print(T)
             system = self._create_adder_system(T)
             context = system.CreateDefaultContext()
             self._fix_adder_inputs(context, T)
