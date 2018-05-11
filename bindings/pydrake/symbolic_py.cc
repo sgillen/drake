@@ -209,7 +209,6 @@ PYBIND11_MODULE(_symbolic_py, m) {
            [](const Expression& self, const Substitution& s) {
              return self.Substitute(s);
            })
-      .def("EqualTo", &Expression::EqualTo)
       // Addition
       .def_loop(py::self + py::self)
       .def_loop(py::self + Variable())
@@ -287,6 +286,14 @@ PYBIND11_MODULE(_symbolic_py, m) {
       })
       .def("Differentiate", &Expression::Differentiate)
       .def("Jacobian", &Expression::Jacobian);
+
+  // Define a `self` method and a ufunc flavor of certain methods.
+  // TODO(eric.cousineau): Figure out how to make this play well with `self`
+  // overloads. Bind the ufunc as a method?
+  // TODO(eric.cousineau): Consider defining a general `equal_to` method, with
+  // overloads for other types.
+  expr_cls.def("EqualTo", &Expression::EqualTo);
+  py::ufunc(expr_cls, "equal_to").def_loop<Expression>(&Expression::EqualTo);
 
   // TODO(eric.cousineau): Consider deprecating the aliases in `math`?
   auto math = py::module::import("pydrake.math");

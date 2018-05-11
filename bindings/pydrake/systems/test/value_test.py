@@ -11,7 +11,7 @@ from pydrake.symbolic import Expression
 from pydrake.systems.framework import (
     AbstractValue,
     BasicVector, BasicVector_,
-    Parameters,
+    Parameters, Parameters_,
     Value,
     VectorBase,
     )
@@ -25,23 +25,30 @@ def pass_through(x):
     return x
 
 
-# TODO(eric.cousineau): Add negative (or positive) test cases for AutoDiffXd
-# and Symbolic once they are in the bindings.
+def int_list(x):
+    return [int(xi) for xi in x]
 
 
 class TestValue(unittest.TestCase):
+    def assertArrayEqual(self, lhs, rhs):
+        lhs = np.array(lhs)
+        rhs = np.array(rhs)
+        if lhs.dtype == Expression or rhs.dtype == Expression:
+            lhs, rhs = lhs.astype(Expression), rhs.astype(Expression)
+            self.assertTrue(Expression.equal_to(lhs, rhs).all())
+        else:
+            print(repr(lhs))
+            print(repr(rhs))
+            self.assertTrue(np.allclose(lhs, rhs))
+
     def test_basic_vector(self):
-        map(self._check_basic_vector, (float, AutoDiffXd)) #, Expression))
+        map(self._check_basic_vector, (float, AutoDiffXd, Expression))
 
     def _check_basic_vector(self, T):
         # Test constructing vectors of sizes [0, 1, 2], and ensure that we can
         # construct from both lists and `np.array` objects with no ambiguity.
-        # for n in [0, 1, 2]:
-        for n in [1]:
-            for wrap in [np.array]:
-            # for wrap in [pass_through, np.array]:
-                print("---")
-                print(T, n, wrap)
+        for n in [0, 1, 2]:
+            for wrap in [pass_through, int_list, np.array]:
                 # Ensure that we can get vectors templated on double by
                 # reference.
                 expected_init = wrap(map(float, range(n)))
@@ -50,28 +57,23 @@ class TestValue(unittest.TestCase):
 
                 value_data = BasicVector_[T](expected_init)
                 value = value_data.get_mutable_value()
-                self.assertTrue(np.allclose(value, expected_init))
+                self.assertArrayEqual(value, expected_init)
 
                 # Add value directly.
                 # TODO(eric.cousineau): Determine if there is a way to extract
                 # the pointer referred to by the buffer (e.g. `value.data`).
                 value[:] += 1
-                self.assertTrue(np.allclose(value, expected_add))
-                self.assertTrue(
-                    np.allclose(value_data.get_value(), expected_add))
-                self.assertTrue(
-                    np.allclose(value_data.get_mutable_value(), expected_add))
+                self.assertArrayEqual(value, expected_add)
+                self.assertArrayEqual(value_data.get_value(), expected_add)
+                self.assertArrayEqual(
+                    value_data.get_mutable_value(), expected_add)
 
                 # Set value from `BasicVector`.
-                print(value_data.size())
-                print(value_data.get_value())
-                print(expected_set)
                 value_data.SetFromVector(expected_set)
-                self.assertTrue(np.allclose(value, expected_set))
-                self.assertTrue(
-                    np.allclose(value_data.get_value(), expected_set))
-                self.assertTrue(
-                    np.allclose(value_data.get_mutable_value(), expected_set))
+                self.assertArrayEqual(value, expected_set)
+                self.assertArrayEqual(value_data.get_value(), expected_set)
+                self.assertArrayEqual(
+                    value_data.get_mutable_value(), expected_set)
                 # Ensure we can construct from size.
                 value_data = BasicVector_[T](n)
                 self.assertEquals(value_data.size(), n)
@@ -154,13 +156,20 @@ class TestValue(unittest.TestCase):
             ]), cm.exception.message)
 
     def test_parameters_api(self):
+        map(self._check_parameters_api, (float, AutoDiffXd, Expression))
+
+    def _check_parameters_api(self, T):
+        Parameters = Parameters_[T]
+        BasicVector = BasicVector_[T]
 
         def compare(actual, expected):
             self.assertEquals(type(actual), type(expected))
-            if isinstance(actual, VectorBase):
-                self.assertTrue(
-                    np.allclose(actual.get_value(), expected.get_value()))
+            if isinstance(actual, BasicVector):
+                self.assertArrayEqual(actual.get_value(), expected.get_value())
             else:
+                assert isinstance(actual, Value[str])
+                # Strings getting converted to numpy arrays is no bueno. Do
+                # scalar comparison.
                 self.assertEquals(actual.get_value(), expected.get_value())
 
         model_numeric = BasicVector([0.])
@@ -182,7 +191,7 @@ class TestValue(unittest.TestCase):
         params.set_abstract_parameters(
             params.get_abstract_parameters().Clone())
         # WARNING: This may invalidate old references!
-        params.SetFrom(copy.deepcopy(params))
+        params.CopyFrom(copy.deepcopy(params))
 
         # Test alternative constructors.
         ctor_test = [
