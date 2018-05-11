@@ -223,7 +223,8 @@ class TestCustom(unittest.TestCase):
 
     def test_vector_system_overrides(self):
         map(self._check_vector_system_overrides,
-            (float, AutoDiffXd, Expression))
+            (AutoDiffXd,))
+            # (float, AutoDiffXd, Expression))
 
     def _check_vector_system_overrides(self, T):
         dt = 0.5
