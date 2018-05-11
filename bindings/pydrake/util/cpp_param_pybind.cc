@@ -76,6 +76,8 @@ py::object GetPyParamScalarImpl(const std::type_info& tinfo) {
       cls = reinterpret_cast<PyObject*>(info->type);
     } else {
       // Try registered NumPy dtypes.
+      // TODO(eric.cousineau): Rather than doing this, consider explicitly
+      // aliasing / registering custom dtypes.
       std::type_index id(tinfo);
       auto* dtype_info = py::detail::dtype_info::maybe_get_entry(id);
       if (dtype_info) {
