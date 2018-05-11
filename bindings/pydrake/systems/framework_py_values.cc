@@ -43,8 +43,16 @@ void DefineFrameworkPyValues(py::module m) {
       // N.B. Place `init<VectorX<T>>` `init<int>` so that we do not implicitly
       // convert scalar-size `np.array` objects to `int` (since this is normally
       // permitted).
-      .def(py::init<VectorX<T>>())
-      .def(py::init<int>())
+      // .def(py::init<VectorX<T>>())
+      // .def(py::init<int>())
+      .def(py::init([](VectorX<T> in) {
+        py::print("CTOR VEC");
+        return new BasicVector<T>(in);
+      }))
+      .def(py::init([](int size) {
+        py::print("CTOR SIZE");
+        return new BasicVector<T>(size);
+      }))
       .def("get_value",
           [](const BasicVector<T>* self) -> Eigen::Ref<const VectorX<T>> {
             return self->get_value();
