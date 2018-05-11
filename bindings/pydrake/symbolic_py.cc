@@ -11,6 +11,7 @@
 
 #include "drake/bindings/pydrake/pydrake_pybind.h"
 #include "drake/bindings/pydrake/symbolic_types_pybind.h"
+#include "drake/bindings/pydrake/util/numpy_dtypes_pybind.h"
 #include "drake/bindings/pydrake/util/wrap_pybind.h"
 
 namespace drake {
@@ -175,18 +176,13 @@ PYBIND11_MODULE(_symbolic_py, m) {
     return intersect(vars1, vars2);
   });
 
+  DefImplicitConversionsFromNumericTypes(&expr_cls);
   expr_cls
       .def(py::init<>())
       .def(py::init<double>())
       .def(py::init<const Variable&>())
       // Casting
-      .def_loop(py::dtype_method::implicit_conversion<double, Expression>())
-      .def_loop(py::dtype_method::implicit_conversion<int, Expression>())
       .def_loop(py::dtype_method::implicit_conversion<Variable, Expression>())
-      // See https://github.com/numpy/numpy/issues/10904 for next 2 casts.
-      // NOLINTNEXTLINE(runtime/int): Use platform-dependent name for NumPy.
-      .def_loop(py::dtype_method::implicit_conversion<long, Expression>())
-      .def_loop(py::dtype_method::implicit_conversion<bool, Expression>())
       // Methods
       .def("__str__", &Expression::to_string)
       .def("__repr__",

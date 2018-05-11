@@ -60,6 +60,7 @@ drake_pybind_library(
     name = "autodiffutils_py",
     cc_deps = [
         ":autodiff_types_pybind",
+        "//bindings/pydrake/util:numpy_dtypes_pybind",
         "//bindings/pydrake/util:wrap_pybind",
     ],
     cc_srcs = ["autodiffutils_py.cc"],
@@ -127,6 +128,7 @@ drake_pybind_library(
     name = "symbolic_py",
     cc_deps = [
         ":symbolic_types_pybind",
+        "//bindings/pydrake/util:numpy_dtypes_pybind",
         "//bindings/pydrake/util:wrap_pybind",
         "@fmt",
     ],

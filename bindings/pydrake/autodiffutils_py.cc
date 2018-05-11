@@ -7,6 +7,7 @@
 
 #include "drake/bindings/pydrake/autodiff_types_pybind.h"
 #include "drake/bindings/pydrake/pydrake_pybind.h"
+#include "drake/bindings/pydrake/util/numpy_dtypes_pybind.h"
 #include "drake/bindings/pydrake/util/wrap_pybind.h"
 
 using Eigen::AutoDiffScalar;
@@ -26,39 +27,12 @@ PYBIND11_MODULE(_autodiffutils_py, m) {
   py::module::import("pydrake.util.deprecation")
       .attr("install_numpy_warning_filters")();
 
-  // TODO(eric.cousineau): Remove this once pybind/pybind11#1329 lands, and rely
-  // on `py::dtype::of<int64_t>`.
-  py::module np = py::module::import("numpy");
-  py::dtype np_int64 = py::reinterpret_borrow<py::dtype>(
-      np.attr("dtype")(np.attr("int64")));
-  // Due to how `np.result_type` works, it promotes data type based on the
-  // scalar magnitude. For `np.allclose`, it uses `np.result_type(y, 1.)`, where
-  // `1.` resolves to `np.float16`.
-  py::dtype np_float16 = py::reinterpret_borrow<py::dtype>(
-        np.attr("dtype")(np.attr("float16")));
-
   py::dtype_user<AutoDiffXd> autodiff(m, "AutoDiffXd");
+  DefImplicitConversionsFromNumericTypes(&autodiff);
   autodiff
     .def(py::init<double>())
     .def(py::init<const double&, const Eigen::VectorXd&>())
-    // Casting
-    // - Upcasting can be implicit, especially for matrix multiplication.
-    .def_loop(py::dtype_method::implicit_conversion<double, AutoDiffXd>())
-    .def_loop(py::dtype_method::implicit_conversion<int, AutoDiffXd>())
-    // `int64` is needed for implicitly converting arguments from
-    // `np.array([<integers])`, which by default resolves to a dtype of int64.
-    .def_loop(
-        py::dtype_method::implicit_conversion<int64_t, AutoDiffXd>(), np_int64)
-    .def_loop(
-        py::dtype_method::implicit_conversion([](int16_t) -> AutoDiffXd {
-            throw std::runtime_error(
-                "No actual half float conversion available");
-        }), np_float16)
-    // See https://github.com/numpy/numpy/issues/10904 for next 2 casts.
-    // NOLINTNEXTLINE(runtime/int): Use platform-dependent name for NumPy.
-    .def_loop(py::dtype_method::implicit_conversion<long, AutoDiffXd>())
-    .def_loop(py::dtype_method::implicit_conversion<bool, AutoDiffXd>())
-    // - Downcasting must be explicit, to prevent inadvertent information loss.
+    // Downcasting must be explicit, to prevent inadvertent information loss.
     .def_loop(py::dtype_method::explicit_conversion(
         [](const AutoDiffXd& self) -> double { return self.value(); }))
     // General methods.
