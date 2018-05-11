@@ -24,13 +24,12 @@ Arguments:
 
 load("@drake//tools/workspace:os.bzl", "determine_os")
 
-# Generated from Git revision 8b517bd from a merge of numpy/numpy#10898 and
-# numpy/numpy#11075.
+# Generated from Git revision 7d247f4 from numpy/numpy#10898.
 # See `./packaging/README.md` for instructions to generate these binaries.
 # N.B. When you update the version of NumPy, ensure to update the variable
 # `expected_version` in `numpy_install_test.py` to reflect the *exact* version
 # per NumPy's build (which should be part of the *.whl's filename).
-# PR DRAFT(eric.cousineau): Upload these to S3 when they pass review.
+# PR DRAFT(eric.cousineau): Upload these to S3 or when they pass review.
 wheels = {
     "ubuntu_16.04": {
         "url": "https://github.com/EricCousineau-TRI/experimental/raw/9f47b9bc31e5fdb6d54d6b08b2904491d8bf43c8/numpy/numpy-1.15.0.dev0%2B8b517bd-cp27-cp27mu-linux_x86_64.whl",  # noqa
