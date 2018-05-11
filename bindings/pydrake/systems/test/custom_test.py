@@ -9,19 +9,19 @@ import numpy as np
 from pydrake.autodiffutils import AutoDiffXd
 from pydrake.symbolic import Expression
 from pydrake.systems.analysis import (
-    Simulator,
+    Simulator, Simulator_,
     )
 from pydrake.systems.framework import (
     AbstractValue,
     BasicVector, BasicVector_,
-    DiagramBuilder,
+    DiagramBuilder, DiagramBuilder_,
     LeafSystem, LeafSystem_,
     PortDataType,
     VectorSystem, VectorSystem_,
     )
 from pydrake.systems.scalar_conversion import TemplateSystem
 from pydrake.systems.primitives import (
-    ZeroOrderHold,
+    ZeroOrderHold, ZeroOrderHold_,
     )
 
 from pydrake.systems.test.test_util import (
@@ -54,12 +54,7 @@ def CustomAdder_(T):
 
         def _calc_sum(self, context, sum_data):
             sum = sum_data.get_mutable_value()
-            print(sum)
             sum[:] = 0.
-            # sum[:] = np.zeros(sum.shape, dtype=T)
-            print(sum)
-            if T == AutoDiffXd:
-                exit(1)
             for i in xrange(context.get_num_input_ports()):
                 input_vector = self.EvalVectorInput(context, i)
                 sum += input_vector.get_value()
@@ -130,15 +125,18 @@ class TestCustom(unittest.TestCase):
             self.assertEquals(output.get_num_ports(), 1)
             system.CalcOutput(context, output)
             value = output.get_vector_data(0).get_value()
+            value_expected = np.array([5, 7, 9])
             if T in (float, AutoDiffXd):
-                self.assertTrue(np.allclose([5, 7, 9], value))
+                self.assertTrue(np.allclose(value_expected, value))
             else:
-                print("TODO: Fix")
+                sym_expected = value_expected.astype(Expression)
+                for actual, expected in zip(sym_expected, value):
+                    self.assertTrue(actual.EqualTo(expected))
 
     def test_adder_simulation(self):
         for T in (float, AutoDiffXd):
             builder = DiagramBuilder_[T]()
-            adder = builder.AddSystem(self._create_adder_system(float))
+            adder = builder.AddSystem(self._create_adder_system(T))
             adder.set_name("custom_adder")
             # Add ZOH so we can easily extract state.
             zoh = builder.AddSystem(ZeroOrderHold_[T](0.1, 3))
@@ -160,11 +158,14 @@ class TestCustom(unittest.TestCase):
             self.assertTrue(np.allclose([5, 7, 9], value))
 
     def test_leaf_system_overrides(self):
+        map(self._check_leaf_system_overrides, (float, AutoDiffXd))
+
+    def _check_leaf_system_overrides(self, T):
         test = self
 
-        class TrivialSystem(LeafSystem):
+        class TrivialSystem(LeafSystem_[T]):
             def __init__(self):
-                LeafSystem.__init__(self)
+                LeafSystem_[T].__init__(self)
                 self.called_publish = False
                 self.called_feedthrough = False
                 self.called_discrete = False
@@ -178,11 +179,11 @@ class TestCustom(unittest.TestCase):
                 # Ensure that we have inputs / outputs to call direct
                 # feedthrough.
                 self._DeclareInputPort(PortDataType.kVectorValued, 1)
-                self._DeclareVectorOutputPort(BasicVector(1), noop)
+                self._DeclareVectorOutputPort(BasicVector_[T](1), noop)
 
             def _DoPublish(self, context, events):
                 # Call base method to ensure we do not get recursion.
-                LeafSystem._DoPublish(self, context, events)
+                LeafSystem_[T]._DoPublish(self, context, events)
                 self.called_publish = True
 
             def _DoHasDirectFeedthrough(self, input_port, output_port):
@@ -190,7 +191,7 @@ class TestCustom(unittest.TestCase):
                 test.assertEquals(input_port, 0)
                 test.assertEquals(output_port, 0)
                 # Call base method to ensure we do not get recursion.
-                base_return = LeafSystem._DoHasDirectFeedthrough(
+                base_return = LeafSystem_[T]._DoHasDirectFeedthrough(
                     self, input_port, output_port)
                 test.assertTrue(base_return is None)
                 # Return custom methods.
@@ -200,7 +201,7 @@ class TestCustom(unittest.TestCase):
             def _DoCalcDiscreteVariableUpdates(
                     self, context, events, discrete_state):
                 # Call base method to ensure we do not get recursion.
-                LeafSystem._DoCalcDiscreteVariableUpdates(
+                LeafSystem_[T]._DoCalcDiscreteVariableUpdates(
                     self, context, events, discrete_state)
                 self.called_discrete = True
 
@@ -221,13 +222,17 @@ class TestCustom(unittest.TestCase):
             system.HasDirectFeedthrough(input_port=0, output_port=0))
 
     def test_vector_system_overrides(self):
+        map(self._check_vector_system_overrides,
+            (float, AutoDiffXd, Expression))
+
+    def _check_vector_system_overrides(self, T):
         dt = 0.5
         for is_discrete in [False, True]:
-            system = CustomVectorSystem(is_discrete)
+            system = CustomVectorSystem_[T](is_discrete)
             context = system.CreateDefaultContext()
 
             u = np.array([1.])
-            context.FixInputPort(0, BasicVector(u))
+            context.FixInputPort(0, BasicVector_[T](u))
 
             # Dispatch virtual calls from C++.
             output = call_vector_system_overrides(
@@ -248,6 +253,9 @@ class TestCustom(unittest.TestCase):
             x0 = [0., 0.]
             c = is_discrete and 2 or 1*dt
             x_expected = x0 + c*u
+            print(T)
+            print(x)
+            print(x_expected)
             self.assertTrue(np.allclose(x, x_expected))
 
             # Check output.
