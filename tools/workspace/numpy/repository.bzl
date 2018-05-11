@@ -32,13 +32,12 @@ load("@drake//tools/workspace:os.bzl", "determine_os")
 # PR DRAFT(eric.cousineau): Upload these to S3 or when they pass review.
 wheels = {
     "ubuntu_16.04": {
-        "url": "https://github.com/EricCousineau-TRI/experimental/raw/483bff8e0e1fd4d109b0e14dcdc8b2d83dfdbe06/numpy/numpy-1.15.0.dev0%2B8b517bd-cp27-cp27mu-linux_x86_64.whl",  # noqa
+        "url": "https://github.com/EricCousineau-TRI/experimental/raw/9f47b9bc31e5fdb6d54d6b08b2904491d8bf43c8/numpy/numpy-1.15.0.dev0%2B8b517bd-cp27-cp27mu-linux_x86_64.whl",  # noqa
         "sha256": "bc24319c135ea2d01cded300b43cec4162936099e7569cde89862460db80481c",  # noqa
     },
     "mac": {
-        # TODO(eric.cousineau): Update this when able.
-        "url": "https://github.com/EricCousineau-TRI/experimental/raw/3211d6dd6aee9e8dd70a19ef86b961a2de3bf821/numpy/numpy-1.15.0.dev0%2B8b517bd-cp27-cp27m-macosx_10_13_x86_64.whl",  # noqa
-        "sha256": "1b3cee66ff92e2e0dc1c97d167b5b13873c3e97a87829a1c7830964ab48b2648",  # noqa
+        "url": "https://github.com/EricCousineau-TRI/experimental/raw/9f47b9bc31e5fdb6d54d6b08b2904491d8bf43c8/numpy/numpy-1.15.0.dev0%2B8b517bd-cp27-cp27m-macosx_10_13_x86_64.whl",  # noqa
+        "sha256": "0f192f999bafb9f8f353fac7bc2504e15e0768352fc601d51385816c09bfd473",  # noqa
     },
 }
 
