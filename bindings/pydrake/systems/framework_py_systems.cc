@@ -174,6 +174,9 @@ struct Impl {
 
     VectorSystemPublic(int inputs, int outputs) : Base(inputs, outputs) {}
 
+    VectorSystemPublic(SystemScalarConverter converter, int inputs, int outputs)
+        : Base(std::move(converter), inputs, outputs) {}
+
     using Base::EvalVectorInput;
     using Base::GetVectorState;
 
@@ -539,9 +542,13 @@ struct Impl {
     DefineTemplateClassWithDefault<VectorSystem<T>, PyVectorSystem,
         LeafSystem<T>>(m, "VectorSystem", GetPyParam<T>(), doc.VectorSystem.doc)
         .def(py::init([](int inputs, int outputs) {
-          return new PyVectorSystem(inputs, outputs);
-        }),
-            doc.VectorSystem.ctor.doc_2args);
+               return new PyVectorSystem(inputs, outputs);
+             }),
+             doc.VectorSystem.ctor.doc_2args)
+        .def(py::init(
+            [](int inputs, int outputs, SystemScalarConverter converter) {
+              return new PyVectorSystem(std::move(converter), inputs, outputs);
+            }), py::arg("inputs"), py::arg("outputs"), py::arg("converter"));
     // TODO(eric.cousineau): Bind virtual methods once we provide a function
     // wrapper to convert `Map<Derived>*` arguments.
     // N.B. This could be mitigated by using `EigenPtr` in public interfaces in
