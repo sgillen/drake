@@ -109,9 +109,6 @@ class TestAutoDiffXd(unittest.TestCase):
 
         # Test implicit conversion.
         self._check_array(
-            autodiff_vector_pass_through(np.array([1, 2], dtype=np.int32)),  # int
-            [AD(1., []), AD(2., [])])
-        self._check_array(
             autodiff_vector_pass_through([1, 2]),  # int
             [AD(1., []), AD(2., [])])
         self._check_array(

@@ -23,6 +23,12 @@ PYBIND11_MODULE(_autodiffutils_py, m) {
   py::module::import("pydrake.util.deprecation")
       .attr("install_numpy_warning_filters")();
 
+  // TODO(eric.cousineau): Remove this once pybind/pybind11#1329 lands, and rely
+  // on `py::dtype::of<int64_t>`.
+  py::module np = py::module::import("numpy");
+  py::dtype np_int64 = py::reinterpret_borrow<py::dtype>(
+      np.attr("dtype")(np.attr("int64")));
+
   py::dtype_user<AutoDiffXd> autodiff(m, "AutoDiffXd");
   autodiff
     .def(py::init<double>())
@@ -31,7 +37,10 @@ PYBIND11_MODULE(_autodiffutils_py, m) {
     // - Upcasting can be implicit, especially for matrix multiplication.
     .def_loop(py::dtype_method::implicit_conversion<double, AutoDiffXd>())
     .def_loop(py::dtype_method::implicit_conversion<int, AutoDiffXd>())
-    .def_loop(py::dtype_method::implicit_conversion<int64_t, AutoDiffXd>())
+    // `int64` is needed for implicitly converting arguments from
+    // `np.array([<integers])`, which by default resolves to a dtype of int64.
+    .def_loop(
+        py::dtype_method::implicit_conversion<int64_t, AutoDiffXd>(), np_int64)
     // See https://github.com/numpy/numpy/issues/10904 for next 2 casts.
     // NOLINTNEXTLINE(runtime/int): Use platform-dependent name for NumPy.
     .def_loop(py::dtype_method::implicit_conversion<long, AutoDiffXd>())
