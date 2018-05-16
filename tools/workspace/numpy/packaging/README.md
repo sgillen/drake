@@ -54,6 +54,10 @@ generate archives.
     effectively be a no-op so the library is used from your `PYTHONPATH`. In
     this way, you can build with debug versions of CPython + NumPy
     ([example for Ubuntu 16.04](https://gist.github.com/EricCousineau-TRI/ce79d3265bb72934267e24ddc8c623bc#file-cpython_dbg_valgrind-sh)).
+        * You will also want to change `.../numpy.package.BUILD.bazel` to use
+        the system version. The easiest way to do this is to change the
+        `numpy_py` target to:
+
 1. Test your code locally on your machine, using these build steps to produce an
 archive.
 1. Upload your *temporary* archives to something like a temporary Git
