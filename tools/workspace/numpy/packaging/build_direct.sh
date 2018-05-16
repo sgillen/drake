@@ -7,6 +7,8 @@ set -eux -o pipefail
 output_dir=${1}
 shift
 
+# PR DRAFT(eric.cousineau): Change this to RobotLocomotion/numpy or
+# numpy/numpy.
 repo=https://github.com/EricCousineau-TRI/numpy
 # Requires NumPy PR #10898 and #11076
 commit=8b517bd2ccf37dd51191052e2b39be4f92d42bca
