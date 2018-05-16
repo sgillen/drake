@@ -24,21 +24,26 @@ Arguments:
 
 load("@drake//tools/workspace:os.bzl", "determine_os")
 
-# Generated from Git revision 8b517bd from a merge of numpy/numpy#10898 and
-# numpy/numpy#11075.
+# Generated from the presently unmerged numpy/numpy#10898.
 # See `./packaging/README.md` for instructions to generate these binaries.
 # N.B. When you update the version of NumPy, ensure to update the variable
 # `expected_version` in `numpy_install_test.py` to reflect the *exact* version
 # per NumPy's build (which should be part of the *.whl's filename).
 # PR DRAFT(eric.cousineau): Upload these to S3 when they pass review.
+
+def _get_url(platform):
+    git_ref = "8507eb3"
+    base_format = "https://github.com/EricCousineau-TRI/experimental/raw/2a2c3d3d05aca8be9bc30740f97e9900650e9949/numpy/numpy-1.15.0.dev0%2B{git_ref}-cp27-{platform}.whl"  # noqa
+    return base_format.format(git_ref=git_ref, platform=platform)
+
 wheels = {
     "ubuntu_16.04": {
-        "url": "https://github.com/EricCousineau-TRI/experimental/raw/9f47b9bc31e5fdb6d54d6b08b2904491d8bf43c8/numpy/numpy-1.15.0.dev0%2B8b517bd-cp27-cp27mu-linux_x86_64.whl",  # noqa
-        "sha256": "bc24319c135ea2d01cded300b43cec4162936099e7569cde89862460db80481c",  # noqa
+        "url": _get_url("cp27mu-linux_x86_64"),
+        "sha256": "48303e57eded39f491773986e20aacaa85d22dbd23dc71a8b53a6f7ff7510a41",  # noqa
     },
     "mac": {
-        "url": "https://github.com/EricCousineau-TRI/experimental/raw/9f47b9bc31e5fdb6d54d6b08b2904491d8bf43c8/numpy/numpy-1.15.0.dev0%2B8b517bd-cp27-cp27m-macosx_10_13_x86_64.whl",  # noqa
-        "sha256": "0f192f999bafb9f8f353fac7bc2504e15e0768352fc601d51385816c09bfd473",  # noqa
+        "url": _get_url("cp27m-macosx_10_13_x86_64"),
+        "sha256": "b7e518069b00f8d32c32f55f00a6bd8fe83019952b94c9dc9a8e463f868a5a86",  # noqa
     },
 }
 
