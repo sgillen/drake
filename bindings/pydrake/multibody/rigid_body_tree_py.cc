@@ -7,6 +7,7 @@
 
 #include "drake/bindings/pydrake/autodiff_types_pybind.h"
 #include "drake/bindings/pydrake/pydrake_pybind.h"
+#include "drake/bindings/pydrake/util/type_pack.h"
 #include "drake/multibody/parsers/package_map.h"
 #include "drake/multibody/parsers/sdf_parser.h"
 #include "drake/multibody/parsers/urdf_parser.h"
@@ -230,12 +231,12 @@ PYBIND11_MODULE(rigid_body_tree, m) {
       // relativeQuaternionJacobianDotTimesV
       // CheckCacheValidity
       .def("doKinematics", [](const RigidBodyTree<double>& tree,
-                              const Eigen::VectorX<T>& q) {
+                              const VectorX<T>& q) {
         return tree.doKinematics(q);
       })
       .def("doKinematics", [](const RigidBodyTree<double>& tree,
-                              const Eigen::VectorX<T>& q,
-                              const Eigen::VectorX<T>& v) {
+                              const VectorX<T>& q,
+                              const VectorX<T>& v) {
         return tree.doKinematics(q, v);
       });
       // CreateKinematicsCacheWithType
@@ -252,8 +253,9 @@ PYBIND11_MODULE(rigid_body_tree, m) {
             cache, points, from_body_or_frame_ind, to_body_or_frame_ind);
       });
   };
+  // Bind for double and AutoDiff.
   type_visit(
-      add_rigid_body_tree_typed_methods, pysystems::NonSymbolicScalarPack{});
+      add_rigid_body_tree_typed_methods, type_pack<double, AutoDiffXd>{});
 
   py::class_<KinematicsCache<double> >(m, "KinematicsCacheDouble");
   py::class_<KinematicsCache<AutoDiffXd> >(m, "KinematicsCacheAutoDiffXd");
