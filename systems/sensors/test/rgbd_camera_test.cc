@@ -45,18 +45,20 @@ constexpr double kFovY = M_PI_4;
 constexpr bool kShowWindow = RenderingConfig::kDefaultShowWindow;
 constexpr double kDepthRangeNear = 0.5;
 constexpr double kDepthRangeFar = 5.;
-constexpr int kWidth = 640;
-constexpr int kHeight = 480;
+constexpr int kWidth = RenderingConfig::kDefaultWidth;
+constexpr int kHeight = RenderingConfig::kDefaultHeight;
+constexpr int kWidthHdtv = 1280;
+constexpr int kHeightHdtv = 720;
 
-void VerifyCameraInfo(const CameraInfo& camera_info) {
-  EXPECT_EQ(kWidth, camera_info.width());
-  EXPECT_EQ(kHeight, camera_info.height());
-  EXPECT_NEAR(kWidth * 0.5, camera_info.center_x(), kTolerance);
-  EXPECT_NEAR(kHeight * 0.5, camera_info.center_y(), kTolerance);
+void VerifyCameraInfo(const CameraInfo& camera_info, int width, int height) {
+  EXPECT_EQ(width, camera_info.width());
+  EXPECT_EQ(height, camera_info.height());
+  EXPECT_NEAR(width * 0.5, camera_info.center_x(), kTolerance);
+  EXPECT_NEAR(height * 0.5, camera_info.center_y(), kTolerance);
 
   // The expected focal value is calculated by the equation here:
   // https://github.com/RobotLocomotion/drake/blob/master/drake/systems/sensors/camera_info.h
-  constexpr double kExpectedFocal = 579.41125496954282;
+  const double kExpectedFocal = 0.5 * height / tan(kFovY / 2);
   EXPECT_NEAR(kExpectedFocal, camera_info.focal_x(), kTolerance);
   EXPECT_NEAR(kExpectedFocal, camera_info.focal_y(), kTolerance);
 }
@@ -76,9 +78,9 @@ void VerifyCameraPose(const Eigen::Isometry3d camera_optical_pose) {
 }
 
 GTEST_TEST(RgbdCamera, TestInstantiation) {
-  auto Verify = [](const RgbdCamera& camera) {
-    VerifyCameraInfo(camera.color_camera_info());
-    VerifyCameraInfo(camera.depth_camera_info());
+  auto Verify = [](const RgbdCamera& camera, int width, int height) {
+    VerifyCameraInfo(camera.color_camera_info(), width, height);
+    VerifyCameraInfo(camera.depth_camera_info(), width, height);
     VerifyCameraPose(camera.color_camera_optical_pose());
     VerifyCameraPose(camera.depth_camera_optical_pose());
     EXPECT_NO_THROW(camera.tree());
@@ -90,7 +92,7 @@ GTEST_TEST(RgbdCamera, TestInstantiation) {
                           Eigen::Vector3d(0.1, 0.2, 0.3),
                           kDepthRangeNear, kDepthRangeFar,
                           kFovY, kShowWindow);
-  Verify(fixed_camera);
+  Verify(fixed_camera, kWidth, kHeight);
   // With the fixed camera use case, RgbdCamera doesn't hold a frame, thus
   // throws an exception.
   EXPECT_THROW(fixed_camera.frame(), std::logic_error);
@@ -100,8 +102,23 @@ GTEST_TEST(RgbdCamera, TestInstantiation) {
                             RigidBodyFrame<double>(),
                             kDepthRangeNear, kDepthRangeFar,
                             kFovY, kShowWindow);
-  Verify(movable_camera);
+  Verify(movable_camera, kWidth, kHeight);
   EXPECT_NO_THROW(movable_camera.frame());
+
+  // Verify that we can construct specifying a different width and hegiht.
+  RgbdCamera fixed_camera_hdtv(
+      "rgbd_camera", RigidBodyTree<double>(),
+      Eigen::Vector3d(1., 2., 3.), Eigen::Vector3d(01., 0.2, 0.3),
+      kDepthRangeNear, kDepthRangeFar,
+      kFovY, kShowWindow, kWidthHdtv, kHeightHdtv);
+  Verify(fixed_camera_hdtv, kWidthHdtv, kHeightHdtv);
+
+  RgbdCamera movable_camera_hdtv(
+      "rgbd_camera", RigidBodyTree<double>(), RigidBodyFrame<double>(),
+      kDepthRangeNear, kDepthRangeFar,
+      kFovY, kShowWindow,
+      kWidthHdtv, kHeightHdtv);
+  Verify(movable_camera_hdtv, kWidthHdtv, kHeightHdtv);
 }
 
 
