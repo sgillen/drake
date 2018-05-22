@@ -45,24 +45,25 @@ constexpr double kFovY = M_PI_4;
 constexpr bool kShowWindow = RenderingConfig::kDefaultShowWindow;
 constexpr double kDepthRangeNear = 0.5;
 constexpr double kDepthRangeFar = 5.;
-constexpr int kWidth = RenderingConfig::kDefaultWidth;
-constexpr int kHeight = RenderingConfig::kDefaultHeight;
-constexpr int kWidthHdtv = 1280;
-constexpr int kHeightHdtv = 720;
 
-using Size = std::array<int, 2>;
-constexpr std::array<Size, 2> kSizes = {{
-    {{kWidth, kHeight}},
-    {{kWidthHdtv, kHeightHdtv}},
-}};
+struct Size {
+  int width{};
+  int height{};
+};
 
-void VerifyCameraInfo(const CameraInfo& camera_info, int width, int height) {
-  EXPECT_EQ(width, camera_info.width());
-  EXPECT_EQ(height, camera_info.height());
-  EXPECT_NEAR(width * 0.5, camera_info.center_x(), kTolerance);
-  EXPECT_NEAR(height * 0.5, camera_info.center_y(), kTolerance);
+constexpr Size kSizeVga = {
+    RenderingConfig::kDefaultWidth, RenderingConfig::kDefaultHeight};
+constexpr Size kSizeHdtv = {1280, 720};
 
-  const double kExpectedFocal = 0.5 * height / tan(kFovY / 2);
+constexpr std::array<Size, 2> kSizes = {{kSizeVga, kSizeHdtv}};
+
+void VerifyCameraInfo(const CameraInfo& camera_info, Size size) {
+  EXPECT_EQ(size.width, camera_info.width());
+  EXPECT_EQ(size.height, camera_info.height());
+  EXPECT_NEAR(size.width * 0.5, camera_info.center_x(), kTolerance);
+  EXPECT_NEAR(size.height * 0.5, camera_info.center_y(), kTolerance);
+
+  const double kExpectedFocal = 0.5 * size.height / tan(kFovY / 2);
   EXPECT_NEAR(kExpectedFocal, camera_info.focal_x(), kTolerance);
   EXPECT_NEAR(kExpectedFocal, camera_info.focal_y(), kTolerance);
 }
@@ -82,9 +83,9 @@ void VerifyCameraPose(const Eigen::Isometry3d camera_optical_pose) {
 }
 
 GTEST_TEST(RgbdCamera, TestInstantiation) {
-  auto Verify = [](const RgbdCamera& camera, int width, int height) {
-    VerifyCameraInfo(camera.color_camera_info(), width, height);
-    VerifyCameraInfo(camera.depth_camera_info(), width, height);
+  auto Verify = [](const RgbdCamera& camera, Size size) {
+    VerifyCameraInfo(camera.color_camera_info(), size);
+    VerifyCameraInfo(camera.depth_camera_info(), size);
     VerifyCameraPose(camera.color_camera_optical_pose());
     VerifyCameraPose(camera.depth_camera_optical_pose());
     EXPECT_NO_THROW(camera.tree());
@@ -96,7 +97,7 @@ GTEST_TEST(RgbdCamera, TestInstantiation) {
                           Eigen::Vector3d(0.1, 0.2, 0.3),
                           kDepthRangeNear, kDepthRangeFar,
                           kFovY, kShowWindow);
-  Verify(fixed_camera, kWidth, kHeight);
+  Verify(fixed_camera, kSizeVga);
   // With the fixed camera use case, RgbdCamera doesn't hold a frame, thus
   // throws an exception.
   EXPECT_THROW(fixed_camera.frame(), std::logic_error);
@@ -106,7 +107,7 @@ GTEST_TEST(RgbdCamera, TestInstantiation) {
                             RigidBodyFrame<double>(),
                             kDepthRangeNear, kDepthRangeFar,
                             kFovY, kShowWindow);
-  Verify(movable_camera, kWidth, kHeight);
+  Verify(movable_camera, kSizeVga);
   EXPECT_NO_THROW(movable_camera.frame());
 
   // Verify that we can construct specifying a different width and hegiht.
@@ -114,15 +115,14 @@ GTEST_TEST(RgbdCamera, TestInstantiation) {
       "rgbd_camera", RigidBodyTree<double>(),
       Eigen::Vector3d(1., 2., 3.), Eigen::Vector3d(01., 0.2, 0.3),
       kDepthRangeNear, kDepthRangeFar,
-      kFovY, kShowWindow, kWidthHdtv, kHeightHdtv);
-  Verify(fixed_camera_hdtv, kWidthHdtv, kHeightHdtv);
+      kFovY, kShowWindow, kSizeHdtv.width, kSizeHdtv.height);
+  Verify(fixed_camera_hdtv, kSizeHdtv);
 
   RgbdCamera movable_camera_hdtv(
       "rgbd_camera", RigidBodyTree<double>(), RigidBodyFrame<double>(),
       kDepthRangeNear, kDepthRangeFar,
-      kFovY, kShowWindow,
-      kWidthHdtv, kHeightHdtv);
-  Verify(movable_camera_hdtv, kWidthHdtv, kHeightHdtv);
+      kFovY, kShowWindow, kSizeHdtv.width, kSizeHdtv.height);
+  Verify(movable_camera_hdtv, kSizeHdtv);
 }
 
 
@@ -197,19 +197,19 @@ class RgbdCameraDiagramTest : public ::testing::Test {
     auto label = output_->GetMutableData(2)->GetMutableValue<
       sensors::ImageLabel16I>();
 
-    EXPECT_EQ(color.width(), width_);
-    EXPECT_EQ(color.height(), height_);
-    EXPECT_EQ(depth.width(), width_);
-    EXPECT_EQ(depth.height(), height_);
-    EXPECT_EQ(label.width(), width_);
-    EXPECT_EQ(label.height(), height_);
+    EXPECT_EQ(color.width(), size_.width);
+    EXPECT_EQ(color.height(), size_.height);
+    EXPECT_EQ(depth.width(), size_.width);
+    EXPECT_EQ(depth.height(), size_.height);
+    EXPECT_EQ(label.width(), size_.width);
+    EXPECT_EQ(label.height(), size_.height);
 
     // Verifying all the pixel has the same values in each images.
     const auto& kColor = color.at(0, 0);
     const auto& kDepth = depth.at(0, 0);
     const auto& kLabel = label.at(0, 0);
-    for (int v = 0; v < height_; ++v) {
-      for (int u = 0; u < width_; ++u) {
+    for (int v = 0; v < size_.height; ++v) {
+      for (int u = 0; u < size_.width; ++u) {
         for (int ch = 0; ch < color.kNumChannels; ++ch) {
           ASSERT_EQ(kColor[ch], color.at(u, v)[ch]);
         }
@@ -226,9 +226,8 @@ class RgbdCameraDiagramTest : public ::testing::Test {
             Size size) {
     diagram_ = std::make_unique<RgbdCameraDiagram>(
         FindResourceOrThrow("drake/systems/sensors/test/models/" + sdf));
-    width_ = size[0];
-    height_ = size[1];
-    diagram_->Init(position, orientation, width_, height_);
+    size_ = size;
+    diagram_->Init(position, orientation, size_.width, size_.height);
     context_ = diagram_->CreateDefaultContext();
     output_ = diagram_->AllocateOutput(*context_);
   }
@@ -239,16 +238,14 @@ class RgbdCameraDiagramTest : public ::testing::Test {
             Size size) {
     diagram_ = std::make_unique<RgbdCameraDiagram>(
         FindResourceOrThrow("drake/systems/sensors/test/models/" + sdf));
-    width_ = size[0];
-    height_ = size[1];
-    diagram_->Init(transformation, width_, height_);
+    size_ = size;
+    diagram_->Init(transformation, size_.width, size_.height);
     context_ = diagram_->CreateDefaultContext();
     output_ = diagram_->AllocateOutput(*context_);
   }
 
   std::unique_ptr<systems::SystemOutput<double>> output_;
-  int width_{};
-  int height_{};
+  Size size_;
 
  private:
   std::unique_ptr<RgbdCameraDiagram> diagram_;
