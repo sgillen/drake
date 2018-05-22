@@ -62,8 +62,6 @@ void VerifyCameraInfo(const CameraInfo& camera_info, int width, int height) {
   EXPECT_NEAR(width * 0.5, camera_info.center_x(), kTolerance);
   EXPECT_NEAR(height * 0.5, camera_info.center_y(), kTolerance);
 
-  // The expected focal value is calculated by the equation here:
-  // https://github.com/RobotLocomotion/drake/blob/master/drake/systems/sensors/camera_info.h
   const double kExpectedFocal = 0.5 * height / tan(kFovY / 2);
   EXPECT_NEAR(kExpectedFocal, camera_info.focal_x(), kTolerance);
   EXPECT_NEAR(kExpectedFocal, camera_info.focal_y(), kTolerance);
