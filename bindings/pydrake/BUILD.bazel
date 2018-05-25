@@ -336,3 +336,22 @@ drake_py_binary(
         ":math_py",
     ],
 )
+
+# Test RobotLocomotion/drake-shambhala#98
+drake_pybind_library(
+    name = "simple_bindings_py",
+    cc_so_name = "simple_bindings",
+    cc_srcs = ["simple_bindings.cc"],
+    add_install = False,
+    package_info = PACKAGE_INFO,
+    py_imports = ["."],
+)
+
+drake_py_binary(
+    name = "simple_bindings_test",
+    srcs = ["simple_bindings_test.py"],
+    deps = [
+        ":all_py",
+        ":simple_bindings_py",
+    ],
+)
