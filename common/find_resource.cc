@@ -9,6 +9,7 @@
 #include "drake/common/drake_throw.h"
 #include "drake/common/find_loaded_library.h"
 #include "drake/common/never_destroyed.h"
+#include "drake/common/text_logging.h"
 
 using std::string;
 
@@ -115,6 +116,7 @@ optional<std::string>  GetCandidateDirFromLibdrake() {
   optional<std::string> libdrake_dir = LoadedLibraryPath("libdrake.so");
   if (libdrake_dir) {
     libdrake_dir = libdrake_dir.value() + "/../share/drake";
+    drake::log()->info("libdrake_dir: {}", *libdrake_dir);
   }
   return libdrake_dir;
 }
@@ -238,6 +240,12 @@ void AddResourceSearchPath(string search_path) {
   GetMutableResourceSearchPaths().push_back(std::move(search_path));
 }
 
+template <typename T>
+T def_if_null(optional<T> in) {
+  if (in) return *in;
+  else return {};
+}
+
 Result FindResource(string resource_path) {
   // Check if resource_path is well-formed: a relative path that starts with
   // "drake" as its first directory name.  A valid example would look like:
@@ -273,18 +281,23 @@ Result FindResource(string resource_path) {
   // if the sentinel file can be found.
   for (const auto& search_path : GetMutableResourceSearchPaths()) {
     spruce::path candidate_dir(*AppendDrakeTo(search_path));
+    drake::log()->info("candidate_dir: {}", candidate_dir.getStr());
     candidate_dirs.emplace_back(CheckCandidateDir(candidate_dir));
   }
 
   // (3) Find where `librake.so` is, and add search path that corresponds to
   // resource folder in install tree based on `libdrake.so` location.
+  drake::log()->info(
+      "libdrake_dir: {}", def_if_null(GetCandidateDirFromLibdrake()));
   candidate_dirs.emplace_back(GetCandidateDirFromLibdrake());
 
   // (4) Find resources during `bazel test` execution.
+  drake::log()->info("test dir: {}", def_if_null(GetTestRunfilesDir()));
   candidate_dirs.emplace_back(GetTestRunfilesDir());
 
   // (5) Search in cwd (and its parent, grandparent, etc.) to find Drake's
   // resource-root sentinel file.
+  drake::log()->info("sentinel_dir: {}", def_if_null(FindSentinelDir()));
   candidate_dirs.emplace_back(FindSentinelDir());
 
   // Make sure that candidate_dirs are not relative paths. This could cause
@@ -298,7 +311,12 @@ Result FindResource(string resource_path) {
     }
 
   // See which (if any) candidate contains the requested resource.
+  string checked = "";
   for (const auto& candidate_dir : candidate_dirs) {
+    if (candidate_dir) {
+      drake::log()->info("check: {}", *candidate_dir);
+      checked += *candidate_dir + "\n  ";
+    }
     if (auto absolute_path = FileExists(candidate_dir, resource_path_substr)) {
       return Result::make_success(
           std::move(resource_path), std::move(*absolute_path));
@@ -306,7 +324,8 @@ Result FindResource(string resource_path) {
   }
 
   // Nothing found.
-  string error_message = "could not find resource: " + resource_path;
+  string error_message =
+      "could not find resource: " + resource_path + "; checked:\n  " + checked;
   return Result::make_error(std::move(resource_path), error_message);
 }
 
