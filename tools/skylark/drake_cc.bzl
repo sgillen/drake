@@ -607,8 +607,6 @@ def drake_example_cc_binary(
             //lcmtypes:drake_lcmtypes_headers are already included in \
             `drake_example_cc_binary()` macro")
     drake_cc_binary(
-        srcs = srcs +
-        ["//tools/install/libdrake:libdrake.so",
-         "//lcmtypes:drake_lcmtypes_headers"],
-        deps = deps + ["//tools/install/libdrake:drake_shared_library"],
+        srcs = srcs + ["//lcmtypes:drake_lcmtypes_headers"],
+        deps = deps + ["//:drake_shared_library"],
         **kwargs)

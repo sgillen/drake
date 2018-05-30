@@ -106,6 +106,9 @@ def pybind_py_library(
 # out dependencies, sources, etc, and simplify installation
 # dependencies.
 
+# TODO(eric.cousineau): Rename `drake_pybind_library` to
+# `drake_pybind_py_library`.
+
 def drake_pybind_library(
         name,
         cc_srcs = [],
@@ -155,7 +158,7 @@ def drake_pybind_library(
         cc_so_name = cc_so_name,
         cc_srcs = cc_srcs,
         cc_deps = cc_deps + [
-            "//bindings/pydrake:drake_shared_library",
+            "//:drake_shared_library",
             "//bindings/pydrake:pydrake_pybind",
         ],
         cc_binary_rule = drake_cc_binary,
@@ -256,8 +259,8 @@ def drake_pybind_cc_googletest(
         name = cc_name,
         srcs = cc_srcs,
         deps = cc_deps + [
+            "//:drake_shared_library",
             "//bindings/pydrake:pydrake_pybind",
-            "//tools/install/libdrake:drake_shared_library",
             "@pybind11",
             "@python//:python_direct_link",
         ],

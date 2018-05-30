@@ -188,19 +188,6 @@ drake_py_library(
     deps = [":all_py"],
 )
 
-# Expose shared linking for downstream C++ libraries.
-cc_library(
-    name = "drake_shared_library",
-    srcs = ["//tools/install/libdrake:libdrake.so"],
-    # N.B. To pull in transitive `data` dependencies, we must list
-    # `libdrake.so` as a data target.
-    data = ["//tools/install/libdrake:libdrake.so"],
-    visibility = ["//visibility:public"],
-    deps = [
-        "//tools/install/libdrake:drake_shared_library",
-    ],
-)
-
 install(
     name = "install",
     install_tests = [

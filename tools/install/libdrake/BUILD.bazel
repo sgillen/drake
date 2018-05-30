@@ -114,8 +114,7 @@ cc_library(
     include_prefix = "drake",
     strip_include_prefix = "/",
     visibility = [
-        "//bindings:__subpackages__",
-        "//examples:__subpackages__",
+        "//:__pkg__",
     ],
     deps = [
         # The list of depended-on *.so files.
