@@ -188,6 +188,15 @@ drake_py_library(
     deps = [":all_py"],
 )
 
+# Expose shared linking for downstream C++ libraries.
+drake_cc_library(
+    name = "drake_shared_library",
+    srcs = ["//tools/install/libdrake:libdrake.so"],
+    deps = [
+        "//tools/install/libdrake:drake_shared_library",
+    ],
+)
+
 install(
     name = "install",
     install_tests = [
