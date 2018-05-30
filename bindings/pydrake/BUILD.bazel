@@ -191,17 +191,17 @@ drake_py_library(
 # Expose shared linking for downstream C++ libraries.
 drake_cc_library(
     name = "drake_shared_library",
+    srcs = ["//tools/install/libdrake:libdrake.so"],
     # N.B. To pull in transitive `data` dependencies, we must list
     # `libdrake.so` as a data target.
     data = ["//tools/install/libdrake:libdrake.so"],
-    srcs = ["//tools/install/libdrake:libdrake.so"],
+    visibility = ["//visibility:public"],
     deps = [
         "//tools/install/libdrake:drake_shared_library",
         # TODO(jwnimmer-tri) We should be getting stx header path from
         # :drake_shared_library, but that isn't working yet.
         "@stx",
     ],
-    visibility = ["//visibility:public"],
 )
 
 install(
