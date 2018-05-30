@@ -51,8 +51,7 @@ def pybind_py_library(
         py_imports = [],
         py_library_rule = native.py_library,
         visibility = None,
-        testonly = None,
-        ,):
+        testonly = None):
     """Declares a pybind11 Python library with C++ and Python portions.
 
     @param cc_srcs
@@ -61,7 +60,6 @@ def pybind_py_library(
         C++ dependencies.
         At present, these should be libraries that will not cause ODR
         conflicts (generally, header-only).
-        By default, this includes `pydrake_pybind`.
     @param cc_so_name (optional)
         Shared object name. By default, this is `${name}`, so that the C++
         code can be then imported in a more controlled fashion in Python.
@@ -145,7 +143,6 @@ def drake_pybind_library(
     """
     if package_info == None:
         fail("`package_info` must be supplied.")
-    py_name = name
     if not cc_so_name:
         cc_so_name = "_" + name
     install_name = name + "_install"
@@ -164,7 +161,6 @@ def drake_pybind_library(
             "@stx",
         ],
         cc_binary_rule = drake_cc_binary,
-        name = py_name,
         py_srcs = py_srcs,
         py_deps = py_deps,
         py_imports = package_info.py_imports + py_imports,
@@ -176,7 +172,7 @@ def drake_pybind_library(
         install(
             name = install_name,
             targets = [
-                py_name,
+                name,
                 cc_so_target,
             ],
             py_dest = package_info.py_dest,
