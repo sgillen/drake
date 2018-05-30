@@ -9,8 +9,8 @@ shift
 
 repo=https://github.com/numpy/numpy
 # Requires NumPy PR #10898 and #11076
-commit=8507eb30b60ae833eef103929a9e7ace2f8d3a75
-fetch_ref=pull/10898/head
+commit=6721890e86291b53fb8dcbee6809891c348ae98e
+fetch_ref=master
 
 git clone ${repo} numpy
 cd numpy
