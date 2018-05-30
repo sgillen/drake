@@ -45,6 +45,11 @@ DEFINE_double(target_realtime_rate, 1.0,
 DEFINE_double(simulation_time, 10.0,
               "Desired duration of the simulation in seconds.");
 
+DEFINE_double(time_step, 0,
+            "If greater than zero, the plant is modeled as a system with "
+            "discrete updates and period equal to this time_step. "
+            "If 0, the plant is modeled as a continuous system.");
+
 int do_main() {
   systems::DiagramBuilder<double> builder;
 
@@ -54,22 +59,13 @@ int do_main() {
   // Make and add the cart_pole model.
   const std::string full_name = FindResourceOrThrow(
       "drake/examples/multibody/cart_pole/cart_pole.sdf");
-  MultibodyPlant<double>& cart_pole = *builder.AddSystem<MultibodyPlant>();
+  MultibodyPlant<double>& cart_pole =
+      *builder.AddSystem<MultibodyPlant>(FLAGS_time_step);
   AddModelFromSdfFile(full_name, &cart_pole, &scene_graph);
 
   // Add gravity to the model.
   cart_pole.AddForceElement<UniformGravityFieldElement>(
       -9.81 * Vector3<double>::UnitZ());
-
-  // Register geometry for visualization.
-  // TODO(amcastro-tri): Add this visual from SDF parsing once SG supports
-  // boxes (or sdformat supports meshes).
-  const Body<double>& cart = cart_pole.GetBodyByName("Cart");
-  std::string box_mesh_path =
-      FindResourceOrThrow("drake/examples/multibody/cart_pole/box_2x1.obj");
-  cart_pole.RegisterVisualGeometry(
-      cart, Isometry3<double>::Identity(),
-      geometry::Mesh(box_mesh_path, 0.12 /* scale factor */), &scene_graph);
 
   // Now the model is complete.
   cart_pole.Finalize();
@@ -109,6 +105,10 @@ int do_main() {
   diagram->SetDefaultContext(diagram_context.get());
   systems::Context<double>& cart_pole_context =
       diagram->GetMutableSubsystemContext(cart_pole, diagram_context.get());
+
+  // There is no input actuation in this example for the passive dynamics.
+  cart_pole_context.FixInputPort(
+      cart_pole.get_actuation_input_port().get_index(), Vector1d(0));
 
   // Get joints so that we can set initial conditions.
   const PrismaticJoint<double>& cart_slider =

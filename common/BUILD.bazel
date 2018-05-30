@@ -38,6 +38,7 @@ drake_cc_package_library(
         ":is_less_than_comparable",
         ":nice_type_name",
         ":number_traits",
+        ":pointer_cast",
         ":polynomial",
         ":reset_after_move",
         ":reset_on_copy",
@@ -350,6 +351,15 @@ drake_cc_library(
 )
 
 drake_cc_library(
+    name = "pointer_cast",
+    srcs = ["pointer_cast.cc"],
+    hdrs = ["pointer_cast.h"],
+    deps = [
+        ":nice_type_name",
+    ],
+)
+
+drake_cc_library(
     name = "sorted_vectors_have_intersection",
     hdrs = ["sorted_vectors_have_intersection.h"],
     deps = [
@@ -381,6 +391,13 @@ drake_cc_library(
         # Don't add this library into the ":common" package library.
         # Only programs with a main() function should ever use this header.
         "exclude_from_package",
+        # Don't install this header via this cc_library, because that would
+        # introduce a dependency from libdrake onto gflags.  Similarly, we
+        # can't use `install_hdrs_exclude` for this because the @gflags
+        # dependency should not be part of the install.  Instead, we exclude
+        # this cc_library entirely, and use a separate rule below for the
+        # installation.
+        "exclude_from_libdrake",
     ],
     deps = [
         ":essential",
@@ -399,7 +416,8 @@ drake_cc_library(
         # This rule should only be used for install purposes.
         "exclude_from_package",
     ],
-    # This rule should only be used for install purposes.
+    # This rule should only be used for install purposes, not within the
+    # in-source bazel build.  We limit its visibility to enforce that.
     visibility = ["//tools/install/libdrake:__pkg__"],
 )
 
@@ -532,6 +550,14 @@ drake_cc_googletest(
     name = "reset_on_copy_test",
     deps = [
         ":reset_on_copy",
+    ],
+)
+
+drake_cc_googletest(
+    name = "pointer_cast_test",
+    deps = [
+        ":pointer_cast",
+        "//common/test_utilities",
     ],
 )
 
@@ -771,8 +797,6 @@ drake_cc_googletest(
 
 drake_cc_googletest(
     name = "symbolic_simplification_test",
-    # Ignored temporarily #8783
-    tags = ["no_memcheck"],
     deps = [
         ":symbolic",
         "//common/test_utilities:symbolic_test_util",

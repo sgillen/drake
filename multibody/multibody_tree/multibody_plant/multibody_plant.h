@@ -158,11 +158,35 @@ class MultibodyPlant : public systems::LeafSystem<T> {
 
   /// Default constructor creates a plant with a single "world" body.
   /// Therefore, right after creation, num_bodies() returns one.
-  MultibodyPlant();
+  /// @param[in] time_step
+  ///   An optional parameter indicating whether `this` plant is modeled as a
+  ///   continuous system (`time_step = 0`) or as a discrete system with
+  ///   periodic updates of period `time_step > 0`. @default 0.0.
+  /// @throws std::exception if `time_step` is negative.
+  explicit MultibodyPlant(double time_step = 0);
 
   /// Scalar-converting copy constructor.  See @ref system_scalar_conversion.
   template<typename U>
-  explicit MultibodyPlant(const MultibodyPlant<U>& other);
+  MultibodyPlant(const MultibodyPlant<U>& other) :
+      systems::LeafSystem<T>(systems::SystemTypeTag<
+          drake::multibody::multibody_plant::MultibodyPlant>()) {
+    DRAKE_THROW_UNLESS(other.is_finalized());
+    model_ = other.model_->template CloneToScalar<T>();
+    time_step_ = other.time_step_;
+    // Copy of all members related with geometry registration.
+    source_id_ = other.source_id_;
+    body_index_to_frame_id_ = other.body_index_to_frame_id_;
+    geometry_id_to_body_index_ = other.geometry_id_to_body_index_;
+    geometry_id_to_visual_index_ = other.geometry_id_to_visual_index_;
+    geometry_id_to_collision_index_ = other.geometry_id_to_collision_index_;
+    visual_geometries_ = other.visual_geometries_;
+    collision_geometries_ = other.collision_geometries_;
+    // MultibodyTree::CloneToScalar() already called MultibodyTree::Finalize()
+    // on the new MultibodyTree on U. Therefore we only Finalize the plant's
+    // internals (and not the MultibodyTree).
+    FinalizePlantOnly();
+  }
+
 
   /// Returns the number of bodies in the model, including the "world" body,
   /// which is always part of the model.
@@ -244,10 +268,11 @@ class MultibodyPlant : public systems::LeafSystem<T> {
     // std::vector of geometry ids for that body. The emplace_back() below
     // resizes visual_geometries_ to store the geometry ids for the body we
     // just added.
-    // TODO(amcastro-tri): static_cast should not be needed. Update when
-    // TypeSafeIndex is fixed to support this comparison.
-    DRAKE_DEMAND(static_cast<int>(visual_geometries_.size()) == body.index());
+    // Similarly for the collision_geometries_ vector.
+    DRAKE_DEMAND(visual_geometries_.size() == body.index());
     visual_geometries_.emplace_back();
+    DRAKE_DEMAND(collision_geometries_.size() == body.index());
+    collision_geometries_.emplace_back();
     return body;
   }
 
@@ -470,6 +495,16 @@ class MultibodyPlant : public systems::LeafSystem<T> {
   const JointType<T>& GetJointByName(const std::string& name) const {
     return model_->template GetJointByName<JointType>(name);
   }
+
+  /// Returns a constant reference to the actuator that is uniquely identified
+  /// by the string `name` in `this` model.
+  /// @throws std::logic_error if there is no actuator with the requested name.
+  /// @see HasJointActuatorNamed() to query if there exists an actuator in
+  /// `this` model with a given specified name.
+  const JointActuator<T>& GetJointActuatorByName(
+      const std::string& name) const {
+    return model_->GetJointActuatorByName(name);
+  }
   /// @}
 
   /// Registers `this` plant to serve as a source for an instance of
@@ -524,6 +559,14 @@ class MultibodyPlant : public systems::LeafSystem<T> {
   const std::vector<geometry::GeometryId>& GetVisualGeometriesForBody(
       const Body<T>& body) const;
 
+  /// Returns the number of geometries registered for visualization.
+  /// This method can be called at any time during the lifetime of `this` plant,
+  /// either pre- or post-finalize, see Finalize().
+  /// Post-finalize calls will always return the same value.
+  int num_visual_geometries() const {
+    return static_cast<int>(geometry_id_to_visual_index_.size());
+  }
+
   /// Registers geometry in a SceneGraph with a given geometry::Shape to be
   /// used for the contact modeling of a given `body`.
   /// More than one geometry can be registered with a body, in which case the
@@ -553,19 +596,20 @@ class MultibodyPlant : public systems::LeafSystem<T> {
       const CoulombFriction<double>& coulomb_friction,
       geometry::SceneGraph<T>* scene_graph);
 
-  /// Returns the number of geometries registered for visualization.
-  /// This method can be called at any time during the lifetime of `this` plant,
-  /// either pre- or post-finalize, see Finalize().
+  /// Returns an array of GeometryId's identifying the different contact
+  /// geometries for `body` previously registered with a SceneGraph.
+  /// @note This method can be called at any time during the lifetime of `this`
+  /// plant, either pre- or post-finalize, see Finalize().
   /// Post-finalize calls will always return the same value.
-  int num_visual_geometries() const {
-    return static_cast<int>(geometry_id_to_visual_index_.size());
-  }
+  /// @see RegisterCollisionGeometry(), Finalize()
+  const std::vector<geometry::GeometryId>& GetCollisionGeometriesForBody(
+      const Body<T>& body) const;
 
   /// Returns the number of geometries registered for contact modeling.
   /// This method can be called at any time during the lifetime of `this` plant,
   /// either pre- or post-finalize, see Finalize().
   /// Post-finalize calls will always return the same value.
-  int get_num_collision_geometries() const {
+  int num_collision_geometries() const {
     return geometry_id_to_collision_index_.size();
   }
 
@@ -698,6 +742,19 @@ class MultibodyPlant : public systems::LeafSystem<T> {
   /// @throws std::logic_error if the %MultibodyPlant has already been
   /// finalized.
   void Finalize();
+
+  /// Returns `true` if this plant is modeled as a discrete system.
+  /// This property of the plant is specified at construction and therefore this
+  /// query can be performed either pre- or post- finalize, see Finalize().
+  bool is_discrete() const { return time_step_ > 0.0; }
+
+  /// The time step (or period) used to model `this` plant as a discrete system
+  /// with periodic updates. Returns 0 (zero) if the plant is modeled as a
+  /// continuous system.
+  /// This property of the plant is specified at construction and therefore this
+  /// query can be performed either pre- or post- finalize, see Finalize().
+  /// @see MultibodyPlant::MultibodyPlant(double)
+  double time_step() const { return time_step_; }
 
   /// @anchor mbp_penalty_method
   /// @name Contact by penalty method
@@ -846,6 +903,9 @@ class MultibodyPlant : public systems::LeafSystem<T> {
   // scalar conversion.
   template <typename U> friend class MultibodyPlant;
 
+  // Friend class to facilitate testing.
+  friend class MultibodyPlantTester;
+
   // Helper method for throwing an exception within public methods that should
   // not be called post-finalize. The invoking method should pass its name so
   // that the error message can include that detail.
@@ -877,6 +937,25 @@ class MultibodyPlant : public systems::LeafSystem<T> {
   void DoCalcTimeDerivatives(
       const systems::Context<T>& context,
       systems::ContinuousState<T>* derivatives) const override;
+
+  // If the plant is modeled as a discrete system with periodic updates (see
+  // is_discrete()), this method computes the periodic updates of the state
+  // using a semi-explicit Euler strategy, that is:
+  //   vⁿ⁺¹ = vⁿ + dt v̇ⁿ
+  //   qⁿ⁺¹ = qⁿ + dt N(qⁿ) vⁿ⁺¹
+  // This semi-explicit update inherits some of the nice properties of the
+  // semi-implicit Euler scheme (which uses v̇ⁿ⁺¹ for the v updated instead) when
+  // there are no velocity-dependent forces (including Coriolis and gyroscopic
+  // terms). The semi-implicit Euler scheme is a symplectic integrator, which
+  // for a Hamiltonian system has the nice property of nearly conserving energy
+  // (in many cases we can write a "modified energy functional" which can be
+  // shown to be exactly conserved and to be within O(dt) of the real energy of
+  // the mechanical system.)
+  // TODO(amcastro-tri): Update this docs when contact is added.
+  void DoCalcDiscreteVariableUpdates(
+      const drake::systems::Context<T>& context0,
+      const std::vector<const drake::systems::DiscreteUpdateEvent<T>*>& events,
+      drake::systems::DiscreteValues<T>* updates) const override;
 
   void DoMapQDotToVelocity(
       const systems::Context<T>& context,
@@ -954,6 +1033,46 @@ class MultibodyPlant : public systems::LeafSystem<T> {
       const PositionKinematicsCache<T>& pc,
       const VelocityKinematicsCache<T>& vc,
       std::vector<SpatialForce<T>>* F_BBo_W_array) const;
+
+  // Given a set of point pairs in `point_pairs_set`, this method computes the
+  // Jacobian N(q) such that:
+  //   vn = N(q) v
+  // where the i-th component of vn corresponds to the "separation velocity"
+  // for the i-th point pair in the set. The i-th separation velocity is defined
+  // positive for when the depth in the i-th point pair (
+  // PenetrationAsPointPair::depth) is decreasing. Since for contact problems
+  // the (positive) depth in PenetrationAsPointPair is defined so that it
+  // corresponds to interpenetrating body geometries, a positive separation
+  // velocity corresponds to bodies moving apart.
+  MatrixX<T> CalcNormalSeparationVelocitiesJacobian(
+      const systems::Context<T>& context,
+      const std::vector<geometry::PenetrationAsPointPair<T>>&
+      point_pairs_set) const;
+
+  // Given a set of nc point pairs in `point_pairs_set`, this method computes
+  // the tangential velocities Jacobian D(q) such that:
+  //   vt = D(q) v
+  // where v ∈ ℝⁿᵛ is the vector of generalized velocities, D(q) is a matrix of
+  // size 2⋅nc×nv and vt is a vector of size 2⋅nc.
+  // This method defines a contact frame C with orientation R_WC in the world
+  // frame W such that Cz_W = nhat_BA_W, the normal direction in the point
+  // pair (PenetrationAsPointPair::nhat_BA_W).
+  // With this definition, the first two columns of R_WC correspond to
+  // orthogonal versors Cx = that1 and Cy = that2 which span the tangent plane
+  // to nhat_BA_W.
+  // vt is defined such that its i-th and (i+1)-th entries correspond to
+  // relative velocity of the i-th point pair in these two orthogonal
+  // directions. That is:
+  //   vt(2 * i)     = vx_AB_C = Cx ⋅ v_AB
+  //   vt(2 * i + 1) = vy_AB_C = Cy ⋅ v_AB
+  //
+  // If the optional output argument R_WC_set is provided with a valid non
+  // nullptr vector, on output the i-th entry of R_WC_set will contain the
+  // orientation R_WC of the i-th point pair in the set.
+  MatrixX<T> CalcTangentVelocitiesJacobian(
+      const systems::Context<T>& context,
+      const std::vector<geometry::PenetrationAsPointPair<T>>& point_pairs_set,
+      std::vector<Matrix3<T>>* R_WC_set = nullptr) const;
 
   // The entire multibody model.
   std::unique_ptr<drake::multibody::MultibodyTree<T>> model_;
@@ -1062,6 +1181,11 @@ class MultibodyPlant : public systems::LeafSystem<T> {
   // geometries for body with index body_index.
   std::vector<std::vector<geometry::GeometryId>> visual_geometries_;
 
+  // Per-body arrays of collision geometries indexed by BodyIndex.
+  // That is, collision_geometries_[body_index] corresponds to the array of
+  // collision geometries for body with index body_index.
+  std::vector<std::vector<geometry::GeometryId>> collision_geometries_;
+
   // Maps a GeometryId with a collision index. This allows, for instance, to
   // find out collision properties (such as friction coefficient) for a given
   // geometry.
@@ -1084,6 +1208,11 @@ class MultibodyPlant : public systems::LeafSystem<T> {
   // Input/Output port indexes:
   int actuation_port_{-1};
   int continuous_state_output_port_{-1};
+
+  // If the plant is modeled as a discrete system with periodic updates,
+  // time_step_ corresponds to the period of those updates. Otherwise, if the
+  // plant is modeled as a continuous system, it is exactly zero.
+  double time_step_{0};
 
   // Temporary solution for fake cache entries to help stabilize the API.
   // TODO(amcastro-tri): Remove these when caching lands.
