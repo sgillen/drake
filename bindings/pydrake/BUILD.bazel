@@ -194,7 +194,11 @@ drake_cc_library(
     srcs = ["//tools/install/libdrake:libdrake.so"],
     deps = [
         "//tools/install/libdrake:drake_shared_library",
+        # TODO(jwnimmer-tri) We should be getting stx header path from
+        # :drake_shared_library, but that isn't working yet.
+        "@stx",
     ],
+    visibility = ["//visibility:public"],
 )
 
 install(

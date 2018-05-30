@@ -70,6 +70,7 @@ def pybind_py_library(
         Python dependencies.
     @param py_imports (optional)
         Additional Python import directories.
+    @return struct(cc_so_target = ..., py_target = ...)
     """
     py_name = name
     if not cc_so_name:
@@ -96,12 +97,14 @@ def pybind_py_library(
         testonly = testonly,
         visibility = visibility,
     )
-    return cc_so_target
+    return struct(
+        cc_so_target = cc_so_target,
+        py_target = py_name,
+    )
 
 # TODO(eric.cousineau): Consider making a `PybindProvider`, to sort
 # out dependencies, sources, etc, and simplify installation
 # dependencies.
-
 
 def drake_pybind_library(
         name,
@@ -146,19 +149,16 @@ def drake_pybind_library(
     if not cc_so_name:
         cc_so_name = "_" + name
     install_name = name + "_install"
-    cc_so_target = pybind_py_library(
+    targets = pybind_py_library(
         name = name,
         cc_so_name = cc_so_name,
-        cc_srcs = cc_srcs + ["//tools/install/libdrake:libdrake.so"],
+        cc_srcs = cc_srcs + [],
         cc_deps = cc_deps + [
             "//bindings/pydrake:pydrake_pybind",
             # Even though "libdrake.so" appears in srcs above, we have to list
             # :drake_shared_library here in order to get its headers onto the
             # include path, and its prerequisite *.so's onto LD_LIBRARY_PATH.
-            "//tools/install/libdrake:drake_shared_library",
-            # TODO(jwnimmer-tri) We should be getting stx header path from
-            # :drake_shared_library, but that isn't working yet.
-            "@stx",
+            "//bindings/pydrake:drake_shared_library",
         ],
         cc_binary_rule = drake_cc_binary,
         py_srcs = py_srcs,
@@ -167,13 +167,13 @@ def drake_pybind_library(
         testonly = testonly,
         visibility = visibility,
     )
-    # Add installation target for C++ and C++ bits.
+    # Add installation target for C++ and Python bits.
     if add_install:
         install(
             name = install_name,
             targets = [
-                name,
-                cc_so_target,
+                targets.cc_so_target,
+                targets.py_target,
             ],
             py_dest = package_info.py_dest,
             library_dest = package_info.py_dest,
