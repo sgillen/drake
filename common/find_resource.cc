@@ -175,10 +175,12 @@ optional<string> GetTestRunfilesDir() {
   // variable that Bazel is required to set when running a test.
   if (::getenv("TEST_TMPDIR") == nullptr) {
     // Not running under `bazel test`.
+    drake::log()->info("NO TMPDIR?");
     return nullopt;
   }
   char* test_srcdir = ::getenv("TEST_SRCDIR");
   if (test_srcdir == nullptr) {
+    drake::log()->info("NO SRCDIR?");
     // Apparently running under `bazel test`, but no runfiles tree is set?
     // Maybe TEST_TMPDIR was something other than Bazel; ignore it.
     return nullopt;
