@@ -152,7 +152,7 @@ def drake_pybind_library(
     targets = pybind_py_library(
         name = name,
         cc_so_name = cc_so_name,
-        cc_srcs = cc_srcs + [],
+        cc_srcs = cc_srcs,
         cc_deps = cc_deps + [
             "//bindings/pydrake:pydrake_pybind",
             # Even though "libdrake.so" appears in srcs above, we have to list
