@@ -607,6 +607,13 @@ def drake_example_cc_binary(
             //lcmtypes:drake_lcmtypes_headers are already included in \
             `drake_example_cc_binary()` macro")
     drake_cc_binary(
-        srcs = srcs + ["//lcmtypes:drake_lcmtypes_headers"],
+        srcs = srcs + [
+            "//lcmtypes:drake_lcmtypes_headers",
+            # N.B. Even though `libdrake.so` is incorporated via
+            # `//:drake_shared_library`, Bazel is still sensitive to transitive
+            # shared library linking; this test may segfault without listing
+            # this in `srcs`.
+            "//tools/install/libdrake:libdrake.so",
+        ],
         deps = deps + ["//:drake_shared_library"],
         **kwargs)
