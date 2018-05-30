@@ -133,6 +133,7 @@ cc_library(
     ] + [
         # The list of libraries directly mentioned in Drake headers.
         "@fmt",
+        "@stx",
     ],
 )
 

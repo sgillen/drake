@@ -126,7 +126,8 @@ def drake_pybind_library(
         C++ dependencies.
         At present, these should be libraries that will not cause ODR
         conflicts (generally, header-only).
-        By default, this includes `pydrake_pybind`.
+        By default, this includes `pydrake_pybind` and `libdrake.so` (and
+        associated headers).
     @param cc_so_name (optional)
         Shared object name. By default, this is `_${name}`, so that the C++
         code can be then imported in a more controlled fashion in Python.
@@ -155,9 +156,6 @@ def drake_pybind_library(
         cc_srcs = cc_srcs,
         cc_deps = cc_deps + [
             "//bindings/pydrake:pydrake_pybind",
-            # Even though "libdrake.so" appears in srcs above, we have to list
-            # :drake_shared_library here in order to get its headers onto the
-            # include path, and its prerequisite *.so's onto LD_LIBRARY_PATH.
             "//bindings/pydrake:drake_shared_library",
         ],
         cc_binary_rule = drake_cc_binary,
