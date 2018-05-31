@@ -14,7 +14,7 @@ Example:
     BUILD:
         py_library(
             name = "foobar",
-            deps = ["@foo//:numpy"],
+            deps = ["@foo//:numpy_py"],
             srcs = ["bar.py"],
         )
 
@@ -32,8 +32,8 @@ load("@drake//tools/workspace:os.bzl", "determine_os")
 # PR DRAFT(eric.cousineau): Upload these to S3 when they pass review.
 
 def _get_url(platform):
-    git_ref = "8507eb3"
-    base_format = "https://github.com/EricCousineau-TRI/experimental/raw/2a2c3d3d05aca8be9bc30740f97e9900650e9949/numpy/numpy-1.15.0.dev0%2B{git_ref}-cp27-{platform}.whl"  # noqa
+    git_ref = "6721890"
+    base_format = "https://github.com/EricCousineau-TRI/experimental/raw/6109720315a1efae945fc6fa1227200b9f7782a2/numpy/numpy-1.15.0.dev0%2B{git_ref}-cp27-{platform}.whl"  # noqa
     return base_format.format(git_ref=git_ref, platform=platform)
 
 wheels = {

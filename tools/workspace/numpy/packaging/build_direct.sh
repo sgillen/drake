@@ -8,7 +8,6 @@ output_dir=${1}
 shift
 
 repo=https://github.com/numpy/numpy
-# Requires NumPy PR #10898 and #11076
 commit=6721890e86291b53fb8dcbee6809891c348ae98e
 fetch_ref=master
 
