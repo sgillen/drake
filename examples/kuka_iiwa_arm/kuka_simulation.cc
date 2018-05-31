@@ -64,13 +64,20 @@ int DoMain() {
       "urdf/iiwa14_polytope_collision.urdf";
   const std::string urdf =
       (!FLAGS_urdf.empty() ? FLAGS_urdf : FindResourceOrThrow(kModelPath));
+  // return 10;  // exits 10
+
   {
     auto tree = std::make_unique<RigidBodyTree<double>>();
+    // return 10;  // exits 135
+
     parsers::urdf::AddModelInstanceFromUrdfFileToWorld(
         urdf, multibody::joints::kFixed, tree.get());
+    return 10;  // dies with stacktrace, `corrupted size vs. prev_size`
+
     multibody::AddFlatTerrainToWorld(tree.get(), 100., 10.);
     plant = builder.AddPlant(std::move(tree));
   }
+
   // Creates and adds LCM publisher for visualization.
   builder.AddVisualizer(&lcm);
   builder.get_visualizer()->set_publish_period(kIiwaLcmStatusPeriod);
