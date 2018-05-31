@@ -110,8 +110,8 @@ cc_library(
 # write out the "list of libraries directly mentioned in Drake headers" below.
 cc_library(
     name = "drake_shared_library",
-    hdrs = [":libdrake_headers"],
     srcs = ["//tools/install/libdrake:libdrake.so"],
+    hdrs = [":libdrake_headers"],
     # N.B. To pull in transitive `data` dependencies, we must list
     # `libdrake.so` as a data target.
     data = ["//tools/install/libdrake:libdrake.so"],

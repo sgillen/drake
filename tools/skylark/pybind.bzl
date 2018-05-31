@@ -165,6 +165,7 @@ def drake_pybind_library(
         py_srcs = py_srcs,
         py_deps = py_deps,
         py_imports = package_info.py_imports + py_imports,
+        py_library_rule = drake_py_library,
         testonly = testonly,
         visibility = visibility,
     )
