@@ -24,7 +24,6 @@ Arguments:
 
 load("@drake//tools/workspace:os.bzl", "determine_os")
 
-# Generated from the presently unmerged numpy/numpy#10898.
 # See `./packaging/README.md` for instructions to generate these binaries.
 # N.B. When you update the version of NumPy, ensure to update the variable
 # `expected_version` in `numpy_install_test.py` to reflect the *exact* version
