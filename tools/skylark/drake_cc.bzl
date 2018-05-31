@@ -590,8 +590,7 @@ def drake_example_cc_binary(
     # libdrake should not be included a second time. Only targets that are in
     # //examples (historically //drake/examples) or in the workspace can be
     # added as dependencies. By extension, this makes sure that
-    # //tools/install/libdrake:drake_shared_library is not added as a
-    # dependency a second time.
+    # //:drake_shared_library is not added as a dependency a second time.
     for dep in deps:
         if not (dep.startswith('@') or
                 dep.startswith(':') or
@@ -613,6 +612,8 @@ def drake_example_cc_binary(
             # `//:drake_shared_library`, Bazel is still sensitive to transitive
             # shared library linking; this test may segfault without listing
             # this in `srcs`.
+            # TODO(eric.cousineau): This may or may not be needed when Drake is
+            # being consumed as an external? Need to confirm.
             "//tools/install/libdrake:libdrake.so",
         ],
         deps = deps + ["//:drake_shared_library"],
