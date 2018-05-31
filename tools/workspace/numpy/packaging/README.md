@@ -60,6 +60,11 @@ generate archives.
         the system version. The easiest way to do this is to change the
         `numpy_py` target to:
 
+                py_library(
+                    name = "numpy_py",
+                    visibility = ["//visibility:public"],
+                )
+
 1. Test your code locally on your machine, using these build steps to produce an
 archive.
 1. Upload your *temporary* archives to something like a temporary Git
