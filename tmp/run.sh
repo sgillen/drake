@@ -13,7 +13,7 @@ ldd-filt() {
 
 cd ..
 set +e
-bazel build //examples/kuka_iiwa_arm:kuka_simulation_test
+bazel build --compiler=gcc-5 //examples/kuka_iiwa_arm:kuka_simulation_test
 echo $?
 set -e
 

@@ -608,7 +608,7 @@ def drake_example_cc_binary(
             `drake_example_cc_binary()` macro")
     drake_cc_binary(
         srcs = srcs +
-        [#"//tools/install/libdrake:libdrake.so",
+        ["//tools/install/libdrake:libdrake.so",
          "//lcmtypes:drake_lcmtypes_headers"],
         deps = deps + ["//tools/install/libdrake:drake_shared_library"],
         **kwargs)
