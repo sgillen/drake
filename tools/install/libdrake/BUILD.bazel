@@ -111,6 +111,8 @@ cc_library(
 cc_library(
     name = "drake_shared_library",
     hdrs = [":libdrake_headers"],
+    srcs = [":libdrake.so"],
+    data = [":libdrake.so"],
     include_prefix = "drake",
     strip_include_prefix = "/",
     visibility = [

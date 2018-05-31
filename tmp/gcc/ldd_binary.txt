@@ -13,7 +13,7 @@
 	libdrake_lcm.so => /home/eacousineau/proj/tri/repo/branches/drake/py/drake/bazel-bin/examples/kuka_iiwa_arm/../../_solib_k8/_U@lcm_S_S_Clcm___Uexternal_Slcm/libdrake_lcm.so 
 	libdrake_osqp.so => /home/eacousineau/proj/tri/repo/branches/drake/py/drake/bazel-bin/examples/kuka_iiwa_arm/../../_solib_k8/_U@osqp_S_S_Cosqp___Uexternal_Sosqp/libdrake_osqp.so 
 	libdrake_scsdir.so => /home/eacousineau/proj/tri/repo/branches/drake/py/drake/bazel-bin/examples/kuka_iiwa_arm/../../_solib_k8/_U@scs_S_S_Cscsdir___Uexternal_Sscs/libdrake_scsdir.so 
-	libdrake.so => /home/eacousineau/proj/tri/repo/branches/drake/py/drake/bazel-bin/examples/kuka_iiwa_arm/../../_solib_k8/_U_S_Sexamples_Skuka_Uiiwa_Uarm_Ckuka_Usimulation_Utest___Utools_Sinstall_Slibdrake/libdrake.so 
+	libdrake.so => /home/eacousineau/proj/tri/repo/branches/drake/py/drake/bazel-bin/examples/kuka_iiwa_arm/../../_solib_k8/_U_S_Stools_Sinstall_Slibdrake_Cdrake_Ushared_Ulibrary___Utools_Sinstall_Slibdrake/libdrake.so 
 	libgcc_s.so.1 => /lib/x86_64-linux-gnu/libgcc_s.so.1 
 	libgflags.so.2 => /usr/lib/gcc/x86_64-linux-gnu/5/../../../x86_64-linux-gnu/libgflags.so.2 
 	libgfortran.so.3 => /usr/lib/x86_64-linux-gnu/libgfortran.so.3 
@@ -41,7 +41,7 @@
 	libSM.so.6 => /usr/lib/x86_64-linux-gnu/libSM.so.6 
 	libstdc++.so.6 => /usr/lib/gcc/x86_64-linux-gnu/5/../../../x86_64-linux-gnu/libstdc++.so.6 
 	libtiff.so.5 => /usr/lib/x86_64-linux-gnu/libtiff.so.5 
-	libtinyxml2.so.2 => /usr/lib/x86_64-linux-gnu/libtinyxml2.so.2 
+	libtinyxml2.so.2 => /usr/lib/gcc/x86_64-linux-gnu/5/../../../x86_64-linux-gnu/libtinyxml2.so.2 
 	libtinyxml.so.2.6.2 => /usr/lib/x86_64-linux-gnu/libtinyxml.so.2.6.2 
 	libuuid.so.1 => /lib/x86_64-linux-gnu/libuuid.so.1 
 	libvtkCommonColor-8.1.so.1 => /home/eacousineau/proj/tri/repo/branches/drake/py/drake/bazel-bin/examples/kuka_iiwa_arm/../../_solib_k8/_U@vtk_S_S_CvtkCommonColor___Uexternal_Svtk_Slib/libvtkCommonColor-8.1.so.1 
