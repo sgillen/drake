@@ -7,51 +7,51 @@
 
 #include <memory>
 
-#include <gflags/gflags.h>
+// #include <gflags/gflags.h>
 
-#include "drake/common/drake_assert.h"
-#include "drake/common/find_resource.h"
-#include "drake/common/text_logging.h"
-#include "drake/common/text_logging_gflags.h"
-#include "drake/examples/kuka_iiwa_arm/iiwa_common.h"
-#include "drake/examples/kuka_iiwa_arm/iiwa_lcm.h"
-#include "drake/lcm/drake_lcm.h"
-#include "drake/lcmt_iiwa_command.hpp"
-#include "drake/lcmt_iiwa_status.hpp"
-#include "drake/manipulation/util/sim_diagram_builder.h"
+// #include "drake/common/drake_assert.h"
+// #include "drake/common/find_resource.h"
+// #include "drake/common/text_logging.h"
+// #include "drake/common/text_logging_gflags.h"
+// #include "drake/examples/kuka_iiwa_arm/iiwa_common.h"
+// #include "drake/examples/kuka_iiwa_arm/iiwa_lcm.h"
+// #include "drake/lcm/drake_lcm.h"
+// #include "drake/lcmt_iiwa_command.hpp"
+// #include "drake/lcmt_iiwa_status.hpp"
+// #include "drake/manipulation/util/sim_diagram_builder.h"
 #include "drake/multibody/parsers/urdf_parser.h"
-#include "drake/multibody/rigid_body_plant/frame_visualizer.h"
-#include "drake/multibody/rigid_body_plant/rigid_body_plant.h"
+// #include "drake/multibody/rigid_body_plant/frame_visualizer.h"
+// #include "drake/multibody/rigid_body_plant/rigid_body_plant.h"
 #include "drake/multibody/rigid_body_tree_construction.h"
-#include "drake/systems/analysis/simulator.h"
-#include "drake/systems/controllers/inverse_dynamics_controller.h"
-#include "drake/systems/framework/diagram.h"
-#include "drake/systems/framework/diagram_builder.h"
-#include "drake/systems/framework/leaf_system.h"
-#include "drake/systems/lcm/lcm_publisher_system.h"
-#include "drake/systems/lcm/lcm_subscriber_system.h"
-#include "drake/systems/primitives/constant_vector_source.h"
+// #include "drake/systems/analysis/simulator.h"
+// #include "drake/systems/controllers/inverse_dynamics_controller.h"
+// #include "drake/systems/framework/diagram.h"
+// #include "drake/systems/framework/diagram_builder.h"
+// #include "drake/systems/framework/leaf_system.h"
+// #include "drake/systems/lcm/lcm_publisher_system.h"
+// #include "drake/systems/lcm/lcm_subscriber_system.h"
+// #include "drake/systems/primitives/constant_vector_source.h"
 
-DEFINE_double(simulation_sec, std::numeric_limits<double>::infinity(),
-              "Number of seconds to simulate.");
-DEFINE_string(urdf, "", "Name of urdf to load");
-DEFINE_bool(visualize_frames, true, "Visualize end effector frames");
-DEFINE_double(target_realtime_rate, 1.0,
-              "Playback speed.  See documentation for "
-              "Simulator::set_target_realtime_rate() for details.");
+// DEFINE_double(simulation_sec, std::numeric_limits<double>::infinity(),
+//               "Number of seconds to simulate.");
+// DEFINE_string(urdf, "", "Name of urdf to load");
+// DEFINE_bool(visualize_frames, true, "Visualize end effector frames");
+// DEFINE_double(target_realtime_rate, 1.0,
+//               "Playback speed.  See documentation for "
+//               "Simulator::set_target_realtime_rate() for details.");
 
 namespace drake {
 namespace examples {
 namespace kuka_iiwa_arm {
 namespace {
-using manipulation::util::SimDiagramBuilder;
-using systems::ConstantVectorSource;
-using systems::Context;
-using systems::Diagram;
-using systems::DiagramBuilder;
-using systems::FrameVisualizer;
-using systems::RigidBodyPlant;
-using systems::Simulator;
+// using manipulation::util::SimDiagramBuilder;
+// using systems::ConstantVectorSource;
+// using systems::Context;
+// using systems::Diagram;
+// using systems::DiagramBuilder;
+// using systems::FrameVisualizer;
+// using systems::RigidBodyPlant;
+// using systems::Simulator;
 
 int DoMain() {
   // drake::lcm::DrakeLcm lcm;
@@ -208,7 +208,7 @@ int DoMain() {
 }  // namespace drake
 
 int main(int argc, char* argv[]) {
-  gflags::ParseCommandLineFlags(&argc, &argv, true);
-  drake::logging::HandleSpdlogGflags();
+  // gflags::ParseCommandLineFlags(&argc, &argv, true);
+  // drake::logging::HandleSpdlogGflags();
   return drake::examples::kuka_iiwa_arm::DoMain();
 }
