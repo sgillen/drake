@@ -40,8 +40,8 @@ py_library(
     srcs = ["__init__.py"],
 )
 
-# Expose shared library for downstream C++ libraries which will also provide
-# Python bindings.
+# Expose shared library for (a) installed binaries, (b) Drake Python bindings,
+# downstream C++ libraries which will also provide Python bindings.
 alias(
     name = "drake_shared_library",
     actual = "//tools/install/libdrake:drake_shared_library",

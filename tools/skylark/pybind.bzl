@@ -15,31 +15,6 @@ load(
 
 _PY_VERSION = "2.7"
 
-def pybind_cc_binary(
-        name,
-        srcs = [],
-        deps = [],
-        visibility = None,
-        testonly = None,
-        cc_binary_rule = native.cc_binary):
-    """Declares a pybind11 shared library.
-
-    The defines the library with the given name and srcs.
-    """
-    cc_binary_rule(
-        name = name,
-        # This is how you tell Bazel to link in a shared library.
-        srcs = srcs,
-        # This is how you tell Bazel to create a shared library.
-        linkshared = 1,
-        linkstatic = 1,
-        # Always link to pybind11.
-        deps = [
-            "@pybind11",
-        ] + deps,
-        testonly = testonly,
-    )
-
 def pybind_py_library(
         name,
         cc_srcs = [],
@@ -79,12 +54,18 @@ def pybind_py_library(
     # output a *.so, so that the target name is similar to what is provided.
     cc_so_target = cc_so_name + ".so"
     # Add C++ shared library.
-    pybind_cc_binary(
+    cc_binary_rule(
         name = cc_so_target,
+        # This is how you tell Bazel to link in a shared library.
         srcs = cc_srcs,
-        deps = cc_deps,
+        # This is how you tell Bazel to create a shared library.
+        linkshared = 1,
+        linkstatic = 1,
+        # Always link to pybind11.
+        deps = [
+            "@pybind11",
+        ] + cc_deps,
         testonly = testonly,
-        cc_binary_rule = cc_binary_rule,
         visibility = visibility,
     )
     # Add Python library.
