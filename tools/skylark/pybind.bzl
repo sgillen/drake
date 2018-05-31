@@ -36,7 +36,7 @@ def _drake_pybind_cc_binary(
     drake_cc_binary(
         name = name,
         # This is how you tell Bazel to link in a shared library.
-        srcs = srcs + ["//tools/install/libdrake:libdrake.so"],
+        srcs = srcs,
         # This is how you tell Bazel to create a shared library.
         linkshared = 1,
         linkstatic = 1,
