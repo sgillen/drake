@@ -131,6 +131,7 @@ cc_library(
         "@tinyxml2",
     ] + [
         # The list of libraries directly mentioned in Drake headers.
+        "@eigen",
         "@fmt",
         "@stx",
     ],
