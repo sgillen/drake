@@ -39,11 +39,11 @@ def _get_url(platform):
 wheels = {
     "ubuntu_16.04": {
         "url": _get_url("cp27mu-linux_x86_64"),
-        "sha256": "48303e57eded39f491773986e20aacaa85d22dbd23dc71a8b53a6f7ff7510a41",  # noqa
+        "sha256": "d4faa33356481f7e3a2930a2fb7f0dcead75f976b61e5ab88624cb40aca46c68",  # noqa
     },
     "mac": {
         "url": _get_url("cp27m-macosx_10_13_x86_64"),
-        "sha256": "b7e518069b00f8d32c32f55f00a6bd8fe83019952b94c9dc9a8e463f868a5a86",  # noqa
+        "sha256": "32d6a833b0543373c9e3ee291417a6a5faedd33f1669e38845ab92a89431db8e",  # noqa
     },
 }
 
