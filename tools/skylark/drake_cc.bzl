@@ -610,8 +610,9 @@ def drake_example_cc_binary(
             "//lcmtypes:drake_lcmtypes_headers",
             # N.B. Even though `libdrake.so` is incorporated via
             # `//:drake_shared_library`, Bazel is still sensitive to transitive
-            # shared library linking; this test may segfault without listing
-            # this in `srcs`.
+            # shared library linking; some binaries (e.g.
+            # `kuka_simulation_test`) may segfault without listing this in
+            # `srcs`.
             # TODO(eric.cousineau): This may or may not be needed when Drake is
             # being consumed as an external? Need to confirm.
             "//tools/install/libdrake:libdrake.so",
