@@ -615,7 +615,7 @@ def drake_example_cc_binary(
             # `srcs`.
             # TODO(eric.cousineau): This may or may not be needed when Drake is
             # being consumed as an external? Need to confirm.
-            "//tools/install/libdrake:libdrake.so",
+            # "//tools/install/libdrake:libdrake.so",
         ],
         deps = deps + ["//:drake_shared_library"],
         **kwargs)

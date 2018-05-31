@@ -54,16 +54,17 @@ using systems::RigidBodyPlant;
 using systems::Simulator;
 
 int DoMain() {
-  drake::lcm::DrakeLcm lcm;
-  SimDiagramBuilder<double> builder;
+  // drake::lcm::DrakeLcm lcm;
+  // SimDiagramBuilder<double> builder;
 
   // Adds a plant.
-  RigidBodyPlant<double>* plant = nullptr;
-  const char* kModelPath =
-      "drake/manipulation/models/iiwa_description/"
+  // RigidBodyPlant<double>* plant = nullptr;
+  const char* kModelPath = /*"drake/"*/
+      "manipulation/models/iiwa_description/"
       "urdf/iiwa14_polytope_collision.urdf";
   const std::string urdf =
-      (!FLAGS_urdf.empty() ? FLAGS_urdf : FindResourceOrThrow(kModelPath));
+      kModelPath;
+      // (!FLAGS_urdf.empty() ? FLAGS_urdf : FindResourceOrThrow(kModelPath));
   // return 10;  // exits 10
 
   {
@@ -74,10 +75,11 @@ int DoMain() {
         urdf, multibody::joints::kFixed, tree.get());
     return 10;  // dies with stacktrace, `corrupted size vs. prev_size`
 
-    multibody::AddFlatTerrainToWorld(tree.get(), 100., 10.);
-    plant = builder.AddPlant(std::move(tree));
+    // multibody::AddFlatTerrainToWorld(tree.get(), 100., 10.);
+    // plant = builder.AddPlant(std::move(tree));
   }
 
+#if false
   // Creates and adds LCM publisher for visualization.
   builder.AddVisualizer(&lcm);
   builder.get_visualizer()->set_publish_period(kIiwaLcmStatusPeriod);
@@ -197,6 +199,7 @@ int DoMain() {
   simulator.StepTo(FLAGS_simulation_sec);
 
   return 0;
+#endif
 }
 
 }  // namespace
