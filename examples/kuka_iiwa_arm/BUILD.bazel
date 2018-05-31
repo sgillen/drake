@@ -140,8 +140,8 @@ drake_example_cc_binary(
     # Flaky because LCM self-test can fail (PR #7311)
     test_rule_flaky = 1,
     deps = [
-        ":iiwa_common",
-        ":iiwa_lcm",
+        # ":iiwa_common",
+        # ":iiwa_lcm",
         "@gflags",
     ],
 )
