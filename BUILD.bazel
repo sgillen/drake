@@ -40,13 +40,12 @@ py_library(
     srcs = ["__init__.py"],
 )
 
-# Expose shared linking for downstream C++ libraries.
-cc_library(
+# Expose shared library for downstream C++ libraries which will also provide
+# Python bindings.
+alias(
     name = "drake_shared_library",
+    actual = "//tools/install/libdrake:drake_shared_library",
     visibility = ["//visibility:public"],
-    deps = [
-        "//tools/install/libdrake:drake_shared_library",
-    ],
 )
 
 _INSTALL_TEST_COMMANDS = "install_test_commands"
