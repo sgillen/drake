@@ -12,7 +12,7 @@ MSG = quaternion_t()
 MSG.w, MSG.x, MSG.y, MSG.z = (1, 2, 3, 4)
 
 
-class TestLcm(unittest.TestCase):
+class TestSystemsLcm(unittest.TestCase):
     def test_serializer(self):
         dut = mut.PySerializer(quaternion_t)
         value = dut.CreateDefaultValue()
