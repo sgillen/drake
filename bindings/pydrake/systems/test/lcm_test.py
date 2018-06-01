@@ -20,18 +20,19 @@ class TestLcm(unittest.TestCase):
         self.assertEqual(value.get_value().encode(), msg.encode())
         raw = serializer.Serialize(value)
         self.assertEqual(raw, msg.encode())
+        print("YAWR")
 
-    # def test_subscriber(self):
-    #     lcm = DrakeMockLcm()
-    #     sub = LcmSubscriberSystem(
-    #         channel="TEST_CHANNEL", lcm_type=quaternion_t, lcm=lcm)
-    #     lcm.InduceSubscriberCallback(
-    #         channel="TEST_CHANNEL", buffer=msg.encode())
-    #     context = sub.CreateDefaultContext()
-    #     output = system.AllocateOutput(context)
-    #     sub.CalcOutput(context, output)
-    #     actual = output.get_data(0).get_value()
-    #     self.assertEqual(actual.encode(), msg.encode())
+    def test_subscriber(self):
+        lcm = DrakeMockLcm()
+        sub = mut.LcmSubscriberSystem.Make(
+            channel="TEST_CHANNEL", lcm_type=quaternion_t, lcm=lcm)
+        lcm.InduceSubscriberCallback(
+            channel="TEST_CHANNEL", buffer=msg.encode())
+        context = sub.CreateDefaultContext()
+        output = system.AllocateOutput(context)
+        sub.CalcOutput(context, output)
+        actual = output.get_data(0).get_value()
+        self.assertEqual(actual.encode(), msg.encode())
 
     # def test_publisher(self):
     #     lcm = DrakeMockLcm()

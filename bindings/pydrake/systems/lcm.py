@@ -1,4 +1,4 @@
-# Code to be executed after `lcm_py.cc`.
+from pydrake.systems._lcm_py import *
 
 from pydrake.systems.framework import AbstractValue, Value
 
@@ -24,7 +24,8 @@ class PySerializer(SerializerInterface):
 # Attach methods (as descriptors).
 @classmethod
 def _make_lcm_system(cls, channel, lcm_type, lcm):
-    return cls(channel, PySerializer(lcm_type), lcm)
+    serializer = PySerializer(lcm_type)
+    return cls(channel, serializer, lcm)
 
 
 LcmPublisherSystem.Make = _make_lcm_system

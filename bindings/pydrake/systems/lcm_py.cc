@@ -56,7 +56,7 @@ class PySerializeInterface : public py::wrapper<SerializerInterface> {
   }
 };
 
-PYBIND11_MODULE(lcm, m) {
+PYBIND11_MODULE(_lcm_py, m) {
   // NOLINTNEXTLINE(build/namespaces): Emulate placement in namespace.
   using namespace drake::lcm;
   // NOLINTNEXTLINE(build/namespaces): Emulate placement in namespace.
@@ -69,7 +69,7 @@ PYBIND11_MODULE(lcm, m) {
 
   {
     using Class = SerializerInterface;
-    py::class_<Class>(m, "SerializerInterface")
+    py::class_<Class, PySerializeInterface>(m, "SerializerInterface")
         .def("CreateDefaultValue", &Class::CreateDefaultValue)
         .def("Deserialize", [](const Class* self, py::bytes buffer) {
             std::string str = buffer;
@@ -110,18 +110,6 @@ PYBIND11_MODULE(lcm, m) {
             // Keep alive: `self` keeps `DrakeLcmInterface` alive.
             py::keep_alive<1, 3>());
   }
-
-  // Evaluate additional Python code.
-  // - Inject `__file__` for ease of 
-  py::str pydrake_file = py::module::import("pydrake").attr("__file__");
-  py::module path = py::module::import("os.path");
-  py::dict d = m.attr("__dict__");
-  py::str py_code = path.attr("join")(
-      path.attr("dirname")(pydrake_file), "systems", "_lcm.py");
-  d["__file__"] = path.attr("join")(
-      path.attr("dirname")(pydrake_file), "systems", "lcm.so");
-  d.attr("update")(py::globals()["__builtin__"]);
-  py::eval_file(py_code, d, d);
 }
 
 }  // namespace pydrake

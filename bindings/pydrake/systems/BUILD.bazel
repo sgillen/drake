@@ -200,10 +200,10 @@ drake_pybind_library(
     cc_deps = [
         "//bindings/pydrake/systems:systems_pybind",
     ],
-    cc_so_name = "lcm",
+    cc_so_name = "_lcm_py",
     cc_srcs = ["lcm_py.cc"],
     package_info = PACKAGE_INFO,
-    py_srcs = ["_lcm.py"],
+    py_srcs = ["lcm.py"],
     py_deps = [
         ":framework_py",
         ":module_py",
