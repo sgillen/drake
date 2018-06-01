@@ -211,6 +211,14 @@ drake_pybind_library(
     ],
 )
 
+drake_py_unittest(
+    name = "lcm_test",
+    deps = [
+        ":lcm_py",
+        "@lcmtypes_robotlocomotion//:lcmtypes_robotlocomotion_py",
+    ],
+)
+
 PY_LIBRARIES_WITH_INSTALL = [
     ":analysis_py",
     ":controllers_py",

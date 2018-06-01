@@ -115,11 +115,13 @@ PYBIND11_MODULE(lcm, m) {
   // - Inject `__file__` for ease of 
   py::str pydrake_file = py::module::import("pydrake").attr("__file__");
   py::module path = py::module::import("os.path");
+  py::dict d = m.attr("__dict__");
   py::str py_code = path.attr("join")(
       path.attr("dirname")(pydrake_file), "systems", "_lcm.py");
-  py::globals()["__file__"] = path.attr("join")(
+  d["__file__"] = path.attr("join")(
       path.attr("dirname")(pydrake_file), "systems", "lcm.so");
-  py::eval_file(py_code);
+  d.attr("update")(py::globals()["__builtin__"]);
+  py::eval_file(py_code, d, d);
 }
 
 }  // namespace pydrake

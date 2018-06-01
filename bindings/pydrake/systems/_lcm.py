@@ -1,3 +1,5 @@
+# Code to be executed after `lcm_py.cc`.
+
 from pydrake.systems.framework import AbstractValue, Value
 
 
