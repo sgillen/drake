@@ -5,9 +5,9 @@
 
 #include "drake/bindings/pydrake/pydrake_pybind.h"
 #include "drake/bindings/pydrake/systems/systems_pybind.h"
-#include "drake/systems/lcm/serializer.h"
 #include "drake/systems/lcm/lcm_publisher_system.h"
 #include "drake/systems/lcm/lcm_subscriber_system.h"
+#include "drake/systems/lcm/serializer.h"
 
 namespace drake {
 namespace pydrake {
@@ -92,6 +92,9 @@ PYBIND11_MODULE(_lcm_py, m) {
                 reinterpret_cast<const char*>(bytes.data()), bytes.size());
           });
   }
+
+  // TODO(eric.cousineau): Consider providing bindings of C++ types if we want
+  // to be able to connect to ports which use C++ LCM types.
 
   {
     using Class = LcmPublisherSystem;
