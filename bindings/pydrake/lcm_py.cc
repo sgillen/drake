@@ -32,6 +32,8 @@ PYBIND11_MODULE(lcm, m) {
             self->Subscribe(
                 channel,
                 [handler](const void* data, int size) {
+                  // TODO(eric.cousineau): This may wreak havoc if called from
+                  // a different thread. Disable this in `DrakeLcm`?
                   handler(py::bytes(static_cast<const char*>(data), size));
                 });
           }, py::arg("channel"), py::arg("handler"))

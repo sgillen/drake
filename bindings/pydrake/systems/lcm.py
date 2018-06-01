@@ -5,6 +5,7 @@ from pydrake.systems.framework import AbstractValue, Value
 
 class PySerializer(SerializerInterface):
     def __init__(self, lcm_type):
+        SerializerInterface.__init__(self)
         self._lcm_type = lcm_type
 
     def CreateDefaultValue(self):

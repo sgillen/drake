@@ -15,15 +15,17 @@ namespace pydrake {
 using systems::lcm::SerializerInterface;
 using systems::AbstractValue;
 
-class PySerializeInterface : public py::wrapper<SerializerInterface> {
+class PySerializerInterface : public py::wrapper<SerializerInterface> {
  public:
   using Base = py::wrapper<SerializerInterface>;
-  using Base::Base;
+
+  PySerializerInterface()
+    : Base() {}
 
   std::unique_ptr<AbstractValue> CreateDefaultValue() const override {
     PYBIND11_OVERLOAD_PURE(
         std::unique_ptr<AbstractValue>, SerializerInterface,
-        "CreateDefaultValue");
+        CreateDefaultValue);
   }
 
   void Deserialize(
@@ -45,8 +47,10 @@ class PySerializeInterface : public py::wrapper<SerializerInterface> {
                  std::vector<uint8_t>* message_bytes) const override {
     // Capture return.
     auto wrapped = [&]() -> py::bytes {
+      // N.B. We must pass `abstract_value` as a pointer to prevent `pybind11`
+      // from copying it.
       PYBIND11_OVERLOAD_INT(
-        py::bytes, SerializerInterface, "Serialize", abstract_value);
+        py::bytes, SerializerInterface, "Serialize", &abstract_value);
       // Fail if overload not found.
       py::pybind11_fail("No overload defined!");
     };
@@ -69,7 +73,10 @@ PYBIND11_MODULE(_lcm_py, m) {
 
   {
     using Class = SerializerInterface;
-    py::class_<Class, PySerializeInterface>(m, "SerializerInterface")
+    py::class_<Class, PySerializerInterface>(m, "SerializerInterface")
+        .def(py::init([]() {
+              return std::make_unique<PySerializerInterface>();
+            }))
         .def("CreateDefaultValue", &Class::CreateDefaultValue)
         .def("Deserialize", [](const Class* self, py::bytes buffer) {
             std::string str = buffer;
@@ -88,7 +95,7 @@ PYBIND11_MODULE(_lcm_py, m) {
 
   {
     using Class = LcmPublisherSystem;
-    py::class_<Class>(m, "LcmPublisherSystem")
+    py::class_<Class, LeafSystem<double>>(m, "LcmPublisherSystem")
         .def(
             py::init<const std::string&, std::unique_ptr<SerializerInterface>,
                      DrakeLcmInterface*>(),
@@ -102,7 +109,7 @@ PYBIND11_MODULE(_lcm_py, m) {
 
   {
     using Class = LcmSubscriberSystem;
-    py::class_<Class>(m, "LcmSubscriberSystem")
+    py::class_<Class, LeafSystem<double>>(m, "LcmSubscriberSystem")
         .def(
             py::init<const std::string&, std::unique_ptr<SerializerInterface>,
                      DrakeLcmInterface*>(),
