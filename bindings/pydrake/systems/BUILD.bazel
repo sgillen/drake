@@ -195,6 +195,22 @@ drake_py_library(
     deps = [":module_py"],
 )
 
+drake_pybind_library(
+    name = "lcm_py",
+    # cc_deps = [
+    #     "",
+    # ],
+    cc_so_name = "lcm",
+    cc_srcs = ["lcm_py.cc"],
+    package_info = PACKAGE_INFO,
+    py_srcs = ["_lcm.py"],
+    py_deps = [
+        ":framework_py",
+        ":module_py",
+        "//bindings/pydrake:lcm_py",
+    ],
+)
+
 PY_LIBRARIES_WITH_INSTALL = [
     ":analysis_py",
     ":controllers_py",
