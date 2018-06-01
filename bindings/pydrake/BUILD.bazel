@@ -102,6 +102,9 @@ drake_pybind_library(
     name = "lcm_py",
     cc_so_name = "lcm",
     cc_srcs = ["lcm_py.cc"],
+    cc_deps = [
+        "//bindings/pydrake/util:drake_optional_pybind",
+    ],
     package_info = PACKAGE_INFO,
     py_deps = [
         ":common_py",
@@ -270,6 +273,7 @@ drake_py_unittest(
     name = "lcm_test",
     deps = [
         ":lcm_py",
+        "@lcmtypes_robotlocomotion//:lcmtypes_robotlocomotion_py",
     ],
 )
 
