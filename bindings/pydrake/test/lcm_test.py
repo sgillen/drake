@@ -12,6 +12,9 @@ class TestLcm(unittest.TestCase):
         # Quickly start and stop the receiving thread.
         dut.StartReceiveThread()
         dut.StopReceiveThread()
+        # Test virtual function names.
+        dut.Publish
+        dut.Subscribe
 
     def test_mock_lcm(self):
         dut = DrakeMockLcm()
