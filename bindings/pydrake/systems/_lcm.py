@@ -1,4 +1,4 @@
-from pydrake.systems.framework import Value
+from pydrake.systems.framework import AbstractValue, Value
 
 
 class PySerializer(SerializerInterface):
@@ -6,13 +6,14 @@ class PySerializer(SerializerInterface):
         self._lcm_type = lcm_type
 
     def CreateDefaultValue(self):
-        return Value.Make(self._lcm_type())
+        return AbstractValue.Make(self._lcm_type())
 
     def Deserialize(self, buffer):
         msg = self._lcm_type.decode(buffer)
-        return Value.Make(msg)
+        return AbstractValue.Make(msg)
 
     def Serialize(self, value):
+        assert isinstance(value, AbstractValue)
         msg = value.get_value()
         assert isinstance(msg, self._lcm_type)
         return msg.encode()

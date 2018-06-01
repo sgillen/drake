@@ -1,3 +1,6 @@
+#include <cstring>
+
+#include "pybind11/eval.h"
 #include "pybind11/pybind11.h"
 
 #include "drake/bindings/pydrake/pydrake_pybind.h"
@@ -9,12 +12,15 @@
 namespace drake {
 namespace pydrake {
 
+using systems::lcm::SerializerInterface;
+using systems::AbstractValue;
+
 class PySerializeInterface : public py::wrapper<SerializerInterface> {
  public:
   using Base = py::wrapper<SerializerInterface>;
   using Base::Base;
 
-  std::unique_ptr<AbstractValue> CreateDefaultValue() {
+  std::unique_ptr<AbstractValue> CreateDefaultValue() const override {
     PYBIND11_OVERLOAD_PURE(
         std::unique_ptr<AbstractValue>, SerializerInterface,
         "CreateDefaultValue");
@@ -23,29 +29,30 @@ class PySerializeInterface : public py::wrapper<SerializerInterface> {
   void Deserialize(
       const void* message_bytes, int message_length,
       AbstractValue* abstract_value) const override {
-    auto wrap = [&]() -> std::unique_ptr<AbstractValue> {
-      py::bytes buffer(message_bytes, message_length);
+    // Capture return.
+    auto wrapped = [&]() -> std::unique_ptr<AbstractValue> {
+      py::bytes buffer(
+          reinterpret_cast<const char*>(message_bytes), message_length);
       PYBIND11_OVERLOAD_INT(
-          std::unique_ptr<AbstractValue>, SerializerInterface, "Deserialize", buffer);
+          std::unique_ptr<AbstractValue>, SerializerInterface,
+          "Deserialize", buffer);
+      py::pybind11_fail("No overload defined!");
     };
-    auto new_value = wrap();
-    abstract_value->SetFrom(*new_value);
-    // Fail if overload not found.
-    py::pybind11_fail("No overload defined!");
+    abstract_value->SetFrom(*wrapped());
   }
 
   void Serialize(const AbstractValue& abstract_value,
                  std::vector<uint8_t>* message_bytes) const override {
-    std::vector::bytes buffer(message_bytes, message_length);
     // Capture return.
-    auto wrap = [&]() -> py::bytes {
+    auto wrapped = [&]() -> py::bytes {
       PYBIND11_OVERLOAD_INT(
-        void, SerializerInterface, "Deserialize", buffer);
+        py::bytes, SerializerInterface, "Serialize", abstract_value);
       // Fail if overload not found.
       py::pybind11_fail("No overload defined!");
     };
-    // Fail if overload not found.
-    py::pybind11_fail("No overload defined!"); 
+    std::string str = wrapped();
+    message_bytes->resize(str.size());
+    std::memcpy(message_bytes->data(), str.data(), str.size());
   }
 };
 
@@ -73,7 +80,7 @@ PYBIND11_MODULE(lcm, m) {
         .def("Serialize", [](
               const Class* self, const AbstractValue* abstract_value) {
             std::vector<uint8_t> bytes;
-            self->Serialize(*abstract_value, bytes);
+            self->Serialize(*abstract_value, &bytes);
             return py::bytes(
                 reinterpret_cast<const char*>(bytes.data()), bytes.size());
           });
