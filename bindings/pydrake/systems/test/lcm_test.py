@@ -38,6 +38,7 @@ class TestLcm(unittest.TestCase):
         lcm = DrakeMockLcm()
         dut = mut.LcmPublisherSystem.Make(
             channel="TEST_CHANNEL", lcm_type=quaternion_t, lcm=lcm)
+        dut.set_publish_period(period=0.1)
         context = dut.CreateDefaultContext()
         context.FixInputPort(0, AbstractValue.Make(MSG))
         dut.Publish(context)
