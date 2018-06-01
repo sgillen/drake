@@ -19,16 +19,16 @@ PYBIND11_MODULE(lcm, m) {
   // NOLINTNEXTLINE(build/namespaces): Emulate placement in namespace.
   using namespace drake::lcm;
 
-  // Use `py::bytes` as a mid-point between C++ LCM (`void* + int` /
-  // `vector<uint8_t>`) and Python LCM (`str`).
-  using VectorHandlerFunction = std::function<void(py::bytes)>;
-
   {
     using Class = DrakeLcmInterface;
+    // Use `py::bytes` as a mid-point between C++ LCM (`void* + int` /
+    // `vector<uint8_t>`) and Python LCM (`str`).
+    using PyHandlerFunction = std::function<void(py::bytes)>;
+
     py::class_<Class>(m, "DrakeLcmInterface")
         .def("Subscribe", [](
               Class* self, const std::string& channel,
-              VectorHandlerFunction handler) {
+              PyHandlerFunction handler) {
             self->Subscribe(
                 channel,
                 [handler](const void* data, int size) {
