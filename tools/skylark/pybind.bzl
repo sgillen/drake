@@ -56,7 +56,6 @@ def pybind_py_library(
     # Add C++ shared library.
     cc_binary_rule(
         name = cc_so_target,
-        # This is how you tell Bazel to link in a shared library.
         srcs = cc_srcs,
         # This is how you tell Bazel to create a shared library.
         linkshared = 1,

@@ -110,6 +110,9 @@ cc_library(
 # TODO(jwnimmer-tri) Ideally, drake_cc_library's installed_headers support
 # would capture a list of headerfile dependencies, so that we don't need to
 # write out the "list of libraries directly mentioned in Drake headers" below.
+#
+# TODO(eric.cousineau) This target should move to `//:drake_shared_library` if
+# possible.
 cc_library(
     name = "drake_shared_library",
     srcs = [":libdrake.so"],
