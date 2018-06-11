@@ -18,7 +18,8 @@ class VisualElement final : public Element {
    */
   VisualElement(const Geometry& geometry,
                 const Eigen::Isometry3d& T_element_to_local,
-                const Eigen::Vector4d& material);
+                const Eigen::Vector4d& material,
+                const std::string name = "");
 
   /** Copy constructor for use by, e.g., std::vector. */
   VisualElement(const VisualElement&) = default;
@@ -40,6 +41,7 @@ class VisualElement final : public Element {
 
  protected:
   Eigen::Vector4d material;
+  std::string name;
 
  public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
