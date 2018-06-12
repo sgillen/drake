@@ -191,7 +191,13 @@ RgbdRendererOSPRay::Impl::Impl(RgbdRendererOSPRay* parent,
 optional<RgbdRenderer::VisualIndex>
 RgbdRendererOSPRay::Impl::ImplRegisterVisual(
     const DrakeShapes::VisualElement& visual, int body_id) {
-  unused(RemoveFileExtension);
+  std::array<vtkNew<vtkActor>, kNumOutputImage> actors;
+  std::array<vtkNew<vtkPolyDataMapper>, kNumOutputImage> mappers;
+
+  bool shape_matched = true;
+  const DrakeShapes::Geometry& geometry = visual.getGeometry();
+
+  unused(RemoveFileExtension, shape_matched, geometry);
   return nullopt;
 }
 
