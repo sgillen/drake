@@ -19,6 +19,9 @@
 #include "vtkTexture.h"
 
 #include "vtkAutoInit.h"
+
+#include "drake/multibody/shapes/visual_element.h"
+
 VTK_MODULE_INIT(vtkRenderingOpenGL2)
 VTK_MODULE_INIT(vtkInteractionStyle)
 
@@ -61,12 +64,19 @@ class vtkProgressiveRenderLooper : public vtkCommand
         this->ProgressiveCount = 0;
       }
     }
+
+    void do_something(const DrakeShapes::VisualElement& visual) {
+        const DrakeShapes::Geometry& geometry = visual.getGeometry();
+        drake::unused(geometry);
+    }
+
     vtkRenderWindow *RenderWindow;
     int ProgressiveCount;
 };
 
 int main(int argc, char* argv[])
 {
+
   vtkSmartPointer<vtkRenderWindow> renWin =
     vtkSmartPointer<vtkRenderWindow>::New();
   vtkSmartPointer<vtkRenderWindowInteractor> iren =

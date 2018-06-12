@@ -6,6 +6,7 @@ cc_binary(
         "*.jpg",
     ]),
     deps = [
+        "//multibody/shapes",
         "@vtk//:vtkCommonCore",
         "@vtk//:vtkCommonDataModel",
         "@vtk//:vtkCommonTransforms",
