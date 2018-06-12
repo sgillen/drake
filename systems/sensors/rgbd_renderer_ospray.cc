@@ -59,6 +59,7 @@ namespace {
 // TODO(kunimatsu-tri) Add support for the arbitrary clipping planes.
 const double kClippingPlaneNear = 0.01;
 const double kClippingPlaneFar = 100.;
+const double kTerrainSize = 100.;
 
 enum ImageType {
   kColor = 0,
@@ -103,7 +104,7 @@ class RgbdRendererOSPRay::Impl : private ModuleInitVtkRenderingOpenGL2 {
   Impl(RgbdRendererOSPRay* parent, const Eigen::Isometry3d& X_WC);
   ~Impl() {}
 
-  void SetBackground(const std::string& filepath);
+  void ImplAddFlatTerrain();
 
  private:
 
@@ -123,24 +124,25 @@ class RgbdRendererOSPRay::Impl : private ModuleInitVtkRenderingOpenGL2 {
   std::map<int, std::array<ActorCollection, kNumOutputImage>> id_object_maps_;
 };
 
-void RgbdRendererOSPRay::Impl::SetBackground(
-    const std::string& filepath) {
-  std::ifstream file_exist(filepath);
-  if (!file_exist) {
-    throw std::runtime_error("Background file not found.");
-  }
-  auto ext = filepath.substr(filepath.find_last_of(".") + 1);
-  if (ext != "jpg" && ext != "jpeg") {
-    throw std::runtime_error("Background file is not jpeg nor jpg.");
-  }
+void RgbdRendererOSPRay::Impl::ImplAddFlatTerrain() {
+  vtkSmartPointer<vtkPlaneSource> plane =
+      vtk_util::CreateSquarePlane(kTerrainSize);
 
-  vtkNew<vtkJPEGReader> jpg_reader;
-  jpg_reader->SetFileName(filepath.c_str());
-  jpg_reader->Update();
-  vtkNew<vtkTexture> tex;
-  tex->SetInputConnection(jpg_reader->GetOutputPort(0));
-  pipelines_[ImageType::kColor]->renderer->TexturedBackgroundOn();
-  pipelines_[ImageType::kColor]->renderer->SetBackgroundTexture(tex);
+  materials_->AddMaterial("terrain", "MetallicPaint");
+  // For color.
+  vtkNew<vtkPolyDataMapper> mapper;
+  mapper->SetInputConnection(plane->GetOutputPort());
+  terrain_actor_->SetMapper(mapper.GetPointer());
+  auto color =
+      ColorPalette::Normalize(parent_->color_palette().get_terrain_color());
+
+  terrain_actor_->GetProperty()->SetColor(color.r, color.g, color.b);
+  terrain_actor_->GetProperty()->LightingOff();
+  auto prop = terrain_actor_->GetProperty();
+  prop->SetMaterialName("terrain");
+
+  pipelines_[ImageType::kColor]->renderer->AddActor(
+      terrain_actor_.GetPointer());
 }
 
 RgbdRendererOSPRay::Impl::Impl(RgbdRendererOSPRay* parent,
