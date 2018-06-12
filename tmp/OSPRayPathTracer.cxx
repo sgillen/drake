@@ -25,9 +25,21 @@
 
 #include "drake/common/eigen_stl_types.h"
 
-struct SomeStruct {
+struct BaseStruct {
+  virtual ~BaseStruct() {
+    cerr << "Destroy" << endl;
+  }
+
+  virtual void info() = 0;
+};
+
+struct SomeStruct : public BaseStruct {
   Eigen::Vector4d value;
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+
+  void info() override {
+    cerr << "item: " << value.transpose() << endl;
+  }
 };
 
 typedef drake::eigen_aligned_std_vector<SomeStruct> SomeStructList;
@@ -77,7 +89,7 @@ class vtkProgressiveRenderLooper : public vtkCommand
 
     void do_something(const SomeStructList& list) {
       for (const auto& item : list) {
-        cerr << "item: " << item.value.transpose() << endl;
+        item.info();
       }
     }
 
