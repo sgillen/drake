@@ -1,0 +1,21 @@
+cc_binary(
+    name = "ospray_path_tracer",
+    srcs = ["OSPRayPathTracer.cxx"],
+    data = glob([
+        "*.obj",
+        "*.jpg",
+    ]),
+    deps = [
+        "@vtk//:vtkCommonCore",
+        "@vtk//:vtkCommonDataModel",
+        "@vtk//:vtkCommonTransforms",
+        "@vtk//:vtkFiltersGeneral",
+        "@vtk//:vtkFiltersSources",
+        "@vtk//:vtkIOGeometry",
+        "@vtk//:vtkIOImage",
+        "@vtk//:vtkRenderingCore",
+        "@vtk//:vtkRenderingOSPRay",
+        "@vtk//:vtkRenderingOpenGL2",
+        "@vtk//:vtkRenderingSceneGraph",
+    ],
+)
