@@ -20,7 +20,17 @@
 
 #include "vtkAutoInit.h"
 
+#include <Eigen/Dense>
 #include "drake/multibody/shapes/visual_element.h"
+
+#include "drake/common/eigen_stl_types.h"
+
+struct SomeStruct {
+  Eigen::Vector4d value;
+  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+};
+
+typedef drake::eigen_aligned_std_vector<SomeStruct> SomeStructList;
 
 VTK_MODULE_INIT(vtkRenderingOpenGL2)
 VTK_MODULE_INIT(vtkInteractionStyle)
@@ -65,9 +75,10 @@ class vtkProgressiveRenderLooper : public vtkCommand
       }
     }
 
-    void do_something(const DrakeShapes::VisualElement& visual) {
-        const DrakeShapes::Geometry& geometry = visual.getGeometry();
-        drake::unused(geometry);
+    void do_something(const SomeStructList& list) {
+      for (const auto& item : list) {
+        cerr << "item: " << item.value.transpose() << endl;
+      }
     }
 
     vtkRenderWindow *RenderWindow;
@@ -342,6 +353,11 @@ int main(int argc, char* argv[])
   //set up progressive rendering
   vtkSmartPointer<vtkProgressiveRenderLooper> looper =
     vtkSmartPointer<vtkProgressiveRenderLooper>::New();
+  looper->do_something({
+    {Eigen::Vector4d::Ones()},
+    {Eigen::Vector4d::Constant(10.)},
+    {Eigen::Vector4d::Constant(100.)},
+  });
   looper->RenderWindow = renWin;
   vtkCamera *cam = renderer->GetActiveCamera();
   iren->AddObserver(vtkCommand::KeyPressEvent, looper);
