@@ -18,16 +18,16 @@ using Eigen::Isometry3d;
 //   EXPECT_EQ(renderer_->config().fov_y, kFovY);
 // }
 
-// TEST_F(RgbdRendererOSPRayTest, NoBodyTest) {
-//   // Rotates so that the light will be out of the field of view.
-//   const Isometry3d X_WC = Eigen::Translation3d(0, 0, 0) *
-//       Eigen::AngleAxisd(M_PI_2, Eigen::Vector3d::UnitX());
+TEST_F(RgbdRendererOSPRayTest, NoBodyTest) {
+  // Rotates so that the light will be out of the field of view.
+  const Isometry3d X_WC = Eigen::Translation3d(0, 0, 0) *
+      Eigen::AngleAxisd(M_PI_2, Eigen::Vector3d::UnitX());
 
-//   Init(X_WC);
-//   renderer_->RenderColorImage(&color_);
-//   const ColorI kNoBody({0, 0, 0});
-//   VerifyUniformColor(kNoBody, 0u);
-// }
+  Init(X_WC);
+  renderer_->RenderColorImage(&color_);
+  const ColorI kNoBody({0, 0, 0});
+  VerifyUniformColor(kNoBody, 0u);
+}
 
 // TEST_F(RgbdRendererOSPRayTest, TerrainTest) {
 //   Init(X_WC_, true);
@@ -149,31 +149,31 @@ using Eigen::Isometry3d;
 //                kColorPixelTolerance);
 // }
 
-TEST_F(RgbdRendererOSPRayTest, CylinderTest) {
-  Init(X_WC_, false);
+// TEST_F(RgbdRendererOSPRayTest, CylinderTest) {
+//   Init(X_WC_, false);
 
-  // Sets up a sphere.
-  Isometry3d X_WV = Isometry3d::Identity();
-  X_WV.translation().z() = 0.6;
-  DrakeShapes::VisualElement visual(X_WV);
-  visual.setGeometry(DrakeShapes::Cylinder(0.2, 1.2));  // Radius and length.
-  const int kBodyID = 1;
-  const RgbdRenderer::VisualIndex kVisualID(0);
-  renderer_->RegisterVisual(visual, kBodyID);
-  renderer_->UpdateVisualPose(X_WV, kBodyID, kVisualID);
-  renderer_->RenderColorImage(&color_);
+//   // Sets up a sphere.
+//   Isometry3d X_WV = Isometry3d::Identity();
+//   X_WV.translation().z() = 0.6;
+//   DrakeShapes::VisualElement visual(X_WV);
+//   visual.setGeometry(DrakeShapes::Cylinder(0.2, 1.2));  // Radius and length.
+//   const int kBodyID = 1;
+//   const RgbdRenderer::VisualIndex kVisualID(0);
+//   renderer_->RegisterVisual(visual, kBodyID);
+//   renderer_->UpdateVisualPose(X_WV, kBodyID, kVisualID);
+//   renderer_->RenderColorImage(&color_);
 
-  // Verifies outside the cylinder.
-  for (const auto& p : kOutliers) {
-    CompareColor(color_.at(p.x, p.y), ColorI({0, 0, 0}), 0,
-                 kColorPixelTolerance);
-  }
-  // Verifies inside the cylinder.
-  const int x = kInlier.x;
-  const int y = kInlier.y;
-  CompareColor(color_.at(x, y), ColorI({255, 255, 255}), 254u,
-               kColorPixelTolerance);
-}
+//   // Verifies outside the cylinder.
+//   for (const auto& p : kOutliers) {
+//     CompareColor(color_.at(p.x, p.y), ColorI({0, 0, 0}), 0,
+//                  kColorPixelTolerance);
+//   }
+//   // Verifies inside the cylinder.
+//   const int x = kInlier.x;
+//   const int y = kInlier.y;
+//   CompareColor(color_.at(x, y), ColorI({255, 255, 255}), 254u,
+//                kColorPixelTolerance);
+// }
 
 // TEST_F(RgbdRendererOSPRayTest, MeshTest) {
 //   Init(X_WC_, false);
