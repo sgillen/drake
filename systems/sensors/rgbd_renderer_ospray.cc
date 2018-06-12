@@ -83,6 +83,8 @@ RgbdRendererOSPRay::~RgbdRendererOSPRay() {}
 
 optional<RgbdRenderer::VisualIndex> RgbdRendererOSPRay::ImplRegisterVisual(
     const DrakeShapes::VisualElement& visual, int body_id) {
+  const DrakeShapes::Geometry& geometry = visual.getGeometry();
+  unused(geometry);
   throw std::runtime_error("Stubbed");
 }
 
