@@ -59,7 +59,6 @@ namespace {
 // TODO(kunimatsu-tri) Add support for the arbitrary clipping planes.
 const double kClippingPlaneNear = 0.01;
 const double kClippingPlaneFar = 100.;
-const double kTerrainSize = 100.;
 
 enum ImageType {
   kColor = 0,
@@ -75,6 +74,14 @@ struct RenderingPipeline {
 };
 
 using ActorCollection = std::vector<vtkSmartPointer<vtkActor>>;
+
+std::string RemoveFileExtension(const std::string& filepath) {
+  const size_t last_dot = filepath.find_last_of(".");
+  if (last_dot == std::string::npos) {
+    DRAKE_ABORT_MSG("File has no extention.");
+  }
+  return filepath.substr(0, last_dot);
+}
 
 void SetModelTransformMatrixToVtkCamera(
     vtkCamera* camera, const vtkSmartPointer<vtkTransform>& X_WC) {
@@ -104,7 +111,8 @@ class RgbdRendererOSPRay::Impl : private ModuleInitVtkRenderingOpenGL2 {
   Impl(RgbdRendererOSPRay* parent, const Eigen::Isometry3d& X_WC);
   ~Impl() {}
 
-  void ImplAddFlatTerrain();
+  optional<VisualIndex> ImplRegisterVisual(
+      const DrakeShapes::VisualElement& visual, int body_id);
 
  private:
 
@@ -123,27 +131,6 @@ class RgbdRendererOSPRay::Impl : private ModuleInitVtkRenderingOpenGL2 {
   // SDF / URDF.
   std::map<int, std::array<ActorCollection, kNumOutputImage>> id_object_maps_;
 };
-
-void RgbdRendererOSPRay::Impl::ImplAddFlatTerrain() {
-  vtkSmartPointer<vtkPlaneSource> plane =
-      vtk_util::CreateSquarePlane(kTerrainSize);
-
-  materials_->AddMaterial("terrain", "MetallicPaint");
-  // For color.
-  vtkNew<vtkPolyDataMapper> mapper;
-  mapper->SetInputConnection(plane->GetOutputPort());
-  terrain_actor_->SetMapper(mapper.GetPointer());
-  auto color =
-      ColorPalette::Normalize(parent_->color_palette().get_terrain_color());
-
-  terrain_actor_->GetProperty()->SetColor(color.r, color.g, color.b);
-  terrain_actor_->GetProperty()->LightingOff();
-  auto prop = terrain_actor_->GetProperty();
-  prop->SetMaterialName("terrain");
-
-  pipelines_[ImageType::kColor]->renderer->AddActor(
-      terrain_actor_.GetPointer());
-}
 
 RgbdRendererOSPRay::Impl::Impl(RgbdRendererOSPRay* parent,
                             const Eigen::Isometry3d& X_WC)
@@ -199,6 +186,138 @@ RgbdRendererOSPRay::Impl::Impl(RgbdRendererOSPRay* parent,
   light_->SetTransformMatrix(vtk_X_WC->GetMatrix());
 
   cp->renderer->AddLight(light_);
+}
+
+optional<RgbdRenderer::VisualIndex>
+RgbdRendererOSPRay::Impl::ImplRegisterVisual(
+    const DrakeShapes::VisualElement& visual, int body_id) {
+  std::array<vtkNew<vtkActor>, kNumOutputImage> actors;
+  std::array<vtkNew<vtkPolyDataMapper>, kNumOutputImage> mappers;
+
+  bool shape_matched = true;
+  const DrakeShapes::Geometry& geometry = visual.getGeometry();
+  switch (visual.getShape()) {
+    // TODO(kunimatsu-tri) Load material property for primitive shapes.
+    // Only mesh is supported for now.
+    case DrakeShapes::BOX: {
+      const auto& box = dynamic_cast<const DrakeShapes::Box&>(geometry);
+      vtkNew<vtkCubeSource> vtk_cube;
+      vtk_cube->SetXLength(box.size(0));
+      vtk_cube->SetYLength(box.size(1));
+      vtk_cube->SetZLength(box.size(2));
+
+      for (auto& mapper : mappers) {
+        mapper->SetInputConnection(vtk_cube->GetOutputPort());
+      }
+      break;
+    }
+    case DrakeShapes::SPHERE: {
+      const auto& sphere = dynamic_cast<const DrakeShapes::Sphere&>(geometry);
+      vtkNew<vtkSphereSource> vtk_sphere;
+      vtk_sphere->SetRadius(sphere.radius);
+      vtk_sphere->SetThetaResolution(50);
+      vtk_sphere->SetPhiResolution(50);
+
+      for (auto& mapper : mappers) {
+        mapper->SetInputConnection(vtk_sphere->GetOutputPort());
+      }
+      break;
+    }
+    case DrakeShapes::CYLINDER: {
+      const auto& cylinder =
+          dynamic_cast<const DrakeShapes::Cylinder&>(geometry);
+      vtkNew<vtkCylinderSource> vtk_cylinder;
+      vtk_cylinder->SetHeight(cylinder.length);
+      vtk_cylinder->SetRadius(cylinder.radius);
+      vtk_cylinder->SetResolution(50);
+
+      // Since the cylinder in vtkCylinderSource is y-axis aligned, we need
+      // to rotate it to be z-axis aligned because that is what Drake uses.
+      vtkNew<vtkTransform> transform;
+      transform->RotateX(90);
+      vtkNew<vtkTransformPolyDataFilter> transform_filter;
+      transform_filter->SetInputConnection(vtk_cylinder->GetOutputPort());
+      transform_filter->SetTransform(transform.GetPointer());
+      transform_filter->Update();
+
+      for (auto& mapper : mappers) {
+        mapper->SetInputConnection(transform_filter->GetOutputPort());
+      }
+      break;
+    }
+    case DrakeShapes::MESH: {
+      const auto& mesh = dynamic_cast<const DrakeShapes::Mesh&>(geometry);
+      const auto* mesh_filename = mesh.resolved_filename_.c_str();
+
+      // TODO(kunimatsu-tri) Add support for other file formats.
+      vtkNew<vtkOBJReader> mesh_reader;
+      mesh_reader->SetFileName(mesh_filename);
+      mesh_reader->Update();
+
+      // Changing the scale of the loaded mesh.
+      const double scale_x = mesh.scale_[0];
+      const double scale_y = mesh.scale_[1];
+      const double scale_z = mesh.scale_[2];
+      vtkNew<vtkTransform> transform;
+      transform->Scale(scale_x, scale_y, scale_z);
+      vtkNew<vtkTransformPolyDataFilter> transform_filter;
+      transform_filter->SetInputConnection(mesh_reader->GetOutputPort());
+      transform_filter->SetTransform(transform.GetPointer());
+      transform_filter->Update();
+
+      for (auto& mapper : mappers) {
+        mapper->SetInputConnection(transform_filter->GetOutputPort());
+      }
+
+      // TODO(kunimatsu-tri) Guessing the material file name is bad. Instead,
+      // load .mtl file referred from the .obj file when
+      // vtkOSPRayMaterialLibrary::ReadFile for .mtl is released.
+      const std::string file = RemoveFileExtension(mesh_filename);
+      bool success = materials_->ReadFile(std::string(file + ".json").c_str());
+      if (success) {
+        auto prop = actors[ImageType::kColor]->GetProperty();
+        auto f = file.substr(file.find_last_of("/") + 1);
+        prop->SetMaterialName(f.c_str());
+      } else {
+        throw std::runtime_error("Found no material file.");
+      }
+      break;
+    }
+    case DrakeShapes::CAPSULE: {
+      // TODO(kunimatsu-tri) Implement this as needed.
+      shape_matched = false;
+      break;
+    }
+    default: {
+      shape_matched = false;
+      break;
+    }
+  }
+
+  // Registers actors.
+  if (shape_matched) {
+    auto& color_actor = actors[ImageType::kColor];
+    if (color_actor->GetProperty()->GetNumberOfTextures() == 0) {
+      // Taken from diffuse color.
+      const auto color = visual.getMaterial();
+      color_actor->GetProperty()->SetColor(color[0], color[1], color[2]);
+    }
+
+    vtkSmartPointer<vtkTransform> vtk_transform =
+        ConvertToVtkTransform(visual.getWorldTransform());
+    auto& actor_collections = id_object_maps_[body_id];
+    for (size_t i = 0; i < actors.size(); ++i) {
+      actors[i]->SetMapper(mappers[i].GetPointer());
+      actors[i]->SetUserTransform(vtk_transform);
+      pipelines_[i]->renderer->AddActor(actors[i].GetPointer());
+      actor_collections[i].push_back(actors[i].GetPointer());
+    }
+
+    return optional<VisualIndex>(VisualIndex(static_cast<int>(
+        id_object_maps_[body_id][ImageType::kColor].size() - 1)));
+  }
+
+  return nullopt;
 }
 
 RgbdRendererOSPRay::RgbdRendererOSPRay(const RenderingConfig& config,
