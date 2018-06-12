@@ -1,0 +1,2254 @@
+diff --git a/Rendering/OSPRay/CMakeLists.txt b/Rendering/OSPRay/CMakeLists.txt
+index 9f15ce1599..738b4ce71b 100644
+--- a/Rendering/OSPRay/CMakeLists.txt
++++ b/Rendering/OSPRay/CMakeLists.txt
+@@ -12,6 +12,7 @@ set(Module_SRCS
+   vtkOSPRayMaterialLibrary.cxx
+   vtkOSPRayPass.cxx
+   vtkOSPRayPolyDataMapperNode.cxx
++  vtkOSPRayVolumeCache.cxx
+   vtkOSPRayVolumeMapper.cxx
+   vtkOSPRayVolumeMapperNode.cxx
+   vtkOSPRayTetrahedraMapperNode.cxx
+diff --git a/Rendering/OSPRay/vtkOSPRayAMRVolumeMapperNode.cxx b/Rendering/OSPRay/vtkOSPRayAMRVolumeMapperNode.cxx
+index 5269e47922..b853feee62 100644
+--- a/Rendering/OSPRay/vtkOSPRayAMRVolumeMapperNode.cxx
++++ b/Rendering/OSPRay/vtkOSPRayAMRVolumeMapperNode.cxx
+@@ -21,15 +21,27 @@
+ #include "vtkSmartPointer.h"
+ #include "vtkObjectFactory.h"
+ #include "vtkOSPRayRendererNode.h"
++#include "vtkOSPRayVolumeCache.h"
+ #include "vtkOverlappingAMR.h"
++#include "vtkRenderer.h"
+ #include "vtkUniformGridAMRDataIterator.h"
+ #include "vtkVolume.h"
+ #include "vtkVolumeMapper.h"
+ #include "vtkVolumeNode.h"
+ #include "vtkVolumeProperty.h"
+ 
++#if defined(__GNUC__)
++#pragma GCC diagnostic push
++#pragma GCC diagnostic ignored "-Wshadow"
++#pragma GCC diagnostic ignored "-Wunused-parameter"
++#endif
+ #include "ospcommon/box.h"
+ #include "ospcommon/vec.h"
++// Undo disabling of warning.
++#if defined(__GNUC__)
++#pragma GCC diagnostic pop
++#endif
++
+ #include "ospray/ospray.h"
+ #include "ospray/version.h"
+ 
+@@ -119,6 +131,8 @@ void vtkOSPRayAMRVolumeMapperNode::Render(bool prepass)
+     vtkOSPRayRendererNode *orn =
+                     static_cast<vtkOSPRayRendererNode *>(
+                     this->GetFirstAncestorOfType("vtkOSPRayRendererNode"));
++    vtkRenderer *ren = vtkRenderer::SafeDownCast(orn->GetRenderable());
++    this->Cache->SetSize(vtkOSPRayRendererNode::GetTimeCacheSize(ren));
+ 
+     osp::Model* OSPRayModel = orn->GetOModel();
+     if (!OSPRayModel)
+@@ -140,117 +154,134 @@ void vtkOSPRayAMRVolumeMapperNode::Render(bool prepass)
+     bool volDirty = false;
+     if (!this->OSPRayVolume || amr->GetMTime() > this->BuildTime)
+     {
+-      this->OSPRayVolume = ospNewVolume("amr_volume");
+-      volDirty=true;
+-
+-      unsigned int lastLevel=0;
+-      std::vector<OSPData>   brickDataArray;
+-      std::vector<BrickInfo> brickInfoArray;
+-      size_t totalDataSize = 0;
+-
+-      vtkAMRInformation* amrInfo = amr->GetAMRInfo();
+-      vtkSmartPointer<vtkUniformGridAMRDataIterator> iter;
+-      iter.TakeReference(vtkUniformGridAMRDataIterator::SafeDownCast(
+-                                 amr->NewIterator()));
+-      for (iter->InitTraversal(); !iter->IsDoneWithTraversal();
+-           iter->GoToNextItem())
++      double tstep = vtkOSPRayRendererNode::GetViewTime(ren);
++      auto cached_Volume = this->Cache->GetFromCache(tstep);
++      if (cached_Volume)
+       {
+-        unsigned int level = iter->GetCurrentLevel();
+-        assert(level >= lastLevel);  //ospray requires level info be ordered lowest to highest
+-        lastLevel = level;
+-        unsigned int index = iter->GetCurrentIndex();
+-
+-        // note: this iteration "naturally" goes from datasets at lower levels to
+-        // those at higher levels.
+-        vtkImageData* data = vtkImageData::SafeDownCast(iter->GetCurrentDataObject());
+-        if (!data)
+-        {
+-          return;
+-        }
+-        float* dataPtr;
+-        int dim[3];
+-
+-        const vtkAMRBox& box = amrInfo->GetAMRBox(level, index);
+-        const int* lo=box.GetLoCorner();
+-        const int* hi=box.GetHiCorner();
+-        ospcommon::vec3i lo_v= {lo[0],lo[1],lo[2]};
+-        ospcommon::vec3i hi_v={hi[0],hi[1],hi[2]};
+-        dim[0] = hi[0]-lo[0]+1;
+-        dim[1] = hi[1]-lo[1]+1;
+-        dim[2] = hi[2]-lo[2]+1;
+-
+-        int fieldAssociation;
+-        mapper->SetScalarMode(VTK_SCALAR_MODE_USE_CELL_FIELD_DATA);
+-        vtkDataArray* cellArray = vtkDataArray::SafeDownCast
+-          (this->GetArrayToProcess(data, fieldAssociation));
+-        if (!cellArray)
++        this->OSPRayVolume = cached_Volume;
++      }
++      else
++      {
++        if (this->Cache->GetSize() == 0)
+         {
+-          std::cerr << "could not get data!\n";
+-          return;
++          ospRelease(this->OSPRayVolume);
+         }
+-
+-        if (cellArray->GetDataType() != VTK_FLOAT)
+-        {
+-          if (cellArray->GetDataType() == VTK_DOUBLE)
++        this->OSPRayVolume = ospNewVolume("amr_volume");
++        this->Cache->AddToCache(tstep, this->OSPRayVolume);
++        volDirty=true;
++
++        unsigned int lastLevel=0;
++        std::vector<OSPData>   brickDataArray;
++        std::vector<BrickInfo> brickInfoArray;
++        size_t totalDataSize = 0;
++
++        vtkAMRInformation* amrInfo = amr->GetAMRInfo();
++        vtkSmartPointer<vtkUniformGridAMRDataIterator> iter;
++        iter.TakeReference(vtkUniformGridAMRDataIterator::SafeDownCast
++                           (amr->NewIterator()));
++        for (iter->InitTraversal(); !iter->IsDoneWithTraversal();
++             iter->GoToNextItem())
++          {
++          unsigned int level = iter->GetCurrentLevel();
++          if (!(level >= lastLevel))
+           {
+-            float* fdata=new float[dim[0]*dim[1]*size_t(dim[2])];
+-            double* dptr;
+-            dptr = (double*)cellArray->WriteVoidPointer(0, cellArray->GetSize());
+-            for(size_t i=0;i<dim[0]*dim[1]*size_t(dim[2]);i++)
++            vtkErrorMacro("ospray requires level info be ordered lowest to highest");
++          };
++          lastLevel = level;
++          unsigned int index = iter->GetCurrentIndex();
++
++          // note: this iteration "naturally" goes from datasets at lower levels to
++          // those at higher levels.
++          vtkImageData* data = vtkImageData::SafeDownCast(iter->GetCurrentDataObject());
++          if (!data)
+             {
+-              fdata[i]=dptr[i];
++            return;
+             }
+-            dataPtr=fdata;
+-          }
+-          else
+-          {
+-            std::cerr << "Only doubles and floats are supported in OSPRay AMR volume mapper currently";
++          float* dataPtr;
++          int dim[3];
++
++          const vtkAMRBox& box = amrInfo->GetAMRBox(level, index);
++          const int* lo=box.GetLoCorner();
++          const int* hi=box.GetHiCorner();
++          ospcommon::vec3i lo_v= {lo[0],lo[1],lo[2]};
++          ospcommon::vec3i hi_v={hi[0],hi[1],hi[2]};
++          dim[0] = hi[0]-lo[0]+1;
++          dim[1] = hi[1]-lo[1]+1;
++          dim[2] = hi[2]-lo[2]+1;
++
++          int fieldAssociation;
++          mapper->SetScalarMode(VTK_SCALAR_MODE_USE_CELL_FIELD_DATA);
++          vtkDataArray* cellArray = vtkDataArray::SafeDownCast
++            (this->GetArrayToProcess(data, fieldAssociation));
++          if (!cellArray)
++            {
++            std::cerr << "could not get data!\n";
+             return;
++            }
++
++          if (cellArray->GetDataType() != VTK_FLOAT)
++            {
++            if (cellArray->GetDataType() == VTK_DOUBLE)
++              {
++              float* fdata=new float[dim[0]*dim[1]*size_t(dim[2])];
++              double* dptr;
++              dptr = (double*)cellArray->WriteVoidPointer(0, cellArray->GetSize());
++              for(size_t i=0;i<dim[0]*dim[1]*size_t(dim[2]);i++)
++                {
++                fdata[i]=dptr[i];
++                }
++              dataPtr=fdata;
++              }
++            else
++              {
++              std::cerr << "Only doubles and floats are supported in OSPRay AMR volume mapper currently";
++              return;
++              }
++            }
++          else
++            {
++            dataPtr=(float*)cellArray->WriteVoidPointer(0, cellArray->GetSize());
++            }
++
++          totalDataSize += sizeof(float)*size_t(dim[0]*dim[1])*dim[2];
++          OSPData odata = ospNewData(dim[0]*dim[1]*dim[2],OSP_FLOAT,dataPtr, OSP_DATA_SHARED_BUFFER);
++          brickDataArray.push_back(odata);
++
++          BrickInfo bi;
++          ospcommon::box3i obox = {lo_v,hi_v};
++          bi.box = obox;
++          double spacing[3];
++          amrInfo->GetSpacing(level,spacing);
++          bi.cellWidth = spacing[0];
++          //cell bounds:  origin + box.LoCorner*spacing,
++          bi.level = level;
++          totalDataSize += sizeof(BrickInfo);
++
++          brickInfoArray.push_back(bi);
+           }
+-        }
+-        else
+-        {
+-          dataPtr=(float*)cellArray->WriteVoidPointer(0, cellArray->GetSize());
+-        }
+ 
+-        totalDataSize += sizeof(float)*size_t(dim[0]*dim[1])*dim[2];
+-        OSPData odata = ospNewData(dim[0]*dim[1]*dim[2],OSP_FLOAT,dataPtr, OSP_DATA_SHARED_BUFFER);
+-        brickDataArray.push_back(odata);
++        assert(brickDataArray.size() == brickInfoArray.size());
++        ospSet1f(this->OSPRayVolume, "samplingRate", this->SamplingRate);  //TODO: gui option
+ 
+-        BrickInfo bi;
+-        ospcommon::box3i obox = {lo_v,hi_v};
+-        bi.box = obox;
+-        double spacing[3];
+-        amrInfo->GetSpacing(level,spacing);
+-        bi.cellWidth = spacing[0];
+-        //cell bounds:  origin + box.LoCorner*spacing,
+-        bi.level = level;
+-        totalDataSize += sizeof(BrickInfo);
++        double origin[3];
++        vol->GetOrigin(origin);
++        double *bds = mapper->GetBounds();
++        origin[0] = bds[0];
++        origin[1] = bds[2];
++        origin[2] = bds[4];
+ 
+-        brickInfoArray.push_back(bi);
++        double spacing[3];
++        amr->GetAMRInfo()->GetSpacing(0,spacing);
++        ospSet3f(this->OSPRayVolume, "gridOrigin", origin[0], origin[1], origin[2]);
++
++        OSPData brickDataData = ospNewData(brickDataArray.size(),OSP_OBJECT,&brickDataArray[0],0);
++        ospSetData(this->OSPRayVolume,"brickData",brickDataData);
++        OSPData brickInfoData = ospNewData(brickInfoArray.size()*sizeof(brickInfoArray[0]),OSP_RAW,&brickInfoArray[0],0);
++        ospSetData(this->OSPRayVolume,"brickInfo",brickInfoData);
++        ospSetObject(this->OSPRayVolume, "transferFunction",
++                     this->TransferFunction);
++        this->BuildTime.Modified();
+       }
+-
+-      assert(brickDataArray.size() == brickInfoArray.size());
+-      ospSet1f(this->OSPRayVolume, "samplingRate", this->SamplingRate);  //TODO: gui option
+-
+-      double origin[3];
+-      vol->GetOrigin(origin);
+-      double *bds = mapper->GetBounds();
+-      origin[0] = bds[0];
+-      origin[1] = bds[2];
+-      origin[2] = bds[4];
+-
+-      double spacing[3];
+-      amr->GetAMRInfo()->GetSpacing(0,spacing);
+-      ospSet3f(this->OSPRayVolume, "gridOrigin", origin[0], origin[1], origin[2]);
+-
+-      OSPData brickDataData = ospNewData(brickDataArray.size(),OSP_OBJECT,&brickDataArray[0],0);
+-      ospSetData(this->OSPRayVolume,"brickData",brickDataData);
+-      OSPData brickInfoData = ospNewData(brickInfoArray.size()*sizeof(brickInfoArray[0]),OSP_RAW,&brickInfoArray[0],0);
+-      ospSetData(this->OSPRayVolume,"brickInfo",brickInfoData);
+-      ospSetObject(this->OSPRayVolume, "transferFunction",
+-                   this->TransferFunction);
+-      this->BuildTime.Modified();
+     }
+     if ((vol->GetProperty()->GetMTime() > this->PropertyTime) || volDirty )
+     {
+diff --git a/Rendering/OSPRay/vtkOSPRayActorNode.cxx b/Rendering/OSPRay/vtkOSPRayActorNode.cxx
+index b1f698bf4d..cf734ce5ec 100644
+--- a/Rendering/OSPRay/vtkOSPRayActorNode.cxx
++++ b/Rendering/OSPRay/vtkOSPRayActorNode.cxx
+@@ -23,11 +23,13 @@
+ #include "vtkInformationIntegerKey.h"
+ #include "vtkInformationObjectBaseKey.h"
+ #include "vtkInformationStringKey.h"
++#include "vtkImageData.h"
+ #include "vtkMapper.h"
+ #include "vtkObjectFactory.h"
+ #include "vtkPiecewiseFunction.h"
+ #include "vtkPolyData.h"
+ #include "vtkProperty.h"
++#include "vtkTexture.h"
+ #include "vtkViewNodeCollection.h"
+ 
+ #include "ospray/ospray.h"
+@@ -173,6 +175,7 @@ vtkMTimeType vtkOSPRayActorNode::GetMTime()
+   vtkDataObject * dobj = nullptr;
+   vtkPolyData *poly = nullptr;
+   vtkMapper *mapper = act->GetMapper();
++  vtkTexture *texture = act->GetTexture();
+   if (mapper)
+   {
+     //if (act->GetRedrawMTime() > mtime)
+@@ -235,5 +238,16 @@ vtkMTimeType vtkOSPRayActorNode::GetMTime()
+       dit->Delete();
+     }
+   }
++  if (texture)
++  {
++    if (texture->GetMTime() > mtime)
++    {
++      mtime = texture->GetMTime();
++    }
++    if (texture->GetInput() && texture->GetInput()->GetMTime() > mtime)
++    {
++      mtime = texture->GetInput()->GetMTime();
++    }
++  }
+   return mtime;
+ }
+diff --git a/Rendering/OSPRay/vtkOSPRayLightNode.cxx b/Rendering/OSPRay/vtkOSPRayLightNode.cxx
+index 46b725e7d4..66623e19c7 100644
+--- a/Rendering/OSPRay/vtkOSPRayLightNode.cxx
++++ b/Rendering/OSPRay/vtkOSPRayLightNode.cxx
+@@ -38,11 +38,13 @@ vtkStandardNewMacro(vtkOSPRayLightNode);
+ //----------------------------------------------------------------------------
+ vtkOSPRayLightNode::vtkOSPRayLightNode()
+ {
++  this->OLight = NULL;
+ }
+ 
+ //----------------------------------------------------------------------------
+ vtkOSPRayLightNode::~vtkOSPRayLightNode()
+ {
++  ospRelease((OSPLight)this->OLight);
+ }
+ 
+ //----------------------------------------------------------------------------
+@@ -120,6 +122,9 @@ void vtkOSPRayLightNode::Render(bool prepass)
+ {
+   if (prepass)
+   {
++    ospRelease((OSPLight)this->OLight);
++    OSPLight ospLight;
++
+     vtkOSPRayRendererNode *orn =
+       static_cast<vtkOSPRayRendererNode *>(
+         this->GetFirstAncestorOfType("vtkOSPRayRendererNode"));
+@@ -136,7 +141,7 @@ void vtkOSPRayLightNode::Render(bool prepass)
+     }
+     if (vtkOSPRayLightNode::GetIsAmbient(light))
+     {
+-      OSPLight ospLight = ospNewLight(oRenderer, "ambient");
++      ospLight = ospNewLight(oRenderer, "ambient");
+       color[0] = static_cast<float>(light->GetDiffuseColor()[0]);
+       color[1] = static_cast<float>(light->GetDiffuseColor()[1]);
+       color[2] = static_cast<float>(light->GetDiffuseColor()[2]);
+@@ -163,7 +168,6 @@ void vtkOSPRayLightNode::Render(bool prepass)
+         pz = p[2];
+         }
+       float coneAngle = static_cast<float>(light->GetConeAngle());
+-      OSPLight ospLight;
+       if (coneAngle <= 0.0)
+       {
+         ospLight = ospNewLight(oRenderer, "PointLight");
+@@ -225,7 +229,7 @@ void vtkOSPRayLightNode::Render(bool prepass)
+       direction[0] = fx - px;
+       direction[1] = fy - py;
+       direction[2] = fz - pz;
+-      OSPLight ospLight = ospNewLight(oRenderer, "DirectionalLight");
++      ospLight = ospNewLight(oRenderer, "DirectionalLight");
+       ospSet3f(ospLight, "color", color[0], color[1], color[2]);
+       float fI = static_cast<float>
+         (vtkOSPRayLightNode::LightScale*
+@@ -240,5 +244,6 @@ void vtkOSPRayLightNode::Render(bool prepass)
+       ospCommit(ospLight);
+       orn->AddLight(ospLight);
+     }
++    this->OLight = ospLight;
+   }
+ }
+diff --git a/Rendering/OSPRay/vtkOSPRayLightNode.h b/Rendering/OSPRay/vtkOSPRayLightNode.h
+index f5f8fa69d4..135e7355d5 100644
+--- a/Rendering/OSPRay/vtkOSPRayLightNode.h
++++ b/Rendering/OSPRay/vtkOSPRayLightNode.h
+@@ -91,6 +91,7 @@ private:
+   void operator=(const vtkOSPRayLightNode&) = delete;
+ 
+   static double LightScale;
++  void *OLight;
+ };
+ 
+ #endif
+diff --git a/Rendering/OSPRay/vtkOSPRayMaterialHelpers.cxx b/Rendering/OSPRay/vtkOSPRayMaterialHelpers.cxx
+index c53f6179a4..ba766f5ed7 100644
+--- a/Rendering/OSPRay/vtkOSPRayMaterialHelpers.cxx
++++ b/Rendering/OSPRay/vtkOSPRayMaterialHelpers.cxx
+@@ -20,44 +20,100 @@
+ #include "vtkProperty.h"
+ #include "vtkTexture.h"
+ 
++#include "ospray/ospray.h"
++
+ //------------------------------------------------------------------------------
+ osp::Texture2D *vtkOSPRayMaterialHelpers::VTKToOSPTexture
+   (vtkImageData *vColorTextureMap)
+ {
++  unsigned char *ochars;
++  void *obuffer;
+   int xsize = vColorTextureMap->GetExtent()[1];
+   int ysize = vColorTextureMap->GetExtent()[3];
+-  unsigned char *ichars =
+-    (unsigned char *)vColorTextureMap->GetScalarPointer();
+-  unsigned char *ochars = new unsigned char[(xsize+1)*(ysize+1)*3]; //LEAK?
+-  unsigned char *oc = ochars;
++  bool incompatible = false;
++  int scalartype = vColorTextureMap->GetScalarType();
++  if (scalartype != VTK_UNSIGNED_CHAR &&
++      scalartype != VTK_CHAR &&
++      scalartype != VTK_FLOAT)
++  {
++    incompatible = true;
++  }
+   int comps = vColorTextureMap->GetNumberOfScalarComponents();
+-  for (int i = 0; i <= xsize; ++i)
++  if (comps != 1 && comps != 3 && comps != 4)
+   {
+-    for (int j = 0; j <= ysize; ++j)
++    incompatible = true;
++  }
++  if (incompatible)
++  {
++    vtkGenericWarningMacro("Problem, incompatible texture type. Defaulting to black texture.");
++    ochars = new unsigned char[(xsize+1)*(ysize+1)*3];
++    unsigned char *oc = ochars;
++    for (int i = 0; i <= xsize; ++i)
+     {
+-      oc[0] = ichars[0];
+-      oc[1] = ichars[1];
+-      oc[2] = ichars[2];
+-      oc+=3;
+-      ichars+=comps;
++      for (int j = 0; j <= ysize; ++j)
++      {
++        oc[0] = 0;
++        oc[1] = 0;
++        oc[2] = 0;
++        oc+=3;
++      }
+     }
++    obuffer = (void*)ochars;
++  } else {
++    obuffer = vColorTextureMap->GetScalarPointer();
+   }
+   osp::Texture2D *t2d;
++  OSPTextureFormat ospformat = OSP_TEXTURE_RGB8;
++  if (scalartype == VTK_FLOAT)
++  {
++    if (comps == 1)
++    {
++      ospformat = OSP_TEXTURE_R32F;
++    }
++    else if (comps == 3)
++    {
++      ospformat = OSP_TEXTURE_RGB32F;
++    }
++    else if (comps == 4)
++    {
++      ospformat = OSP_TEXTURE_RGBA32F;
++    }
++  }
++  else
++  {
++    if (comps == 1)
++    {
++      ospformat = OSP_TEXTURE_R8;
++    }
++    else if (comps == 3)
++    {
++      ospformat = OSP_TEXTURE_RGB8;
++    }
++    else if (comps == 4)
++    {
++      ospformat = OSP_TEXTURE_RGBA8;
++    }
++  }
+   t2d = (osp::Texture2D*)ospNewTexture2D
+     (
+      osp::vec2i{xsize+1,
+          ysize+1},
+-     OSP_TEXTURE_RGB8,
+-     ochars,
+-     OSP_TEXTURE_FILTER_NEAREST);
++     ospformat,
++     obuffer,
++     OSP_TEXTURE_FILTER_NEAREST|OSP_TEXTURE_SHARED_BUFFER);
++  ospCommit(t2d);
++  if (incompatible)
++  {
++    delete[] ochars;
++  }
+   return t2d;
+ }
+ 
+ //------------------------------------------------------------------------------
+ void vtkOSPRayMaterialHelpers::MakeMaterials
+   (vtkOSPRayRendererNode *orn,
+-   OSPRenderer oRenderer,
+-   std::map<std::string, OSPMaterial> &mats)
++   osp::Renderer *oRenderer,
++   std::map<std::string, osp::Material*> &mats)
+ {
+   vtkOSPRayMaterialLibrary *ml = vtkOSPRayRendererNode::GetMaterialLibrary(orn->GetRenderer());
+   if (!ml)
+@@ -69,7 +125,7 @@ void vtkOSPRayMaterialHelpers::MakeMaterials
+   std::set<std::string >::iterator it = nicknames.begin();
+   while (it != nicknames.end())
+   {
+-    OSPMaterial newmat = vtkOSPRayMaterialHelpers::MakeMaterial
++    osp::Material* newmat = vtkOSPRayMaterialHelpers::MakeMaterial
+       (orn, oRenderer, *it);
+     mats[*it] = newmat;
+     ++it;
+@@ -117,15 +173,14 @@ void vtkOSPRayMaterialHelpers::MakeMaterials
+     vtkImageData* vColorTextureMap = vtkImageData::SafeDownCast(texname->GetInput()); \
+     osp::Texture2D *t2d = vtkOSPRayMaterialHelpers::VTKToOSPTexture(vColorTextureMap); \
+     ospSetObject(oMaterial, #texname, ((OSPTexture2D)(t2d))); \
+-    ospCommit(t2d); \
+   }
+ 
+ //------------------------------------------------------------------------------
+-OSPMaterial vtkOSPRayMaterialHelpers::MakeMaterial
++osp::Material* vtkOSPRayMaterialHelpers::MakeMaterial
+   (vtkOSPRayRendererNode *orn,
+-  OSPRenderer oRenderer, std::string nickname)
++  osp::Renderer* oRenderer, std::string nickname)
+ {
+-  OSPMaterial oMaterial;
++  osp::Material* oMaterial;
+   vtkOSPRayMaterialLibrary *ml = vtkOSPRayRendererNode::GetMaterialLibrary(orn->GetRenderer());
+   if (!ml)
+     {
+@@ -169,10 +224,29 @@ OSPMaterial vtkOSPRayMaterialHelpers::MakeMaterial
+     OSPSET1F(flakeSpread)
+     OSPSET1F(eta)
+   }
++  else if (implname == "Principled")
++  {
++    oMaterial = ospNewMaterial(oRenderer, implname.c_str());
++    OSPSET3F(baseColor);
++    OSPSET1F(metallic);
++    OSPSET3F(specular);
++    OSPSET3F(edgeColor);
++    OSPSET1F(transmission);
++    OSPSET1F(roughness);
++    OSPSET1F(normalScale);
++    OSPSET1F(coat);
++    OSPSET3F(coatColor);
++    OSPSET1F(coatThickness);
++    OSPSET1F(coatRoughness);
++    OSPSET1F(coatNormalScale);
++    OSPSET1F(ior);
++    OSPSET1F(iorOutside);
++  }
+   else if (implname == "OBJMaterial")
+   {
+     oMaterial = ospNewMaterial(oRenderer, implname.c_str());
+     OSPSET1F(alpha);//aka "d", default 1.0
++    OSPSET1F(d);//aka "d", default 1.0
+     OSPSET3F(color);//aka "Kd" aka "kd", default (0.8,0.8,0.8)
+     OSPSET3F(kd);//aka "Kd" aka "kd", default (0.8,0.8,0.8)
+     OSPSET3F(Kd);//aka "Kd" aka "kd", default (0.8,0.8,0.8)
+@@ -181,11 +255,19 @@ OSPMaterial vtkOSPRayMaterialHelpers::MakeMaterial
+     OSPSET1F(ns);//aka "Ns", default 10.0
+     OSPSET1F(Ns);//aka "Ns", default 10.0
+     OSPSET3F(tf);//aka "Tf", default (0.0,0.0,0.0)
++    OSPSET3F(Tf);//aka "Tf", default (0.0,0.0,0.0)
+     OSPSETTEXTURE(map_d);
+     OSPSETTEXTURE(map_kd);
++    OSPSETTEXTURE(map_Kd);
++    OSPSETTEXTURE(colorMap);
+     OSPSETTEXTURE(map_ks);
++    OSPSETTEXTURE(map_Ks);
+     OSPSETTEXTURE(map_ns);
++    OSPSETTEXTURE(map_Ns);
+     OSPSETTEXTURE(map_bump);
++    OSPSETTEXTURE(map_Bump);
++    OSPSETTEXTURE(normalmap);
++    OSPSETTEXTURE(BumpMap);
+ 
+     /*
+     //todo hookup these texture transforms up, for now could be just in 9 long double vectors, but should really be a 3x3
+diff --git a/Rendering/OSPRay/vtkOSPRayMaterialHelpers.h b/Rendering/OSPRay/vtkOSPRayMaterialHelpers.h
+index 53ec52eb13..e7d8fecc8f 100644
+--- a/Rendering/OSPRay/vtkOSPRayMaterialHelpers.h
++++ b/Rendering/OSPRay/vtkOSPRayMaterialHelpers.h
+@@ -31,7 +31,12 @@
+ #ifndef vtkOSPRayMaterialHelpers_h
+ #define vtkOSPRayMaterialHelpers_h
+ 
+-#include "ospray/ospray.h"
++namespace osp {
++  struct Texture2D;
++  struct Renderer;
++  struct Material;
++}
++
+ #include <map>
+ 
+ class vtkImageData;
+@@ -42,23 +47,23 @@ namespace vtkOSPRayMaterialHelpers {
+   /**
+    * Manufacture an ospray texture from a 2d vtkImageData
+    */
+-  osp::Texture2D *VTKToOSPTexture(vtkImageData *vColorTextureMap);
++  osp::Texture2D* VTKToOSPTexture(vtkImageData *vColorTextureMap);
+ 
+   /**
+    * Construct a set of ospray materials for all of the material names.
+    */
+   void MakeMaterials(vtkOSPRayRendererNode *orn,
+-                     OSPRenderer oRenderer,
+-                     std::map<std::string, OSPMaterial> &mats);
++                     osp::Renderer *oRenderer,
++                     std::map<std::string, osp::Material*> &mats);
+ 
+   /**
+    * Construct one ospray material within the given renderer that
+    * corresponds to the visual characteristics set out in the named
+    * material in the material library.
+    */
+-  OSPMaterial MakeMaterial(vtkOSPRayRendererNode *orn,
+-                           OSPRenderer oRenderer,
+-                           std::string nickname);
++  osp::Material* MakeMaterial(vtkOSPRayRendererNode *orn,
++                              osp::Renderer *oRenderer,
++                              std::string nickname);
+ 
+ }
+ #endif
+diff --git a/Rendering/OSPRay/vtkOSPRayMaterialLibrary.cxx b/Rendering/OSPRay/vtkOSPRayMaterialLibrary.cxx
+index 20b400021c..2d48956d40 100644
+--- a/Rendering/OSPRay/vtkOSPRayMaterialLibrary.cxx
++++ b/Rendering/OSPRay/vtkOSPRayMaterialLibrary.cxx
+@@ -124,7 +124,6 @@ bool vtkOSPRayMaterialLibrary::InternalParse
+     return false;
+   }
+ 
+-  //todo: this reader is a lot more fragile then I'ld like, need to make it robust
+   std::istream *doc;
+   if (fromfile)
+   {
+@@ -132,9 +131,28 @@ bool vtkOSPRayMaterialLibrary::InternalParse
+   } else {
+     doc = new std::istringstream(filename);
+   }
++  if (std::string(filename).rfind(".mtl") != std::string::npos)
++    {
++    return this->InternalParseMTL(filename, fromfile, doc);
++    }
++  return this->InternalParseJSON(filename, fromfile, doc);
++}
+ 
++// ----------------------------------------------------------------------------
++bool vtkOSPRayMaterialLibrary::InternalParseJSON
++  (const char *filename, bool fromfile, std::istream *doc)
++{
++  //todo: this reader is a lot more fragile then I'ld like, need to make it robust
+   Json::Value root;
+-  *doc >> root;
++  try
++  {
++    *doc >> root;
++  }
++  catch (Json::RuntimeError)
++  {
++    delete doc;
++    return false;
++  }
+   delete doc;
+ 
+   if (!root.isMember("family"))
+@@ -248,6 +266,198 @@ bool vtkOSPRayMaterialLibrary::InternalParse
+   return true;
+ }
+ 
++namespace {
++  static std::string trim(std::string s)
++  {
++    size_t start = 0;
++    while ((start < s.length()) && (isspace(s[start])))
++    {
++      start++;
++    }
++    size_t end = s.length();
++    while ((end > start) && (isspace(s[end-1])))
++    {
++      end--;
++    }
++    return s.substr(start, end-start);
++  }
++}
++
++// ----------------------------------------------------------------------------
++bool vtkOSPRayMaterialLibrary::InternalParseMTL
++  (const char *filename, bool fromfile, std::istream *doc)
++{
++  std::string str;
++  std::string nickname = "";
++  std::string implname = "OBJMaterial";
++
++  const std::vector<std::string> singles
++    {"d ", "Ks ", "alpha ", "roughness ", "eta ", "thickness "};
++  const std::vector<std::string> triples
++    {"Ka ", "color ", "Kd ", "Ks "};
++  const std::vector<std::string> textures
++    {"map_d ",
++     "map_Kd ", "map_kd ", "colorMap ",
++     "map_Ks ", "map_ks ",
++     "map_Ns ", "map_ns ", "map_Bump", "map_bump", "normalMap", "bumpMap"};
++
++  while(getline(*doc, str))
++  {
++    std::string tstr = trim(str);
++    std::string lkey;
++
++    //a new material
++    lkey = "newmtl ";
++    if (tstr.compare(0, lkey.size(), lkey) == 0)
++    {
++      nickname = trim(tstr.substr(lkey.size()));
++      this->Internal->NickNames.insert(nickname);
++      this->Internal->ImplNames[nickname] = "OBJMaterial";
++    }
++
++    //ospray type of the material, if not obj
++    lkey = "type ";
++    if (tstr.compare(0, lkey.size(), lkey) == 0)
++    {
++      //this non standard entry is a quick way to break out of
++      //objmaterial and use one of the ospray specific materials
++      implname = trim(tstr.substr(lkey.size()));
++      if (implname == "matte")
++      {
++        implname = "OBJMaterial";
++      }
++      if (implname == "glass")
++      {
++        implname = "ThinGlass";
++      }
++      if (implname == "metal")
++      {
++        implname = "Metal";
++      }
++      if (implname == "glass")
++      {
++        implname = "ThinGlass";
++      }
++      if (implname == "metallicPaint")
++      {
++        implname = "MetallicPaint";
++      }
++      this->Internal->ImplNames[nickname] = implname;
++    }
++
++    //grab all the single valued settings we see
++    std::vector<std::string>::const_iterator sit1 = singles.begin();
++    while (sit1 != singles.end())
++    {
++      std::string key = *sit1;
++      ++sit1;
++      if (tstr.compare(0, key.size(), key) == 0)
++      {
++        std::string v = tstr.substr(key.size());
++        double dv;
++        bool OK = false;
++        try
++        {
++          dv = std::stod(v);
++          OK = true;
++        }
++        catch (const std::invalid_argument&) {}
++        catch (const std::out_of_range&) {}
++        if (OK)
++        {
++          double vals[1] = {dv};
++          this->AddShaderVariable(nickname, key.substr(0,key.size()-1).c_str(), 1, vals);
++        }
++      }
++    }
++
++    //grab all the triple valued settings we see
++    std::vector<std::string>::const_iterator sit3 = triples.begin();
++    while (sit3 != triples.end())
++    {
++      std::string key = *sit3;
++      ++sit3;
++      if (tstr.compare(0, key.size(), key) == 0)
++      {
++        std::string vs = tstr.substr(key.size());
++        size_t loc1 = vs.find(" ");
++        size_t loc2 = vs.find(" ", loc1);
++        std::string v1 = vs.substr(0,loc1);
++        std::string v2 = vs.substr(loc1+1,loc2);
++        std::string v3 = vs.substr(loc2+1);
++        double d1, d2, d3;
++        bool OK = false;
++        try
++        {
++          d1 = std::stod(v1);
++          d2 = std::stod(v1);
++          d3 = std::stod(v1);
++          OK = true;
++        }
++        catch (const std::invalid_argument&) {}
++        catch (const std::out_of_range&) {}
++        if (OK)
++        {
++          double vals[3] = {d1, d2, d3};
++          this->AddShaderVariable(nickname, key.substr(0,key.size()-1).c_str(), 3, vals);
++        }
++      }
++    }
++
++    //grab all the textures we see
++    std::vector<std::string>::const_iterator tit = textures.begin();
++    while (tit != textures.end())
++    {
++      std::string key = *tit;
++      ++tit;
++
++      std::string tfname = "";
++      if (tstr.compare(0, key.size(), key) == 0)
++      {
++        tfname = trim(tstr.substr(key.size()));
++      }
++      if (tfname != "")
++      {
++        vtkSmartPointer<vtkTexture> textr = vtkSmartPointer<vtkTexture>::New();
++        vtkSmartPointer<vtkJPEGReader> jpgReader = vtkSmartPointer<vtkJPEGReader>::New();
++        vtkSmartPointer<vtkPNGReader> pngReader = vtkSmartPointer<vtkPNGReader>::New();
++        if (fromfile)
++        {
++          std::string parentDir
++            = vtksys::SystemTools::GetParentDirectory(filename);
++          std::string tfullname = parentDir + "/" + tfname;
++          if (!vtksys::SystemTools::FileExists(tfullname.c_str(), true))
++          {
++            cerr << "No such texture file " << tfullname << " skipping" << endl;
++            continue;
++          }
++          if (tfullname.substr( tfullname.length() - 3 ) == "png")
++          {
++            pngReader->SetFileName(tfullname.c_str());
++            pngReader->Update();
++            textr->SetInputConnection(pngReader->GetOutputPort(0));
++          } else {
++            jpgReader->SetFileName(tfullname.c_str());
++            jpgReader->Update();
++            textr->SetInputConnection(jpgReader->GetOutputPort(0));
++          }
++        } else {
++          vtkSmartPointer<vtkXMLImageDataReader> reader =
++            vtkSmartPointer<vtkXMLImageDataReader>::New();
++          reader->ReadFromInputStringOn();
++          reader->SetInputString(tfname);
++          textr->SetInputConnection(reader->GetOutputPort(0));
++        }
++        textr->Update();
++
++        this->AddTexture(nickname, key.substr(0,key.size()-1).c_str(), textr);
++      }
++    }
++  }
++
++  return true;
++}
++
+ // ----------------------------------------------------------------------------
+ const char * vtkOSPRayMaterialLibrary::WriteBuffer()
+ {
+@@ -278,7 +488,7 @@ const char * vtkOSPRayMaterialLibrary::WriteBuffer()
+         std::string vname = vit->first;
+         std::vector<double> vvals = vit->second;
+         Json::Value jvvals;
+-        for (size_t i = 0; i < vvals.size(); i++)
++        for (size_t i = 0; i < vvals.size(); ++i)
+         {
+           jvvals.append(vvals[i]);
+         }
+diff --git a/Rendering/OSPRay/vtkOSPRayMaterialLibrary.h b/Rendering/OSPRay/vtkOSPRayMaterialLibrary.h
+index 77f9c74d8c..e2718d924f 100644
+--- a/Rendering/OSPRay/vtkOSPRayMaterialLibrary.h
++++ b/Rendering/OSPRay/vtkOSPRayMaterialLibrary.h
+@@ -110,6 +110,8 @@ protected:
+   virtual ~vtkOSPRayMaterialLibrary();
+ 
+   bool InternalParse(const char *name, bool IsFile);
++  bool InternalParseJSON(const char *name, bool IsFile, std::istream *doc);
++  bool InternalParseMTL(const char *name, bool IsFile, std::istream *doc);
+ 
+ private:
+   vtkOSPRayMaterialLibrary(const vtkOSPRayMaterialLibrary&) = delete;
+diff --git a/Rendering/OSPRay/vtkOSPRayPolyDataMapperNode.cxx b/Rendering/OSPRay/vtkOSPRayPolyDataMapperNode.cxx
+index af0c162816..cc427bca07 100644
+--- a/Rendering/OSPRay/vtkOSPRayPolyDataMapperNode.cxx
++++ b/Rendering/OSPRay/vtkOSPRayPolyDataMapperNode.cxx
+@@ -183,7 +183,7 @@ namespace vtkosp {
+   }
+ 
+   //----------------------------------------------------------------------------
+-  OSPGeometry RenderAsSpheres(osp::vec3fa *vertices,
++  OSPGeometry RenderAsSpheres(osp::vec3f *vertices,
+                               std::vector<unsigned int> &indexArray,
+                               std::vector<unsigned int> &rIndexArray,
+                               double pointSize,
+@@ -200,8 +200,7 @@ namespace vtkosp {
+                               osp::vec4f *PointColors,
+                               int numPointValueTextureCoords,
+                               float *pointValueTextureCoords,
+-                              OSPModel oModel,
+-                              OSPRenderer oRenderer
++                              OSPModel oModel
+                               )
+   {
+     OSPGeometry ospMesh = ospNewGeometry("spheres");
+@@ -295,11 +294,9 @@ namespace vtkosp {
+     else if (vColorTextureMap && _hastm)
+     {
+       osp::Texture2D *t2d = vtkOSPRayMaterialHelpers::VTKToOSPTexture(vColorTextureMap);
+-      OSPMaterial ospMaterial = ospNewMaterial(oRenderer,"OBJMaterial");
+-      ospSetObject(ospMaterial, "map_Kd", ((OSPTexture2D)(t2d)));
+-      ospCommit(t2d);
+-      ospCommit(ospMaterial);
+-      ospSetMaterial(ospMesh, ospMaterial);
++      ospSetObject(actorMaterial, "map_Kd", ((OSPTexture2D)(t2d)));
++      ospCommit(actorMaterial);
++      ospSetMaterial(ospMesh, actorMaterial);
+     }
+     else if (numCellMaterials)
+     {
+@@ -329,7 +326,7 @@ namespace vtkosp {
+   }
+ 
+   //----------------------------------------------------------------------------
+-  OSPGeometry RenderAsCylinders(osp::vec3fa *vertices,
++  OSPGeometry RenderAsCylinders(osp::vec3f *vertices,
+                                 std::vector<unsigned int> &indexArray,
+                                 std::vector<unsigned int> &rIndexArray,
+                                 double lineWidth,
+@@ -346,8 +343,7 @@ namespace vtkosp {
+                                 osp::vec4f *PointColors,
+                                 int numPointValueTextureCoords,
+                                 float *pointValueTextureCoords,
+-                                OSPModel oModel,
+-                                OSPRenderer oRenderer
++                                OSPModel oModel
+                                 )
+   {
+     OSPGeometry ospMesh = ospNewGeometry("cylinders");
+@@ -455,11 +451,9 @@ namespace vtkosp {
+     else if (vColorTextureMap && _hastm)
+     {
+       osp::Texture2D *t2d = vtkOSPRayMaterialHelpers::VTKToOSPTexture(vColorTextureMap);
+-      OSPMaterial ospMaterial = ospNewMaterial(oRenderer,"OBJMaterial");
+-      ospSetObject(ospMaterial, "map_Kd", ((OSPTexture2D)(t2d)));
+-      ospCommit(t2d);
+-      ospCommit(ospMaterial);
+-      ospSetMaterial(ospMesh, ospMaterial);
++      ospSetObject(actorMaterial, "map_Kd", ((OSPTexture2D)(t2d)));
++      ospCommit(actorMaterial);
++      ospSetMaterial(ospMesh, actorMaterial);
+     }
+     else if (numCellMaterials)
+     {
+@@ -505,8 +499,7 @@ namespace vtkosp {
+                                 osp::vec4f *PointColors,
+                                 int numPointValueTextureCoords,
+                                 float *pointValueTextureCoords,
+-                                OSPModel oModel,
+-                                OSPRenderer oRenderer
++                                OSPModel oModel
+                                 )
+   {
+     OSPGeometry ospMesh = ospNewGeometry("trianglemesh");
+@@ -579,12 +572,11 @@ namespace vtkosp {
+     }
+     else if (vColorTextureMap && _hastm)
+     {
++      //Note: this will only have an affect on OBJMaterials
+       osp::Texture2D *t2d = vtkOSPRayMaterialHelpers::VTKToOSPTexture(vColorTextureMap);
+-      OSPMaterial ospMaterial = ospNewMaterial(oRenderer,"OBJMaterial");
+-      ospSetObject(ospMaterial, "map_Kd", ((OSPTexture2D)(t2d)));
+-      ospCommit(t2d);
+-      ospCommit(ospMaterial);
+-      ospSetMaterial(ospMesh, ospMaterial);
++      ospSetObject(actorMaterial, "map_Kd", ((OSPTexture2D)(t2d)));
++      ospCommit(actorMaterial);
++      ospSetMaterial(ospMesh, actorMaterial);
+     }
+     else if (numCellMaterials)
+     {
+@@ -776,15 +768,15 @@ void vtkOSPRayPolyDataMapperNode::ORenderPoly(
+   std::vector<double> _vertices;
+   vtkPolyDataMapperNode::TransformPoints(act, poly, _vertices);
+   size_t numPositions = _vertices.size()/3;
+-  osp::vec3fa *vertices = new osp::vec3fa[numPositions];
++  osp::vec3f *vertices = new osp::vec3f[numPositions];
+   for (size_t i = 0; i < numPositions; i++)
+   {
+     vertices[i] =
+-      osp::vec3fa{static_cast<float>(_vertices[i*3+0]),
+-                  static_cast<float>(_vertices[i*3+1]),
+-                  static_cast<float>(_vertices[i*3+2])};
++      osp::vec3f{static_cast<float>(_vertices[i*3+0]),
++                 static_cast<float>(_vertices[i*3+1]),
++                 static_cast<float>(_vertices[i*3+2])};
+   }
+-  OSPData position = ospNewData(numPositions, OSP_FLOAT3A, &vertices[0]);
++  OSPData position = ospNewData(numPositions, OSP_FLOAT3, &vertices[0]);
+   ospCommit(position);
+   _vertices.clear();
+ 
+@@ -976,7 +968,9 @@ void vtkOSPRayPolyDataMapperNode::ORenderPoly(
+       float *tc = vColorCoordinates->GetPointer(0);
+       for (int i = 0; i < numPointValueTextureCoords; i++)
+       {
+-        pointValueTextureCoords[i] = *tc;
++        float v = *tc;
++        v = ((v > 1.0f) ? 1.0 : ((v < 0.0f) ? 0.0f : v)); //clamp [0..1]
++        pointValueTextureCoords[i] = v;
+         tc+=2;
+       }
+       vColorTextureMap = pColorTextureMap;
+@@ -998,7 +992,7 @@ void vtkOSPRayPolyDataMapperNode::ORenderPoly(
+                                     numCellMaterials, cellMaterials,
+                                     numPointColors, pointColors,
+                                     numPointValueTextureCoords, pointValueTextureCoords,
+-                                    oModel, oRenderer
++                                    oModel
+                                     ));
+   }
+ 
+@@ -1020,7 +1014,7 @@ void vtkOSPRayPolyDataMapperNode::ORenderPoly(
+                                       numCellMaterials, cellMaterials,
+                                       numPointColors, pointColors,
+                                       numPointValueTextureCoords, pointValueTextureCoords,
+-                                      oModel, oRenderer
++                                      oModel
+                                       ));
+     }
+     else
+@@ -1036,7 +1030,7 @@ void vtkOSPRayPolyDataMapperNode::ORenderPoly(
+                                         numCellMaterials, cellMaterials,
+                                         numPointColors, pointColors,
+                                         numPointValueTextureCoords, pointValueTextureCoords,
+-                                        oModel, oRenderer
++                                        oModel
+                                         ));
+     }
+   }
+@@ -1060,7 +1054,7 @@ void vtkOSPRayPolyDataMapperNode::ORenderPoly(
+                                         numCellMaterials, cellMaterials,
+                                         numPointColors, pointColors,
+                                         numPointValueTextureCoords, pointValueTextureCoords,
+-                                        oModel, oRenderer
++                                        oModel
+                                         ));
+         break;
+       }
+@@ -1077,7 +1071,7 @@ void vtkOSPRayPolyDataMapperNode::ORenderPoly(
+                                           numCellMaterials, cellMaterials,
+                                           numPointColors, pointColors,
+                                           numPointValueTextureCoords, pointValueTextureCoords,
+-                                          oModel, oRenderer
++                                          oModel
+                                           ));
+         break;
+       }
+@@ -1112,8 +1106,7 @@ void vtkOSPRayPolyDataMapperNode::ORenderPoly(
+                                             numCellMaterials, cellMaterials,
+                                             numPointColors, pointColors,
+                                             0, pointValueTextureCoords,
+-                                            oModel,
+-                                            oRenderer
++                                            oModel
+                                             ));
+         }
+ 
+@@ -1140,7 +1133,7 @@ void vtkOSPRayPolyDataMapperNode::ORenderPoly(
+                                           numCellMaterials, cellMaterials,
+                                           numPointColors, pointColors,
+                                           numPointValueTextureCoords, pointValueTextureCoords,
+-                                          oModel, oRenderer
++                                          oModel
+                                           ));
+         delete[] normals;
+       }
+@@ -1165,7 +1158,7 @@ void vtkOSPRayPolyDataMapperNode::ORenderPoly(
+                                         numCellMaterials, cellMaterials,
+                                         numPointColors, pointColors,
+                                         numPointValueTextureCoords, pointValueTextureCoords,
+-                                        oModel, oRenderer
++                                        oModel
+                                         ));
+         break;
+       }
+@@ -1182,7 +1175,7 @@ void vtkOSPRayPolyDataMapperNode::ORenderPoly(
+                                           numCellMaterials, cellMaterials,
+                                           numPointColors, pointColors,
+                                           numPointValueTextureCoords, pointValueTextureCoords,
+-                                          oModel, oRenderer
++                                          oModel
+                                           ));
+         break;
+       }
+@@ -1217,7 +1210,7 @@ void vtkOSPRayPolyDataMapperNode::ORenderPoly(
+                                             numCellMaterials, cellMaterials,
+                                             numPointColors, pointColors,
+                                             0, pointValueTextureCoords,
+-                                            oModel, oRenderer
++                                            oModel
+                                             ));
+         }
+         osp::vec3f *normals = nullptr;
+@@ -1243,7 +1236,7 @@ void vtkOSPRayPolyDataMapperNode::ORenderPoly(
+                                           numCellMaterials, cellMaterials,
+                                           numPointColors, pointColors,
+                                           numPointValueTextureCoords, pointValueTextureCoords,
+-                                          oModel, oRenderer
++                                          oModel
+                                           ));
+         delete[] normals;
+       }
+diff --git a/Rendering/OSPRay/vtkOSPRayRendererNode.cxx b/Rendering/OSPRay/vtkOSPRayRendererNode.cxx
+index 294b5a0e8f..bf936d302c 100644
+--- a/Rendering/OSPRay/vtkOSPRayRendererNode.cxx
++++ b/Rendering/OSPRay/vtkOSPRayRendererNode.cxx
+@@ -25,6 +25,7 @@
+ #include "vtkCollectionIterator.h"
+ #include "vtkImageData.h"
+ #include "vtkInformation.h"
++#include "vtkInformationDoubleKey.h"
+ #include "vtkInformationDoubleVectorKey.h"
+ #include "vtkInformationIntegerKey.h"
+ #include "vtkInformationObjectBaseKey.h"
+@@ -188,7 +189,8 @@ vtkInformationKeyMacro(vtkOSPRayRendererNode, RENDERER_TYPE, String);
+ vtkInformationKeyMacro(vtkOSPRayRendererNode, NORTH_POLE, DoubleVector);
+ vtkInformationKeyMacro(vtkOSPRayRendererNode, EAST_POLE, DoubleVector);
+ vtkInformationKeyMacro(vtkOSPRayRendererNode, MATERIAL_LIBRARY, ObjectBase);
+-
++vtkInformationKeyMacro(vtkOSPRayRendererNode, VIEW_TIME, Double);
++vtkInformationKeyMacro(vtkOSPRayRendererNode, TIME_CACHE_SIZE, Integer);
+ 
+ class vtkOSPRayRendererNodeInternals
+ {
+@@ -213,6 +215,7 @@ public:
+     this->least[2] = 0.;
+     this->LastViewPort[0] = 0.;
+     this->LastViewPort[1] = 0.;
++    this->LastParallelScale = 0.0;
+   };
+ 
+   ~vtkOSPRayRendererNodeInternals() {};
+@@ -410,6 +413,7 @@ public:
+   double lup[3];
+   double least[3];
+   double LastViewPort[2];
++  double LastParallelScale;
+ 
+   OSPLight BGLight;
+ };
+@@ -422,6 +426,7 @@ vtkOSPRayRendererNode::vtkOSPRayRendererNode()
+ {
+   this->Buffer = nullptr;
+   this->ZBuffer = nullptr;
++  this->ODepthBuffer = nullptr;
+   this->OModel = nullptr;
+   this->ORenderer = nullptr;
+   this->NumActors = 0;
+@@ -441,18 +446,10 @@ vtkOSPRayRendererNode::~vtkOSPRayRendererNode()
+ {
+   delete[] this->Buffer;
+   delete[] this->ZBuffer;
+-  if (this->OModel)
+-  {
+-    ospRelease((OSPModel)this->OModel);
+-  }
+-  if (this->ORenderer)
+-  {
+-    ospRelease((OSPRenderer)this->ORenderer);
+-  }
+-  if (this->OFrameBuffer)
+-  {
+-    ospRelease(this->OFrameBuffer);
+-  }
++  delete[] this->ODepthBuffer;
++  ospRelease((OSPModel)this->OModel);
++  ospRelease((OSPRenderer)this->ORenderer);
++  ospRelease(this->OFrameBuffer);
+   this->AccumulateMatrix->Delete();
+   delete this->Internal;
+ }
+@@ -666,6 +663,58 @@ double * vtkOSPRayRendererNode::GetEastPole(vtkRenderer *renderer)
+   return nullptr;
+ }
+ 
++//----------------------------------------------------------------------------
++void vtkOSPRayRendererNode::SetViewTime(double value, vtkRenderer *renderer)
++{
++  if (!renderer)
++  {
++    return;
++  }
++  vtkInformation *info = renderer->GetInformation();
++  info->Set(vtkOSPRayRendererNode::VIEW_TIME(), value);
++}
++
++//----------------------------------------------------------------------------
++double vtkOSPRayRendererNode::GetViewTime(vtkRenderer *renderer)
++{
++  if (!renderer)
++  {
++    return 0;
++  }
++  vtkInformation *info = renderer->GetInformation();
++  if (info && info->Has(vtkOSPRayRendererNode::VIEW_TIME()))
++  {
++    return (info->Get(vtkOSPRayRendererNode::VIEW_TIME()));
++  }
++  return 0;
++}
++
++//----------------------------------------------------------------------------
++void vtkOSPRayRendererNode::SetTimeCacheSize(int value, vtkRenderer *renderer)
++{
++  if (!renderer)
++  {
++    return;
++  }
++  vtkInformation *info = renderer->GetInformation();
++  info->Set(vtkOSPRayRendererNode::TIME_CACHE_SIZE(), value);
++}
++
++//----------------------------------------------------------------------------
++int vtkOSPRayRendererNode::GetTimeCacheSize(vtkRenderer *renderer)
++{
++  if (!renderer)
++  {
++    return 0;
++  }
++  vtkInformation *info = renderer->GetInformation();
++  if (info && info->Has(vtkOSPRayRendererNode::TIME_CACHE_SIZE()))
++  {
++    return (info->Get(vtkOSPRayRendererNode::TIME_CACHE_SIZE()));
++  }
++  return 0;
++}
++
+ //----------------------------------------------------------------------------
+ void vtkOSPRayRendererNode::PrintSelf(ostream& os, vtkIndent indent)
+ {
+@@ -781,7 +830,7 @@ void vtkOSPRayRendererNode::Traverse(int operation)
+       (numAct != this->NumActors))
+   {
+     this->NumActors = numAct;
+-    //ospRelease((OSPModel)this->OModel);
++    ospRelease((OSPModel)this->OModel);
+     oModel = ospNewModel();
+     this->OModel = oModel;
+     it->InitTraversal();
+@@ -940,6 +989,7 @@ void vtkOSPRayRendererNode::Render(bool prepass)
+     {
+       this->ImageX = this->Size[0];
+       this->ImageY = this->Size[1];
++      ospRelease(this->OFrameBuffer);
+       this->OFrameBuffer = ospNewFrameBuffer
+         (isize,
+          OSP_FB_RGBA8,
+@@ -955,7 +1005,8 @@ void vtkOSPRayRendererNode::Render(bool prepass)
+       this->ZBuffer = new float[this->Size[0]*this->Size[1]];
+       if (this->CompositeOnGL)
+       {
+-        ODepthBuffer = new float[this->Size[0] * this->Size[1]];
++        delete[] this->ODepthBuffer;
++        this->ODepthBuffer = new float[this->Size[0] * this->Size[1]];
+       }
+     }
+     else if (this->Accumulate)
+@@ -1069,6 +1120,12 @@ void vtkOSPRayRendererNode::Render(bool prepass)
+             }
+           }
+         }
++        if (this->Internal->LastParallelScale !=
++            ren->GetActiveCamera()->GetParallelScale())
++        {
++          this->Internal->LastParallelScale = ren->GetActiveCamera()->GetParallelScale();
++          canReuse = false;
++        }
+       }
+       if (!canReuse)
+       {
+@@ -1090,7 +1147,6 @@ void vtkOSPRayRendererNode::Render(bool prepass)
+     ospSet1i(oRenderer, "backgroundEnabled", ren->GetErase());
+     if (this->CompositeOnGL)
+     {
+-      OSPTexture2D glDepthTex=nullptr;
+       vtkRenderWindow *rwin =
+       vtkRenderWindow::SafeDownCast(ren->GetVTKWindow());
+       int viewportX, viewportY;
+@@ -1125,10 +1181,10 @@ void vtkOSPRayRendererNode::Render(bool prepass)
+       cameraDir.z -= cameraPos[2];
+       cameraDir = ospray::opengl::normalize(cameraDir);
+ 
+-      glDepthTex = ospray::opengl::getOSPDepthTextureFromOpenGLPerspective
++      OSPTexture2D glDepthTex = ospray::opengl::getOSPDepthTextureFromOpenGLPerspective
+         (fovy, aspect, zNear, zFar,
+          (osp::vec3f&)cameraDir, (osp::vec3f&)cameraUp,
+-         this->GetZBuffer(), ODepthBuffer, viewportWidth, viewportHeight);
++         this->GetZBuffer(), this->ODepthBuffer, viewportWidth, viewportHeight);
+ 
+       ospSetObject(oRenderer, "maxDepthTexture", glDepthTex);
+     }
+diff --git a/Rendering/OSPRay/vtkOSPRayRendererNode.h b/Rendering/OSPRay/vtkOSPRayRendererNode.h
+index 7d7416314c..3b4857b3d5 100644
+--- a/Rendering/OSPRay/vtkOSPRayRendererNode.h
++++ b/Rendering/OSPRay/vtkOSPRayRendererNode.h
+@@ -26,6 +26,7 @@
+ #include "vtkRendererNode.h"
+ #include <vector> // for ivars
+ 
++class vtkInformationDoubleKey;
+ class vtkInformationDoubleVectorKey;
+ class vtkInformationIntegerKey;
+ class vtkInformationObjectBaseKey;
+@@ -181,6 +182,30 @@ public:
+   static vtkOSPRayMaterialLibrary* GetMaterialLibrary(vtkRenderer *renderer);
+   //@}
+ 
++  /**
++   * Requested time to show in a renderer and to lookup in a temporal cache.
++   */
++  static vtkInformationDoubleKey* VIEW_TIME();
++  //@{
++  /**
++   * Convenience method to set/get VIEW_TIME on a vtkRenderer.
++   */
++  static void SetViewTime(double , vtkRenderer *renderer);
++  static double GetViewTime(vtkRenderer *renderer);
++  //@}
++
++  /**
++   * Temporal cache size..
++   */
++  static vtkInformationIntegerKey* TIME_CACHE_SIZE();
++  //@{
++  /**
++   * Convenience method to set/get TIME_CACHE_SIZE on a vtkRenderer.
++   */
++  static void SetTimeCacheSize(int , vtkRenderer *renderer);
++  static int GetTimeCacheSize(vtkRenderer *renderer);
++  //@}
++
+   /**
+    * Methods for other nodes to access
+    */
+diff --git a/Rendering/OSPRay/vtkOSPRayTetrahedraMapperNode.cxx b/Rendering/OSPRay/vtkOSPRayTetrahedraMapperNode.cxx
+index 21cb574973..bbad90b6f9 100644
+--- a/Rendering/OSPRay/vtkOSPRayTetrahedraMapperNode.cxx
++++ b/Rendering/OSPRay/vtkOSPRayTetrahedraMapperNode.cxx
+@@ -16,17 +16,25 @@
+ 
+ #include "vtkCell.h"
+ #include "vtkColorTransferFunction.h"
++#include "vtkDataArray.h"
+ #include "vtkDataSet.h"
+-#include "vtkFloatArray.h"
++#include "vtkObjectFactory.h"
+ #include "vtkOSPRayRendererNode.h"
++#include "vtkOSPRayVolumeCache.h"
+ #include "vtkPiecewiseFunction.h"
+ #include "vtkPointData.h"
++#include "vtkRenderer.h"
+ #include "vtkUnstructuredGridVolumeMapper.h"
+ #include "vtkVolume.h"
+ #include "vtkVolumeNode.h"
+ #include "vtkVolumeProperty.h"
+ 
++#include <algorithm>
++
+ #include "ospray/ospray.h"
++#include "ospray/version.h"
++
++#include <cassert>
+ 
+ vtkStandardNewMacro(vtkOSPRayTetrahedraMapperNode);
+ 
+@@ -37,12 +45,17 @@ vtkOSPRayTetrahedraMapperNode::vtkOSPRayTetrahedraMapperNode()
+   this->NumColors = 128;
+   this->OSPRayVolume = NULL;
+   this->TransferFunction = NULL;
++  this->Cache = new vtkOSPRayVolumeCache;
+ }
+ 
+ vtkOSPRayTetrahedraMapperNode::~vtkOSPRayTetrahedraMapperNode()
+ {
+-  delete this->OSPRayVolume;
+   ospRelease(this->TransferFunction);
++  if (this->Cache->GetSize() == 0)
++  {
++    ospRelease(this->OSPRayVolume);
++  }
++  delete this->Cache;
+ }
+ 
+ void vtkOSPRayTetrahedraMapperNode::PrintSelf(ostream &os, vtkIndent indent)
+@@ -87,6 +100,8 @@ void vtkOSPRayTetrahedraMapperNode::Render(bool prepass)
+ 
+     vtkOSPRayRendererNode *orn = static_cast<vtkOSPRayRendererNode *>(
+       this->GetFirstAncestorOfType("vtkOSPRayRendererNode"));
++    vtkRenderer *ren = vtkRenderer::SafeDownCast(orn->GetRenderable());
++    this->Cache->SetSize(vtkOSPRayRendererNode::GetTimeCacheSize(ren));
+ 
+     osp::Model* OSPRayModel = orn->GetOModel();
+     if (!OSPRayModel)
+@@ -100,57 +115,23 @@ void vtkOSPRayTetrahedraMapperNode::Render(bool prepass)
+       return;
+     }
+     int fieldAssociation;
+-    vtkDataArray *sa = vtkDataArray::SafeDownCast(
++    vtkDataArray *array = vtkDataArray::SafeDownCast(
+       this->GetArrayToProcess(dataSet, fieldAssociation));
+-    if (!sa)
++    if (!array)
+     {
+       //ok can happen in paraview client server mode for example
+       return;
+     }
++#if OSPRAY_VERSION_MAJOR == 1 && OSPRAY_VERSION_MINOR < 6
+     if (fieldAssociation != 0)
+     {
+       vtkWarningMacro("Only point aligned data supported currently.");
+     }
+-    vtkSmartPointer<vtkFloatArray> array = vtkFloatArray::SafeDownCast(sa);
+-    if (!array)
+-    {
+-      vtkWarningMacro("Only float supported currently.");
+-      return;
+-    }
++#endif
+ 
+     int numberOfCells = dataSet->GetNumberOfCells();
+     int numberOfPoints = dataSet->GetNumberOfPoints();
+ 
+-    double point[3];
+-    for (int i=0; i<numberOfPoints; i++)
+-    {
+-      dataSet->GetPoint(i,point);
+-      osp::vec3f v;
+-      v.x = point[0];
+-      v.y = point[1];
+-      v.z = point[2];
+-      this->Vertices.push_back(v);
+-    }
+-
+-    for (int i=0; i<numberOfCells; i++)
+-    {
+-      vtkCell *cell = dataSet->GetCell(i);
+-      if (cell->GetCellType() == VTK_TETRA)
+-      {
+-        for (int j=0; j<4; j++)
+-        {
+-          this->Cells.push_back(cell->GetPointId(j));
+-        }
+-      }
+-    }
+-
+-    // Now the point data to volume render
+-    for(int j=0; j<numberOfPoints; j++)
+-    {
+-      float val = array->GetValue(j);
+-      this->Field.push_back(val);
+-    }
+-
+     if (!this->TransferFunction)
+     {
+       this->TransferFunction = ospNewTransferFunction("piecewise_linear");
+@@ -159,31 +140,111 @@ void vtkOSPRayTetrahedraMapperNode::Render(bool prepass)
+     // when input data is modified
+     if (mapper->GetDataSetInput()->GetMTime() > this->BuildTime)
+     {
+-      if (this->OSPRayVolume)
++      double tstep = vtkOSPRayRendererNode::GetViewTime(ren);
++      auto cached_Volume = this->Cache->GetFromCache(tstep);
++      if (cached_Volume)
+       {
+-        delete this->OSPRayVolume;
++        this->OSPRayVolume = cached_Volume;
++      }
++      else
++      {
++        if (this->OSPRayVolume && this->Cache->GetSize() == 0)
++        {
++          ospRelease(this->OSPRayVolume);
++        }
++#if OSPRAY_VERSION_MAJOR == 1 && OSPRAY_VERSION_MINOR >= 5
++        this->OSPRayVolume = ospNewVolume("unstructured_volume");
++#else
++        this->OSPRayVolume = ospNewVolume("tetrahedral_volume");
++#endif
++        this->Cache->AddToCache(tstep, this->OSPRayVolume);
++
+         this->Vertices.clear();
++        double point[3];
++        for (int i=0; i<numberOfPoints; i++)
++        {
++          dataSet->GetPoint(i,point);
++          osp::vec3f v;
++          v.x = point[0];
++          v.y = point[1];
++          v.z = point[2];
++          this->Vertices.push_back(v);
++        }
++
+         this->Cells.clear();
+-        this->Field.clear();
+-      }
+-      this->OSPRayVolume = ospNewVolume("tetrahedral_volume");
+-      assert(this->OSPRayVolume);
++        for (int i=0; i<numberOfCells; i++)
++        {
++          vtkCell *cell = dataSet->GetCell(i);
++          if (cell->GetCellType() == VTK_TETRA)
++          {
++#if OSPRAY_VERSION_MAJOR == 1 && OSPRAY_VERSION_MINOR >= 5
++            for (int j=0; j<4; j++)
++            {
++              this->Cells.push_back(-1);
++            }
++#endif
++            for (int j=0; j<4; j++)
++            {
++              this->Cells.push_back(cell->GetPointId(j));
++            }
++          }
++#if OSPRAY_VERSION_MAJOR == 1 && OSPRAY_VERSION_MINOR >= 5
++          else if (cell->GetCellType() == VTK_HEXAHEDRON)
++          {
++            for (int j=0; j<8; j++)
++            {
++              this->Cells.push_back(cell->GetPointId(j));
++            }
++          }
++#endif
++        }
+ 
+-      OSPData verticesData = ospNewData(this->Vertices.size(),OSP_FLOAT3,
+-        this->Vertices.data(),0);
+-      assert(verticesData);
+-      ospSetData(this->OSPRayVolume, "vertices", verticesData);
++        // Now the point data to volume render
++        this->Field.clear();
++#if OSPRAY_VERSION_MAJOR == 1 && OSPRAY_VERSION_MINOR >= 6
++        for (int j = 0; j < (fieldAssociation ? numberOfCells : numberOfPoints); j++)
++#else
++        for(int j=0; j<numberOfPoints; j++)
++#endif
++        {
++          //TODO: when OSP TET volume gets other types, use them
++          //TODO: try pass ref to entire array instead of this val by val copy
++          float val = static_cast<float>(array->GetTuple1(j));
++          this->Field.push_back(val);
++        }
+ 
+-      OSPData fieldData = ospNewData(this->Field.size(),OSP_FLOAT,this->Field.data(),0);
+-      assert(fieldData);
+-      ospSetData(this->OSPRayVolume, "field", fieldData);
++        OSPData verticesData = ospNewData(this->Vertices.size(),OSP_FLOAT3,
++                                          this->Vertices.data(),0);
++        assert(verticesData);
++        ospSetData(this->OSPRayVolume, "vertices", verticesData);
+ 
+-      OSPData tetrahedraData = ospNewData(this->Cells.size()/4,OSP_INT4,this->Cells.data(),0);
+-      assert(tetrahedraData);
+-      ospSetData(this->OSPRayVolume, "tetrahedra", tetrahedraData);
++        OSPData fieldData = ospNewData(this->Field.size(),OSP_FLOAT,this->Field.data(),0);
++        assert(fieldData);
++#if OSPRAY_VERSION_MAJOR == 1 && OSPRAY_VERSION_MINOR >= 6
++        if (fieldAssociation)
++        {
++          ospSetData(this->OSPRayVolume, "cellField", fieldData);
++        }
++        else
++#endif
++        {
++          ospSetData(this->OSPRayVolume, "field", fieldData);
++        }
+ 
+-      ospSet1i(this->OSPRayVolume, "nVertices", static_cast<int>(this->Vertices.size()));
+-      ospSet1i(this->OSPRayVolume, "nTetrahedra", static_cast<int>(this->Cells.size())/4);
++        OSPData indicesData = ospNewData(this->Cells.size()/4,OSP_INT4,this->Cells.data(),0);
++#if OSPRAY_VERSION_MAJOR == 1 && OSPRAY_VERSION_MINOR >= 5
++        ospSetData(this->OSPRayVolume, "indices", indicesData);
++#else
++        ospSetData(this->OSPRayVolume, "tetrahedra", indicesData);
++#endif
++
++        ospSet1i(this->OSPRayVolume, "nVertices", static_cast<int>(this->Vertices.size()));
++#if OSPRAY_VERSION_MAJOR == 1 && OSPRAY_VERSION_MINOR >= 5
++        ospSet1i(this->OSPRayVolume, "nCells", static_cast<int>(this->Cells.size())/8);
++#else
++        ospSet1i(this->OSPRayVolume, "nTetrahedra", static_cast<int>(this->Cells.size())/4);
++#endif
++      }
+     }
+ 
+     double* dim = mapper->GetBounds();
+@@ -195,18 +256,18 @@ void vtkOSPRayTetrahedraMapperNode::Render(bool prepass)
+     if (vol->GetProperty()->GetMTime() > this->PropertyTime
+         || mapper->GetDataSetInput()->GetMTime() > this->BuildTime)
+     {
+-      // Get transfer function. ++++++++++++++++++++++++++++++++++++++++++++++++++
++      // Get transfer function.
+       vtkColorTransferFunction* colorTF = volProperty->GetRGBTransferFunction(0);
+       vtkPiecewiseFunction *scalarTF = volProperty->GetScalarOpacity(0);
+ 
+       this->TFVals.resize(this->NumColors*3);
+       this->TFOVals.resize(this->NumColors);
+-      scalarTF->GetTable(sa->GetRange()[0],
+-        sa->GetRange()[1],
++      scalarTF->GetTable(array->GetRange()[0],
++        array->GetRange()[1],
+         this->NumColors,
+         &TFOVals[0]);
+-      colorTF->GetTable(sa->GetRange()[0],
+-        sa->GetRange()[1],
++      colorTF->GetTable(array->GetRange()[0],
++        array->GetRange()[1],
+         this->NumColors,
+         &this->TFVals[0]);
+ 
+@@ -228,8 +289,8 @@ void vtkOSPRayTetrahedraMapperNode::Render(bool prepass)
+       OSPData tfAlphaData = ospNewData(NumColors, OSP_FLOAT, &TFOVals[0]);
+       ospSetData(this->TransferFunction, "opacities", tfAlphaData);
+ 
+-      ospSet2f(this->TransferFunction, "valueRange", sa->GetRange()[0],
+-        sa->GetRange()[1]);
++      ospSet2f(this->TransferFunction, "valueRange", array->GetRange()[0],
++        array->GetRange()[1]);
+ 
+       ospSet1i(this->OSPRayVolume, "gradientShadingEnabled",
+         volProperty->GetShade());
+@@ -244,10 +305,10 @@ void vtkOSPRayTetrahedraMapperNode::Render(bool prepass)
+       this->PropertyTime.Modified();
+     }
+ 
+-    ospSet1f(OSPRayVolume, "samplingStep", samplingStep);
+-    ospSet1f(OSPRayVolume, "adaptiveMaxSamplingRate", 2.0f);
+-    ospSet1f(OSPRayVolume, "adaptiveBacktrack", 0.01f);
+-    ospSet1i(OSPRayVolume, "adaptiveSampling", 1);
++    ospSet1f(this->OSPRayVolume, "samplingStep", samplingStep);
++    ospSet1f(this->OSPRayVolume, "adaptiveMaxSamplingRate", 2.0f);
++    ospSet1f(this->OSPRayVolume, "adaptiveBacktrack", 0.01f);
++    ospSet1i(this->OSPRayVolume, "adaptiveSampling", 1);
+     if (this->SamplingRate == 0.0f)  // 0 means automatic sampling rate
+     {
+       //automatically determine sampling rate
+diff --git a/Rendering/OSPRay/vtkOSPRayTetrahedraMapperNode.h b/Rendering/OSPRay/vtkOSPRayTetrahedraMapperNode.h
+index aa71b5faa8..357142f62f 100644
+--- a/Rendering/OSPRay/vtkOSPRayTetrahedraMapperNode.h
++++ b/Rendering/OSPRay/vtkOSPRayTetrahedraMapperNode.h
+@@ -27,14 +27,7 @@
+ #include "vtkRenderingOSPRayModule.h" // For export macro
+ #include "vtkVolumeMapperNode.h"
+ 
+-class vtkFloatArray;
+-class vtkPoints;
+-class vtkUnsignedCharArray;
+-class vtkVisibilitySort;
+-class vtkVolumeProperty;
+-class vtkRenderWindow;
+-class vtkAbstractArray;
+-class vtkDataSet;
++class vtkOSPRayVolumeCache;
+ 
+ namespace osp
+ {
+@@ -76,6 +69,7 @@ protected:
+   std::vector<osp::vec3f> Vertices;
+   std::vector<float> Field;
+ 
++  vtkOSPRayVolumeCache *Cache;
+ private:
+   vtkOSPRayTetrahedraMapperNode(const vtkOSPRayTetrahedraMapperNode&) = delete;
+   void operator=(const vtkOSPRayTetrahedraMapperNode &) = delete;
+diff --git a/Rendering/OSPRay/vtkOSPRayVolumeCache.cxx b/Rendering/OSPRay/vtkOSPRayVolumeCache.cxx
+new file mode 100644
+index 0000000000..25c0359f47
+--- /dev/null
++++ b/Rendering/OSPRay/vtkOSPRayVolumeCache.cxx
+@@ -0,0 +1,84 @@
++/*=========================================================================
++
++  Program:   Visualization Toolkit
++  Module:    vtkOSPRayVolumeCache.h
++
++  Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
++  All rights reserved.
++  See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
++
++     This software is distributed WITHOUT ANY WARRANTY; without even
++     the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
++     PURPOSE.  See the above copyright notice for more information.
++
++=========================================================================*/
++
++#include "vtkOSPRayVolumeCache.h"
++
++#include "ospray/ospray.h"
++
++//------------------------------------------------------------------------------
++vtkOSPRayVolumeCache::vtkOSPRayVolumeCache()
++{
++  this->Size = 0;
++};
++
++//------------------------------------------------------------------------------
++vtkOSPRayVolumeCache::~vtkOSPRayVolumeCache()
++{
++  this->Empty();
++};
++
++//------------------------------------------------------------------------------
++void vtkOSPRayVolumeCache::AddToCache(double tstep, osp::Volume *payload)
++{
++  if (static_cast<int>(this->Contents.size()) >= this->Size)
++  {
++    return;
++  }
++  osp::Volume *content = this->GetFromCache(tstep);
++  ospRelease(content);
++  this->Contents[tstep] = payload;
++}
++
++//------------------------------------------------------------------------------
++osp::Volume* vtkOSPRayVolumeCache::GetFromCache(double tstep)
++{
++  auto ret = this->Contents.find(tstep);
++  if (ret != this->Contents.end())
++  {
++    return ret->second;
++  }
++  return nullptr;
++}
++
++//------------------------------------------------------------------------------
++void vtkOSPRayVolumeCache::Empty()
++{
++  for (auto itr : this->Contents)
++  {
++    ospRelease(itr.second);
++  }
++  this->Contents.clear();
++  this->Size = 0;
++}
++
++//------------------------------------------------------------------------------
++int vtkOSPRayVolumeCache::GetSize()
++{
++  return this->Size;
++}
++
++//------------------------------------------------------------------------------
++void vtkOSPRayVolumeCache::SetSize(int sz)
++{
++  if (sz == this->Size)
++  {
++    return;
++  }
++  if (sz < this->Size)
++  {
++    this->Empty();
++  }
++  this->Size = sz;
++}
+diff --git a/Rendering/OSPRay/vtkOSPRayVolumeCache.h b/Rendering/OSPRay/vtkOSPRayVolumeCache.h
+new file mode 100644
+index 0000000000..fb0e668564
+--- /dev/null
++++ b/Rendering/OSPRay/vtkOSPRayVolumeCache.h
+@@ -0,0 +1,73 @@
++/*=========================================================================
++
++  Program:   Visualization Toolkit
++  Module:    vtkOSPRayVolumeCache.h
++
++  Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
++  All rights reserved.
++  See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
++
++     This software is distributed WITHOUT ANY WARRANTY; without even
++     the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
++     PURPOSE.  See the above copyright notice for more information.
++
++=========================================================================*/
++/**
++ * @class   vtkOSPRayVolumeCache
++ * @brief   temporal cache ospray structures to speed flipbooks
++ *
++ * A temporal cache of ospray volumes that are created on the first
++ * playthrough and reused afterward to speed up animations. Cache is
++ * first come first serve. In other words the first 'Size' AddToCache
++ * calls will succeed, later calls will be silently ignored. Decreasing
++ * the size of the cache frees all previously held contents.
++*/
++
++#ifndef vtkOSPRayVolumeCache_h
++#define vtkOSPRayVolumeCache_h
++
++#include "vtkRenderingOSPRayModule.h" // For export macro
++#include "vtkSystemIncludes.h" //dll warning suppression
++#include <map> // for stl
++
++namespace osp
++{
++  struct Volume;
++}
++
++class VTKRENDERINGOSPRAY_EXPORT vtkOSPRayVolumeCache {
++public:
++  vtkOSPRayVolumeCache();
++  ~vtkOSPRayVolumeCache();
++
++  /**
++   * Insert a new volume into the cache.
++   */
++  void AddToCache(double tstep, osp::Volume *payload);
++
++  /**
++   * Obtain a volume from the cache.
++   * Return nullptr if none present at tstep.
++   */
++  osp::Volume* GetFromCache(double tstep);
++
++  //@{
++  /**
++   * Set/Get the number of slots available in the cache.
++   * Default is 0.
++   */
++  void SetSize(int);
++  int GetSize();
++  //@}
++
++private:
++
++  // deletes all of the content in the cache
++  void Empty();
++  int Size;
++
++  std::map<double, osp::Volume*> Contents;
++};
++
++#endif //vtkOSPRayVolumeCache_h
++// VTK-HeaderTest-Exclude: vtkOSPRayVolumeCache.h
+diff --git a/Rendering/OSPRay/vtkOSPRayVolumeMapperNode.cxx b/Rendering/OSPRay/vtkOSPRayVolumeMapperNode.cxx
+index d810c61319..880b7161cc 100644
+--- a/Rendering/OSPRay/vtkOSPRayVolumeMapperNode.cxx
++++ b/Rendering/OSPRay/vtkOSPRayVolumeMapperNode.cxx
+@@ -22,12 +22,14 @@
+ #include "vtkInformation.h"
+ #include "vtkImageData.h"
+ #include "vtkObjectFactory.h"
++#include "vtkOSPRayVolumeCache.h"
+ #include "vtkOSPRayRendererNode.h"
+ #include "vtkPiecewiseFunction.h"
+ #include "vtkPointData.h"
+ #include "vtkVolume.h"
+ #include "vtkVolumeNode.h"
+ #include "vtkVolumeProperty.h"
++#include "vtkRenderer.h"
+ 
+ #include <algorithm>
+ 
+@@ -43,13 +45,18 @@ vtkOSPRayVolumeMapperNode::vtkOSPRayVolumeMapperNode()
+   this->NumColors = 128;
+   this->OSPRayVolume = nullptr;
+   this->TransferFunction = nullptr;
++  this->Cache = new vtkOSPRayVolumeCache;
+ }
+ 
+ //----------------------------------------------------------------------------
+ vtkOSPRayVolumeMapperNode::~vtkOSPRayVolumeMapperNode()
+ {
+-  delete this->OSPRayVolume;
+   ospRelease(this->TransferFunction);
++  if (this->Cache->GetSize() == 0)
++  {
++    ospRelease(this->OSPRayVolume);
++  }
++  delete this->Cache;
+ }
+ 
+ //----------------------------------------------------------------------------
+@@ -79,6 +86,8 @@ void vtkOSPRayVolumeMapperNode::Render(bool prepass)
+     vtkOSPRayRendererNode *orn =
+       static_cast<vtkOSPRayRendererNode *>(
+         this->GetFirstAncestorOfType("vtkOSPRayRendererNode"));
++    vtkRenderer *ren = vtkRenderer::SafeDownCast(orn->GetRenderable());
++    this->Cache->SetSize(vtkOSPRayRendererNode::GetTimeCacheSize(ren));
+ 
+     osp::Model* OSPRayModel = orn->GetOModel();
+ 
+@@ -106,110 +115,158 @@ void vtkOSPRayVolumeMapperNode::Render(bool prepass)
+       vtkErrorMacro("VolumeMapper's Input has no scalar array!");
+       return;
+     }
+-    vtkDataArray *sca = nullptr;
+-    int ncomp = sa->GetNumberOfComponents();
+-    if (ncomp>1)
+-    {
+-      int comp = 0;//mapper->GetArrayComponent(); not yet supported
+-      /*
+-      if (comp<0)
+-      {
+-        comp = 0;
+-      }
+-      if (comp>ncomp-1)
+-      {
+-        comp = ncomp-1;
+-      }
+-      */
+-      sca = sa->NewInstance();
+-      sca->SetNumberOfComponents(1);
+-      sca->SetNumberOfTuples(sa->GetNumberOfTuples());
+-      sca->CopyComponent(0, sa, comp);
+-      sa = sca;
+-    }
+-    int ScalarDataType = sa->GetDataType();
+-    void* ScalarDataPointer = sa->GetVoidPointer(0);
+-    int dim[3];
+-    data->GetDimensions(dim);
+-    if (fieldAssociation == vtkDataObject::FIELD_ASSOCIATION_CELLS)
+-    {
+-      dim[0] = dim[0]-1;
+-      dim[1] = dim[1]-1;
+-      dim[2] = dim[2]-1;
+-    }
+-
+-    std::string voxelType;
+-    if (ScalarDataType == VTK_FLOAT)
+-    {
+-      voxelType = "float";
+-    }
+-    else if (ScalarDataType == VTK_UNSIGNED_CHAR)
+-    {
+-      voxelType = "uchar";
+-    }
+-    else if (ScalarDataType == VTK_UNSIGNED_SHORT)
+-    {
+-      voxelType = "ushort";
+-    }
+-    else if (ScalarDataType == VTK_SHORT)
+-    {
+-      voxelType = "ushort";
+-    }
+-    else if (ScalarDataType == VTK_DOUBLE)
+-    {
+-      voxelType = "double";
+-    }
+-    else
+-    {
+-      vtkErrorMacro("ERROR: Unsupported data type for ospray volumes, current supported data types are: float, uchar, and double.");
+-      return;
+-    }
+ 
+     if (!this->TransferFunction)
+     {
+       this->TransferFunction = ospNewTransferFunction("piecewise_linear");
+     }
+ 
++    vtkVolumeProperty* volProperty = vol->GetProperty();
+     // when input data is modified
++    vtkDataArray *sca = nullptr;
+     if (mapper->GetDataSetInput()->GetMTime() > this->BuildTime)
+     {
+-      delete this->OSPRayVolume;
+-      this->OSPRayVolume = ospNewVolume("block_bricked_volume");
+-
+-      //
+-      // Send Volumetric data to OSPRay
+-      //
+-      ospSet3i(this->OSPRayVolume, "dimensions", dim[0], dim[1], dim[2]);
+-      double origin[3];
+-      double scale[3];
+-      data->GetOrigin(origin);
+-      vol->GetScale(scale);
+-      const double *bds = vol->GetBounds();
+-      origin[0] = bds[0];
+-      origin[1] = bds[2];
+-      origin[2] = bds[4];
+-
+-      double spacing[3];
+-      data->GetSpacing(spacing);
+-      scale[0] = (bds[1]-bds[0])/double(dim[0]-1);
+-      scale[1] = (bds[3]-bds[2])/double(dim[1]-1);
+-      scale[2] = (bds[5]-bds[4])/double(dim[2]-1);
+-
+-      ospSet3f(this->OSPRayVolume, "gridOrigin", origin[0], origin[1], origin[2]);
+-      ospSet3f(this->OSPRayVolume, "gridSpacing", scale[0], scale[1], scale[2]);
+-      ospSetString(this->OSPRayVolume, "voxelType", voxelType.c_str());
+-
+-      osp::vec3i ll, uu;
+-      ll.x = 0, ll.y = 0, ll.z = 0;
+-      uu.x = dim[0], uu.y = dim[1], uu.z = dim[2];
+-      ospSetRegion(this->OSPRayVolume, ScalarDataPointer, ll, uu);
+-
+-      ospSet2f(this->TransferFunction, "valueRange",
+-               sa->GetRange()[0], sa->GetRange()[1]);
++      double tstep = vtkOSPRayRendererNode::GetViewTime(ren);
++      auto cached_Volume = this->Cache->GetFromCache(tstep);
++      if (cached_Volume)
++      {
++        this->OSPRayVolume = cached_Volume;
++      }
++      else
++      {
++        int ncomp = sa->GetNumberOfComponents();
++        if (ncomp>1)
++        {
++          int comp = 0;//mapper->GetArrayComponent(); not yet supported
++          sca = sa->NewInstance();
++          sca->SetNumberOfComponents(1);
++          sca->SetNumberOfTuples(sa->GetNumberOfTuples());
++          sca->CopyComponent(0, sa, comp);
++          sa = sca;
++        }
++        int ScalarDataType = sa->GetDataType();
++        void* ScalarDataPointer = sa->GetVoidPointer(0);
++        int dim[3];
++        data->GetDimensions(dim);
++        if (fieldAssociation == vtkDataObject::FIELD_ASSOCIATION_CELLS)
++        {
++          dim[0] = dim[0]-1;
++          dim[1] = dim[1]-1;
++          dim[2] = dim[2]-1;
++        }
++
++        std::string voxelType;
++        if (ScalarDataType == VTK_FLOAT)
++        {
++          voxelType = "float";
++        }
++        else if (ScalarDataType == VTK_UNSIGNED_CHAR)
++        {
++          voxelType = "uchar";
++        }
++        else if (ScalarDataType == VTK_UNSIGNED_SHORT)
++        {
++          voxelType = "ushort";
++        }
++        else if (ScalarDataType == VTK_SHORT)
++        {
++          voxelType = "short";
++        }
++        else if (ScalarDataType == VTK_DOUBLE)
++        {
++          voxelType = "double";
++        }
++        else
++        {
++          vtkErrorMacro("ERROR: Unsupported data type for ospray volumes, current supported data types are: float, uchar, short, ushort, and double.");
++          return;
++        }
++
++        if (this->Cache->GetSize() == 0)
++        {
++          ospRelease(this->OSPRayVolume);
++        }
++        this->OSPRayVolume = ospNewVolume("block_bricked_volume");
++        this->Cache->AddToCache(tstep, this->OSPRayVolume);
++        //
++        // Send Volumetric data to OSPRay
++        //
++        ospSet3i(this->OSPRayVolume, "dimensions", dim[0], dim[1], dim[2]);
++        double origin[3];
++        double scale[3];
++        data->GetOrigin(origin);
++        vol->GetScale(scale);
++        const double *bds = vol->GetBounds();
++        origin[0] = bds[0];
++        origin[1] = bds[2];
++        origin[2] = bds[4];
++
++        double spacing[3];
++        data->GetSpacing(spacing);
++        scale[0] = (bds[1]-bds[0])/double(dim[0]-1);
++        scale[1] = (bds[3]-bds[2])/double(dim[1]-1);
++        scale[2] = (bds[5]-bds[4])/double(dim[2]-1);
++
++        ospSet3f(this->OSPRayVolume, "gridOrigin", origin[0], origin[1], origin[2]);
++        ospSet3f(this->OSPRayVolume, "gridSpacing", scale[0], scale[1], scale[2]);
++        ospSetString(this->OSPRayVolume, "voxelType", voxelType.c_str());
++
++        osp::vec3i ll, uu;
++        ll.x = 0, ll.y = 0, ll.z = 0;
++        uu.x = dim[0], uu.y = dim[1], uu.z = dim[2];
++        ospSetRegion(this->OSPRayVolume, ScalarDataPointer, ll, uu);
++
++        ospSet2f(this->TransferFunction, "valueRange",
++                 sa->GetRange()[0], sa->GetRange()[1]);
++        ospSetObject(this->OSPRayVolume, "transferFunction",
++                     this->TransferFunction);
++
++        ospSet1f(OSPRayVolume, "adaptiveMaxSamplingRate", 1.2f);
++        ospSet1f(OSPRayVolume, "adaptiveBacktrack", 0.01f);
++        ospSet1i(OSPRayVolume, "adaptiveSampling", 1);
++        if (this->SamplingRate == 0.0f)  // 0 means automatic sampling rate
++        {
++          //automatically determine sampling rate
++          int minBound = std::min(std::min(dim[0],dim[1]),dim[2]);
++          float minSamplingRate = 0.075f; // lower for min adaptive sampling step
++          if (minBound < 100)
++          {
++            float s = (100.0f - minBound)/100.0f;
++            ospSet1f(this->OSPRayVolume, "samplingRate", s*6.f + 1.f);
++            ospSet1i(this->OSPRayVolume, "adaptiveSampling", 0); //turn off preIntegration
++          }
++          else if (minBound < 1000)
++          {
++            float s = std::min((900.0f - minBound)/1000.0f, 1.f);
++            float s_new = (s*s*s*(0.5f-minSamplingRate) + minSamplingRate);
++            ospSet1f(this->OSPRayVolume, "samplingRate", s_new);
++            ospSet1f(this->OSPRayVolume, "adaptiveMaxSamplingRate", 2.f);
++          }
++          else
++          {
++            ospSet1f(this->OSPRayVolume, "samplingRate", minSamplingRate);
++          }
++        }
++        else
++        {
++          ospSet1f(this->OSPRayVolume, "samplingRate", this->SamplingRate);
++        }
++        ospSet1f(this->OSPRayVolume, "adaptiveScalar", 15.f);
++        ospSet1i(this->OSPRayVolume, "preIntegration", 0); //turn off preIntegration
++
++        float rs = static_cast<float>(volProperty->GetSpecular(0)/16.); //16 chosen because near GL
++        float gs = static_cast<float>(volProperty->GetSpecular(1)/16.);
++        float bs = static_cast<float>(volProperty->GetSpecular(2)/16.);
++        ospSet3f(this->OSPRayVolume, "specular", rs,gs,bs);
++
++        ospSet1i(this->OSPRayVolume, "gradientShadingEnabled",
++                 volProperty->GetShade());
++        ospCommit(this->TransferFunction);
++        ospCommit(this->OSPRayVolume);
++      }
+     }
+ 
+     // test for modifications to volume properties
+-    vtkVolumeProperty* volProperty = vol->GetProperty();
+     if (vol->GetProperty()->GetMTime() > this->PropertyTime
+         || mapper->GetDataSetInput()->GetMTime() > this->BuildTime)
+     {
+@@ -236,58 +293,15 @@ void vtkOSPRayVolumeMapperNode::Render(bool prepass)
+       OSPData tfAlphaData = ospNewData(NumColors, OSP_FLOAT, &TFOVals[0]);
+       ospSetData(this->TransferFunction, "opacities", tfAlphaData);
+ 
+-      ospSetObject(this->OSPRayVolume, "transferFunction",
+-                   this->TransferFunction);
+-
+-      ospSet1i(this->OSPRayVolume, "gradientShadingEnabled",
+-               volProperty->GetShade());
+       this->PropertyTime.Modified();
+       ospRelease(colorData);
+       ospRelease(tfAlphaData);
++      ospCommit(this->TransferFunction);
+     }
+ 
+-    ospSet1f(OSPRayVolume, "adaptiveMaxSamplingRate", 1.2f);
+-    ospSet1f(OSPRayVolume, "adaptiveBacktrack", 0.01f);
+-    ospSet1i(OSPRayVolume, "adaptiveSampling", 1);
+-    if (this->SamplingRate == 0.0f)  // 0 means automatic sampling rate
+-    {
+-      //automatically determine sampling rate
+-      int minBound = std::min(std::min(dim[0],dim[1]),dim[2]);
+-      float minSamplingRate = 0.075f; // lower for min adaptive sampling step
+-      if (minBound < 100)
+-      {
+-        float s = (100.0f - minBound)/100.0f;
+-        ospSet1f(this->OSPRayVolume, "samplingRate", s*6.f + 1.f);
+-        ospSet1i(this->OSPRayVolume, "adaptiveSampling", 0); //turn off preIntegration
+-      }
+-      else if (minBound < 1000)
+-      {
+-        float s = std::min((900.0f - minBound)/1000.0f, 1.f);
+-        float s_new = (s*s*s*(0.5f-minSamplingRate) + minSamplingRate);
+-        ospSet1f(this->OSPRayVolume, "samplingRate", s_new);
+-        ospSet1f(this->OSPRayVolume, "adaptiveMaxSamplingRate", 2.f);
+-      }
+-      else
+-      {
+-        ospSet1f(this->OSPRayVolume, "samplingRate", minSamplingRate);
+-      }
+-    }
+-    else
+-    {
+-      ospSet1f(this->OSPRayVolume, "samplingRate", this->SamplingRate);
+-    }
+-    ospSet1f(this->OSPRayVolume, "adaptiveScalar", 15.f);
+-    float rs = static_cast<float>(volProperty->GetSpecular(0)/16.); //16 chosen because near GL
+-    float gs = static_cast<float>(volProperty->GetSpecular(1)/16.);
+-    float bs = static_cast<float>(volProperty->GetSpecular(2)/16.);
+-    ospSet3f(this->OSPRayVolume, "specular", rs,gs,bs);
+-    ospSet1i(this->OSPRayVolume, "preIntegration", 0); //turn off preIntegration
+-
+     this->RenderTime = volNode->GetMTime();
+     this->BuildTime.Modified();
+ 
+-    ospCommit(this->TransferFunction);
+-    ospCommit(this->OSPRayVolume);
+     ospAddVolume(OSPRayModel, this->OSPRayVolume);
+ 
+     if (sca)
+diff --git a/Rendering/OSPRay/vtkOSPRayVolumeMapperNode.h b/Rendering/OSPRay/vtkOSPRayVolumeMapperNode.h
+index bf8c1f1770..6c4e41fa7a 100644
+--- a/Rendering/OSPRay/vtkOSPRayVolumeMapperNode.h
++++ b/Rendering/OSPRay/vtkOSPRayVolumeMapperNode.h
+@@ -28,6 +28,7 @@
+ class vtkAbstractArray;
+ class vtkDataSet;
+ class vtkVolume;
++class vtkOSPRayVolumeCache;
+ 
+ namespace osp
+ {
+@@ -77,6 +78,8 @@ protected:
+   std::vector<float> TFVals;
+   std::vector<float> TFOVals;
+ 
++  vtkOSPRayVolumeCache *Cache;
++
+ private:
+   vtkOSPRayVolumeMapperNode(const vtkOSPRayVolumeMapperNode&) = delete;
+   void operator=(const vtkOSPRayVolumeMapperNode&) = delete;
