@@ -130,7 +130,7 @@ def _impl(repository_ctx):
     # else:
     #     fail("Operating system is NOT supported", attr = os_result)
 
-    yar = "/home/eacousineau/proj/tri/proj/perception/vtk_ospray_build/build/install"
+    yar = "/home/eacousineau/proj/tri/proj/perception/vtk_ospray_build/build_gcc_internal/install"
     # yar = "/home/eacousineau/proj/tri/repo/branches/drake/review/drake/tools/workspace/vtk/packaging/build"
     dirs = ["bin", "include", "lib", "share"]
     for dir in dirs:

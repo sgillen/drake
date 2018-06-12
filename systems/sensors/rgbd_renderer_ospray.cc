@@ -238,12 +238,14 @@ void RgbdRendererOSPRay::Impl::ImplRenderColorImage(
 
 void RgbdRendererOSPRay::Impl::ImplRenderDepthImage(
     ImageDepth32F* depth_image_out) const {
+  unused(depth_image_out);
   // TODO(kunimatsu-tri) Implement this.
   throw std::runtime_error("Not implemented.");
 }
 
 void RgbdRendererOSPRay::Impl::ImplRenderLabelImage(
     ImageLabel16I* label_image_out) const {
+  unused(label_image_out);
   // TODO(kunimatsu-tri) Implement this.
   throw std::runtime_error("Not implemented.");
 }
