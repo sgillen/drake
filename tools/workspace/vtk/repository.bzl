@@ -52,7 +52,7 @@ Argument:
 
 load("@drake//tools/workspace:os.bzl", "determine_os")
 
-VTK_MAJOR_MINOR_VERSION = "9.0"
+VTK_MAJOR_MINOR_VERSION = "8.1"
 
 def _vtk_cc_library(os_name, name, hdrs = None, visibility = None, deps = None,
                     header_only = False, linkopts = []):
@@ -174,10 +174,6 @@ licenses([
         ],
     )
 
-    file_content += _vtk_cc_library(repository_ctx.os.name, "vtklzma")
-    file_content += _vtk_cc_library(
-        repository_ctx.os.name, "vtkdoubleconversion")
-
     file_content += _vtk_cc_library(
         repository_ctx.os.name,
         "vtkCommonCore",
@@ -239,9 +235,7 @@ licenses([
             "vtkWrappingHints.h",
         ],
         deps = [
-            ":vtkdoubleconversion",
             ":vtkkwiml",
-            ":vtklzma",
             ":vtksys",
         ],
     )
@@ -597,9 +591,8 @@ licenses([
 cc_library(
     name = "ospray",
     srcs =
-        glob(["lib/libembree3.so*"]) +
-        glob(["lib/libospray*.so*"]) +
-        glob(["lib/libtbb.so*"]),
+        glob(["lib/libembree.so*"]) +
+        glob(["lib/libospray*.so*"]),
     visibility = ["//visibility:private"],
 )
 """
