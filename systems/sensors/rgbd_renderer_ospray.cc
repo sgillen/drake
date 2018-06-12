@@ -52,7 +52,14 @@ namespace drake {
 namespace systems {
 namespace sensors {
 
-class RgbdRendererOSPRay::Impl {
+struct ModuleInitVtkRenderingOpenGL2 {
+  ModuleInitVtkRenderingOpenGL2() {
+    VTK_AUTOINIT_CONSTRUCT(vtkRenderingOpenGL2)
+  }
+};
+
+class RgbdRendererOSPRay::Impl : private ModuleInitVtkRenderingOpenGL2 {
+
  public:
   DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(Impl)
 
