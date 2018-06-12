@@ -18,6 +18,9 @@
 #include "vtkSmartPointer.h"
 #include "vtkTexture.h"
 
+#include "vtkAutoInit.h"
+VTK_MODULE_INIT(vtkRenderingOpenGL2)
+
 //----------------------------------------------------------------------------
 class vtkProgressiveRenderLooper : public vtkCommand
 {
