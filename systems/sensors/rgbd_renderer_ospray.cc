@@ -52,14 +52,30 @@ namespace drake {
 namespace systems {
 namespace sensors {
 
+namespace {
+
+enum ImageType {
+  kColor = 0,
+};
+
+const int kNumOutputImage = 1;
+
+struct RenderingPipeline {
+  vtkNew<vtkRenderer> renderer;
+  vtkNew<vtkRenderWindow> window;
+  vtkNew<vtkWindowToImageFilter> filter;
+  vtkNew<vtkImageExport> exporter;
+};
+
 struct ModuleInitVtkRenderingOpenGL2 {
   ModuleInitVtkRenderingOpenGL2() {
     VTK_AUTOINIT_CONSTRUCT(vtkRenderingOpenGL2)
   }
 };
 
-class RgbdRendererOSPRay::Impl : private ModuleInitVtkRenderingOpenGL2 {
+}  // namespace
 
+class RgbdRendererOSPRay::Impl : private ModuleInitVtkRenderingOpenGL2 {
  public:
   DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(Impl)
 
@@ -69,15 +85,27 @@ class RgbdRendererOSPRay::Impl : private ModuleInitVtkRenderingOpenGL2 {
  private:
 
   RgbdRendererOSPRay* parent_ = nullptr;
+  // 0 for RGB, 1 for depth, and 2 for ground-truth label rendering.
+  std::array<std::unique_ptr<RenderingPipeline>,
+             kNumOutputImage> pipelines_;
 };
 
 RgbdRendererOSPRay::Impl::Impl(RgbdRendererOSPRay* parent,
                             const Eigen::Isometry3d& X_WC)
-    : parent_(parent) {
+    : parent_(parent),
+      pipelines_{{std::make_unique<RenderingPipeline>()}} {
+  auto& cp = pipelines_[ImageType::kColor];
+  if (parent_->config().show_window) {
+    cp->window->SetWindowName("Color Image");
+  } else {
+    for (auto& pipeline : pipelines_) {
+      pipeline->window->SetOffScreenRendering(1);
+    }
+  }
+
   // OSPRay specific configuration.
   vtkNew<vtkOSPRayPass> ospray;
   unused(ospray);
-  unused(parent_);
   exit(0);
 }
 
