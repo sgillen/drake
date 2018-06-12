@@ -93,6 +93,7 @@ cc_library(
         "@vtk//:vtkIOImage",
         "@vtk//:vtkRenderingCore",
         "@vtk//:vtkRenderingOpenGL2",
+        "@vtk//:vtkRenderingOSPRay",
     ],
 )
 
