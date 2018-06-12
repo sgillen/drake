@@ -52,7 +52,13 @@ namespace drake {
 namespace systems {
 namespace sensors {
 
+using vtk_util::ConvertToVtkTransform;
+
 namespace {
+
+// TODO(kunimatsu-tri) Add support for the arbitrary clipping planes.
+const double kClippingPlaneNear = 0.01;
+const double kClippingPlaneFar = 100.;
 
 enum ImageType {
   kColor = 0,
@@ -66,6 +72,19 @@ struct RenderingPipeline {
   vtkNew<vtkWindowToImageFilter> filter;
   vtkNew<vtkImageExport> exporter;
 };
+
+void SetModelTransformMatrixToVtkCamera(
+    vtkCamera* camera, const vtkSmartPointer<vtkTransform>& X_WC) {
+  // vtkCamera contains a transformation as the internal state and
+  // ApplyTransform multiplies a given transformation on top of the internal
+  // transformation. Thus, resetting 'Set{Position, FocalPoint, ViewUp}' is
+  // needed here.
+  camera->SetPosition(0., 0., 0.);
+  camera->SetFocalPoint(0., 0., 1.);  // Sets z-forward.
+  camera->SetViewUp(0., -1, 0.);  // Sets y-down. For the detail, please refer
+  // to CameraInfo's document.
+  camera->ApplyTransform(X_WC);
+}
 
 struct ModuleInitVtkRenderingOpenGL2 {
   ModuleInitVtkRenderingOpenGL2() {
@@ -109,8 +128,45 @@ RgbdRendererOSPRay::Impl::Impl(RgbdRendererOSPRay* parent,
 
   // OSPRay specific configuration.
   vtkNew<vtkOSPRayPass> ospray;
-  unused(ospray);
   exit(0);
+  cp->renderer->SetPass(ospray);
+  vtkOSPRayRendererNode::SetRendererType("pathtracer", cp->renderer);
+  vtkOSPRayRendererNode::SetSamplesPerPixel(1, cp->renderer);
+
+  double np[3] = {0, 0, 1};
+  double ep[3] = {0, 1, 0};
+  vtkOSPRayRendererNode::SetNorthPole(np, cp->renderer);
+  vtkOSPRayRendererNode::SetEastPole(ep, cp->renderer);
+  vtkOSPRayRendererNode::SetMaterialLibrary(materials_, cp->renderer);
+
+  const vtkSmartPointer<vtkTransform> vtk_X_WC = ConvertToVtkTransform(X_WC);
+
+  for (auto& pipeline : pipelines_) {
+    auto camera = pipeline->renderer->GetActiveCamera();
+    camera->SetViewAngle(parent_->config().fov_y * 180. / M_PI);
+    camera->SetClippingRange(kClippingPlaneNear, kClippingPlaneFar);
+    SetModelTransformMatrixToVtkCamera(camera, vtk_X_WC);
+    pipeline->window->SetSize(parent_->config().width,
+                              parent_->config().height);
+    pipeline->window->AddRenderer(pipeline->renderer);
+    pipeline->filter->SetInput(pipeline->window);
+    pipeline->filter->SetScale(1);
+    pipeline->filter->ReadFrontBufferOff();
+    pipeline->filter->SetInputBufferTypeToRGBA();
+    pipeline->filter->Update();
+    pipeline->exporter->SetInputData(pipeline->filter->GetOutput());
+    pipeline->exporter->ImageLowerLeftOff();
+  }
+
+  // TODO(kunimatsu-tri) Add API to handle lighting stuff.
+  light_->SetPosition(-2, 0, 10);
+  light_->SetFocalPoint(0, 0, 0);
+  light_->PositionalOff();
+  // OSPRay specific control, radius to get soft shadows.
+  vtkOSPRayLightNode::SetRadius(2.0, light_);
+  light_->SetTransformMatrix(vtk_X_WC->GetMatrix());
+
+  cp->renderer->AddLight(light_);
 }
 
 RgbdRendererOSPRay::RgbdRendererOSPRay(const RenderingConfig& config,
