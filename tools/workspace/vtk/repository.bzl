@@ -106,29 +106,34 @@ def _impl(repository_ctx):
     if os_result.error != None:
         fail(os_result.error)
 
-    if os_result.is_macos:
-        repository_ctx.symlink("/usr/local/opt/vtk@{}/include".format(
-            VTK_MAJOR_MINOR_VERSION), "include")
-    elif os_result.is_ubuntu:
-        if os_result.ubuntu_release == "16.04":
-            archive = "vtk-v8.1.1-qt-5.5.1-xenial-x86_64.tar.gz"
-            sha256 = "b2bc97da2d21dda16775de50638ffeaa4070673dcc01aaee88311f09678a36bc"  # noqa
-        elif os_result.ubuntu_release == "18.04":
-            archive = "vtk-v8.1.1-qt-5.9.5-bionic-x86_64.tar.gz"
-            sha256 = "3f61705139f2475bd035ccdd3d52920f2308b3581ca044a6a4bc535ceea9cc71"  # noqa
-        else:
-            fail("Operating system is NOT supported", attr = os_result)
+    # if os_result.is_macos:
+    #     repository_ctx.symlink("/usr/local/opt/vtk@{}/include".format(
+    #         VTK_MAJOR_MINOR_VERSION), "include")
+    # elif os_result.is_ubuntu:
+    #     if os_result.ubuntu_release == "16.04":
+    #         archive = "vtk-v8.1.1-qt-5.5.1-xenial-x86_64.tar.gz"
+    #         sha256 = "b2bc97da2d21dda16775de50638ffeaa4070673dcc01aaee88311f09678a36bc"  # noqa
+    #     elif os_result.ubuntu_release == "18.04":
+    #         archive = "vtk-v8.1.1-qt-5.9.5-bionic-x86_64.tar.gz"
+    #         sha256 = "3f61705139f2475bd035ccdd3d52920f2308b3581ca044a6a4bc535ceea9cc71"  # noqa
+    #     else:
+    #         fail("Operating system is NOT supported", attr = os_result)
 
-        urls = [
-            x.format(archive = archive)
-            for x in repository_ctx.attr.mirrors.get("vtk")
-        ]
-        root_path = repository_ctx.path("")
+    #     urls = [
+    #         x.format(archive = archive)
+    #         for x in repository_ctx.attr.mirrors.get("vtk")
+    #     ]
+    #     root_path = repository_ctx.path("")
 
-        repository_ctx.download_and_extract(urls, root_path, sha256 = sha256)
+    #     repository_ctx.download_and_extract(urls, root_path, sha256 = sha256)
 
-    else:
-        fail("Operating system is NOT supported", attr = os_result)
+    # else:
+    #     fail("Operating system is NOT supported", attr = os_result)
+
+    yar = "/home/eacousineau/proj/tri/proj/perception/vtk_ospray_build/build/install"
+    dirs = ["bin", "include", "lib", "share"]
+    for dir in dirs:
+        repository_ctx.symlink(yar + "/" + dir, dir)
 
     file_content = """# -*- python -*-
 
