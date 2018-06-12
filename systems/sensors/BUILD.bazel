@@ -479,10 +479,10 @@ drake_cc_googletest(
     ],
     deps = [
         ":rgbd_renderer",
-        ":rgbd_renderer_test_util",
-        "//common:find_resource",
-        "//common/test_utilities:eigen_matrix_compare",
-        "//math:geometric_transform",
+        # ":rgbd_renderer_test_util",
+        # "//common:find_resource",
+        # "//common/test_utilities:eigen_matrix_compare",
+        # "//math:geometric_transform",
     ],
 )
 

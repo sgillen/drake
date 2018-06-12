@@ -263,6 +263,7 @@ RgbdRendererOSPRay::Impl::Impl(RgbdRendererOSPRay* parent,
 
   // OSPRay specific configuration.
   vtkNew<vtkOSPRayPass> ospray;
+  exit(0);
   cp->renderer->SetPass(ospray);
   vtkOSPRayRendererNode::SetRendererType("pathtracer", cp->renderer);
   vtkOSPRayRendererNode::SetSamplesPerPixel(1, cp->renderer);
