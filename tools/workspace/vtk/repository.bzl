@@ -637,9 +637,12 @@ licenses([
     file_content += """
 cc_library(
     name = "ospray",
-    srcs =
-        glob(["lib/libembree*.so*"]) +
-        glob(["lib/libospray*.so*"]),
+    srcs = glob([
+        "lib/libembree*.so*",
+        "lib/libmpifort*.so*",
+        "lib/libospray*.so*",
+        "lib/libtbb*.so*",
+    ]),
     visibility = ["//visibility:private"],
 )
 """
