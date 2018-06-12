@@ -134,7 +134,6 @@ class RgbdRendererOSPRay::Impl : private ModuleInitVtkRenderingOpenGL2 {
   void ImplRenderLabelImage(ImageLabel16I* label_image_out) const;
 
  private:
-  float CheckRangeAndConvertToMeters(float shader_output) const;
 
   RgbdRendererOSPRay* parent_ = nullptr;
   vtkNew<vtkLight> light_;
