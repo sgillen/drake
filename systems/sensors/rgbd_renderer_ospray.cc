@@ -195,9 +195,9 @@ RgbdRendererOSPRay::Impl::ImplRegisterVisual(
   std::array<vtkNew<vtkPolyDataMapper>, kNumOutputImage> mappers;
 
   bool shape_matched = true;
-  const DrakeShapes::Geometry& geometry = visual.getGeometry();
+//  const DrakeShapes::Geometry& geometry = visual.getGeometry();
 
-  unused(RemoveFileExtension, shape_matched, geometry);
+  unused(RemoveFileExtension, shape_matched); //, geometry);
   return nullopt;
 }
 
