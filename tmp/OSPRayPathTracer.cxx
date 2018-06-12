@@ -52,7 +52,9 @@ class vtkProgressiveRenderLooper : public vtkCommand
           {
             this->ProgressiveCount++;
             this->RenderWindow->Render();
-            //cerr << this->ProgressiveCount << endl;
+            // cerr << this->ProgressiveCount << endl;
+            if (this->ProgressiveCount >= 2)
+              exit(0);
           }
         }
       } else {
