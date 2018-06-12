@@ -73,6 +73,8 @@ struct RenderingPipeline {
   vtkNew<vtkImageExport> exporter;
 };
 
+using ActorCollection = std::vector<vtkSmartPointer<vtkActor>>;
+
 void SetModelTransformMatrixToVtkCamera(
     vtkCamera* camera, const vtkSmartPointer<vtkTransform>& X_WC) {
   // vtkCamera contains a transformation as the internal state and
@@ -111,6 +113,12 @@ class RgbdRendererOSPRay::Impl : private ModuleInitVtkRenderingOpenGL2 {
   // 0 for RGB, 1 for depth, and 2 for ground-truth label rendering.
   std::array<std::unique_ptr<RenderingPipeline>,
              kNumOutputImage> pipelines_;
+
+  // A map which takes pairs of a body index in RBT and three vectors of
+  // vtkSmartPointer to vtkActor for color, depth and label rendering
+  // respectively. Each vtkActor corresponds to an visual element specified in
+  // SDF / URDF.
+  std::map<int, std::array<ActorCollection, kNumOutputImage>> id_object_maps_;
 };
 
 RgbdRendererOSPRay::Impl::Impl(RgbdRendererOSPRay* parent,
