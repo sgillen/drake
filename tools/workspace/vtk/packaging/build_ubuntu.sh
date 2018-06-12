@@ -8,4 +8,5 @@ rm -rf build
 docker build -t drake-vtk .
 
 mkdir build
-docker run drake-vtk -v ~+/build:/opt/drake
+docker run -v ${PWD}/build:/build drake-vtk \
+    bash -c 'cp /opt/drake/*.tar.gz /build'
