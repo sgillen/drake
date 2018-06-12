@@ -14,21 +14,13 @@ namespace systems {
 namespace sensors {
 namespace test {
 
-void test_ospray(const DrakeShapes::VisualElement& visual) {
+void test_ospray() {
   vtkNew<vtkOSPRayPass> ospray;
-  std::cerr << "ospray: " << &(*ospray) << std::endl;
-  const DrakeShapes::Geometry& geometry = visual.getGeometry();
-  unused(geometry);
 }
 
 int DoMain() {
   DrakeShapes::Sphere sphere(1.);
-  Eigen::Vector4d rgba;
-  rgba << 1, 0, 0, 1;
-  DrakeShapes::VisualElement element(
-    sphere, Eigen::Isometry3d::Identity(), rgba);
-
-  test_ospray(element);
+  test_ospray();
 
   return 0;
 }
