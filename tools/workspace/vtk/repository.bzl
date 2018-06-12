@@ -523,6 +523,50 @@ licenses([
 
     file_content += _vtk_cc_library(
         repository_ctx.os.name,
+        "vtkFiltersExtraction",
+        deps = [
+            ":vtkCommonCore",
+        ],
+    )
+
+    file_content += _vtk_cc_library(
+        repository_ctx.os.name,
+        "vtkalglib",
+        deps = [
+            ":vtkCommonCore",
+        ],
+    )
+
+    file_content += _vtk_cc_library(
+        repository_ctx.os.name,
+        "vtkFiltersStatistics",
+        deps = [
+            ":vtkCommonCore",
+        ],
+    )
+
+    file_content += _vtk_cc_library(
+        repository_ctx.os.name,
+        "vtkImagingFourier",
+        deps = [
+            ":vtkCommonCore",
+        ],
+    )
+
+    file_content += _vtk_cc_library(
+        repository_ctx.os.name,
+        "vtkInteractionStyle",
+        deps = [
+            ":vtkalglib",
+            ":vtkFiltersStatistics",
+            ":vtkFiltersExtraction",
+            ":vtkImagingFourier",
+        ],
+        visibility = ["//visibility:public"],
+    )
+
+    file_content += _vtk_cc_library(
+        repository_ctx.os.name,
         "vtkRenderingCore",
         hdrs = [
             "vtkAbstractMapper.h",

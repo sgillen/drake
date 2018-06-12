@@ -20,6 +20,7 @@
 
 #include "vtkAutoInit.h"
 VTK_MODULE_INIT(vtkRenderingOpenGL2)
+VTK_MODULE_INIT(vtkInteractionStyle)
 
 //----------------------------------------------------------------------------
 class vtkProgressiveRenderLooper : public vtkCommand

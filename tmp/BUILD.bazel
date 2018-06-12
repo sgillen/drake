@@ -11,6 +11,7 @@ cc_binary(
         "@vtk//:vtkCommonTransforms",
         "@vtk//:vtkFiltersGeneral",
         "@vtk//:vtkFiltersSources",
+        "@vtk//:vtkInteractionStyle",
         "@vtk//:vtkIOGeometry",
         "@vtk//:vtkIOImage",
         "@vtk//:vtkRenderingCore",
