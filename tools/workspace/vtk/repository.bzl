@@ -659,11 +659,16 @@ cc_library(
         deps = [
             ":vtkCommonDataModel",
             ":vtkImagingCore",
+            ":vtkImagingMath",
             ":vtkIOXML",
+            ":vtkFiltersAMR",
             ":vtkRenderingOpenGL2",
             ":vtkRenderingCore",
             ":vtkRenderingSceneGraph",
             ":vtkRenderingVolume",
+            ":vtkRenderingVolumeAMR",
+            ":vtkRenderingVolumeOpenGL2",
+            ":vtkParallelCore",
             ":ospray",
         ],
     )
@@ -681,6 +686,31 @@ cc_library(
         deps = [
             ":vtkCommonCore",
         ],
+    )
+
+    file_content += _vtk_cc_library(
+        repository_ctx.os.name,
+        "vtkRenderingVolumeAMR",
+    )
+
+    file_content += _vtk_cc_library(
+        repository_ctx.os.name,
+        "vtkRenderingVolumeOpenGL2",
+    )
+
+    file_content += _vtk_cc_library(
+        repository_ctx.os.name,
+        "vtkImagingMath",
+    )
+
+    file_content += _vtk_cc_library(
+        repository_ctx.os.name,
+        "vtkFiltersAMR",
+    )
+
+    file_content += _vtk_cc_library(
+        repository_ctx.os.name,
+        "vtkParallelCore",
     )
 
     file_content += _vtk_cc_library(
