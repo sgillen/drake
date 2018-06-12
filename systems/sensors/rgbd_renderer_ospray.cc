@@ -85,6 +85,10 @@ class RgbdRendererOSPRay::Impl : private ModuleInitVtkRenderingOpenGL2 {
  private:
 
   RgbdRendererOSPRay* parent_ = nullptr;
+  vtkNew<vtkLight> light_;
+  vtkNew<vtkOSPRayMaterialLibrary> materials_;
+  vtkNew<vtkActor> terrain_actor_;
+  // Use ImageType to access to this array. We assume pipelines_'s indices to be
   // 0 for RGB, 1 for depth, and 2 for ground-truth label rendering.
   std::array<std::unique_ptr<RenderingPipeline>,
              kNumOutputImage> pipelines_;
