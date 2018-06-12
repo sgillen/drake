@@ -42,7 +42,7 @@
 #include "drake/systems/sensors/depth_shaders.h"
 #include "drake/systems/sensors/vtk_util.h"
 
-VTK_AUTOINIT_DECLARE(vtkRenderingOpenGL2)
+VTK_MODULE_INIT(vtkRenderingOpenGL2)
 
 // TODO(kunimatsu-tri) Refactor RgbdRenderer with SceneGraph when it's
 // ready, so that other VTK dependent sensor simulators can share the world
