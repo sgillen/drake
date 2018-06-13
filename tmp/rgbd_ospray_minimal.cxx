@@ -1,39 +1,22 @@
 #include <array>
-#include <fstream>
-#include <limits>
-#include <map>
-#include <string>
 #include <vector>
 
 #include <Eigen/Dense>
-#include <vtkActor.h>
+
 #include <vtkAutoInit.h>
 #include <vtkCamera.h>
-#include <vtkCommand.h>
-#include <vtkCubeSource.h>
-#include <vtkCylinderSource.h>
 #include <vtkImageExport.h>
-#include <vtkJPEGReader.h>
 #include <vtkLight.h>
 #include <vtkNew.h>
-#include <vtkOBJReader.h>
 #include <vtkOSPRayLightNode.h>
 #include <vtkOSPRayMaterialLibrary.h>
 #include <vtkOSPRayPass.h>
 #include <vtkOSPRayRendererNode.h>
-#include <vtkPNGReader.h>
-#include <vtkPlaneSource.h>
-#include <vtkPolyDataMapper.h>
-#include <vtkProperty.h>
 #include <vtkRenderWindow.h>
 #include <vtkRenderer.h>
 #include <vtkRendererCollection.h>
-#include <vtkShaderProgram.h>
 #include <vtkSmartPointer.h>
-#include <vtkSphereSource.h>
-#include <vtkTexture.h>
 #include <vtkTransform.h>
-#include <vtkTransformPolyDataFilter.h>
 #include <vtkWindowToImageFilter.h>
 
 VTK_AUTOINIT_DECLARE(vtkRenderingOpenGL2)
@@ -61,7 +44,6 @@ class ImageRgba8U {
   int height_;
   std::vector<T> data_;
 };
-
 
 const int kWidth = 640;
 const int kHeight = 480;
