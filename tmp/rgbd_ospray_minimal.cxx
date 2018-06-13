@@ -21,7 +21,7 @@
 
 VTK_AUTOINIT_DECLARE(vtkRenderingOpenGL2)
 
-namespace testing {
+namespace tmp {
 
 using Eigen::Isometry3d;
 
@@ -193,10 +193,10 @@ void NoBodyTest() {
   renderer->RenderColorImage(&color);
 }
 
-}  // namespace testing
+}  // namespace tmp
 
 int main() {
-  testing::NoBodyTest();
+  tmp::NoBodyTest();
   std::cerr << "Done" << std::endl;
   return 0;
 }
