@@ -10,6 +10,6 @@ rm -rf build && mkdir build && cd build
 # Symlink for datafiles.
 ln -s .. tmp
 
-cmake -DCMAKE_PREFIX_PATH=${prefix_dir} ..
+cmake -DCMAKE_PREFIX_PATH=${prefix_dir} -DCMAKE_BUILD_TYPE=Debug ..
 make -j
 ./OSPRayPathTracer
