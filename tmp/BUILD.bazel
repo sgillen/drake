@@ -21,3 +21,23 @@ cc_binary(
         "@vtk//:vtkRenderingSceneGraph",
     ],
 )
+
+cc_binary(
+    name = "rgbd_ospray_minimal",
+    srcs = ["rgbd_ospray_minimal.cxx"],
+    deps = [
+        "@eigen",
+        "@vtk//:vtkCommonCore",
+        "@vtk//:vtkCommonDataModel",
+        "@vtk//:vtkCommonTransforms",
+        "@vtk//:vtkFiltersGeneral",
+        "@vtk//:vtkFiltersSources",
+        "@vtk//:vtkInteractionStyle",
+        "@vtk//:vtkIOGeometry",
+        "@vtk//:vtkIOImage",
+        "@vtk//:vtkRenderingCore",
+        "@vtk//:vtkRenderingOSPRay",
+        "@vtk//:vtkRenderingOpenGL2",
+        "@vtk//:vtkRenderingSceneGraph",
+    ],
+)
