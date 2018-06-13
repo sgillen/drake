@@ -25,6 +25,7 @@ cc_binary(
 cc_binary(
     name = "rgbd_ospray_minimal",
     srcs = ["rgbd_ospray_minimal.cxx"],
+    data = ["plastic_mug.obj"],
     deps = [
         "@eigen",
         "@vtk//:vtkCommonCore",

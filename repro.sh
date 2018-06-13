@@ -19,19 +19,26 @@ if [[ $(sysctl kernel.core_pattern) != "kernel.core_pattern = /tmp/core_dump" ]]
 fi
 ulimit -c unlimited
 
-rm -f /tmp/core_dump
+check_crash() {
+    arg=${1}
+    echo -e "\n\n\n[ ${arg} ]"
+    rm -f /tmp/core_dump
 
-set +e
-(
+    set +e
+    (
+        set -e
+        # Normally takes about ~30 executions to produce segfault. Can range
+        # anywhere from 2-50 (or more).
+        for i in $(seq 300); do
+            echo "[ $i ]"
+            ${bin} ${arg}
+        done
+    )
     set -e
-    # Normally takes about ~30 executions to produce segfault. Can range
-    # anywhere from 2-50 (or more).
-    for i in $(seq 300); do
-        echo "[ $i ]"
-        ${bin}
-    done
-)
-set -e
 
-# Postmortem
-gdb -ex bt -ex q ${bin} /tmp/core_dump
+    # Postmortem
+    gdb -ex bt -ex q ${bin} /tmp/core_dump
+}
+
+check_crash NoBodyTest
+check_crash MeshTest

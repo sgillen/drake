@@ -1,21 +1,33 @@
+#ifdef NDEBUG
+  // For `assert`
+  #undef NDEBUG
+#endif
+
 #include <array>
+#include <map>
 #include <memory>
+#include <string>
 #include <vector>
 
+#include <vtkActor.h>
 #include <vtkAutoInit.h>
 #include <vtkCamera.h>
 #include <vtkImageExport.h>
 #include <vtkLight.h>
 #include <vtkNew.h>
+#include <vtkOBJReader.h>
 #include <vtkOSPRayLightNode.h>
 #include <vtkOSPRayMaterialLibrary.h>
 #include <vtkOSPRayPass.h>
 #include <vtkOSPRayRendererNode.h>
+#include <vtkPolyDataMapper.h>
+#include <vtkProperty.h>
 #include <vtkRenderWindow.h>
 #include <vtkRenderer.h>
 #include <vtkRendererCollection.h>
 #include <vtkSmartPointer.h>
 #include <vtkTransform.h>
+#include <vtkTransformPolyDataFilter.h>
 #include <vtkWindowToImageFilter.h>
 
 VTK_AUTOINIT_DECLARE(vtkRenderingOpenGL2)
@@ -60,6 +72,8 @@ struct RenderingPipeline {
   vtkNew<vtkWindowToImageFilter> filter;
   vtkNew<vtkImageExport> exporter;
 };
+
+using ActorCollection = std::vector<vtkSmartPointer<vtkActor>>;
 
 void SetModelTransformMatrixToVtkCamera(
     vtkCamera* camera, const vtkSmartPointer<vtkTransform>& X_WC) {
@@ -160,6 +174,52 @@ class RgbdRendererOSPRay : private ModuleInitVtkRenderingOpenGL2 {
     p->exporter->Export(color_image_out->at(0, 0));
   }
 
+  void RegisterStuff() {
+    // RegisterVisual
+    std::array<vtkNew<vtkActor>, kNumOutputImage> actors;
+    std::array<vtkNew<vtkPolyDataMapper>, kNumOutputImage> mappers;
+    const char* mesh_filename = "tmp/plastic_mug.obj";
+
+    vtkNew<vtkOBJReader> mesh_reader;
+    mesh_reader->SetFileName(mesh_filename);
+    mesh_reader->Update();
+
+    // Changing the scale of the loaded mesh.
+    const double scale_x = 1;
+    const double scale_y = 1;
+    const double scale_z = 1;
+    vtkNew<vtkTransform> transform;
+    transform->Scale(scale_x, scale_y, scale_z);
+    vtkNew<vtkTransformPolyDataFilter> transform_filter;
+    transform_filter->SetInputConnection(mesh_reader->GetOutputPort());
+    transform_filter->SetTransform(transform.GetPointer());
+    transform_filter->Update();
+
+    for (auto& mapper : mappers) {
+      mapper->SetInputConnection(transform_filter->GetOutputPort());
+    }
+
+    // NOTE: Skipping properties in repro.
+
+    auto& color_actor = actors[ImageType::kColor];
+    if (color_actor->GetProperty()->GetNumberOfTextures() == 0) {
+      // Taken from diffuse color.
+      const std::uint8_t color[] = {255, 0, 0};
+      color_actor->GetProperty()->SetColor(color[0], color[1], color[2]);
+    }
+
+    vtkNew<vtkTransform> vtk_transform;
+    vtk_transform->Identity();
+    const int body_id = 0;
+    auto& actor_collections = id_object_maps_[body_id];
+    for (size_t i = 0; i < actors.size(); ++i) {
+      actors[i]->SetMapper(mappers[i].GetPointer());
+      actors[i]->SetUserTransform(vtk_transform);
+      pipelines_[i]->renderer->AddActor(actors[i].GetPointer());
+      actor_collections[i].push_back(actors[i].GetPointer());
+    }
+  }
+
  private:
   int width_;
   int height_;
@@ -169,6 +229,12 @@ class RgbdRendererOSPRay : private ModuleInitVtkRenderingOpenGL2 {
   // 0 for RGB, 1 for depth, and 2 for ground-truth label rendering.
   std::array<std::unique_ptr<RenderingPipeline>,
              kNumOutputImage> pipelines_;
+
+  // A map which takes pairs of a body index in RBT and three vectors of
+  // vtkSmartPointer to vtkActor for color, depth and label rendering
+  // respectively. Each vtkActor corresponds to an visual element specified in
+  // SDF / URDF.
+  std::map<int, std::array<ActorCollection, kNumOutputImage>> id_object_maps_;
 };
 
 void NoBodyTest() {
@@ -179,10 +245,27 @@ void NoBodyTest() {
   renderer->RenderColorImage(&color);
 }
 
+void MeshTest() {
+  vtkNew<vtkTransform> X_WC;
+  X_WC->Identity();
+  auto renderer = CreatePtr(new RgbdRendererOSPRay(kWidth, kHeight, X_WC));
+  ImageRgba8U color(kWidth, kHeight);
+  renderer->RegisterStuff();
+  renderer->RenderColorImage(&color);
+}
+
 }  // namespace tmp
 
-int main() {
-  tmp::NoBodyTest();
+int main(int argc, char** argv) {
+  assert(argc == 2 && "Supply test");
+  std::string arg = argv[1];
+  if (arg == "NoBodyTest") {
+    tmp::NoBodyTest();
+  } else if (arg == "MeshTest") {
+    tmp::MeshTest();
+  } else {
+    assert(false && "Invalid test");
+  }
   std::cerr << "Done" << std::endl;
   return 0;
 }
