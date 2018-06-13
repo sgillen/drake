@@ -2,6 +2,8 @@
 set -eux
 
 cd $(dirname $0)
+bazel build --compiler=gcc-5 -c dbg @vtk//:vtk
+
 prefix_dir=${PWD}/../bazel-drake/external/vtk
 test -d ${prefix_dir}
 

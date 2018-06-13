@@ -20,30 +20,6 @@
 
 #include "vtkAutoInit.h"
 
-#include <Eigen/Dense>
-#include "drake/multibody/shapes/visual_element.h"
-
-#include "drake/common/eigen_stl_types.h"
-
-// struct BaseStruct {
-//   virtual ~BaseStruct() {
-//     cerr << "Destroy" << endl;
-//   }
-
-//   virtual void info() const = 0;
-// };
-
-// struct SomeStruct : public BaseStruct {
-//   Eigen::Vector4d value;
-//   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-
-//   void info() const override {
-//     cerr << "item: " << value.transpose() << endl;
-//   }
-// };
-
-// typedef drake::eigen_aligned_std_vector<SomeStruct> SomeStructList;
-
 VTK_MODULE_INIT(vtkRenderingOpenGL2)
 VTK_MODULE_INIT(vtkInteractionStyle)
 
@@ -86,12 +62,6 @@ class vtkProgressiveRenderLooper : public vtkCommand
         this->ProgressiveCount = 0;
       }
     }
-
-    // void do_something(const SomeStructList& list) {
-    //   for (const auto& item : list) {
-    //     item.info();
-    //   }
-    // }
 
     vtkRenderWindow *RenderWindow;
     int ProgressiveCount;
@@ -365,11 +335,6 @@ int main(int argc, char* argv[])
   //set up progressive rendering
   vtkSmartPointer<vtkProgressiveRenderLooper> looper =
     vtkSmartPointer<vtkProgressiveRenderLooper>::New();
-  // looper->do_something({
-  //   {Eigen::Vector4d::Ones()},
-  //   {Eigen::Vector4d::Constant(10.)},
-  //   {Eigen::Vector4d::Constant(100.)},
-  // });
   looper->RenderWindow = renWin;
   vtkCamera *cam = renderer->GetActiveCamera();
   iren->AddObserver(vtkCommand::KeyPressEvent, looper);

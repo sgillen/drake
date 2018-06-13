@@ -1,7 +1,6 @@
 #include <array>
+#include <memory>
 #include <vector>
-
-#include <Eigen/Dense>
 
 #include <vtkAutoInit.h>
 #include <vtkCamera.h>
@@ -22,8 +21,6 @@
 VTK_AUTOINIT_DECLARE(vtkRenderingOpenGL2)
 
 namespace tmp {
-
-using Eigen::Isometry3d;
 
 class ImageRgba8U {
  public:
@@ -77,35 +74,24 @@ void SetModelTransformMatrixToVtkCamera(
   camera->ApplyTransform(X_WC);
 }
 
-vtkSmartPointer<vtkTransform> ConvertToVtkTransform(
-    const Eigen::Isometry3d& transform) {
-  vtkNew<vtkMatrix4x4> vtk_mat;
-  for (int i = 0; i < 4; ++i) {
-    for (int j = 0; j < 4; ++j) {
-      vtk_mat->SetElement(i, j, transform.matrix()(i, j));
-    }
-  }
-
-  vtkSmartPointer<vtkTransform> vtk_transform =
-      vtkSmartPointer<vtkTransform>::New();
-  vtk_transform->SetMatrix(vtk_mat.GetPointer());
-
-  return vtk_transform;
-}
-
 struct ModuleInitVtkRenderingOpenGL2 {
   ModuleInitVtkRenderingOpenGL2() {
     VTK_AUTOINIT_CONSTRUCT(vtkRenderingOpenGL2)
   }
 };
 
+template <typename T>
+std::unique_ptr<T> CreatePtr(T* value) {
+  return std::unique_ptr<T>(value);
+}
+
 class RgbdRendererOSPRay : private ModuleInitVtkRenderingOpenGL2 {
  public:
   RgbdRendererOSPRay(
       int width, int height,
-      const Eigen::Isometry3d& X_WC) 
+      vtkSmartPointer<vtkTransform> X_WC) 
     : width_{width}, height_{height},
-      pipelines_{{std::make_unique<RenderingPipeline>()}} {
+      pipelines_{CreatePtr(new RenderingPipeline())} {
     auto& cp = pipelines_[ImageType::kColor];
     constexpr bool show_window = false;
     if (show_window) {
@@ -129,7 +115,7 @@ class RgbdRendererOSPRay : private ModuleInitVtkRenderingOpenGL2 {
     vtkOSPRayRendererNode::SetMaterialLibrary(materials_, cp->renderer);
     vtkOSPRayRendererNode::SetMaxFrames(10, cp->renderer);
 
-    const vtkSmartPointer<vtkTransform> vtk_X_WC = ConvertToVtkTransform(X_WC);
+    const vtkSmartPointer<vtkTransform> vtk_X_WC = X_WC;
 
     for (auto& pipeline : pipelines_) {
       auto camera = pipeline->renderer->GetActiveCamera();
@@ -186,9 +172,9 @@ class RgbdRendererOSPRay : private ModuleInitVtkRenderingOpenGL2 {
 };
 
 void NoBodyTest() {
-  const Isometry3d X_WC = Eigen::Translation3d(0, 0, 0) *
-      Eigen::AngleAxisd(M_PI_2, Eigen::Vector3d::UnitX());
-  auto renderer = std::make_unique<RgbdRendererOSPRay>(kWidth, kHeight, X_WC);
+  vtkNew<vtkTransform> X_WC;
+  X_WC->Identity();
+  auto renderer = CreatePtr(new RgbdRendererOSPRay(kWidth, kHeight, X_WC));
   ImageRgba8U color(kWidth, kHeight);
   renderer->RenderColorImage(&color);
 }
