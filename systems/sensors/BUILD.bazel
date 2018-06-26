@@ -194,6 +194,7 @@ drake_cc_library(
         "rgbd_renderer_vtk.h",
     ],
     deps = [
+        ":camera_info",
         ":image",
         ":vtk_util",
         "//common",

@@ -57,7 +57,12 @@ namespace sensors {
 // needed.
 class CameraInfo {
  public:
-  DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(CameraInfo)
+  // Default copy and move.
+  CameraInfo(const CameraInfo&) = default;
+  CameraInfo(CameraInfo&&) = default;
+  // Disable assignment.
+  CameraInfo& operator=(const CameraInfo&) = delete;
+  CameraInfo& operator=(CameraInfo&&) = delete;
 
   /// Constructor that directly sets the image size, center, and focal lengths.
   ///
@@ -110,6 +115,16 @@ class CameraInfo {
 
   /// Returns the image center y value in pixels.
   double center_y() const { return intrinsic_matrix_(1, 2); }
+
+  /// Returns the horizontal field of view.
+  double fov_x() const {
+    return 2 * atan(width() / (2 * focal_x()));
+  }
+
+  /// Returns the vertical field of view.
+  double fov_y() const {
+    return 2 * atan(height() / (2 * focal_y()));
+  }
 
   /// Returns the camera intrinsic matrix.
   const Eigen::Matrix3d& intrinsic_matrix() const {

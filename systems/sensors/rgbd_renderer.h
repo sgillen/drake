@@ -8,6 +8,7 @@
 #include "drake/common/drake_optional.h"
 #include "drake/common/type_safe_index.h"
 #include "drake/multibody/shapes/visual_element.h"
+#include "drake/systems/sensors/camera_info.h"
 #include "drake/systems/sensors/color_palette.h"
 #include "drake/systems/sensors/image.h"
 
@@ -17,30 +18,29 @@ namespace sensors {
 
 /// Common configurations of rendering systems.
 struct RenderingConfig {
-  // TODO(eric.cousineau): Define all default values be defined here to
-  // minimize duplication.
-  /// The width of the image to be rendered in pixels.
-  const int width{kDefaultWidth};
   /// Default value for `width`.
   static constexpr int kDefaultWidth{640};
-  /// The height of the image to be rendered in pixels.
-  const int height{kDefaultHeight};
   /// Default value for `height`.
   static constexpr int kDefaultHeight{480};
-  /// The renderer's camera vertical field of view in radians.
-  const double fov_y;
+  /// Default value for `fov_y`.
+  static constexpr double kDefaultFovY{M_PI / 4};
+  // TODO(eric.cousineau): Define all default values be defined here to
+  // minimize duplication.
+  /// Camera image size and intrinsics. See documentation for `CameraInfo` for
+  /// more information.
+  CameraInfo camera_info{kDefaultWidth, kDefaultHeight, kDefaultFovY};
   /// The minimum depth RgbdRenderer can output. Note that this is different
   /// from renderer's clipping range where all the objects outside the range are
   /// not rendered even in RGB image while this only affects depth image.
-  const double z_near;
+  double z_near{-1};
   /// The maximum depth RgbdRenderer can output. Note that this is different
   /// from renderer's clipping range where all the objects outside the range are
   /// not rendered even in RGB image while this only affects depth image.
-  const double z_far;
+  double z_far{-1};
   /// A flag for showing visible windows for RGB and label images.  If this is
   /// false, offscreen rendering is executed. This is useful for debugging
   /// purposes.
-  const bool show_window{kDefaultShowWindow};
+  bool show_window{kDefaultShowWindow};
   /// Default value for `show_window`.
   static constexpr bool kDefaultShowWindow{false};
 };
@@ -174,7 +174,7 @@ class RgbdRenderer {
   virtual void ImplRenderLabelImage(ImageLabel16I* label_image_out) const = 0;
 
   /// The common configuration needed by all implementations of this interface.
-  RenderingConfig config_;
+  const RenderingConfig config_;
 
   /// The color palette for sky, terrain colors and ground truth label rendering
   /// TODO(thduynguyen, SeanCurtis-TRI): This is a world's property (colors for

@@ -286,8 +286,8 @@ void RgbdRendererVTK::Impl::ImplRenderColorImage(
 
 void RgbdRendererVTK::Impl::ImplRenderDepthImage(
     ImageDepth32F* depth_image_out) const {
-  const int width = parent_->config().width;
-  const int height = parent_->config().height;
+  const int width = parent_->config().camera_info.width();
+  const int height = parent_->config().camera_info.height();
   ImageRgba8U image(width, height);
 
   // TODO(sherm1) Should evaluate VTK cache entry.
@@ -320,8 +320,8 @@ void RgbdRendererVTK::Impl::ImplRenderDepthImage(
 
 void RgbdRendererVTK::Impl::ImplRenderLabelImage(
     ImageLabel16I* label_image_out) const {
-  const int width = parent_->config().width;
-  const int height = parent_->config().height;
+  const int width = parent_->config().camera_info.width();
+  const int height = parent_->config().camera_info.height();
   ImageRgba8U image(width, height);
 
   // TODO(sherm1) Should evaluate VTK cache entry.
@@ -380,12 +380,12 @@ RgbdRendererVTK::Impl::Impl(RgbdRendererVTK* parent,
   for (auto& pipeline : pipelines_) {
     pipeline->renderer->SetBackground(sky_color.r, sky_color.g, sky_color.b);
     auto camera = pipeline->renderer->GetActiveCamera();
-    camera->SetViewAngle(parent_->config().fov_y * 180. / M_PI);
+    camera->SetViewAngle(parent_->config().camera_info.fov_y() * 180. / M_PI);
     camera->SetClippingRange(kClippingPlaneNear, kClippingPlaneFar);
     SetModelTransformMatrixToVtkCamera(camera, vtk_X_WC);
 
-    pipeline->window->SetSize(parent_->config().width,
-                              parent_->config().height);
+    pipeline->window->SetSize(parent_->config().camera_info.width(),
+                              parent_->config().camera_info.height());
     pipeline->window->AddRenderer(pipeline->renderer.GetPointer());
     pipeline->filter->SetInput(pipeline->window.GetPointer());
     pipeline->filter->SetScale(1);

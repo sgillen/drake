@@ -93,7 +93,8 @@ class RgbdRendererTest : public ::testing::Test {
   // All tests on this class must invoke this first.
   void Init(const Eigen::Isometry3d& X_WC, bool add_terrain = false) {
     renderer_ = std::make_unique<Renderer>(
-        RenderingConfig{kWidth, kHeight, kFovY, kZNear, kZFar, kShowWindow},
+        RenderingConfig{
+            CameraInfo(kWidth, kHeight, kFovY), kZNear, kZFar, kShowWindow},
         X_WC);
 
     if (add_terrain) renderer_->AddFlatTerrain();

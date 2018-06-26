@@ -13,9 +13,9 @@ using Eigen::Isometry3d;
 TEST_F(RgbdRendererVTKTest, InstantiationTest) {
   Init(Isometry3d::Identity());
 
-  EXPECT_EQ(renderer_->config().width, kWidth);
-  EXPECT_EQ(renderer_->config().height, kHeight);
-  EXPECT_EQ(renderer_->config().fov_y, kFovY);
+  EXPECT_EQ(renderer_->config().camera_info.width(), kWidth);
+  EXPECT_EQ(renderer_->config().camera_info.height(), kHeight);
+  EXPECT_EQ(renderer_->config().camera_info.fov_y(), kFovY);
 }
 
 TEST_F(RgbdRendererVTKTest, NoBodyTest) {

@@ -10,6 +10,8 @@ RgbdRenderer::RgbdRenderer(const RenderingConfig& config,
                            const Eigen::Isometry3d&)
     : config_(config),
       color_palette_(kNumMaxLabel, Label::kFlatTerrain, Label::kNoBody) {
+  DRAKE_DEMAND(config.z_near >= 0.);
+  DRAKE_DEMAND(config.z_far >= 0.);
 }
 
 RgbdRenderer::~RgbdRenderer() {}
