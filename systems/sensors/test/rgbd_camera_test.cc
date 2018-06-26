@@ -321,7 +321,7 @@ TEST_F(RgbdCameraDiagramTest, ResetRendererTest) {
 
     diagram_->camera().ResetRenderer(
         std::unique_ptr<RgbdRenderer>(new RgbdRendererVTK(
-            RenderingConfig{size.width, size.height, kFovY,
+            RenderingConfig{CameraInfo{size.width, size.height, kFovY},
                             kDepthRangeNear, kDepthRangeFar, kShowWindow})));
 
     auto renderer2 = &diagram_->camera().mutable_renderer();
