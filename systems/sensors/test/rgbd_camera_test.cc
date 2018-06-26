@@ -103,9 +103,11 @@ GTEST_TEST(RgbdCamera, TestInstantiation) {
   // throws an exception.
   EXPECT_THROW(fixed_camera.frame(), std::logic_error);
 
+  RigidBodyTree<double> empty_tree;
+  RigidBodyFrame<double> empty_frame = *empty_tree.findFrame("world");
   RgbdCamera movable_camera("rgbd_camera",
-                            RigidBodyTree<double>(),
-                            RigidBodyFrame<double>(),
+                            empty_tree,
+                            empty_frame,
                             kDepthRangeNear, kDepthRangeFar,
                             kFovY, kShowWindow);
   Verify(movable_camera, kSizeVga);
@@ -113,14 +115,14 @@ GTEST_TEST(RgbdCamera, TestInstantiation) {
 
   // Verify that we can construct specifying a different width and height.
   RgbdCamera fixed_camera_hd720(
-      "rgbd_camera", RigidBodyTree<double>(),
+      "rgbd_camera", empty_tree,
       Eigen::Vector3d(1., 2., 3.), Eigen::Vector3d(01., 0.2, 0.3),
       kDepthRangeNear, kDepthRangeFar,
       kFovY, kShowWindow, kSizeHd720.width, kSizeHd720.height);
   Verify(fixed_camera_hd720, kSizeHd720);
 
   RgbdCamera movable_camera_hd720(
-      "rgbd_camera", RigidBodyTree<double>(), RigidBodyFrame<double>(),
+      "rgbd_camera", empty_tree, empty_frame,
       kDepthRangeNear, kDepthRangeFar,
       kFovY, kShowWindow, kSizeHd720.width, kSizeHd720.height);
   Verify(movable_camera_hd720, kSizeHd720);

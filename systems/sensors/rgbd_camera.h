@@ -115,7 +115,7 @@ class RgbdCamera final : public LeafSystem<double> {
                                             const CameraInfo& camera_info,
                                             Eigen::Matrix3Xf* point_cloud);
 
-  RgbdCamera(const Config& config);
+  explicit RgbdCamera(const Config& config);
 
   /// A constructor for %RgbdCamera that defines `B` using Euler angles.
   /// The pose of %RgbdCamera will be fixed to the world coordinate system

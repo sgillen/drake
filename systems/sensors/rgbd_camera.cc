@@ -110,18 +110,11 @@ RgbdCamera::RgbdCamera(const std::string& name,
                        const RigidBodyFrame<double>& frame, double z_near,
                        double z_far, double fov_y, bool show_window,
                        int width, int height)
-    : tree_(tree),
-      frame_(Config{"", {}, {frame}}.placement.frame),
-      camera_fixed_(false),
-      color_camera_info_(width, height, fov_y),
-      depth_camera_info_(width, height, fov_y),
-      renderer_(
-          new RgbdRendererVTK(RenderingConfig{{width, height, fov_y},
-                                              z_near, z_far, show_window},
-                              Eigen::Isometry3d::Identity())) {
-  InitPorts(name);
-  InitRenderer();
-}
+    : RgbdCamera(Config{
+          name, &tree, {frame},
+          RenderingConfig{
+              CameraInfo{width, height, fov_y},
+              z_near, z_far, show_window}}) {}
 
 void RgbdCamera::InitPorts(const std::string& name) {
   set_name(name);
