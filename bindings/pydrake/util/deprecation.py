@@ -108,7 +108,7 @@ class _DeprecatedDescriptor(object):
         self._message = message
 
     def _warn(self):
-        _warn_deprecated(self._message, stacklevel=3)
+        _warn_deprecated(self._message, stacklevel=4)
 
     def __get__(self, obj, objtype):
         self._warn()
