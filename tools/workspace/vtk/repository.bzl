@@ -119,12 +119,15 @@ def _impl(repository_ctx):
         else:
             fail("Operating system is NOT supported", attr = os_result)
 
+        sha256 = "8a7798184be86df7e2b34bd08aadbde6e442b2dd1a791085ae74c02e62f8d711"
         urls = [
-            x.format(archive = archive)
-            for x in repository_ctx.attr.mirrors.get("vtk")
+            "https://s3.amazonaws.com/drake-packages/vtk/vtk-v8.1.1-embree-3.2.0-ospray-1.6.1-qt-5.5.1-xenial-x86_64.tar.gz",
+            # x.format(archive = archive)
+            # for x in repository_ctx.attr.mirrors.get("vtk")
         ]
         root_path = repository_ctx.path("")
 
+        print("WOOH")
         repository_ctx.download_and_extract(urls, root_path, sha256 = sha256)
 
     else:
@@ -586,7 +589,7 @@ licenses([
 cc_library(
     name = "ospray",
     srcs =
-        glob(["lib/libembree.so*"]) +
+        glob(["lib/libembree*.so*"]) +
         glob(["lib/libospray*.so*"]),
     visibility = ["//visibility:private"],
 )
