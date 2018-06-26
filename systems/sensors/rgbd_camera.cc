@@ -66,7 +66,7 @@ const RigidBodyTree<double>& CheckConfigAndGetTree(
   return *config.tree;
 }
 
-}
+}  // namespace
 
 RgbdCamera::RgbdCamera(const Config& config)
   : tree_(CheckConfigAndGetTree(config)),

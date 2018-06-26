@@ -126,6 +126,15 @@ GTEST_TEST(RgbdCamera, TestInstantiation) {
       kDepthRangeNear, kDepthRangeFar,
       kFovY, kShowWindow, kSizeHd720.width, kSizeHd720.height);
   Verify(movable_camera_hd720, kSizeHd720);
+
+  // Verify that we can construct with arbitrary specification.
+  RgbdCamera movable_freeform({
+      "rgbd_camera", &empty_tree, {empty_frame},
+      {
+        {kSizeVga.width, kSizeVga.height, 611, 611, 315, 244},
+        kDepthRangeNear, kDepthRangeFar
+      }});
+  Verify(movable_freeform, kSizeVga);
 }
 
 

@@ -78,7 +78,8 @@ class RgbdCamera final : public LeafSystem<double> {
     /// placement.
     struct Placement {
       Placement(const RigidBodyFrame<double>& frame_in)
-          : camera_fixed(false), frame(frame_in) {}
+          : camera_fixed(false), frame(frame_in),
+            X_WB(Eigen::Isometry3d::Identity()) {}
       Placement(const Eigen::Isometry3d& X_WB_in)
           : camera_fixed(true), X_WB(X_WB_in) {}
 
