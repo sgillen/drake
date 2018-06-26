@@ -111,7 +111,7 @@ RgbdCamera::RgbdCamera(const std::string& name,
                        double z_far, double fov_y, bool show_window,
                        int width, int height)
     : tree_(tree),
-      frame_(frame),
+      frame_(Config{"", {}, {frame}}.placement.frame),
       camera_fixed_(false),
       color_camera_info_(width, height, fov_y),
       depth_camera_info_(width, height, fov_y),
