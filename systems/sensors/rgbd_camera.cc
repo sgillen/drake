@@ -75,7 +75,8 @@ RgbdCamera::RgbdCamera(const Config& config)
     color_camera_info_(config.rendering.camera_info),
     depth_camera_info_(config.rendering.camera_info),
     X_WB_initial_(config.placement.X_WB),
-    renderer_(new RgbdRendererVTK(config.rendering, X_WB_initial_)) {
+    renderer_(new RgbdRendererVTK(
+        config.rendering, X_WB_initial_ * X_BC_)) {
   InitPorts(config.name);
   InitRenderer();
 }
