@@ -58,15 +58,13 @@ constexpr Size kSizeHd720 = {1280, 720};
 
 constexpr std::array<Size, 2> kSizes = {{kSizeVga, kSizeHd720}};
 
-void VerifyCameraInfo(const CameraInfo& camera_info, Size size) {
-  EXPECT_EQ(size.width, camera_info.width());
-  EXPECT_EQ(size.height, camera_info.height());
-  EXPECT_NEAR(size.width * 0.5, camera_info.center_x(), kTolerance);
-  EXPECT_NEAR(size.height * 0.5, camera_info.center_y(), kTolerance);
-
-  const double kExpectedFocal = 0.5 * size.height / tan(kFovY / 2);
-  EXPECT_NEAR(kExpectedFocal, camera_info.focal_x(), kTolerance);
-  EXPECT_NEAR(kExpectedFocal, camera_info.focal_y(), kTolerance);
+void VerifyCameraInfo(const CameraInfo& actual, const CameraInfo& expected) {
+  EXPECT_EQ(expected.width(), actual.width());
+  EXPECT_EQ(expected.height(), actual.height());
+  EXPECT_NEAR(expected.center_x(), actual.center_x(), kTolerance);
+  EXPECT_NEAR(expected.center_y(), actual.center_y(), kTolerance);
+  EXPECT_NEAR(expected.focal_x(), actual.focal_x(), kTolerance);
+  EXPECT_NEAR(expected.focal_y(), actual.focal_y(), kTolerance);
 }
 
 void VerifyCameraPose(const Eigen::Isometry3d camera_optical_pose) {
@@ -84,12 +82,15 @@ void VerifyCameraPose(const Eigen::Isometry3d camera_optical_pose) {
 }
 
 GTEST_TEST(RgbdCamera, TestInstantiation) {
-  auto Verify = [](const RgbdCamera& camera, Size size) {
-    VerifyCameraInfo(camera.color_camera_info(), size);
-    VerifyCameraInfo(camera.depth_camera_info(), size);
+  auto Verify = [](const RgbdCamera& camera, const CameraInfo& expected) {
+    VerifyCameraInfo(camera.color_camera_info(), expected);
+    VerifyCameraInfo(camera.depth_camera_info(), expected);
     VerifyCameraPose(camera.color_camera_optical_pose());
     VerifyCameraPose(camera.depth_camera_optical_pose());
     EXPECT_NO_THROW(camera.tree());
+  };
+  auto DefaultInfo = [](const Size& size) {
+    return CameraInfo(size.width, size.height, kFovY);
   };
 
   RgbdCamera fixed_camera("rgbd_camera",
@@ -98,7 +99,7 @@ GTEST_TEST(RgbdCamera, TestInstantiation) {
                           Eigen::Vector3d(0.1, 0.2, 0.3),
                           kDepthRangeNear, kDepthRangeFar,
                           kFovY, kShowWindow);
-  Verify(fixed_camera, kSizeVga);
+  Verify(fixed_camera, DefaultInfo(kSizeVga));
   // With the fixed camera use case, RgbdCamera doesn't hold a frame, thus
   // throws an exception.
   EXPECT_THROW(fixed_camera.frame(), std::logic_error);
@@ -110,7 +111,7 @@ GTEST_TEST(RgbdCamera, TestInstantiation) {
                             empty_frame,
                             kDepthRangeNear, kDepthRangeFar,
                             kFovY, kShowWindow);
-  Verify(movable_camera, kSizeVga);
+  Verify(movable_camera, DefaultInfo(kSizeVga));
   EXPECT_NO_THROW(movable_camera.frame());
 
   // Verify that we can construct specifying a different width and height.
@@ -119,22 +120,23 @@ GTEST_TEST(RgbdCamera, TestInstantiation) {
       Eigen::Vector3d(1., 2., 3.), Eigen::Vector3d(01., 0.2, 0.3),
       kDepthRangeNear, kDepthRangeFar,
       kFovY, kShowWindow, kSizeHd720.width, kSizeHd720.height);
-  Verify(fixed_camera_hd720, kSizeHd720);
+  Verify(fixed_camera_hd720, DefaultInfo(kSizeHd720));
 
   RgbdCamera movable_camera_hd720(
       "rgbd_camera", empty_tree, empty_frame,
       kDepthRangeNear, kDepthRangeFar,
       kFovY, kShowWindow, kSizeHd720.width, kSizeHd720.height);
-  Verify(movable_camera_hd720, kSizeHd720);
+  Verify(movable_camera_hd720, DefaultInfo(kSizeHd720));
 
   // Verify that we can construct with arbitrary specification.
+  // TODO(eric.cousineau): Specify unconstrained `center_{x,y}` and
+  // `focal_{x,y}`.
+  CameraInfo info_freeform(
+      kSizeVga.width, kSizeVga.height, 611, 611, 320, 240);
   RgbdCamera movable_freeform({
       "rgbd_camera", &empty_tree, {empty_frame},
-      {
-        {kSizeVga.width, kSizeVga.height, 611, 611, 315, 244},
-        kDepthRangeNear, kDepthRangeFar
-      }});
-  Verify(movable_freeform, kSizeVga);
+      {info_freeform, kDepthRangeNear, kDepthRangeFar}});
+  Verify(movable_freeform, info_freeform);
 }
 
 

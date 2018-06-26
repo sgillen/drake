@@ -63,6 +63,14 @@ const RigidBodyTree<double>& CheckConfigAndGetTree(
   if (!config.placement.camera_fixed) {
     DRAKE_DEMAND(&config.placement.frame.get_rigid_body());
   }
+
+  // At present, we cannot specify `focal_x` != `focal_y`, and cannot specify
+  // `center_x` != `center_y` (#8850).
+  const CameraInfo& camera_info = config.rendering.camera_info;
+  DRAKE_DEMAND(camera_info.width() / 2 == camera_info.center_x());
+  DRAKE_DEMAND(camera_info.height() / 2 == camera_info.center_y());
+  DRAKE_DEMAND(camera_info.focal_x() == camera_info.focal_y());
+
   return *config.tree;
 }
 
