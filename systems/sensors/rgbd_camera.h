@@ -21,7 +21,6 @@
 namespace drake {
 namespace systems {
 namespace sensors {
-
 /// An RGB-D camera system that provides RGB, depth and label images using
 /// visual elements of RigidBodyTree.
 /// RgbdCamera uses [VTK](https://github.com/Kitware/VTK) as the rendering
@@ -69,31 +68,6 @@ class RgbdCamera final : public LeafSystem<double> {
  public:
   DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(RgbdCamera)
 
-  /// Parameters for constructing an `RgbdCamera`.
-  struct Config {
-    std::string name;
-    const RigidBodyTree<double>* tree{};
-
-    /// Permits toggling between fixed camera placement or frame-based
-    /// placement.
-    struct Placement {
-      Placement(const RigidBodyFrame<double>& frame_in)
-          : camera_fixed(false), frame(frame_in) {}
-      Placement(const Eigen::Isometry3d& X_WB_in)
-          : camera_fixed(true), X_WB(X_WB_in) {}
-
-      const bool camera_fixed{};
-      // TODO(eric.cousineau): This should really be `shared_ptr`...
-      const RigidBodyFrame<double> frame;
-      const Eigen::Isometry3d X_WB;
-    };
-    Placement placement;
-
-    RenderingConfig rendering;
-    // TODO(eric.cousineau): Specify `depth_rendering`.
-    // TODO(eric.cousineau): Specify X_BC, X_DB.
-  };
-
   /// Converts a depth image obtained from RgbdCamera to a point cloud.  If a
   /// pixel in the depth image has NaN depth value, all the `(x, y, z)` values
   /// in the converted point will be NaN.
@@ -115,13 +89,6 @@ class RgbdCamera final : public LeafSystem<double> {
                                             const CameraInfo& camera_info,
                                             Eigen::Matrix3Xf* point_cloud);
 
-  RgbdCamera(const Config& config);
-
- private:
-  RgbdCamera(const Config& config, std::true_type);
-  RgbdCamera(const Config& config, std::false_type);
-
- public:
   /// A constructor for %RgbdCamera that defines `B` using Euler angles.
   /// The pose of %RgbdCamera will be fixed to the world coordinate system
   /// throughout the simulation.
@@ -157,7 +124,6 @@ class RgbdCamera final : public LeafSystem<double> {
   ///
   /// @throws std::logic_error When the number of rigid bodies in the scene
   /// exceeds the maximum limit 1535.
-  // TODO(eric.cousineau): Deprecate this constructor.
   RgbdCamera(const std::string& name,
              const RigidBodyTree<double>& tree,
              const Eigen::Vector3d& position,
@@ -200,7 +166,6 @@ class RgbdCamera final : public LeafSystem<double> {
   ///
   /// @throws std::logic_error When the number of rigid bodies in the scene
   /// exceeds the maximum limit 1535.
-  // TODO(eric.cousineau): Deprecate this constructor.
   RgbdCamera(const std::string& name,
              const RigidBodyTree<double>& tree,
              const RigidBodyFrame<double>& frame,
