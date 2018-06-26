@@ -87,23 +87,14 @@ RgbdCamera::RgbdCamera(const std::string& name,
                        const Eigen::Vector3d& orientation, double z_near,
                        double z_far, double fov_y, bool show_window, int width,
                        int height)
-    : tree_(tree),
-      frame_(RigidBodyFrame<double>()),
-      camera_fixed_(true),
-      color_camera_info_(width, height, fov_y),
-      depth_camera_info_(width, height, fov_y),
-      X_WB_initial_(
+  : RgbdCamera(Config{
+        name, &tree, {
           Eigen::Translation3d(position[0], position[1], position[2]) *
           Eigen::Isometry3d(math::RollPitchYaw<double>(orientation)
-                                .ToMatrix3ViaRotationMatrix())),
-      renderer_(new RgbdRendererVTK(
-          RenderingConfig{{width, height, fov_y}, z_near, z_far, show_window},
-          Eigen::Translation3d(position[0], position[1], position[2]) *
-          Eigen::Isometry3d(math::RollPitchYaw<double>(orientation)
-                                .ToMatrix3ViaRotationMatrix()) * X_BC_)) {
-  InitPorts(name);
-  InitRenderer();
-}
+                                .ToMatrix3ViaRotationMatrix())},
+        RenderingConfig{
+              CameraInfo{width, height, fov_y},
+              z_near, z_far, show_window}}) {}
 
 RgbdCamera::RgbdCamera(const std::string& name,
                        const RigidBodyTree<double>& tree,
