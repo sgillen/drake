@@ -77,13 +77,15 @@ class RgbdCamera final : public LeafSystem<double> {
     /// Permits toggling between fixed camera placement or frame-based
     /// placement.
     struct Placement {
-      const RigidBodyFrame<double>* const frame{};
-      const optional<Eigen::Isometry3d> X_WB;
-
-      Placement(const RigidBodyFrame<double>* frame_in)
-          : frame(frame_in) {}
+      Placement(const RigidBodyFrame<double>& frame_in)
+          : camera_fixed(false), frame(frame_in) {}
       Placement(const Eigen::Isometry3d& X_WB_in)
-          : X_WB(X_WB_in) {}
+          : camera_fixed(true), X_WB(X_WB_in) {}
+
+      bool camera_fixed{};
+      // TODO(eric.cousineau): This should really be `shared_ptr`...
+      const RigidBodyFrame<double> frame{};
+      const Eigen::Isometry3d X_WB{};
     };
     Placement placement;
 

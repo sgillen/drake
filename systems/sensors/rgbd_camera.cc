@@ -60,7 +60,9 @@ const RigidBodyTree<double>& CheckConfigAndGetTree(
   // Tree must be specified.
   DRAKE_DEMAND(config.tree);
   // Placement must be either frame-based or fixed-frame.
-  DRAKE_DEMAND(config.placement.frame || config.placement.X_WB);
+  if (!config.placement.camera_fixed) {
+    DRAKE_DEMAND(&config.placement.frame.get_rigid_body());
+  }
   return *config.tree;
 }
 
@@ -68,17 +70,11 @@ const RigidBodyTree<double>& CheckConfigAndGetTree(
 
 RgbdCamera::RgbdCamera(const Config& config)
   : tree_(CheckConfigAndGetTree(config)),
-    frame_(
-        config.placement.frame
-            ? *config.placement.frame
-            : RigidBodyFrame<double>()),
-    camera_fixed_(!config.placement.frame),
+    frame_(config.placement.frame),
+    camera_fixed_(config.placement.camera_fixed),
     color_camera_info_(config.rendering.camera_info),
     depth_camera_info_(config.rendering.camera_info),
-    X_WB_initial_(
-        config.placement.frame
-            ? Eigen::Isometry3d::Identity()
-            : *config.placement.X_WB),
+    X_WB_initial_(config.placement.X_WB),
     renderer_(new RgbdRendererVTK(config.rendering, X_WB_initial_)) {
   InitPorts(config.name);
   InitRenderer();
@@ -106,7 +102,7 @@ RgbdCamera::RgbdCamera(const std::string& name,
                        int width, int height)
     : RgbdCamera(RgbdCamera::Config{
           name, &tree,
-          {&frame_},
+          {frame_},
           RenderingConfig{
               CameraInfo{width, height, fov_y},
               z_near, z_far, show_window}}) {}
