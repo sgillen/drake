@@ -82,10 +82,10 @@ class RgbdCamera final : public LeafSystem<double> {
       Placement(const Eigen::Isometry3d& X_WB_in)
           : camera_fixed(true), X_WB(X_WB_in) {}
 
-      bool camera_fixed{};
+      const bool camera_fixed{};
       // TODO(eric.cousineau): This should really be `shared_ptr`...
-      const RigidBodyFrame<double> frame{};
-      const Eigen::Isometry3d X_WB{};
+      const RigidBodyFrame<double> frame;
+      const Eigen::Isometry3d X_WB;
     };
     Placement placement;
 
