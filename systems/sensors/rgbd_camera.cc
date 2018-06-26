@@ -49,6 +49,37 @@ void RgbdCamera::ConvertDepthImageToPointCloud(const ImageDepth32F& depth_image,
   }
 }
 
+namespace {
+
+// Make a checking function to validate and return the tree so that it may be
+// used in `RgbdCamera`s constructor.
+const RigidBodyTree<double>& CheckConfigAndGetTree(
+    const RgbdCamera::Config& config) {
+  // Name must be non-empty.
+  DRAKE_DEMAND(!config.name.empty());
+  // Tree must be specified.
+  DRAKE_DEMAND(config.tree);
+  // Placement must be either frame-based or fixed-frame.
+  if (!config.placement.camera_fixed) {
+    DRAKE_DEMAND(&config.placement.frame.get_rigid_body());
+  }
+  return *config.tree;
+}
+
+}
+
+RgbdCamera::RgbdCamera(const Config& config)
+  : tree_(CheckConfigAndGetTree(config)),
+    frame_(config.placement.frame),
+    camera_fixed_(config.placement.camera_fixed),
+    color_camera_info_(config.rendering.camera_info),
+    depth_camera_info_(config.rendering.camera_info),
+    X_WB_initial_(config.placement.X_WB),
+    renderer_(new RgbdRendererVTK(config.rendering, X_WB_initial_)) {
+  InitPorts(config.name);
+  InitRenderer();
+}
+
 RgbdCamera::RgbdCamera(const std::string& name,
                        const RigidBodyTree<double>& tree,
                        const Eigen::Vector3d& position,
