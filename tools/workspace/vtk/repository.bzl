@@ -586,7 +586,7 @@ licenses([
 cc_library(
     name = "ospray",
     srcs =
-        glob(["lib/libembree.so*"]) +
+        glob(["lib/libembree*.so*"]) +
         glob(["lib/libospray*.so*"]),
     visibility = ["//visibility:private"],
 )
