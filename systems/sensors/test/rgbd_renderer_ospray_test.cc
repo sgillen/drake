@@ -2,10 +2,57 @@
 
 #include "drake/systems/sensors/test/rgbd_renderer_test_util.h"
 
+#include <vtkImageData.h>
+#include <vtkNew.h>
+#include <vtkPNGWriter.h>
+
 namespace drake {
 namespace systems {
 namespace sensors {
 namespace test {
+
+using std::string;
+
+template <PixelType kPixelType>
+void SaveToFile(const string& filepath, const Image<kPixelType>& image) {
+  const int width = image.width();
+  const int height = image.height();
+  const int num_channels = Image<kPixelType>::kNumChannels;
+
+  vtkNew<vtkImageData> vtk_image;
+  vtk_image->SetDimensions(width, height, 1);
+
+  switch (kPixelType) {
+    case PixelType::kRgba8U:
+      vtk_image->AllocateScalars(VTK_UNSIGNED_CHAR, num_channels);
+      break;
+    case PixelType::kDepth32F:
+      vtk_image->AllocateScalars(VTK_FLOAT, num_channels);
+      break;
+    case PixelType::kLabel16I:
+      vtk_image->AllocateScalars(VTK_UNSIGNED_SHORT, num_channels);
+      break;
+  }
+
+  auto image_ptr = reinterpret_cast<
+    typename Image<kPixelType>::T*>(vtk_image->GetScalarPointer());
+  const int num_scalar_components = vtk_image->GetNumberOfScalarComponents();
+
+  for (int v = height - 1; v >= 0; --v) {
+    for (int u = 0; u < width; ++u) {
+      for (int c = 0; c < num_channels; ++c) {
+        image_ptr[c] =
+            static_cast<typename Image<kPixelType>::T>(image.at(u, v)[c]);
+      }
+      image_ptr += num_scalar_components;
+    }
+  }
+
+  vtkNew<vtkPNGWriter> writer;
+  writer->SetFileName(filepath.c_str());
+  writer->SetInputData(vtk_image.GetPointer());
+  writer->Write();
+}
 
 using RgbdRendererOSPRayTest = RgbdRendererTest<RgbdRendererOSPRay>;
 using Eigen::Isometry3d;
@@ -188,6 +235,8 @@ TEST_F(RgbdRendererOSPRayTest, MeshTest) {
   renderer_->RegisterVisual(visual, kBodyID);
   renderer_->UpdateVisualPose(X_WV, kBodyID, kVisualID);
   renderer_->RenderColorImage(&color_);
+
+  SaveToFile("/tmp/image.png", color_);
 
   // Verifies outside the mesh.
   for (const auto& p : kOutliers) {
