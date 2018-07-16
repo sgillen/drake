@@ -16,12 +16,8 @@ sub_module = property(
     lambda obj, value: setattr(obj, "sub_module", value))
 
 
-def _handler(name):
-    raise AttributeError()
-
-
 __all__ = ["value", "sub_module"]
-ModuleShim.install(__name__, _handler)
+ModuleShim.install(__name__)
 
 
 class ExampleClass(object):

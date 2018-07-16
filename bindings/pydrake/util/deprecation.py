@@ -21,21 +21,6 @@ import warnings
 # (e.g. `install`).
 
 
-def _is_descriptor(value):
-    if value is None:
-        return False
-    getter = getattr(value, "__get__", None)
-    if getter is not None:
-        return True
-        # print("YAW")
-        # print(type(getter))
-        # print(dir(getter))
-        # if getter.im_self is not None:
-        #     print("SHOE")
-        #     return True
-    return False
-
-
 class ModuleShim(object):
     """Provides a shim for automatically resolving extra variables, and
     respects descriptors within a module.
@@ -47,29 +32,16 @@ class ModuleShim(object):
     """
     # TODO(eric.cousineau): Consider overriding `__dict__` if need be.
 
-    def __init__(self, orig_module, handler):
+    def __init__(self, orig_module):
         assert hasattr(orig_module, "__all__"), (
             "Please define `__all__` for this module.")
         # https://stackoverflow.com/a/16237698/7829525
         object.__setattr__(self, '_orig_module', orig_module)
-        object.__setattr__(self, '_handler', handler)
 
     def __getattr__(self, name):
         # Use the original module if possible.
         m = self._orig_module
-        if hasattr(m, name):
-            value = getattr(m, name)
-        else:
-            # Otherwise, use the handler, and store the result.
-            try:
-                value = self._handler(name)
-            except AttributeError as e:
-                if e.message:
-                    raise e
-                else:
-                    raise AttributeError(
-                        "'module' object has no attribute '{}'".format(name))
-            setattr(m, name, value)
+        value = getattr(m, name)
         if _is_descriptor(value):
             return value.__get__(m, type(m))
         else:
@@ -104,16 +76,15 @@ class ModuleShim(object):
         return None
 
     @classmethod
-    def install(cls, name, handler):
-        """ Hook into module's attribute accessors and mutators.
+    def install(cls, name):
+        """
+        Hook into module's attribute accessors and mutators, and permit a module to take descriptors.
+
         @param name
             Module name. Generally should be __name__.
-        @param handler
-            Function of the form `handler(var)`, where `var` is
-            the variable name.
         """
         old_module = sys.modules[name]
-        new_module = cls(old_module, handler)
+        new_module = cls(old_module)
         sys.modules[name] = new_module
 
 
@@ -126,6 +97,15 @@ class DrakeDeprecationWarning(DeprecationWarning):
     def __init__(self, message, *args):
         extra_message = message + DrakeDeprecationWarning.addendum
         DeprecationWarning.__init__(self, extra_message, *args)
+
+
+def _is_descriptor(value):
+    if value is None:
+        return False
+    getter = getattr(value, "__get__", None)
+    if getter is not None:
+        return True
+    return False
 
 
 class _ConstantDescriptor(object):
