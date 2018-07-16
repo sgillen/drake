@@ -83,14 +83,9 @@ class ModuleShim(object):
         @param name
             Module name. Generally should be __name__.
         """
-        if name == "deprecation_example.cc_module":
-            print("YAWR")
         old_module = sys.modules[name]
-        print(old_module)
-        try:
-            new_module = cls(old_module)
-        except Exception as e:
-            raise e
+        new_module = cls(old_module)
+        print(sys.modules.keys())
         sys.modules[name] = new_module
 
 
