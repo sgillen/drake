@@ -6,16 +6,18 @@ from pydrake.util.deprecation import (
 )
 
 value = 1
-
-
 deprecated_value = deprecated_attribute("Bad value")(100)
+sub_module = property(
+    lambda obj: "This would be a shim",
+    # N.B. We must implement a `setter` for values that have submodule aliases.
+    # This is called when the submodule is imported.
+    # N.B. As this is written, this will overwrite the original descriptor,
+    # which is fine.
+    lambda obj, value: setattr(obj, "sub_module", value))
 
 
 def _handler(name):
-    if name == "sub_module":
-        return "This would be a shim"
-    else:
-        raise AttributeError()
+    raise AttributeError()
 
 
 __all__ = ["value", "sub_module"]
