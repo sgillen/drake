@@ -21,11 +21,27 @@ import warnings
 # (e.g. `install`).
 
 
+def _is_descriptor(value):
+    if value is None:
+        return False
+    getter = getattr(value, "__get__", None)
+    if getter is not None:
+        return True
+        # print("YAW")
+        # print(type(getter))
+        # print(dir(getter))
+        # if getter.im_self is not None:
+        #     print("SHOE")
+        #     return True
+    return False
+
+
 class ModuleShim(object):
-    """Provides a shim for automatically resolving extra variables.
+    """Provides a shim for automatically resolving extra variables, and
+    respects descriptors within a module.
 
     This can be used to deprecate import alias in modules to simplify
-    dependencies.
+    dependencies, or deprecate aliases which already exist.
 
     @see https://stackoverflow.com/a/7668273/7829525
     """
@@ -41,7 +57,7 @@ class ModuleShim(object):
         # Use the original module if possible.
         m = self._orig_module
         if hasattr(m, name):
-            return getattr(m, name)
+            value = getattr(m, name)
         else:
             # Otherwise, use the handler, and store the result.
             try:
@@ -53,18 +69,38 @@ class ModuleShim(object):
                     raise AttributeError(
                         "'module' object has no attribute '{}'".format(name))
             setattr(m, name, value)
+        if _is_descriptor(value):
+            return value.__get__(m)
+        else:
             return value
 
     def __setattr__(self, name, value):
         # Redirect writes to the original module.
-        setattr(self._orig_module, name, value)
+        m = self._orig_module
+        desc = self._get_descriptor(name)
+        if desc:
+            desc.__set__(m, value)
+        else:
+            setattr(m, name, value)
 
     def __delattr__(self, name):
         # Redirect deletions to the original module.
-        delattr(self._orig_module, name)
+        m = self._orig_module
+        desc = self._get_descriptor(name)
+        if desc:
+            desc.__del__(m)
+        else:
+            delattr(m, name)
 
     def __repr__(self):
         return repr(self._orig_module)
+
+    def _get_descriptor(self, name):
+        m = self._orig_module
+        value = getattr(m, name, None)
+        if _is_descriptor(value):
+            return value
+        return None
 
     @classmethod
     def install(cls, name, handler):
@@ -89,6 +125,35 @@ class DrakeDeprecationWarning(DeprecationWarning):
     def __init__(self, message, *args):
         extra_message = message + DrakeDeprecationWarning.addendum
         DeprecationWarning.__init__(self, extra_message, *args)
+
+
+class _ConstantDescriptor(object):
+    def __init__(self, value):
+        self._value = value
+
+    def __get__(self, obj, objtype):
+        return self._value
+
+    def __set__(self, obj, value):
+        raise Exception("Read-only value")
+
+    def __delete__(self, obj):
+        raise Exception("Read-only value")
+
+
+def _deprecate_attribute(cls, name, message):
+    # Deprecates an attribute which is directly owned by an object.
+    # TODO(eric.cousineau): Permit a non-constant value wrapper version if need
+    # be.
+    sys.stdout = sys.stderr
+    original = getattr(cls, name)
+    if not _is_descriptor(original):
+        # N.B. We don't use `property` here because, for some reason, I (Eric)
+        # am unable to get it to be called.
+        value = _ConstantDescriptor(original)
+    else:
+        value = original
+    setattr(cls, name, deprecated(message)(value))
 
 
 def _warn_deprecated(message, stacklevel=2):

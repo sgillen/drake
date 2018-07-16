@@ -36,8 +36,10 @@ PYBIND11_MODULE(cc_module, m) {
         WarnDeprecated(cls_handle.attr("message_overload"));
         self->overload(value);
       });
-  DeprecateAttribute(cls, "DeprecatedMethod", cls.attr("message_method"));
-  DeprecateAttribute(cls, "deprecated_prop", cls.attr("message_prop"));
+  // DeprecateAttribute(cls, "DeprecatedMethod", cls.attr("message_method"));
+  // DeprecateAttribute(cls, "deprecated_prop", cls.attr("message_prop"));
+  cls.attr("deprecated_attr") = 10;
+  DeprecateAttribute(cls, "deprecated_attr", cls.attr("message_attr"));
 }
 
 }  // namespace

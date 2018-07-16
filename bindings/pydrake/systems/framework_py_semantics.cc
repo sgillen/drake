@@ -6,6 +6,7 @@
 
 #include "drake/bindings/pydrake/pydrake_pybind.h"
 #include "drake/bindings/pydrake/systems/systems_pybind.h"
+#include "drake/bindings/pydrake/util/deprecation_pybind.h"
 #include "drake/bindings/pydrake/util/drake_optional_pybind.h"
 #include "drake/bindings/pydrake/util/eigen_pybind.h"
 #include "drake/bindings/pydrake/util/type_safe_index_pybind.h"
@@ -197,12 +198,10 @@ void DefineFrameworkPySemantics(py::module m) {
       .def("get_data_type", &InputPort<T>::get_data_type)
       .def("get_index", &InputPort<T>::get_index);
 
-    // TODO(eric.cousineau): Make these deprecated module attributes so that
-    // they present deprecation messages.
     // N.B. While this is called over again for each `T`, it is idempotent
     // (no averse side-effects).
-    m.attr("InputPortDescriptor") = m.attr("InputPort");
-    m.attr("InputPortDescriptor_") = m.attr("InputPort_");
+    SetDeprecatedAliasAttribute(m, "InputPortDescriptor", "InputPort");
+    SetDeprecatedAliasAttribute(m, "InputPortDescriptor_", "InputPort_");
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
     // Use deprecated alias directly here, so that it's easy to know when to

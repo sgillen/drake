@@ -15,10 +15,20 @@ namespace pydrake {
 /// is implemented with a Python property descriptor.
 inline void DeprecateAttribute(
     py::object cls, py::str name, py::str message) {
-  py::object deprecated =
-      py::module::import("pydrake.util.deprecation").attr("deprecated");
-  py::object original = cls.attr(name);
-  cls.attr(name) = deprecated(message)(original);
+  py::object deprecate_attribute =
+      py::module::import("pydrake.util.deprecation")
+      .attr("_deprecate_attribute");
+  deprecate_attribute(cls, name, message);
+}
+
+/// Deprecates an alias attribute.
+inline void SetDeprecatedAliasAttribute(
+    py::object cls, py::str alias, py::str original) {
+  cls.attr(alias) = cls.attr(original);
+  DeprecateAttribute(
+    cls, alias,
+    py::str("`{}` is deprecated; please use `{}` instead").format(
+        alias, original));
 }
 
 /// Raises a deprecation warning.
