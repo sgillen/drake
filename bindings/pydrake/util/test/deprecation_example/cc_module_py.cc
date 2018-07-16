@@ -26,6 +26,7 @@ PYBIND11_MODULE(cc_module, m) {
   cls.attr("message_overload") = "overload(int) is deprecated";
   cls.attr("message_method") = "Deprecated method";
   cls.attr("message_prop") = "Deprecated property";
+  cls.attr("message_attr") = "Deprecated attribute";
   // Add deprecated members.
   cls
       .def(py::init())
@@ -36,8 +37,8 @@ PYBIND11_MODULE(cc_module, m) {
         WarnDeprecated(cls_handle.attr("message_overload"));
         self->overload(value);
       });
-  // DeprecateAttribute(cls, "DeprecatedMethod", cls.attr("message_method"));
-  // DeprecateAttribute(cls, "deprecated_prop", cls.attr("message_prop"));
+  DeprecateAttribute(cls, "DeprecatedMethod", cls.attr("message_method"));
+  DeprecateAttribute(cls, "deprecated_prop", cls.attr("message_prop"));
   cls.attr("deprecated_attr") = 10;
   DeprecateAttribute(cls, "deprecated_attr", cls.attr("message_attr"));
 }
