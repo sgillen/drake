@@ -57,17 +57,22 @@ class TestDeprecation(unittest.TestCase):
         # well supported for `exec`.
         import deprecation_example.import_all
         import deprecation_example
-        self.assertIsInstance(deprecation_example.sub_module, str)
+        self.assertEqual(
+            deprecation_example.sub_module, "This would be a shim")
 
     def test_module_import_exec(self):
         # Test `exec` workflow.
         temp = {}
         exec "from deprecation_example import *" in temp
-        self.assertIsInstance(temp["sub_module"], str)
+        self.assertEqual(
+            temp["sub_module"], "This would be a shim")
 
     def test_module_attr(self):
         import deprecation_example as m
-        print(m.deprecated_value)
+        with warnings.catch_warnings(record=True) as w:
+            self.assertEqual(m.deprecated_value, 100)
+            self.assertEqual(len(w), 1)
+            self._check_warning(w[0], "Bad value")
 
     def _check_warning(
             self, item, message_expected, type=DrakeDeprecationWarning):
