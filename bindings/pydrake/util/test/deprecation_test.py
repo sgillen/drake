@@ -65,6 +65,10 @@ class TestDeprecation(unittest.TestCase):
         exec "from deprecation_example import *" in temp
         self.assertIsInstance(temp["sub_module"], str)
 
+    def test_module_attr(self):
+        import deprecation_example as m
+        print(m.deprecated_value)
+
     def _check_warning(
             self, item, message_expected, type=DrakeDeprecationWarning):
         self.assertEqual(item.category, type)

@@ -45,6 +45,7 @@ class ModuleShim(object):
 
     @see https://stackoverflow.com/a/7668273/7829525
     """
+    # TODO(eric.cousineau): Consider overriding `__dict__` if need be.
 
     def __init__(self, orig_module, handler):
         assert hasattr(orig_module, "__all__"), (
@@ -70,7 +71,7 @@ class ModuleShim(object):
                         "'module' object has no attribute '{}'".format(name))
             setattr(m, name, value)
         if _is_descriptor(value):
-            return value.__get__(m)
+            return value.__get__(m, type(m))
         else:
             return value
 
@@ -145,7 +146,6 @@ def _deprecate_attribute(cls, name, message):
     # Deprecates an attribute which is directly owned by an object.
     # TODO(eric.cousineau): Permit a non-constant value wrapper version if need
     # be.
-    sys.stdout = sys.stderr
     original = getattr(cls, name)
     if not _is_descriptor(original):
         # N.B. We don't use `property` here because, for some reason, I (Eric)

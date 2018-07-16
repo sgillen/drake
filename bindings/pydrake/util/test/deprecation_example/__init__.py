@@ -1,3 +1,4 @@
+import sys
 from pydrake.util.deprecation import (
     ModuleShim,
     deprecated,
@@ -6,6 +7,8 @@ from pydrake.util.deprecation import (
 
 value = 1
 
+deprecated_value = 100
+_deprecate_attribute(sys.modules[__name__], "deprecated_value", "Bad value")
 
 def _handler(name):
     if name == "sub_module":
