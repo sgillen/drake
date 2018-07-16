@@ -88,6 +88,10 @@ class ModuleShim(object):
         print(sys.modules.keys())
         sys.modules[name] = new_module
 
+        # TODO(eric.cousineau): Use `meta_path` or something to handle wrapping
+        # C extensions...
+        # http://xion.org.pl/2012/05/06/hacking-python-imports/
+
 
 class DrakeDeprecationWarning(DeprecationWarning):
     """Extends `DeprecationWarning` to permit Drake-specific warnings to
