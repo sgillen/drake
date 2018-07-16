@@ -33,8 +33,8 @@ class ModuleShim(object):
     # TODO(eric.cousineau): Consider overriding `__dict__` if need be.
 
     def __init__(self, orig_module):
-        assert hasattr(orig_module, "__all__"), (
-            "Please define `__all__` for this module.")
+        # assert hasattr(orig_module, "__all__"), (
+        #     "Please define `__all__` for this module.")
         # https://stackoverflow.com/a/16237698/7829525
         object.__setattr__(self, '_orig_module', orig_module)
 
@@ -83,8 +83,14 @@ class ModuleShim(object):
         @param name
             Module name. Generally should be __name__.
         """
+        if name == "deprecation_example.cc_module":
+            print("YAWR")
         old_module = sys.modules[name]
-        new_module = cls(old_module)
+        print(old_module)
+        try:
+            new_module = cls(old_module)
+        except Exception as e:
+            raise e
         sys.modules[name] = new_module
 
 

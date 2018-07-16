@@ -41,6 +41,10 @@ PYBIND11_MODULE(cc_module, m) {
   DeprecateAttribute(cls, "deprecated_prop", cls.attr("message_prop"));
   cls.attr("deprecated_attr") = 10;
   DeprecateAttribute(cls, "deprecated_attr", cls.attr("message_attr"));
+
+  // m.attr("__all__") = "ExampleCppClass";
+  py::module("pydrake.util.deprecation").attr("ModuleShim").attr("install")(
+      "deprecation_example.cc_module");
 }
 
 }  // namespace
