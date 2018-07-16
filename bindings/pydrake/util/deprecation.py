@@ -156,6 +156,14 @@ def _deprecate_attribute(cls, name, message):
     setattr(cls, name, deprecated(message)(value))
 
 
+def deprecated_attribute(message):
+    def wrapped(original):
+        assert not _is_descriptor(original)
+        value = _ConstantDescriptor(original)
+        return _DeprecatedDescriptor(value, message)
+    return wrapped
+
+
 def _warn_deprecated(message, stacklevel=2):
     # Logs a deprecation warning message.  Also used by `deprecation_pybind.h`
     # in addition to this file.

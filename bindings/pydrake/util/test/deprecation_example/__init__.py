@@ -2,13 +2,14 @@ import sys
 from pydrake.util.deprecation import (
     ModuleShim,
     deprecated,
-    _deprecate_attribute,
+    deprecated_attribute,
 )
 
 value = 1
 
-deprecated_value = 100
-_deprecate_attribute(sys.modules[__name__], "deprecated_value", "Bad value")
+
+deprecated_value = deprecated_attribute("Bad value")(100)
+
 
 def _handler(name):
     if name == "sub_module":
@@ -37,8 +38,4 @@ class ExampleClass(object):
     # Deprecate public property.
     _deprecated_prop = property(lambda self: 2, doc=doc_prop)
     deprecated_prop = deprecated(message_prop)(_deprecated_prop)
-
-    deprecated_attr = 10
-
-
-_deprecate_attribute(ExampleClass, "deprecated_attr", ExampleClass.message_attr)
+    deprecated_attr = deprecated_attribute(message_attr)(10)
