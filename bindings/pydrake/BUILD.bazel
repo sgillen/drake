@@ -199,6 +199,9 @@ install(
         ":test/all_install_test.py",
         ":test/common_install_test.py",
     ],
+    install_tests_data = [
+        ":test/all_test.py",
+    ],
     targets = PY_LIBRARIES + [":all_py"],
     py_dest = PACKAGE_INFO.py_dest,
     visibility = ["//visibility:public"],

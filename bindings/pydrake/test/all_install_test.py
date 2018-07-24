@@ -20,10 +20,11 @@ class TestAllInstall(unittest.TestCase):
         tool_env[env_python_path] = os.path.abspath(
             os.path.join(install_dir, "lib", "python2.7", "site-packages")
         )
-        # Ensure we can import all user-visible modules.
-        script = "import pydrake.all"
+        # Ensure we can import all user-visible modules via our Bazel test.
+        script = os.path.join(
+            os.path.dirname(__file__), "all_test.py")
         install_test_helper.check_call(
-            [install_test_helper.get_python_executable(), "-c", script],
+            [install_test_helper.get_python_executable(), script],
             env=tool_env
         )
 

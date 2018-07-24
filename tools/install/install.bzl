@@ -362,7 +362,11 @@ def _install_test_actions(ctx):
     for test in ctx.attr.install_tests:
         for f in test.files:
             test_actions.append(
-                struct(src = f, cmd = f.path),
+                struct(
+                    src = f,
+                    cmd = f.path,
+                    data = ctx.files.install_tests_data,
+                ),
             )
 
     return test_actions
@@ -493,9 +497,12 @@ def _install_impl(ctx):
         )
 
     # Return actions.
+    install_test_files = []
+    for i in installed_tests:
+        install_test_files += [i.src] + i.data
     files = ctx.runfiles(
         files = [a.src for a in actions if not hasattr(a, "main_class")] +
-                [i.src for i in installed_tests],
+                install_test_files
     )
     return [
         InstallInfo(install_actions = actions, rename = rename),
@@ -535,6 +542,10 @@ install = rule(
         "py_strip_prefix": attr.string_list(),
         "rename": attr.string_dict(),
         "install_tests": attr.label_list(
+            default = [],
+            allow_files = True,
+        ),
+        "install_tests_data": attr.label_list(
             default = [],
             allow_files = True,
         ),
@@ -650,6 +661,8 @@ Args:
       files upon installation.
     install_tests: List of scripts that are designed to test the install
         tree. These scripts will not be installed.
+    install_tests_data: Data for install test scripts (e.g. to re-run a small
+        Bazel test in install space).
     install_tests_script: Name of the generated file that contains the commands
         run to test the install tree. This only needs to be specified for the
         main `install()` call, and the same name should be passed to
