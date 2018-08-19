@@ -37,6 +37,12 @@ void init_math(py::module m) {
            py::arg("w"), py::arg("v"));
 
   // TODO(jadecastro, eric.cousineau): Bind additional classes as necessary.
+  {
+    using Class = PositionKinematicsCache<T>;
+    py::class_<Class>(m, "PositionKinematicsCache")
+        .def(py::init<const MultibodyTreeTopology&>(), py::arg("topology"))
+        .def("get_X_WB", &Class::get_X_WB);
+  }
 }
 
 void init_all(py::module m) {
