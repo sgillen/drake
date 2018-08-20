@@ -14,7 +14,21 @@ namespace pydrake {
 
 using std::string;
 
+// TODO(eric.cousineau): Expose available scalar types.
 using T = double;
+
+// Binds MutlibodyTreeElement methods.
+// N.B. We do this rather than inheritance because this template is more of a
+// mixin than it is a parent class (since it is not used for its dynamic
+// polymorphism).
+template <typename PyClass>
+void BindMultibodyTreeElementMixin(PyClass& cls) {
+  using Class = typename PyClass::type;
+  cls
+      .def("get_parent_tree", &Class::get_parent_tree, py_reference_internal)
+      .def("index", &Class::index)
+      .def("model_instance", &Class::model_instance);
+}
 
 void init_math(py::module m) {
   // NOLINTNEXTLINE(build/namespaces): Emulate placement in namespace.
@@ -39,7 +53,7 @@ void init_math(py::module m) {
                     const Eigen::Ref<const Vector3<T>>&>(),
            py::arg("w"), py::arg("v"));
 
-  // This is defined in the same order as `multibody_tree_indexes.h`.
+  // These are defined in the same order as `multibody_tree_indexes.h`.
   BindTypeSafeIndex<FrameIndex>(m, "FrameIndex");
   BindTypeSafeIndex<BodyIndex>(m, "BodyIndex");
   BindTypeSafeIndex<MobilizerIndex>(m, "MobilizerIndex");
@@ -51,18 +65,38 @@ void init_math(py::module m) {
   m.def("world_index", &world_index);
 
   {
-    using Class = MultibodyTree<T>;
-    // N.B. We purposely do not expose much functionality, as users should
-    // generally be using `MultibodyPlant`. We simply enable passing the object
-    // around.
-    py::class_<Class>(m, "MultibodyTree");
+    using Class = Frame<T>;
+    py::class_<Class> cls(m, "Frame");
+    BindMultibodyTreeElementMixin(cls);
+    cls
+        .def("body", &Class::body, py_reference);
   }
 
   {
-    using Class = PositionKinematicsCache<T>;
-    py::class_<Class>(m, "PositionKinematicsCache")
-        .def(py::init<const MultibodyTreeTopology&>(), py::arg("topology"))
-        .def("get_X_WB", &Class::get_X_WB);
+    using Class = Body<T>;
+    py::class_<Class> cls(m, "Body")
+    BindMultibodyTreeElementMixin(cls);
+  }
+
+  {
+    using Class = Joint<T>;
+    py::class_<Class> cls(m, "Joint");
+    BindMultibodyTreeElementMixin(cls);
+    cls
+        .def("name", &Class::name)
+        .def("parent_body", &Class::parent_body, py_reference)
+        .def("child_body", &Class::child_body, py_reference)
+        .def("frame_on_parent", &Class::frame_on_parent, py_reference_internal)
+        .def("frame_on_child", &Class:frame_on_child, py_reference_internal)
+        .def("num_dofs", &Class::num_dofs);
+  }
+
+  {
+    // N.B. We purposely do not expose much functionality, as users should
+    // generally be using `MultibodyPlant`. We simply enable passing the object
+    // around.
+    using Class = MultibodyTree<T>;
+    py::class_<Class>(m, "MultibodyTree");
   }
 }
 
@@ -70,9 +104,10 @@ void init_multibody_tree(py::module m) {
   // TODO(jadecastro, eric.cousineau): Bind additional classes as necessary.
   {
     using Class = MultibodyPlant<T>;
-    py::class_<Class> cls(m, "MultibodyPlant");
+    py::class_<Class, systems::LeafSystem<T>> cls(m, "MultibodyPlant");
     // N.B. These are defined as they appear in the class declaration.
-    // TODO(eric.cousineau): Add model-instance based overloads.
+    // TODO(eric.cousineau): Add model-instance based overloads beyond
+    // forwarded methods.
     cls
         .def(py::init<double>(), py::arg("time_step") = 0.);
     // Forwarded methods from `MultibodyTree`.
@@ -90,14 +125,21 @@ void init_multibody_tree(py::module m) {
              py::overload_cast<ModelInstanceIndex>(&Class::num_velocities))
         .def("num_multibody_states", &Class::num_multibody_states)
         .def("num_actuated_dofs", &Class::num_actuated);
-    // TODO(eric.cousineau): Add constructions methods, `AddRigidBody`, etc.
+    // TODO(eric.cousineau): Add construction methods, `AddRigidBody`, etc.
     // Topology queries.
-    
     cls
         .def("HasBodyNamed", py::overload_cast<string>(&Class::HasBodyNamed),
              py::arg("name"))
         .def("HasJointNamed", py::overload_cast<string>(&Class::HasJointNamed),
-             py::arg("name"));
+             py::arg("name"))
+        .def("GetBodyByName", py::overload_cast<string>(&Class::GetBodyByName),
+             py::arg("name"), py_reference_internal)
+        .def("GetJointByName",
+             py::overload_cast<string>(&Class::GetJointByName),
+             py::arg("name"), py_reference_internal)
+        .def("GetJointActuatorByName",
+             py::overload_cast<string>(&Class::GetJointActuatorByName),
+             py::arg("name"), py_reference_internal);
     // Port accessors.
     cls
         .def("get_actuation_input_port",
