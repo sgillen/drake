@@ -48,6 +48,18 @@ void init_math(py::module m) {
   BindTypeSafeIndex<ModelInstanceIndex>(m, "ModelInstanceIndex");
   m.def("world_index", &world_index);
 
+  {
+    using Class = BodyTopology
+  }
+  {
+    using Class = PositionKinematicsCache<T>;
+    py::class_<Class>(m, "PositionKinematicsCache")
+        .def(py::init<const MultibodyTreeTopology&>(), py::arg("topology"))
+        .def("get_X_WB", &Class::get_X_WB);
+  }
+}
+
+void init_multibody_tree(py::module m) {
   // TODO(jadecastro, eric.cousineau): Bind additional classes as necessary.
   {
     using Class = MultibodyPlant<T>;
@@ -66,15 +78,6 @@ void init_math(py::module m) {
              py::overload_cast<ModelInstanceIndex>(&Class::num_velocities))
         .def("num_multibody_states", &Class::num_multibody_states)
         .def("num_actuated_dofs", &Class::num_actuated
-  }
-  {
-    using Class = BodyTopology
-  }
-  {
-    using Class = PositionKinematicsCache<T>;
-    py::class_<Class>(m, "PositionKinematicsCache")
-        .def(py::init<const MultibodyTreeTopology&>(), py::arg("topology"))
-        .def("get_X_WB", &Class::get_X_WB);
   }
 }
 
