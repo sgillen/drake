@@ -11,6 +11,7 @@
 
 namespace drake {
 namespace pydrake {
+namespace {
 
 using std::string;
 
@@ -30,29 +31,7 @@ void BindMultibodyTreeElementMixin(PyClass& cls) {
       .def("model_instance", &Class::model_instance);
 }
 
-void init_math(py::module m) {
-  // NOLINTNEXTLINE(build/namespaces): Emulate placement in namespace.
-  using namespace drake::multibody;
-
-  m.doc() = "MultibodyTree math functionality.";
-
-  py::class_<SpatialVector<SpatialVelocity, T>>(m, "SpatialVector")
-      .def("rotational",
-           [](const SpatialVector<SpatialVelocity, T>* self)
-               -> const Vector3<T>& { return self->rotational(); },
-           py_reference_internal)
-      .def("translational",
-           [](const SpatialVector<SpatialVelocity, T>* self)
-               -> const Vector3<T>& { return self->translational(); },
-           py_reference_internal);
-
-  py::class_<SpatialVelocity<T>, SpatialVector<SpatialVelocity, T>>(
-      m, "SpatialVelocity")
-      .def(py::init())
-      .def(py::init<const Eigen::Ref<const Vector3<T>>&,
-                    const Eigen::Ref<const Vector3<T>>&>(),
-           py::arg("w"), py::arg("v"));
-
+void init(py::module m) {
   // These are defined in the same order as `multibody_tree_indexes.h`.
   BindTypeSafeIndex<FrameIndex>(m, "FrameIndex");
   BindTypeSafeIndex<BodyIndex>(m, "BodyIndex");
@@ -70,6 +49,12 @@ void init_math(py::module m) {
     BindMultibodyTreeElementMixin(cls);
     cls
         .def("body", &Class::body, py_reference);
+  }
+
+  {
+    using Class = BodyFrame<T>;
+    py::class_<Class, Frame<T>> cls;
+    // No need to re-bind element mixins from `Frame`.
   }
 
   {
@@ -100,16 +85,37 @@ void init_math(py::module m) {
   }
 }
 
-void init_multibody_tree(py::module m) {
-  // TODO(jadecastro, eric.cousineau): Bind additional classes as necessary.
+void init_math(py::module m) {
+  // NOLINTNEXTLINE(build/namespaces): Emulate placement in namespace.
+  using namespace drake::multibody;
+
+  m.doc() = "MultibodyTree math functionality.";
+
+  py::class_<SpatialVector<SpatialVelocity, T>>(m, "SpatialVector")
+      .def("rotational",
+           [](const SpatialVector<SpatialVelocity, T>* self)
+               -> const Vector3<T>& { return self->rotational(); },
+           py_reference_internal)
+      .def("translational",
+           [](const SpatialVector<SpatialVelocity, T>* self)
+               -> const Vector3<T>& { return self->translational(); },
+           py_reference_internal);
+
+  py::class_<SpatialVelocity<T>, SpatialVector<SpatialVelocity, T>>(
+      m, "SpatialVelocity")
+      .def(py::init())
+      .def(py::init<const Eigen::Ref<const Vector3<T>>&,
+                    const Eigen::Ref<const Vector3<T>>&>(),
+           py::arg("w"), py::arg("v"));
+}
+
+void init_multibody_plant(py::module m) {
   {
     using Class = MultibodyPlant<T>;
     py::class_<Class, systems::LeafSystem<T>> cls(m, "MultibodyPlant");
     // N.B. These are defined as they appear in the class declaration.
     // TODO(eric.cousineau): Add model-instance based overloads beyond
     // forwarded methods.
-    cls
-        .def(py::init<double>(), py::arg("time_step") = 0.);
     // Forwarded methods from `MultibodyTree`.
     cls
         .def("num_bodies", &Class::num_bodies)
@@ -176,9 +182,15 @@ void init_all(py::module m) {
   // manually spell it out.
   py::dict vars = m.attr("__dict__");
   py::exec(
-      "from pydrake.multibody.multibody_tree.math import *",
-      py::globals(), vars);
+      R"""(
+from pydrake.multibody.multibody_tree import *
+from pydrake.multibody.multibody_tree.math import *
+from pydrake.multibody.multibody_tree.multibody_tree import *
+from pydrake.multibody.multibody_tree.parsing import *
+)""", py::globals(), vars);
 }
+
+}  // namespace
 
 PYBIND11_MODULE(multibody_tree, m) {
   m.doc() = "MultibodyTree functionality.";
@@ -186,8 +198,9 @@ PYBIND11_MODULE(multibody_tree, m) {
   // N.B. At present, we cannot have `math` as a submodule here, and in
   // `pydrake`. The current solution is to manually define submodules.
   // See the dicussion in #8282 for more information.
+  init(m);
   init_math(m.def_submodule("math"));
-  init_multibody_tree(m.def_submodule("multibody_tree"));
+  init_multibody_plant(m.def_submodule("multibody_plant"));
   init_parsing(m.def_submodule("parsing"));
   init_all(m.def_submodule("all"));
 }
