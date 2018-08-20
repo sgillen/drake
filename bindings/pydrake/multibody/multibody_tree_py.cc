@@ -7,6 +7,7 @@
 #include "drake/multibody/multibody_tree/math/spatial_force.h"
 #include "drake/multibody/multibody_tree/math/spatial_vector.h"
 #include "drake/multibody/multibody_tree/math/spatial_velocity.h"
+#include "drake/multibody/multibody_tree/position_kinematics_cache.h"
 
 namespace drake {
 namespace pydrake {
@@ -36,7 +37,39 @@ void init_math(py::module m) {
                     const Eigen::Ref<const Vector3<T>>&>(),
            py::arg("w"), py::arg("v"));
 
+  // This is defined in the same order as `multibody_tree_indexes.h`.
+  BindTypeSafeIndex<FrameIndex>(m, "FrameIndex");
+  BindTypeSafeIndex<BodyIndex>(m, "BodyIndex");
+  BindTypeSafeIndex<MobilizerIndex>(m, "MobilizerIndex");
+  BindTypeSafeIndex<BodyNodeIndex>(m, "BodyNodeIndex");
+  BindTypeSafeIndex<ForceElementIndex>(m, "ForceElementIndex");
+  BindTypeSafeIndex<JointIndex>(m, "JointIndex");
+  BindTypeSafeIndex<JointActuatorIndex>(m, "JointActuatorIndex");
+  BindTypeSafeIndex<ModelInstanceIndex>(m, "ModelInstanceIndex");
+  m.def("world_index", &world_index);
+
   // TODO(jadecastro, eric.cousineau): Bind additional classes as necessary.
+  {
+    using Class = MultibodyPlant<T>;
+    py::class_<Class>(m, "MultibodyPlant")
+        .def(py::init<double>(), py::arg("time_step") = 0.)
+        .def("num_bodies", &Class::num_bodies)
+        .def("num_joints", &Class::num_joints)
+        .def("num_actuators", &Class::num_actuators)
+        .def("num_model_instances", &Class::num_model_instances)
+        .def("num_positions", py::overload_cast<>(&Class::num_positions))
+        .def("num_positions",
+             py::overload_cast<ModelInstanceIndex>(&Class::num_positions),
+             py::arg("model_instance"))
+        .def("num_velocities", py::overload_cast<>(&Class::num_velocities))
+        .def("num_velocities",
+             py::overload_cast<ModelInstanceIndex>(&Class::num_velocities))
+        .def("num_multibody_states", &Class::num_multibody_states)
+        .def("num_actuated_dofs", &Class::num_actuated
+  }
+  {
+    using Class = BodyTopology
+  }
   {
     using Class = PositionKinematicsCache<T>;
     py::class_<Class>(m, "PositionKinematicsCache")
