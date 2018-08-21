@@ -72,7 +72,7 @@ class DiscreteDerivative final : public LeafSystem<T> {
   double time_step() const { return time_step_; }
 
  private:
-  void DoCalcDiscreteVariableUpdates(
+  systems::EventHandlerStatus DoCalcDiscreteVariableUpdates(
       const Context<T>& context,
       const std::vector<const DiscreteUpdateEvent<T>*>&,
       DiscreteValues<T>* discrete_state) const final;

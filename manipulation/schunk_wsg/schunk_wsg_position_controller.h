@@ -106,7 +106,7 @@ class SchunkWsgPositionController : public systems::LeafSystem<double> {
   void CalcGripForceOutput(const systems::Context<double>& context,
                            systems::BasicVector<double>* output_vector) const;
 
-  void DoCalcDiscreteVariableUpdates(
+  systems::EventHandlerStatus DoCalcDiscreteVariableUpdates(
       const systems::Context<double>& context,
       const std::vector<const systems::DiscreteUpdateEvent<double>*>& events,
       systems::DiscreteValues<double>* updates) const;

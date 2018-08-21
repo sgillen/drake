@@ -34,6 +34,7 @@ using systems::Context;
 using systems::ContinuousState;
 using systems::DiscreteUpdateEvent;
 using systems::DiscreteValues;
+using systems::EventHandlerStatus;
 using systems::LeafSystem;
 using systems::PublishEvent;
 using systems::System;
@@ -102,7 +103,7 @@ struct Impl {
     using Base::Base;
 
     // Trampoline virtual methods.
-    void DoPublish(
+    EventHandlerStatus DoPublish(
         const Context<T>& context,
         const vector<const PublishEvent<T>*>& events) const override {
       // Yuck! We have to dig in and use internals :(
@@ -111,10 +112,10 @@ struct Impl {
       // @see https://github.com/pybind/pybind11/issues/1241
       // TODO(eric.cousineau): Figure out how to supply different behavior,
       // possibly using function wrapping.
-      PYBIND11_OVERLOAD_INT(void, LeafSystem<T>, "_DoPublish", &context,
-                            events);
+      PYBIND11_OVERLOAD_INT(
+          EventHandlerStatus, LeafSystem<T>, "_DoPublish", &context, events);
       // If the macro did not return, use default functionality.
-      Base::DoPublish(context, events);
+      return Base::DoPublish(context, events);
     }
 
     optional<bool> DoHasDirectFeedthrough(int input_port,
@@ -134,16 +135,17 @@ struct Impl {
       Base::DoCalcTimeDerivatives(context, derivatives);
     }
 
-    void DoCalcDiscreteVariableUpdates(
+    EventHandlerStatus DoCalcDiscreteVariableUpdates(
         const Context<T>& context,
         const std::vector<const DiscreteUpdateEvent<T>*>& events,
         DiscreteValues<T>* discrete_state) const override {
       // See `DoPublish` for explanation.
-      PYBIND11_OVERLOAD_INT(void, LeafSystem<T>,
-                            "_DoCalcDiscreteVariableUpdates", &context, events,
-                            discrete_state);
+      PYBIND11_OVERLOAD_INT(
+          EventHandlerStatus, LeafSystem<T>, "_DoCalcDiscreteVariableUpdates",
+          &context, events, discrete_state);
       // If the macro did not return, use default functionality.
-      Base::DoCalcDiscreteVariableUpdates(context, events, discrete_state);
+      return Base::DoCalcDiscreteVariableUpdates(context, events,
+                                                 discrete_state);
     }
   };
 
@@ -170,16 +172,16 @@ struct Impl {
     using Base::Base;
 
     // Trampoline virtual methods.
-    void DoPublish(
+    EventHandlerStatus DoPublish(
         const Context<T>& context,
         const vector<const PublishEvent<T>*>& events) const override {
       // Copied from above, since we cannot use `PyLeafSystemBase` due to final
       // overrides of some methods.
       // TODO(eric.cousineau): Make this more granular?
-      PYBIND11_OVERLOAD_INT(void, VectorSystem<T>, "_DoPublish", &context,
-                            events);
+      PYBIND11_OVERLOAD_INT(
+          EventHandlerStatus, VectorSystem<T>, "_DoPublish", &context, events);
       // If the macro did not return, use default functionality.
-      Base::DoPublish(context, events);
+      return Base::DoPublish(context, events);
     }
 
     optional<bool> DoHasDirectFeedthrough(int input_port,
@@ -224,19 +226,20 @@ struct Impl {
       Base::DoCalcVectorOutput(context, input, state, derivatives);
     }
 
-    void DoCalcVectorDiscreteVariableUpdates(
+    EventHandlerStatus DoCalcVectorDiscreteVariableUpdates(
         const Context<T>& context,
         const Eigen::VectorBlock<const VectorX<T>>& input,
         const Eigen::VectorBlock<const VectorX<T>>& state,
         Eigen::VectorBlock<VectorX<T>>* next_state) const override {
       // WARNING: Mutating `next_state` will not work when T is AutoDiffXd,
       // Expression, etc. See above.
-      PYBIND11_OVERLOAD_INT(void, VectorSystem<T>,
-                            "_DoCalcVectorDiscreteVariableUpdates", &context,
-                            input, state, ToEigenRef(next_state));
+      PYBIND11_OVERLOAD_INT(
+          EventHandlerStatus, VectorSystem<T>,
+          "_DoCalcVectorDiscreteVariableUpdates",
+          &context, input, state, ToEigenRef(next_state));
       // If the macro did not return, use default functionality.
-      Base::DoCalcVectorDiscreteVariableUpdates(context, input, state,
-                                                next_state);
+      return Base::DoCalcVectorDiscreteVariableUpdates(
+          context, input, state, next_state);
     }
   };
 
@@ -340,9 +343,8 @@ struct Impl {
              py::arg("max_depth") = std::numeric_limits<int>::max())
         // Events.
         .def("Publish",
-             overload_cast_explicit<void, const Context<T>&>(
-                 &System<T>::Publish),
-             doc.System.Publish.doc)
+             overload_cast_explicit<EventHandlerStatus, const Context<T>&>(
+                 &System<T>::Publish), doc.System.Publish.doc)
         // Scalar types.
         .def("ToAutoDiffXd",
              [](const System<T>& self) { return self.ToAutoDiffXd(); },

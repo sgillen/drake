@@ -61,7 +61,8 @@ SchunkWsgPositionController::SchunkWsgPositionController(double time_step,
   this->set_name("wsg_controller");
 }
 
-void SchunkWsgPositionController::DoCalcDiscreteVariableUpdates(
+drake::systems::EventHandlerStatus
+SchunkWsgPositionController::DoCalcDiscreteVariableUpdates(
     const drake::systems::Context<double>& context,
     const std::vector<const drake::systems::DiscreteUpdateEvent<double>*>&
         events,
@@ -71,6 +72,7 @@ void SchunkWsgPositionController::DoCalcDiscreteVariableUpdates(
   const double desired_position =
       this->EvalEigenVectorInput(context, desired_position_input_port_)[0];
   updates->get_mutable_vector().SetAtIndex(0, desired_position);
+  return drake::systems::EventHandlerStatus::Succeeded();
 }
 
 Vector2d SchunkWsgPositionController::CalcGeneralizedForce(

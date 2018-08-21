@@ -37,7 +37,8 @@ void DiscreteDerivative<T>::set_state(
 }
 
 template <typename T>
-void DiscreteDerivative<T>::DoCalcDiscreteVariableUpdates(
+drake::systems::EventHandlerStatus
+DiscreteDerivative<T>::DoCalcDiscreteVariableUpdates(
     const drake::systems::Context<T>& context,
     const std::vector<const drake::systems::DiscreteUpdateEvent<T>*>&,
     drake::systems::DiscreteValues<T>* discrete_state) const {
@@ -48,6 +49,7 @@ void DiscreteDerivative<T>::DoCalcDiscreteVariableUpdates(
   // x₁[n+1] = x₀[n].
   discrete_state->get_mutable_vector().get_mutable_value().tail(n_) =
       context.get_discrete_state(0).get_value().head(n_);
+  return drake::systems::EventHandlerStatus::Succeeded();
 }
 
 template <typename T>

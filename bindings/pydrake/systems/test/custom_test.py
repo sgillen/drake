@@ -17,6 +17,7 @@ from pydrake.systems.framework import (
     BasicVector, BasicVector_,
     Context,
     DiagramBuilder,
+    EventHandlerStatus,
     kUseDefaultName,
     LeafSystem, LeafSystem_,
     PortDataType,
@@ -93,6 +94,7 @@ class CustomVectorSystem(VectorSystem):
     def _DoCalcVectorDiscreteVariableUpdates(self, context, u, x, x_n):
         x_n[:] = x + 2*u
         self.has_called.append("discrete")
+        return EventHandlerStatus.Succeeded()
 
     def _DoHasDirectFeedthrough(self, input_port, output_port):
         self.has_called.append("feedthrough")
@@ -183,8 +185,6 @@ class TestCustom(unittest.TestCase):
                 self._DeclareVectorOutputPort(BasicVector(1), noop)
 
             def _DoPublish(self, context, events):
-                # Call base method to ensure we do not get recursion.
-                LeafSystem._DoPublish(self, context, events)
                 # N.B. We do not test for a singular call to `DoPublish`
                 # (checking `assertFalse(self.called_publish)` first) because
                 # the above `_DeclareInitializationEvent` will call both its
@@ -192,6 +192,8 @@ class TestCustom(unittest.TestCase):
                 # `Simulator::Initialize` from `call_leaf_system_overrides`,
                 # even when we explicitly say not to publish at initialize.
                 self.called_publish = True
+                # Call base method to ensure we do not get recursion.
+                return LeafSystem._DoPublish(self, context, events)
 
             def _DoHasDirectFeedthrough(self, input_port, output_port):
                 # Test inputs.
@@ -213,10 +215,10 @@ class TestCustom(unittest.TestCase):
 
             def _DoCalcDiscreteVariableUpdates(
                     self, context, events, discrete_state):
-                # Call base method to ensure we do not get recursion.
-                LeafSystem._DoCalcDiscreteVariableUpdates(
-                    self, context, events, discrete_state)
                 self.called_discrete = True
+                # Call base method to ensure we do not get recursion.
+                return LeafSystem._DoCalcDiscreteVariableUpdates(
+                    self, context, events, discrete_state)
 
             def _on_initialize(self, context, event):
                 test.assertIsInstance(context, Context)
