@@ -4,16 +4,24 @@
 
 #include "drake/bindings/pydrake/pydrake_pybind.h"
 #include "drake/bindings/pydrake/util/eigen_geometry_pybind.h"
+#include "drake/bindings/pydrake/util/type_safe_index_pybind.h"
 #include "drake/multibody/multibody_tree/math/spatial_force.h"
 #include "drake/multibody/multibody_tree/math/spatial_vector.h"
 #include "drake/multibody/multibody_tree/math/spatial_velocity.h"
-#include "drake/multibody/multibody_tree/position_kinematics_cache.h"
+#include "drake/multibody/multibody_tree/multibody_plant/multibody_plant.h"
+#include "drake/multibody/multibody_tree/multibody_tree.h"
+#include "drake/multibody/multibody_tree/parsing/multibody_plant_sdf_parser.h"
 
 namespace drake {
 namespace pydrake {
 namespace {
 
 using std::string;
+
+using geometry::SceneGraph;
+
+// NOLINTNEXTLINE(build/namespaces): Emulate placement in namespace.
+using namespace drake::multibody;
 
 // TODO(eric.cousineau): Expose available scalar types.
 using T = double;
@@ -31,7 +39,7 @@ void BindMultibodyTreeElementMixin(PyClass& cls) {
       .def("model_instance", &Class::model_instance);
 }
 
-void init(py::module m) {
+void init_module(py::module m) {
   // These are defined in the same order as `multibody_tree_indexes.h`.
   BindTypeSafeIndex<FrameIndex>(m, "FrameIndex");
   BindTypeSafeIndex<BodyIndex>(m, "BodyIndex");
@@ -53,13 +61,13 @@ void init(py::module m) {
 
   {
     using Class = BodyFrame<T>;
-    py::class_<Class, Frame<T>> cls;
+    py::class_<Class, Frame<T>> cls(m, "BodyFrame");
     // No need to re-bind element mixins from `Frame`.
   }
 
   {
     using Class = Body<T>;
-    py::class_<Class> cls(m, "Body")
+    py::class_<Class> cls(m, "Body");
     BindMultibodyTreeElementMixin(cls);
   }
 
@@ -72,7 +80,7 @@ void init(py::module m) {
         .def("parent_body", &Class::parent_body, py_reference)
         .def("child_body", &Class::child_body, py_reference)
         .def("frame_on_parent", &Class::frame_on_parent, py_reference_internal)
-        .def("frame_on_child", &Class:frame_on_child, py_reference_internal)
+        .def("frame_on_child", &Class::frame_on_child, py_reference_internal)
         .def("num_dofs", &Class::num_dofs);
   }
 
@@ -110,6 +118,9 @@ void init_math(py::module m) {
 }
 
 void init_multibody_plant(py::module m) {
+  // NOLINTNEXTLINE(build/namespaces): Emulate placement in namespace.
+  using namespace drake::multibody::multibody_plant;
+
   py::module::import("pydrake.geometry");
 
   {
@@ -124,40 +135,57 @@ void init_multibody_plant(py::module m) {
         .def("num_joints", &Class::num_joints)
         .def("num_actuators", &Class::num_actuators)
         .def("num_model_instances", &Class::num_model_instances)
-        .def("num_positions", py::overload_cast<>(&Class::num_positions))
         .def("num_positions",
-             py::overload_cast<ModelInstanceIndex>(&Class::num_positions),
+             overload_cast_explicit<int>(&Class::num_positions))
+        .def("num_positions",
+             overload_cast_explicit<int, ModelInstanceIndex>(
+                &Class::num_positions),
              py::arg("model_instance"))
-        .def("num_velocities", py::overload_cast<>(&Class::num_velocities))
         .def("num_velocities",
-             py::overload_cast<ModelInstanceIndex>(&Class::num_velocities))
+             overload_cast_explicit<int>(&Class::num_velocities))
+        .def("num_velocities",
+             overload_cast_explicit<int, ModelInstanceIndex>(
+                &Class::num_velocities))
         .def("num_multibody_states", &Class::num_multibody_states)
-        .def("num_actuated_dofs", &Class::num_actuated);
+        .def("num_actuated_dofs",
+             overload_cast_explicit<int>(&Class::num_actuated_dofs));
     // TODO(eric.cousineau): Add construction methods, `AddRigidBody`, etc.
     // Topology queries.
     cls
-        .def("HasBodyNamed", py::overload_cast<string>(&Class::HasBodyNamed),
+        .def("HasBodyNamed",
+             overload_cast_explicit<bool, const string&>(&Class::HasBodyNamed),
              py::arg("name"))
-        .def("HasJointNamed", py::overload_cast<string>(&Class::HasJointNamed),
+        .def("HasJointNamed",
+             overload_cast_explicit<bool, const string&>(
+                &Class::HasJointNamed),
              py::arg("name"))
-        .def("GetBodyByName", py::overload_cast<string>(&Class::GetBodyByName),
+        .def("GetBodyByName",
+             overload_cast_explicit<const Body<T>&, const string&>(
+                &Class::GetBodyByName),
              py::arg("name"), py_reference_internal)
         .def("GetJointByName",
-             py::overload_cast<string>(&Class::GetJointByName),
+             [](const Class* self, const string& name) -> auto& {
+               return self->GetJointByName(name);
+             },
              py::arg("name"), py_reference_internal)
         .def("GetJointActuatorByName",
-             py::overload_cast<string>(&Class::GetJointActuatorByName),
+             overload_cast_explicit<const JointActuator<T>&, const string&>(
+                &Class::GetJointActuatorByName),
              py::arg("name"), py_reference_internal);
     // Port accessors.
     cls
         .def("get_actuation_input_port",
-             py::overload_cast<>(&Class::get_actuation_input_port),
+             overload_cast_explicit<const systems::InputPort<T>&>(
+                &Class::get_actuation_input_port),
              py_reference_internal)
         .def("get_continuous_state_output_port",
-             py::overload_cast<>(&Class::get_continuous_state_output_port),
+             overload_cast_explicit<const systems::OutputPort<T>&>(
+                &Class::get_continuous_state_output_port),
              py_reference_internal)
         .def("get_contact_results_output_port",
-             &Class::get_contact_results_output_port, py_reference_internal)
+             overload_cast_explicit<const systems::OutputPort<T>&>(
+                &Class::get_contact_results_output_port),
+             py_reference_internal);
     // Property accessors.
     cls
         .def("world_body", &Class::world_body, py_reference_internal)
@@ -167,13 +195,19 @@ void init_multibody_plant(py::module m) {
 }
 
 void init_parsing(py::module m) {
+  // NOLINTNEXTLINE(build/namespaces): Emulate placement in namespace.
+  using namespace drake::multibody::parsing;
+  using multibody_plant::MultibodyPlant;
+
   m.def("AddModelFromSdfFile",
-        py::overload_cast<string, string, MultibodyPlant<T>*, SceneGraph<T>*>(
+        py::overload_cast<
+            const string&, const string&, MultibodyPlant<T>*, SceneGraph<T>*>(
             &AddModelFromSdfFile),
         py::arg("file_name"), py::arg("model_name"), py::arg("plant"),
         py::arg("scene_graph") = nullptr);
   m.def("AddModelFromSdfFile",
-        py::overload_cast<string, MultibodyPlant<T>*, SceneGraph<T>*>(
+        py::overload_cast<
+            const string&, MultibodyPlant<T>*, SceneGraph<T>*>(
             &AddModelFromSdfFile),
         py::arg("file_name"), py::arg("plant"),
         py::arg("scene_graph") = nullptr);
@@ -200,7 +234,7 @@ PYBIND11_MODULE(multibody_tree, m) {
   // N.B. At present, we cannot have `math` as a submodule here, and in
   // `pydrake`. The current solution is to manually define submodules.
   // See the dicussion in #8282 for more information.
-  init(m);
+  init_module(m);
   init_math(m.def_submodule("math"));
   init_multibody_plant(m.def_submodule("multibody_plant"));
   init_parsing(m.def_submodule("parsing"));

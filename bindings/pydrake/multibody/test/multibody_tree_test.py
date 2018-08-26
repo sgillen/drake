@@ -48,6 +48,10 @@ class TestMath(unittest.TestCase):
         self.assertTrue(np.allclose(velocity1.rotational(), w))
         self.assertTrue(np.allclose(velocity1.translational(), v))
 
+    def test_type_safe_indices(self):
+        """Existence tests."""
+        self.assertEqual(world_index(), BodyIndex(0))
+
     def test_multibody_plant_api_via_parsing(self):
         # TODO(eric.cousineau): Decouple this when construction can be done
         # without parsing.
