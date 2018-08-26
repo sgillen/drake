@@ -70,6 +70,8 @@ class TestAll(unittest.TestCase):
             "jacobian",
             "sin",
             "cos",
+            # geometry
+            "SceneGraph",
             # lcm
             "DrakeLcm",
             # symbolic
@@ -95,6 +97,7 @@ class TestAll(unittest.TestCase):
             # Import modules, since these names are generic.
             "Element",
             # - multibody_tree
+            "MultibodyPlant",
             "SpatialVelocity",
             # solvers
             # - gurobi

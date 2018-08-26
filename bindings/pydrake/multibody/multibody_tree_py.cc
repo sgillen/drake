@@ -110,6 +110,8 @@ void init_math(py::module m) {
 }
 
 void init_multibody_plant(py::module m) {
+  py::module::import("pydrake.geometry");
+
   {
     using Class = MultibodyPlant<T>;
     py::class_<Class, systems::LeafSystem<T>> cls(m, "MultibodyPlant");
