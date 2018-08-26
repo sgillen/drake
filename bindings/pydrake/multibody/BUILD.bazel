@@ -43,6 +43,7 @@ drake_pybind_library(
     py_deps = [
         ":module_py",
         "//bindings/pydrake:geometry_py",
+        "//bindings/pydrake/systems:framework_py",
         "//bindings/pydrake/util:eigen_geometry_py",
     ],
 )

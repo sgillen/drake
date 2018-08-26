@@ -89,7 +89,7 @@ class TestMath(unittest.TestCase):
             plant.GetJointActuatorNamed(name="ElbowJoint"))
         
         self.assertIsInstance(
-            plant.GetBodyByName(name="Link1", Body))
+            plant.GetBodyByName(name="Link1"), Body)
         self.assertIsInstance(
             plant.get_actuation_input_port(), InputPort)
         self.assertIsInstance(
