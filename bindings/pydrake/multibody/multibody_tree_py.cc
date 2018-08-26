@@ -235,10 +235,13 @@ PYBIND11_MODULE(multibody_tree, m) {
   // `pydrake`. The current solution is to manually define submodules.
   // See the dicussion in #8282 for more information.
   init_module(m);
+  unused(
+    &init_multibody_plant,
+    &init_parsing, &init_all);
   init_math(m.def_submodule("math"));
   init_multibody_plant(m.def_submodule("multibody_plant"));
   init_parsing(m.def_submodule("parsing"));
-  init_all(m.def_submodule("all"));
+  // init_all(m.def_submodule("all"));
 }
 
 }  // namespace pydrake
