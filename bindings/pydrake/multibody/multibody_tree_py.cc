@@ -69,6 +69,8 @@ void init_module(py::module m) {
     using Class = Body<T>;
     py::class_<Class> cls(m, "Body");
     BindMultibodyTreeElementMixin(cls);
+    cls
+        .def("name", &Class::name);
   }
 
   {
@@ -82,6 +84,15 @@ void init_module(py::module m) {
         .def("frame_on_parent", &Class::frame_on_parent, py_reference_internal)
         .def("frame_on_child", &Class::frame_on_child, py_reference_internal)
         .def("num_dofs", &Class::num_dofs);
+  }
+
+  {
+    using Class = JointActuator<T>;
+    py::class_<Class> cls(m, "JointActuator");
+    BindMultibodyTreeElementMixin(cls);
+    cls
+        .def("name", &Class::name)
+        .def("joint", &Class::joint, py_reference_internal);
   }
 
   {

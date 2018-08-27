@@ -1,3 +1,4 @@
+from .benchmarks import *
 from .collision import *
 from .joints import *
 from .parsers import *
