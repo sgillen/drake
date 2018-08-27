@@ -1,3 +1,4 @@
+#include "pybind11/eval.h"
  #include "pybind11/pybind11.h"
 
 #include "drake/bindings/pydrake/pydrake_pybind.h"
@@ -26,9 +27,22 @@ void init_acrobot(py::module m) {
         py::arg("scene_graph") = nullptr);
 }
 
+void init_all(py::module m) {
+  py::dict vars = m.attr("__dict__");
+  py::exec(
+      R"""(
+from pydrake.multibody.benchmarks.acrobot import *
+)""");
+}
+
 PYBIND11_MODULE(benchmarks, m) {
   py::module::import("pydrake.multibody.multibody_tree");
   init_acrobot(m.def_submodule("acrobot"));
+
+  // Pre-register this module to define an `all` module.
+  py::module::import("sys").attr("modules")[
+      "pydrake.multibody.benchmarks"] = m;
+  init_all(m.def_submodule("all"));
 }
 
 }  // namespace pydrake

@@ -259,7 +259,11 @@ PYBIND11_MODULE(multibody_tree, m) {
   init_math(m.def_submodule("math"));
   init_multibody_plant(m.def_submodule("multibody_plant"));
   init_parsing(m.def_submodule("parsing"));
-  // init_all(m.def_submodule("all"));
+  
+  // Pre-register this model so that we can evaluate simple code.
+  py::module::import("sys").attr("modules")[
+      "pydrake.multibody.multibody_tree"] = m;
+  init_all(m.def_submodule("all"));
 }
 
 }  // namespace pydrake
