@@ -131,6 +131,8 @@ void init_multibody_plant(py::module m) {
     // forwarded methods.
     // Forwarded methods from `MultibodyTree`.
     cls
+        .def(py::init<double>(),
+             py::arg("time_step") = 0.)
         .def("num_bodies", &Class::num_bodies)
         .def("num_joints", &Class::num_joints)
         .def("num_actuators", &Class::num_actuators)
@@ -190,7 +192,9 @@ void init_multibody_plant(py::module m) {
     cls
         .def("world_body", &Class::world_body, py_reference_internal)
         .def("model", &Class::model, py_reference_internal)
-        .def("is_finalized", &Class::is_finalized);
+        .def("is_finalized", &Class::is_finalized)
+        .def("Finalize", py::overload_cast<SceneGraph<T>*>(&Class::Finalize),
+             py::arg("scene_graph") = nullptr);
   }
 }
 
@@ -212,6 +216,9 @@ void init_parsing(py::module m) {
         py::arg("file_name"), py::arg("plant"),
         py::arg("scene_graph") = nullptr);
 }
+
+// void from_module_import_all(py::module m, py::dict vars) {
+// }
 
 void init_all(py::module m) {
   // Not sure if relative imports will work in this context, so we will

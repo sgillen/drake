@@ -59,8 +59,9 @@ class TestMath(unittest.TestCase):
         file_name = FindResourceOrThrow(
             "drake/multibody/benchmarks/acrobot/acrobot.sdf")
         plant = MultibodyPlant()
-        model_instance = AddModelFromSdfFile(plant)
-        self.assertIsInstance(model_instnace, ModelInstanceIndex)
+        model_instance = AddModelFromSdfFile(
+            file_name=file_name, plant=plant, scene_graph=None)
+        self.assertIsInstance(model_instance, ModelInstanceIndex)
         plant.Finalize()
         benchmark = MakeAcrobotPlant(AcrobotParameters(), True)
         self.assertEqual(plant.num_bodies(), benchmark.num_bodies())

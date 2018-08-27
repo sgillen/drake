@@ -220,6 +220,9 @@ drake_py_unittest(
 
 drake_py_unittest(
     name = "multibody_tree_test",
+    data = [
+        "//multibody/benchmarks/acrobot:models",
+    ],
     deps = [
         ":multibody_tree_py",
     ],
