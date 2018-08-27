@@ -38,10 +38,6 @@ from pydrake.multibody.benchmarks.acrobot import *
 PYBIND11_MODULE(benchmarks, m) {
   py::module::import("pydrake.multibody.multibody_tree");
   init_acrobot(m.def_submodule("acrobot"));
-
-  // Pre-register this module to define an `all` module.
-  py::module::import("sys").attr("modules")[
-      "pydrake.multibody.benchmarks"] = m;
   init_all(m.def_submodule("all"));
 }
 
