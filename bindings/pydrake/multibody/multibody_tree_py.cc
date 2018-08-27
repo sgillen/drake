@@ -41,7 +41,8 @@ void BindMultibodyTreeElementMixin(PyClass* pcls) {
 }
 
 void init_module(py::module m) {
-  // These are defined in the same order as `multibody_tree_indexes.h`.
+  // To simplify checking binding coverage, these are defined in the same order
+  // as `multibody_tree_indexes.h`.
   BindTypeSafeIndex<FrameIndex>(m, "FrameIndex");
   BindTypeSafeIndex<BodyIndex>(m, "BodyIndex");
   BindTypeSafeIndex<MobilizerIndex>(m, "MobilizerIndex");
