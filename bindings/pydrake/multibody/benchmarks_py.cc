@@ -17,6 +17,7 @@ void init_acrobot(py::module m) {
   // NOLINTNEXTLINE(build/namespaces): Emulate placement in namespace.
   using namespace drake::multibody::benchmarks::acrobot;
 
+  py::module::import("pydrake.geometry");
   // `MultibodyTree` is used by `MakeAcrobotPlant`.
   py::module::import("pydrake.multibody.multibody_tree");
 

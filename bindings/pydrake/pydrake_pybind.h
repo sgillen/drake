@@ -207,13 +207,13 @@ namespace py = pybind11;
 
 /// Used when returning `T& or `const T&`, as pybind's default behavior is to
 /// copy lvalue references.
-const auto py_reference_internal =
-    py::return_value_policy::reference_internal;
+const auto py_reference = py::return_value_policy::reference;
 
 /// Used when returning references to objects that are internally owned by
 /// `self`. Implies both `py_reference` and `py::keep_alive<0, 1>`, which
 /// implies "Keep alive, reference: `return` keeps` self` alive".
-const auto py_reference = py::return_value_policy::reference;
+const auto py_reference_internal =
+    py::return_value_policy::reference_internal;
 
 /// @}
 
