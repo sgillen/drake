@@ -233,12 +233,11 @@ void init_parsing(py::module m) {
 void init_all(py::module m) {
   py::dict vars = m.attr("__dict__");
   py::exec(
-      R"""(
-from pydrake.multibody.multibody_tree import *
-from pydrake.multibody.multibody_tree.math import *
-from pydrake.multibody.multibody_tree.multibody_plant import *
-from pydrake.multibody.multibody_tree.parsing import *
-)""", py::globals(), vars);
+      "from pydrake.multibody.multibody_tree import *\n"
+      "from pydrake.multibody.multibody_tree.math import *\n"
+      "from pydrake.multibody.multibody_tree.multibody_plant import *\n"
+      "from pydrake.multibody.multibody_tree.parsing import *\n",
+      py::globals(), vars);
 }
 
 }  // namespace
