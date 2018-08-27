@@ -129,3 +129,17 @@ class TestMultibodyTree(unittest.TestCase):
         self._test_multibody_tree_element_mixin(joint_actuator)
         self.assertIsInstance(joint_actuator.name(), unicode)
         self.assertIsInstance(joint_actuator.joint(), Joint)
+
+    def test_multibody_plant_parsing(self):
+        file_name = FindResourceOrThrow(
+            "drake/multibody/benchmarks/acrobot/acrobot.sdf")
+
+        plant = MultibodyPlant(time_step=0.01)
+        model_instance = AddModelFromSdfFile(
+            file_name=file_name, plant=plant, scene_graph=None)
+        self.assertIsInstance(model_instance, ModelInstanceIndex)
+
+        plant = MultibodyPlant(time_step=0.01)
+        model_instance = AddModelFromSdfFile(
+            file_name=file_name, model_name="acrobot", plant=plant,
+            scene_graph=None)

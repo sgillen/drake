@@ -20,13 +20,10 @@ using std::string;
 
 using geometry::SceneGraph;
 
-// NOLINTNEXTLINE(build/namespaces): Emulate placement in namespace.
-using namespace drake::multibody;
-
 // TODO(eric.cousineau): Expose available scalar types.
 using T = double;
 
-// Binds MutlibodyTreeElement methods.
+// Binds `MultibodyTreeElement` methods.
 // N.B. We do this rather than inheritance because this template is more of a
 // mixin than it is a parent class (since it is not used for its dynamic
 // polymorphism).
@@ -35,12 +32,15 @@ void BindMultibodyTreeElementMixin(PyClass* pcls) {
   using Class = typename PyClass::type;
   auto& cls = *pcls;
   cls
-      .def("get_parent_tree", &Class::get_parent_tree, py_reference_internal)
+      .def("get_parent_tree", &Class::get_parent_tree, py_reference)
       .def("index", &Class::index)
       .def("model_instance", &Class::model_instance);
 }
 
 void init_module(py::module m) {
+  // NOLINTNEXTLINE(build/namespaces): Emulate placement in namespace.
+  using namespace drake::multibody;
+
   // To simplify checking binding coverage, these are defined in the same order
   // as `multibody_tree_indexes.h`.
   BindTypeSafeIndex<FrameIndex>(m, "FrameIndex");
@@ -94,7 +94,7 @@ void init_module(py::module m) {
     BindMultibodyTreeElementMixin(&cls);
     cls
         .def("name", &Class::name)
-        .def("joint", &Class::joint, py_reference_internal);
+        .def("joint", &Class::joint, py_reference);
   }
 
   {
@@ -132,9 +132,12 @@ void init_math(py::module m) {
 
 void init_multibody_plant(py::module m) {
   // NOLINTNEXTLINE(build/namespaces): Emulate placement in namespace.
+  using namespace drake::multibody;
+  // NOLINTNEXTLINE(build/namespaces): Emulate placement in namespace.
   using namespace drake::multibody::multibody_plant;
 
   py::module::import("pydrake.geometry");
+  py::module::import("pydrake.systems.framework");
 
   {
     using Class = MultibodyPlant<T>;
@@ -213,7 +216,10 @@ void init_multibody_plant(py::module m) {
 
 void init_parsing(py::module m) {
   // NOLINTNEXTLINE(build/namespaces): Emulate placement in namespace.
+  using namespace drake::multibody;
+  // NOLINTNEXTLINE(build/namespaces): Emulate placement in namespace.
   using namespace drake::multibody::parsing;
+
   using multibody_plant::MultibodyPlant;
 
   m.def("AddModelFromSdfFile",
@@ -245,8 +251,8 @@ void init_all(py::module m) {
 PYBIND11_MODULE(multibody_tree, m) {
   m.doc() = "MultibodyTree functionality.";
 
-  // TODO(eric.cousineau): Split this into separate files.
-  // See dicussion in #8282 for more prior situation.
+  // TODO(eric.cousineau): Split this into separate files. See discussion in
+  // #8282 for info relating to the current implementation.
   init_module(m);
   init_math(m.def_submodule("math"));
   init_multibody_plant(m.def_submodule("multibody_plant"));

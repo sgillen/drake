@@ -17,6 +17,9 @@ void init_acrobot(py::module m) {
   // NOLINTNEXTLINE(build/namespaces): Emulate placement in namespace.
   using namespace drake::multibody::benchmarks::acrobot;
 
+  // `MultibodyTree` is used by `MakeAcrobotPlant`.
+  py::module::import("pydrake.multibody.multibody_tree");
+
   py::class_<AcrobotParameters>(m, "AcrobotParameters")
       .def(py::init());
 
@@ -35,7 +38,6 @@ void init_all(py::module m) {
 }
 
 PYBIND11_MODULE(benchmarks, m) {
-  py::module::import("pydrake.multibody.multibody_tree");
   init_acrobot(m.def_submodule("acrobot"));
   init_all(m.def_submodule("all"));
 }
