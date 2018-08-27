@@ -232,14 +232,12 @@ void init_parsing(py::module m) {
 // }
 
 void init_all(py::module m) {
-  // Not sure if relative imports will work in this context, so we will
-  // manually spell it out.
   py::dict vars = m.attr("__dict__");
   py::exec(
       R"""(
 from pydrake.multibody.multibody_tree import *
 from pydrake.multibody.multibody_tree.math import *
-from pydrake.multibody.multibody_tree.multibody_tree import *
+from pydrake.multibody.multibody_tree.multibody_plant import *
 from pydrake.multibody.multibody_tree.parsing import *
 )""", py::globals(), vars);
 }
@@ -253,16 +251,9 @@ PYBIND11_MODULE(multibody_tree, m) {
   // `pydrake`. The current solution is to manually define submodules.
   // See the dicussion in #8282 for more information.
   init_module(m);
-  unused(
-    &init_multibody_plant,
-    &init_parsing, &init_all);
   init_math(m.def_submodule("math"));
   init_multibody_plant(m.def_submodule("multibody_plant"));
   init_parsing(m.def_submodule("parsing"));
-  
-  // Pre-register this model so that we can evaluate simple code.
-  py::module::import("sys").attr("modules")[
-      "pydrake.multibody.multibody_tree"] = m;
   init_all(m.def_submodule("all"));
 }
 

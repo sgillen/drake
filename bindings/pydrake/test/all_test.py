@@ -86,8 +86,8 @@ class TestAll(unittest.TestCase):
             # - planner
             "DoDifferentialInverseKinematics",
             # multibody
-            # - benchmarks
-            "MakeAcrobotPlant",
+            # # - benchmarks
+            # "MakeAcrobotPlant",
             # - multibody_tree
             "MultibodyPlant",
             "SpatialVelocity",

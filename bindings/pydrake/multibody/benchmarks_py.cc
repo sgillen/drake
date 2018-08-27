@@ -32,7 +32,7 @@ void init_all(py::module m) {
   py::exec(
       R"""(
 from pydrake.multibody.benchmarks.acrobot import *
-)""");
+)""", py::globals(), vars);
 }
 
 PYBIND11_MODULE(benchmarks, m) {
