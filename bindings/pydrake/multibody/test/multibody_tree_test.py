@@ -1,21 +1,18 @@
 # -*- coding: utf-8 -*-
 
 from pydrake.multibody.multibody_tree import (
-    # Indices.
-    FrameIndex,
-    BodyIndex,
-    JointIndex,
-    JointActuatorIndex,
-    ModelInstanceIndex,
-    world_index,
-    # Elements.
-    Frame,
-    BodyFrame,
     Body,
+    BodyFrame,
+    BodyIndex,
+    Frame,
+    FrameIndex,
     Joint,
     JointActuator,
-    # Tree.
+    JointActuatorIndex,
+    JointIndex,
+    ModelInstanceIndex,
     MultibodyTree,
+    world_index,
 )
 from pydrake.multibody.multibody_tree.math import (
     SpatialVelocity,
@@ -39,14 +36,14 @@ import unittest
 import numpy as np
 
 
-CLS_TO_INDEX_MAP = {
+CLASS_TO_INDEX_CLASS_MAP = {
     Body: BodyIndex,
     Joint: JointIndex,
     JointActuator: JointActuatorIndex,
 }
 
 
-class TestMultibodyTree(unittest.TestCase):
+class TestMultibodyTreeMath(unittest.TestCase):
     def test_spatial_velocity(self):
         velocity = SpatialVelocity()
         # - Accessors.
@@ -61,6 +58,8 @@ class TestMultibodyTree(unittest.TestCase):
         self.assertTrue(np.allclose(velocity1.rotational(), w))
         self.assertTrue(np.allclose(velocity1.translational(), v))
 
+
+class TestMultibodyTree(unittest.TestCase):
     def test_type_safe_indices(self):
         """Existence tests."""
         self.assertEqual(world_index(), BodyIndex(0))
@@ -110,7 +109,7 @@ class TestMultibodyTree(unittest.TestCase):
     def _test_multibody_tree_element_mixin(self, element):
         self.assertIsInstance(element.get_parent_tree(), MultibodyTree)
         cls = type(element)
-        self.assertIsInstance(element.index(), CLS_TO_INDEX_MAP[cls])
+        self.assertIsInstance(element.index(), CLASS_TO_INDEX_CLASS_MAP[cls])
         self.assertIsInstance(element.model_instance(), ModelInstanceIndex)
 
     def _test_body_api(self, body):
