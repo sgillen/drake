@@ -31,8 +31,9 @@ using T = double;
 // mixin than it is a parent class (since it is not used for its dynamic
 // polymorphism).
 template <typename PyClass>
-void BindMultibodyTreeElementMixin(PyClass& cls) {
+void BindMultibodyTreeElementMixin(PyClass* pcls) {
   using Class = typename PyClass::type;
+  auto& cls = *pcls;
   cls
       .def("get_parent_tree", &Class::get_parent_tree, py_reference_internal)
       .def("index", &Class::index)
@@ -54,7 +55,7 @@ void init_module(py::module m) {
   {
     using Class = Frame<T>;
     py::class_<Class> cls(m, "Frame");
-    BindMultibodyTreeElementMixin(cls);
+    BindMultibodyTreeElementMixin(&cls);
     cls
         .def("body", &Class::body, py_reference);
   }
@@ -68,7 +69,7 @@ void init_module(py::module m) {
   {
     using Class = Body<T>;
     py::class_<Class> cls(m, "Body");
-    BindMultibodyTreeElementMixin(cls);
+    BindMultibodyTreeElementMixin(&cls);
     cls
         .def("name", &Class::name);
   }
@@ -76,7 +77,7 @@ void init_module(py::module m) {
   {
     using Class = Joint<T>;
     py::class_<Class> cls(m, "Joint");
-    BindMultibodyTreeElementMixin(cls);
+    BindMultibodyTreeElementMixin(&cls);
     cls
         .def("name", &Class::name)
         .def("parent_body", &Class::parent_body, py_reference)
@@ -89,7 +90,7 @@ void init_module(py::module m) {
   {
     using Class = JointActuator<T>;
     py::class_<Class> cls(m, "JointActuator");
-    BindMultibodyTreeElementMixin(cls);
+    BindMultibodyTreeElementMixin(&cls);
     cls
         .def("name", &Class::name)
         .def("joint", &Class::joint, py_reference_internal);
@@ -228,9 +229,6 @@ void init_parsing(py::module m) {
         py::arg("scene_graph") = nullptr);
 }
 
-// void from_module_import_all(py::module m, py::dict vars) {
-// }
-
 void init_all(py::module m) {
   py::dict vars = m.attr("__dict__");
   py::exec(
@@ -247,9 +245,8 @@ from pydrake.multibody.multibody_tree.parsing import *
 PYBIND11_MODULE(multibody_tree, m) {
   m.doc() = "MultibodyTree functionality.";
 
-  // N.B. At present, we cannot have `math` as a submodule here, and in
-  // `pydrake`. The current solution is to manually define submodules.
-  // See the dicussion in #8282 for more information.
+  // TODO(eric.cousineau): Split this into separate files.
+  // See dicussion in #8282 for more prior situation.
   init_module(m);
   init_math(m.def_submodule("math"));
   init_multibody_plant(m.def_submodule("multibody_plant"));
