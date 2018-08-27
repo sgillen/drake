@@ -87,7 +87,7 @@ class TestAll(unittest.TestCase):
             "DoDifferentialInverseKinematics",
             # multibody
             # - benchmarks
-            # "MakeAcrobotPlant",
+            "MakeAcrobotPlant",
             # - multibody_tree
             "MultibodyPlant",
             "SpatialVelocity",

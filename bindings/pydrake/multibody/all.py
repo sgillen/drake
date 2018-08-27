@@ -1,4 +1,3 @@
-from .benchmarks import *
 from .collision import *
 from .joints import *
 from .parsers import *
@@ -8,4 +7,5 @@ from .rigid_body import *
 from .shapes import *
 
 # Submodules.
+from .benchmarks.all import *
 from .multibody_tree.all import *
