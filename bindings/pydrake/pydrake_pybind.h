@@ -37,8 +37,10 @@ Some (but not all) exceptions:
 
 *   Some of `drake/common` is incorporated into `pydrake.util`. (This will be
 remedied in the future.)
+*   `drake/multibody/rigid_body_tree.h` is actually contained in the module
+`pydrake.multibody.rigid_body_tree`.
 *   `drake/solvers/mathematical_program.h` is actually contained in the module
-`pydrake.sovlers.mathematicalprogram`.
+`pydrake.solvers.mathematicalprogram`.
 
 ## `pybind11` Tips
 
