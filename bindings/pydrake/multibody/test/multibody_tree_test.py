@@ -81,8 +81,9 @@ class TestMultibodyTree(unittest.TestCase):
         self.assertEqual(
             plant.num_model_instances(), benchmark.num_model_instances() + 1)
         self.assertEqual(plant.num_positions(), benchmark.num_positions())
-        self.assertIsInstance(
-            plant.num_positions(model_instance=model_instance), int)
+        self.assertEqual(
+            plant.num_positions(model_instance=model_instance),
+            benchmark.num_positions())
         self.assertEqual(
             plant.num_velocities(), benchmark.num_velocities())
         self.assertEqual(
