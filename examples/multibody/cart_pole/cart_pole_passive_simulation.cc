@@ -57,7 +57,7 @@ int do_main() {
   MultibodyPlant<double>& cart_pole =
       *builder.AddSystem<MultibodyPlant>(FLAGS_time_step);
   AddModelFromSdfFile(full_name, &cart_pole, &scene_graph);
- 
+
   // Add gravity to the model.
   cart_pole.AddForceElement<UniformGravityFieldElement>(
       -9.81 * Vector3<double>::UnitZ());
