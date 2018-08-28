@@ -50,6 +50,8 @@ class TestBarycentricMesh(unittest.TestCase):
     def test_wrap_to(self):
         self.assertEqual(wrap_to(1.5, 0., 1.), .5)
 
+
+class TestMath(unittest.TestCase):
     def test_math(self):
         # Compare against `math` functions.
         # TODO(eric.cousineau): Consider removing this and only rely on
@@ -123,3 +125,6 @@ class TestBarycentricMesh(unittest.TestCase):
         self.assertTrue(np.allclose(rpy.ToQuaternion().wxyz(), q_I.wxyz()))
         R = rpy.ToRotationMatrix().matrix()
         self.assertTrue(np.allclose(R, np.eye(3)))
+
+    def test_rigid_transform(self):
+        

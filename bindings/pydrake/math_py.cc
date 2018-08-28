@@ -85,6 +85,47 @@ PYBIND11_MODULE(math, m) {
               &RotationMatrix<T>::ToQuaternion))
       .def_static("Identity", &RotationMatrix<T>::Identity);
 
+  // TODO(eric.cousineau): Add bindings for `Bool<T>`.
+  py::class<RigidTransform<T>>(m, "RigidTransform")
+      .def(py::init())
+      .def(py::init<const RotationMatrix<T>&, const Vector3<T>&>(),
+           py::arg("R"), py::arg("p"))
+      .def(py::init<const RotationMtarix<T>&>(), py::arg("R"))
+      .def(py::init<const Vector3<T>&>(), py::arg("p"))
+      .def(py::init<const Eigen::Isometry3<T>&>(), py::arg("pose"))
+      .def("set", &RigidTransform<T>::set, py::arg("R"), py::arg("p"))
+      .def("SetFromIsometry3", &RigidTransform<T>::SetFromIsometry3,
+           py::arg("pose"))
+      .def_static("Identity", &RigidTransform<T>::Identity)
+      .def("rotation", &RigidTransform<T>::rotation, py_reference_internal)
+      .def("set_rotation", &RigidTransform<T>::set_rotation, py::arg("R"))
+      .def("translation", &RigidTransform<T>::translation,
+           py_reference_internal)
+      .def("set_translation", &RigidTransform<T>::set_translation, py::arg("p"))
+      .def("GetAsMatrix4", &RigidTransform<T>::GetAsMatrix4)
+      .def("GetAsMatrix34", &RigidTransform<T>::GetAsMatrix34)
+      .def("GetAsIsometry3", &RigidTransform<T>::GetAsIsometry3)
+      .def("SetIdentity", &RigidTransform<T>::SetIdentity)
+      // .def("IsExactlyIdentity", ...)
+      // .def("IsIdentityToEpsilon", ...)
+      .def("inverse", &RigidTransform<T>::inverse)
+      // TODO(eric.cousineau): Use `matmul` operator once we support Python3.
+      .def("multiply", [](
+          const RigidTransform<T>* self, const RIgidTransform<T>& other) {
+        return *self * other;
+      }, py::arg("other"))
+      .def("multiply", [](
+          const RigidTransform<T>* self, const Vector3<T>& p_BoQ_B) {
+        return *self * p_BoQ_B;
+      }, py::arg("p_BoQ_B"))
+      // .def("IsNearlyEqualTo", ...)
+      // .def("IsExactlyEqualTo", ...)
+      .def("GetMaximumAbsoluteDifference",
+           &RigidTransform<T>::GetMaximumAbsoluteDifference, py::arg("other"))
+      .def("GetMaximumAbsoluteTranslationDifference",
+           &RigidTransform<T>::GetMaximumAbsoluteTranslationDifference,
+           py::arg("other"));
+
   // General math overloads.
   // N.B. Additional overloads will be added for autodiff, symbolic, etc, by
   // those respective modules.
