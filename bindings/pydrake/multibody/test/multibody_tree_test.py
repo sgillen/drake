@@ -29,7 +29,9 @@ from pydrake.multibody.benchmarks.acrobot import (
 )
 
 from pydrake.common import FindResourceOrThrow
-from pydrake.systems.framework import InputPort, OutputPort
+from pydrake.geometry import SceneGraph
+from pydrake.systems.framework import DiagramBuilder, InputPort, OutputPort
+from pydrake.systems.analysis import Simulator
 
 import copy
 import unittest
@@ -144,3 +146,46 @@ class TestMultibodyTree(unittest.TestCase):
         model_instance = AddModelFromSdfFile(
             file_name=file_name, model_name="acrobot", plant=plant,
             scene_graph=None)
+
+    def test_multibody_plant_simulation(self):
+        """
+        Provides an existence test using `cart_pole_passive_simulation`.
+        """
+        file_name = FindResourceOrThrow(
+            "drkae/examples/multibody/cart_pole/cart_pole.sdf")
+        builder = DiagramBuilder()
+        scene_graph = builder.AddSystem(SceneGraph())
+        cart_pole = builder.AddSystem(MultibodyPlant(time_step=0.))
+        AddModelFromSdfFile(
+            file_name=file_name, plant=cart_pole, scene_graph)
+        # Add gravity.
+        cart_pole.AddForceElement(
+            UniformGravityFieldElement([0, 0, -9.81]))
+        cart_pole.Finalize(scene_graph)
+        self.assertTrue(cart_pole.get_source_id().is_valid())
+
+        builder.Connect(
+            cart_pole.get_geometry_poses_output_port(),
+            scene_graph.get_source_pose_port(cart_pole.get_source_id().value()))
+
+        lcm = DrakeLcm()
+        ConnectVisualization(scene_graph, builder, lcm)
+        diagram = builder.Build()
+        DispatchLoadMessage(scene_graph, lcm)
+
+        diagram_context = diagram.CreateDefaultContext()
+        cart_pole_context = daigram.GetMutableSubsystemContext()
+
+        cart_pole_context.FixInputPort(
+            cart_pole.get_actuation_input_port().get_index(), [0])
+
+        cart_slider = cart_pole.GetJointByName("CartSlider")
+        pole_pin = cart_pole.GetJointByName("PolePin")
+        cart_slider.set_translation(cart_pole_context, 0.)
+        cart_slider.set_angle(cart_pole_context, 2.)
+
+        simulator = Simulator(diagram, diagram_context)
+        simulator.set_publish_every_time_step(False)
+        simulator.set_target_realtime_rate(1.)
+        simulator.Initialize()
+        simulator.StepTo(0.1)
