@@ -4,6 +4,8 @@ from pydrake.multibody.multibody_tree import (
     Body,
     BodyFrame,
     BodyIndex,
+    ForceElement,
+    ForceElementIndex,
     Frame,
     FrameIndex,
     Joint,
@@ -12,6 +14,7 @@ from pydrake.multibody.multibody_tree import (
     JointIndex,
     ModelInstanceIndex,
     MultibodyTree,
+    UniformGravityFieldElement,
     world_index,
 )
 from pydrake.multibody.multibody_tree.math import (
@@ -29,7 +32,9 @@ from pydrake.multibody.benchmarks.acrobot import (
 )
 
 from pydrake.common import FindResourceOrThrow
-from pydrake.geometry import SceneGraph
+from pydrake.geometry import (
+    ConnectVisualization, DispatchLoadMessage, SceneGraph)
+from pydrake.lcm import DrakeLcm
 from pydrake.systems.framework import DiagramBuilder, InputPort, OutputPort
 from pydrake.systems.analysis import Simulator
 
@@ -38,11 +43,17 @@ import unittest
 import numpy as np
 
 
-CLASS_TO_INDEX_CLASS_MAP = {
-    Body: BodyIndex,
-    Joint: JointIndex,
-    JointActuator: JointActuatorIndex,
-}
+def get_index_class(cls):
+    class_to_index_class_map = {
+        Body: BodyIndex,
+        ForceElement: ForceElementIndex,
+        Joint: JointIndex,
+        JointActuator: JointActuatorIndex,
+    }
+    for key_cls, index_cls in class_to_index_class_map.iteritems():
+        if issubclass(cls, key_cls):
+            return index_cls
+    raise RuntimeError("Unknown class: {}".format(cls))
 
 
 class TestMultibodyTreeMath(unittest.TestCase):
@@ -109,7 +120,7 @@ class TestMultibodyTree(unittest.TestCase):
     def _test_multibody_tree_element_mixin(self, element):
         self.assertIsInstance(element.get_parent_tree(), MultibodyTree)
         cls = type(element)
-        self.assertIsInstance(element.index(), CLASS_TO_INDEX_CLASS_MAP[cls])
+        self.assertIsInstance(element.index(), get_index_class(cls))
         self.assertIsInstance(element.model_instance(), ModelInstanceIndex)
 
     def _test_body_api(self, body):
@@ -152,40 +163,40 @@ class TestMultibodyTree(unittest.TestCase):
         Provides an existence test using `cart_pole_passive_simulation`.
         """
         file_name = FindResourceOrThrow(
-            "drkae/examples/multibody/cart_pole/cart_pole.sdf")
+            "drake/examples/multibody/cart_pole/cart_pole.sdf")
         builder = DiagramBuilder()
         scene_graph = builder.AddSystem(SceneGraph())
         cart_pole = builder.AddSystem(MultibodyPlant(time_step=0.))
         AddModelFromSdfFile(
-            file_name=file_name, plant=cart_pole, scene_graph)
+            file_name=file_name, plant=cart_pole, scene_graph=scene_graph)
         # Add gravity.
         cart_pole.AddForceElement(
             UniformGravityFieldElement([0, 0, -9.81]))
         cart_pole.Finalize(scene_graph)
-        self.assertTrue(cart_pole.get_source_id().is_valid())
+        self.assertTrue(cart_pole.geometry_source_is_registered())
 
         builder.Connect(
             cart_pole.get_geometry_poses_output_port(),
-            scene_graph.get_source_pose_port(cart_pole.get_source_id().value()))
+            scene_graph.get_source_pose_port(cart_pole.get_source_id()))
 
         lcm = DrakeLcm()
-        ConnectVisualization(scene_graph, builder, lcm)
+        ConnectVisualization(scene_graph=scene_graph, builder=builder, lcm=lcm)
         diagram = builder.Build()
-        DispatchLoadMessage(scene_graph, lcm)
+        DispatchLoadMessage(scene_graph=scene_graph, lcm=lcm)
 
         diagram_context = diagram.CreateDefaultContext()
-        cart_pole_context = daigram.GetMutableSubsystemContext()
+        cart_pole_context = diagram.GetMutableSubsystemContext(
+            cart_pole, diagram_context)
 
         cart_pole_context.FixInputPort(
             cart_pole.get_actuation_input_port().get_index(), [0])
 
         cart_slider = cart_pole.GetJointByName("CartSlider")
         pole_pin = cart_pole.GetJointByName("PolePin")
-        cart_slider.set_translation(cart_pole_context, 0.)
-        cart_slider.set_angle(cart_pole_context, 2.)
+        cart_slider.set_translation(context=cart_pole_context, translation=0.)
+        pole_pin.set_angle(cart_pole_context, 2.)
 
         simulator = Simulator(diagram, diagram_context)
         simulator.set_publish_every_time_step(False)
-        simulator.set_target_realtime_rate(1.)
         simulator.Initialize()
         simulator.StepTo(0.1)

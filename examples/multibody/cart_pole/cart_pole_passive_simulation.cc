@@ -57,7 +57,7 @@ int do_main() {
   MultibodyPlant<double>& cart_pole =
       *builder.AddSystem<MultibodyPlant>(FLAGS_time_step);
   AddModelFromSdfFile(full_name, &cart_pole, &scene_graph);
-
+ 
   // Add gravity to the model.
   cart_pole.AddForceElement<UniformGravityFieldElement>(
       -9.81 * Vector3<double>::UnitZ());
@@ -66,7 +66,7 @@ int do_main() {
   cart_pole.Finalize(&scene_graph);
 
   // Sanity check on the availability of the optional source id before using it.
-  DRAKE_DEMAND(!!cart_pole.get_source_id());
+  DRAKE_DEMAND(cart_pole.geometry_source_is_registered());
 
   builder.Connect(
       cart_pole.get_geometry_poses_output_port(),
