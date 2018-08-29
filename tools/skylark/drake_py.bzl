@@ -100,8 +100,12 @@ def _py_target_isolated(
 def drake_py_binary(
         name,
         srcs = None,
+        main = None,
         deps = None,
         isolate = False,
+        tags = [],
+        add_test_rule = 0,
+        test_rule_args = [],
         **kwargs):
     """A wrapper to insert Drake-specific customizations.
 
@@ -112,15 +116,33 @@ def drake_py_binary(
     """
 
     # Work around https://github.com/bazelbuild/bazel/issues/1567.
-    deps = (deps or []) + ["//:module_py"]
+    new_deps = (deps or []) + ["//:module_py"]
+    if main == None and len(srcs) == 1:
+        main = srcs[0]
     _py_target_isolated(
         name = name,
         py_target = native.py_binary,
         isolate = isolate,
         srcs = srcs,
-        deps = deps,
+        main = main,
+        deps = new_deps,
+        tags = tags,
         **kwargs
     )
+    if add_test_rule:
+        drake_py_test(
+            name = name + "_test",
+            srcs = srcs,
+            main = main,
+            deps = deps,
+            isolate = isolate,
+            args = test_rule_args,
+            tags = tags + ["nolint"],
+            # N.B. Same as the warning in `drake_pybind_cc_googletest`: numpy
+            # imports unittest unconditionally.
+            allow_import_unittest = True,
+            **kwargs
+        )
 
 def drake_py_unittest(
         name,

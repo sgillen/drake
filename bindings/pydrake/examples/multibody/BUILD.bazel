@@ -42,6 +42,11 @@ drake_py_binary(
         "//bindings/pydrake/multibody:multibody_tree_py",
         "//bindings/pydrake/systems:analysis_py",
     ],
+    add_test_rule = 1,
+    test_rule_args = [
+        "--target_realtime_rate=0",
+        "--simulation_time=0.1",
+    ],
 )
 
 PY_LIBRARIES_WITH_INSTALL = []
@@ -63,15 +68,6 @@ install(
     targets = PY_LIBRARIES,
     py_dest = PACKAGE_INFO.py_dest,
     deps = get_drake_py_installs(PY_LIBRARIES_WITH_INSTALL),
-)
-
-drake_py_sh_test(
-    name = "cart_pole_passive_simulation_test",
-    args = [
-        "--target_realtime_rate=0",
-        "--simulation_time=0.1",
-    ],
-    target = "cart_pole_passive_simulation",
 )
 
 add_lint_tests()
