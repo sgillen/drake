@@ -277,7 +277,7 @@ drake_py_unittest(
 
 drake_py_unittest(
     name = "common_test",
-    data = ["//examples/atlas:models"],
+    # data = ["//examples/atlas:models"],
     deps = [":common_py"],
 )
 

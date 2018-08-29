@@ -43,7 +43,6 @@ def _find_libdrake_components():
 kind("cc_library", visible("//tools/install/libdrake:libdrake.so", "//..."))
     except(attr("testonly", "1", "//..."))
     except("//:*")
-    except("//examples/...")
     except("//lcmtypes/...")
     except("//tools/install/libdrake:*")
     except(attr(tags, "exclude_from_libdrake", //...))
