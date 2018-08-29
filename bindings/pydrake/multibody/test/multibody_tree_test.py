@@ -160,7 +160,8 @@ class TestMultibodyTree(unittest.TestCase):
 
     def test_multibody_plant_simulation(self):
         """
-        Provides an existence test using `cart_pole_passive_simulation`.
+        Provides an existence test by recreating
+        `cart_pole_passive_simulation.cc` in Python.
         """
         file_name = FindResourceOrThrow(
             "drake/examples/multibody/cart_pole/cart_pole.sdf")
@@ -169,9 +170,7 @@ class TestMultibodyTree(unittest.TestCase):
         cart_pole = builder.AddSystem(MultibodyPlant(time_step=0.))
         AddModelFromSdfFile(
             file_name=file_name, plant=cart_pole, scene_graph=scene_graph)
-        # Add gravity.
-        cart_pole.AddForceElement(
-            UniformGravityFieldElement([0, 0, -9.81]))
+        cart_pole.AddForceElement(UniformGravityFieldElement([0, 0, -9.81]))
         cart_pole.Finalize(scene_graph)
         self.assertTrue(cart_pole.geometry_source_is_registered())
 
@@ -194,7 +193,7 @@ class TestMultibodyTree(unittest.TestCase):
         cart_slider = cart_pole.GetJointByName("CartSlider")
         pole_pin = cart_pole.GetJointByName("PolePin")
         cart_slider.set_translation(context=cart_pole_context, translation=0.)
-        pole_pin.set_angle(cart_pole_context, 2.)
+        pole_pin.set_angle(context=cart_pole_context, angle=2.)
 
         simulator = Simulator(diagram, diagram_context)
         simulator.set_publish_every_time_step(False)
