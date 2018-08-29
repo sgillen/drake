@@ -230,4 +230,5 @@ def drake_py_sh_test(
         # N.B. Same as the warning in `drake_pybind_cc_googletest`: numpy
         # imports unittest unconditionally.
         allow_import_unittest = True,
-        **kwargs)
+        **kwargs
+    )

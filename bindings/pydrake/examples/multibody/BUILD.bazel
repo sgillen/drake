@@ -67,11 +67,11 @@ install(
 
 drake_py_sh_test(
     name = "cart_pole_passive_simulation_test",
-    target = "cart_pole_passive_simulation",
     args = [
         "--target_realtime_rate=0",
         "--simulation_time=0.1",
     ],
+    target = "cart_pole_passive_simulation",
 )
 
 add_lint_tests()
