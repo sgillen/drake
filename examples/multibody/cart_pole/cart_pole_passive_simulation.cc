@@ -26,7 +26,6 @@ using geometry::SceneGraph;
 using lcm::DrakeLcm;
 
 // "multibody" namespace is ambiguous here without "drake::".
-using drake::multibody::Body;
 using drake::multibody::multibody_plant::MultibodyPlant;
 using drake::multibody::parsing::AddModelFromSdfFile;
 using drake::multibody::PrismaticJoint;
