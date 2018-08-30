@@ -29,7 +29,7 @@ namespace trajectory_optimization {
  * will store the kinematics cache for each knot.
  *
  * By default, the generalized constraint force Jᵀλ only includes those from
- * RigidBodyTree::PositionConstraint().
+ * RigidBodyTree::Positionevaluator().
  *
  * @note The user MUST call this Compile function before solving the
  * optimization program, and after all the generalized constraint force Jᵀλ has

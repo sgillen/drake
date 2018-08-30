@@ -203,7 +203,7 @@ class CustomDirectTranscriptionConstraint : public solvers::Constraint {
  * will store the kinematics cache for each knot.
  *
  * By default, the generalized constraint force Jᵀλ only includes those from
- * RigidBodyTree::PositionConstraint().
+ * RigidBodyTree::Positionevaluator().
  *
  * @note The user MUST call this Compile function before solving the
  * optimization program, and after all the generalized constraint force Jᵀλ has
@@ -226,9 +226,9 @@ class ElasticContactImplicitDirectTranscription : public MultipleShooting {
                                 double maximum_timestep, int num_contact_lambda,
                                 double compl_tol, double elasticity);
 
-  PiecewisePolynomialTrajectory ReconstructInputTrajectory() const override;
+  trajectories::PiecewisePolynomial<double> ReconstructInputTrajectory() const override;
 
-  PiecewisePolynomialTrajectory ReconstructStateTrajectory() const override;
+  trajectories::PiecewisePolynomial<double> ReconstructStateTrajectory() const override;
 
   const solvers::MatrixXDecisionVariable& GeneralizedPositions() const {
     return q_vars_;
