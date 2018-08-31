@@ -107,14 +107,13 @@
       </axis>
     </joint>
 
-    <!-- TODO(eric.cousineau): Enable this, either with `sdformat`, or 
-    extracting
+    <!-- TODO(eric.cousineau): Enable adding frames, per TODO in
+    `multibody_plant_sdf_test.cc`.
+    It is not possible to add a "null inertia" link.
     -->
-    <!-- <joint name='ArbitraryFrameWeld' type='fixed'>
-      <parent>Link2</parent>
-      <child>ArbitraryFrame</child>
-      <pose>0.1 0.2 0.3 0 0 0</pose>
-    </joint>
-    <link name='ArbitraryFrame'/> -->
+    <frame name='ArbitraryFrame'>
+      <pose frame='Link2'>0.1 0.2 0.3 0 0 0</pose>
+    </frame>
+
   </model>
 </sdf>

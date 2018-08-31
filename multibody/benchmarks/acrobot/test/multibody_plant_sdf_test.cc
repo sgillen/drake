@@ -60,9 +60,12 @@ GTEST_TEST(MultibodyPlant, SimpleModelCreationSdf) {
   EXPECT_EQ(link1_frame.name(), "Link1");
   const Frame<double>& link2_frame = plant->GetFrameByName("Link2");
   EXPECT_EQ(link2_frame.name(), "Link2");
-  // const Frame<double>& arbitrary_frame =
-  //     plant->GetFrameByName("ArbitraryFrame");
-  // EXPECT_EQ(arbitrary_frame.name(), "ArbitraryFrame");
+  // TODO(eric.cousineau): Per TODO in `acrobot.sdf`, this should check for the
+  // existence of a frame `ArbitraryFrame`, which should have *no* inertial
+  // effect.
+  const Frame<double>& arbitrary_frame =
+      plant->GetFrameByName("ArbitraryFrame");
+  EXPECT_EQ(arbitrary_frame.name(), "ArbitraryFrame");
 
   // Attempting to retrieve a link that is not part of the model should throw
   // an exception.
