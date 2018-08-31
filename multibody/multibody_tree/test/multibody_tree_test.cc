@@ -127,7 +127,6 @@ void VerifyModelBasics(const MultibodyTree<T>& model) {
   // Get frames by name.
   for (const std::string frame_name : kFrameNames) {
     const Frame<T>& frame = model.GetFrameByName(frame_name);
-    drake::log()->info("Test Frame: {} - {}", frame.name(), int64_t(&frame));
     EXPECT_EQ(frame.name(), frame_name);
   }
   DRAKE_EXPECT_THROWS_MESSAGE(

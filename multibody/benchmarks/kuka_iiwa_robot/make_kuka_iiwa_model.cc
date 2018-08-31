@@ -162,12 +162,9 @@ unique_ptr<MultibodyTree<T>> KukaIiwaModelBuilder<T>::Build() const {
   model->AddJointActuator("iiwa_actuator_7", *joint);
 
   // Add arbitrary tool frame.
-  const Frame<T>& frame = model->template AddFrame<FixedOffsetFrame>(
+  model->template AddFrame<FixedOffsetFrame>(
       model->GetFrameByName("iiwa_link_7"),
       Isometry3d(Translation3d(0.1, 0.2, 0.3)), "tool_arbitrary");
-
-  drake::log()->info("Frame: {} - {}", frame.name(), int64_t(&frame));
-  DRAKE_DEMAND(frame.name() == "tool_arbitrary");
 
   // Add force element for a constant gravity pointing downwards, that is, in
   // the negative z-axis direction.

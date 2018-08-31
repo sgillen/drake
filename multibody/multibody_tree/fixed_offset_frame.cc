@@ -31,7 +31,7 @@ std::unique_ptr<Frame<ToScalar>> FixedOffsetFrame<T>::TemplatedDoCloneToScalar(
   const Frame<ToScalar>& parent_frame_clone =
       tree_clone.get_variant(parent_frame_);
   return std::make_unique<FixedOffsetFrame<ToScalar>>(
-      parent_frame_clone, X_PF_);
+      parent_frame_clone, X_PF_, this->name());
 }
 
 template <typename T>
