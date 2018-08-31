@@ -15,6 +15,7 @@ from pydrake.multibody.multibody_tree import (
     ModelInstanceIndex,
     MultibodyTree,
     UniformGravityFieldElement,
+    WeldJoint,
     world_index,
 )
 from pydrake.multibody.multibody_tree.math import (
@@ -155,3 +156,17 @@ class TestMultibodyTree(unittest.TestCase):
         model_instance = AddModelFromSdfFile(
             file_name=file_name, model_name="acrobot", plant=plant,
             scene_graph=None)
+
+    def test_multibody_welding(self):
+        file_name = FindResourceOrThrow(
+            "drake/multibody/benchmarks/acrobot/acrobot.sdf")
+
+        # Add a weld joint between two instances of an acrobot.
+        plant = MultibodyPlant()
+        first_instance = AddModelFromSdfFile(file_name, plant)
+        second_instance = AddModelFromSdfFile(file_name, plant)
+        joint = plant.AddJoint(WeldJoint(
+            name="weld_things",
+            parent_frame_P=plant.GetBodyByName("Link2", first_instance).body_frame(),
+            child_frame_C=plant.GetBodyByName("Link1", second_instance).body_frame(),
+            X_PC=Isometry3.Identity()))
