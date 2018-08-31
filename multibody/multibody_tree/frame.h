@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <string>
 
 #include "drake/common/autodiff.h"
 #include "drake/common/nice_type_name.h"
