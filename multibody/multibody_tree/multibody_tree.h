@@ -1018,6 +1018,17 @@ class MultibodyTree {
         instance_index_to_name_.at(model_instance) + "'.");
   }
 
+  const Frame<T>& GetFrameByName(const std::string& name) const {
+    return get_frame(
+        GetElementIndex<FrameIndex>(name, "Frame", body_name_to_index_));
+  }
+
+  const Frame<T>& GetFrameByName(
+      const std::string& name, ModelInstanceIndex model_instance) const {
+    return get_frame(
+        GetElementIndex<FrameIndex>(name, "Frame", body_name_to_index_));
+  }
+
   /// Returns a constant reference to a rigid body that is identified
   /// by the string `name` in `this` model.
   /// @throws std::logic_error if there is no body with the requested name.

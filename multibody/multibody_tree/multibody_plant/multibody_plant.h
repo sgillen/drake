@@ -646,6 +646,15 @@ class MultibodyPlant : public systems::LeafSystem<T> {
     return model_->GetBodyByName(name, model_instance);
   }
 
+  const Frame<T>& GetFrameByName(const std::string& name) const {
+    return model_->GetFrameByName(name);
+  }
+
+  const Frame<T>& GetFrameByName(
+      const std::string& name, ModelInstanceIndex model_instance) const {
+    return model_->GetFrameByName(name, model_instance);
+  }
+
   /// Returns a constant reference to a joint that is identified
   /// by the string `name` in `this` %MultibodyPlant.
   /// @throws std::logic_error if there is no joint with the requested name.
