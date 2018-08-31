@@ -106,12 +106,15 @@
         <use_parent_model_frame>1</use_parent_model_frame>
       </axis>
     </joint>
-    <!--
-    TODO(eric.cousineau): Enable this, either with `sdformat`, or extracting
-    what we need.
-    <frame name="ArbitraryFrame">
-      <pose frame="Link1">0.1 0.2 0.3 0 0 0</pose>
-    </frame>
+
+    <!-- TODO(eric.cousineau): Enable this, either with `sdformat`, or 
+    extracting
     -->
+    <!-- <joint name='ArbitraryFrameWeld' type='fixed'>
+      <parent>Link2</parent>
+      <child>ArbitraryFrame</child>
+      <pose>0.1 0.2 0.3 0 0 0</pose>
+    </joint>
+    <link name='ArbitraryFrame'/> -->
   </model>
 </sdf>

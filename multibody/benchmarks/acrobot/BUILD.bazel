@@ -48,9 +48,13 @@ drake_cc_library(
         "make_acrobot_plant.h",
         "make_acrobot_plant_sdf.h",
     ],
+    data = [
+        ":models",
+    ],
     deps = [
         "//geometry:scene_graph",
         "//multibody/multibody_tree/multibody_plant",
+        "//multibody/multibody_tree/parsing",
         "@sdformat",
     ],
 )

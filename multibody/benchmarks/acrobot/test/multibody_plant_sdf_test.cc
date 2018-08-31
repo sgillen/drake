@@ -37,8 +37,8 @@ GTEST_TEST(MultibodyPlant, SimpleModelCreationSdf) {
   // Model Size. Counting the world body, there should be three bodies.
   EXPECT_EQ(3, plant->num_bodies());
   EXPECT_EQ(2, plant->num_joints());
-  EXPECT_EQ(0, plant->num_actuators());
-  EXPECT_EQ(0, plant->num_actuated_dofs());
+  EXPECT_EQ(1, plant->num_actuators());
+  EXPECT_EQ(1, plant->num_actuated_dofs());
 
   // State size.
   EXPECT_EQ(plant->num_positions(), 2);
@@ -60,9 +60,6 @@ GTEST_TEST(MultibodyPlant, SimpleModelCreationSdf) {
   EXPECT_EQ(link1_frame.name(), "Link1");
   const Frame<double>& link2_frame = plant->GetFrameByName("Link2");
   EXPECT_EQ(link2_frame.name(), "Link2");
-  // TODO(eric.cousineau): Resolve the `sdformat` issues to make this work, or
-  // update `AddModelFromSdfFile` to pre-load the `SDFPtr` instance, and
-  // extract frames manually.
   // const Frame<double>& arbitrary_frame =
   //     plant->GetFrameByName("ArbitraryFrame");
   // EXPECT_EQ(arbitrary_frame.name(), "ArbitraryFrame");
