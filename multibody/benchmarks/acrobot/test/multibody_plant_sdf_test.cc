@@ -11,6 +11,8 @@
 
 namespace drake {
 
+using Eigen::Isometry3d;
+using Eigen::Translation3d;
 using Eigen::Vector3d;
 using multibody::benchmarks::acrobot::AcrobotParameters;
 using multibody::benchmarks::acrobot::MakeAcrobotPlant;
@@ -60,12 +62,13 @@ GTEST_TEST(MultibodyPlant, SimpleModelCreationSdf) {
   EXPECT_EQ(link1_frame.name(), "Link1");
   const Frame<double>& link2_frame = plant->GetFrameByName("Link2");
   EXPECT_EQ(link2_frame.name(), "Link2");
-  // TODO(eric.cousineau): Per TODO in `acrobot.sdf`, this should check for the
-  // existence of a frame `ArbitraryFrame`, which should have *no* inertial
-  // effect.
   const Frame<double>& arbitrary_frame =
       plant->GetFrameByName("ArbitraryFrame");
   EXPECT_EQ(arbitrary_frame.name(), "ArbitraryFrame");
+  EXPECT_EQ(arbitrary_frame.body().name(), "Link2");
+  EXPECT_TRUE(CompareMatrices(
+      arbitrary_frame.GetFixedPoseInBodyFrame().matrix(),
+      Isometry3d(Translation3d(0.1, 0.2, 0.3)).matrix()));
 
   // Attempting to retrieve a link that is not part of the model should throw
   // an exception.

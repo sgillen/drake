@@ -107,10 +107,8 @@
       </axis>
     </joint>
 
-    <!-- TODO(eric.cousineau): Enable adding frames, per TODO in
-    `multibody_plant_sdf_test.cc`.
-    It is not possible to add a "null inertia" link.
-    -->
+    <!-- TODO(eric.cousineau): Verify that this won't change out from
+    underneath us. -->
     <frame name='ArbitraryFrame'>
       <pose frame='Link2'>0.1 0.2 0.3 0 0 0</pose>
     </frame>

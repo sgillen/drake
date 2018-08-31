@@ -374,6 +374,11 @@ class MultibodyPlant : public systems::LeafSystem<T> {
     return AddRigidBody(name, default_model_instance(), M_BBo_B);
   }
 
+  template <template<typename> class FrameType>
+  const FrameType<T>& AddFrame(std::unique_ptr<FrameType<T>> frame) {
+    return model_->AddFrame<FrameType>(std::move(frame));
+  }
+
   /// This method adds a Joint of type `JointType` between two bodies.
   /// The two bodies connected by this Joint object are referred to as the
   /// _parent_ and _child_ bodies. Although the terms _parent_ and _child_ are
