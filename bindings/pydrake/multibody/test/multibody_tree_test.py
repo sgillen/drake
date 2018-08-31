@@ -38,6 +38,7 @@ import unittest
 import numpy as np
 
 from pydrake.common import FindResourceOrThrow
+from pydrake.util.eigen_geometry import Isometry3
 from pydrake.systems.framework import InputPort, OutputPort
 
 
@@ -163,10 +164,12 @@ class TestMultibodyTree(unittest.TestCase):
 
         # Add a weld joint between two instances of an acrobot.
         plant = MultibodyPlant()
-        first_instance = AddModelFromSdfFile(file_name, plant)
-        second_instance = AddModelFromSdfFile(file_name, plant)
+        first_acrobot = AddModelFromSdfFile(file_name, "first_acrobot", plant)
+        second_acrobot = AddModelFromSdfFile(file_name, "second_acrobot", plant)
         joint = plant.AddJoint(WeldJoint(
             name="weld_things",
-            parent_frame_P=plant.GetBodyByName("Link2", first_instance).body_frame(),
-            child_frame_C=plant.GetBodyByName("Link1", second_instance).body_frame(),
+            parent_frame_P=plant.GetBodyByName("Link2", first_acrobot).body_frame(),
+            child_frame_C=plant.GetBodyByName("Link1", second_acrobot).body_frame(),
             X_PC=Isometry3.Identity()))
+        self.assertIsInstance(joint, WeldJoint)
+        self._test_joint_api(joint)

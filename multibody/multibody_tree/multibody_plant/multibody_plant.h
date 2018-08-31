@@ -379,10 +379,9 @@ class MultibodyPlant : public systems::LeafSystem<T> {
   /// related `MultibodyTree::AddJoint<>` method.
   template <template<typename Scalar> class JointType>
   const JointType<T>& AddJoint(std::unique_ptr<JointType<T>> joint) {
-    // static_assert(std::is_convertible<JointType<T>*, Joint<T>*>::value,
-    //               "JointType must be a sub-class of Joint<T>.");
-    // return model_->AddJoint<JointType<T>>(std::move(joint));
-    return nullptr;
+    static_assert(std::is_convertible<JointType<T>*, Joint<T>*>::value,
+                  "JointType must be a sub-class of Joint<T>.");
+    return model_->AddJoint(std::move(joint));
   }
 
   /// This method adds a Joint of type `JointType` between two bodies.

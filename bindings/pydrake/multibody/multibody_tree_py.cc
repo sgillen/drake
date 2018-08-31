@@ -78,7 +78,8 @@ void init_module(py::module m) {
     py::class_<Class> cls(m, "Body");
     BindMultibodyTreeElementMixin(&cls);
     cls
-        .def("name", &Class::name);
+        .def("name", &Class::name)
+        .def("body_frame", &Class::body_frame, py_reference_internal);
   }
 
   // - Joints.
@@ -219,11 +220,11 @@ void init_multibody_plant(py::module m) {
         .def("num_multibody_states", &Class::num_multibody_states)
         .def("num_actuated_dofs",
              overload_cast_explicit<int>(&Class::num_actuated_dofs));
-    // TODO(eric.cousineau): Add construction methods, `AddRigidBody`, etc.
+    // Construction.
     cls
         .def("AddJoint",
              [](Class* self, std::unique_ptr<Joint<T>> joint) -> auto& {
-               return self->AddJoint<Joint<T>>(std::move(joint));
+               return self->AddJoint(std::move(joint));
              }, py::arg("joint"), py_reference_internal)
         .def("AddForceElement",
              [](Class* self,
@@ -244,6 +245,11 @@ void init_multibody_plant(py::module m) {
              overload_cast_explicit<const Body<T>&, const string&>(
                 &Class::GetBodyByName),
              py::arg("name"), py_reference_internal)
+        .def("GetBodyByName",
+             overload_cast_explicit<const Body<T>&, const string&,
+                                    ModelInstanceIndex>(
+                &Class::GetBodyByName),
+             py::arg("name"), py::arg("model_instance"), py_reference_internal)
         .def("GetJointByName",
              [](const Class* self, const string& name) -> auto& {
                return self->GetJointByName(name);
