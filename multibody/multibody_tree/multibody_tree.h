@@ -132,8 +132,12 @@ class MultibodyTree {
     Frame<T>* body_frame =
         &internal::BodyAttorney<T>::get_mutable_body_frame(body.get());
     body_frame->set_parent_tree(this, body_frame_index);
+    DRAKE_ASSERT(body_frame->name() == body->name());
+    frame_name_to_index_.insert(
+        std::make_pair(body_frame->name(), body_frame_index));
     frames_.push_back(body_frame);
     BodyType<T>* raw_body_ptr = body.get();
+    body_name_to_index_.insert(std::make_pair(body->name(), body->index()));
     owned_bodies_.push_back(std::move(body));
     return *raw_body_ptr;
   }
@@ -221,7 +225,6 @@ class MultibodyTree {
 
     const RigidBody<T>& body =
         this->template AddBody<RigidBody>(name, model_instance, M_BBo_B);
-    body_name_to_index_.insert(std::make_pair(name, body.index()));
     return body;
   }
 
@@ -311,6 +314,9 @@ class MultibodyTree {
     frame->set_parent_tree(this, frame_index);
     FrameType<T>* raw_frame_ptr = frame.get();
     frames_.push_back(raw_frame_ptr);
+    if (!frame->name().empty()) {
+      frame_name_to_index_.insert(std::make_pair(frame->name(), frame_index));
+    }
     owned_frames_.push_back(std::move(frame));
     return *raw_frame_ptr;
   }
@@ -901,6 +907,29 @@ class MultibodyTree {
     return false;
   }
 
+  bool HasFrameNamed(const std::string& name) const {
+    DRAKE_DEMAND(!name.empty());
+    const int count = frame_name_to_index_.count(name);
+    if (count > 1) {
+      throw std::logic_error(
+          "Frame " + name + " appears in multiple model instances.");
+    }
+    return count > 0;
+  }
+
+  bool HasFrameNamed(const std::string& name,
+                     ModelInstanceIndex model_instance) const {
+    DRAKE_THROW_UNLESS(model_instance < instance_name_to_index_.size());
+    // See notes in `HasBodyNamed`.
+    const auto range = frame_name_to_index_.equal_range(name);
+    for (auto it = range.first; it != range.second; ++it) {
+      if (get_frame(it->second).body().model_instance() == model_instance) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   /// @returns `true` if a joint named `name` was added to the model.
   /// @see AddJoint().
   ///
@@ -1019,14 +1048,25 @@ class MultibodyTree {
   }
 
   const Frame<T>& GetFrameByName(const std::string& name) const {
+    DRAKE_DEMAND(!name.empty());
     return get_frame(
-        GetElementIndex<FrameIndex>(name, "Frame", body_name_to_index_));
+        GetElementIndex<FrameIndex>(name, "Frame", frame_name_to_index_));
   }
 
   const Frame<T>& GetFrameByName(
       const std::string& name, ModelInstanceIndex model_instance) const {
-    return get_frame(
-        GetElementIndex<FrameIndex>(name, "Frame", body_name_to_index_));
+    DRAKE_DEMAND(!name.empty());
+    DRAKE_THROW_UNLESS(model_instance < instance_name_to_index_.size());
+    const auto range = frame_name_to_index_.equal_range(name);
+    for (auto it = range.first; it != range.second; ++it) {
+      const Frame<T>& frame = get_frame(it->second);
+      if (frame.body().model_instance() == model_instance) {
+        return frame;
+      }
+    }
+    throw std::logic_error(
+        "There is no frame named '" + name + "' in model instance '" +
+        instance_index_to_name_.at(model_instance) + "'.");
   }
 
   /// Returns a constant reference to a rigid body that is identified
@@ -2202,6 +2242,7 @@ class MultibodyTree {
     // required to be finalized.
     tree_clone->topology_ = this->topology_;
     tree_clone->body_name_to_index_ = this->body_name_to_index_;
+    tree_clone->frame_name_to_index_ = this->frame_name_to_index_;
     tree_clone->joint_name_to_index_ = this->joint_name_to_index_;
     tree_clone->actuator_name_to_index_ = this->actuator_name_to_index_;
     tree_clone->instance_name_to_index_ = this->instance_name_to_index_;
@@ -2598,6 +2639,9 @@ class MultibodyTree {
 
   // Map used to find body indexes by their body name.
   std::unordered_multimap<std::string, BodyIndex> body_name_to_index_;
+
+  // Map used to find frame indexes by their frame name.
+  std::unordered_multimap<std::string, FrameIndex> frame_name_to_index_;
 
   // Map used to find joint indexes by their joint name.
   std::unordered_multimap<std::string, JointIndex> joint_name_to_index_;

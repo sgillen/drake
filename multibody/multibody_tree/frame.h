@@ -48,6 +48,11 @@ class Frame : public FrameBase<T> {
     return body_;
   }
 
+  /// Returns the name of this frame. May be empty if unnamed.
+  const std::string& name() const {
+    return name_;
+  }
+
   /// Returns the pose `X_BF` of `this` frame F in the body frame B associated
   /// with this frame.
   /// In particular, if `this` **is** the body frame B, this method directly
@@ -113,9 +118,9 @@ class Frame : public FrameBase<T> {
   /// Only derived classes can use this constructor. It creates a %Frame
   /// object attached to `body` and puts the frame in the body's model
   /// instance.
-  explicit Frame(const Body<T>& body)
+  explicit Frame(const Body<T>& body, const std::string& name)
       : FrameBase<T>(body.model_instance()),
-        body_(body) {}
+        body_(body), name_(name) {}
 
   /// @name Methods to make a clone templated on different scalar types.
   ///
@@ -147,6 +152,8 @@ class Frame : public FrameBase<T> {
 
   // The body associated with this frame.
   const Body<T>& body_;
+
+  std::string name_;
 
   // The internal bookkeeping topology struct used by MultibodyTree.
   FrameTopology topology_;
