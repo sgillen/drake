@@ -55,6 +55,18 @@ GTEST_TEST(MultibodyPlant, SimpleModelCreationSdf) {
   const Body<double>& link2 = plant->GetBodyByName("Link2");
   EXPECT_EQ(link2.name(), "Link2");
 
+  // Get frames by name.
+  const Frame<double>& link1_frame = plant->GetFrameByName("Link1");
+  EXPECT_EQ(link1_frame.name(), "Link1");
+  const Frame<double>& link2_frame = plant->GetFrameByName("Link2");
+  EXPECT_EQ(link2_frame.name(), "Link2");
+  // TODO(eric.cousineau): Resolve the `sdformat` issues to make this work, or
+  // update `AddModelFromSdfFile` to pre-load the `SDFPtr` instance, and
+  // extract frames manually.
+  // const Frame<double>& arbitrary_frame =
+  //     plant->GetFrameByName("ArbitraryFrame");
+  // EXPECT_EQ(arbitrary_frame.name(), "ArbitraryFrame");
+
   // Attempting to retrieve a link that is not part of the model should throw
   // an exception.
   EXPECT_THROW(plant->GetBodyByName(kInvalidName), std::logic_error);

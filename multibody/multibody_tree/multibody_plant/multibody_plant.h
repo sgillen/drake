@@ -646,10 +646,25 @@ class MultibodyPlant : public systems::LeafSystem<T> {
     return model_->GetBodyByName(name, model_instance);
   }
 
+  /// Returns a constant reference to a frame that is identified by the
+  /// string `name` in `this` model.
+  /// @throws std::logic_error if `name` is empty.
+  /// @throws std::logic_error if there is no frame with the requested name.
+  /// @throws std::logic_error if the frame name occurs in multiple model
+  /// instances.
+  /// @see HasFrameNamed() to query if there exists a body in `this` model with
+  /// a given specified name.
   const Frame<T>& GetFrameByName(const std::string& name) const {
     return model_->GetFrameByName(name);
   }
 
+  /// Returns a constant reference to the frame that is uniquely identified
+  /// by the string `name` in @p model_instance.
+  /// @throws std::logic_error if there is no frame with the requested name.
+  /// @throws std::runtime_error if @p model_instance is not valid for this
+  ///         model.
+  /// @see HasFrameNamed() to query if there exists a frame in `this` model with
+  /// a given specified name.
   const Frame<T>& GetFrameByName(
       const std::string& name, ModelInstanceIndex model_instance) const {
     return model_->GetFrameByName(name, model_instance);

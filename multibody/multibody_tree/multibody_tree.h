@@ -129,6 +129,7 @@ class MultibodyTree {
     body->set_parent_tree(this, body_index);
     // MultibodyTree can access selected private methods in Body through its
     // BodyAttorney.
+    // - Register body frame.
     Frame<T>* body_frame =
         &internal::BodyAttorney<T>::get_mutable_body_frame(body.get());
     body_frame->set_parent_tree(this, body_frame_index);
@@ -136,6 +137,7 @@ class MultibodyTree {
     frame_name_to_index_.insert(
         std::make_pair(body_frame->name(), body_frame_index));
     frames_.push_back(body_frame);
+    // - Register body.
     BodyType<T>* raw_body_ptr = body.get();
     body_name_to_index_.insert(std::make_pair(body->name(), body->index()));
     owned_bodies_.push_back(std::move(body));
@@ -907,6 +909,11 @@ class MultibodyTree {
     return false;
   }
 
+  /// @returns `true` if a frame named `name` was added to the model.
+  /// @see AddFrame().
+  ///
+  /// @throws std::logic_error if the frame name occurs in multiple model
+  /// instances.
   bool HasFrameNamed(const std::string& name) const {
     DRAKE_DEMAND(!name.empty());
     const int count = frame_name_to_index_.count(name);
@@ -917,6 +924,10 @@ class MultibodyTree {
     return count > 0;
   }
 
+  /// @returns `true` if a frame named `name` was added to @p model_instance.
+  /// @see AddFrame().
+  ///
+  /// @throws if @p model_instance is not valid for this model.
   bool HasFrameNamed(const std::string& name,
                      ModelInstanceIndex model_instance) const {
     DRAKE_THROW_UNLESS(model_instance < instance_name_to_index_.size());
@@ -1047,12 +1058,27 @@ class MultibodyTree {
         instance_index_to_name_.at(model_instance) + "'.");
   }
 
+  /// Returns a constant reference to a frame that is identified by the
+  /// string `name` in `this` model.
+  /// @throws std::logic_error if `name` is empty.
+  /// @throws std::logic_error if there is no frame with the requested name.
+  /// @throws std::logic_error if the frame name occurs in multiple model
+  /// instances.
+  /// @see HasFrameNamed() to query if there exists a body in `this` model with
+  /// a given specified name.
   const Frame<T>& GetFrameByName(const std::string& name) const {
     DRAKE_DEMAND(!name.empty());
     return get_frame(
         GetElementIndex<FrameIndex>(name, "Frame", frame_name_to_index_));
   }
 
+  /// Returns a constant reference to the frame that is uniquely identified
+  /// by the string `name` in @p model_instance.
+  /// @throws std::logic_error if there is no frame with the requested name.
+  /// @throws std::runtime_error if @p model_instance is not valid for this
+  ///         model.
+  /// @see HasFrameNamed() to query if there exists a frame in `this` model with
+  /// a given specified name.
   const Frame<T>& GetFrameByName(
       const std::string& name, ModelInstanceIndex model_instance) const {
     DRAKE_DEMAND(!name.empty());
