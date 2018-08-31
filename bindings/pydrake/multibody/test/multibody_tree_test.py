@@ -110,6 +110,9 @@ class TestMultibodyTree(unittest.TestCase):
         self._test_joint_actuator_api(
             plant.GetJointActuatorByName(name="ElbowJoint"))
         self._test_body_api(plant.GetBodyByName(name="Link1"))
+        self.assertIs(
+            plant.GetBodyByName(name="Link1"),
+            plant.GetBodyByName(name="Link1", model_instance=model_instance))
         self.assertIsInstance(
             plant.get_actuation_input_port(), InputPort)
         self.assertIsInstance(
@@ -165,11 +168,14 @@ class TestMultibodyTree(unittest.TestCase):
         # Add a weld joint between two instances of an acrobot.
         plant = MultibodyPlant()
         first_acrobot = AddModelFromSdfFile(file_name, "first_acrobot", plant)
-        second_acrobot = AddModelFromSdfFile(file_name, "second_acrobot", plant)
+        second_acrobot = AddModelFromSdfFile(
+            file_name, "second_acrobot", plant)
         joint = plant.AddJoint(WeldJoint(
             name="weld_things",
-            parent_frame_P=plant.GetBodyByName("Link2", first_acrobot).body_frame(),
-            child_frame_C=plant.GetBodyByName("Link1", second_acrobot).body_frame(),
+            parent_frame_P=plant.GetBodyByName(
+                "Link2", first_acrobot).body_frame(),
+            child_frame_C=plant.GetBodyByName(
+                "Link1", second_acrobot).body_frame(),
             X_PC=Isometry3.Identity()))
         self.assertIsInstance(joint, WeldJoint)
         self._test_joint_api(joint)
