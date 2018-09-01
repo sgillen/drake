@@ -184,6 +184,7 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription, TestContactImplicitBrick) 
 
   Eigen::MatrixXd initial_guess;
 
+  // Relates Fukushima et al. slack.
   const std::vector<double> compl_slack_sequence = {1.0, 0.1, 0.01, 0.001, 0};
   const std::vector<double> elasticity_sequence = {0.5, 0.2};
 
@@ -220,9 +221,12 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription, TestContactImplicitBrick) 
       solvers::SolutionResult result = traj_opt.Solve();
       //traj_opt.Solve();
 
-      std::cerr << "Found trajectory with COMPL_SLACK: " << compl_slack << std::endl;
+      drake::log()->info("result: {}", result);
+      drake::log()->info("Found trajectory with COMPL_SLACK: {}", compl_slack);
 
       initial_guess = traj_opt.GetSolution(traj_opt.decision_variables());
+      drake::log()->info("Solution:\ninitial_guess =\n\t{}", initial_guess.transpose());
+      ASSERT_TRUE(initial_guess.array().isFinite().all());
 
       if (compl_slack == 0) {
         CheckTrajectoryOutput(&traj_opt, result,
