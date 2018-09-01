@@ -46,10 +46,14 @@ class ContactImplicitConstraint
 
  protected:
   void DoEval(const Eigen::Ref<const Eigen::VectorXd>& x,
-              Eigen::VectorXd& y) const override;
+              Eigen::VectorXd* y) const override;
 
   void DoEval(const Eigen::Ref<const AutoDiffVecXd>& x,
-              AutoDiffVecXd& y) const override;
+              AutoDiffVecXd* y) const override;
+
+  void DoEval(const Eigen::Ref<const VectorX<symbolic::Variable>>& x,
+              VectorX<symbolic::Expression>* y) const override;
+  
  private:
   const RigidBodyTree<double>* tree_;
   const RigidBodyTree<double>* empty_tree_;
@@ -62,6 +66,10 @@ class ContactImplicitConstraint
 
   std::shared_ptr<plants::KinematicsCacheWithVHelper<AutoDiffXd>>
   	  kinematics_cache_with_v_helper_;
+
+  template <typename DerivedX, typename ScalarY>
+  void DoEvalGeneric(const Eigen::MatrixBase<DerivedX>& x,
+                     VectorX<ScalarY>* y) const;
 };
 
 
@@ -76,7 +84,7 @@ class TimestepIntegrationConstraint
       const RigidBodyTree<double>& empty_tree,
       std::shared_ptr<plants::KinematicsCacheWithVHelper<AutoDiffXd>>
         kinematics_cache_with_v_helper, int num_lambda, double elasticity);
-  ~TimestepIntegrationConstraint() {}
+  ~TimestepIntegrationConstraint() override {}
 
   template <typename DerivedQL, typename DerivedV,
             typename DerivedLambda>
@@ -98,10 +106,14 @@ class TimestepIntegrationConstraint
 
  protected:
   void DoEval(const Eigen::Ref<const Eigen::VectorXd>& x,
-              Eigen::VectorXd& y) const;
+              Eigen::VectorXd* y) const override;
 
   void DoEval(const Eigen::Ref<const AutoDiffVecXd>& x,
-              AutoDiffVecXd& y) const;
+              AutoDiffVecXd* y) const override;
+
+  void DoEval(const Eigen::Ref<const VectorX<symbolic::Variable>>& x,
+              VectorX<symbolic::Expression>* y) const override;
+
  private:
   const RigidBodyTree<double>* tree_;
   const RigidBodyTree<double>* empty_tree_;
@@ -113,6 +125,10 @@ class TimestepIntegrationConstraint
 
   std::shared_ptr<plants::KinematicsCacheWithVHelper<AutoDiffXd>>
       kinematics_cache_with_v_helper_;
+
+  template <typename DerivedX, typename ScalarY>
+  void DoEvalGeneric(const Eigen::MatrixBase<DerivedX>& x,
+                     VectorX<ScalarY>* y) const;
 };
 
 

@@ -137,16 +137,10 @@ ContactImplicitConstraint::ContactImplicitConstraint(
     UpdateUpperBound(UB);
 }
 
-void ContactImplicitConstraint::DoEval(
-  const Eigen::Ref<const Eigen::VectorXd>& x, Eigen::VectorXd& y) const {
-  AutoDiffVecXd y_t;
-  Eval(math::initializeAutoDiff(x), y_t);
-  y = math::autoDiffToValueMatrix(y_t);
-}
-
-void ContactImplicitConstraint::DoEval(
-  const Eigen::Ref<const AutoDiffVecXd>& x, AutoDiffVecXd& y) const {
-  y.resize(num_constraints());
+template <typename DerivedX, typename ScalarY>
+  void ContactImplicitConstraint::DoEvalGeneric(const Eigen::MatrixBase<DerivedX>& x,
+                     VectorX<ScalarY>* y) const {
+  y->resize(num_constraints());
 
   int x_count = 0;
 
@@ -193,7 +187,22 @@ void ContactImplicitConstraint::DoEval(
 
   VectorX<AutoDiffXd> y3 = phi.transpose()*lambda_phi;
 
-  y << y1, y2, y3;
+  *y << y1, y2, y3;
+  }
+
+void ContactImplicitConstraint::DoEval(
+  const Eigen::Ref<const Eigen::VectorXd>& x, Eigen::VectorXd* y) const {
+  DoEvalGeneric(x, y);
+}
+
+void ContactImplicitConstraint::DoEval(
+  const Eigen::Ref<const AutoDiffVecXd>& x, AutoDiffVecXd* y) const {
+  DoEvalGeneric(x, y);
+}
+
+void ContactImplicitConstraint::DoEval(const Eigen::Ref<const VectorX<symbolic::Variable>>& x,
+              VectorX<symbolic::Expression>* y) const {
+  DoEvalGeneric(x, y);
 }
 
 TimestepIntegrationConstraint::TimestepIntegrationConstraint(
@@ -215,16 +224,10 @@ TimestepIntegrationConstraint::TimestepIntegrationConstraint(
   unused(num_contacts_);
 }
 
-void TimestepIntegrationConstraint::DoEval(
-  const Eigen::Ref<const Eigen::VectorXd>& x,
-              Eigen::VectorXd& y) const {
-  AutoDiffVecXd y_t;
-  DoEval(math::initializeAutoDiff(x), y_t);
-  y = math::autoDiffToValueMatrix(y_t);
-}
-
-void TimestepIntegrationConstraint::DoEval(
-  const Eigen::Ref<const AutoDiffVecXd>& x, AutoDiffVecXd& y) const {
+template <typename DerivedX, typename ScalarY>
+void TimestepIntegrationConstraint::DoEvalGeneric(const Eigen::MatrixBase<DerivedX>& x,
+                     VectorX<ScalarY>* y) const {
+  y->resize(num_constraints());
 
   int x_count = 0;
 
@@ -261,11 +264,27 @@ void TimestepIntegrationConstraint::DoEval(
   auto dphi_delta = Jphi*qd_plus + elasticity_*Jphi*qd_minus;
 
   // Jqdot_plus_l - Jqdot_minus_l = -(1+restitution)J*M^(-1)*J^T*lambda
-  y << Jphi*qd_plus - Jphi*qd_minus -
+  *y << Jphi*qd_plus - Jphi*qd_minus -
           Jphi*M.inverse()*Jphi.transpose()*lambda_phi,
           dphi_delta.transpose()*lambda_phi;
   //auto dphi_delta = Jphi*qd_plus + elasticity_*Jphi*qd_minus;
   //dphi_delta = 
+}
+
+void TimestepIntegrationConstraint::DoEval(
+  const Eigen::Ref<const Eigen::VectorXd>& x,
+              Eigen::VectorXd* y) const {
+  DoEvalGeneric(x, y);
+}
+
+void TimestepIntegrationConstraint::DoEval(
+  const Eigen::Ref<const AutoDiffVecXd>& x, AutoDiffVecXd* y) const {
+  DoEvalGeneric(x, y);
+}
+
+void TimestepIntegrationConstraint::DoEval(const Eigen::Ref<const VectorX<symbolic::Variable>>& x,
+              VectorX<symbolic::Expression>* y) const {
+  DoEvalGeneric(x, y);
 }
 
 

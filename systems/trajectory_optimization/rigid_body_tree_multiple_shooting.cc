@@ -76,14 +76,14 @@ void DirectTranscriptionConstraint::AddGeneralizedConstraintForceEvaluator(
 }
 
 void DirectTranscriptionConstraint::DoEval(
-    const Eigen::Ref<const Eigen::VectorXd>& x, Eigen::VectorXd& y) const {
+    const Eigen::Ref<const Eigen::VectorXd>& x, Eigen::VectorXd* y) const {
   AutoDiffVecXd y_t;
   Eval(math::initializeAutoDiff(x), y_t);
-  y = math::autoDiffToValueMatrix(y_t);
+  *y = math::autoDiffToValueMatrix(y_t);
 }
 
 void DirectTranscriptionConstraint::DoEval(
-    const Eigen::Ref<const AutoDiffVecXd>& x, AutoDiffVecXd& y) const {
+    const Eigen::Ref<const AutoDiffVecXd>& x, AutoDiffVecXd* y) const {
   DRAKE_ASSERT(x.size() == num_vars());
 
   int x_count = 0;
@@ -105,7 +105,7 @@ void DirectTranscriptionConstraint::DoEval(
 
   auto kinsol = kinematics_helper1_->UpdateKinematics(q_r, v_r);
 
-  y.resize(num_constraints());
+  y->resize(num_constraints());
 
   // By using backward Euler integration, the constraint is
   // qᵣ - qₗ = q̇ᵣ*h
@@ -116,7 +116,7 @@ void DirectTranscriptionConstraint::DoEval(
   // TODO(hongkai.dai): Project qdot_r to the constraint manifold (for example,
   // if q contains unit quaternion, and we need to project this backward Euler
   // integration on the unit quaternion manifold.)
-  y.head(num_positions_) = q_r - q_l - qdot_r * h;
+  y->head(num_positions_) = q_r - q_l - qdot_r * h;
 
   const auto M = tree_->massMatrix(kinsol);
 
@@ -140,7 +140,7 @@ void DirectTranscriptionConstraint::DoEval(
     lambda_count += evaluator->lambda_size();
   }
 
-  y.tail(num_velocities_) =
+  y->tail(num_velocities_) =
       M * (v_r - v_l) -
       (tree_->B * u_r + total_generalized_constraint_force - c) * h;
 }
@@ -174,17 +174,17 @@ class JointLimitsComplementarityConstraint : public solvers::Constraint {
 
  protected:
   void DoEval(const Eigen::Ref<const Eigen::VectorXd>& x,
-              Eigen::VectorXd& y) const override {
+              Eigen::VectorXd* y) const override {
     AutoDiffVecXd ty;
     Eval(math::initializeAutoDiff(x), ty);
-    y = math::autoDiffToValueMatrix(ty);
+    *y = math::autoDiffToValueMatrix(ty);
   }
 
   void DoEval(const Eigen::Ref<const AutoDiffVecXd>& x,
-              AutoDiffVecXd& y) const override {
-    y.resize(2);
-    y(0) = (joint_upper_bound_ - x(0)) * x(1);
-    y(1) = (x(0) - joint_lower_bound_) * x(2);
+              AutoDiffVecXd* y) const override {
+    y->resize(2);
+    *y(0) = (joint_upper_bound_ - x(0)) * x(1);
+    *y(1) = (x(0) - joint_lower_bound_) * x(2);
   }
 
  private:
@@ -333,7 +333,7 @@ void RigidBodyTreeMultipleShooting::DoAddRunningCost(
   }
 }
 
-PiecewisePolynomialTrajectory
+trajectories::PiecewisePolynomial<double>
 RigidBodyTreeMultipleShooting::ReconstructStateTrajectory() const {
   Eigen::VectorXd times = GetSampleTimes();
   std::vector<double> times_vec(N());
@@ -343,11 +343,11 @@ RigidBodyTreeMultipleShooting::ReconstructStateTrajectory() const {
     times_vec[i] = times(i);
     states[i] = GetSolution(state(i));
   }
-  return PiecewisePolynomialTrajectory(
-      PiecewisePolynomial<double>::FirstOrderHold(times_vec, states));
+  return trajectories::PiecewisePolynomial<double>(
+      trajectories::PiecewisePolynomial<double>::FirstOrderHold(times_vec, states));
 }
 
-PiecewisePolynomialTrajectory
+trajectories::PiecewisePolynomial<double>
 RigidBodyTreeMultipleShooting::ReconstructInputTrajectory() const {
   Eigen::VectorXd times = GetSampleTimes();
   std::vector<double> times_vec(N());
@@ -357,8 +357,8 @@ RigidBodyTreeMultipleShooting::ReconstructInputTrajectory() const {
     times_vec[i] = times(i);
     inputs[i] = GetSolution(input(i));
   }
-  return PiecewisePolynomialTrajectory(
-      PiecewisePolynomial<double>::ZeroOrderHold(times_vec, inputs));
+  return trajectories::PiecewisePolynomial<double>(
+      trajectories::PiecewisePolynomial<double>::ZeroOrderHold(times_vec, inputs));
 }
 
 }  // namespace trajectory_optimization

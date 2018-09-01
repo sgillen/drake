@@ -170,10 +170,13 @@ class CustomDirectTranscriptionConstraint : public solvers::Constraint {
 
  protected:
   void DoEval(const Eigen::Ref<const Eigen::VectorXd>& x,
-              Eigen::VectorXd& y) const override;
+              Eigen::VectorXd* y) const override;
 
   void DoEval(const Eigen::Ref<const AutoDiffVecXd>& x,
-              AutoDiffVecXd& y) const override;
+              AutoDiffVecXd* y) const override;
+
+  void DoEval(const Eigen::Ref<const VectorX<symbolic::Variable>>& x,
+              VectorX<symbolic::Expression>* y) const override;
 
  private:
   const RigidBodyTree<double>* tree_;
@@ -187,6 +190,10 @@ class CustomDirectTranscriptionConstraint : public solvers::Constraint {
   // Stores the GeneralizedConstraintForceEvaluator
   std::vector<std::unique_ptr<GeneralizedConstraintForceEvaluator>>
       generalized_constraint_force_evaluators_;
+      
+  template <typename DerivedX, typename ScalarY>
+  void DoEvalGeneric(const Eigen::MatrixBase<DerivedX>& x,
+                     VectorX<ScalarY>* y) const;
 };
 
 
