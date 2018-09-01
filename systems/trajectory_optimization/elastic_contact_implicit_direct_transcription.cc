@@ -86,7 +86,7 @@ void CustomDirectTranscriptionConstraint::DoEvalGeneric(const Eigen::MatrixBase<
   int x_count = 0;
   // A lambda expression to take num_element entreis from x, in a certain
   // order.
-  auto x_segment = [x, &x_count](int num_element) {
+  auto x_segment = [&x, &x_count](int num_element) {
     x_count += num_element;
     return x.segment(x_count - num_element, num_element);
   };

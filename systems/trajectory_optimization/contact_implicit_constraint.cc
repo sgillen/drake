@@ -144,7 +144,7 @@ template <typename DerivedX, typename ScalarY>
 
   int x_count = 0;
 
-  auto x_segment = [x, &x_count](int num_element) {
+  auto x_segment = [&x, &x_count](int num_element) {
     x_count += num_element;
     return x.segment(x_count - num_element, num_element);
   };
@@ -234,7 +234,7 @@ void TimestepIntegrationConstraint::DoEvalGeneric(const Eigen::MatrixBase<Derive
 
   int x_count = 0;
 
-  auto x_segment = [x, &x_count](int num_element) {
+  auto x_segment = [&x, &x_count](int num_element) {
     x_count += num_element;
     return x.segment(x_count - num_element, num_element);
   };
