@@ -20,6 +20,8 @@ namespace {
 // Construct a RigidBodyTree containing a four bar linkage.
 std::unique_ptr<RigidBodyTree<double>>
 ConstructContactImplicitBrickTree(bool is_empty) {
+  drake::log()->trace("ConstructContactImplicitBrickTree({})", is_empty);
+
   RigidBodyTree<double>* tree = new RigidBodyTree<double>();
   const double plane_len = 100;
   multibody::AddFlatTerrainToWorld(tree, plane_len, plane_len);
@@ -40,6 +42,7 @@ ConstructContactImplicitBrickTree(bool is_empty) {
 void AddTrajectoryConstraints(ElasticContactImplicitDirectTranscription* traj_opt, const int num_time_samples,
                               Eigen::VectorXd q_0, Eigen::VectorXd q_f, Eigen::VectorXd q_f_margin,
                               Eigen::VectorXd qdot_0_min, Eigen::VectorXd qdot_0_max) {
+  drake::log()->trace("AddTrajectoryConstraints(...)");
 
   (*traj_opt).SetSolverOption(
       solvers::SnoptSolver::id(), "Print file", "~/tmp/snopt.out");
@@ -89,6 +92,7 @@ void CheckTrajectoryOutput(ElasticContactImplicitDirectTranscription *traj_opt,
                            const int num_time_samples,
                            const double minimum_timestep, const double maximum_timestep,
                            Eigen::VectorXd q_0) {
+  drake::log()->trace("CheckTrajectoryOutput(...)");
   EXPECT_EQ(result, solvers::SolutionResult::kSolutionFound);
 
   const double tol{1e-4};
@@ -218,6 +222,7 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription, TestContactImplicitBrick) 
       }
 
       traj_opt.Compile();
+      drake::log()->trace("Solve");
       solvers::SolutionResult result = traj_opt.Solve();
       //traj_opt.Solve();
 

@@ -256,6 +256,7 @@ ElasticContactImplicitDirectTranscription::ElasticContactImplicitDirectTranscrip
 }
 
 void ElasticContactImplicitDirectTranscription::Compile() {
+  drake::log()->trace("ElasticContactImplicitDirectTranscription::Compile(...)");
   for (int i = 0; i < N() - 1; ++i) {
     AddConstraint(direct_transcription_constraints_[i].evaluator(),
                   direct_transcription_constraints_[i].variables());
@@ -270,7 +271,7 @@ void ElasticContactImplicitDirectTranscription::Compile() {
     AddConstraint(contact_implicit_constraints_[i].evaluator(),
                   contact_implicit_constraints_[i].variables());
   }
-  
+  drake::log()->trace("- Compile: Done");
 }
 
 void ElasticContactImplicitDirectTranscription::

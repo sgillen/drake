@@ -30,8 +30,10 @@ inline void HandleSpdlogGflags() {
 #ifdef HAVE_SPDLOG
   if (want_trace) {
     log()->set_level(spdlog::level::trace);
+    log()->debug("Log level: trace");
   } else if (want_debug) {
     log()->set_level(spdlog::level::debug);
+    log()->debug("Log level: debug");
   } else if (want_warn) {
     log()->set_level(spdlog::level::warn);
   }
