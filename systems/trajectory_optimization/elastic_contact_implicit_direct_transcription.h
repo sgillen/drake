@@ -191,9 +191,9 @@ class CustomDirectTranscriptionConstraint : public solvers::Constraint {
   std::vector<std::unique_ptr<GeneralizedConstraintForceEvaluator>>
       generalized_constraint_force_evaluators_;
       
-  template <typename DerivedX, typename ScalarY>
+  template <typename DerivedX>
   void DoEvalGeneric(const Eigen::MatrixBase<DerivedX>& x,
-                     VectorX<ScalarY>* y) const;
+                     AutoDiffVecXd* y) const;
 };
 
 

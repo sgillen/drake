@@ -78,9 +78,9 @@ void CustomDirectTranscriptionConstraint::AddGeneralizedConstraintForceEvaluator
   x->tail(new_lambda_vars.rows()) = new_lambda_vars;
 }
 
-template <typename DerivedX, typename ScalarY>
+template <typename DerivedX>
 void CustomDirectTranscriptionConstraint::DoEvalGeneric(const Eigen::MatrixBase<DerivedX>& x,
-                     VectorX<ScalarY>* y) const{
+                     AutoDiffVecXd* y) const{
   DRAKE_ASSERT(x.size() == num_vars());
 
   int x_count = 0;
@@ -149,7 +149,9 @@ void CustomDirectTranscriptionConstraint::DoEvalGeneric(const Eigen::MatrixBase<
 
 void CustomDirectTranscriptionConstraint::DoEval(
     const Eigen::Ref<const Eigen::VectorXd>& x, Eigen::VectorXd* y) const {
-  DoEvalGeneric(x, y);
+  AutoDiffVecXd ty(y->rows());
+  DoEvalGeneric(x, &ty);
+  *y = math::DiscardGradient(ty);
 }
 
 void CustomDirectTranscriptionConstraint::DoEval(
@@ -157,9 +159,9 @@ void CustomDirectTranscriptionConstraint::DoEval(
   DoEvalGeneric(x, y);
 }
 
-void CustomDirectTranscriptionConstraint::DoEval(const Eigen::Ref<const VectorX<symbolic::Variable>>& x,
-              VectorX<symbolic::Expression>* y) const {
-  DoEvalGeneric(x, y);
+void CustomDirectTranscriptionConstraint::DoEval(const Eigen::Ref<const VectorX<symbolic::Variable>>&,
+              VectorX<symbolic::Expression>*) const {
+  throw std::runtime_error("Not implemented");
 }
 
 

@@ -139,8 +139,6 @@ class RigidBodyTreeMultipleShooting : public MultipleShooting {
       kinematics_cache_helpers_;
   std::vector<std::shared_ptr<plants::KinematicsCacheWithVHelper<AutoDiffXd>>>
       kinematics_cache_with_v_helpers_;
-  std::vector<std::shared_ptr<plants::KinematicsCacheHelper<AutoDiffXd>>>
-      kinematics_cache_helpers_;
   solvers::MatrixXDecisionVariable q_vars_;
   solvers::MatrixXDecisionVariable v_vars_;
   solvers::MatrixXDecisionVariable position_constraint_lambda_vars_;

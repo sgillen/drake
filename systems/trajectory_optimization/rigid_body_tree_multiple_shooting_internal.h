@@ -109,10 +109,15 @@ class DirectTranscriptionConstraint : public solvers::Constraint {
           constraint_force_evaluator_bindings);
 
   void DoEval(const Eigen::Ref<const Eigen::VectorXd>& x,
-              Eigen::VectorXd& y) const override;
+              Eigen::VectorXd* y) const override;
 
   void DoEval(const Eigen::Ref<const AutoDiffVecXd>& x,
-              AutoDiffVecXd& y) const override;
+              AutoDiffVecXd* y) const override;
+
+  void DoEval(const Eigen::Ref<const VectorX<symbolic::Variable>>&,
+              VectorX<symbolic::Expression>*) const override {
+    throw std::runtime_error("Not supported");
+  }
 
  private:
   const RigidBodyTree<double>* tree_;

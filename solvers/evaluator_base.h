@@ -146,6 +146,9 @@ class EvaluatorBase {
   // matrix in the linear constraint is resized.
   void set_num_outputs(int num_outputs) { num_outputs_ = num_outputs; }
 
+  // HACK
+  void set_num_vars(int num_vars) { num_vars_ = num_vars; }
+
  private:
   int num_vars_{};
   int num_outputs_{};

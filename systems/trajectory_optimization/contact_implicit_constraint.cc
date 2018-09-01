@@ -192,7 +192,9 @@ template <typename DerivedX, typename ScalarY>
 
 void ContactImplicitConstraint::DoEval(
   const Eigen::Ref<const Eigen::VectorXd>& x, Eigen::VectorXd* y) const {
-  DoEvalGeneric(x, y);
+  AutoDiffVecXd ty(y->rows());
+  DoEvalGeneric(x, &ty);
+  *y = math::DiscardGradient(ty);
 }
 
 void ContactImplicitConstraint::DoEval(
@@ -200,9 +202,10 @@ void ContactImplicitConstraint::DoEval(
   DoEvalGeneric(x, y);
 }
 
-void ContactImplicitConstraint::DoEval(const Eigen::Ref<const VectorX<symbolic::Variable>>& x,
-              VectorX<symbolic::Expression>* y) const {
-  DoEvalGeneric(x, y);
+void ContactImplicitConstraint::DoEval(const Eigen::Ref<const VectorX<symbolic::Variable>>&,
+              VectorX<symbolic::Expression>*) const {
+  throw std::runtime_error("Not supported");
+  // DoEvalGeneric(x, y);
 }
 
 TimestepIntegrationConstraint::TimestepIntegrationConstraint(
@@ -274,7 +277,9 @@ void TimestepIntegrationConstraint::DoEvalGeneric(const Eigen::MatrixBase<Derive
 void TimestepIntegrationConstraint::DoEval(
   const Eigen::Ref<const Eigen::VectorXd>& x,
               Eigen::VectorXd* y) const {
-  DoEvalGeneric(x, y);
+  AutoDiffVecXd ty(y->rows());
+  DoEvalGeneric(x, &ty);
+  *y = math::DiscardGradient(ty);
 }
 
 void TimestepIntegrationConstraint::DoEval(
@@ -282,9 +287,9 @@ void TimestepIntegrationConstraint::DoEval(
   DoEvalGeneric(x, y);
 }
 
-void TimestepIntegrationConstraint::DoEval(const Eigen::Ref<const VectorX<symbolic::Variable>>& x,
-              VectorX<symbolic::Expression>* y) const {
-  DoEvalGeneric(x, y);
+void TimestepIntegrationConstraint::DoEval(const Eigen::Ref<const VectorX<symbolic::Variable>>&,
+              VectorX<symbolic::Expression>*) const {
+  throw std::runtime_error("Not supported");
 }
 
 
