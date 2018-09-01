@@ -97,15 +97,15 @@ drake_cc_library(
     ],
     deps = [
         ":generalized_constraint_force_evaluator",
+        ":joint_limit_constraint_force_evaluator",
         ":multiple_shooting",
+        ":position_constraint_force_evaluator",
         "//common:essential",
         "//math:autodiff",
         "//math:gradient",
         "//multibody:kinematics_cache_helper",
         "//multibody:rigid_body_tree",
         "//solvers:constraint",
-	":joint_limit_constraint_force_evaluator", 
-	":position_constraint_force_evaluator", 
     ],
 )
 
@@ -219,6 +219,7 @@ drake_cc_googletest(
         "//examples/simple_four_bar:models",
     ],
     deps = [
+        ":position_constraint_force_evaluator",
         ":rigid_body_tree_multiple_shooting",
         "//common:find_resource",
         "//common/test_utilities:eigen_matrix_compare",

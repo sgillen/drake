@@ -2,6 +2,7 @@
 
 #include <limits>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -9,12 +10,77 @@
 #include "drake/common/unused.h"
 #include "drake/math/autodiff.h"
 #include "drake/math/autodiff_gradient.h"
+#include "drake/systems/trajectory_optimization/joint_limit_constraint_force_evaluator.h"
+#include "drake/systems/trajectory_optimization/position_constraint_force_evaluator.h"
 #include "drake/systems/trajectory_optimization/rigid_body_tree_multiple_shooting_internal.h"
 
 namespace drake {
 namespace systems {
 namespace trajectory_optimization {
+using plants::KinematicsCacheHelper;
 using plants::KinematicsCacheWithVHelper;
+
+namespace {
+/**
+ * Add a variable to the map map_variable_to_index. If
+ * error_for_duplicate_variable is set to true, then throws a runtime error
+ * when the added `vars` already exist in `map_variable_to_index`.
+ */
+void AddVariableToMap(
+    const Eigen::Ref<const solvers::VectorXDecisionVariable>& vars,
+    bool error_for_duplicate_variable,
+    std::unordered_map<symbolic::Variable::Id, int>* map_variable_to_index,
+    solvers::VectorXDecisionVariable* aggregated_vars) {
+  const int num_existing_aggregated_vars = aggregated_vars->rows();
+  aggregated_vars->conservativeResize(num_existing_aggregated_vars +
+                                      vars.rows());
+  for (int i = 0; i < vars.rows(); ++i) {
+    const auto it = map_variable_to_index->find(vars(i).get_id());
+    if (it != map_variable_to_index->end()) {
+      if (error_for_duplicate_variable) {
+        throw std::runtime_error("This variable exists in the map already.");
+      }
+    } else {
+      const int variable_count = map_variable_to_index->size();
+      map_variable_to_index->emplace_hint(it, vars(i).get_id(), variable_count);
+      (*aggregated_vars)(variable_count) = vars(i);
+    }
+  }
+  aggregated_vars->conservativeResize(map_variable_to_index->size());
+}
+
+/**
+ * This function returns the mapping, that maps all the variables bound with
+ * the DirectTranscriptionConstraint to the index in the aggregated bound
+ * variables. The aggregated variables is returned as the second argument.
+ */
+std::pair<std::unordered_map<symbolic::Variable::Id, int>,
+          solvers::VectorXDecisionVariable>
+GetVariableIndicesInDirectTranscriptionConstraint(
+    const symbolic::Variable& h,
+    const Eigen::Ref<const solvers::VectorXDecisionVariable>& q_l,
+    const Eigen::Ref<const solvers::VectorXDecisionVariable>& v_l,
+    const Eigen::Ref<const solvers::VectorXDecisionVariable>& q_r,
+    const Eigen::Ref<const solvers::VectorXDecisionVariable>& v_r,
+    const Eigen::Ref<const solvers::VectorXDecisionVariable>& u_r,
+    const std::vector<solvers::Binding<GeneralizedConstraintForceEvaluator>>&
+        bindings) {
+  std::unordered_map<symbolic::Variable::Id, int> map_variable_to_index;
+  map_variable_to_index.emplace(h.get_id(), 0);
+  solvers::VectorXDecisionVariable aggregated_vars(1);
+  aggregated_vars << h;
+  AddVariableToMap(q_l, true, &map_variable_to_index, &aggregated_vars);
+  AddVariableToMap(v_l, true, &map_variable_to_index, &aggregated_vars);
+  AddVariableToMap(q_r, true, &map_variable_to_index, &aggregated_vars);
+  AddVariableToMap(v_r, true, &map_variable_to_index, &aggregated_vars);
+  AddVariableToMap(u_r, true, &map_variable_to_index, &aggregated_vars);
+  for (const auto& binding : bindings) {
+    AddVariableToMap(binding.variables(), false, &map_variable_to_index,
+                     &aggregated_vars);
+  }
+  return std::make_pair(map_variable_to_index, aggregated_vars);
+}
+}  // namespace
 
 /**
  * Implements the constraint for the backward Euler integration
@@ -34,78 +100,119 @@ using plants::KinematicsCacheWithVHelper;
  * c(qᵣ, vᵣ): The Coriolis, gravity and centripedal force on the right knot.
  * h: The duration between the left and right knot.
  */
+solvers::Binding<DirectTranscriptionConstraint>
+DirectTranscriptionConstraint::Make(
+    const RigidBodyTree<double>& tree,
+    std::shared_ptr<plants::KinematicsCacheWithVHelper<AutoDiffXd>>
+        kinematics_helper,
+    const symbolic::Variable& h,
+    const Eigen::Ref<const solvers::VectorXDecisionVariable>& q_l,
+    const Eigen::Ref<const solvers::VectorXDecisionVariable>& v_l,
+    const Eigen::Ref<const solvers::VectorXDecisionVariable>& q_r,
+    const Eigen::Ref<const solvers::VectorXDecisionVariable>& v_r,
+    const Eigen::Ref<const solvers::VectorXDecisionVariable>& u_r,
+    const std::vector<solvers::Binding<GeneralizedConstraintForceEvaluator>>&
+        constraint_force_evaluator_bindings) {
+  std::unordered_map<symbolic::Variable::Id, int> map_var_to_index;
+  solvers::VectorXDecisionVariable aggregated_vars;
+  std::tie(map_var_to_index, aggregated_vars) =
+      GetVariableIndicesInDirectTranscriptionConstraint(
+          h, q_l, v_l, q_r, v_r, u_r, constraint_force_evaluator_bindings);
+  std::shared_ptr<DirectTranscriptionConstraint> constraint{
+      new DirectTranscriptionConstraint(tree, kinematics_helper, h, q_l, v_l,
+                                        q_r, v_r, u_r, map_var_to_index,
+                                        constraint_force_evaluator_bindings)};
+  return solvers::Binding<DirectTranscriptionConstraint>(constraint,
+                                                         aggregated_vars);
+}
+
 DirectTranscriptionConstraint::DirectTranscriptionConstraint(
     const RigidBodyTree<double>& tree,
-    std::shared_ptr<KinematicsCacheWithVHelper<AutoDiffXd>> kinematics_helper)
-    : Constraint(tree.get_num_positions() + tree.get_num_velocities(),
-                 1 + 2 * tree.get_num_positions() +
-                     2 * tree.get_num_velocities() + tree.get_num_actuators(),
-                 Eigen::VectorXd::Zero(tree.get_num_positions() +
-                                       tree.get_num_velocities()),
-                 Eigen::VectorXd::Zero(tree.get_num_positions() +
-                                       tree.get_num_velocities())),
+    std::shared_ptr<KinematicsCacheWithVHelper<AutoDiffXd>> kinematics_helper,
+    const symbolic::Variable& h,
+    const Eigen::Ref<const solvers::VectorXDecisionVariable>& q_l,
+    const Eigen::Ref<const solvers::VectorXDecisionVariable>& v_l,
+    const Eigen::Ref<const solvers::VectorXDecisionVariable>& q_r,
+    const Eigen::Ref<const solvers::VectorXDecisionVariable>& v_r,
+    const Eigen::Ref<const solvers::VectorXDecisionVariable>& u_r,
+    const std::unordered_map<symbolic::Variable::Id, int>& map_var_to_index,
+    const std::vector<solvers::Binding<GeneralizedConstraintForceEvaluator>>&
+        constraint_force_evaluator_bindings)
+    : Constraint(
+          tree.get_num_positions() + tree.get_num_velocities(),  // output size
+          map_var_to_index.size(),                               // input size.
+          Eigen::VectorXd::Zero(tree.get_num_positions() +
+                                tree.get_num_velocities()),
+          Eigen::VectorXd::Zero(tree.get_num_positions() +
+                                tree.get_num_velocities())),
       tree_(&tree),
       num_positions_{tree.get_num_positions()},
       num_velocities_{tree.get_num_velocities()},
       num_actuators_{tree.get_num_actuators()},
-      num_lambda_{0},
-      kinematics_helper1_{kinematics_helper} {}
-
-void DirectTranscriptionConstraint::AddGeneralizedConstraintForceEvaluator(
-    std::unique_ptr<GeneralizedConstraintForceEvaluator> evaluator) {
-  set_num_vars(num_vars() + evaluator->lambda_size());
-  num_lambda_ += evaluator->lambda_size();
-  generalized_constraint_force_evaluators_.push_back(std::move(evaluator));
+      kinematics_helper1_{kinematics_helper} {
+  // Obtain the indices of each variable vector in aggregated_variables_
+  auto FindVariableIndices = [&map_var_to_index](
+      const Eigen::Ref<const solvers::VectorXDecisionVariable>& vars,
+      std::vector<int>* var_indices) {
+    var_indices->resize(vars.rows());
+    for (int i = 0; i < vars.rows(); ++i) {
+      var_indices->at(i) = map_var_to_index.at(vars(i).get_id());
+    }
+  };
+  h_index_ = map_var_to_index.at(h.get_id());
+  FindVariableIndices(q_l, &q_l_indices_);
+  FindVariableIndices(v_l, &v_l_indices_);
+  FindVariableIndices(q_r, &q_r_indices_);
+  FindVariableIndices(v_r, &v_r_indices_);
+  FindVariableIndices(u_r, &u_r_indices_);
+  generalized_constraint_force_evaluator_bindings_.reserve(
+      constraint_force_evaluator_bindings.size());
+  for (const auto& binding : constraint_force_evaluator_bindings) {
+    std::vector<int> evaluator_vars_indices;
+    FindVariableIndices(binding.variables(), &evaluator_vars_indices);
+    generalized_constraint_force_evaluator_bindings_.emplace_back(
+        binding.evaluator(), evaluator_vars_indices);
+  }
 }
 
-void DirectTranscriptionConstraint::AddGeneralizedConstraintForceEvaluator(
-    std::unique_ptr<GeneralizedConstraintForceEvaluator> evaluator,
-    const Eigen::Ref<const solvers::VectorXDecisionVariable>& new_lambda_vars,
-    solvers::VectorXDecisionVariable* x) {
-  if (x->rows() != num_vars()) {
-    throw std::runtime_error("x doesn't have the right size.");
+namespace {
+template <typename DerivedX, typename DerivedV>
+void FillInVariableValues(const Eigen::MatrixBase<DerivedX>& x,
+                          const std::vector<int>& var_indices,
+                          Eigen::MatrixBase<DerivedV>* var_vals) {
+  DRAKE_ASSERT(var_vals->rows() == static_cast<int>(var_indices.size()));
+  for (int i = 0; i < var_vals->rows(); ++i) {
+    (*var_vals)(i) = x(var_indices[i]);
   }
-  if (new_lambda_vars.rows() != evaluator->lambda_size()) {
-    throw std::runtime_error("new_lambda_vars doesn't have the right size.");
-  }
-  AddGeneralizedConstraintForceEvaluator(std::move(evaluator));
-  // Append new_lambda_vars to the end of x, since lambda_r shows up in the end
-  // of x, as defined in CompositeEvalInput(...)
-  x->conservativeResize(num_vars());
-  x->tail(new_lambda_vars.rows()) = new_lambda_vars;
 }
+}  // namespace
 
 void DirectTranscriptionConstraint::DoEval(
-    const Eigen::Ref<const Eigen::VectorXd>& x, Eigen::VectorXd* y) const {
+    const Eigen::Ref<const Eigen::VectorXd>& x, Eigen::VectorXd& y) const {
   AutoDiffVecXd y_t;
   Eval(math::initializeAutoDiff(x), y_t);
-  *y = math::autoDiffToValueMatrix(y_t);
+  y = math::autoDiffToValueMatrix(y_t);
 }
 
 void DirectTranscriptionConstraint::DoEval(
-    const Eigen::Ref<const AutoDiffVecXd>& x, AutoDiffVecXd* y) const {
+    const Eigen::Ref<const AutoDiffVecXd>& x, AutoDiffVecXd& y) const {
   DRAKE_ASSERT(x.size() == num_vars());
 
-  int x_count = 0;
-  // A lambda expression to take num_element entreis from x, in a certain
-  // order.
-  auto x_segment = [x, &x_count](int num_element) {
-    x_count += num_element;
-    return x.segment(x_count - num_element, num_element);
-  };
-
-  const AutoDiffXd h = x(0);
-  x_count++;
-  const AutoDiffVecXd q_l = x_segment(num_positions_);
-  const AutoDiffVecXd v_l = x_segment(num_velocities_);
-  const AutoDiffVecXd q_r = x_segment(num_positions_);
-  const AutoDiffVecXd v_r = x_segment(num_velocities_);
-  const AutoDiffVecXd u_r = x_segment(num_actuators_);
-  const AutoDiffVecXd lambda_r = x_segment(num_lambda_);
+  const AutoDiffXd h = x(h_index_);
+  AutoDiffVecXd q_l(num_positions_);
+  AutoDiffVecXd v_l(num_velocities_);
+  AutoDiffVecXd q_r(num_positions_);
+  AutoDiffVecXd v_r(num_velocities_);
+  AutoDiffVecXd u_r(tree_->get_num_actuators());
+  FillInVariableValues(x, q_l_indices_, &q_l);
+  FillInVariableValues(x, v_l_indices_, &v_l);
+  FillInVariableValues(x, q_r_indices_, &q_r);
+  FillInVariableValues(x, v_r_indices_, &v_r);
+  FillInVariableValues(x, u_r_indices_, &u_r);
 
   auto kinsol = kinematics_helper1_->UpdateKinematics(q_r, v_r);
 
-  y->resize(num_constraints());
+  y.resize(num_constraints());
 
   // By using backward Euler integration, the constraint is
   // qᵣ - qₗ = q̇ᵣ*h
@@ -116,7 +223,7 @@ void DirectTranscriptionConstraint::DoEval(
   // TODO(hongkai.dai): Project qdot_r to the constraint manifold (for example,
   // if q contains unit quaternion, and we need to project this backward Euler
   // integration on the unit quaternion manifold.)
-  y->head(num_positions_) = q_r - q_l - qdot_r * h;
+  y.head(num_positions_) = q_r - q_l - qdot_r * h;
 
   const auto M = tree_->massMatrix(kinsol);
 
@@ -128,24 +235,20 @@ void DirectTranscriptionConstraint::DoEval(
   // Compute Jᵀλ
   AutoDiffVecXd total_generalized_constraint_force(num_velocities_);
   total_generalized_constraint_force.setZero();
-  int lambda_count = 0;
-  for (const auto& evaluator : generalized_constraint_force_evaluators_) {
-    AutoDiffVecXd q_v_lambda(num_positions_ + num_velocities_ +
-                             evaluator->lambda_size());
-    q_v_lambda << q_r, v_r,
-        lambda_r.segment(lambda_count, evaluator->lambda_size());
+  for (const auto& binding : generalized_constraint_force_evaluator_bindings_) {
+    AutoDiffVecXd evaluator_vars(binding.first->num_vars());
+    FillInVariableValues(x, binding.second, &evaluator_vars);
     AutoDiffVecXd generalized_constraint_force(num_velocities_);
-    evaluator->Eval(q_v_lambda, generalized_constraint_force);
+    binding.first->Eval(evaluator_vars, generalized_constraint_force);
     total_generalized_constraint_force += generalized_constraint_force;
-    lambda_count += evaluator->lambda_size();
   }
 
-  y->tail(num_velocities_) =
+  y.tail(num_velocities_) =
       M * (v_r - v_l) -
       (tree_->B * u_r + total_generalized_constraint_force - c) * h;
 }
-namespace {
 
+namespace {
 // This class encodes the complementarity constraint on the joint limit
 // constraint force λ, and the joint q.
 // The constraints are
@@ -166,25 +269,25 @@ class JointLimitsComplementarityConstraint : public solvers::Constraint {
         joint_upper_bound_(joint_upper_bound) {}
 
   template <typename Scalar>
-  Vector3<Scalar> CompositeEvalInput(const Scalar& q,
-                                     const Scalar joint_lower_bound_force,
-                                     const Scalar& joint_upper_bound_force) {
+  Vector3<Scalar> ComposeEvalInputVector(
+      const Scalar& q, const Scalar joint_lower_bound_force,
+      const Scalar& joint_upper_bound_force) {
     return Vector3<Scalar>(q, joint_upper_bound_force, joint_lower_bound_force);
   }
 
  protected:
   void DoEval(const Eigen::Ref<const Eigen::VectorXd>& x,
-              Eigen::VectorXd* y) const override {
+              Eigen::VectorXd& y) const override {
     AutoDiffVecXd ty;
     Eval(math::initializeAutoDiff(x), ty);
-    *y = math::autoDiffToValueMatrix(ty);
+    y = math::autoDiffToValueMatrix(ty);
   }
 
   void DoEval(const Eigen::Ref<const AutoDiffVecXd>& x,
-              AutoDiffVecXd* y) const override {
-    y->resize(2);
-    *y(0) = (joint_upper_bound_ - x(0)) * x(1);
-    *y(1) = (x(0) - joint_lower_bound_) * x(2);
+              AutoDiffVecXd& y) const override {
+    y.resize(2);
+    y(0) = (joint_upper_bound_ - x(0)) * x(1);
+    y(1) = (x(0) - joint_lower_bound_) * x(2);
   }
 
  private:
@@ -202,13 +305,18 @@ RigidBodyTreeMultipleShooting::RigidBodyTreeMultipleShooting(
       tree_{&tree},
       num_positions_{tree.get_num_positions()},
       num_velocities_{tree.get_num_velocities()},
+      num_actuators_{tree.get_num_actuators()},
+      constraint_force_evaluator_bindings(num_time_samples),
+      kinematics_cache_helpers_(num_time_samples),
+      kinematics_cache_with_v_helpers_(num_time_samples),
       position_constraint_lambda_vars_(NewContinuousVariables(
           tree.getNumPositionConstraints(), N(), "position_lambda")) {
   // For each knot, we will need to impose a transcription/collocation
   // constraint. Each of these constraints require us caching some
   // kinematics info.
-  kinematics_cache_with_v_helpers_.resize(num_time_samples);
   for (int i = 0; i < num_time_samples; ++i) {
+    kinematics_cache_helpers_[i] =
+        std::make_shared<KinematicsCacheHelper<AutoDiffXd>>(*tree_);
     kinematics_cache_with_v_helpers_[i] =
         std::make_shared<KinematicsCacheWithVHelper<AutoDiffXd>>(*tree_);
   }
@@ -221,26 +329,17 @@ RigidBodyTreeMultipleShooting::RigidBodyTreeMultipleShooting(
         x_vars().segment(num_states() * i + num_positions_, num_velocities_);
   }
 
-  direct_transcription_constraints_.reserve(N() - 1);
-  for (int i = 0; i < N() - 1; ++i) {
-    auto transcription_cnstr = std::make_shared<DirectTranscriptionConstraint>(
-        *tree_, kinematics_cache_with_v_helpers_[i + 1]);
-    // Add RigidBodyConstraint::PositionConstraint to the constraint force Jᵀλ
-    // used in the dynamics for direct transcription.
+  // Add RigidBodyConstraint::PositionConstraint to the constraint force Jᵀλ
+  // used in the dynamics for direct transcription.
+  for (int i = 0; i < N(); ++i) {
     auto position_constraint_force_evaluator =
         std::make_unique<PositionConstraintForceEvaluator>(
-            *tree_, kinematics_cache_helpers_[i + 1]);
-    transcription_cnstr->AddGeneralizedConstraintForceEvaluator(
-        std::move(position_constraint_force_evaluator));
-
-    const solvers::VectorXDecisionVariable transcription_vars =
-        transcription_cnstr->CompositeEvalInput(
-            h_vars()(i), q_vars_.col(i), v_vars_.col(i), q_vars_.col(i + 1),
-            v_vars_.col(i + 1),
-            u_vars().segment((i + 1) * num_inputs(), num_inputs()),
-            position_constraint_lambda_vars_.col(i + 1));
-    direct_transcription_constraints_.emplace_back(transcription_cnstr,
-                                                   transcription_vars);
+            *tree_, kinematics_cache_helpers_[i]);
+    const solvers::VectorXDecisionVariable evaluator_variables =
+        position_constraint_force_evaluator->ComposeEvalInputVector(
+            q_vars_.col(i), position_constraint_lambda_vars_.col(i));
+    constraint_force_evaluator_bindings[i].emplace_back(
+        std::move(position_constraint_force_evaluator), evaluator_variables);
   }
 }
 
@@ -290,7 +389,7 @@ RigidBodyTreeMultipleShooting::AddJointLimitImplicitConstraint(
       std::make_shared<JointLimitsComplementarityConstraint>(joint_lower_bound,
                                                              joint_upper_bound);
   const auto joint_complementary_vars =
-      joint_complementary_constraint->CompositeEvalInput(
+      joint_complementary_constraint->ComposeEvalInputVector(
           q_vars_(joint_position_index, right_knot_index),
           lower_limit_force_lambda, upper_limit_force_lambda);
   AddConstraint(joint_complementary_constraint, joint_complementary_vars);
@@ -299,8 +398,12 @@ RigidBodyTreeMultipleShooting::AddJointLimitImplicitConstraint(
 
 void RigidBodyTreeMultipleShooting::Compile() {
   for (int i = 0; i < N() - 1; ++i) {
-    AddConstraint(direct_transcription_constraints_[i].evaluator(),
-                  direct_transcription_constraints_[i].variables());
+    // Build direct transcription constraint
+    AddConstraint(DirectTranscriptionConstraint::Make(
+        *tree_, kinematics_cache_with_v_helpers_[i + 1], h_vars()(i),
+        q_vars_.col(i), v_vars_.col(i), q_vars_.col(i + 1), v_vars_.col(i + 1),
+        u_vars().segment((i + 1) * num_actuators_, num_actuators_),
+        constraint_force_evaluator_bindings[i + 1]));
   }
 }
 
@@ -309,18 +412,10 @@ void RigidBodyTreeMultipleShooting::
         int interval_index,
         std::unique_ptr<GeneralizedConstraintForceEvaluator> evaluator,
         const Eigen::Ref<const solvers::VectorXDecisionVariable>&
-            evaluator_lambda) {
-  DRAKE_ASSERT(evaluator->lambda_size() == evaluator_lambda.rows());
-  solvers::VectorXDecisionVariable vars =
-      direct_transcription_constraints_[interval_index].variables();
-  auto direct_transcription_constraint =
-      direct_transcription_constraints_[interval_index].evaluator();
-  direct_transcription_constraint->AddGeneralizedConstraintForceEvaluator(
-      std::move(evaluator), evaluator_lambda, &vars);
-  // Now update the Binding in direct_transcription_constraints_
-  direct_transcription_constraints_[interval_index] =
-      solvers::Binding<DirectTranscriptionConstraint>(
-          direct_transcription_constraint, vars);
+            evaluator_variables) {
+  DRAKE_ASSERT(evaluator->num_vars() == evaluator_variables.rows());
+  constraint_force_evaluator_bindings[interval_index + 1].emplace_back(
+      std::move(evaluator), evaluator_variables);
 }
 
 void RigidBodyTreeMultipleShooting::DoAddRunningCost(
@@ -343,8 +438,8 @@ RigidBodyTreeMultipleShooting::ReconstructStateTrajectory() const {
     times_vec[i] = times(i);
     states[i] = GetSolution(state(i));
   }
-  return trajectories::PiecewisePolynomial<double>(
-      trajectories::PiecewisePolynomial<double>::FirstOrderHold(times_vec, states));
+  return trajectories::PiecewisePolynomial<double>::FirstOrderHold(times_vec,
+                                                                   states);
 }
 
 trajectories::PiecewisePolynomial<double>
@@ -357,8 +452,8 @@ RigidBodyTreeMultipleShooting::ReconstructInputTrajectory() const {
     times_vec[i] = times(i);
     inputs[i] = GetSolution(input(i));
   }
-  return trajectories::PiecewisePolynomial<double>(
-      trajectories::PiecewisePolynomial<double>::ZeroOrderHold(times_vec, inputs));
+  return trajectories::PiecewisePolynomial<double>::ZeroOrderHold(times_vec,
+                                                                  inputs);
 }
 
 }  // namespace trajectory_optimization

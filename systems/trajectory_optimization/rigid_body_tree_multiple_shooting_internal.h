@@ -4,6 +4,8 @@
 // test. DO NOT INCLUDE THIS HEADER FILE in your program!
 
 #include <memory>
+#include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include "drake/math/autodiff.h"
@@ -11,13 +13,10 @@
 #include "drake/multibody/rigid_body_tree.h"
 #include "drake/solvers/constraint.h"
 #include "drake/solvers/decision_variable.h"
-
+#include "drake/systems/trajectory_optimization/generalized_constraint_force_evaluator.h"
 namespace drake {
 namespace systems {
 namespace trajectory_optimization {
-// Forward declaration
-class GeneralizedConstraintForceEvaluator;
-
 /**
  * Implements the constraint for the backward Euler integration
  * <pre>
@@ -49,147 +48,97 @@ class DirectTranscriptionConstraint : public solvers::Constraint {
  public:
   DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(DirectTranscriptionConstraint)
 
-  /** Constructor
+  /** Factory method to create a DirectTranscriptionConstraint 
    * @param tree The RigidBodyTree whose trajectory will be optimized.
-   * @param num_lambda The number of lambda on the right knot point.
    * @param kinematics_helper The kinematics helper that stores the kinematics
    * information for the position and velocity on the right knot.
+   * @param h The decision variable for the time interval
+   * @param q_l The decision variables for the generalized position on the left
+   * knot.
+   * @param v_l The decision variables for the generalized velocity on the left
+   * knot.
+   * @param q_r The decision variables for the generalized position on the right
+   * knot.
+   * @param v_r The decision variables for the generalized velocity on the right
+   * knot.
+   * @param u_r The decision variables for the actuator input on the right knot.
+   * @param constraint_force_evaluator_bindings A vector of
+   * GeneralizedConstraintForceEvaluator, together with the bound variables for
+   * each evaluator. Note that within the constructor,
+   * constraint_force_evaluator_bindings will transfer the ownership of the
+   * evaluators to the newly constructed object.
+   */
+  static solvers::Binding<DirectTranscriptionConstraint> Make(
+      const RigidBodyTree<double>& tree,
+      std::shared_ptr<plants::KinematicsCacheWithVHelper<AutoDiffXd>>
+          kinematics_helper,
+      const symbolic::Variable& h,
+      const Eigen::Ref<const solvers::VectorXDecisionVariable>& q_l,
+      const Eigen::Ref<const solvers::VectorXDecisionVariable>& v_l,
+      const Eigen::Ref<const solvers::VectorXDecisionVariable>& q_r,
+      const Eigen::Ref<const solvers::VectorXDecisionVariable>& v_r,
+      const Eigen::Ref<const solvers::VectorXDecisionVariable>& u_r,
+      const std::vector<solvers::Binding<GeneralizedConstraintForceEvaluator>>&
+          constraint_force_evaluator_bindings);
+
+  ~DirectTranscriptionConstraint() override = default;
+
+  const GeneralizedConstraintForceEvaluator*
+  generalized_constraint_force_evaluator(int index) const {
+    return generalized_constraint_force_evaluator_bindings_[index].first.get();
+  }
+
+ protected:
+  /** Constructor
+   * The input to this constructor is the same as the factory method Create(),
+   * except for the additional input map_var_to_index. This mapping records
+   * the index of each variable in the input to the Eval function.
    */
   DirectTranscriptionConstraint(
       const RigidBodyTree<double>& tree,
       std::shared_ptr<plants::KinematicsCacheWithVHelper<AutoDiffXd>>
-          kinematics_helper);
+          kinematics_helper,
+      const symbolic::Variable& h,
+      const Eigen::Ref<const solvers::VectorXDecisionVariable>& q_l,
+      const Eigen::Ref<const solvers::VectorXDecisionVariable>& v_l,
+      const Eigen::Ref<const solvers::VectorXDecisionVariable>& q_r,
+      const Eigen::Ref<const solvers::VectorXDecisionVariable>& v_r,
+      const Eigen::Ref<const solvers::VectorXDecisionVariable>& u_r,
+      const std::unordered_map<symbolic::Variable::Id, int>& map_var_to_index,
+      const std::vector<solvers::Binding<GeneralizedConstraintForceEvaluator>>&
+          constraint_force_evaluator_bindings);
 
-  ~DirectTranscriptionConstraint() override = default;
-
-  /**
-   * Adds a GeneralizedConstraintForceEvaluator.
-   * Note that by adding a new generalized constraint force evaluator, it also
-   * increases DirectTranscriptionConstraint::num_vars() by
-   * evaluator.num_lambda(). Namely the last evaluator.num_lambda() variables
-   * bounded with this DirectTranscriptionConstraint, is going to be used to
-   * compute the generalized constraint force in this @p evaluator.
-   * @param evaluator This will evaluate a generalized constraint force. If the
-   * user has evaluator1 that computes the loop joint force, and evaluator2 that
-   * computes the contact force from the foot toe, then the user can call this
-   * function for twice
-   * AddGeneralizedConstraintForceEvaluator(evaluator1);
-   * AddGeneralizedConstraintForceEvaluator(evaluator2);
-   * The user doesn't have to create one evaluator, that computes the summation
-   * of all generalized constraint forces.
-   */
-  void AddGeneralizedConstraintForceEvaluator(
-      std::unique_ptr<GeneralizedConstraintForceEvaluator> evaluator);
-
-  void AddGeneralizedConstraintForceEvaluator(
-      std::unique_ptr<GeneralizedConstraintForceEvaluator> evaluator,
-      const Eigen::Ref<const solvers::VectorXDecisionVariable>& new_lambda_vars,
-      solvers::VectorXDecisionVariable* x);
-
-  /**
-   * Composite the input variable x to the Eval function, from the state,
-   * control and contact force at left or the right knot. This function helps
-   * the users so that they do not need to memorize the order of variables in
-   * `x`, used in the Eval function.
-   */
-  template <typename Scalar, typename DerivedQL, typename DerivedVL,
-            typename DerivedQR, typename DerivedVR, typename DerivedUR,
-            typename DerivedLambdaR>
-  typename std::enable_if<is_eigen_vector_of<DerivedQL, Scalar>::value &&
-                              is_eigen_vector_of<DerivedVL, Scalar>::value &&
-                              is_eigen_vector_of<DerivedQR, Scalar>::value &&
-                              is_eigen_vector_of<DerivedVR, Scalar>::value &&
-                              is_eigen_vector_of<DerivedUR, Scalar>::value &&
-                              is_eigen_vector_of<DerivedLambdaR, Scalar>::value,
-                          Eigen::Matrix<Scalar, Eigen::Dynamic, 1>>::type
-  CompositeEvalInput(const Scalar& h, const Eigen::MatrixBase<DerivedQL>& q_l,
-                     const Eigen::MatrixBase<DerivedVL>& v_l,
-                     const Eigen::MatrixBase<DerivedQR>& q_r,
-                     const Eigen::MatrixBase<DerivedVR>& v_r,
-                     const Eigen::MatrixBase<DerivedUR>& u_r,
-                     const Eigen::MatrixBase<DerivedLambdaR>& lambda_r) const {
-    DRAKE_ASSERT(q_l.rows() == num_positions_);
-    DRAKE_ASSERT(v_l.rows() == num_velocities_);
-    DRAKE_ASSERT(q_r.rows() == num_positions_);
-    DRAKE_ASSERT(v_r.rows() == num_velocities_);
-    DRAKE_ASSERT(u_r.rows() == num_actuators_);
-    DRAKE_ASSERT(lambda_r.rows() == num_lambda_);
-    Eigen::Matrix<Scalar, Eigen::Dynamic, 1> x(num_vars(), 1);
-    x << h, q_l, v_l, q_r, v_r, u_r, lambda_r;
-    return x;
-  }
-
-  template <typename Scalar, typename DerivedQL, typename DerivedVL,
-            typename DerivedQR, typename DerivedVR, typename DerivedUR>
-  typename std::enable_if<is_eigen_vector_of<DerivedQL, Scalar>::value &&
-                              is_eigen_vector_of<DerivedVL, Scalar>::value &&
-                              is_eigen_vector_of<DerivedQR, Scalar>::value &&
-                              is_eigen_vector_of<DerivedVR, Scalar>::value &&
-                              is_eigen_vector_of<DerivedUR, Scalar>::value,
-                          Eigen::Matrix<Scalar, Eigen::Dynamic, 1>>::type
-  CompositeEvalInput(const Scalar& h, const Eigen::MatrixBase<DerivedQL>& q_l,
-                     const Eigen::MatrixBase<DerivedVL>& v_l,
-                     const Eigen::MatrixBase<DerivedQR>& q_r,
-                     const Eigen::MatrixBase<DerivedVR>& v_r,
-                     const Eigen::MatrixBase<DerivedUR>& u_r) const {
-    DRAKE_ASSERT(q_l.rows() == num_positions_);
-    DRAKE_ASSERT(v_l.rows() == num_velocities_);
-    DRAKE_ASSERT(q_r.rows() == num_positions_);
-    DRAKE_ASSERT(v_r.rows() == num_velocities_);
-    DRAKE_ASSERT(u_r.rows() == num_actuators_);
-    Eigen::Matrix<Scalar, Eigen::Dynamic, 1> x(num_vars(), 1);
-    x << h, q_l, v_l, q_r, v_r, u_r;
-    return x;
-  }
-
-  template <typename Scalar, typename DerivedQL, typename DerivedVL,
-            typename DerivedQR, typename DerivedVR, typename DerivedUR>
-  typename std::enable_if<is_eigen_vector_of<DerivedQL, Scalar>::value &&
-                              is_eigen_vector_of<DerivedVL, Scalar>::value &&
-                              is_eigen_vector_of<DerivedQR, Scalar>::value &&
-                              is_eigen_vector_of<DerivedVR, Scalar>::value &&
-                              is_eigen_vector_of<DerivedUR, Scalar>::value,
-                          Eigen::Matrix<Scalar, Eigen::Dynamic, 1>>::type
-  CompositeEvalInput(const Scalar& h, const Eigen::MatrixBase<DerivedQL>& q_l,
-                     const Eigen::MatrixBase<DerivedVL>& v_plus_l,
-                     const Eigen::MatrixBase<DerivedVL>& v_minus_l,
-                     const Eigen::MatrixBase<DerivedQR>& q_r,
-                     const Eigen::MatrixBase<DerivedVR>& v_plus_r,
-                     const Eigen::MatrixBase<DerivedVR>& v_minus_r,
-                     const Eigen::MatrixBase<DerivedUR>& u_r) const {
-    DRAKE_ASSERT(q_l.rows() == num_positions_);
-    DRAKE_ASSERT(v_plus_l.rows() == num_velocities_/2);
-    DRAKE_ASSERT(v_minus_l.rows() == num_velocities_/2);
-    DRAKE_ASSERT(q_r.rows() == num_positions_);
-    DRAKE_ASSERT(v_plus_r.rows() == num_velocities_/2);
-    DRAKE_ASSERT(v_minus_r.rows() == num_velocities_/2);
-    DRAKE_ASSERT(u_r.rows() == num_actuators_);
-    Eigen::Matrix<Scalar, Eigen::Dynamic, 1> x(num_vars(), 1);
-    x << h, q_l, v_plus_l, v_minus_l, q_r, v_plus_r, v_minus_r, u_r;
-    return x;
-  }
-
- protected:
   void DoEval(const Eigen::Ref<const Eigen::VectorXd>& x,
-              Eigen::VectorXd* y) const override;
+              Eigen::VectorXd& y) const override;
 
   void DoEval(const Eigen::Ref<const AutoDiffVecXd>& x,
-              AutoDiffVecXd* y) const override;
+              AutoDiffVecXd& y) const override;
 
  private:
   const RigidBodyTree<double>* tree_;
   const int num_positions_;
   const int num_velocities_;
   const int num_actuators_;
-  int num_lambda_;
   // Stores the kinematics cache at the right knot point.
   mutable std::shared_ptr<plants::KinematicsCacheWithVHelper<AutoDiffXd>>
       kinematics_helper1_;
-  // Stores the GeneralizedConstraintForceEvaluator
-  std::vector<std::unique_ptr<GeneralizedConstraintForceEvaluator>>
-      generalized_constraint_force_evaluators_;
+  // The indices of h, q_l, v_l, q_r, v_r, u_r in the aggregated_variables_.
+  int h_index_;
+  std::vector<int> q_l_indices_;
+  std::vector<int> v_l_indices_;
+  std::vector<int> q_r_indices_;
+  std::vector<int> v_r_indices_;
+  std::vector<int> u_r_indices_;
+  // Stores the GeneralizedConstraintForceEvaluator, together with the indices
+  // of the variables bound with each evaluator in the aggregated variables.
+  // so
+  // aggregated_variables_[generalized_constraint_force_evaluator_bindings_[i].second]
+  // are the variables bound with the evaluator
+  // generalized_constraint_force_evaluator_bindings_[i].first
+  std::vector<std::pair<std::shared_ptr<GeneralizedConstraintForceEvaluator>,
+                        std::vector<int>>>
+      generalized_constraint_force_evaluator_bindings_;
 };
-
 }  // namespace trajectory_optimization
 }  // namespace systems
 }  // namespace drake

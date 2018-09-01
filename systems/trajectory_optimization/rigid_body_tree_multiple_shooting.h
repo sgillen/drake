@@ -10,8 +10,6 @@
 #include "drake/systems/trajectory_optimization/generalized_constraint_force_evaluator.h"
 #include "drake/systems/trajectory_optimization/multiple_shooting.h"
 #include "drake/systems/trajectory_optimization/rigid_body_tree_multiple_shooting_internal.h"
-#include "drake/systems/trajectory_optimization/joint_limit_constraint_force_evaluator.h"
-#include "drake/systems/trajectory_optimization/position_constraint_force_evaluator.h"
 
 namespace drake {
 namespace systems {
@@ -29,7 +27,7 @@ namespace trajectory_optimization {
  * will store the kinematics cache for each knot.
  *
  * By default, the generalized constraint force Jᵀλ only includes those from
- * RigidBodyTree::Positionevaluator().
+ * RigidBodyTree::PositionConstraint().
  *
  * @note The user MUST call this Compile function before solving the
  * optimization program, and after all the generalized constraint force Jᵀλ has
@@ -50,9 +48,11 @@ class RigidBodyTreeMultipleShooting : public MultipleShooting {
                                 int num_time_samples, double minimum_timestep,
                                 double maximum_timestep);
 
-  trajectories::PiecewisePolynomial<double> ReconstructInputTrajectory() const override;
+  trajectories::PiecewisePolynomial<double> ReconstructInputTrajectory()
+      const override;
 
-  trajectories::PiecewisePolynomial<double> ReconstructStateTrajectory() const override;
+  trajectories::PiecewisePolynomial<double> ReconstructStateTrajectory()
+      const override;
 
   const solvers::MatrixXDecisionVariable& GeneralizedPositions() const {
     return q_vars_;
@@ -128,15 +128,15 @@ class RigidBodyTreeMultipleShooting : public MultipleShooting {
   const RigidBodyTree<double>* tree_{nullptr};
   const int num_positions_;
   const int num_velocities_;
-  // direct_transcription_constraints_[i] stores the
-  // DirectTranscriptionConstraint
-  // between knot i and i+1, together with the bounded variables. Notice that
-  // when the user adds additional constraint force knot i,
-  // direct_transcription_constraints_[i-1] needs to add the constraint force
-  // evaluator, and the bound variables should be updated to include the new
-  // constraint force λ.
-  std::vector<solvers::Binding<DirectTranscriptionConstraint>>
-      direct_transcription_constraints_;
+  const int num_actuators_;
+  // constraint_force_evaluator_bindings[i] stores the evaluator that computes
+  // one generalized constraint force Jᵀλ at knot i, together with the variables
+  // bound with the evaluator
+  std::vector<
+      std::vector<solvers::Binding<GeneralizedConstraintForceEvaluator>>>
+      constraint_force_evaluator_bindings;
+  std::vector<std::shared_ptr<plants::KinematicsCacheHelper<AutoDiffXd>>>
+      kinematics_cache_helpers_;
   std::vector<std::shared_ptr<plants::KinematicsCacheWithVHelper<AutoDiffXd>>>
       kinematics_cache_with_v_helpers_;
   std::vector<std::shared_ptr<plants::KinematicsCacheHelper<AutoDiffXd>>>
