@@ -113,6 +113,11 @@ void init_module(py::module m) {
     using Class = RevoluteJoint<T>;
     py::class_<Class, Joint<T>> cls(m, "RevoluteJoint");
     cls
+        .def(py::init<const string&, const Frame<T>&,
+             const Frame<T>&, const Vector3<T>&, double>(),
+             py::arg("name"), py::arg("frame_on_parent"),
+             py::arg("frame_on_child"), py::arg("axis"),
+             py::arg("damping") = 0)
         .def("get_angle", &Class::get_angle, py::arg("context"))
         .def("set_angle", &Class::set_angle, py::arg("context"),
              py::arg("angle"));
@@ -121,11 +126,11 @@ void init_module(py::module m) {
   {
     using Class = WeldJoint<T>;
     py::class_<Class, Joint<T>> cls(m, "WeldJoint");
-    cls
-        .def(py::init<const string&, const Frame<T>&,
-             const Frame<T>&, const Isometry3<double>&>(),
-             py::arg("name"), py::arg("parent_frame_P"),
-             py::arg("child_frame_C"), py::arg("X_PC"));
+    // cls
+    //     .def(py::init<const string&, const Frame<T>&,
+    //          const Frame<T>&, const Isometry3<double>&>(),
+    //          py::arg("name"), py::arg("parent_frame_P"),
+    //          py::arg("child_frame_C"), py::arg("X_PC"));
   }
 
   // - Actuators.
