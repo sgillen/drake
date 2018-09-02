@@ -15,7 +15,7 @@ from pydrake.multibody.multibody_tree import (
     ModelInstanceIndex,
     MultibodyTree,
     UniformGravityFieldElement,
-    # WeldJoint,
+    WeldJoint,
     world_index,
 )
 from pydrake.multibody.multibody_tree.math import (

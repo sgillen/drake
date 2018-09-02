@@ -126,11 +126,11 @@ void init_module(py::module m) {
   {
     using Class = WeldJoint<T>;
     py::class_<Class, Joint<T>> cls(m, "WeldJoint");
-    // cls
-    //     .def(py::init<const string&, const Frame<T>&,
-    //          const Frame<T>&, const Isometry3<double>&>(),
-    //          py::arg("name"), py::arg("parent_frame_P"),
-    //          py::arg("child_frame_C"), py::arg("X_PC"));
+    cls
+        .def(py::init<const string&, const Frame<T>&,
+             const Frame<T>&, const Isometry3<double>&>(),
+             py::arg("name"), py::arg("parent_frame_P"),
+             py::arg("child_frame_C"), py::arg("X_PC"));
   }
 
   // - Actuators.
