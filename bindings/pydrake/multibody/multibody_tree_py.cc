@@ -57,7 +57,7 @@ void init_module(py::module m) {
   BindTypeSafeIndex<ModelInstanceIndex>(m, "ModelInstanceIndex");
   m.def("world_index", &world_index);
 
-  // - Frames.
+  // Frames.
   {
     using Class = Frame<T>;
     py::class_<Class> cls(m, "Frame");
@@ -72,7 +72,7 @@ void init_module(py::module m) {
     // No need to re-bind element mixins from `Frame`.
   }
 
-  // - Bodies.
+  // Bodies.
   {
     using Class = Body<T>;
     py::class_<Class> cls(m, "Body");
@@ -82,7 +82,7 @@ void init_module(py::module m) {
         .def("body_frame", &Class::body_frame, py_reference_internal);
   }
 
-  // - Joints.
+  // Joints.
   {
     using Class = Joint<T>;
     py::class_<Class> cls(m, "Joint");
@@ -113,6 +113,11 @@ void init_module(py::module m) {
     using Class = RevoluteJoint<T>;
     py::class_<Class, Joint<T>> cls(m, "RevoluteJoint");
     cls
+        .def(py::init<const string&, const Frame<T>&,
+             const Frame<T>&, const Vector3<T>&, double>(),
+             py::arg("name"), py::arg("frame_on_parent"),
+             py::arg("frame_on_child"), py::arg("axis"),
+             py::arg("damping") = 0)
         .def("get_angle", &Class::get_angle, py::arg("context"))
         .def("set_angle", &Class::set_angle, py::arg("context"),
              py::arg("angle"));
@@ -128,7 +133,7 @@ void init_module(py::module m) {
              py::arg("child_frame_C"), py::arg("X_PC"));
   }
 
-  // - Actuators.
+  // Actuators.
   {
     using Class = JointActuator<T>;
     py::class_<Class> cls(m, "JointActuator");
@@ -138,7 +143,7 @@ void init_module(py::module m) {
         .def("joint", &Class::joint, py_reference_internal);
   }
 
-  // - Force Elements.
+  // Force Elements.
   {
     using Class = ForceElement<T>;
     py::class_<Class> cls(m, "ForceElement");
@@ -151,7 +156,7 @@ void init_module(py::module m) {
         .def(py::init<Vector3<double>>(), py::arg("g_W"));
   }
 
-  // - Tree.
+  // Tree.
   {
     // TODO(eric.cousineau): Expose more of kinematics and dynamics API.
     using Class = MultibodyTree<T>;

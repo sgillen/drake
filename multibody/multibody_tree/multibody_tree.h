@@ -540,6 +540,9 @@ class MultibodyTree {
   /// @tparam JointType
   ///   The type of the new joint to add, which must be a subclass of Joint<T>.
   /// @returns A rvalue reference to the added joint.
+  ///
+  /// @see The Joint class's documentation for further details on how a Joint
+  /// is defined, or the semi-emplace `AddJoint<>` overload below.
   template <template<typename Scalar> class JointType>
   const JointType<T>& AddJoint(
       std::unique_ptr<JointType<T>> joint) {

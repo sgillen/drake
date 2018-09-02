@@ -14,6 +14,7 @@ from pydrake.multibody.multibody_tree import (
     JointIndex,
     ModelInstanceIndex,
     MultibodyTree,
+    RevoluteJoint,
     UniformGravityFieldElement,
     WeldJoint,
     world_index,
@@ -161,21 +162,41 @@ class TestMultibodyTree(unittest.TestCase):
             file_name=file_name, model_name="acrobot", plant=plant,
             scene_graph=None)
 
-    def test_multibody_welding(self):
-        file_name = FindResourceOrThrow(
+    def test_multibody_add_joint(self):
+        """
+        Tests joint constructors and `AddJoint`.
+        """
+        acrobot_file = FindResourceOrThrow(
             "drake/multibody/benchmarks/acrobot/acrobot.sdf")
-
-        # Add a weld joint between two instances of an acrobot.
+        # Add different joints between multiple instances of an acrobot.
+        # TODO(eric.cousineau): Remove the multiple acrobot instances and use
+        # programmatically constructed bodies once this API is exposed in
+        # Python.
+        num_joints = 2
         plant = MultibodyPlant()
-        first_acrobot = AddModelFromSdfFile(file_name, "first_acrobot", plant)
-        second_acrobot = AddModelFromSdfFile(
-            file_name, "second_acrobot", plant)
-        joint = plant.AddJoint(WeldJoint(
-            name="weld_things",
-            parent_frame_P=plant.GetBodyByName(
-                "Link2", first_acrobot).body_frame(),
-            child_frame_C=plant.GetBodyByName(
-                "Link1", second_acrobot).body_frame(),
-            X_PC=Isometry3.Identity()))
-        self.assertIsInstance(joint, WeldJoint)
-        self._test_joint_api(joint)
+        acrobots = []
+        for i in xrange(num_joints + 1):
+            acrobot = AddModelFromSdfFile(
+                acrobot_file, "acrobot_{}".format(i), plant)
+            acrobots.append(acrobot)
+        joints = [
+            RevoluteJoint(
+                name="revolve_things",
+                frame_on_parent=plant.GetBodyByName(
+                    "Link2", acrobots[1]).body_frame(),
+                frame_on_child=plant.GetBodyByName(
+                    "Link1", acrobots[2]).body_frame(),
+                axis=[0, 0, 1],
+                damping=0.),
+            WeldJoint(
+                name="weld_things",
+                parent_frame_P=plant.GetBodyByName(
+                    "Link2", acrobots[0]).body_frame(),
+                child_frame_C=plant.GetBodyByName(
+                    "Link1", acrobots[1]).body_frame(),
+                X_PC=Isometry3.Identity()),
+        ]
+        for joint in joints:
+            joint_out = plant.AddJoint(joint)
+            self.assertIs(joint, joint_out)
+            self._test_joint_api(joint)
