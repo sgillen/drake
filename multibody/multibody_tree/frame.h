@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <string>
 
 #include "drake/common/autodiff.h"
 #include "drake/common/nice_type_name.h"
@@ -46,6 +47,11 @@ class Frame : public FrameBase<T> {
   /// Returns a const reference to the body associated to this %Frame.
   const Body<T>& body() const {
     return body_;
+  }
+
+  /// Returns the name of this frame. May be empty if unnamed.
+  const std::string& name() const {
+    return name_;
   }
 
   /// Returns the pose `X_BF` of `this` frame F in the body frame B associated
@@ -113,9 +119,9 @@ class Frame : public FrameBase<T> {
   /// Only derived classes can use this constructor. It creates a %Frame
   /// object attached to `body` and puts the frame in the body's model
   /// instance.
-  explicit Frame(const Body<T>& body)
+  explicit Frame(const Body<T>& body, const std::string& name)
       : FrameBase<T>(body.model_instance()),
-        body_(body) {}
+        body_(body), name_(name) {}
 
   /// @name Methods to make a clone templated on different scalar types.
   ///
@@ -147,6 +153,8 @@ class Frame : public FrameBase<T> {
 
   // The body associated with this frame.
   const Body<T>& body_;
+
+  std::string name_;
 
   // The internal bookkeeping topology struct used by MultibodyTree.
   FrameTopology topology_;

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <string>
 
 #include "drake/common/autodiff.h"
 #include "drake/common/eigen_types.h"
@@ -43,7 +44,9 @@ class FixedOffsetFrame final : public Frame<T> {
   /// @param[in] X_PF
   ///   The _default_ transform giving the pose of F in P, therefore only the
   ///   value (as an Isometry3<double>) is provided.
-  FixedOffsetFrame(const Frame<T>& P, const Isometry3<double>& X_PF);
+  FixedOffsetFrame(
+      const Frame<T>& P, const Isometry3<double>& X_PF,
+      const std::string& name = "");
 
   /// Creates a material Frame F whose pose is fixed with respect to the
   /// BodyFrame B of the given Body, which serves as F's parent frame.
@@ -52,7 +55,9 @@ class FixedOffsetFrame final : public Frame<T> {
   ///
   /// @param[in] bodyB The body whose BodyFrame B is to be F's parent frame.
   /// @param[in] X_BF  The transform giving the pose of F in B.
-  FixedOffsetFrame(const Body<T>& bodyB, const Isometry3<double>& X_BF);
+  FixedOffsetFrame(
+      const Body<T>& bodyB, const Isometry3<double>& X_BF,
+      const std::string& name = "");
 
   Isometry3<T> CalcPoseInBodyFrame(
       const systems::Context<T>& context) const override {

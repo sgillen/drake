@@ -135,6 +135,13 @@ TEST_F(AcrobotModelTests, ModelBasics) {
   EXPECT_EQ(shoulder_joint.child_body().name(), parameters_.link1_name());
   EXPECT_EQ(elbow_joint.parent_body().name(), parameters_.link1_name());
   EXPECT_EQ(elbow_joint.child_body().name(), parameters_.link2_name());
+
+
+  // Get frames by name.
+  const Frame<double>& link1_frame = plant_->GetFrameByName("Link1");
+  EXPECT_EQ(link1_frame.name(), "Link1");
+  const Frame<double>& link2_frame = plant_->GetFrameByName("Link2");
+  EXPECT_EQ(link2_frame.name(), "Link2");
 }
 
 // Verify the parsed model computes the same mass matrix as a Drake benchmark
