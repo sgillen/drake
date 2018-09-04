@@ -70,7 +70,7 @@ class FrameTests : public ::testing::Test {
 
     // Frame R is arbitrary, but named.
     frameR_ = &model_->AddFrame<FixedOffsetFrame>(
-        *frameP_, Isometry3d::Identity(), "R");
+        "R", *frameP_, Isometry3d::Identity());
 
     model_->Finalize();
     context_ = model_->CreateDefaultContext();

@@ -374,6 +374,12 @@ class MultibodyPlant : public systems::LeafSystem<T> {
     return AddRigidBody(name, default_model_instance(), M_BBo_B);
   }
 
+  /// This method adds a Frame of type `FrameType<T>`. For more information,
+  /// please see the corresponding constructor of `FrameType`.
+  /// @tparam FrameType Template which will be instantiated on `T`.
+  /// @param frame Unique pointer frame instance.
+  /// @returns A constant reference to the new Frame just added, which will
+  ///          remain valid for the lifetime of `this` %MultibodyPlant.
   template <template<typename> class FrameType>
   const FrameType<T>& AddFrame(std::unique_ptr<FrameType<T>> frame) {
     return model_->AddFrame(std::move(frame));
@@ -653,11 +659,10 @@ class MultibodyPlant : public systems::LeafSystem<T> {
 
   /// Returns a constant reference to a frame that is identified by the
   /// string `name` in `this` model.
-  /// @throws std::logic_error if `name` is empty.
   /// @throws std::logic_error if there is no frame with the requested name.
   /// @throws std::logic_error if the frame name occurs in multiple model
   /// instances.
-  /// @see HasFrameNamed() to query if there exists a body in `this` model with
+  /// @see HasFrameNamed() to query if there exists a frame in `this` model with
   /// a given specified name.
   const Frame<T>& GetFrameByName(const std::string& name) const {
     return model_->GetFrameByName(name);

@@ -163,8 +163,8 @@ unique_ptr<MultibodyTree<T>> KukaIiwaModelBuilder<T>::Build() const {
 
   // Add arbitrary tool frame.
   model->template AddFrame<FixedOffsetFrame>(
-      model->GetFrameByName("iiwa_link_7"),
-      Isometry3d(Translation3d(0.1, 0.2, 0.3)), "tool_arbitrary");
+      "tool_arbitrary", model->GetFrameByName("iiwa_link_7"),
+      Isometry3d(Translation3d(0.1, 0.2, 0.3)));
 
   // Add force element for a constant gravity pointing downwards, that is, in
   // the negative z-axis direction.
