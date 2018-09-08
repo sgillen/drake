@@ -3,8 +3,13 @@
 load("@drake//tools/install:install.bzl", "install")
 load("//tools/lint:lint.bzl", "add_lint_tests")
 load(
+    "//tools/skylark:drake_cc.bzl",
+    "drake_cc_googletest",
+)
+load(
     "//tools/skylark:drake_py.bzl",
     "drake_py_library",
+    "drake_py_test",
 )
 load(
     "//tools/skylark:pybind.bzl",
@@ -30,6 +35,8 @@ drake_py_library(
     visibility = ["//visibility:public"],
 )
 
+# TODO(eric.cousineau): Alias headers.
+
 # Roll-up alias.
 alias(
     name = "util",
@@ -42,6 +49,17 @@ install(
     py_dest = PACKAGE_INFO.py_dest,
     docs = ["wrapt/LICENSE"],
     doc_dest = "share/doc",
+)
+
+drake_cc_googletest(
+    name = "alias_cc_test",
+    # TODO(eric.cousineau): Fix this.
+)
+
+drake_py_test(
+    name = "alias_py_test",
+    deps = ["util"],
+    allow_import_unittest = True
 )
 
 add_lint_tests()
