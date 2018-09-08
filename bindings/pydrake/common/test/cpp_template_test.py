@@ -3,7 +3,7 @@ from __future__ import absolute_import, print_function
 import unittest
 from types import ModuleType
 
-import pydrake.util.cpp_template as m
+import pydrake.common.cpp_template as m
 
 _TEST_MODULE = "cpp_template_test"
 

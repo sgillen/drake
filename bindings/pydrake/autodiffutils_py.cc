@@ -5,7 +5,7 @@
 
 #include "drake/bindings/pydrake/autodiff_types_pybind.h"
 #include "drake/bindings/pydrake/pydrake_pybind.h"
-#include "drake/bindings/pydrake/util/wrap_pybind.h"
+#include "drake/bindings/pydrake/common/wrap_pybind.h"
 
 using Eigen::AutoDiffScalar;
 using std::sin;
@@ -20,7 +20,7 @@ PYBIND11_MODULE(_autodiffutils_py, m) {
   // Install NumPy warning filtres.
   // N.B. This may interfere with other code, but until that is a confirmed
   // issue, we should aggressively try to avoid these warnings.
-  py::module::import("pydrake.util.deprecation")
+  py::module::import("pydrake.common.deprecation")
       .attr("install_numpy_warning_filters")();
 
   py::class_<AutoDiffXd> autodiff(m, "AutoDiffXd");

@@ -5,7 +5,7 @@
 
 #include "drake/bindings/pydrake/pydrake_pybind.h"
 #include "drake/bindings/pydrake/symbolic_types_pybind.h"
-#include "drake/bindings/pydrake/util/wrap_pybind.h"
+#include "drake/bindings/pydrake/common/wrap_pybind.h"
 #include "drake/systems/controllers/dynamic_programming.h"
 #include "drake/systems/controllers/inverse_dynamics.h"
 #include "drake/systems/controllers/inverse_dynamics_controller.h"

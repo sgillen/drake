@@ -2,7 +2,7 @@
 #include "pybind11/pybind11.h"
 
 #include "drake/bindings/pydrake/pydrake_pybind.h"
-#include "drake/bindings/pydrake/util/drake_optional_pybind.h"
+#include "drake/bindings/pydrake/common/drake_optional_pybind.h"
 #include "drake/manipulation/planner/differential_inverse_kinematics.h"
 
 namespace drake {

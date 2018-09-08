@@ -35,7 +35,7 @@ then in Python you would do:
 
 Some (but not all) exceptions:
 
-- Some of `drake/common` is incorporated into `pydrake.util`. (This will be
+- Some of `drake/common` is incorporated into `pydrake.common`. (This will be
 remedied in the future.)
 - `drake/multibody/rigid_body_tree.h` is actually contained in the module
 `pydrake.multibody.rigid_body_tree`.

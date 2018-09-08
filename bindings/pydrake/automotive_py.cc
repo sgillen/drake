@@ -12,7 +12,7 @@
 #include "drake/automotive/simple_car.h"
 #include "drake/bindings/pydrake/pydrake_pybind.h"
 #include "drake/bindings/pydrake/systems/systems_pybind.h"
-#include "drake/bindings/pydrake/util/wrap_pybind.h"
+#include "drake/bindings/pydrake/common/wrap_pybind.h"
 #include "drake/systems/framework/basic_vector.h"
 
 namespace drake {

@@ -3,7 +3,7 @@
 import inspect
 from types import MethodType
 
-from pydrake.util.cpp_param import get_param_names, get_param_canonical
+from pydrake.common.cpp_param import get_param_names, get_param_canonical
 
 
 def _get_module_name_from_stack(frame=2):

@@ -7,7 +7,7 @@
 #include "drake/automotive/maliput/api/road_geometry.h"
 #include "drake/automotive/maliput/api/segment.h"
 #include "drake/bindings/pydrake/pydrake_pybind.h"
-#include "drake/bindings/pydrake/util/wrap_pybind.h"
+#include "drake/bindings/pydrake/common/wrap_pybind.h"
 
 namespace drake {
 namespace pydrake {

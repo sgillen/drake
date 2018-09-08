@@ -45,10 +45,10 @@ drake_pybind_library(
 drake_pybind_library(
     name = "multibody_tree_py",
     cc_deps = [
-        "//bindings/pydrake/util:deprecation_pybind",
-        "//bindings/pydrake/util:drake_optional_pybind",
-        "//bindings/pydrake/util:eigen_geometry_pybind",
-        "//bindings/pydrake/util:type_safe_index_pybind",
+        "//bindings/pydrake/common:deprecation_pybind",
+        "//bindings/pydrake/common:drake_optional_pybind",
+        "//bindings/pydrake/common:eigen_geometry_pybind",
+        "//bindings/pydrake/common:type_safe_index_pybind",
     ],
     cc_so_name = "multibody_tree",
     cc_srcs = ["multibody_tree_py.cc"],
@@ -57,7 +57,7 @@ drake_pybind_library(
         ":module_py",
         "//bindings/pydrake:geometry_py",
         "//bindings/pydrake/systems:framework_py",
-        "//bindings/pydrake/util:eigen_geometry_py",
+        "//bindings/pydrake/common:eigen_geometry_py",
     ],
 )
 
@@ -92,7 +92,7 @@ drake_pybind_library(
     name = "rigid_body_tree_py",
     cc_deps = [
         "//bindings/pydrake:autodiff_types_pybind",
-        "//bindings/pydrake/util:type_pack",
+        "//bindings/pydrake/common:type_pack",
     ],
     cc_so_name = "rigid_body_tree",
     cc_srcs = ["rigid_body_tree_py.cc"],
@@ -105,7 +105,7 @@ drake_pybind_library(
         ":rigid_body_py",
         ":shapes_py",
         "//bindings/pydrake:autodiffutils_py",
-        "//bindings/pydrake/util:eigen_geometry_py",
+        "//bindings/pydrake/common:eigen_geometry_py",
     ],
 )
 
@@ -124,14 +124,14 @@ drake_pybind_library(
 drake_pybind_library(
     name = "joints_py",
     cc_deps = [
-        "//bindings/pydrake/util:eigen_geometry_pybind",
+        "//bindings/pydrake/common:eigen_geometry_pybind",
     ],
     cc_so_name = "joints",
     cc_srcs = ["joints_py.cc"],
     package_info = PACKAGE_INFO,
     py_deps = [
         ":module_py",
-        "//bindings/pydrake/util:eigen_geometry_py",
+        "//bindings/pydrake/common:eigen_geometry_py",
     ],
 )
 
@@ -153,7 +153,7 @@ drake_pybind_library(
     package_info = PACKAGE_INFO,
     py_deps = [
         ":module_py",
-        "//bindings/pydrake/util:eigen_geometry_py",
+        "//bindings/pydrake/common:eigen_geometry_py",
     ],
 )
 

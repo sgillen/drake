@@ -1,9 +1,9 @@
-import pydrake.util.eigen_geometry as mut
+import pydrake.common.eigen_geometry as mut
 
 import numpy as np
 import unittest
 
-import pydrake.util.test.eigen_geometry_test_util as test_util
+import pydrake.common.test.eigen_geometry_test_util as test_util
 
 
 def normalize(x):
