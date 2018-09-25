@@ -208,7 +208,8 @@ def extract(include_map, node, prefix):
         assert node.kind == CursorKind.TRANSLATION_UNIT
         include = None
     else:
-        include = include_map.get(d(node.location.file.name))
+        filename = d(node.location.file.name)
+        include = include_map.get(filename)
         if include is None:
             return 0
     if node.kind in RECURSE_LIST:
@@ -330,7 +331,7 @@ if __name__ == '__main__':
     # TODO: Sort based on this include path?
     include_file = '/tmp/includes.h'
     with open(include_file, 'w') as f:
-        for include in includes[:20]:
+        for include in includes:
             f.write("#include \"{}\"\n".format(include))
     include_map = FileDict(zip(filenames, includes))
 

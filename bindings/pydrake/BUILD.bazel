@@ -53,8 +53,7 @@ generate_pybind_documentation_header(
         "//common:essential",
         "//common:find_resource",
         "//common:nice_type_name",
-        # TODO(jamiesnape): Fix compilation errors in //common:symbolic.
-        # "//common:symbolic",
+        "//common:symbolic",
         "//common:temp_directory",
         "//common:type_safe_index",
         "//common/trajectories",
