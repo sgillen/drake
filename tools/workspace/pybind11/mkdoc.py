@@ -225,24 +225,12 @@ def extract(filename, node, prefix):
             output.append((name, filename, comment))
 
 
-class ExtractionThread(Thread):
-    def __init__(self, filename, parameters, quiet):
-        Thread.__init__(self)
-        self.filename = filename
-        self.parameters = parameters
-        self.quiet = quiet
-        job_semaphore.acquire()
+def drake_genfile_path_to_include_path(filename):
+    pieces = filename.split('/')
+    assert pieces.count('drake') == 1
+    drake_index = pieces.index('drake')
+    return '/'.join(pieces[drake_index:])
 
-    def run(self):
-        if not self.quiet:
-            print('Processing "%s" ..' % self.filename, file=sys.stderr)
-        try:
-            index = cindex.Index(
-                cindex.conf.lib.clang_createIndex(False, True))
-            tu = index.parse(self.filename, self.parameters)
-            extract(self.filename, tu.cursor, '')
-        finally:
-            job_semaphore.release()
 
 if __name__ == '__main__':
     parameters = ['-x', 'c++', '-D__MKDOC_PY__']
@@ -309,17 +297,26 @@ if __name__ == '__main__':
 ''')
 
     output.clear()
-    for filename in filenames:
-        thr = ExtractionThread(filename, parameters, quiet)
-        thr.start()
 
-    if not quiet:
-        print('Waiting for jobs to finish ..', file=sys.stderr)
-    for i in range(job_count):
-        job_semaphore.acquire()
+    text = ""
+    includes = list(map(drake_genfile_path_to_include_path, filenames))
+    include_file = '/tmp/includes.h'
+    with open(include_file, 'w') as f:
+        for include in includes:
+            f.write("#include \"{}\"\n".format(include))
+    # exit(10)
+
+    print("Parse...", file=sys.stderr)
+    index = cindex.Index(
+        cindex.conf.lib.clang_createIndex(False, True))
+    tu = index.parse(include_file, parameters)
+    for filename in filenames:
+        print("Process: {}".format(filename), file=sys.stderr)
+        extract(filename, tu.cursor, '')
 
     name_ctr = 1
     name_prev = None
+    # TODO(eric.cousineau): Sort based on filename + line.
     for name, _, comment in list(sorted(output, key=lambda x: (x[0], x[1]))):
         if name == name_prev:
             name_ctr += 1
