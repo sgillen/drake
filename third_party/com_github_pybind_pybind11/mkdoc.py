@@ -59,6 +59,17 @@ def d(s):
     return s.decode('utf8')
 
 
+class Symbol(object):
+    def __init__(self, name, include, line, comment):
+        self.name = name
+        self.include = include
+        self.line = line
+        self.comment = comment
+
+    def sorting_key(self):
+        return (self.name, self.include, self.line)
+
+
 def sanitize_name(name):
     name = re.sub(r'type-parameter-0-([0-9]+)', r'T\1', name)
     for k, v in CPP_OPERATORS.items():
@@ -223,9 +234,10 @@ def extract(include_map, node, prefix):
             sub_prefix += '_'
         if len(node.spelling) > 0:
             name = sanitize_name(sub_prefix + d(node.spelling))
+            line = node.location.line
             global output
             assert include is not None
-            output.append((name, include, comment))
+            output.append(Symbol(name, include, line, comment))
 
 
 def drake_genfile_path_to_include_path(filename):
@@ -340,8 +352,8 @@ if __name__ == '__main__':
 
     name_ctr = 1
     name_prev = None
-    # TODO(eric.cousineau): Sort based on filename + line.
-    for name, _, comment in list(sorted(output, key=lambda x: (x[0], x[1]))):
+    for symbol in sorted(output, key=Symbol.sorting_key):
+        name = symbol.name
         if name == name_prev:
             name_ctr += 1
             name = name + "_%i" % name_ctr
@@ -349,7 +361,7 @@ if __name__ == '__main__':
             name_prev = name
             name_ctr = 1
         print('\nstatic const char *%s [[gnu::unused]] =%sR"doc(%s)doc";' %
-              (name, '\n' if '\n' in comment else ' ', comment))
+              (name, '\n' if '\n' in symbol.comment else ' ', symbol.comment))
 
     print('''
 #if defined(__GNUG__)
