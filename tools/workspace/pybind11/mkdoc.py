@@ -202,10 +202,15 @@ def process_comment(comment):
     return result.rstrip().lstrip('\n')
 
 
-def extract(filename, node, prefix):
-    if not (node.location.file is None or
-            os.path.samefile(d(node.location.file.name), filename)):
-        return 0
+def extract(include_map, node, prefix):
+    if node.location.file is None:
+        # This should only happen on the input source file.
+        assert node.kind == CursorKind.TRANSLATION_UNIT
+        include = None
+    else:
+        include = include_map.get(d(node.location.file.name))
+        if include is None:
+            return 0
     if node.kind in RECURSE_LIST:
         sub_prefix = prefix
         if node.kind != CursorKind.TRANSLATION_UNIT:
@@ -213,7 +218,7 @@ def extract(filename, node, prefix):
                 sub_prefix += '_'
             sub_prefix += d(node.spelling)
         for i in node.get_children():
-            extract(filename, i, sub_prefix)
+            extract(include_map, i, sub_prefix)
     if node.kind in PRINT_LIST:
         comment = d(node.raw_comment) if node.raw_comment is not None else ''
         comment = process_comment(comment)
@@ -223,14 +228,35 @@ def extract(filename, node, prefix):
         if len(node.spelling) > 0:
             name = sanitize_name(sub_prefix + d(node.spelling))
             global output
-            output.append((name, filename, comment))
+            assert include is not None
+            output.append((name, include, comment))
 
 
 def drake_genfile_path_to_include_path(filename):
+    # TODO(eric.cousineau): Is there a simple way to generalize this, given
+    # include paths?
     pieces = filename.split('/')
     assert pieces.count('drake') == 1
     drake_index = pieces.index('drake')
     return '/'.join(pieces[drake_index:])
+
+
+class FileDict(object):
+    def __init__(self, items):
+        self._d = {self._key(file): value for file, value in items}
+
+    def _key(self, file):
+        return os.path.realpath(os.path.abspath(file))
+
+    def get(self, file, default=None):
+        return self._d.get(self._key(file), default)
+
+    def __contains__(self, file):
+        return self._key(file) in self._d
+
+    def __getitem__(self, file):
+        key = self._key(file)
+        return self._d[key]
 
 
 if __name__ == '__main__':
@@ -301,23 +327,19 @@ if __name__ == '__main__':
 
     text = ""
     includes = list(map(drake_genfile_path_to_include_path, filenames))
+    # TODO: Sort based on this include path?
     include_file = '/tmp/includes.h'
     with open(include_file, 'w') as f:
-        for include in includes:
+        for include in includes[:20]:
             f.write("#include \"{}\"\n".format(include))
-    # exit(10)
+    include_map = FileDict(zip(filenames, includes))
 
-    print("Parse...", file=sys.stderr)
+    print("Parse header...", file=sys.stderr)
     index = cindex.Index(
         cindex.conf.lib.clang_createIndex(False, True))
     tu = index.parse(include_file, parameters)
-
-    def action(filename):
-        print("Process: {}".format(filename), file=sys.stderr)
-        extract(filename, tu.cursor, '')
-
-    with ThreadPoolExecutor(max_workers=cpu_count()) as pool:
-        pool.map(action, filenames)
+    print("Extract relevant symbols...", file=sys.stderr)
+    extract(include_map, tu.cursor, '')
 
     name_ctr = 1
     name_prev = None
