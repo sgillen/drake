@@ -15,7 +15,7 @@ from tempfile import NamedTemporaryFile
 import textwrap
 
 from clang import cindex
-from clang.cindex import CursorKind
+from clang.cindex import AccessSpecifier, CursorKind
 
 RECURSE_LIST = [
     CursorKind.TRANSLATION_UNIT,
@@ -53,7 +53,6 @@ CPP_OPERATORS = {
 CPP_OPERATORS = OrderedDict(
     sorted(CPP_OPERATORS.items(), key=lambda t: -len(t[0])))
 
-output = []
 
 def d(s):
     return s.decode('utf8')
@@ -68,6 +67,32 @@ class Symbol(object):
 
     def sorting_key(self):
         return (self.name, self.include, self.line)
+
+SKIP_FULL_NAMES = [
+    'std',
+]
+
+SKIP_PARTIAL_NAMES = [
+    'operator new',
+    'operator delete',
+    'operator=',
+]
+
+SKIP_ACCESS = [
+    AccessSpecifier.PRIVATE,
+]
+
+
+def is_accepted_symbol(node):
+    name = d(node.spelling)
+    if name in SKIP_FULL_NAMES:
+        return False
+    for bad in SKIP_PARTIAL_NAMES:
+        if bad in name:
+            return False
+    if node.access_specifier in SKIP_ACCESS:
+        return False
+    return True
 
 
 def sanitize_name(name):
@@ -208,35 +233,31 @@ def process_comment(comment):
     return result.rstrip().lstrip('\n')
 
 
-def extract(include_map, node, prefix):
-    if node.location.file is None:
-        # This should only happen on the input source file.
-        assert node.kind == CursorKind.TRANSLATION_UNIT
-        include = None
-    else:
-        filename = d(node.location.file.name)
-        include = include_map.get(filename)
-        if include is None:
-            return 0
-    if node.kind in RECURSE_LIST:
-        sub_prefix = prefix
-        if node.kind != CursorKind.TRANSLATION_UNIT:
-            if len(sub_prefix) > 0:
-                sub_prefix += '_'
-            sub_prefix += d(node.spelling)
+def extract(include_map, node, prefix, output):
+    if node.kind == CursorKind.TRANSLATION_UNIT:
         for i in node.get_children():
-            extract(include_map, i, sub_prefix)
+            extract(include_map, i, prefix, output)
+        return
+    assert node.location.file is not None
+    filename = d(node.location.file.name)
+    include = include_map.get(filename)
+    if include is None:
+        return 0
+    sub_prefix = prefix
+    if len(sub_prefix) > 0:
+        sub_prefix += '_'
+    sub_prefix += d(node.spelling)
+    if not is_accepted_symbol(node):
+        return
+    if node.kind in RECURSE_LIST:
+        for i in node.get_children():
+            extract(include_map, i, sub_prefix, output)
     if node.kind in PRINT_LIST:
         comment = d(node.raw_comment) if node.raw_comment is not None else ''
         comment = process_comment(comment)
-        sub_prefix = prefix
-        if len(sub_prefix) > 0:
-            sub_prefix += '_'
         if len(node.spelling) > 0:
-            name = sanitize_name(sub_prefix + d(node.spelling))
+            name = sanitize_name(sub_prefix)
             line = node.location.line
-            global output
-            assert include is not None
             output.append(Symbol(name, include, line, comment))
 
 
@@ -331,12 +352,10 @@ if __name__ == '__main__':
 #endif
 ''')
 
-    output.clear()
-
-    text = ""
     includes = list(map(drake_genfile_path_to_include_path, filenames))
     include_map = FileDict(zip(filenames, includes))
     # TODO(eric.cousineau): Sort files based on include path?
+    output = []
     with NamedTemporaryFile('w') as include_file:
         for include in includes:
             include_file.write("#include \"{}\"\n".format(include))
@@ -348,7 +367,7 @@ if __name__ == '__main__':
         tu = index.parse(include_file.name, parameters)
         if not quiet:
             print("Extract relevant symbols...", file=sys.stderr)
-        extract(include_map, tu.cursor, '')
+        extract(include_map, tu.cursor, '', output)
 
     name_ctr = 1
     name_prev = None
