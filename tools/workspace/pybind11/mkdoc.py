@@ -17,6 +17,7 @@ from clang.cindex import CursorKind
 from collections import OrderedDict
 from threading import Thread, Semaphore
 from multiprocessing import cpu_count
+from concurrent.futures import ThreadPoolExecutor
 
 RECURSE_LIST = [
     CursorKind.TRANSLATION_UNIT,
@@ -310,9 +311,13 @@ if __name__ == '__main__':
     index = cindex.Index(
         cindex.conf.lib.clang_createIndex(False, True))
     tu = index.parse(include_file, parameters)
-    for filename in filenames:
+
+    def action(filename):
         print("Process: {}".format(filename), file=sys.stderr)
         extract(filename, tu.cursor, '')
+
+    with ThreadPoolExecutor(max_workers=cpu_count()) as pool:
+        pool.map(action, filenames)
 
     name_ctr = 1
     name_prev = None
