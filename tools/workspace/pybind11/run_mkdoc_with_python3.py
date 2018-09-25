@@ -21,7 +21,7 @@ if sys.platform.startswith('linux'):
 
 os.environ['LANG'] = 'en_US.UTF-8'
 
-mkdoc_path = resolve_path('external/pybind11/tools/mkdoc.py')
+mkdoc_path = resolve_path('tools/workspace/pybind11/mkdoc.py')
 python3_path = resolve_path('external/python3/python3')
 argv = [python3_path, mkdoc_path] + sys.argv[1:]
 os.execv(argv[0], argv)
