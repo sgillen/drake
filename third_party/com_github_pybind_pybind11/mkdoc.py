@@ -278,7 +278,7 @@ if __name__ == '__main__':
 
     for item in sys.argv[1:]:
         if item == '-quiet':
-            quiet = True        
+            quiet = True
         elif item.startswith('-std='):
             std = item
         elif item.startswith('-'):
@@ -295,7 +295,7 @@ if __name__ == '__main__':
 
     print('''#pragma once
 
-// GENERATED FILE DO NOT EDIT    
+// GENERATED FILE DO NOT EDIT
 // This file contains docstrings for the Python bindings that were
 // automatically extracted by mkdoc.py from pybind11.
 
@@ -324,7 +324,7 @@ if __name__ == '__main__':
     text = ""
     includes = list(map(drake_genfile_path_to_include_path, filenames))
     include_map = FileDict(zip(filenames, includes))
-    # TODO: Sort files based on include path?
+    # TODO(eric.cousineau): Sort files based on include path?
     with NamedTemporaryFile('w') as include_file:
         for include in includes:
             include_file.write("#include \"{}\"\n".format(include))
@@ -348,7 +348,7 @@ if __name__ == '__main__':
         else:
             name_prev = name
             name_ctr = 1
-        print('\nstatic const char *%s =%sR"doc(%s)doc";' %
+        print('\nstatic const char *%s [[gnu::unused]] =%sR"doc(%s)doc";' %
               (name, '\n' if '\n' in comment else ' ', comment))
 
     print('''

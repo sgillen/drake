@@ -318,7 +318,7 @@ def _generate_pybind_documentation_header_impl(ctx):
 
     args = ctx.actions.args()
     args.add_all(compile_flags, uniquify = True)
-    # args.add("-quiet")
+    args.add("-quiet")
 
     # Replace with ctx.fragments.cpp.cxxopts in Bazel 0.17.1.
     args.add("-std=c++14")

@@ -136,7 +136,7 @@ void init_module(py::module m) {
     py::class_<Class, Joint<T>> cls(m, "PrismaticJoint");
     cls
         .def("get_translation", &Class::get_translation, py::arg("context"),
-        D(PrismaticJoint, get_translation))
+             D(PrismaticJoint, get_translation))
         .def("set_translation", &Class::set_translation,
              py::arg("context"), py::arg("translation"),
              D(PrismaticJoint, set_translation))

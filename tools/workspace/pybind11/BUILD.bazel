@@ -8,18 +8,13 @@ exports_files(
     visibility = ["@pybind11//:__pkg__"],
 )
 
-# TODO(jamiesnape): Once we only support Python 3.x, delete this target and
-# modify any targets that depend on it to depend on @pybind11//:mkdoc directly.
 py_binary(
     name = "run_mkdoc_with_python3",
     srcs = [
         "run_mkdoc_with_python3.py",
-        "mkdoc.py",
+        "//third_party:com_github_pybind_pybind11/mkdoc.py",
     ],
-    data = [
-        # "@pybind11//:mkdoc",
-        "@python3",
-    ],
+    data = ["@python3"],
     default_python_version = "PY2",
     deps = ["@clang_cindex_python3//:clang"],
 )
