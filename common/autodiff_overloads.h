@@ -19,20 +19,10 @@
 
 #pragma once
 
-// Redundant #define guards for the benefit of @pybind11//:mkdoc.py.
-#ifndef DRAKE_COMMON_AUTODIFF_OVERLOADS_H_
-#define DRAKE_COMMON_AUTODIFF_OVERLOADS_H_
-
 #ifndef DRAKE_COMMON_AUTODIFF_HEADER
 // TODO(soonho-tri): Change to #error.
 #warning Do not directly include this file. Include "drake/common/autodiff.h".
-
-// Ensure that this header is self-contained for the benefit of
-// @pybind11//:mkdoc.py.
-#include <Eigen/Core>
-#include <unsupported/Eigen/AutoDiff>
-
-#endif  // DRAKE_COMMON_AUTODIFF_HEADER
+#endif
 
 #include <cmath>
 #include <limits>
@@ -197,5 +187,3 @@ cond(bool f_cond, const Eigen::AutoDiffScalar<DerType>& e_then, Rest... rest) {
 }
 
 }  // namespace drake
-
-#endif  // DRAKE_COMMON_AUTODIFF_OVERLOADS_H_

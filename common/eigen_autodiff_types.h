@@ -1,9 +1,5 @@
 #pragma once
 
-// Redundant #define guards for the benefit of @pybind11//:mkdoc.py.
-#ifndef DRAKE_COMMON_EIGEN_AUTODIFF_TYPES_H_
-#define DRAKE_COMMON_EIGEN_AUTODIFF_TYPES_H_
-
 /// @file
 /// This file contains abbreviated definitions for certain uses of
 /// AutoDiffScalar that are commonly used in Drake.
@@ -12,13 +8,7 @@
 #ifndef DRAKE_COMMON_AUTODIFF_HEADER
 // TODO(soonho-tri): Change to #error.
 #warning Do not directly include this file. Include "drake/common/autodiff.h".
-
-// Ensure that this header is self-contained for the benefit of
-// @pybind11//:mkdoc.py.
-#include <Eigen/Core>
-#include <unsupported/Eigen/AutoDiff>
-
-#endif  // DRAKE_COMMON_AUTODIFF_HEADER
+#endif
 
 #include <type_traits>
 
@@ -46,5 +36,3 @@ using AutoDiffVecd = Eigen::Matrix<AutoDiffd<num_vars>, rows, 1>;
 typedef AutoDiffVecd<Eigen::Dynamic, Eigen::Dynamic> AutoDiffVecXd;
 
 }  // namespace drake
-
-#endif  // DRAKE_COMMON_EIGEN_AUTODIFF_TYPES_H_
