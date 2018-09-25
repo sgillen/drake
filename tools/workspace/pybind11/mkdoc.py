@@ -10,6 +10,7 @@ import os
 import sys
 import platform
 import re
+from tempfile import NamedTemporaryFile
 import textwrap
 
 from clang import cindex
@@ -328,19 +329,20 @@ if __name__ == '__main__':
 
     text = ""
     includes = list(map(drake_genfile_path_to_include_path, filenames))
-    # TODO: Sort based on this include path?
-    include_file = '/tmp/includes.h'
-    with open(include_file, 'w') as f:
-        for include in includes:
-            f.write("#include \"{}\"\n".format(include))
     include_map = FileDict(zip(filenames, includes))
-
-    print("Parse header...", file=sys.stderr)
-    index = cindex.Index(
-        cindex.conf.lib.clang_createIndex(False, True))
-    tu = index.parse(include_file, parameters)
-    print("Extract relevant symbols...", file=sys.stderr)
-    extract(include_map, tu.cursor, '')
+    # TODO: Sort based on this include path?
+    with NamedTemporaryFile('w') as include_file:
+        for include in includes:
+            include_file.write("#include \"{}\"\n".format(include))
+        include_file.flush()
+        with open(include_file.name) as f:
+            print(f.read(), file=sys.stderr)
+        print("Parse header...", file=sys.stderr)
+        index = cindex.Index(
+            cindex.conf.lib.clang_createIndex(False, True))
+        tu = index.parse(include_file.name, parameters)
+        print("Extract relevant symbols...", file=sys.stderr)
+        extract(include_map, tu.cursor, '')
 
     name_ctr = 1
     name_prev = None
