@@ -6,6 +6,7 @@
 #  Extract documentation from C++ header files to use it in Python bindings
 #
 
+from collections import OrderedDict
 import os
 import sys
 import platform
@@ -15,10 +16,6 @@ import textwrap
 
 from clang import cindex
 from clang.cindex import CursorKind
-from collections import OrderedDict
-from threading import Thread, Semaphore
-from multiprocessing import cpu_count
-from concurrent.futures import ThreadPoolExecutor
 
 RECURSE_LIST = [
     CursorKind.TRANSLATION_UNIT,
@@ -55,9 +52,6 @@ CPP_OPERATORS = {
 
 CPP_OPERATORS = OrderedDict(
     sorted(CPP_OPERATORS.items(), key=lambda t: -len(t[0])))
-
-job_count = cpu_count()
-job_semaphore = Semaphore(job_count)
 
 output = []
 
@@ -330,18 +324,18 @@ if __name__ == '__main__':
     text = ""
     includes = list(map(drake_genfile_path_to_include_path, filenames))
     include_map = FileDict(zip(filenames, includes))
-    # TODO: Sort based on this include path?
+    # TODO: Sort files based on include path?
     with NamedTemporaryFile('w') as include_file:
         for include in includes:
             include_file.write("#include \"{}\"\n".format(include))
         include_file.flush()
-        with open(include_file.name) as f:
-            print(f.read(), file=sys.stderr)
-        print("Parse header...", file=sys.stderr)
+        if not quiet:
+            print("Parse header...", file=sys.stderr)
         index = cindex.Index(
             cindex.conf.lib.clang_createIndex(False, True))
         tu = index.parse(include_file.name, parameters)
-        print("Extract relevant symbols...", file=sys.stderr)
+        if not quiet:
+            print("Extract relevant symbols...", file=sys.stderr)
         extract(include_map, tu.cursor, '')
 
     name_ctr = 1
