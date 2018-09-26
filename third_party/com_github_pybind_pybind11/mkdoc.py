@@ -277,6 +277,20 @@ class SymbolTree(object):
             return self.children_map[piece]
 
 
+def print_symbols(leaf):
+    for i, symbol in enumerate(leaf.symbols):
+        name = sanitize_name("::".join(symbol.name))
+        print("{} -> {}".format("::".join(symbol.name), name), file=sys.stderr)
+        if i > 0:
+            name += "_%i" % (i + 1)
+        print('\n// %s:%s\nstatic const char *__doc_%s [[gnu::unused]] =%sR"doc(%s)doc";' %
+              (symbol.include, symbol.line, name, '\n' if '\n' in symbol.comment else ' ', symbol.comment))
+    keys = sorted(leaf.children_map.keys())
+    for key in keys:
+        child = leaf.children_map[key]
+        print_symbols(child)
+
+
 def extract(include_map, node, output):
     if node.kind == CursorKind.TRANSLATION_UNIT:
         for i in node.get_children():
@@ -326,20 +340,6 @@ class FileDict(object):
     def __getitem__(self, file):
         key = self._key(file)
         return self._d[key]
-
-
-def print_symbols(leaf):
-    for i, symbol in enumerate(leaf.symbols):
-        name = sanitize_name("::".join(symbol.name))
-        print("{} -> {}".format("::".join(symbol.name), name), file=sys.stderr)
-        if i > 0:
-            name += "_%i" % (i + 1)
-        print('\n// %s:%s\nstatic const char *__doc_%s [[gnu::unused]] =%sR"doc(%s)doc";' %
-              (symbol.include, symbol.line, name, '\n' if '\n' in symbol.comment else ' ', symbol.comment))
-    keys = sorted(leaf.children_map.keys())
-    for key in keys:
-        child = leaf.children_map[key]
-        print_symbols(child)
 
 
 if __name__ == '__main__':
