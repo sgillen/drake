@@ -21,7 +21,7 @@ PYBIND11_MODULE(collision, m) {
   py::module::import("pydrake.multibody.shapes");
   py::module::import("pydrake.multibody.rigid_body");
 
-  py::class_<Element, DrakeShapes::Element>(m, "CollisionElement")
+  py::class_<Element, DrakeShapes::Element>(m, "CollisionElement", D(Element))
   .def(py::init<const DrakeShapes::Geometry&, const Eigen::Isometry3d&>(),
        py::arg("geometry_in"), py::arg("T_element_to_local"),
        D(Element, Element))

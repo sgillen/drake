@@ -36,6 +36,8 @@ using T = double;
 // N.B. We do this rather than inheritance because this template is more of a
 // mixin than it is a parent class (since it is not used for its dynamic
 // polymorphism).
+// TODO(jamiesnape): Add documentation for bindings generated with this
+// function.
 template <typename PyClass>
 void BindMultibodyTreeElementMixin(PyClass* pcls) {
   using Class = typename PyClass::type;
@@ -119,7 +121,11 @@ void init_module(py::module m) {
         .def("num_positions", &Class::num_positions,
              D(Joint, num_positions))
         .def("num_velocities", &Class::num_velocities,
-             D(Joint, num_velocities));
+             D(Joint, num_velocities))
+        .def("lower_limits", &Class::lower_limits,
+             D(Joint, lower_limits))
+        .def("upper_limits", &Class::upper_limits,
+             D(Joint, upper_limits));
 
     // Add deprecated methods.
 #pragma GCC diagnostic push
@@ -133,7 +139,7 @@ void init_module(py::module m) {
 
   {
     using Class = PrismaticJoint<T>;
-    py::class_<Class, Joint<T>> cls(m, "PrismaticJoint");
+    py::class_<Class, Joint<T>> cls(m, "PrismaticJoint", D(PrismaticJoint));
     cls
         .def("get_translation", &Class::get_translation, py::arg("context"),
              D(PrismaticJoint, get_translation))
@@ -150,7 +156,7 @@ void init_module(py::module m) {
 
   {
     using Class = RevoluteJoint<T>;
-    py::class_<Class, Joint<T>> cls(m, "RevoluteJoint");
+    py::class_<Class, Joint<T>> cls(m, "RevoluteJoint", D(RevoluteJoint));
     cls
         .def(py::init<const string&, const Frame<T>&,
              const Frame<T>&, const Vector3<T>&, double>(),
@@ -166,7 +172,7 @@ void init_module(py::module m) {
 
   {
     using Class = WeldJoint<T>;
-    py::class_<Class, Joint<T>> cls(m, "WeldJoint");
+    py::class_<Class, Joint<T>> cls(m, "WeldJoint", D(WeldJoint));
     cls
         .def(py::init<const string&, const Frame<T>&,
              const Frame<T>&, const Isometry3<double>&>(),
@@ -178,7 +184,7 @@ void init_module(py::module m) {
   // Actuators.
   {
     using Class = JointActuator<T>;
-    py::class_<Class> cls(m, "JointActuator");
+    py::class_<Class> cls(m, "JointActuator", D(JointActuator));
     BindMultibodyTreeElementMixin(&cls);
     cls
         .def("name", &Class::name, D(JointActuator, name))
@@ -195,7 +201,8 @@ void init_module(py::module m) {
 
   {
     using Class = UniformGravityFieldElement<T>;
-    py::class_<Class, ForceElement<T>>(m, "UniformGravityFieldElement")
+    py::class_<Class, ForceElement<T>>(m, "UniformGravityFieldElement",
+                                       D(UniformGravityFieldElement))
         .def(py::init<Vector3<double>>(), py::arg("g_W"),
              D(UniformGravityFieldElement, UniformGravityFieldElement));
   }
@@ -214,7 +221,7 @@ void init_module(py::module m) {
     // N.B. Pending a concrete direction on #9366, a minimal subset of the
     // `MultibodyTree` API will be exposed.
     using Class = MultibodyTree<T>;
-    py::class_<Class>(m, "MultibodyTree")
+    py::class_<Class>(m, "MultibodyTree", D(MultibodyTree))
         .def("CalcRelativeTransform", &Class::CalcRelativeTransform,
              py::arg("context"), py::arg("frame_A"), py::arg("frame_B"),
              D(MultibodyTree, CalcRelativeTransform)
@@ -335,7 +342,8 @@ void init_math(py::module m) {
 
   m.doc() = "MultibodyTree math functionality.";
 
-  py::class_<SpatialVector<SpatialVelocity, T>>(m, "SpatialVector")
+  py::class_<SpatialVector<SpatialVelocity, T>>(m, "SpatialVector",
+                                                D(SpatialVector))
       .def("rotational",
            [](const SpatialVector<SpatialVelocity, T>* self)
                -> const Vector3<T>& { return self->rotational(); },
@@ -364,7 +372,8 @@ void init_multibody_plant(py::module m) {
 
   {
     using Class = MultibodyPlant<T>;
-    py::class_<Class, systems::LeafSystem<T>> cls(m, "MultibodyPlant");
+    py::class_<Class, systems::LeafSystem<T>> cls(m, "MultibodyPlant",
+        D(multibody_plant, MultibodyPlant));
     // N.B. These are defined as they appear in the class declaration.
     // TODO(eric.cousineau): Add model-instance based overloads beyond
     // forwarded methods.
@@ -471,7 +480,8 @@ void init_multibody_plant(py::module m) {
              D(multibody_plant, MultibodyPlant, get_geometry_query_input_port))
         .def("get_geometry_poses_output_port",
              &Class::get_geometry_poses_output_port, py_reference_internal,
-             D(multibody_plant, MultibodyPlant, get_geometry_query_input_port))
+             D(multibody_plant, MultibodyPlant,
+               get_geometry_poses_output_port))
         .def("geometry_source_is_registered",
              &Class::geometry_source_is_registered,
              D(multibody_plant, MultibodyPlant,

@@ -35,6 +35,7 @@ PYBIND11_MODULE(rigid_body_plant, m) {
                           D(CompliantContactModelParameters));
     cls
         .def(
+            // TODO(jamiesnape): Add documentation of this binding.
             py::init(
                 [](double v_stiction_tolerance, double characteristic_radius) {
                   return Class{v_stiction_tolerance, characteristic_radius};
@@ -57,7 +58,7 @@ PYBIND11_MODULE(rigid_body_plant, m) {
 
   {
     using Class = ContactInfo<T>;
-    py::class_<Class> cls(m, "ContactInfo");
+    py::class_<Class> cls(m, "ContactInfo", D(ContactInfo));
     cls
         .def("get_element_id_1", &Class::get_element_id_1,
              D(ContactInfo, get_element_id_1))
@@ -69,7 +70,7 @@ PYBIND11_MODULE(rigid_body_plant, m) {
 
   {
     using Class = ContactForce<T>;
-    py::class_<Class> cls(m, "ContactForce");
+    py::class_<Class> cls(m, "ContactForce", D(ContactForce));
     cls
         .def(
              py::init<
@@ -97,7 +98,7 @@ PYBIND11_MODULE(rigid_body_plant, m) {
 
   {
     using Class = ContactResults<T>;
-    py::class_<Class> cls(m, "ContactResults");
+    py::class_<Class> cls(m, "ContactResults", D(ContactResults));
     cls
         .def(py::init<>(), D(ContactResults, ContactResults))
         .def("get_num_contacts", &Class::get_num_contacts,
@@ -121,7 +122,7 @@ PYBIND11_MODULE(rigid_body_plant, m) {
 
   {
     using Class = CompliantMaterial;
-    py::class_<Class> cls(m, "CompliantMaterial");
+    py::class_<Class> cls(m, "CompliantMaterial", D(CompliantMaterial));
     cls
         .def(py::init<>(), D(CompliantMaterial, CompliantMaterial))
         .def(py::init<double, double, double, double>(),
@@ -289,7 +290,7 @@ PYBIND11_MODULE(rigid_body_plant, m) {
 
   {
     using Class = DrakeVisualizer;
-    py::class_<Class, LeafSystem<T>>(m, "DrakeVisualizer")
+    py::class_<Class, LeafSystem<T>>(m, "DrakeVisualizer", D(DrakeVisualizer))
         .def(py::init<const RigidBodyTree<T>&, DrakeLcmInterface*, bool>(),
              py::arg("tree"), py::arg("lcm"),
              py::arg("enable_playback") = false,

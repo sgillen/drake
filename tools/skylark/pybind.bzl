@@ -294,11 +294,17 @@ def _generate_pybind_documentation_header_impl(ctx):
     package_headers = []
     for target in ctx.attr.targets:
         if hasattr(target, "cc"):
+            # Note that target.cc.compile_flags does not include copts added
+            # to the target or on the command line (including via rc file).
             compile_flags += [
                 compile_flag.replace(" ", "")
                 for compile_flag in target.cc.compile_flags
             ]
             transitive_headers += target.cc.transitive_headers.to_list()
+
+            # Find all headers provided by the drake_cc_package_library,
+            # i.e., the set of transitively-available headers that exist in
+            # the same Bazel package as the target.
             package_headers += [
                 transitive_header
                 for transitive_header in target.cc.transitive_headers
@@ -306,24 +312,15 @@ def _generate_pybind_documentation_header_impl(ctx):
                     target.label.workspace_root == transitive_header.owner.workspace_root)  # noqa
             ]
 
-    for deps in ctx.attr.deps:
-        if hasattr(deps, "cc"):
-            compile_flags += [
-                compile_flag.replace(" ", "")
-                for compile_flag in deps.cc.compile_flags
-            ]
-            transitive_headers += deps.cc.transitive_headers.to_list()
-
     mkdoc = ctx.file._mkdoc
 
     args = ctx.actions.args()
     args.add_all(compile_flags, uniquify = True)
     args.add("-quiet")
 
-    # Replace with ctx.fragments.cpp.cxxopts in Bazel 0.17.1.
+    # Replace with ctx.fragments.cpp.cxxopts in Bazel 0.17+.
     args.add("-std=c++14")
-    args.add("-Wno-#warnings")
-    args.add("-Wno-pragma-once-outside-header")
+    args.add("-w")
     args.add_all(package_headers, uniquify = True)
 
     ctx.actions.run_shell(
@@ -334,6 +331,9 @@ def _generate_pybind_documentation_header_impl(ctx):
         command = "{} $@ > {}".format(mkdoc.path, ctx.outputs.out.path),
     )
 
+# Generates a header that defines variables containing a representation of the
+# contents of Doxygen comments for each class, function, etc. in the
+# transitive headers of the given targets.
 generate_pybind_documentation_header = rule(
     attrs = {
         "targets": attr.label_list(
@@ -347,7 +347,6 @@ generate_pybind_documentation_header = rule(
             executable = True,
         ),
         "out": attr.output(mandatory = True),
-        "deps": attr.label_list(),
     },
     fragments = ["cpp"],
     implementation = _generate_pybind_documentation_header_impl,

@@ -22,13 +22,14 @@ PYBIND11_MODULE(joints, m) {
          D(DrakeJoint, get_num_positions))
     .def("get_name", &DrakeJoint::get_name, D(DrakeJoint, get_name));
 
-  py::class_<PrismaticJoint, DrakeJoint>(m, "PrismaticJoint", D(PrismaticJoint))
+  py::class_<PrismaticJoint, DrakeJoint>(m, "PrismaticJoint",
+                                         D(PrismaticJoint))
     .def(py::init<const std::string&,
                   const Eigen::Isometry3d&,
                   const Eigen::Vector3d&>(),
          py::arg("name"),
          py::arg("transform_to_parent_body"),
-         py::arg("translation_axis"), D(DrakeJoint, get_name),
+         py::arg("translation_axis"),
          D(PrismaticJoint, PrismaticJoint));
 
   py::class_<RevoluteJoint, DrakeJoint>(m, "RevoluteJoint", D(RevoluteJoint))

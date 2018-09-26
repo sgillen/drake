@@ -10,11 +10,11 @@ namespace drake {
 namespace pydrake {
 
 PYBIND11_MODULE(parsers, m) {
-  using drake::parsers::PackageMap;
+  using drake::multibody::parsing::PackageMap;
 
   m.doc() = "Tools for loading robots from various files";
 
-  py::class_<PackageMap>(m, "PackageMap")
+  py::class_<PackageMap>(m, "PackageMap", D(PackageMap))
     .def(py::init<>(), D(PackageMap, PackageMap))
     .def("Add", &PackageMap::Add, D(PackageMap, Add))
     .def("Contains", &PackageMap::Contains, D(PackageMap, Contains))

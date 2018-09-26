@@ -22,7 +22,7 @@ py_binary(
 drake_runfiles_binary(
     name = "mkdoc",
     target = ":run_mkdoc_with_python3",
-    visibility = ["//bindings:__subpackages__"],
+    visibility = ["//visibility:public"],
 )
 
 add_lint_tests()

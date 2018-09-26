@@ -22,7 +22,8 @@ PYBIND11_MODULE(inverse_kinematics, m) {
   py::module::import("pydrake.solvers.mathematicalprogram");
   py::module::import("pydrake.math");
 
-  py::class_<InverseKinematics> ik_cls(m, "InverseKinematics");
+  py::class_<InverseKinematics> ik_cls(m, "InverseKinematics",
+                                       D(InverseKinematics));
   ik_cls.def(py::init<const MultibodyPlant<double>&>(), py::arg("plant"))
       .def("AddPositionConstraint", &InverseKinematics::AddPositionConstraint,
            py::arg("frameB"), py::arg("p_BQ"), py::arg("frameA"),
