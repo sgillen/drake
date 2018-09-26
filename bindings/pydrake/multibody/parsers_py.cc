@@ -4,28 +4,27 @@
 #include "drake/bindings/pydrake/pydrake_pybind.h"
 #include "drake/multibody/parsers/package_map.h"
 
-#define D(...) DOC(drake, multibody, parsing, __VA_ARGS__)
-
 namespace drake {
 namespace pydrake {
 
 PYBIND11_MODULE(parsers, m) {
   using drake::multibody::parsing::PackageMap;
+  auto& doc = pydrake_doc.drake.multibody.parsing;
 
   m.doc() = "Tools for loading robots from various files";
 
-  py::class_<PackageMap>(m, "PackageMap", D(PackageMap))
-    .def(py::init<>(), D(PackageMap, PackageMap))
-    .def("Add", &PackageMap::Add, D(PackageMap, Add))
-    .def("Contains", &PackageMap::Contains, D(PackageMap, Contains))
-    .def("size", &PackageMap::size, D(PackageMap, size))
-    .def("GetPath", &PackageMap::GetPath, D(PackageMap, GetPath))
+  py::class_<PackageMap>(m, "PackageMap", doc.PackageMap.doc)
+    .def(py::init<>(), doc.PackageMap.ctor.doc)
+    .def("Add", &PackageMap::Add, doc.PackageMap.Add.doc)
+    .def("Contains", &PackageMap::Contains, doc.PackageMap.Contains.doc)
+    .def("size", &PackageMap::size, doc.PackageMap.size.doc)
+    .def("GetPath", &PackageMap::GetPath, doc.PackageMap.GetPath.doc)
     .def("PopulateFromFolder", &PackageMap::PopulateFromFolder,
-         D(PackageMap, PopulateFromFolder))
+         doc.PackageMap.PopulateFromFolder.doc)
     .def("PopulateFromEnvironment", &PackageMap::PopulateFromEnvironment,
-         D(PackageMap, PopulateFromEnvironment))
+         doc.PackageMap.PopulateFromEnvironment.doc)
     .def("PopulateUpstreamToDrake", &PackageMap::PopulateUpstreamToDrake,
-         D(PackageMap, PopulateUpstreamToDrake));
+         doc.PackageMap.PopulateUpstreamToDrake.doc);
 }
 
 }  // namespace pydrake
