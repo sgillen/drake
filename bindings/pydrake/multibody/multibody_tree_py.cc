@@ -19,8 +19,6 @@
 #include "drake/multibody/multibody_tree/multibody_tree.h"
 #include "drake/multibody/multibody_tree/parsing/multibody_plant_sdf_parser.h"
 
-auto& doc = pydrake_doc.drake.multibody;
-
 namespace drake {
 namespace pydrake {
 namespace {
@@ -51,6 +49,8 @@ void BindMultibodyTreeElementMixin(PyClass* pcls) {
 void init_module(py::module m) {
   // NOLINTNEXTLINE(build/namespaces): Emulate placement in namespace.
   using namespace drake::multibody;
+
+  auto& doc = pydrake_doc.drake.multibody;
 
   using systems::Context;
 
@@ -340,6 +340,8 @@ void init_math(py::module m) {
   // NOLINTNEXTLINE(build/namespaces): Emulate placement in namespace.
   using namespace drake::multibody;
 
+  auto& doc = pydrake_doc.drake.multibody;
+
   m.doc() = "MultibodyTree math functionality.";
 
   py::class_<SpatialVector<SpatialVelocity, T>>(m, "SpatialVector",
@@ -367,13 +369,15 @@ void init_multibody_plant(py::module m) {
   // NOLINTNEXTLINE(build/namespaces): Emulate placement in namespace.
   using namespace drake::multibody::multibody_plant;
 
+  auto& doc = pydrake_doc.drake.multibody.multibody_plant;
+
   py::module::import("pydrake.geometry");
   py::module::import("pydrake.systems.framework");
 
   {
     using Class = MultibodyPlant<T>;
     py::class_<Class, systems::LeafSystem<T>> cls(m, "MultibodyPlant",
-        doc.multibody_plant.MultibodyPlant.doc);
+        doc.MultibodyPlant.doc);
     // N.B. These are defined as they appear in the class declaration.
     // TODO(eric.cousineau): Add model-instance based overloads beyond
     // forwarded methods.
@@ -382,142 +386,138 @@ void init_multibody_plant(py::module m) {
         .def(py::init<double>(),
              py::arg("time_step") = 0.)
         .def("num_bodies", &Class::num_bodies,
-             doc.multibody_plant.MultibodyPlant.num_bodies.doc)
+             doc.MultibodyPlant.num_bodies.doc)
         .def("num_joints", &Class::num_joints,
-             doc.multibody_plant.MultibodyPlant.num_joints.doc)
+             doc.MultibodyPlant.num_joints.doc)
         .def("num_actuators", &Class::num_actuators,
-             doc.multibody_plant.MultibodyPlant.num_actuators.doc)
+             doc.MultibodyPlant.num_actuators.doc)
         .def("num_model_instances", &Class::num_model_instances,
-             doc.multibody_plant.MultibodyPlant.num_model_instances.doc)
+             doc.MultibodyPlant.num_model_instances.doc)
         .def("num_positions",
              overload_cast_explicit<int>(&Class::num_positions),
-             doc.multibody_plant.MultibodyPlant.num_positions.doc)
+             doc.MultibodyPlant.num_positions.doc)
         .def("num_positions",
              overload_cast_explicit<int, ModelInstanceIndex>(
                 &Class::num_positions),
              py::arg("model_instance"),
-             doc.multibody_plant.MultibodyPlant.num_positions.doc_2)
+             doc.MultibodyPlant.num_positions.doc_2)
         .def("num_velocities",
              overload_cast_explicit<int>(&Class::num_velocities),
-             doc.multibody_plant.MultibodyPlant.num_velocities.doc)
+             doc.MultibodyPlant.num_velocities.doc)
         .def("num_velocities",
              overload_cast_explicit<int, ModelInstanceIndex>(
                  &Class::num_velocities),
-             doc.multibody_plant.MultibodyPlant.num_velocities.doc_2)
+             doc.MultibodyPlant.num_velocities.doc_2)
         .def("num_multibody_states", &Class::num_multibody_states,
-             doc.multibody_plant.MultibodyPlant.num_multibody_states.doc)
+             doc.MultibodyPlant.num_multibody_states.doc)
         .def("num_actuated_dofs",
              overload_cast_explicit<int>(&Class::num_actuated_dofs),
-             doc.multibody_plant.MultibodyPlant.num_actuated_dofs.doc);
+             doc.MultibodyPlant.num_actuated_dofs.doc);
     // Construction.
     cls
         .def("AddJoint",
              [](Class* self, std::unique_ptr<Joint<T>> joint) -> auto& {
                return self->AddJoint(std::move(joint));
              }, py::arg("joint"), py_reference_internal,
-             doc.multibody_plant.MultibodyPlant.AddJoint.doc)
+             doc.MultibodyPlant.AddJoint.doc)
         .def("WeldFrames", &Class::WeldFrames,
              py::arg("A"), py::arg("B"),
              py::arg("X_AB") = Isometry3<double>::Identity(),
              py_reference_internal,
-             doc.multibody_plant.MultibodyPlant.WeldFrames.doc)
+             doc.MultibodyPlant.WeldFrames.doc)
         .def("AddForceElement",
              [](Class* self,
                 std::unique_ptr<ForceElement<T>> force_element) -> auto& {
                return self->AddForceElement<ForceElement>(
                    std::move(force_element));
              }, py::arg("force_element"), py_reference_internal,
-             doc.multibody_plant.MultibodyPlant.AddForceElement.doc);
+             doc.MultibodyPlant.AddForceElement.doc);
     // Topology queries.
     cls
         .def("HasBodyNamed",
              overload_cast_explicit<bool, const string&>(&Class::HasBodyNamed),
-             py::arg("name"), doc.multibody_plant.MultibodyPlant.HasBodyNamed.doc)
+             py::arg("name"), doc.MultibodyPlant.HasBodyNamed.doc)
         .def("HasJointNamed",
              overload_cast_explicit<bool, const string&>(
                 &Class::HasJointNamed),
              py::arg("name"),
-             doc.multibody_plant.MultibodyPlant.HasJointNamed.doc)
+             doc.MultibodyPlant.HasJointNamed.doc)
         .def("GetFrameByName",
              overload_cast_explicit<const Frame<T>&, const string&>(
                  &Class::GetFrameByName),
              py::arg("name"), py_reference_internal,
-             doc.multibody_plant.MultibodyPlant.GetFrameByName.doc)
+             doc.MultibodyPlant.GetFrameByName.doc)
         .def("GetFrameByName",
              overload_cast_explicit<const Frame<T>&, const string&,
                                     ModelInstanceIndex>(
                  &Class::GetFrameByName),
              py::arg("name"), py::arg("model_instance"), py_reference_internal,
-             doc.multibody_plant.MultibodyPlant.GetFrameByName.doc_2)
+             doc.MultibodyPlant.GetFrameByName.doc_2)
         .def("GetBodyByName",
              overload_cast_explicit<const Body<T>&, const string&>(
                 &Class::GetBodyByName),
              py::arg("name"), py_reference_internal,
-             doc.multibody_plant.MultibodyPlant.GetBodyByName.doc)
+             doc.MultibodyPlant.GetBodyByName.doc)
         .def("GetBodyByName",
              overload_cast_explicit<const Body<T>&, const string&,
                                     ModelInstanceIndex>(
                 &Class::GetBodyByName),
              py::arg("name"), py::arg("model_instance"), py_reference_internal,
-             doc.multibody_plant.MultibodyPlant.GetBodyByName.doc_2)
+             doc.MultibodyPlant.GetBodyByName.doc_2)
         .def("GetJointByName",
              [](const Class* self, const string& name) -> auto& {
                return self->GetJointByName(name);
              },
              py::arg("name"), py_reference_internal,
-             doc.multibody_plant.MultibodyPlant.GetJointByName.doc)
+             doc.MultibodyPlant.GetJointByName.doc)
         .def("GetJointActuatorByName",
              overload_cast_explicit<const JointActuator<T>&, const string&>(
                 &Class::GetJointActuatorByName),
              py::arg("name"), py_reference_internal,
-             doc.multibody_plant.MultibodyPlant.GetJointActuatorByName.doc);
+             doc.MultibodyPlant.GetJointActuatorByName.doc);
     // Geometry.
     cls
         .def("get_source_id", &Class::get_source_id,
-             doc.multibody_plant.MultibodyPlant.get_source_id.doc)
+             doc.MultibodyPlant.get_source_id.doc)
         .def("get_geometry_query_input_port",
              &Class::get_geometry_query_input_port, py_reference_internal,
-             doc.multibody_plant.MultibodyPlant.get_geometry_query_input_port.doc)
+             doc.MultibodyPlant.get_geometry_query_input_port.doc)
         .def("get_geometry_poses_output_port",
              &Class::get_geometry_poses_output_port, py_reference_internal,
-             doc.multibody_plant.MultibodyPlant
-                .get_geometry_poses_output_port.doc)
+             doc.MultibodyPlant.get_geometry_poses_output_port.doc)
         .def("geometry_source_is_registered",
              &Class::geometry_source_is_registered,
-             doc.multibody_plant.MultibodyPlant
-                .geometry_source_is_registered.doc);
+             doc.MultibodyPlant.geometry_source_is_registered.doc);
     // Port accessors.
     cls
         .def("get_actuation_input_port",
              overload_cast_explicit<const systems::InputPort<T>&>(
                 &Class::get_actuation_input_port),
              py_reference_internal,
-             doc.multibody_plant.MultibodyPlant.get_actuation_input_port.doc)
+             doc.MultibodyPlant.get_actuation_input_port.doc)
         .def("get_continuous_state_output_port",
              overload_cast_explicit<const systems::OutputPort<T>&>(
                 &Class::get_continuous_state_output_port),
              py_reference_internal,
-             doc.multibody_plant.MultibodyPlant
-                .get_continuous_state_output_port.doc)
+             doc.MultibodyPlant.get_continuous_state_output_port.doc)
         .def("get_contact_results_output_port",
              overload_cast_explicit<const systems::OutputPort<T>&>(
                 &Class::get_contact_results_output_port),
              py_reference_internal,
-             doc.multibody_plant.MultibodyPlant
-                .get_contact_results_output_port.doc);
+             doc.MultibodyPlant.get_contact_results_output_port.doc);
     // Property accessors.
     cls
         .def("world_body", &Class::world_body, py_reference_internal,
-             doc.multibody_plant.MultibodyPlant.world_body.doc)
+             doc.MultibodyPlant.world_body.doc)
         .def("world_frame", &Class::world_frame, py_reference_internal,
-             doc.multibody_plant.MultibodyPlant.world_frame.doc)
+             doc.MultibodyPlant.world_frame.doc)
         .def("tree", &Class::tree, py_reference_internal,
-             doc.multibody_plant.MultibodyPlant.tree.doc)
+             doc.MultibodyPlant.tree.doc)
         .def("is_finalized", &Class::is_finalized,
-             doc.multibody_plant.MultibodyPlant.is_finalized.doc)
+             doc.MultibodyPlant.is_finalized.doc)
         .def("Finalize", py::overload_cast<SceneGraph<T>*>(&Class::Finalize),
              py::arg("scene_graph") = nullptr,
-             doc.multibody_plant.MultibodyPlant.Finalize.doc);
+             doc.MultibodyPlant.Finalize.doc);
     // Add deprecated methods.
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -537,20 +537,22 @@ void init_parsing(py::module m) {
 
   using multibody_plant::MultibodyPlant;
 
+  auto& doc = pydrake_doc.drake.multibody.parsing;
+
   m.def("AddModelFromSdfFile",
         py::overload_cast<
             const string&, const string&, MultibodyPlant<T>*, SceneGraph<T>*>(
             &AddModelFromSdfFile),
         py::arg("file_name"), py::arg("model_name"), py::arg("plant"),
         py::arg("scene_graph") = nullptr,
-        doc.parsing.AddModelFromSdfFile.doc);
+        doc.AddModelFromSdfFile.doc);
   m.def("AddModelFromSdfFile",
         py::overload_cast<
             const string&, MultibodyPlant<T>*, SceneGraph<T>*>(
             &AddModelFromSdfFile),
         py::arg("file_name"), py::arg("plant"),
         py::arg("scene_graph") = nullptr,
-        doc.parsing.AddModelFromSdfFile.doc_2);
+        doc.AddModelFromSdfFile.doc_2);
 }
 
 void init_all(py::module m) {
