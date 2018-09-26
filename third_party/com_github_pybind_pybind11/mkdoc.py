@@ -286,24 +286,34 @@ def print_symbols(name, leaf, level=0):
     if len(leaf.symbols) == 0:
         full_name = name
     else:
-        full_pieces = leaf.symbols[0].name
+        top = leaf.symbols[0]
+        full_pieces = top.name
         assert name == full_pieces[-1]
         full_name = "::".join(full_pieces)
+        # Override variable.
+        if top.node.kind == CursorKind.CONSTRUCTOR:
+            name = "ctor"
 
     name = sanitize_name(name)
 
     indent = '  '*level
     iprint = lambda s: print((indent + s).rstrip())
     iprint('// {}'.format(full_name))
-    iprint('constexpr struct /* {} */ {{'.format(name))
+    modifier = ""
+    if level == 0:
+        modifier = "constexpr "
+    iprint('{}struct /* {} */ {{'.format(name))
     iprint('')
     for i, symbol in enumerate(leaf.symbols):
         assert full_pieces == symbol.name
         var = "doc";
         if i > 0:
             var += "_{}".format(i + 1)
+        delim = "\n"
+        if "\n" not in symbol.comment and len(symbol.comment) < 40:
+            delim = " "
         iprint('  // {}:{}'.format(symbol.include, symbol.line))
-        iprint('  const char* {} =\nR"doc({})doc";'.format(var, symbol.comment))
+        iprint('  const char* {} ={}R"doc({})doc";'.format(var, delim, symbol.comment))
         iprint('')
     keys = sorted(leaf.children_map.keys())
     for key in keys:
@@ -450,7 +460,7 @@ if __name__ == '__main__':
     # TODO(eric.cousineau): Sort files based on include path?
     with NamedTemporaryFile('w') as include_file:
         for include in includes[:]:
-            if include in ["drake/systems/primitives/sine.h"]:
+            if True: #include in ["drake/systems/primitives/sine.h"]:
                 include_file.write("#include \"{}\"\n".format(include))
         include_file.flush()
         if not quiet:
