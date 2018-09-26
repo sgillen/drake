@@ -69,6 +69,9 @@ class Symbol(object):
         return (self.name, self.include, self.line)
 
 SKIP_FULL_NAMES = [
+    'Eigen',
+    'detail',
+    'internal',
     'std',
 ]
 
@@ -92,6 +95,10 @@ def is_accepted_symbol(node):
             return False
     if node.access_specifier in SKIP_ACCESS:
         return False
+    # TODO(eric.cousineau): Figure out how to strip forward declarations.
+    # TODO(eric.cousineau): It is hard to figure out the true scope of class
+    # members that are defined outside of the class; iterating through parents
+    # (lexical or semantic) does not seem to work?
     return True
 
 
@@ -242,21 +249,21 @@ def extract(include_map, node, prefix, output):
     filename = d(node.location.file.name)
     include = include_map.get(filename)
     if include is None:
-        return 0
-    sub_prefix = prefix
-    if len(sub_prefix) > 0:
-        sub_prefix += '_'
-    sub_prefix += d(node.spelling)
+        return
     if not is_accepted_symbol(node):
         return
+    raw_name = prefix
+    if len(raw_name) > 0:
+        raw_name += '_'
+    raw_name += d(node.spelling)
+    name = sanitize_name(raw_name)
     if node.kind in RECURSE_LIST:
         for i in node.get_children():
-            extract(include_map, i, sub_prefix, output)
+            extract(include_map, i, name, output)
     if node.kind in PRINT_LIST:
         comment = d(node.raw_comment) if node.raw_comment is not None else ''
         comment = process_comment(comment)
         if len(node.spelling) > 0:
-            name = sanitize_name(sub_prefix)
             line = node.location.line
             output.append(Symbol(name, include, line, comment))
 
@@ -355,7 +362,6 @@ if __name__ == '__main__':
     includes = list(map(drake_genfile_path_to_include_path, filenames))
     include_map = FileDict(zip(filenames, includes))
     # TODO(eric.cousineau): Sort files based on include path?
-    output = []
     with NamedTemporaryFile('w') as include_file:
         for include in includes:
             include_file.write("#include \"{}\"\n".format(include))
@@ -365,9 +371,11 @@ if __name__ == '__main__':
         index = cindex.Index(
             cindex.conf.lib.clang_createIndex(False, True))
         tu = index.parse(include_file.name, parameters)
-        if not quiet:
-            print("Extract relevant symbols...", file=sys.stderr)
-        extract(include_map, tu.cursor, '', output)
+
+    if not quiet:
+        print("Extract relevant symbols...", file=sys.stderr)
+    output = []
+    extract(include_map, tu.cursor, '', output)
 
     name_ctr = 1
     name_prev = None
@@ -379,8 +387,8 @@ if __name__ == '__main__':
         else:
             name_prev = name
             name_ctr = 1
-        print('\nstatic const char *%s [[gnu::unused]] =%sR"doc(%s)doc";' %
-              (name, '\n' if '\n' in symbol.comment else ' ', symbol.comment))
+        print('\n// %s:%s\nstatic const char *%s [[gnu::unused]] =%sR"doc(%s)doc";' %
+              (symbol.include, symbol.line, name, '\n' if '\n' in symbol.comment else ' ', symbol.comment))
 
     print('''
 #if defined(__GNUG__)
