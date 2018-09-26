@@ -59,7 +59,8 @@ def d(s):
 
 
 class Symbol(object):
-    def __init__(self, name, include, line, comment):
+    def __init__(self, node, name, include, line, comment):
+        self.node = node
         self.name = name
         self.include = include
         self.line = line
@@ -109,7 +110,7 @@ def sanitize_name(name):
     name = re.sub('<.*>', '', name)
     name = ''.join([ch if ch.isalnum() else '_' for ch in name])
     name = re.sub('_$', '', re.sub('_+', '_', name))
-    return '__doc_' + name
+    return name
 
 
 def process_comment(comment):
@@ -265,7 +266,7 @@ def extract(include_map, node, prefix, output):
         comment = process_comment(comment)
         if len(node.spelling) > 0:
             line = node.location.line
-            output.append(Symbol(name, include, line, comment))
+            output.append(Symbol(node, name, include, line, comment))
 
 
 def drake_genfile_path_to_include_path(filename):
@@ -293,6 +294,21 @@ class FileDict(object):
     def __getitem__(self, file):
         key = self._key(file)
         return self._d[key]
+
+
+def print_symbols(output):
+    name_ctr = 1
+    name_prev = None
+    for symbol in sorted(output, key=Symbol.sorting_key):
+        name = symbol.name
+        if name == name_prev:
+            name_ctr += 1
+            name = name + "_%i" % name_ctr
+        else:
+            name_prev = name
+            name_ctr = 1
+        print('\n// %s:%s\nstatic const char *__doc_%s [[gnu::unused]] =%sR"doc(%s)doc";' %
+              (symbol.include, symbol.line, name, '\n' if '\n' in symbol.comment else ' ', symbol.comment))
 
 
 if __name__ == '__main__':
@@ -376,19 +392,7 @@ if __name__ == '__main__':
         print("Extract relevant symbols...", file=sys.stderr)
     output = []
     extract(include_map, tu.cursor, '', output)
-
-    name_ctr = 1
-    name_prev = None
-    for symbol in sorted(output, key=Symbol.sorting_key):
-        name = symbol.name
-        if name == name_prev:
-            name_ctr += 1
-            name = name + "_%i" % name_ctr
-        else:
-            name_prev = name
-            name_ctr = 1
-        print('\n// %s:%s\nstatic const char *%s [[gnu::unused]] =%sR"doc(%s)doc";' %
-              (symbol.include, symbol.line, name, '\n' if '\n' in symbol.comment else ' ', symbol.comment))
+    print_symbols(output)
 
     print('''
 #if defined(__GNUG__)
