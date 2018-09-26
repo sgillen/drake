@@ -422,12 +422,15 @@ def main():
 
     quiet = False
     std = '-std=c++11'
+    root_name = 'pydrake_doc'
 
     for item in sys.argv[1:]:
         if item == '-quiet':
             quiet = True
         elif item.startswith('-std='):
             std = item
+        elif item.startswith('-root-name='):
+            root_name = item[len('-root-name='):]
         elif item.startswith('-'):
             parameters.append(item)
         else:
@@ -471,7 +474,7 @@ def main():
 
     if not quiet:
         eprint("Writing header file...")
-    print_symbols('root', output.root)
+    print_symbols(root_name, output.root)
 
     print('''
 #if defined(__GNUG__)
