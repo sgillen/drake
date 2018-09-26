@@ -1,5 +1,7 @@
 #!/usr/bin/python
 
+# find . ../../../drake/bindings/pydrake -name *_py*.cc | xargs ./tmp_sub_doc.py -i
+
 import re
 from common_scripts.text_processor import TextProcessor
 
@@ -11,11 +13,12 @@ class Custom(TextProcessor):
         self.addArguments()
         
     def process(self, oldText):
-        define_pattern = r"#define D\(...\) DOC\((.*?), __VA_ARGS__\)"
+        define_pattern = r"#define D\(...\) DOC\((.*?)__VA_ARGS__\)"
 
         def define_sub(m):
-            pieces = m.group(1).split(", ")
-            return "auto& doc = pydrake_doc." + ".".join(pieces) + ";"
+            pieces = ["pydrake_doc"] + m.group(1).split(", ")
+            pieces.remove('')
+            return "auto& doc = " + ".".join(pieces) + ";"
 
         usage_pattern = r"\bD\((.*?)\)"
 
@@ -28,6 +31,8 @@ class Custom(TextProcessor):
                 suffix = "_{}".format(index)
             except ValueError:
                 pass
+            if len(pieces) > 1 and pieces[-1] == pieces[-2]:
+                pieces[-1] = "ctor"
             return "doc." + ".".join(pieces) + ".doc" + suffix
 
         new = oldText
