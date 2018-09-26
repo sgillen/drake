@@ -106,9 +106,6 @@ def is_accepted_symbol(node):
     # TODO(eric.cousineau): Remove `node.is_default_method()`? May make things
     # unstable.
     # TODO(eric.cousineau): Figure out how to strip forward declarations.
-    # TODO(eric.cousineau): It is hard to figure out the true scope of class
-    # members that are defined outside of the class; iterating through parents
-    # (lexical or semantic) does not seem to work?
     return True
 
 
@@ -260,10 +257,10 @@ def get_full_name(node):
     return name
 
 
-def extract(include_map, node, prefix, output):
+def extract(include_map, node, output):
     if node.kind == CursorKind.TRANSLATION_UNIT:
         for i in node.get_children():
-            extract(include_map, i, prefix, output)
+            extract(include_map, i, output)
         return
     assert node.location.file is not None
     filename = d(node.location.file.name)
@@ -272,15 +269,11 @@ def extract(include_map, node, prefix, output):
         return
     if not is_accepted_symbol(node):
         return
-    raw_name = prefix
-    if len(raw_name) > 0:
-        raw_name += '_'
-    raw_name += d(node.spelling)
-    name = sanitize_name(raw_name)
     if node.kind in RECURSE_LIST:
         for i in node.get_children():
-            extract(include_map, i, name, output)
+            extract(include_map, i, output)
     if node.kind in PRINT_LIST:
+        name = sanitize_name(get_full_name(node))
         comment = d(node.raw_comment) if node.raw_comment is not None else ''
         comment = process_comment(comment)
         if len(node.spelling) > 0:
