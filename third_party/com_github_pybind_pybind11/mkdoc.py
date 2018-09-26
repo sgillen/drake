@@ -331,12 +331,15 @@ class FileDict(object):
 def print_symbols(leaf):
     for i, symbol in enumerate(leaf.symbols):
         name = sanitize_name("::".join(symbol.name))
+        print("{} -> {}".format("::".join(symbol.name), name), file=sys.stderr)
         if i > 0:
             name += "_%i" % (i + 1)
         print('\n// %s:%s\nstatic const char *__doc_%s [[gnu::unused]] =%sR"doc(%s)doc";' %
               (symbol.include, symbol.line, name, '\n' if '\n' in symbol.comment else ' ', symbol.comment))
-    for sub in leaf.children_map.values():
-        print_symbols(sub)
+    keys = sorted(leaf.children_map.keys())
+    for key in keys:
+        child = leaf.children_map[key]
+        print_symbols(child)
 
 
 if __name__ == '__main__':
