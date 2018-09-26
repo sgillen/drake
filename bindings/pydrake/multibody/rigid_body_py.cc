@@ -36,9 +36,11 @@ PYBIND11_MODULE(rigid_body, m) {
 
     .def("add_joint", &RigidBody<double>::add_joint<DrakeJoint>,
          doc.RigidBody.add_joint.doc)
-    .def("has_joint", &RigidBody<double>::has_joint, doc.RigidBody.has_joint.doc)
+    .def("has_joint", &RigidBody<double>::has_joint,
+         doc.RigidBody.has_joint.doc)
     .def("getJoint", &RigidBody<double>::getJoint,
-         py::return_value_policy::reference_internal, doc.RigidBody.getJoint.doc)
+         py::return_value_policy::reference_internal,
+         doc.RigidBody.getJoint.doc)
 
     .def("get_visual_elements", &RigidBody<double>::get_visual_elements,
          doc.RigidBody.get_visual_elements.doc)

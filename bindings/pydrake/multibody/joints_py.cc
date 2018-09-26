@@ -32,7 +32,8 @@ PYBIND11_MODULE(joints, m) {
          py::arg("translation_axis"),
          doc.PrismaticJoint.ctor.doc);
 
-  py::class_<RevoluteJoint, DrakeJoint>(m, "RevoluteJoint", doc.RevoluteJoint.doc)
+  py::class_<RevoluteJoint, DrakeJoint>(
+      m, "RevoluteJoint", doc.RevoluteJoint.doc)
     .def(py::init<const std::string&,
                   const Eigen::Isometry3d&,
                   const Eigen::Vector3d&>(),
