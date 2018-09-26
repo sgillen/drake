@@ -60,22 +60,6 @@ CPP_OPERATORS = {
 CPP_OPERATORS = OrderedDict(
     sorted(CPP_OPERATORS.items(), key=lambda t: -len(t[0])))
 
-
-def d(s):
-    return s.decode('utf8')
-
-
-class Symbol(object):
-    def __init__(self, node, name, include, line, comment):
-        self.node = node
-        self.name = name
-        self.include = include
-        self.line = line
-        self.comment = comment
-
-    def sorting_key(self):
-        return (self.name, self.include, self.line)
-
 SKIP_FULL_NAMES = [
     'Eigen',
     'detail',
@@ -95,8 +79,32 @@ SKIP_ACCESS = [
 ]
 
 
+def utf8(s):
+    # Decodes a string to utf8.
+    return s.decode('utf8')
+
+
+class Symbol(object):
+    def __init__(self, node, name, include, line, comment):
+        self.node = node
+        self.name = name
+        self.include = include
+        self.line = line
+        self.comment = comment
+
+    def sorting_key(self):
+        return (self.name, self.include, self.line)
+
+
+def eprint(*args):
+    print(*args, file=sys.stderr)
+
+
 def is_accepted_symbol(node):
-    name = d(node.spelling)
+    """
+    Determine if a symbol should be visited or not.
+    """
+    name = utf8(node.spelling)
     if name in SKIP_FULL_NAMES:
         return False
     for bad in SKIP_PARTIAL_NAMES:
@@ -110,11 +118,10 @@ def is_accepted_symbol(node):
     return True
 
 
-def eprint(*args):
-    print(*args, file=sys.stderr)
-
-
 def sanitize_name(name):
+    """
+    Sanitize a C++ symbol to be variable-friendly.
+    """
     name = re.sub(r'type-parameter-0-([0-9]+)', r'T\1', name)
     for k, v in CPP_OPERATORS.items():
         name = name.replace('operator%s' % k, 'operator_%s' % v)
@@ -126,6 +133,9 @@ def sanitize_name(name):
 
 
 def process_comment(comment):
+    """
+    Convert Doxygen-formatted string to look presentable in a Python docstring.
+    """
     result = ''
 
     # Remove C++ comment syntax
@@ -253,11 +263,14 @@ def process_comment(comment):
     return result.rstrip().lstrip('\n')
 
 
-def get_full_name(node):
-    name = [d(node.spelling)]
+def get_name_chain(node):
+    """
+    Extracts the pieces for a namespace-qualified name for a symbol.
+    """
+    name = [utf8(node.spelling)]
     p = node.semantic_parent
     while p.kind != CursorKind.TRANSLATION_UNIT:
-        piece = d(p.spelling)  # Pass-through for anonymous structs.
+        piece = utf8(p.spelling)  # Pass-through for anonymous structs.
         if len(piece) > 0:
             name.insert(0, piece)
         p = p.semantic_parent
@@ -265,7 +278,10 @@ def get_full_name(node):
 
 
 class SymbolTree(object):
-
+    """
+    Contains symbols that (a) may have 0 or more pieces of documentation and
+    (b) may have child objects.
+    """
     def __init__(self):
         self.root = SymbolTree.Leaf()
 
@@ -284,7 +300,37 @@ class SymbolTree(object):
             return self.children_map[piece]
 
 
+def extract(include_map, node, output):
+    """
+    Extract libclang cursors and add to a symbol tree.
+    """
+    if node.kind == CursorKind.TRANSLATION_UNIT:
+        for i in node.get_children():
+            extract(include_map, i, output)
+        return
+    assert node.location.file is not None
+    filename = utf8(node.location.file.name)
+    include = include_map.get(filename)
+    if include is None:
+        return
+    if not is_accepted_symbol(node):
+        return
+    if node.kind in RECURSE_LIST:
+        for i in node.get_children():
+            extract(include_map, i, output)
+    if node.kind in PRINT_LIST:
+        if len(node.spelling) > 0:
+            comment = utf8(node.raw_comment) if node.raw_comment is not None else ''
+            comment = process_comment(comment)
+            name = get_name_chain(node)
+            line = node.location.line
+            output.append(Symbol(node, name, include, line, comment))
+
+
 def print_symbols(name, leaf, level=0):
+    """
+    Prints C++ code for containing documentation.
+    """
     if len(leaf.symbols) == 0:
         full_name = name
     else:
@@ -306,7 +352,8 @@ def print_symbols(name, leaf, level=0):
         modifier = "constexpr "
     iprint('{}struct /* {} */ {{'.format(modifier, name))
     iprint('')
-    for i, symbol in enumerate(leaf.symbols):
+    symbol_iter = sorted(leaf.symbols, key=Symbol.sorting_key)
+    for i, symbol in enumerate(symbol_iter):
         assert full_pieces == symbol.name
         var = "doc";
         if i > 0:
@@ -315,7 +362,7 @@ def print_symbols(name, leaf, level=0):
         if "\n" not in symbol.comment and len(symbol.comment) < 40:
             delim = " "
         iprint('  // {}:{}'.format(symbol.include, symbol.line))
-        iprint('  const char* {} ={}R"doc({})doc";'.format(var, delim, symbol.comment))
+        iprint('  const char* {} ={}R"""({})""";'.format(var, delim, symbol.comment))
         iprint('')
     keys = sorted(leaf.children_map.keys())
     for key in keys:
@@ -323,30 +370,6 @@ def print_symbols(name, leaf, level=0):
         print_symbols(key, child, level=level+1)
     iprint('}} {};'.format(name))
     iprint('')
-
-
-def extract(include_map, node, output):
-    if node.kind == CursorKind.TRANSLATION_UNIT:
-        for i in node.get_children():
-            extract(include_map, i, output)
-        return
-    assert node.location.file is not None
-    filename = d(node.location.file.name)
-    include = include_map.get(filename)
-    if include is None:
-        return
-    if not is_accepted_symbol(node):
-        return
-    if node.kind in RECURSE_LIST:
-        for i in node.get_children():
-            extract(include_map, i, output)
-    if node.kind in PRINT_LIST:
-        if len(node.spelling) > 0:
-            comment = d(node.raw_comment) if node.raw_comment is not None else ''
-            comment = process_comment(comment)
-            name = get_full_name(node)
-            line = node.location.line
-            output.append(Symbol(node, name, include, line, comment))
 
 
 def drake_genfile_path_to_include_path(filename):
@@ -359,6 +382,9 @@ def drake_genfile_path_to_include_path(filename):
 
 
 class FileDict(object):
+    """
+    Provides a dictionary that hashes based on a file's true path.
+    """
     def __init__(self, items):
         self._d = {self._key(file): value for file, value in items}
 
@@ -376,7 +402,7 @@ class FileDict(object):
         return self._d[key]
 
 
-if __name__ == '__main__':
+def main():
     parameters = ['-x', 'c++', '-D__MKDOC_PY__']
     filenames = []
 
@@ -410,8 +436,7 @@ if __name__ == '__main__':
     parameters.append(std)
 
     if len(filenames) == 0:
-        print('Syntax: %s [.. a list of header files ..]' % sys.argv[0],
-              file=sys.stderr)
+        eprint('Syntax: %s [.. a list of header files ..]' % sys.argv[0])
         exit(-1)
 
     print('''#pragma once
@@ -430,20 +455,22 @@ if __name__ == '__main__':
     include_map = FileDict(zip(filenames, includes))
     # TODO(eric.cousineau): Sort files based on include path?
     with NamedTemporaryFile('w') as include_file:
-        for include in includes[:]:
-            if True: #include in ["drake/systems/primitives/sine.h"]:
-                include_file.write("#include \"{}\"\n".format(include))
+        for include in includes:
+            include_file.write("#include \"{}\"\n".format(include))
         include_file.flush()
         if not quiet:
-            print("Parse header...", file=sys.stderr)
+            eprint("Parse header...")
         index = cindex.Index(
             cindex.conf.lib.clang_createIndex(False, True))
         tu = index.parse(include_file.name, parameters)
 
     if not quiet:
-        print("Extract relevant symbols...", file=sys.stderr)
+        eprint("Extract relevant symbols...")
     output = SymbolTree()
     extract(include_map, tu.cursor, output)
+
+    if not quiet:
+        eprint("Writing header file...")
     print_symbols('root', output.root)
 
     print('''
@@ -451,3 +478,7 @@ if __name__ == '__main__':
 #pragma GCC diagnostic pop
 #endif
 ''')
+
+
+if __name__ == '__main__':
+    main()
