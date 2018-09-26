@@ -282,18 +282,35 @@ class SymbolTree(object):
             return self.children_map[piece]
 
 
-def print_symbols(leaf):
+def print_symbols(name, leaf, level=0):
+    if len(leaf.symbols) == 0:
+        full_name = name
+    else:
+        full_pieces = leaf.symbols[0].name
+        assert name == full_pieces[-1]
+        full_name = "::".join(full_pieces)
+
+    name = sanitize_name(name)
+
+    indent = '  '*level
+    iprint = lambda s: print((indent + s).rstrip())
+    iprint('// {}'.format(full_name))
+    iprint('constexpr struct /* {} */ {{'.format(name))
+    iprint('')
     for i, symbol in enumerate(leaf.symbols):
-        raw_name = "::".join(symbol.name)
-        name = sanitize_name(raw_name)
+        assert full_pieces == symbol.name
+        var = "doc";
         if i > 0:
-            name += "_%i" % (i + 1)
-        print('\n// %s:%s - %s\nstatic const char *__doc_%s [[gnu::unused]] =%sR"doc(%s)doc";' %
-              (symbol.include, symbol.line, raw_name, name, '\n' if '\n' in symbol.comment else ' ', symbol.comment))
+            var += "_{}".format(i + 1)
+        iprint('  // {}:{}'.format(symbol.include, symbol.line))
+        iprint('  const char* {} =\nR"doc({})doc";'.format(var, symbol.comment))
+        iprint('')
     keys = sorted(leaf.children_map.keys())
     for key in keys:
         child = leaf.children_map[key]
-        print_symbols(child)
+        print_symbols(key, child, level=level+1)
+    iprint('}} {};'.format(name))
+    iprint('')
 
 
 def extract(include_map, node, output):
@@ -312,9 +329,9 @@ def extract(include_map, node, output):
         for i in node.get_children():
             extract(include_map, i, output)
     if node.kind in PRINT_LIST:
-        comment = d(node.raw_comment) if node.raw_comment is not None else ''
-        comment = process_comment(comment)
         if len(node.spelling) > 0:
+            comment = d(node.raw_comment) if node.raw_comment is not None else ''
+            comment = process_comment(comment)
             name = get_full_name(node)
             line = node.location.line
             output.append(Symbol(node, name, include, line, comment))
@@ -446,7 +463,7 @@ if __name__ == '__main__':
         print("Extract relevant symbols...", file=sys.stderr)
     output = SymbolTree()
     extract(include_map, tu.cursor, output)
-    print_symbols(output.root)
+    print_symbols('root', output.root)
 
     print('''
 #if defined(__GNUG__)
