@@ -7,7 +7,7 @@
 #include "drake/multibody/collision/element.h"
 #include "drake/multibody/rigid_body.h"
 
-#define D(...) DOC(drake, multibody, collision, __VA_ARGS__)
+auto& doc = pydrake_doc.drake.multibody.collision;
 
 namespace drake {
 namespace pydrake {
@@ -21,12 +21,12 @@ PYBIND11_MODULE(collision, m) {
   py::module::import("pydrake.multibody.shapes");
   py::module::import("pydrake.multibody.rigid_body");
 
-  py::class_<Element, DrakeShapes::Element>(m, "CollisionElement", D(Element))
+  py::class_<Element, DrakeShapes::Element>(m, "CollisionElement", doc.Element.doc)
   .def(py::init<const DrakeShapes::Geometry&, const Eigen::Isometry3d&>(),
        py::arg("geometry_in"), py::arg("T_element_to_local"),
-       D(Element, Element))
-  .def("set_body", &Element::set_body, D(Element, set_body))
-  .def("get_body", &Element::get_body, D(Element, get_body));
+       doc.Element.ctor.doc)
+  .def("set_body", &Element::set_body, doc.Element.set_body.doc)
+  .def("get_body", &Element::get_body, doc.Element.get_body.doc);
 }
 
 }  // namespace pydrake

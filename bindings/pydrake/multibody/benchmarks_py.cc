@@ -5,7 +5,7 @@
 #include "drake/bindings/pydrake/pydrake_pybind.h"
 #include "drake/multibody/benchmarks/acrobot/make_acrobot_plant.h"
 
-#define D(...) DOC(drake, multibody, benchmarks, acrobot, __VA_ARGS__)
+auto& doc = pydrake_doc.drake.multibody.benchmarks.acrobot;
 
 namespace drake {
 namespace pydrake {
@@ -24,15 +24,15 @@ void init_acrobot(py::module m) {
   // `MultibodyTree` is used by `MakeAcrobotPlant`.
   py::module::import("pydrake.multibody.multibody_tree");
 
-  py::class_<AcrobotParameters>(m, "AcrobotParameters", D(AcrobotParameters))
-      .def(py::init(), D(AcrobotParameters, AcrobotParameters));
+  py::class_<AcrobotParameters>(m, "AcrobotParameters", doc.AcrobotParameters.doc)
+      .def(py::init(), doc.AcrobotParameters.ctor.doc);
 
   m.def("MakeAcrobotPlant",
         py::overload_cast<const AcrobotParameters&, bool, SceneGraph<double>*>(
             &MakeAcrobotPlant),
         py::arg("default_parameters"), py::arg("finalize"),
         py::arg("scene_graph") = nullptr,
-        D(MakeAcrobotPlant));
+        doc.MakeAcrobotPlant.doc);
 }
 
 void init_all(py::module m) {

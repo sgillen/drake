@@ -9,7 +9,7 @@
 #include "drake/multibody/joints/prismatic_joint.h"
 #include "drake/multibody/joints/revolute_joint.h"
 
-#define D(...) DOC(__VA_ARGS__)
+auto& doc = pydrake_doc;
 
 namespace drake {
 namespace pydrake {
@@ -17,29 +17,29 @@ namespace pydrake {
 PYBIND11_MODULE(joints, m) {
   m.doc() = "Joint types supported by Drake.";
 
-  py::class_<DrakeJoint>(m, "DrakeJoint", D(DrakeJoint))
+  py::class_<DrakeJoint>(m, "DrakeJoint", doc.DrakeJoint.doc)
     .def("get_num_positions", &DrakeJoint::get_num_positions,
-         D(DrakeJoint, get_num_positions))
-    .def("get_name", &DrakeJoint::get_name, D(DrakeJoint, get_name));
+         doc.DrakeJoint.get_num_positions.doc)
+    .def("get_name", &DrakeJoint::get_name, doc.DrakeJoint.get_name.doc);
 
   py::class_<PrismaticJoint, DrakeJoint>(m, "PrismaticJoint",
-                                         D(PrismaticJoint))
+                                         doc.PrismaticJoint.doc)
     .def(py::init<const std::string&,
                   const Eigen::Isometry3d&,
                   const Eigen::Vector3d&>(),
          py::arg("name"),
          py::arg("transform_to_parent_body"),
          py::arg("translation_axis"),
-         D(PrismaticJoint, PrismaticJoint));
+         doc.PrismaticJoint.ctor.doc);
 
-  py::class_<RevoluteJoint, DrakeJoint>(m, "RevoluteJoint", D(RevoluteJoint))
+  py::class_<RevoluteJoint, DrakeJoint>(m, "RevoluteJoint", doc.RevoluteJoint.doc)
     .def(py::init<const std::string&,
                   const Eigen::Isometry3d&,
                   const Eigen::Vector3d&>(),
          py::arg("name"),
          py::arg("transform_to_parent_body"),
          py::arg("rotation_axis"),
-         D(RevoluteJoint, RevoluteJoint));
+         doc.RevoluteJoint.ctor.doc);
 }
 
 }  // namespace pydrake
