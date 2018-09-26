@@ -257,7 +257,9 @@ def get_full_name(node):
     name = [d(node.spelling)]
     p = node.semantic_parent
     while p.kind != CursorKind.TRANSLATION_UNIT:
-        name.insert(0, d(p.spelling))
+        piece = d(p.spelling)  # Pass-through for anonymous structs.
+        if len(piece) > 0:
+            name.insert(0, piece)
         p = p.semantic_parent
     return tuple(name)
 
@@ -302,7 +304,7 @@ def print_symbols(name, leaf, level=0):
     modifier = ""
     if level == 0:
         modifier = "constexpr "
-    iprint('{}struct /* {} */ {{'.format(name))
+    iprint('{}struct /* {} */ {{'.format(modifier, name))
     iprint('')
     for i, symbol in enumerate(leaf.symbols):
         assert full_pieces == symbol.name
@@ -416,44 +418,13 @@ if __name__ == '__main__':
 
 // GENERATED FILE DO NOT EDIT
 // This file contains docstrings for the Python bindings that were
-// automatically extracted by mkdoc.py from pybind11.
-
-#define __EXPAND(x)                                      x
-#define __COUNT(_1, _2, _3, _4, _5, _6, _7, COUNT, ...)  COUNT
-#define __VA_SIZE(...)                                   __EXPAND(__COUNT(__VA_ARGS__, 7, 6, 5, 4, 3, 2, 1))
-#define __CAT1(a, b)                                     a ## b
-#define __CAT2(a, b)                                     __CAT1(a, b)
-#define __DOC1(n1)                                       __doc_##n1
-#define __DOC2(n1, n2)                                   __doc_##n1##_##n2
-#define __DOC3(n1, n2, n3)                               __doc_##n1##_##n2##_##n3
-#define __DOC4(n1, n2, n3, n4)                           __doc_##n1##_##n2##_##n3##_##n4
-#define __DOC5(n1, n2, n3, n4, n5)                       __doc_##n1##_##n2##_##n3##_##n4##_##n5
-#define __DOC6(n1, n2, n3, n4, n5, n6)                   __doc_##n1##_##n2##_##n3##_##n4##_##n5##_##n6
-#define __DOC7(n1, n2, n3, n4, n5, n6, n7)               __doc_##n1##_##n2##_##n3##_##n4##_##n5##_##n6##_##n7
-#define DOC(...)                                         __EXPAND(__EXPAND(__CAT2(__DOC, __VA_SIZE(__VA_ARGS__)))(__VA_ARGS__))
+// automatically extracted by mkdoc.py from pybind11 / drake.
 
 #if defined(__GNUG__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-variable"
 #endif
 ''')
-
-    if False:
-        import pickle
-        with open('/tmp/data.pkl', 'wb') as f:
-            data = dict(
-                parameters=parameters,
-                filenames=filenames,
-            )
-            pickle.dump(data, f)
-
-        from os import execvp
-        os.environ['BAZEL_RUNFILES'] = os.getcwd()
-        os.environ['PATH'] = '/home/eacousineau/bin:/home/eacousineau/.local/bin:'
-        sys.path.insert(0, os.path.dirname(__file__))
-        os.environ['PYTHONPATH'] = ':'.join(sys.path)
-        execvp('jupyter', ['jupyter', 'notebook', '/home/eacousineau/proj/tri/repo/branches/drake/review/drake/bindings/pydrake/cindex_stuff.ipynb'])
-        exit(1)
 
     includes = list(map(drake_genfile_path_to_include_path, filenames))
     include_map = FileDict(zip(filenames, includes))
