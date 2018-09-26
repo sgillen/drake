@@ -6,7 +6,7 @@
 #  Extract documentation from C++ header files to use it in Python bindings
 #
 
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 import os
 import sys
 import platform
@@ -249,12 +249,32 @@ def process_comment(comment):
 
 
 def get_full_name(node):
-    name = d(node.spelling)
+    name = [d(node.spelling)]
     p = node.semantic_parent
     while p.kind != CursorKind.TRANSLATION_UNIT:
-        name = d(p.spelling) + "::" + name
+        name.insert(0, d(p.spelling))
         p = p.semantic_parent
-    return name
+    return tuple(name)
+
+
+class SymbolTree(object):
+
+    def __init__(self):
+        self.root = SymbolTree.Leaf()
+
+    def append(self, symbol):
+        leaf = self.root
+        for piece in symbol.name:
+            leaf = leaf.get_child(piece)
+        leaf.symbols.append(symbol)
+
+    class Leaf(object):
+        def __init__(self):
+            self.symbols = []
+            self.children_map = defaultdict(SymbolTree.Leaf)
+
+        def get_child(self, piece):
+            return self.children_map[piece]
 
 
 def extract(include_map, node, output):
@@ -273,10 +293,10 @@ def extract(include_map, node, output):
         for i in node.get_children():
             extract(include_map, i, output)
     if node.kind in PRINT_LIST:
-        name = sanitize_name(get_full_name(node))
         comment = d(node.raw_comment) if node.raw_comment is not None else ''
         comment = process_comment(comment)
         if len(node.spelling) > 0:
+            name = get_full_name(node)
             line = node.location.line
             output.append(Symbol(node, name, include, line, comment))
 
@@ -308,19 +328,15 @@ class FileDict(object):
         return self._d[key]
 
 
-def print_symbols(output):
-    name_ctr = 1
-    name_prev = None
-    for symbol in sorted(output, key=Symbol.sorting_key):
-        name = symbol.name
-        if name == name_prev:
-            name_ctr += 1
-            name = name + "_%i" % name_ctr
-        else:
-            name_prev = name
-            name_ctr = 1
+def print_symbols(leaf):
+    for i, symbol in enumerate(leaf.symbols):
+        name = sanitize_name("::".join(symbol.name))
+        if i > 0:
+            name += "_%i" % (i + 1)
         print('\n// %s:%s\nstatic const char *__doc_%s [[gnu::unused]] =%sR"doc(%s)doc";' %
               (symbol.include, symbol.line, name, '\n' if '\n' in symbol.comment else ' ', symbol.comment))
+    for sub in leaf.children_map.values():
+        print_symbols(sub)
 
 
 if __name__ == '__main__':
@@ -387,28 +403,30 @@ if __name__ == '__main__':
 #endif
 ''')
 
-    import pickle
-    with open('/tmp/data.pkl', 'wb') as f:
-        data = dict(
-            parameters=parameters,
-            filenames=filenames,
-        )
-        pickle.dump(data, f)
+    if False:
+        import pickle
+        with open('/tmp/data.pkl', 'wb') as f:
+            data = dict(
+                parameters=parameters,
+                filenames=filenames,
+            )
+            pickle.dump(data, f)
 
-    from os import execvp
-    os.environ['BAZEL_RUNFILES'] = os.getcwd()
-    os.environ['PATH'] = '/home/eacousineau/bin:/home/eacousineau/.local/bin:'
-    sys.path.insert(0, os.path.dirname(__file__))
-    os.environ['PYTHONPATH'] = ':'.join(sys.path)
-    execvp('jupyter', ['jupyter', 'notebook', '/home/eacousineau/proj/tri/repo/branches/drake/review/drake/bindings/pydrake/cindex_stuff.ipynb'])
-    exit(1)
+        from os import execvp
+        os.environ['BAZEL_RUNFILES'] = os.getcwd()
+        os.environ['PATH'] = '/home/eacousineau/bin:/home/eacousineau/.local/bin:'
+        sys.path.insert(0, os.path.dirname(__file__))
+        os.environ['PYTHONPATH'] = ':'.join(sys.path)
+        execvp('jupyter', ['jupyter', 'notebook', '/home/eacousineau/proj/tri/repo/branches/drake/review/drake/bindings/pydrake/cindex_stuff.ipynb'])
+        exit(1)
 
     includes = list(map(drake_genfile_path_to_include_path, filenames))
     include_map = FileDict(zip(filenames, includes))
     # TODO(eric.cousineau): Sort files based on include path?
     with NamedTemporaryFile('w') as include_file:
-        for include in includes:
-            include_file.write("#include \"{}\"\n".format(include))
+        for include in includes[:]:
+            if include in ["drake/systems/primitives/sine.h"]:
+                include_file.write("#include \"{}\"\n".format(include))
         include_file.flush()
         if not quiet:
             print("Parse header...", file=sys.stderr)
@@ -418,9 +436,9 @@ if __name__ == '__main__':
 
     if not quiet:
         print("Extract relevant symbols...", file=sys.stderr)
-    output = []
-    extract(include_map, tu.cursor, '', output)
-    print_symbols(output)
+    output = SymbolTree()
+    extract(include_map, tu.cursor, output)
+    print_symbols(output.root)
 
     print('''
 #if defined(__GNUG__)
