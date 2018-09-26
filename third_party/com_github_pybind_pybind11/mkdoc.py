@@ -17,6 +17,21 @@ import textwrap
 from clang import cindex
 from clang.cindex import AccessSpecifier, CursorKind
 
+CLASS_KINDS = [
+    CursorKind.CLASS_DECL,
+    CursorKind.STRUCT_DECL,
+    CursorKind.CLASS_TEMPLATE,
+]
+
+FUNCTION_KINDS = [
+    CursorKind.FUNCTION_DECL,
+    CursorKind.FUNCTION_TEMPLATE,
+    CursorKind.CONVERSION_FUNCTION,
+    CursorKind.CXX_METHOD,
+    CursorKind.CONSTRUCTOR,
+]
+
+
 RECURSE_LIST = [
     CursorKind.TRANSLATION_UNIT,
     CursorKind.NAMESPACE,
@@ -26,17 +41,9 @@ RECURSE_LIST = [
     CursorKind.CLASS_TEMPLATE
 ]
 
-PRINT_LIST = [
-    CursorKind.CLASS_DECL,
-    CursorKind.STRUCT_DECL,
+PRINT_LIST = CLASS_KINDS + FUNCTION_KINDS + [
     CursorKind.ENUM_DECL,
     CursorKind.ENUM_CONSTANT_DECL,
-    CursorKind.CLASS_TEMPLATE,
-    CursorKind.FUNCTION_DECL,
-    CursorKind.FUNCTION_TEMPLATE,
-    CursorKind.CONVERSION_FUNCTION,
-    CursorKind.CXX_METHOD,
-    CursorKind.CONSTRUCTOR,
     CursorKind.FIELD_DECL
 ]
 
@@ -96,6 +103,8 @@ def is_accepted_symbol(node):
             return False
     if node.access_specifier in SKIP_ACCESS:
         return False
+    # TODO(eric.cousineau): Remove `node.is_default_method()`? May make things
+    # unstable.
     # TODO(eric.cousineau): Figure out how to strip forward declarations.
     # TODO(eric.cousineau): It is hard to figure out the true scope of class
     # members that are defined outside of the class; iterating through parents
@@ -108,6 +117,7 @@ def sanitize_name(name):
     for k, v in CPP_OPERATORS.items():
         name = name.replace('operator%s' % k, 'operator_%s' % v)
     name = re.sub('<.*>', '', name)
+    name = name.replace('::', '_')
     name = ''.join([ch if ch.isalnum() else '_' for ch in name])
     name = re.sub('_$', '', re.sub('_+', '_', name))
     return name
@@ -239,6 +249,15 @@ def process_comment(comment):
                         result += wrapped + '\n\n'
                     wrapper.initial_indent = wrapper.subsequent_indent = ''
     return result.rstrip().lstrip('\n')
+
+
+def get_full_name(node):
+    name = d(node.spelling)
+    p = node.semantic_parent
+    while p.kind != CursorKind.TRANSLATION_UNIT:
+        name = d(p.spelling) + "::" + name
+        p = p.semantic_parent
+    return name
 
 
 def extract(include_map, node, prefix, output):
@@ -374,6 +393,22 @@ if __name__ == '__main__':
 #pragma GCC diagnostic ignored "-Wunused-variable"
 #endif
 ''')
+
+    import pickle
+    with open('/tmp/data.pkl', 'wb') as f:
+        data = dict(
+            parameters=parameters,
+            filenames=filenames,
+        )
+        pickle.dump(data, f)
+
+    from os import execvp
+    os.environ['BAZEL_RUNFILES'] = os.getcwd()
+    os.environ['PATH'] = '/home/eacousineau/bin:/home/eacousineau/.local/bin:'
+    sys.path.insert(0, os.path.dirname(__file__))
+    os.environ['PYTHONPATH'] = ':'.join(sys.path)
+    execvp('jupyter', ['jupyter', 'notebook', '/home/eacousineau/proj/tri/repo/branches/drake/review/drake/bindings/pydrake/cindex_stuff.ipynb'])
+    exit(1)
 
     includes = list(map(drake_genfile_path_to_include_path, filenames))
     include_map = FileDict(zip(filenames, includes))
