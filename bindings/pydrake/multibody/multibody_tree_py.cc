@@ -49,6 +49,7 @@ void BindMultibodyTreeElementMixin(PyClass* pcls) {
 void init_module(py::module m) {
   // NOLINTNEXTLINE(build/namespaces): Emulate placement in namespace.
   using namespace drake::multibody;
+  auto& doc = pydrake_doc.drake.multibody;
 
   auto& doc = pydrake_doc.drake.multibody;
 
@@ -339,6 +340,7 @@ void init_module(py::module m) {
 void init_math(py::module m) {
   // NOLINTNEXTLINE(build/namespaces): Emulate placement in namespace.
   using namespace drake::multibody;
+  auto& doc = pydrake_doc.drake.multibody;
 
   auto& doc = pydrake_doc.drake.multibody;
 
@@ -368,6 +370,7 @@ void init_multibody_plant(py::module m) {
   using namespace drake::multibody;
   // NOLINTNEXTLINE(build/namespaces): Emulate placement in namespace.
   using namespace drake::multibody::multibody_plant;
+  auto& doc = pydrake_doc.drake.multibody.multibody_plant;
 
   auto& doc = pydrake_doc.drake.multibody.multibody_plant;
 
@@ -534,6 +537,7 @@ void init_parsing(py::module m) {
   using namespace drake::multibody;
   // NOLINTNEXTLINE(build/namespaces): Emulate placement in namespace.
   using namespace drake::multibody::parsing;
+  auto& doc = pydrake_doc.drake.multibody.parsing;
 
   using multibody_plant::MultibodyPlant;
 

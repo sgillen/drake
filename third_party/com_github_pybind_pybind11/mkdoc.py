@@ -161,8 +161,8 @@ def process_comment(comment):
         result = result2
 
     # Doxygen tags
-    cpp_group = '([\w:]+)'
-    param_group = '([\[\w:\]]+)'
+    cpp_group = r'([\w:]+)'
+    param_group = r'([\[\w:\]]+)'
 
     s = result
     s = re.sub(r'[@\\]c\s+%s' % cpp_group, r'``\1``', s)
@@ -282,6 +282,7 @@ class SymbolTree(object):
     Contains symbols that (a) may have 0 or more pieces of documentation and
     (b) may have child objects.
     """
+
     def __init__(self):
         self.root = SymbolTree.Leaf()
 
@@ -320,7 +321,8 @@ def extract(include_map, node, output):
             extract(include_map, i, output)
     if node.kind in PRINT_LIST:
         if len(node.spelling) > 0:
-            comment = utf8(node.raw_comment) if node.raw_comment is not None else ''
+            comment = utf8(
+                node.raw_comment) if node.raw_comment is not None else ''
             comment = process_comment(comment)
             name = get_name_chain(node)
             line = node.location.line
@@ -344,8 +346,9 @@ def print_symbols(name, leaf, level=0):
 
     name = sanitize_name(name)
 
-    indent = '  '*level
-    iprint = lambda s: print((indent + s).rstrip())
+    indent = '  ' * level
+
+    def iprint(s): return print((indent + s).rstrip())
     iprint('// {}'.format(full_name))
     modifier = ""
     if level == 0:
@@ -355,7 +358,7 @@ def print_symbols(name, leaf, level=0):
     symbol_iter = sorted(leaf.symbols, key=Symbol.sorting_key)
     for i, symbol in enumerate(symbol_iter):
         assert full_pieces == symbol.name
-        var = "doc";
+        var = "doc"
         if i > 0:
             var += "_{}".format(i + 1)
         delim = "\n"
@@ -367,7 +370,7 @@ def print_symbols(name, leaf, level=0):
     keys = sorted(leaf.children_map.keys())
     for key in keys:
         child = leaf.children_map[key]
-        print_symbols(key, child, level=level+1)
+        print_symbols(key, child, level=level + 1)
     iprint('}} {};'.format(name))
     iprint('')
 
@@ -385,6 +388,7 @@ class FileDict(object):
     """
     Provides a dictionary that hashes based on a file's true path.
     """
+
     def __init__(self, items):
         self._d = {self._key(file): value for file, value in items}
 
@@ -444,15 +448,16 @@ def main():
 
     print('''#pragma once
 
+// {} {}
 // GENERATED FILE DO NOT EDIT
 // This file contains docstrings for the Python bindings that were
-// automatically extracted by mkdoc.py from pybind11 / drake.
+// automatically extracted by mkdoc.py.
 
 #if defined(__GNUG__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-variable"
 #endif
-''')
+'''.format('GENERATED FILE', 'DO NOT EDIT'))
 
     includes = list(map(drake_genfile_path_to_include_path, filenames))
     include_map = FileDict(zip(filenames, includes))

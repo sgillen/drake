@@ -21,6 +21,7 @@ namespace pydrake {
 PYBIND11_MODULE(rigid_body_plant, m) {
   // NOLINTNEXTLINE(build/namespaces): Emulate placement in namespace.
   using namespace drake::systems;
+  auto& doc = pydrake_doc.drake.systems;
 
   // Ensure we have bindings for dependencies.
   py::module::import("pydrake.lcm");
