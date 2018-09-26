@@ -87,6 +87,7 @@ SKIP_PARTIAL_NAMES = [
     'operator new',
     'operator delete',
     'operator=',
+    'operator->',
 ]
 
 SKIP_ACCESS = [
@@ -109,6 +110,10 @@ def is_accepted_symbol(node):
     return True
 
 
+def eprint(*args):
+    print(*args, file=sys.stderr)
+
+
 def sanitize_name(name):
     name = re.sub(r'type-parameter-0-([0-9]+)', r'T\1', name)
     for k, v in CPP_OPERATORS.items():
@@ -116,7 +121,7 @@ def sanitize_name(name):
     name = re.sub('<.*>', '', name)
     name = name.replace('::', '_')
     name = ''.join([ch if ch.isalnum() else '_' for ch in name])
-    name = re.sub('_$', '', re.sub('_+', '_', name))
+    name = re.sub('_+', '_', name)
     return name
 
 
@@ -279,12 +284,12 @@ class SymbolTree(object):
 
 def print_symbols(leaf):
     for i, symbol in enumerate(leaf.symbols):
-        name = sanitize_name("::".join(symbol.name))
-        print("{} -> {}".format("::".join(symbol.name), name), file=sys.stderr)
+        raw_name = "::".join(symbol.name)
+        name = sanitize_name(raw_name)
         if i > 0:
             name += "_%i" % (i + 1)
-        print('\n// %s:%s\nstatic const char *__doc_%s [[gnu::unused]] =%sR"doc(%s)doc";' %
-              (symbol.include, symbol.line, name, '\n' if '\n' in symbol.comment else ' ', symbol.comment))
+        print('\n// %s:%s - %s\nstatic const char *__doc_%s [[gnu::unused]] =%sR"doc(%s)doc";' %
+              (symbol.include, symbol.line, raw_name, name, '\n' if '\n' in symbol.comment else ' ', symbol.comment))
     keys = sorted(leaf.children_map.keys())
     for key in keys:
         child = leaf.children_map[key]
