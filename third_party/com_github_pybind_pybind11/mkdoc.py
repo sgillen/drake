@@ -63,8 +63,10 @@ CPP_OPERATORS = OrderedDict(
 SKIP_FULL_NAMES = [
     'Eigen',
     'detail',
+    'google',
     'internal',
     'std',
+    'tinyxml2',
 ]
 
 SKIP_PARTIAL_NAMES = [
@@ -72,6 +74,8 @@ SKIP_PARTIAL_NAMES = [
     'operator delete',
     'operator=',
     'operator->',
+    'operator<<',
+    'operator>>',
 ]
 
 SKIP_ACCESS = [
@@ -332,9 +336,16 @@ def extract(include_map, node, output):
 
 def print_symbols(name, leaf, level=0):
     """
-    Prints C++ code for containing documentation.
+    Prints C++ code for releveant documentation.
     """
+    indent = '  ' * level
+
+    def iprint(s):
+        return print((indent + s).rstrip())
+
     if len(leaf.symbols) == 0:
+        # TODO(eric.cousineau): Store non-documented instance for namespaces,
+        # so we get the full name.
         full_name = name
     else:
         top = leaf.symbols[0]
@@ -344,18 +355,14 @@ def print_symbols(name, leaf, level=0):
         # Override variable.
         if top.node.kind == CursorKind.CONSTRUCTOR:
             name = "ctor"
-
     name = sanitize_name(name)
-
-    indent = '  ' * level
-
-    def iprint(s): return print((indent + s).rstrip())
     iprint('// {}'.format(full_name))
     modifier = ""
     if level == 0:
         modifier = "constexpr "
     iprint('{}struct /* {} */ {{'.format(modifier, name))
     iprint('')
+    # Print documentation items.
     symbol_iter = sorted(leaf.symbols, key=Symbol.sorting_key)
     for i, symbol in enumerate(symbol_iter):
         assert full_pieces == symbol.name
@@ -369,6 +376,7 @@ def print_symbols(name, leaf, level=0):
         iprint('  const char* {} ={}R"""({})""";'.format(var, delim,
                                                          symbol.comment))
         iprint('')
+    # Recurse into child elements.
     keys = sorted(leaf.children_map.keys())
     for key in keys:
         child = leaf.children_map[key]
@@ -381,7 +389,10 @@ def drake_genfile_path_to_include_path(filename):
     # TODO(eric.cousineau): Is there a simple way to generalize this, given
     # include paths?
     pieces = filename.split('/')
-    assert pieces.count('drake') == 1
+    if 'lcmtypes' in pieces:
+        # Do not care about lcm-generated symbols.
+        return None
+    assert pieces.count('drake') == 1, filename
     drake_index = pieces.index('drake')
     return '/'.join(pieces[drake_index:])
 
@@ -391,7 +402,7 @@ class FileDict(object):
     Provides a dictionary that hashes based on a file's true path.
     """
 
-    def __init__(self, items):
+    def __init__(self, items=[]):
         self._d = {self._key(file): value for file, value in items}
 
     def _key(self, file):
@@ -406,6 +417,10 @@ class FileDict(object):
     def __getitem__(self, file):
         key = self._key(file)
         return self._d[key]
+
+    def __setitem__(self, file, value):
+        key = self._key(file)
+        self._d[key] = value
 
 
 def main():
@@ -462,9 +477,13 @@ def main():
 #endif
 '''.format('GENERATED FILE', 'DO NOT EDIT'))
 
-    includes = list(map(drake_genfile_path_to_include_path, filenames))
-    include_map = FileDict(zip(filenames, includes))
-    # TODO(eric.cousineau): Sort files based on include path?
+    includes = []
+    include_map = FileDict()
+    for filename in filenames:
+        include = drake_genfile_path_to_include_path(filename)
+        if include is not None:
+            includes.append(include)
+            include_map[filename] = include
     with NamedTemporaryFile('w') as include_file:
         for include in includes:
             include_file.write("#include \"{}\"\n".format(include))
