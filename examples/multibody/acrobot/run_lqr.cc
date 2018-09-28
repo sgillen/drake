@@ -8,7 +8,6 @@
 #include "drake/geometry/geometry_visualization.h"
 #include "drake/geometry/scene_graph.h"
 #include "drake/lcm/drake_lcm.h"
-#include "drake/lcmt_viewer_draw.hpp"
 #include "drake/multibody/benchmarks/acrobot/make_acrobot_plant.h"
 #include "drake/multibody/multibody_tree/joints/revolute_joint.h"
 #include "drake/multibody/multibody_tree/parsing/multibody_plant_sdf_parser.h"
@@ -16,8 +15,6 @@
 #include "drake/systems/analysis/simulator.h"
 #include "drake/systems/controllers/linear_quadratic_regulator.h"
 #include "drake/systems/framework/diagram_builder.h"
-#include "drake/systems/lcm/lcm_publisher_system.h"
-#include "drake/systems/lcm/serializer.h"
 #include "drake/systems/primitives/affine_system.h"
 #include "drake/systems/rendering/pose_bundle_to_draw_message.h"
 
@@ -33,9 +30,6 @@ using multibody::JointActuator;
 using multibody::RevoluteJoint;
 using multibody::UniformGravityFieldElement;
 using systems::Context;
-using systems::lcm::LcmPublisherSystem;
-using systems::lcm::Serializer;
-using systems::rendering::PoseBundleToDrawMessage;
 
 namespace examples {
 namespace multibody {
@@ -48,6 +42,10 @@ DEFINE_double(target_realtime_rate, 1.0,
 
 DEFINE_double(simulation_time, 10.0,
               "Desired duration of the simulation in seconds.");
+
+DEFINE_bool(time_stepping, true, "If 'true', the plant is modeled as a "
+    "discrete system with periodic updates. "
+    "If 'false', the plant is modeled as a continuous system.");
 
 // This helper method makes an LQR controller to balance an acrobot model
 // specified in the SDF file `file_name`.
@@ -101,11 +99,15 @@ int do_main() {
 
   const double simulation_time = FLAGS_simulation_time;
 
+  const double time_step = FLAGS_time_stepping ? 1.0e-3 : 0.0;
+
   // Make and add the acrobot model.
   const std::string relative_name =
       "drake/multibody/benchmarks/acrobot/acrobot.sdf";
   const std::string full_name = FindResourceOrThrow(relative_name);
-  MultibodyPlant<double>& acrobot = *builder.AddSystem<MultibodyPlant>();
+  MultibodyPlant<double>& acrobot =
+      *builder.AddSystem<MultibodyPlant>(time_step);
+
   AddModelFromSdfFile(full_name, &acrobot, &scene_graph);
 
   // Add gravity to the model.
@@ -113,7 +115,7 @@ int do_main() {
       -9.81 * Vector3<double>::UnitZ());
 
   // We are done defining the model.
-  acrobot.Finalize();
+  acrobot.Finalize(&scene_graph);
 
   DRAKE_DEMAND(acrobot.num_actuators() == 1);
   DRAKE_DEMAND(acrobot.num_actuated_dofs() == 1);
@@ -139,17 +141,6 @@ int do_main() {
   builder.Connect(controller->get_output_port(),
                   acrobot.get_actuation_input_port());
 
-  // Boilerplate used to connect the plant to a SceneGraph for
-  // visualization.
-  DrakeLcm lcm;
-  const PoseBundleToDrawMessage& converter =
-      *builder.template AddSystem<PoseBundleToDrawMessage>();
-  LcmPublisherSystem& publisher =
-      *builder.template AddSystem<LcmPublisherSystem>(
-          "DRAKE_VIEWER_DRAW",
-          std::make_unique<Serializer<drake::lcmt_viewer_draw>>(), &lcm);
-  publisher.set_publish_period(1 / 60.0);
-
   // Sanity check on the availability of the optional source id before using it.
   DRAKE_DEMAND(!!acrobot.get_source_id());
 
@@ -157,16 +148,8 @@ int do_main() {
       acrobot.get_geometry_poses_output_port(),
       scene_graph.get_source_pose_port(acrobot.get_source_id().value()));
 
-  builder.Connect(scene_graph.get_pose_bundle_output_port(),
-                  converter.get_input_port(0));
-  builder.Connect(converter, publisher);
-
-  // Last thing before building the diagram; dispatch the message to load
-  // geometry.
-  geometry::DispatchLoadMessage(scene_graph);
-
-  // And build the Diagram:
-  std::unique_ptr<systems::Diagram<double>> diagram = builder.Build();
+  geometry::ConnectDrakeVisualizer(&builder, scene_graph);
+  auto diagram = builder.Build();
 
   // Create a context for this system:
   std::unique_ptr<systems::Context<double>> diagram_context =

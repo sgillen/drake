@@ -34,7 +34,7 @@ class SingleOutputVectorSourceTest : public ::testing::Test {
   void SetUp() override {
     source_ = std::make_unique<TestSource>();
     context_ = source_->CreateDefaultContext();
-    output_ = source_->AllocateOutput(*context_);
+    output_ = source_->AllocateOutput();
   }
 
   std::unique_ptr<System<double>> source_;
@@ -77,6 +77,7 @@ class Convertable final : public SingleOutputVectorSource<T> {
   explicit Convertable(UseTransmogrify) : Base(Tag{}, kSize) {}
   Convertable(UseTransmogrify, UseVector) : Base(Tag{}, *MakeVec()) {}
 
+  // Scalar-converting copy constructor.
   template <typename U>
   explicit Convertable(const Convertable<U>&)
       : Convertable<T>(UseTransmogrify{}) {}

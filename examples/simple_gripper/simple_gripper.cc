@@ -1,4 +1,5 @@
 #include <memory>
+#include <string>
 
 #include <gflags/gflags.h>
 #include "fmt/ostream.h"
@@ -9,10 +10,11 @@
 #include "drake/geometry/geometry_visualization.h"
 #include "drake/geometry/scene_graph.h"
 #include "drake/lcm/drake_lcm.h"
-#include "drake/lcmt_viewer_draw.hpp"
 #include "drake/math/roll_pitch_yaw.h"
 #include "drake/math/rotation_matrix.h"
 #include "drake/multibody/multibody_tree/joints/prismatic_joint.h"
+#include "drake/multibody/multibody_tree/multibody_plant/contact_results.h"
+#include "drake/multibody/multibody_tree/multibody_plant/contact_results_to_lcm.h"
 #include "drake/multibody/multibody_tree/multibody_plant/multibody_plant.h"
 #include "drake/multibody/multibody_tree/parsing/multibody_plant_sdf_parser.h"
 #include "drake/multibody/multibody_tree/uniform_gravity_field_element.h"
@@ -23,9 +25,7 @@
 #include "drake/systems/analysis/simulator.h"
 #include "drake/systems/framework/diagram_builder.h"
 #include "drake/systems/lcm/lcm_publisher_system.h"
-#include "drake/systems/lcm/serializer.h"
 #include "drake/systems/primitives/sine.h"
-#include "drake/systems/rendering/pose_bundle_to_draw_message.h"
 
 namespace drake {
 namespace examples {
@@ -42,14 +42,13 @@ using drake::math::RollPitchYaw;
 using drake::math::RotationMatrix;
 using drake::multibody::Body;
 using drake::multibody::multibody_plant::CoulombFriction;
+using drake::multibody::multibody_plant::ContactResultsToLcmSystem;
 using drake::multibody::multibody_plant::MultibodyPlant;
 using drake::multibody::parsing::AddModelFromSdfFile;
 using drake::multibody::PrismaticJoint;
 using drake::multibody::UniformGravityFieldElement;
 using drake::systems::ImplicitEulerIntegrator;
 using drake::systems::lcm::LcmPublisherSystem;
-using drake::systems::lcm::Serializer;
-using drake::systems::rendering::PoseBundleToDrawMessage;
 using drake::systems::RungeKutta2Integrator;
 using drake::systems::RungeKutta3Integrator;
 using drake::systems::SemiExplicitEulerIntegrator;
@@ -78,6 +77,9 @@ DEFINE_double(max_time_step, 1.0e-3,
               "is used.");
 DEFINE_double(accuracy, 1.0e-2, "Sets the simulation accuracy for variable step"
               "size integrators with error control.");
+DEFINE_bool(time_stepping, true, "If 'true', the plant is modeled as a "
+    "discrete system with periodic updates of period 'max_time_step'."
+    "If 'false', the plant is modeled as a continuous system.");
 
 // Contact parameters
 DEFINE_double(penetration_allowance, 1.0e-2,
@@ -109,9 +111,9 @@ DEFINE_double(gripper_force, 10, "The force to be applied by the gripper. [N]. "
               "grip_width.");
 
 // Parameters for shaking the mug.
-DEFINE_double(amplitude, 0, "The amplitude of the harmonic oscillations "
+DEFINE_double(amplitude, 0.15, "The amplitude of the harmonic oscillations "
               "carried out by the gripper. [m].");
-DEFINE_double(frequency, 0, "The frequency of the harmonic oscillations "
+DEFINE_double(frequency, 2.0, "The frequency of the harmonic oscillations "
               "carried out by the gripper. [Hz].");
 
 // The pad was measured as a torus with the following major and minor radii.
@@ -156,8 +158,14 @@ void AddGripperPads(MultibodyPlant<double>* plant,
     CoulombFriction<double> friction(
         FLAGS_ring_static_friction, FLAGS_ring_static_friction);
 
-    plant->RegisterCollisionGeometry(
-        finger, X_FS, Sphere(kPadMinorRadius), friction, scene_graph);
+    plant->RegisterCollisionGeometry(finger, X_FS, Sphere(kPadMinorRadius),
+                                     "collision" + std::to_string(i), friction,
+                                     scene_graph);
+
+    const geometry::VisualMaterial red(Vector4<double>(1.0, 0.0, 0.0, 1.0));
+    plant->RegisterVisualGeometry(finger, X_FS, Sphere(kPadMinorRadius),
+                                  "visual" + std::to_string(i), red,
+                                  scene_graph);
   }
 }
 
@@ -167,7 +175,12 @@ int do_main() {
   SceneGraph<double>& scene_graph = *builder.AddSystem<SceneGraph>();
   scene_graph.set_name("scene_graph");
 
-  MultibodyPlant<double>& plant = *builder.AddSystem<MultibodyPlant>();
+  DRAKE_DEMAND(FLAGS_max_time_step > 0);
+
+  MultibodyPlant<double>& plant =
+      FLAGS_time_stepping ?
+      *builder.AddSystem<MultibodyPlant>(FLAGS_max_time_step) :
+      *builder.AddSystem<MultibodyPlant>();
   std::string full_name =
       FindResourceOrThrow("drake/examples/simple_gripper/simple_gripper.sdf");
   AddModelFromSdfFile(full_name, &plant, &scene_graph);
@@ -219,7 +232,7 @@ int do_main() {
   }
 
   // Now the model is complete.
-  plant.Finalize();
+  plant.Finalize(&scene_graph);
 
   // Set how much penetration (in meters) we are willing to accept.
   plant.set_penetration_allowance(FLAGS_penetration_allowance);
@@ -247,28 +260,29 @@ int do_main() {
   DRAKE_DEMAND(plant.num_actuators() == 2);
   DRAKE_DEMAND(plant.num_actuated_dofs() == 2);
 
-  // Boilerplate used to connect the plant to a SceneGraph for
-  // visualization.
-  DrakeLcm lcm;
-  const PoseBundleToDrawMessage& converter =
-      *builder.template AddSystem<PoseBundleToDrawMessage>();
-  LcmPublisherSystem& publisher =
-      *builder.template AddSystem<LcmPublisherSystem>(
-          "DRAKE_VIEWER_DRAW",
-          std::make_unique<Serializer<drake::lcmt_viewer_draw>>(), &lcm);
-
   // Sanity check on the availability of the optional source id before using it.
   DRAKE_DEMAND(!!plant.get_source_id());
 
-  builder.Connect(
-      plant.get_geometry_poses_output_port(),
-      scene_graph.get_source_pose_port(plant.get_source_id().value()));
   builder.Connect(scene_graph.get_query_output_port(),
                   plant.get_geometry_query_input_port());
 
-  builder.Connect(scene_graph.get_pose_bundle_output_port(),
-                  converter.get_input_port(0));
-  builder.Connect(converter, publisher);
+  DrakeLcm lcm;
+  geometry::ConnectDrakeVisualizer(&builder, scene_graph, &lcm);
+  builder.Connect(
+      plant.get_geometry_poses_output_port(),
+      scene_graph.get_source_pose_port(plant.get_source_id().value()));
+
+  // Publish contact results for visualization.
+  const auto& contact_results_to_lcm =
+      *builder.AddSystem<ContactResultsToLcmSystem>(plant);
+  const auto& contact_results_publisher = *builder.AddSystem(
+      LcmPublisherSystem::Make<lcmt_contact_results_for_viz>(
+          "CONTACT_RESULTS", &lcm));
+  // Contact results to lcm msg.
+  builder.Connect(plant.get_contact_results_output_port(),
+                  contact_results_to_lcm.get_input_port(0));
+  builder.Connect(contact_results_to_lcm.get_output_port(0),
+                  contact_results_publisher.get_input_port());
 
   // Sinusoidal force input. We want the gripper to follow a trajectory of the
   // form x(t) = X0 * sin(ω⋅t). By differentiating once, we can compute the
@@ -303,12 +317,7 @@ int do_main() {
   builder.Connect(harmonic_force.get_output_port(0),
                   plant.get_actuation_input_port());
 
-  // Last thing before building the diagram; dispatch the message to load
-  // geometry.
-  geometry::DispatchLoadMessage(scene_graph);
-
-  // And build the Diagram:
-  std::unique_ptr<systems::Diagram<double>> diagram = builder.Build();
+  auto diagram = builder.Build();
 
   // Create a context for this system:
   std::unique_ptr<systems::Context<double>> diagram_context =
@@ -329,7 +338,7 @@ int do_main() {
 
   // Initialize the mug pose to be right in the middle between the fingers.
   std::vector<Isometry3d> X_WB_all;
-  plant.model().CalcAllBodyPosesInWorld(plant_context, &X_WB_all);
+  plant.tree().CalcAllBodyPosesInWorld(plant_context, &X_WB_all);
   const Vector3d& p_WBr = X_WB_all[right_finger.index()].translation();
   const Vector3d& p_WBl = X_WB_all[left_finger.index()].translation();
   const double mug_y_W = (p_WBr(1) + p_WBl(1)) / 2.0;
@@ -340,7 +349,7 @@ int do_main() {
                (FLAGS_rz * M_PI / 180) + M_PI);
   X_WM.linear() = RotationMatrix<double>(RollPitchYaw<double>(rpy)).matrix();
   X_WM.translation() = Vector3d(0.0, mug_y_W, 0.0);
-  plant.model().SetFreeBodyPoseOrThrow(mug, X_WM, &plant_context);
+  plant.tree().SetFreeBodyPoseOrThrow(mug, X_WM, &plant_context);
 
   // Set the initial height of the gripper and its initial velocity so that with
   // the applied harmonic forces it continues to move in a harmonic oscillation

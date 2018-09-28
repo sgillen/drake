@@ -18,7 +18,7 @@ namespace systems {
 namespace sensors {
 
 // Note that if `depth_image` holds any pixels that have NaN, the converted
-// points will aslo become NaN.
+// points will also become NaN.
 void RgbdCamera::ConvertDepthImageToPointCloud(const ImageDepth32F& depth_image,
                                                const CameraInfo& camera_info,
                                                Eigen::Matrix3Xf* point_cloud) {
@@ -54,41 +54,87 @@ RgbdCamera::RgbdCamera(const std::string& name,
                        const Eigen::Vector3d& position,
                        const Eigen::Vector3d& orientation, double z_near,
                        double z_far, double fov_y, bool show_window,
-                       int width, int height)
+                       int width, int height, bool flat_terrain)
     : tree_(tree),
       frame_(RigidBodyFrame<double>()),
       camera_fixed_(true),
+      flat_terrain_(flat_terrain),
       color_camera_info_(width, height, fov_y),
       depth_camera_info_(width, height, fov_y),
       X_WB_initial_(
           Eigen::Translation3d(position[0], position[1], position[2]) *
-          Eigen::Isometry3d(math::rpy2rotmat(orientation))),
+          Eigen::Isometry3d(math::RollPitchYaw<double>(orientation)
+                                .ToMatrix3ViaRotationMatrix())),
       renderer_(new RgbdRendererVTK(
-          RenderingConfig{width, height, fov_y, z_near, z_far,
-                          show_window},
+          RenderingConfig{width, height, fov_y, z_near, z_far, show_window},
           Eigen::Translation3d(position[0], position[1], position[2]) *
-              Eigen::Isometry3d(math::rpy2rotmat(orientation)) * X_BC_)) {
-  Init(name);
+          Eigen::Isometry3d(math::RollPitchYaw<double>(orientation)
+                                .ToMatrix3ViaRotationMatrix()) * X_BC_)) {
+  InitPorts(name);
+  InitRenderer();
 }
 
 RgbdCamera::RgbdCamera(const std::string& name,
                        const RigidBodyTree<double>& tree,
                        const RigidBodyFrame<double>& frame, double z_near,
                        double z_far, double fov_y, bool show_window,
-                       int width, int height)
+                       int width, int height, bool flat_terrain)
     : tree_(tree),
       frame_(frame),
       camera_fixed_(false),
+      flat_terrain_(flat_terrain),
       color_camera_info_(width, height, fov_y),
       depth_camera_info_(width, height, fov_y),
       renderer_(
           new RgbdRendererVTK(RenderingConfig{width, height, fov_y,
                                               z_near, z_far, show_window},
                               Eigen::Isometry3d::Identity())) {
-  Init(name);
+  InitPorts(name);
+  InitRenderer();
 }
 
-void RgbdCamera::Init(const std::string& name) {
+RgbdCamera::RgbdCamera(const std::string& name,
+                       const RigidBodyTree<double>& tree,
+                       const Eigen::Vector3d& position,
+                       const Eigen::Vector3d& orientation,
+                       std::unique_ptr<RgbdRenderer> renderer,
+                       bool flat_terrain)
+    : tree_(tree),
+      frame_(RigidBodyFrame<double>()),
+      camera_fixed_(true),
+      flat_terrain_(flat_terrain),
+      color_camera_info_(renderer->config().width, renderer->config().height,
+                         renderer->config().fov_y),
+      depth_camera_info_(renderer->config().width, renderer->config().height,
+                         renderer->config().fov_y),
+      X_WB_initial_(
+          Eigen::Translation3d(position[0], position[1], position[2]) *
+          Eigen::Isometry3d(math::RollPitchYaw<double>(orientation)
+                                .ToMatrix3ViaRotationMatrix())) {
+  renderer_ = std::move(renderer);
+  InitPorts(name);
+  InitRenderer();
+}
+
+RgbdCamera::RgbdCamera(const std::string& name,
+                       const RigidBodyTree<double>& tree,
+                       const RigidBodyFrame<double>& frame,
+                       std::unique_ptr<RgbdRenderer> renderer,
+                       bool flat_terrain)
+    : tree_(tree),
+      frame_(frame),
+      camera_fixed_(false),
+      flat_terrain_(flat_terrain),
+      color_camera_info_(renderer->config().width, renderer->config().height,
+                         renderer->config().fov_y),
+      depth_camera_info_(renderer->config().width, renderer->config().height,
+                         renderer->config().fov_y) {
+  renderer_ = std::move(renderer);
+  InitPorts(name);
+  InitRenderer();
+}
+
+void RgbdCamera::InitPorts(const std::string& name) {
   set_name(name);
   const int kVecNum =
       tree_.get_num_positions() + tree_.get_num_velocities();
@@ -112,7 +158,9 @@ void RgbdCamera::Init(const std::string& name) {
 
   camera_base_pose_port_ = &this->DeclareVectorOutputPort(
       rendering::PoseVector<double>(), &RgbdCamera::OutputPoseVector);
+}
 
+void RgbdCamera::InitRenderer() {
   // Creates rendering world.
   for (const auto& body : tree_.get_bodies()) {
     if (body->get_name() == std::string(RigidBodyTreeConstants::kWorldName)) {
@@ -120,15 +168,21 @@ void RgbdCamera::Init(const std::string& name) {
     }
 
     const int body_id = body->get_body_index();
+    auto& body_visual_indices = body_visual_indices_map_[body_id];
     for (const auto& visual : body->get_visual_elements()) {
-      renderer_->RegisterVisual(visual, body_id);
+      optional<VisualIndex> visual_index =
+          renderer_->RegisterVisual(visual, body_id);
+      if (visual_index) {
+        body_visual_indices.push_back(*visual_index);
+      }
     }
   }
 
-  renderer_->AddFlatTerrain();
+  if (flat_terrain_)
+    renderer_->AddFlatTerrain();
 }
 
-const InputPortDescriptor<double>& RgbdCamera::state_input_port() const {
+const InputPort<double>& RgbdCamera::state_input_port() const {
   return *state_input_port_;
 }
 
@@ -200,7 +254,9 @@ void RgbdCamera::UpdateModelPoses(
 
     const auto X_WBody = tree_.CalcBodyPoseInWorldFrame(cache, *body);
 
-    for (size_t i = 0; i < body->get_visual_elements().size(); ++i) {
+    const auto& body_visual_indices =
+        body_visual_indices_map_.at(body->get_body_index());
+    for (VisualIndex i : body_visual_indices) {
       const auto& visual = body->get_visual_elements()[i];
       const auto X_WV = X_WBody * visual.getLocalTransform();
       renderer_->UpdateVisualPose(X_WV, body->get_body_index(),

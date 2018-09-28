@@ -26,6 +26,8 @@ from .autodiffutils import *
 from .automotive import *
 from .common import *
 from .forwarddiff import *
+from .geometry import *
+from .lcm import *
 from .math import *
 from .symbolic import *
 from .trajectories import *
@@ -33,6 +35,7 @@ from .trajectories import *
 # Submodules.
 # - `examples` does not offer public Drake symbols.
 from .maliput.all import *
+from .manipulation.all import *
 from .multibody.all import *
 from .solvers.all import *
 from .systems.all import *

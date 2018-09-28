@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <utility>
 
+#include "drake/automotive/driving_command_mux.h"
 #include "drake/automotive/gen/driving_command.h"
 #include "drake/automotive/gen/driving_command_translator.h"
 #include "drake/automotive/gen/maliput_railcar_state_translator.h"
@@ -28,7 +29,6 @@
 #include "drake/systems/lcm/lcm_subscriber_system.h"
 #include "drake/systems/lcm/lcmt_drake_signal_translator.h"
 #include "drake/systems/primitives/constant_value_source.h"
-#include "drake/systems/primitives/multiplexer.h"
 
 namespace drake {
 
@@ -98,8 +98,8 @@ void AutomotiveSimulator<T>::ConnectCarOutputsAndPriusVis(
   DRAKE_DEMAND(&pose_output.get_system() == &velocity_output.get_system());
   const std::string name = pose_output.get_system().get_name();
   auto ports = aggregator_->AddSinglePoseAndVelocityInput(name, id);
-  builder_->Connect(pose_output, ports.pose_descriptor);
-  builder_->Connect(velocity_output, ports.velocity_descriptor);
+  builder_->Connect(pose_output, ports.pose_input_port);
+  builder_->Connect(velocity_output, ports.velocity_input_port);
   if (lcm_) {
     car_vis_applicator_->AddCarVis(std::make_unique<PriusVis<T>>(id, name));
   }
@@ -173,8 +173,7 @@ int AutomotiveSimulator<T>::AddMobilControlledSimpleCar(
   simple_car_initial_states_[simple_car].set_value(initial_state.get_value());
   auto pursuit = builder_->template AddSystem<PurePursuitController<T>>();
   pursuit->set_name(name + "_pure_pursuit_controller");
-  auto mux = builder_->template AddSystem<systems::Multiplexer<T>>(
-      DrivingCommand<T>());
+  auto mux = builder_->template AddSystem<DrivingCommandMux<T>>();
   mux->set_name(name + "_mux");
 
   // Wire up MobilPlanner and IdmController.
@@ -197,9 +196,9 @@ int AutomotiveSimulator<T>::AddMobilControlledSimpleCar(
   builder_->Connect(mobil_planner->lane_output(), pursuit->lane_input());
   // Build DrivingCommand via a mux of two scalar outputs (a BasicVector where
   // row 0 = steering command, row 1 = acceleration command).
-  builder_->Connect(pursuit->steering_command_output(), mux->get_input_port(0));
+  builder_->Connect(pursuit->steering_command_output(), mux->steering_input());
   builder_->Connect(idm_controller->acceleration_output(),
-                    mux->get_input_port(1));
+                    mux->acceleration_input());
   builder_->Connect(mux->get_output_port(0), simple_car->get_input_port(0));
 
   ConnectCarOutputsAndPriusVis(id, simple_car->pose_output(),
@@ -281,8 +280,7 @@ int AutomotiveSimulator<T>::AddIdmControlledCar(
 
   auto pursuit = builder_->template AddSystem<PurePursuitController<T>>();
   pursuit->set_name(name + "_pure_pursuit_controller");
-  auto mux = builder_->template AddSystem<systems::Multiplexer<T>>(
-      DrivingCommand<T>());
+  auto mux = builder_->template AddSystem<DrivingCommandMux<T>>();
   mux->set_name(name + "_mux");
 
   // Wire up the simple car and pose aggregator to IdmController.
@@ -299,9 +297,9 @@ int AutomotiveSimulator<T>::AddIdmControlledCar(
   // Build DrivingCommand via a mux of two scalar outputs (a BasicVector where
   // row 0 = steering command, row 1 = acceleration command).
   builder_->Connect(pursuit->steering_command_output(),
-                    mux->get_input_port(0));
+                    mux->steering_input());
   builder_->Connect(idm_controller->acceleration_output(),
-                    mux->get_input_port(1));
+                    mux->acceleration_input());
   builder_->Connect(mux->get_output_port(0), simple_car->get_input_port(0));
 
   ConnectCarOutputsAndPriusVis(id, simple_car->pose_output(),
@@ -696,8 +694,7 @@ template <typename T>
 PoseBundle<T> AutomotiveSimulator<T>::GetCurrentPoses() const {
   DRAKE_DEMAND(has_started());
   const auto& context = simulator_->get_context();
-  std::unique_ptr<SystemOutput<T>> system_output = diagram_->AllocateOutput(
-      context);
+  std::unique_ptr<SystemOutput<T>> system_output = diagram_->AllocateOutput();
   diagram_->CalcOutput(context, system_output.get());
   DRAKE_DEMAND(system_output->get_num_ports() == 1);
   const AbstractValue* abstract_value = system_output->get_data(0);

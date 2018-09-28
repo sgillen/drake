@@ -9,8 +9,9 @@
 namespace drake {
 namespace pydrake {
 
-/**
-@page python_bindings Python Bindings
+/** @defgroup python_bindings Python Bindings
+@ingroup technical_notes
+@brief Details on implementing python bindings for the C++ code.
 
 # Overview
 
@@ -20,6 +21,27 @@ its C++ API to Python.
 At present, a fork of `pybind11` is used which permits bindings matrices with
 `dtype=object`, passing `unique_ptr` objects, and prevents aliasing for Python
 classes derived from `pybind11` classes.
+
+## Module Organization
+
+The structure of the bindings generally follow the *directory structure*, not
+the namespace structure. As an example, if in C++  you do:
+
+    #include <drake/multibody/multibody_tree/multibody_plant/{header}.h>
+    using drake::multibody::multibody_plant::{symbol};
+
+then in Python you would do:
+
+    from pydrake.multibody.multibody_tree.multibody_plant import {symbol}
+
+Some (but not all) exceptions:
+
+- Some of `drake/common` is incorporated into `pydrake.util`. (This will be
+remedied in the future.)
+- `drake/multibody/rigid_body_tree.h` is actually contained in the module
+`pydrake.multibody.rigid_body_tree`.
+- `drake/solvers/mathematical_program.h` is actually contained in the module
+`pydrake.solvers.mathematicalprogram`.
 
 ## `pybind11` Tips
 
@@ -52,7 +74,7 @@ derived class, you should use
 
 ## Target Conventions
 
-Target names should be of the following form:
+### Names
 
 - `*_py`: A Python library (can be pure Python or pybind)
   - File Names: `*.py`, `*_py.cc`
@@ -62,6 +84,15 @@ Target names should be of the following form:
   - File Names: `*_pybind.{h,cc}`
 
 File names should follow form with their respective target.
+
+### Visibility
+
+- All Python libraries should generally be private, as `pydrake` will
+  be consumed as one encapsulated target.
+
+- All C++ `*_pybind` libraries for binding utilities should be public to aide
+  downstream Bazel projects. If the API is unstable, consider making it private
+  with a TODO to make public once it stabilizes.
 
 ### Bazel
 
@@ -111,7 +142,7 @@ one of the other arguments (`self` is included in those arguments, for
 - "Keep alive, reference" implies a reference that is lifetime-sensitive
 (something that is not necessarily owned by the other arguments).
 - "Keep alive, transitive" implies a transfer of ownership of owned
-objects from one container to another (e.g. transfering all `System`s
+objects from one container to another (e.g. transferring all `System`s
 from `DiagramBuilder` to `Diagram` when calling
 `DiagramBuilder.Build()`).
 
@@ -125,6 +156,27 @@ This works about 80% of the time.
 - `static_cast`, as mentioned in the pybind11 documentation.
 - Lambdas, e.g. `[](Args... args) -> auto&& { return func(args...); }`
 (using perfect forwarding when appropriate).
+
+## Python Subclassing of C++ Classes
+
+In general, minimize the amount in which users may subclass C++ classes in
+Python. When you do wish to do this, ensure that you use a trampoline class
+in `pybind`, and ensure that the trampoline class inherits from the
+`py::wrapper<>` class specific to our fork of `pybind`. This ensures that no
+slicing happens with the subclassed instances.
+
+## Convenience aliases
+
+Some aliases are provided; prefer these to the full spellings.
+
+`namespace py` is a shorthand alias to `pybind11` for consistency.
+
+@see py_reference, py_reference_internal for dealing with %common ownership
+     issues.
+
+@note Downstream users should avoid `using namespace drake::pydrake`, as
+this may create ambiguous aliases (especially for GCC). Instead, consider
+an alias.
 
 # Interactive Debugging with Bazel
 
@@ -166,26 +218,20 @@ If using CLion, consider using `gdbserver`.
 
 // TODO(eric.cousineau): Add API naming conventions (#7819).
 
-/// @defgroup Convenience aliases
-/// @{
-
-/// Shorthand alias to `pybind` for consistency.
-/// @note Downstream users should avoid `using namespace drake::pydrake`, as
-/// this may create ambiguous aliases (especially for GCC). Instead, consider
-/// an alias.
+// Note: Doxygen apparently doesn't process comments for namespace aliases. If
+// you put Doxygen comments here they will apply instead to py_reference. See
+// the "Convenience aliases" section above for documentation.
 namespace py = pybind11;
 
 /// Used when returning `T& or `const T&`, as pybind's default behavior is to
 /// copy lvalue references.
-const auto py_reference_internal =
-    py::return_value_policy::reference_internal;
+const auto py_reference = py::return_value_policy::reference;
 
 /// Used when returning references to objects that are internally owned by
 /// `self`. Implies both `py_reference` and `py::keep_alive<0, 1>`, which
 /// implies "Keep alive, reference: `return` keeps` self` alive".
-const auto py_reference = py::return_value_policy::reference;
-
-/// @}
+const auto py_reference_internal =
+    py::return_value_policy::reference_internal;
 
 // Implementation for `overload_cast_explicit`. We must use this structure so
 // that we can constrain what is inferred. Otherwise, the ambiguity confuses

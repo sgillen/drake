@@ -5,14 +5,22 @@
 #include <unordered_map>
 #include <vector>
 
+#include "drake/geometry/geometry_set.h"
 #include "drake/geometry/geometry_state.h"
 #include "drake/geometry/query_object.h"
 #include "drake/geometry/query_results/penetration_as_point_pair.h"
+#include "drake/geometry/scene_graph_inspector.h"
 #include "drake/systems/framework/context.h"
 #include "drake/systems/framework/leaf_system.h"
 #include "drake/systems/rendering/pose_bundle.h"
 
 namespace drake {
+
+// Forward declarations to give LCM message publication appropriate access.
+namespace lcm {
+class DrakeLcmInterface;
+}  // namespace lcm
+
 namespace geometry {
 
 class GeometryInstance;
@@ -185,7 +193,10 @@ class QueryObject;
  - AutoDiffXd
 
  They are already available to link against in the containing library.
- No other values for T are currently supported.  */
+ No other values for T are currently supported.
+
+ @ingroup systems
+ */
 template <typename T>
 class SceneGraph final : public systems::LeafSystem<T> {
  public:
@@ -236,7 +247,7 @@ class SceneGraph final : public systems::LeafSystem<T> {
    with that `id`. This port is used to communicate _pose_ data for registered
    frames.
    @throws  std::logic_error if the source_id is _not_ recognized. */
-  const systems::InputPortDescriptor<T>& get_source_pose_port(SourceId id);
+  const systems::InputPort<T>& get_source_pose_port(SourceId id) const;
 
   /** Returns the output port which produces the PoseBundle for LCM
    communication to drake visualizer. */
@@ -314,6 +325,7 @@ class SceneGraph final : public systems::LeafSystem<T> {
    previously registered frame F (indicated by `frame_id`). The pose of the
    geometry is defined in a fixed pose relative to F (i.e., `X_FG`).
    Returns the corresponding unique geometry id.
+
    @param source_id   The id for the source registering the geometry.
    @param frame_id    The id for the frame F to hang the geometry on.
    @param geometry    The geometry G to affix to frame F.
@@ -322,7 +334,9 @@ class SceneGraph final : public systems::LeafSystem<T> {
                              source,
                              2. the `frame_id` doesn't belong to the source,
                              3. the `geometry` is equal to `nullptr`,
-                             4. a context has been allocated. */
+                             4. a context has been allocated, or
+                             5. the geometry's name doesn't satisfy the
+                             requirements outlined in GeometryInstance.  */
   GeometryId RegisterGeometry(SourceId source_id, FrameId frame_id,
                               std::unique_ptr<GeometryInstance> geometry);
 
@@ -339,8 +353,10 @@ class SceneGraph final : public systems::LeafSystem<T> {
    @throws std::logic_error 1. the `source_id` does _not_ map to a registered
                             source,
                             2. the `geometry_id` doesn't belong to the source,
-                            3. the `geometry` is equal to `nullptr`, or
-                            4. a context has been allocated. */
+                            3. the `geometry` is equal to `nullptr`,
+                            4. a context has been allocated, or
+                            5. the geometry's name doesn't satisfy the
+                            requirements outlined in GeometryInstance.  */
   GeometryId RegisterGeometry(SourceId source_id, GeometryId geometry_id,
                               std::unique_ptr<GeometryInstance> geometry);
 
@@ -350,11 +366,72 @@ class SceneGraph final : public systems::LeafSystem<T> {
    @param source_id     The id for the source registering the frame.
    @param geometry      The anchored geometry G to add to the world.
    @returns The index for the added geometry.
-   @throws std::logic_error  If the `source_id` does _not_ map to a registered
-                             source or a context has been allocated. */
+   @throws std::logic_error  1. the `source_id` does _not_ map to a registered
+                             source,
+                             2. a context has been allocated, or
+                             3. the geometry's name doesn't satisfy the
+                             requirements outlined in GeometryInstance.  */
   GeometryId RegisterAnchoredGeometry(
       SourceId source_id, std::unique_ptr<GeometryInstance> geometry);
 
+  //@}
+
+  /** Reports the identifier for the world frame. */
+  static FrameId world_frame_id() {
+    return internal::InternalFrame::get_world_frame_id();
+  }
+
+  /** Returns an inspector on the system's *model* scene graph data.
+   @throw std::logic_error If a context has been allocated.*/
+  const SceneGraphInspector<T>& model_inspector() const;
+
+  /** @name         Collision filtering
+   @anchor scene_graph_collision_filtering
+   The interface for limiting the scope of penetration queries (i.e., "filtering
+   collisions").
+
+   The scene graph consists of the set of geometry
+   `G = D ⋃ A = {g₀, g₁, ..., gₙ}`, where D is the set of dynamic geometry and
+   A is the set of anchored geometry (by definition `D ⋂ A = ∅`). Collision
+   occurs between pairs of geometries (e.g., (gᵢ, gⱼ)). The set of collision
+   candidate pairs is initially defined as `C = (G × G) - (A × A) - F - I`,
+   where:
+     - `G × G = {(gᵢ, gⱼ)}, ∀ gᵢ, gⱼ ∈ G` is the cartesian product of the set
+       of %SceneGraph geometries.
+     - `A × A` represents all pairs consisting only of anchored geometry;
+       anchored geometry is never tested against other anchored geometry.
+     - `F = (gᵢ, gⱼ)`, such that `frame(gᵢ) == frame(gⱼ)`; the pair where both
+       geometries are rigidly affixed to the same frame. By implication,
+       `gᵢ, gⱼ ∈ D` as only dynamic geometries are affixed to frames.
+     - `I = {(g, g)}, ∀ g ∈ G` is the set of all pairs consisting of a geometry
+        with itself; there is no collision between a geometry and itself.
+
+   Only pairs contained in C will be tested as part of penetration queries.
+   These filter methods essentially create new sets of pairs and then subtract
+   them from the candidate set C. See each method for details.
+
+   Modifications to C _must_ be performed before context allocation.
+   */
+  //@{
+
+  /** Excludes geometry pairs from collision evaluation by updating the
+   candidate pair set `C = C - P`, where `P = {(gᵢ, gⱼ)}, ∀ gᵢ, gⱼ ∈ G` and
+   `G = {g₀, g₁, ..., gₘ}` is the input `set` of geometries.
+
+   @throws std::logic_error if the set includes ids that don't exist in the
+                            scene graph.  */
+  void ExcludeCollisionsWithin(const GeometrySet& set);
+
+  /** Excludes geometry pairs from collision evaluation by updating the
+   candidate pair set `C = C - P`, where `P = {(a, b)}, ∀ a ∈ A, b ∈ B` and
+   `A = {a₀, a₁, ..., aₘ}` and `B = {b₀, b₁, ..., bₙ}` are the input sets of
+   geometries `setA` and `setB`, respectively. This does _not_ preclude
+   collisions between members of the _same_ set.
+
+   @throws std::logic_error if the groups include ids that don't exist in the
+                            scene graph.   */
+  void ExcludeCollisionsBetween(const GeometrySet& setA,
+                                const GeometrySet& setB);
   //@}
 
  private:
@@ -381,7 +458,8 @@ class SceneGraph final : public systems::LeafSystem<T> {
   void MakeSourcePorts(SourceId source_id);
 
   // Allow the load dispatch to peek into SceneGraph.
-  friend void DispatchLoadMessage(const SceneGraph<double>&);
+  friend void DispatchLoadMessage(const SceneGraph<double>&,
+                                  lcm::DrakeLcmInterface*);
 
   // Constructs a QueryObject for OutputPort allocation.
   QueryObject<T> MakeQueryObject() const;
@@ -437,12 +515,9 @@ class SceneGraph final : public systems::LeafSystem<T> {
 
   // A raw pointer to the default geometry state (which serves as the model for
   // allocating contexts for this system). The instance is owned by
-  // model_abstract_states_. This pointer will only be non-null between
-  // construction and context allocation. It serves a key role in enforcing the
-  // property that source ids can only be added prior to context allocation.
-  // This is mutable so that it can be cleared in the const method
-  // AllocateContext().
+  // model_abstract_states_.
   GeometryState<T>* initial_state_{};
+  SceneGraphInspector<T> model_inspector_;
 
   // TODO(SeanCurtis-TRI): Get rid of this.
   mutable bool context_has_been_allocated_{false};

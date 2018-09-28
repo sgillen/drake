@@ -98,9 +98,9 @@ class Sample final : public drake::systems::BasicVector<T> {
   }
 
   /// Returns whether the current values of this vector are well-formed.
-  drake::Bool<T> IsValid() const {
+  drake::boolean<T> IsValid() const {
     using std::isnan;
-    auto result = (T(0) == T(0));
+    drake::boolean<T> result{true};
     result = result && !isnan(x());
     result = result && (x() >= T(0.0));
     result = result && !isnan(two_word());

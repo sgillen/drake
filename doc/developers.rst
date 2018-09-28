@@ -80,11 +80,11 @@ supported for CMake builds using the "Unix Makefiles" generator.
 | Operating System            | Build System    | C/C++ Compiler     | Java       | MATLAB (Optional) | Python |
 +=============================+=================+====================+============+===================+========+
 +-----------------------------+-----------------+--------------------+------------+-------------------+--------+
-| Ubuntu 16.04 LTS ("Xenial") | | Bazel 0.12.0  | | Clang 4.0        | OpenJDK 8  | R2017a            | 2.7.11 |
+| Ubuntu 16.04 LTS ("Xenial") | | Bazel 0.16.1  | | Clang 4.0        | OpenJDK 8  | R2017a            | 2.7.11 |
 |                             | | CMake 3.5.1   | | GCC 5.4          |            |                   |        |
 +-----------------------------+-----------------+--------------------+------------+                   +--------+
-| macOS 10.12 ("Sierra")      | | Bazel 0.12.0  | Apple Clang 9.0.0  | Oracle 1.8 |                   | 2.7.14 |
-+-----------------------------+ | CMake 3.11.0  |                    |            +-------------------+        |
+| macOS 10.12 ("Sierra")      | | Bazel 0.16.1  | Apple Clang 9.0.0  | Oracle 10  |                   | 2.7.15 |
++-----------------------------+ | CMake 3.12.1  |                    |            +-------------------+        |
 | macOS 10.13 ("High Sierra") |                 |                    |            | R2017b            |        |
 +-----------------------------+-----------------+--------------------+------------+-------------------+--------+
 
@@ -169,7 +169,6 @@ make the review faster.
 - @EricCousineau-TRI (Toyota Research Institute)
 - @ggould-tri (Toyota Research Institute)
 - @jwnimmer-tri (Toyota Research Institute)
-- @psiorx (MIT)
 - @sammy-tri (Toyota Research Institute)
 - @SeanCurtis-TRI (Toyota Research Institute)
 - @sherm1 (Toyota Research Institute)

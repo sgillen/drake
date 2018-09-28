@@ -1,16 +1,22 @@
 #include "drake/geometry/geometry_visualization.h"
 
+#include <memory>
 #include <string>
 #include <vector>
 
 #include "drake/common/drake_copyable.h"
+#include "drake/common/never_destroyed.h"
 #include "drake/geometry/geometry_state.h"
 #include "drake/geometry/internal_geometry.h"
 #include "drake/geometry/scene_graph.h"
 #include "drake/geometry/shape_specification.h"
 #include "drake/lcm/drake_lcm.h"
+#include "drake/lcmt_viewer_draw.hpp"
 #include "drake/lcmt_viewer_geometry_data.hpp"
 #include "drake/math/rotation_matrix.h"
+#include "drake/systems/lcm/lcm_publisher_system.h"
+#include "drake/systems/lcm/serializer.h"
+#include "drake/systems/rendering/pose_bundle_to_draw_message.h"
 
 namespace drake {
 namespace geometry {
@@ -97,6 +103,16 @@ class ShapeToLcm : public ShapeReifier {
   }
 
   void ImplementGeometry(const Mesh& mesh, void*) override {
+    geometry_data_.type = geometry_data_.MESH;
+    geometry_data_.num_float_data = 3;
+    geometry_data_.float_data.push_back(static_cast<float>(mesh.scale()));
+    geometry_data_.float_data.push_back(static_cast<float>(mesh.scale()));
+    geometry_data_.float_data.push_back(static_cast<float>(mesh.scale()));
+    geometry_data_.string_data = mesh.filename();
+  }
+
+  // For visualization, Convex is the same as Mesh.
+  void ImplementGeometry(const Convex& mesh, void*) override {
     geometry_data_.type = geometry_data_.MESH;
     geometry_data_.num_float_data = 3;
     geometry_data_.float_data.push_back(static_cast<float>(mesh.scale()));
@@ -195,19 +211,53 @@ lcmt_viewer_load_robot GeometryVisualizationImpl::BuildLoadMessage(
 
 }  // namespace internal
 
-void DispatchLoadMessage(const GeometryState<double>& state) {
-  using lcm::DrakeLcm;
-
+// TODO(sherm1) Per Sean Curtis, the load message should take its geometry
+// from a Context rather than directly out of the SceneGraph. If geometry
+// has been added to the Context it won't be loaded here. A runtime
+// geometry change will likely require a geometry-changed event.
+void DispatchLoadMessage(const SceneGraph<double>& scene_graph,
+                         lcm::DrakeLcmInterface* lcm) {
   lcmt_viewer_load_robot message =
-      internal::GeometryVisualizationImpl::BuildLoadMessage(state);
+      internal::GeometryVisualizationImpl::BuildLoadMessage(
+          *scene_graph.initial_state_);
   // Send a load message.
-  DrakeLcm lcm;
-  Publish(&lcm, "DRAKE_VIEWER_LOAD_ROBOT", message);
+  Publish(lcm, "DRAKE_VIEWER_LOAD_ROBOT", message);
 }
 
-void DispatchLoadMessage(const SceneGraph<double>& scene_graph) {
-  scene_graph.ThrowIfContextAllocated("DisplatchLoadMessage");
-  DispatchLoadMessage(*scene_graph.initial_state_);
+void ConnectDrakeVisualizer(systems::DiagramBuilder<double>* builder,
+                            const SceneGraph<double>& scene_graph,
+                            lcm::DrakeLcmInterface* lcm_optional) {
+  using systems::lcm::LcmPublisherSystem;
+  using systems::lcm::Serializer;
+  using systems::rendering::PoseBundleToDrawMessage;
+
+  DRAKE_DEMAND(builder != nullptr);
+
+  PoseBundleToDrawMessage* converter =
+      builder->template AddSystem<PoseBundleToDrawMessage>();
+
+  LcmPublisherSystem* publisher =
+      builder->template AddSystem<LcmPublisherSystem>(
+          "DRAKE_VIEWER_DRAW",
+          std::make_unique<Serializer<drake::lcmt_viewer_draw>>(),
+          lcm_optional);
+  publisher->set_publish_period(1 / 60.0);
+
+  // The functor we create in publisher here holds a reference to scene_graph,
+  // which must therefore live as long as publisher does. We can count on that
+  // because scene_graph is required to be contained in builder (see method
+  // documentation), along with the converter and publisher we just added.
+  // Builder will transfer ownership of all of these objects to the Diagram it
+  // eventually builds.
+  publisher->AddInitializationMessage([&scene_graph](
+      const systems::Context<double>&, lcm::DrakeLcmInterface* lcm) {
+    DispatchLoadMessage(scene_graph, lcm);
+  });
+
+  // Note that this will fail if scene_graph is not actually in builder.
+  builder->Connect(scene_graph.get_pose_bundle_output_port(),
+                   converter->get_input_port(0));
+  builder->Connect(*converter, *publisher);
 }
 
 }  // namespace geometry

@@ -32,15 +32,31 @@ drake_py_library(
 )
 
 drake_pybind_library(
+    name = "benchmarks_py",
+    cc_so_name = "benchmarks",
+    cc_srcs = ["benchmarks_py.cc"],
+    package_info = PACKAGE_INFO,
+    py_deps = [
+        ":module_py",
+        ":multibody_tree_py",
+    ],
+)
+
+drake_pybind_library(
     name = "multibody_tree_py",
     cc_deps = [
+        "//bindings/pydrake/util:deprecation_pybind",
+        "//bindings/pydrake/util:drake_optional_pybind",
         "//bindings/pydrake/util:eigen_geometry_pybind",
+        "//bindings/pydrake/util:type_safe_index_pybind",
     ],
     cc_so_name = "multibody_tree",
     cc_srcs = ["multibody_tree_py.cc"],
     package_info = PACKAGE_INFO,
     py_deps = [
         ":module_py",
+        "//bindings/pydrake:geometry_py",
+        "//bindings/pydrake/systems:framework_py",
         "//bindings/pydrake/util:eigen_geometry_py",
     ],
 )
@@ -141,8 +157,25 @@ drake_pybind_library(
     ],
 )
 
+drake_pybind_library(
+    name = "inverse_kinematics_py",
+    cc_deps = [
+        "//bindings/pydrake:symbolic_types_pybind",
+    ],
+    cc_so_name = "inverse_kinematics",
+    cc_srcs = ["inverse_kinematics_py.cc"],
+    package_info = PACKAGE_INFO,
+    py_deps = [
+        ":module_py",
+        ":multibody_tree_py",
+        "//bindings/pydrake/solvers:mathematicalprogram_py",
+    ],
+)
+
 PY_LIBRARIES_WITH_INSTALL = [
+    ":benchmarks_py",
     ":collision_py",
+    ":inverse_kinematics_py",
     ":joints_py",
     ":multibody_tree_py",
     ":parsers_py",
@@ -176,6 +209,13 @@ install(
     deps = get_drake_py_installs(PY_LIBRARIES_WITH_INSTALL),
 )
 
+filegroup(
+    name = "models",
+    srcs = glob([
+        "**/*.sdf",
+    ]),
+)
+
 drake_py_unittest(
     name = "rigid_body_plant_test",
     data = ["//examples/pendulum:models"],
@@ -197,6 +237,7 @@ drake_py_unittest(
     data = [
         "//examples/atlas:models",
         "//examples/pendulum:models",
+        "//examples/simple_four_bar:models",
     ],
     deps = [":rigid_body_tree_py"],
 )
@@ -216,8 +257,26 @@ drake_py_unittest(
 
 drake_py_unittest(
     name = "multibody_tree_test",
+    data = [
+        "//examples/double_pendulum:models",
+        "//manipulation/models/iiwa_description:models",
+        "//manipulation/models/wsg_50_description:models",
+        "//multibody/benchmarks/acrobot:models",
+    ],
     deps = [
+        ":benchmarks_py",
         ":multibody_tree_py",
+    ],
+)
+
+drake_py_unittest(
+    name = "inverse_kinematics_test",
+    data = [
+        ":models",
+    ],
+    deps = [
+        ":benchmarks_py",
+        ":inverse_kinematics_py",
     ],
 )
 

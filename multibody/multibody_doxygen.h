@@ -5,8 +5,20 @@
 // For example, to link to the notation group: @ref multibody_notation
 // To link to the Spatial Inertia discussion: @ref multibody_spatial_inertia.
 
+
 //------------------------------------------------------------------------------
-/** @defgroup multibody_concepts Multibody Dynamics Concepts
+// TODO(sherm1) Change Collision Concepts title here when #9467 is fixed.
+/** @addtogroup multibody Multibody Dynamics
+  @{
+    @ingroup algorithms
+    @defgroup multibody_concepts Multibody Dynamics Concepts
+    @defgroup collision_concepts Collision Concepts (RigidBodyPlant only)
+  @}
+ */
+
+//------------------------------------------------------------------------------
+/** @addtogroup multibody_concepts
+@{
 
 Translating from the mathematics of multibody mechanics to correct code is a
 difficult process and requires careful discipline to ensure that the resulting
@@ -35,19 +47,26 @@ is included in the external documentation.
 @warning Drake is under development and these concepts have not yet been
 adopted consistently throughout the code. New code uses these concepts and
 older code will be retrofitted over time. The documentation here applies to
-the new `MultibodyTree` family of classes; there are some differences from the
-earlier `RigidBodyTree` family.
+the new @ref drake::multibody::MultibodyTree "MultibodyTree "/
+@ref drake::multibody::multibody_plant::MultibodyPlant "MultibodyPlant"
+family of classes; there are some differences from the earlier `RigidBodyTree`
+family.
 
 <em><b>Developers</b>: you can link directly to specific discussion topics here
 from your Doxygen comments; instructions are at the top of the source file used
 to generate them.</em>
 
 Next topic: @ref multibody_notation
+
+  @defgroup multibody_notation Terminology and Notation
+  @defgroup multibody_spatial_algebra Spatial Algebra
+  @defgroup constraint_overview Multibody dynamics constraints
+@}
 **/
 
 
 //------------------------------------------------------------------------------
-/** @defgroup multibody_notation Terminology and Notation
+/** @addtogroup multibody_notation
 @ingroup multibody_concepts
 
 Drake uses consistent terminology and notation for multibody mechanics
@@ -405,7 +424,7 @@ Next topic: @ref multibody_spatial_algebra
 **/
 
 //------------------------------------------------------------------------------
-/** @defgroup multibody_spatial_algebra Spatial Algebra
+/** @addtogroup multibody_spatial_algebra
 @ingroup multibody_concepts
 
 Multibody dynamics involves both rotational and translational quantities, for

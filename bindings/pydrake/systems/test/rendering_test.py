@@ -35,7 +35,7 @@ class TestRendering(unittest.TestCase):
         self.assertTrue(isinstance(value, BasicVector))
         self.assertTrue(isinstance(copy.copy(value), PoseVector))
         self.assertTrue(isinstance(value.Clone(), PoseVector))
-        self.assertEquals(value.size(), PoseVector.kSize)
+        self.assertEqual(value.size(), PoseVector.kSize)
         # - Accessors.
         self.assertTrue(isinstance(
             value.get_isometry(), Isometry3))
@@ -68,7 +68,7 @@ class TestRendering(unittest.TestCase):
         self.assertTrue(isinstance(frame_velocity, BasicVector))
         self.assertTrue(isinstance(copy.copy(frame_velocity), FrameVelocity))
         self.assertTrue(isinstance(frame_velocity.Clone(), FrameVelocity))
-        self.assertEquals(frame_velocity.size(), FrameVelocity.kSize)
+        self.assertEqual(frame_velocity.size(), FrameVelocity.kSize)
         # - Accessors.
         self.assertTrue(isinstance(
             frame_velocity.get_velocity(), SpatialVelocity))
@@ -134,12 +134,12 @@ class TestRendering(unittest.TestCase):
         instance_id2 = 42  # Supply another random, but unique, id.
         ports2 = aggregator.AddSinglePoseAndVelocityInput(
             "pose_and_velocity", instance_id2)
-        self.assertEqual(ports2.pose_descriptor.get_data_type(),
+        self.assertEqual(ports2.pose_input_port.get_data_type(),
                          PortDataType.kVectorValued)
-        self.assertEqual(ports2.pose_descriptor.size(), PoseVector.kSize)
-        self.assertEqual(ports2.velocity_descriptor.get_data_type(),
+        self.assertEqual(ports2.pose_input_port.size(), PoseVector.kSize)
+        self.assertEqual(ports2.velocity_input_port.get_data_type(),
                          PortDataType.kVectorValued)
-        self.assertEqual(ports2.velocity_descriptor.size(),
+        self.assertEqual(ports2.velocity_input_port.size(),
                          FrameVelocity.kSize)
         num_poses = 1
         port3 = aggregator.AddBundleInput("pose_bundle", num_poses)
@@ -147,7 +147,7 @@ class TestRendering(unittest.TestCase):
 
         # - CalcOutput.
         context = aggregator.CreateDefaultContext()
-        output = aggregator.AllocateOutput(context)
+        output = aggregator.AllocateOutput()
 
         p1 = [0, 1, 2]
         pose1 = PoseVector()
