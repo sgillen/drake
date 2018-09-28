@@ -9,7 +9,7 @@ load(
     "get_pybind_package_info",
 )
 load(
-    "//tools:drake.bzl",
+    "@drake//tools/skylark:drake_cc.bzl",
     "drake_cc_library",
 )
 load(
@@ -36,7 +36,7 @@ drake_py_library(
     srcs = ["__init__.py"],
     imports = PACKAGE_INFO.py_imports,
     deps = [
-        "//bindings/pydrake:common_py",
+        "//bindings/pydrake:module_py",
     ],
 )
 
@@ -156,10 +156,10 @@ drake_pybind_library(
 drake_pybind_library(
     name = "sensors_py",
     cc_deps = [
-        "//bindings/pydrake/systems:systems_pybind",
         "//bindings/pydrake/common:cpp_template_pybind",
         "//bindings/pydrake/common:eigen_geometry_pybind",
         "//bindings/pydrake/common:eigen_pybind",
+        "//bindings/pydrake/systems:systems_pybind",
     ],
     cc_so_name = "sensors",
     cc_srcs = ["sensors_py.cc"],

@@ -60,12 +60,24 @@ class TestAll(unittest.TestCase):
 
         # Subset of symbols.
         expected_symbols = (
+            # __init__
+            "getDrakePath",
             # autodiffutils
             "AutoDiffXd",
             # automotive
             "SimpleCar",
             # common
+            # - __init__
             "AddResourceSearchPath",
+            # - compatibility
+            "maybe_patch_numpy_formatters",
+            # - containers
+            "EqualToDict",
+            # - deprecation
+            "DrakeDeprecationWarning",
+            # - eigen_geometry
+            "Isometry3",
+            "Quaternion",
             # forwarddiff
             "jacobian",
             "sin",
@@ -128,9 +140,6 @@ class TestAll(unittest.TestCase):
             "PoseVector",
             # - sensors
             "Image",
-            # util
-            "Isometry3",
-            "Quaternion",
         )
         # Ensure each symbol is exposed as globals from the above import
         # statement.

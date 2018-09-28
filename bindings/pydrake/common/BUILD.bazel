@@ -3,7 +3,7 @@
 load("@drake//tools/install:install.bzl", "install")
 load("//tools/lint:lint.bzl", "add_lint_tests")
 load(
-    "//tools:drake.bzl",
+    "@drake//tools/skylark:drake_cc.bzl",
     "drake_cc_googletest",
     "drake_cc_library",
 )
@@ -56,12 +56,14 @@ drake_cc_library(
 # `libdrake.so`.
 drake_pybind_library(
     name = "module_py",
-    cc_srcs = ["module_py.cc"],
     cc_so_name = "_module_py",
+    cc_srcs = ["module_py.cc"],
     package_info = PACKAGE_INFO,
     py_deps = [
         ":deprecation_py",
         "//bindings:bazel_workaround_4594_libdrake_py",
+        "//bindings/pydrake:_init_py",
+        # TODO(eric.cousineau): Simplify dependency for `pydrake:module_py`.
         # For backwards compatibility.
         "//bindings/pydrake/util:module_py",
     ],
@@ -76,7 +78,7 @@ drake_py_library(
     imports = PACKAGE_INFO.py_imports,
 )
 
-# N.B. Since `common_py` incorporates `deprecation_py`, C++ Python libraries
+# N.B. Since `module_py` incorporates `deprecation_py`, C++ Python libraries
 # need not worry about it.
 drake_cc_library(
     name = "deprecation_pybind",
@@ -123,7 +125,7 @@ drake_cc_library(
 
 drake_py_library(
     name = "cpp_param_py",
-    srcs = ["cpp_param.py"],
+    srcs = ["_cpp_param.py"],
     deps = [
         ":module_py",
     ],
@@ -131,7 +133,7 @@ drake_py_library(
 
 drake_py_library(
     name = "cpp_template_py",
-    srcs = ["cpp_template.py"],
+    srcs = ["_cpp_template.py"],
     deps = [
         ":cpp_param_py",
         ":module_py",
@@ -152,7 +154,7 @@ drake_cc_library(
 
 drake_py_library(
     name = "cpp_const_py",
-    srcs = ["cpp_const.py"],
+    srcs = ["_cpp_const.py"],
     deps = [
         ":module_py",
         "//bindings/pydrake/third_party:wrapt_py",
@@ -202,6 +204,7 @@ drake_py_library(
 
 PY_LIBRARIES_WITH_INSTALL = [
     ":eigen_geometry_py",
+    ":module_py",
 ]
 
 PY_LIBRARIES = [
@@ -211,7 +214,6 @@ PY_LIBRARIES = [
     ":cpp_param_py",
     ":cpp_template_py",
     ":deprecation_py",
-    ":module_py",
     ":pybind11_version_py",
 ]
 

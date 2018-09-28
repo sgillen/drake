@@ -3,7 +3,7 @@
 load("@drake//tools/install:install.bzl", "install")
 load("//tools/lint:lint.bzl", "add_lint_tests")
 load(
-    "//tools/skylark:drake_cc.bzl",
+    "@drake//tools/skylark:drake_cc.bzl",
     "drake_cc_googletest",
 )
 load(
@@ -15,6 +15,7 @@ load(
     "//tools/skylark:pybind.bzl",
     "get_pybind_package_info",
 )
+load(":build_macros.bzl", "util_cc_header_alias")
 
 package(default_visibility = [
     "//bindings/pydrake:__subpackages__",
@@ -24,18 +25,15 @@ package(default_visibility = [
 # bindings.
 PACKAGE_INFO = get_pybind_package_info("//bindings")
 
-PY_LIBRARIES = [
-    ":module_py",
-]
-
 # N.B. For simplicity, `common:module_py` will depend on this module.
 drake_py_library(
     name = "module_py",
-    srcs = ["__init__.py"],
+    srcs = [
+        "__init__.py",
+        "all.py",
+    ],
     visibility = ["//visibility:public"],
 )
-
-# TODO(eric.cousineau): Alias headers.
 
 # Roll-up alias.
 alias(
@@ -43,23 +41,45 @@ alias(
     actual = "//bindings/pydrake/common",
 )
 
+PY_LIBRARIES = [
+    ":module_py",
+]
+
+cc_header_alias_names = [
+    "cpp_param_pybind",
+    "cpp_template_pybind",
+    "deprecation_pybind",
+    "drake_optional_pybind",
+    "eigen_geometry_pybind",
+    "eigen_pybind",
+    "type_pack",
+    "type_safe_index_pybind",
+    "wrap_function",
+    "wrap_pybind",
+]
+
+[
+    util_cc_header_alias(name = name)
+    for name in cc_header_alias_names
+]
+
 install(
     name = "install",
-    targets = PY_LIBRARIES,
+    targets = PY_LIBRARIES + cc_header_alias_names,
     py_dest = PACKAGE_INFO.py_dest,
-    docs = ["wrapt/LICENSE"],
-    doc_dest = "share/doc",
 )
 
 drake_cc_googletest(
     name = "alias_cc_test",
-    # TODO(eric.cousineau): Fix this.
+    deps = cc_header_alias_names + [
+        "//:drake_shared_library",
+    ],
 )
 
 drake_py_test(
     name = "alias_py_test",
+    allow_import_unittest = True,
     deps = ["util"],
-    allow_import_unittest = True
 )
 
 add_lint_tests()

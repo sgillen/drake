@@ -1,4 +1,5 @@
-# Ensure we can import symbols from old paths.
+# Ensure we can import a subset of symbols from old paths.
+from pydrake.util.all import Quaternion
 from pydrake.util.compatibility import maybe_patch_numpy_formatters
 from pydrake.util.containers import EqualToDict
 from pydrake.util.cpp_const import ConstError

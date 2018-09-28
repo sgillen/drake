@@ -7,24 +7,24 @@
 #include "pybind11/pybind11.h"
 #include "pybind11/stl.h"
 
-#include "drake/bindings/pydrake/pydrake_pybind.h"
-// `GetPyTypes` is implemented specifically for `cpp_template`; to simplify
+// `GetPyTypes` is implemented specifically for `_cpp_template`; to simplify
 // dependencies, this is included transitively.
 #include "drake/bindings/pydrake/common/cpp_param_pybind.h"
+#include "drake/bindings/pydrake/pydrake_pybind.h"
 
 namespace drake {
 namespace pydrake {
 namespace internal {
 
-// C++ interface for `pydrake.common.cpp_template.get_or_init`.
+// C++ interface for `pydrake.common._cpp_template.get_or_init`.
 // Please see that function for common parameters.
-// @param template_cls_name Name of the template class in `cpp_template`,
+// @param template_cls_name Name of the template class in `_cpp_template`,
 // resolves to class to be passed as `template_cls`.
 inline py::object GetOrInitTemplate(
     py::handle scope, const std::string& name,
     const std::string& template_cls_name,
     py::tuple args = py::tuple(), py::dict kwargs = py::dict()) {
-  const char module_name[] = "pydrake.common.cpp_template";
+  const char module_name[] = "pydrake.common._cpp_template";
   py::handle m = py::module::import(module_name);
   return m.attr("get_or_init")(
       scope, name, m.attr(template_cls_name.c_str()), *args, **kwargs);

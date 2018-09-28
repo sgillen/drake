@@ -1,6 +1,6 @@
 import unittest
 
-import pydrake.common.cpp_const as cpp_const
+import pydrake.common._cpp_const as m
 
 
 # Not annotated.
@@ -19,7 +19,7 @@ class Basic(object):
 
 
 # Annotated.
-@cpp_const.const_decorated(owned_properties=['_values'])
+@m.const_decorated(owned_properties=['_values'])
 class Advanced(object):
     def __init__(self):
         self._values = {}
@@ -33,7 +33,7 @@ class Advanced(object):
     def get_values(self):
         return self._values
 
-    @cpp_const.mutable_method
+    @m.mutable_method
     def mutate(self): pass
 
     def mutate_indirect(self):
@@ -55,12 +55,12 @@ class AdvancedChild(Advanced):
 class TestCppConst(unittest.TestCase):
     def _ex(self):
         # Shorthand for testing for errors.
-        return self.assertRaises(cpp_const.ConstError)
+        return self.assertRaises(m.ConstError)
 
     def test_list(self):
         # List.
         x = [1, 2, 3, [10]]
-        x_const = cpp_const.to_const(x)
+        x_const = m.to_const(x)
         with self._ex():
             x_const[0] = 10
         with self._ex():
@@ -73,25 +73,25 @@ class TestCppConst(unittest.TestCase):
             x_const.pop()
         # N.B. Access does not propagate.
         for i in x_const:
-            self.assertFalse(cpp_const.is_const_test(i))
-        self.assertFalse(cpp_const.is_const_test(x_const[3]))
+            self.assertFalse(m.is_const_test(i))
+        self.assertFalse(m.is_const_test(x_const[3]))
 
     def test_dict(self):
         # Dictionary.
         d = {"a": 0, "b": 1, "z": [25]}
-        d_const = cpp_const.to_const(d)
+        d_const = m.to_const(d)
         self.assertEqual(d_const["a"], 0)
         with self._ex():
             d_const["c"] = 2
         with self._ex():
             d_const.clear()
         # N.B. Access does not implicitly propagate.
-        self.assertFalse(cpp_const.is_const_test(d_const["z"]))
+        self.assertFalse(m.is_const_test(d_const["z"]))
 
     def test_basic(self):
         # Basic class.
         obj = Basic("Tim")
-        obj_const = cpp_const.to_const(obj)
+        obj_const = m.to_const(obj)
         obj.new_attr = "Something"
         self.assertEqual(obj_const.get_name(), "Tim")
         self.assertEqual(obj_const.__dict__["_name"], "Tim")
@@ -106,15 +106,15 @@ class TestCppConst(unittest.TestCase):
         with self._ex():
             obj_const.new_attr = "Something Else"
         # N.B. Access does not implicitly propagate.
-        self.assertFalse(cpp_const.is_const_test(obj_const.value))
+        self.assertFalse(m.is_const_test(obj_const.value))
 
     def test_advanced(self):
         obj = Advanced()
         obj.add("a", 0)
         obj.add("b", 1)
         obj.add("z", [10])
-        obj_const = cpp_const.to_const(obj)
-        self.assertTrue(cpp_const.is_const_test(obj_const.get_values()))
+        obj_const = m.to_const(obj)
+        self.assertTrue(m.is_const_test(obj_const.get_values()))
         self.assertEqual(obj_const.get("a"), 0)
         with self._ex():
             obj_const.add("c", 2)
@@ -125,14 +125,14 @@ class TestCppConst(unittest.TestCase):
         with self._ex():
             obj_const.mutate_indirect()
         # N.B. Access does not implicitly propagate.
-        self.assertFalse(cpp_const.is_const_test(obj_const.get("z")))
+        self.assertFalse(m.is_const_test(obj_const.get("z")))
         self.assertFalse(
-            cpp_const.is_const_test(obj_const.__dict__["_values"]))
+            m.is_const_test(obj_const.__dict__["_values"]))
 
     def test_child(self):
         obj = AdvancedChild()
         obj.add("a", 0)
-        obj_const = cpp_const.to_const(obj)
+        obj_const = m.to_const(obj)
         self.assertEqual(obj_const.const_safe("a"), 0)
         with self._ex():
             obj_const.const_unsafe("a")

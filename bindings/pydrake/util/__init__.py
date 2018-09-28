@@ -1,29 +1,25 @@
-# Expose all modules at the time of transition.
-# TODO(eric.cousineau): Add deprecation message.
+"""
+Backwards compatibility for symbols moved to `pydrake.common`.
+"""
+import importlib
 import sys
 
-from pydrake.common import (
-    compatibility,
-    containers,
-    cpp_const,
-    cpp_param,
-    cpp_template,
-    deprecation,
-    eigen_geometry,
-)
+# TODO(eric.cousineau): Add deprecation message on 2018/11/01.
 
-def _alias_modules(names):
-    # Alias registered modules.
-    for name in names:
-        m = globals()[name]
-        sys.modules["pydrake.util." + name] = m
 
-_alias_modules([
-    "compatibility",
-    "containers",
-    "cpp_const",
-    "cpp_param",
-    "cpp_template",
-    "deprecation",
-    "eigen_geometry",
-])
+def _alias(new, old=None):
+    if old is None:
+        old = new
+    m = importlib.import_module("pydrake.common." + new)
+    sys.modules["pydrake.util." + old] = m
+
+
+__all__ = []
+
+_alias("compatibility")
+_alias("containers")
+_alias("_cpp_const", "cpp_const")
+_alias("_cpp_param", "cpp_param")
+_alias("_cpp_template", "cpp_template")
+_alias("deprecation")
+_alias("eigen_geometry")

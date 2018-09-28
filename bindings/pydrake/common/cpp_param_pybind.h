@@ -9,14 +9,14 @@
 
 #include "pybind11/pybind11.h"
 
-#include "drake/bindings/pydrake/pydrake_pybind.h"
 #include "drake/bindings/pydrake/common/type_pack.h"
+#include "drake/bindings/pydrake/pydrake_pybind.h"
 
 namespace drake {
 namespace pydrake {
 namespace internal {
 
-// Gets singleton for type aliases from `cpp_param`.
+// Gets singleton for type aliases from `_cpp_param`.
 py::object GetParamAliases();
 
 // Gets Python type object given `std::type_info`.

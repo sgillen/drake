@@ -21,16 +21,20 @@ import warnings
 # TODO(eric.cousineau): Make autocomplete ignore `ModuleShim` attributes
 # (e.g. `install`).
 
+__all__ = [
+    "DrakeDeprecationWarning",
+    "deprecated",
+    "install_numpy_warning_filters",
+]
+
 
 class ModuleShim(object):
-    """Provides a shim for automatically resolving extra variables.
-
-    This can be used to deprecate import alias in modules to simplify
-    dependencies.
-
-    @see https://stackoverflow.com/a/7668273/7829525
-    """
-
+    # @note This is not included in `__all__`, and is not intended to be a
+    # public symbol!
+    # Provides a shim for automatically resolving extra variables.
+    # This can be used to deprecate import alias in modules to simplify
+    # dependencies.
+    # @see https://stackoverflow.com/a/7668273/7829525
     def __init__(self, orig_module, handler):
         assert hasattr(orig_module, "__all__"), (
             "Please define `__all__` for this module.")
@@ -154,10 +158,10 @@ def deprecated(message):
 
 def install_numpy_warning_filters(force=False):
     """Install warnings filters specific to NumPy."""
-    global installed_numpy_warning_filters
-    if installed_numpy_warning_filters and not force:
+    global _installed_numpy_warning_filters
+    if _installed_numpy_warning_filters and not force:
         return
-    installed_numpy_warning_filters = True
+    _installed_numpy_warning_filters = True
     # Warnings specific to comparison with `dtype=object` should be raised to
     # errors (#8315, #8491). Without them, NumPy will return effectively
     # garbage values (e.g. comparison based on object ID): either a scalar bool
@@ -174,4 +178,4 @@ def install_numpy_warning_filters(force=False):
 
 
 warnings.simplefilter('once', DrakeDeprecationWarning)
-installed_numpy_warning_filters = False
+_installed_numpy_warning_filters = False

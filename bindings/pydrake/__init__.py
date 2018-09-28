@@ -23,7 +23,7 @@ except ImportError:
 # We specifically load `common` prior to loading any other pydrake modules,
 # in order to get assertion configuration done as early as possible.
 from . import common
-from .util.deprecation import ModuleShim
+from .common.deprecation import ModuleShim
 
 
 def getDrakePath():

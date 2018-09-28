@@ -1,7 +1,13 @@
 from pydrake.multibody import inverse_kinematics as ik
 
 import math
+import unittest
 
+import numpy as np
+
+from pydrake.common import FindResourceOrThrow
+from pydrake.common.eigen_geometry import Quaternion, AngleAxis
+from pydrake.math import RotationMatrix
 from pydrake.multibody.multibody_tree.multibody_plant import MultibodyPlant
 from pydrake.multibody.multibody_tree.parsing import (
     AddModelFromSdfFile,
@@ -9,13 +15,7 @@ from pydrake.multibody.multibody_tree.parsing import (
 from pydrake.multibody.benchmarks.acrobot import (
     MakeAcrobotPlant,
 )
-import unittest
 import pydrake.solvers.mathematicalprogram as mp
-import pydrake.math
-import numpy as np
-
-from pydrake.common import FindResourceOrThrow
-from pydrake.common.eigen_geometry import Quaternion, AngleAxis
 
 
 class TestInverseKinematics(unittest.TestCase):
@@ -89,9 +89,9 @@ class TestInverseKinematics(unittest.TestCase):
 
     def test_AddOrientationConstraint(self):
         theta_bound = 0.2 * math.pi
-        R_AbarA = pydrake.math.RotationMatrix(
+        R_AbarA = RotationMatrix(
             quaternion=Quaternion(0.5, -0.5, 0.5, 0.5))
-        R_BbarB = pydrake.math.RotationMatrix(
+        R_BbarB = RotationMatrix(
             quaternion=Quaternion(1.0 / 3, 2.0 / 3, 0, 2.0 / 3))
         self.ik_two_bodies.AddOrientationConstraint(
             frameAbar=self.body1_frame, R_AbarA=R_AbarA,

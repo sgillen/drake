@@ -2,11 +2,11 @@
 #include "pybind11/eval.h"
 #include "pybind11/pybind11.h"
 
-#include "drake/bindings/pydrake/pydrake_pybind.h"
 #include "drake/bindings/pydrake/common/deprecation_pybind.h"
 #include "drake/bindings/pydrake/common/drake_optional_pybind.h"
 #include "drake/bindings/pydrake/common/eigen_geometry_pybind.h"
 #include "drake/bindings/pydrake/common/type_safe_index_pybind.h"
+#include "drake/bindings/pydrake/pydrake_pybind.h"
 #include "drake/multibody/multibody_tree/joints/prismatic_joint.h"
 #include "drake/multibody/multibody_tree/joints/revolute_joint.h"
 #include "drake/multibody/multibody_tree/joints/weld_joint.h"

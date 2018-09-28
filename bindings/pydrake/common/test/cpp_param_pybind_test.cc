@@ -1,7 +1,7 @@
 #include "drake/bindings/pydrake/common/cpp_param_pybind.h"
 
 // @file
-// Tests the public interfaces in `cpp_param.py` and `cpp_param_pybind.h`.
+// Tests the public interfaces in `_cpp_param.py` and `cpp_param_pybind.h`.
 
 #include <stdexcept>
 #include <string>

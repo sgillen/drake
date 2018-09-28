@@ -1,7 +1,7 @@
 from __future__ import print_function
 
 """
-Tests the pure Python functionality of `cpp_param`: (a) idempotent mapping for
+Tests the pure Python functionality of `_cpp_param`: (a) idempotent mapping for
 unaliased types, and (b) correct mapping for aliased types (as the aliases
 relate in C++).
 
@@ -14,7 +14,7 @@ import ctypes
 import numpy as np
 
 
-from pydrake.common.cpp_param import get_param_canonical, get_param_names
+from pydrake.common._cpp_param import get_param_canonical, get_param_names
 
 
 class CustomPyType(object):
@@ -57,7 +57,7 @@ class TestCppParam(unittest.TestCase):
 
     def test_aliases(self):
         # Aliases:
-        # This follows the ordering in `cpp_param.py`,
+        # This follows the ordering in `_cpp_param.py`,
         # `_ParamAliases._register_common`.
         self._check_aliases(float, [np.double, ctypes.c_double])
         self._check_aliases(np.float32, [ctypes.c_float])

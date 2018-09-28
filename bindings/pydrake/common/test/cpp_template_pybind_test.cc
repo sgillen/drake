@@ -1,7 +1,7 @@
 #include "drake/bindings/pydrake/common/cpp_template_pybind.h"
 
 // @file
-// Tests the public interfaces in `cpp_template.py` and
+// Tests the public interfaces in `_cpp_template.py` and
 // `cpp_template_pybind.h`.
 
 #include <string>
