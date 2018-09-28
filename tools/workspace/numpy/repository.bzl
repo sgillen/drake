@@ -33,7 +33,7 @@ load("@drake//tools/workspace:os.bzl", "determine_os")
 def _get_url(platform):
     git_ref = "6721890"
     base_format = "https://github.com/EricCousineau-TRI/experimental/raw/6109720315a1efae945fc6fa1227200b9f7782a2/numpy/numpy-1.15.0.dev0%2B{git_ref}-cp27-{platform}.whl"  # noqa
-    return base_format.format(git_ref=git_ref, platform=platform)
+    return base_format.format(git_ref = git_ref, platform = platform)
 
 wheels = {
     "ubuntu_16.04": {
@@ -77,7 +77,8 @@ def _impl(repository_ctx):
     )
     repository_ctx.symlink(
         Label("@drake//tools/workspace/numpy:package.BUILD.bazel"),
-        "BUILD.bazel")
+        "BUILD.bazel",
+    )
 
 numpy_py_repository = repository_rule(
     _impl,
