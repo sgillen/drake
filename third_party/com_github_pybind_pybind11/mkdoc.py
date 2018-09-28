@@ -374,12 +374,13 @@ def print_symbols(name, leaf, level=0):
             name_var = "ctor"
 
     name_var = sanitize_name(name_var)
+    # We may get empty symbols if `libclang` produces warnings.
+    assert len(name_var) > 0
     iprint('// Symbol: {}'.format(full_name))
     modifier = ""
     if level == 0:
         modifier = "constexpr "
     iprint('{}struct /* {} */ {{'.format(modifier, name_var))
-    iprint('')
     # Print documentation items.
     symbol_iter = sorted(leaf.doc_symbols, key=Symbol.sorting_key)
     for i, symbol in enumerate(symbol_iter):
@@ -393,14 +394,12 @@ def print_symbols(name, leaf, level=0):
         iprint('  // Source: {}:{}'.format(symbol.include, symbol.line))
         iprint('  const char* {} ={}R"""({})""";'.format(
             doc_var, delim, symbol.comment))
-        iprint('')
     # Recurse into child elements.
     keys = sorted(leaf.children_map.keys())
     for key in keys:
         child = leaf.children_map[key]
         print_symbols(key, child, level=level + 1)
     iprint('}} {};'.format(name_var))
-    iprint('')
 
 
 def drake_genfile_path_to_include_path(filename):
