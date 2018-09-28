@@ -89,15 +89,15 @@ def utf8(s):
 
 
 class Symbol(object):
-    def __init__(self, node, name, include, line, comment):
+    def __init__(self, node, name_chain, include, line, comment):
         self.node = node
-        self.name = name
+        self.name_chain = name_chain
         self.include = include
         self.line = line
         self.comment = comment
 
     def sorting_key(self):
-        return (self.name, self.include, self.line)
+        return (self.name_chain, self.include, self.line)
 
 
 def eprint(*args):
@@ -272,14 +272,14 @@ def get_name_chain(node):
     """
     Extracts the pieces for a namespace-qualified name for a symbol.
     """
-    name = [utf8(node.spelling)]
+    name_chain = [utf8(node.spelling)]
     p = node.semantic_parent
     while p.kind != CursorKind.TRANSLATION_UNIT:
         piece = utf8(p.spelling)  # Pass-through for anonymous structs.
         if len(piece) > 0:
-            name.insert(0, piece)
+            name_chain.insert(0, piece)
         p = p.semantic_parent
-    return tuple(name)
+    return tuple(name_chain)
 
 
 class SymbolTree(object):
@@ -291,15 +291,20 @@ class SymbolTree(object):
     def __init__(self):
         self.root = SymbolTree.Leaf()
 
-    def append(self, symbol):
+    def get_leaf(self, name_chain):
+        """Gets leaf for a name chain, creating a fresh node if necessary."""
         leaf = self.root
-        for piece in symbol.name:
+        for piece in name_chain:
             leaf = leaf.get_child(piece)
-        leaf.symbols.append(symbol)
+        return leaf
 
     class Leaf(object):
+        """Leaf for a given name chain."""
         def __init__(self):
-            self.symbols = []
+            # Should be non-None for non-root items.
+            self.first_symbol = None
+            # May be empty if no documented symbols are present.
+            self.doc_symbols = []
             self.children_map = defaultdict(SymbolTree.Leaf)
 
         def get_child(self, piece):
@@ -317,21 +322,34 @@ def extract(include_map, node, output):
     assert node.location.file is not None
     filename = utf8(node.location.file.name)
     include = include_map.get(filename)
+    line = node.location.line
     if include is None:
         return
     if not is_accepted_symbol(node):
         return
+    name_chain = None
+
+    def get_leaf():
+        name_chain = get_name_chain(node)
+        leaf = output.get_leaf(name_chain)
+        if leaf.first_symbol is None:
+            leaf.first_symbol = Symbol(node, name_chain, include, line, None)
+        return name_chain, leaf
+
     if node.kind in RECURSE_LIST:
+        if name_chain is None:
+            name_chain, leaf = get_leaf()
         for i in node.get_children():
             extract(include_map, i, output)
     if node.kind in PRINT_LIST:
+        if name_chain is None:
+            name_chain, leaf = get_leaf()
         if len(node.spelling) > 0:
             comment = utf8(
                 node.raw_comment) if node.raw_comment is not None else ''
             comment = process_comment(comment)
-            name = get_name_chain(node)
-            line = node.location.line
-            output.append(Symbol(node, name, include, line, comment))
+            symbol = Symbol(node, name_chain, include, line, comment)
+            leaf.doc_symbols.append(symbol)
 
 
 def print_symbols(name, leaf, level=0):
@@ -343,45 +361,45 @@ def print_symbols(name, leaf, level=0):
     def iprint(s):
         return print((indent + s).rstrip())
 
-    if len(leaf.symbols) == 0:
-        # TODO(eric.cousineau): Store non-documented instance for namespaces,
-        # so we get the full name.
+    name_var = name
+    if not leaf.first_symbol:
+        assert level == 0
         full_name = name
     else:
-        top = leaf.symbols[0]
-        full_pieces = top.name
-        assert name == full_pieces[-1]
-        full_name = "::".join(full_pieces)
+        name_chain = leaf.first_symbol.name_chain
+        assert name == name_chain[-1]
+        full_name = "::".join(name_chain)
         # Override variable.
-        if top.node.kind == CursorKind.CONSTRUCTOR:
-            name = "ctor"
-    name = sanitize_name(name)
-    iprint('// {}'.format(full_name))
+        if leaf.first_symbol.node.kind == CursorKind.CONSTRUCTOR:
+            name_var = "ctor"
+
+    name_var = sanitize_name(name_var)
+    iprint('// Symbol: {}'.format(full_name))
     modifier = ""
     if level == 0:
         modifier = "constexpr "
-    iprint('{}struct /* {} */ {{'.format(modifier, name))
+    iprint('{}struct /* {} */ {{'.format(modifier, name_var))
     iprint('')
     # Print documentation items.
-    symbol_iter = sorted(leaf.symbols, key=Symbol.sorting_key)
+    symbol_iter = sorted(leaf.doc_symbols, key=Symbol.sorting_key)
     for i, symbol in enumerate(symbol_iter):
-        assert full_pieces == symbol.name
-        var = "doc"
+        assert name_chain == symbol.name_chain
+        doc_var = "doc"
         if i > 0:
-            var += "_{}".format(i + 1)
+            doc_var += "_{}".format(i + 1)
         delim = "\n"
         if "\n" not in symbol.comment and len(symbol.comment) < 40:
             delim = " "
-        iprint('  // {}:{}'.format(symbol.include, symbol.line))
-        iprint('  const char* {} ={}R"""({})""";'.format(var, delim,
-                                                         symbol.comment))
+        iprint('  // Source: {}:{}'.format(symbol.include, symbol.line))
+        iprint('  const char* {} ={}R"""({})""";'.format(
+            doc_var, delim, symbol.comment))
         iprint('')
     # Recurse into child elements.
     keys = sorted(leaf.children_map.keys())
     for key in keys:
         child = leaf.children_map[key]
         print_symbols(key, child, level=level + 1)
-    iprint('}} {};'.format(name))
+    iprint('}} {};'.format(name_var))
     iprint('')
 
 
@@ -507,7 +525,7 @@ def main():
 #if defined(__GNUG__)
 #pragma GCC diagnostic pop
 #endif
-''')
+'''.rstrip())
 
 
 if __name__ == '__main__':
