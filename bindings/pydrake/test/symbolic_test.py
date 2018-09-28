@@ -107,7 +107,7 @@ class TestSymbolicVariable(SymbolicTestCase):
         self.assertEqualStructure((x > 1), "(x > 1)")
         self.assertEqualStructure((x <= 1), "(x <= 1)")
         self.assertEqualStructure((x < 1), "(x < 1)")
-        self.assertEqualStructure((x == 1), "(x = 1)")
+        self.assertEqualStructure((x == 1), "(x == 1)")
         self.assertEqualStructure((x != 1), "(x != 1)")
 
         # float rop Variable
@@ -115,7 +115,7 @@ class TestSymbolicVariable(SymbolicTestCase):
         self.assertEqualStructure((1 <= y), "(y >= 1)")
         self.assertEqualStructure((1 > y), "(y < 1)")
         self.assertEqualStructure((1 >= y), "(y <= 1)")
-        self.assertEqualStructure((1 == y), "(y = 1)")
+        self.assertEqualStructure((1 == y), "(y == 1)")
         self.assertEqualStructure((1 != y), "(y != 1)")
 
         # Variable rop Variable
@@ -123,7 +123,7 @@ class TestSymbolicVariable(SymbolicTestCase):
         self.assertEqualStructure((x <= y), "(x <= y)")
         self.assertEqualStructure((x > y), "(x > y)")
         self.assertEqualStructure((x >= y), "(x >= y)")
-        self.assertEqualStructure((x == y), "(x = y)")
+        self.assertEqualStructure((x == y), "(x == y)")
         self.assertEqualStructure((x != y), "(x != y)")
 
     def test_repr(self):
@@ -153,7 +153,7 @@ class TestSymbolicVariable(SymbolicTestCase):
         self.assertFalse(x.EqualTo(y))
 
     def test_logical(self):
-        self.assertEqualStructure((sym.logical_not(x == 0)), "!((x = 0))")
+        self.assertEqualStructure((sym.logical_not(x == 0)), "!((x == 0))")
         # Test single-operand logical statements
         self.assertEqualStructure((sym.logical_and(x >= 1)), "(x >= 1)")
         self.assertEqualStructure((sym.logical_or(x >= 1)), "(x >= 1)")
@@ -445,7 +445,7 @@ class TestSymbolicExpression(SymbolicTestCase):
         algebra.check_value((e_xv <= e_yv), "(x <= y)")
         algebra.check_value((e_xv > e_yv), "(x > y)")
         algebra.check_value((e_xv >= e_yv), "(x >= y)")
-        algebra.check_value((e_xv == e_yv), "(x = y)")
+        algebra.check_value((e_xv == e_yv), "(x == y)")
         algebra.check_value((e_xv != e_yv), "(x != y)")
 
         # Expression rop Variable
@@ -453,7 +453,7 @@ class TestSymbolicExpression(SymbolicTestCase):
         algebra.check_value((e_xv <= yv), "(x <= y)")
         algebra.check_value((e_xv > yv), "(x > y)")
         algebra.check_value((e_xv >= yv), "(x >= y)")
-        algebra.check_value((e_xv == yv), "(x = y)")
+        algebra.check_value((e_xv == yv), "(x == y)")
         algebra.check_value((e_xv != yv), "(x != y)")
 
         # Variable rop Expression
@@ -461,7 +461,7 @@ class TestSymbolicExpression(SymbolicTestCase):
         algebra.check_value((xv <= e_yv), "(x <= y)")
         algebra.check_value((xv > e_yv), "(x > y)")
         algebra.check_value((xv >= e_yv), "(x >= y)")
-        algebra.check_value((xv == e_yv), "(x = y)")
+        algebra.check_value((xv == e_yv), "(x == y)")
         algebra.check_value((xv != e_yv), "(x != y)")
 
         # Expression rop float
@@ -469,7 +469,7 @@ class TestSymbolicExpression(SymbolicTestCase):
         algebra.check_value((e_xv <= 1), "(x <= 1)")
         algebra.check_value((e_xv > 1), "(x > 1)")
         algebra.check_value((e_xv >= 1), "(x >= 1)")
-        algebra.check_value((e_xv == 1), "(x = 1)")
+        algebra.check_value((e_xv == 1), "(x == 1)")
         algebra.check_value((e_xv != 1), "(x != 1)")
 
         # float rop Expression
@@ -477,7 +477,7 @@ class TestSymbolicExpression(SymbolicTestCase):
         algebra.check_value((1 <= e_yv), "(y >= 1)")
         algebra.check_value((1 > e_yv), "(y < 1)")
         algebra.check_value((1 >= e_yv), "(y <= 1)")
-        algebra.check_value((1 == e_yv), "(y = 1)")
+        algebra.check_value((1 == e_yv), "(y == 1)")
         algebra.check_value((1 != e_yv), "(y != 1)")
         return xv, e_xv
 
@@ -571,11 +571,11 @@ class TestSymbolicExpression(SymbolicTestCase):
         e_yv = np.array([e_y, e_y])
         value = (e_xv == e_yv)
         self.assertEqual(value.dtype, sym.Formula)
-        self.assertEqualStructureArray(value, ["(x = y)", "(x = y)"])
+        self.assertEqualStructureArray(value, ["(x == y)", "(x == y)"])
         # - True + False.
         e_xyv = np.array([e_x, e_y])
         value = (e_xv == e_xyv)
-        self.assertEqualStructureArray(value, [sym.Formula.True(), "(x = y)"])
+        self.assertEqualStructureArray(value, [sym.Formula.True(), "(x == y)"])
         # - All true.
         value = (e_xv == e_xv)
         self.assertEqualStructureArray(value, ["True", "True"])

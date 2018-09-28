@@ -193,7 +193,7 @@ class TestValue(unittest.TestCase):
         params.set_abstract_parameters(
             params.get_abstract_parameters().Clone())
         # WARNING: This may invalidate old references!
-        params.SetFrom(copy.deepcopy(params))
+        params.CopyFrom(copy.deepcopy(params))
 
         # Test alternative constructors.
         ctor_test = [
