@@ -4,7 +4,6 @@ load("//tools/workspace:generate_file.bzl", "generate_file")
 load("@drake//tools/workspace:github.bzl", "github_archive")
 
 _REPOSITORY = "EricCousineau-TRI/pybind11"
-# _REPOSITORY = "RobotLocomotion/pybind11"
 
 _COMMIT = "3a4d863c255e7c92bfd9aa19124487b7a7ba7484"
 
@@ -16,7 +15,6 @@ def pybind11_repository(
     github_archive(
         name = name,
         repository = _REPOSITORY,
-        local_repository_override = "/home/eacousineau/proj/tri/repo/repro/externals/pybind11",  # noqa
         commit = _COMMIT,
         sha256 = _SHA256,
         build_file = "@drake//tools/workspace/pybind11:package.BUILD.bazel",
