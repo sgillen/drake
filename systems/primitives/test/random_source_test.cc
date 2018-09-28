@@ -148,13 +148,18 @@ GTEST_TEST(RandomSourceTest, AddToDiagramBuilderTest) {
   DiagramBuilder<double> builder;
 
   auto* sys1 = builder.AddSystem<TestSystem>();
-  sys1->DeclareInputPort(kVectorValued, 3, RandomDistribution::kUniform);
-  sys1->DeclareInputPort(kVectorValued, 2, RandomDistribution::kExponential);
+  sys1->DeclareInputPort("uniform", kVectorValued, 3,
+                         RandomDistribution::kUniform);
+  sys1->DeclareInputPort("exponential", kVectorValued, 2,
+                         RandomDistribution::kExponential);
 
   auto* sys2 = builder.AddSystem<TestSystem>();
-  sys2->DeclareInputPort(kVectorValued, 5, RandomDistribution::kGaussian);
-  sys2->DeclareInputPort(kVectorValued, 2, RandomDistribution::kExponential);
-  sys2->DeclareInputPort(kVectorValued, 1, RandomDistribution::kGaussian);
+  sys2->DeclareInputPort("gaussian", kVectorValued, 5,
+                         RandomDistribution::kGaussian);
+  sys2->DeclareInputPort("exponential", kVectorValued, 2,
+                         RandomDistribution::kExponential);
+  sys2->DeclareInputPort("scalar_gaussian", kVectorValued, 1,
+                         RandomDistribution::kGaussian);
 
   // Export input 1.
   builder.ExportInput(sys2->get_input_port(1));

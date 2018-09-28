@@ -14,6 +14,7 @@
 
 #include "drake/common/autodiff.h"
 #include "drake/common/drake_assert.h"
+#include "drake/common/drake_bool.h"
 #include "drake/common/drake_copyable.h"
 #include "drake/common/drake_optional.h"
 #include "drake/common/drake_throw.h"
@@ -1097,6 +1098,11 @@ class System : public SystemBase {
     return static_cast<int>(constraints_.size());
   }
 
+
+  /// Returns the dimension of the continuous state vector that has been
+  /// declared until now.
+  virtual int get_num_continuous_states() const = 0;
+
   /// Returns the constraint at index @p constraint_index.
   /// @throws std::out_of_range for an invalid constraint_index.
   const SystemConstraint<T>& get_constraint(
@@ -1114,18 +1120,22 @@ class System : public SystemBase {
   /// Returns true if @p context satisfies all of the registered
   /// SystemConstraints with tolerance @p tol.  @see
   /// SystemConstraint::CheckSatisfied.
-  bool CheckSystemConstraintsSatisfied(const Context<T> &context,
-                                       double tol) const {
+  boolean<T> CheckSystemConstraintsSatisfied(
+      const Context<T>& context, double tol) const {
     DRAKE_DEMAND(tol >= 0.0);
+    boolean<T> result{true};
     for (const auto& constraint : constraints_) {
-      if (!constraint->CheckSatisfied(context, tol)) {
+      result = result && constraint->CheckSatisfied(context, tol);
+      // If T is a real number (not a symbolic expression), we can bail out
+      // early with a diagnostic when the first constraint fails.
+      if (scalar_predicate<T>::is_bool && !result) {
         SPDLOG_DEBUG(drake::log(),
                      "Context fails to satisfy SystemConstraint {}",
                      constraint->description());
-        return false;
+        return result;
       }
     }
-    return true;
+    return result;
   }
 
   /// Checks that @p output is consistent with the number and size of output
@@ -1616,27 +1626,62 @@ class System : public SystemBase {
   }
 
   /// Adds a port with the specified @p type and @p size to the input topology.
+  ///
+  /// Input port names must be unique for this system (passing in a duplicate
+  /// @p name will throw std::logic_error). If @p name is given as
+  /// kUseDefaultName, then a default value of e.g. "u2", where 2
+  /// is the input number will be provided. An empty @p name is not permitted.
+  ///
   /// If the port is intended to model a random noise or disturbance input,
   /// @p random_type can (optionally) be used to label it as such; doing so
   /// enables algorithms for design and analysis (e.g. state estimation) to
   /// reason explicitly about randomness at the system level.  All random input
   /// ports are assumed to be statistically independent.
+  /// @pre @p name must not be empty.
+  /// @throws std::logic_error for a duplicate port name.
   /// @returns the declared port.
   const InputPort<T>& DeclareInputPort(
-      PortDataType type, int size,
+      std::string name, PortDataType type, int size,
       optional<RandomDistribution> random_type = nullopt) {
     const InputPortIndex port_index(get_num_input_ports());
+
     const DependencyTicket port_ticket(this->assign_next_dependency_ticket());
-    this->AddInputPort(
-        std::make_unique<InputPort<T>>(
-            port_index, port_ticket, type, size, random_type, this, this));
+    this->AddInputPort(std::make_unique<InputPort<T>>(
+        this, this, NextInputPortName(std::move(name)), port_index, port_ticket,
+        type, size, random_type));
     return get_input_port(port_index);
   }
 
   /// Adds an abstract-valued port to the input topology.
   /// @returns the declared port.
+  /// @see DeclareInputPort() for more information.
+  const InputPort<T>& DeclareAbstractInputPort(std::string name) {
+    return DeclareInputPort(std::move(name),
+                            kAbstractValued, 0 /* size */);
+  }
+  //@}
+
+  // =========================================================================
+  /// @name             To-be-deprecated declarations
+  /// Methods in this section leave out the port name parameter and are the same
+  /// as invoking the corresponding method with `kUseDefaultName` as the name.
+  /// We intend to make specifying the name required and will deprecate these
+  /// soon. Don't use them.
+  //@{
+
+  /// See the nearly identical signature with an additional (first) argument
+  /// specifying the port name.  This version will be deprecated as discussed
+  /// in #9447.
+  const InputPort<T>& DeclareInputPort(
+      PortDataType type, int size,
+      optional<RandomDistribution> random_type = nullopt) {
+    return DeclareInputPort(kUseDefaultName, type, size, random_type);
+  }
+
+  /// See the nearly identical signature with an argument specifying the port
+  /// name.  This version will be deprecated as discussed in #9447.
   const InputPort<T>& DeclareAbstractInputPort() {
-    return DeclareInputPort(kAbstractValued, 0 /* size */);
+    return DeclareAbstractInputPort(kUseDefaultName);
   }
   //@}
 

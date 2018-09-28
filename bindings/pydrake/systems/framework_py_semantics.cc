@@ -29,6 +29,7 @@ void DefineFrameworkPySemantics(py::module m) {
   using namespace drake::systems;
 
   m.attr("kAutoSize") = kAutoSize;
+  m.attr("kUseDefaultName") = kUseDefaultName;
 
   py::enum_<PortDataType>(m, "PortDataType")
     .value("kVectorValued", kVectorValued)
@@ -166,10 +167,10 @@ void DefineFrameworkPySemantics(py::module m) {
            py::overload_cast<
                const OutputPort<T>&, const InputPort<T>&>(
                &DiagramBuilder<T>::Connect))
-      .def("ExportInput", &DiagramBuilder<T>::ExportInput,
-           py_reference_internal)
-      .def("ExportOutput", &DiagramBuilder<T>::ExportOutput,
-           py_reference_internal)
+      .def("ExportInput", &DiagramBuilder<T>::ExportInput, py::arg("input"),
+           py::arg("name") = kUseDefaultName, py_reference_internal)
+      .def("ExportOutput", &DiagramBuilder<T>::ExportOutput, py::arg("output"),
+           py::arg("name") = kUseDefaultName, py_reference_internal)
       .def("Build", &DiagramBuilder<T>::Build,
            // Keep alive, transitive: `return` keeps `self` alive.
            py::keep_alive<1, 0>())

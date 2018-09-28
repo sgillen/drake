@@ -488,6 +488,15 @@ class Diagram : public System<T>, internal::SystemParentServiceInterface {
     return it->second;
   }
 
+  int get_num_continuous_states() const final {
+    int num_states = 0;
+    for (const auto& system : registered_systems_) {
+      num_states += system->get_num_continuous_states();
+    }
+
+    return num_states;
+  }
+
  protected:
   /// Constructs an uninitialized Diagram. Subclasses that use this constructor
   /// are obligated to call DiagramBuilder::BuildInto(this).  Provides scalar-
@@ -1192,10 +1201,18 @@ class Diagram : public System<T>, internal::SystemParentServiceInterface {
       const InputPortIndex port = id.second;
       blueprint->input_port_ids.emplace_back(new_system, port);
     }
+    for (InputPortIndex i{0}; i < this->get_num_input_ports(); i++) {
+      blueprint->input_port_names.emplace_back(
+          this->get_input_port(i).get_name());
+    }
     for (const OutputPortLocator& id : output_port_ids_) {
       const System<NewType>* new_system = old_to_new_map[id.first];
       const OutputPortIndex port = id.second;
       blueprint->output_port_ids.emplace_back(new_system, port);
+    }
+    for (OutputPortIndex i{0}; i < this->get_num_output_ports(); i++) {
+      blueprint->output_port_names.emplace_back(
+          this->get_output_port(i).get_name());
     }
     // Make all the connections.
     for (const auto& edge : connection_map_) {
@@ -1275,8 +1292,14 @@ class Diagram : public System<T>, internal::SystemParentServiceInterface {
   struct Blueprint {
     // The ordered subsystem ports that are inputs to the entire diagram.
     std::vector<InputPortLocator> input_port_ids;
+    // The names should be the same length and ordering as the ids.
+    std::vector<std::string> input_port_names;
+
     // The ordered subsystem ports that are outputs of the entire diagram.
     std::vector<OutputPortLocator> output_port_ids;
+    // The names should be the same length and ordering as the ids.
+    std::vector<std::string> output_port_names;
+
     // A map from the input ports of constituent systems to the output ports
     // on which they depend. This graph is possibly cyclic, but must not
     // contain an algebraic loop.
@@ -1336,11 +1359,18 @@ class Diagram : public System<T>, internal::SystemParentServiceInterface {
     DRAKE_THROW_UNLESS(NamesAreUniqueAndNonEmpty());
 
     // Add the inputs to the Diagram topology, and check their invariants.
+    DRAKE_DEMAND(input_port_ids_.size() ==
+                 blueprint->input_port_names.size());
+    std::vector<std::string>::iterator name_iter =
+        blueprint->input_port_names.begin();
     for (const InputPortLocator& id : input_port_ids_) {
-      ExportInput(id);
+      ExportInput(id, *name_iter++);
     }
+    DRAKE_DEMAND(output_port_ids_.size() ==
+                 blueprint->output_port_names.size());
+    name_iter = blueprint->output_port_names.begin();
     for (const OutputPortLocator& id : output_port_ids_) {
-      ExportOutput(id);
+      ExportOutput(id, *name_iter++);
     }
 
     // Identify the intersection of the subsystems' scalar conversion support.
@@ -1364,7 +1394,7 @@ class Diagram : public System<T>, internal::SystemParentServiceInterface {
   }
 
   // Exposes the given port as an input of the Diagram.
-  void ExportInput(const InputPortLocator& port) {
+  void ExportInput(const InputPortLocator& port, std::string name) {
     const System<T>* const sys = port.first;
     const int port_index = port.second;
     // Fail quickly if this system is not part of the diagram.
@@ -1372,13 +1402,13 @@ class Diagram : public System<T>, internal::SystemParentServiceInterface {
 
     // Add this port to our externally visible topology.
     const auto& subsystem_input_port = sys->get_input_port(port_index);
-    this->DeclareInputPort(subsystem_input_port.get_data_type(),
-                           subsystem_input_port.size(),
-                           subsystem_input_port.get_random_type());
+    this->DeclareInputPort(
+        std::move(name), subsystem_input_port.get_data_type(),
+        subsystem_input_port.size(), subsystem_input_port.get_random_type());
   }
 
   // Exposes the given subsystem output port as an output of the Diagram.
-  void ExportOutput(const OutputPortLocator& port) {
+  void ExportOutput(const OutputPortLocator& port, std::string name) {
     const System<T>* const sys = port.first;
     const int port_index = port.second;
     const auto& source_output_port = sys->get_output_port(port_index);
@@ -1386,9 +1416,8 @@ class Diagram : public System<T>, internal::SystemParentServiceInterface {
     auto diagram_port = std::make_unique<DiagramOutputPort<T>>(
         this,  // implicit_cast<const System<T>*>(this)
         this,  // implicit_cast<SystemBase*>(this)
-        OutputPortIndex(this->get_num_output_ports()),
-        this->assign_next_dependency_ticket(),
-        &source_output_port,
+        std::move(name), OutputPortIndex(this->get_num_output_ports()),
+        this->assign_next_dependency_ticket(), &source_output_port,
         GetSystemIndexOrAbort(&source_output_port.get_system()));
     this->AddOutputPort(std::move(diagram_port));
   }

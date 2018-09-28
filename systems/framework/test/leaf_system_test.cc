@@ -41,6 +41,10 @@ class TestSystem : public LeafSystem<T> {
   ~TestSystem() override {}
 
   using LeafSystem<T>::DeclareContinuousState;
+  using LeafSystem<T>::DeclareVectorInputPort;
+  using LeafSystem<T>::DeclareAbstractInputPort;
+  using LeafSystem<T>::DeclareVectorOutputPort;
+  using LeafSystem<T>::DeclareAbstractOutputPort;
 
   void AddPeriodicUpdate() {
     const double period = 10.0;
@@ -81,6 +85,8 @@ class TestSystem : public LeafSystem<T> {
 
   void DoCalcTimeDerivatives(const Context<T>& context,
                              ContinuousState<T>* derivatives) const override {}
+
+  void CalcOutput(const Context<T>& context, BasicVector<T>* output) const {}
 
   const BasicVector<T>& GetVanillaNumericParameters(
       const Context<T>& context) const {
@@ -213,6 +219,21 @@ class LeafSystemTest : public ::testing::Test {
   std::unique_ptr<CompositeEventCollection<double>> event_info_;
   const LeafCompositeEventCollection<double>* leaf_info_;
 };
+
+TEST_F(LeafSystemTest, DefaultPortNameTest) {
+  EXPECT_EQ(system_.DeclareVectorInputPort(BasicVector<double>(2)).get_name(),
+            "u0");
+  EXPECT_EQ(system_.DeclareAbstractInputPort(Value<int>(1)).get_name(), "u1");
+
+  EXPECT_EQ(system_.DeclareVectorOutputPort(&TestSystem<double>::CalcOutput)
+                .get_name(), "y0");
+  EXPECT_EQ(
+      system_
+          .DeclareAbstractOutputPort(kUseDefaultName, BasicVector<double>(2),
+                                     &TestSystem<double>::CalcOutput)
+          .get_name(),
+      "y1");
+}
 
 // Tests that witness functions can be declared. Tests that witness functions
 // stop Simulator at desired points (i.e., the raison d'etre of a witness
@@ -569,6 +590,10 @@ TEST_F(LeafSystemTest, AbstractParameters) {
 // Tests that the leaf system reserved the declared misc continuous state.
 TEST_F(LeafSystemTest, DeclareVanillaMiscContinuousState) {
   system_.DeclareContinuousState(2);
+
+  // Tests get_num_continuous_states without a context.
+  EXPECT_EQ(2, system_.get_num_continuous_states());
+
   std::unique_ptr<Context<double>> context = system_.CreateDefaultContext();
   const ContinuousState<double>& xc = context->get_continuous_state();
   EXPECT_EQ(2, xc.size());
@@ -581,6 +606,10 @@ TEST_F(LeafSystemTest, DeclareVanillaMiscContinuousState) {
 // interesting custom type.
 TEST_F(LeafSystemTest, DeclareTypedMiscContinuousState) {
   system_.DeclareContinuousState(MyVector2d());
+
+  // Tests get_num_continuous_states without a context.
+  EXPECT_EQ(2, system_.get_num_continuous_states());
+
   std::unique_ptr<Context<double>> context = system_.CreateDefaultContext();
   const ContinuousState<double>& xc = context->get_continuous_state();
   // Check that type was preserved.
@@ -596,6 +625,10 @@ TEST_F(LeafSystemTest, DeclareTypedMiscContinuousState) {
 // second-order structure.
 TEST_F(LeafSystemTest, DeclareVanillaContinuousState) {
   system_.DeclareContinuousState(4, 3, 2);
+
+  // Tests get_num_continuous_states without a context.
+  EXPECT_EQ(4 + 3 + 2, system_.get_num_continuous_states());
+
   std::unique_ptr<Context<double>> context = system_.CreateDefaultContext();
   const ContinuousState<double>& xc = context->get_continuous_state();
   EXPECT_EQ(4 + 3 + 2, xc.size());
@@ -609,6 +642,10 @@ TEST_F(LeafSystemTest, DeclareVanillaContinuousState) {
 TEST_F(LeafSystemTest, DeclareTypedContinuousState) {
   using MyVector9d = MyVector<4 + 3 + 2, double>;
   system_.DeclareContinuousState(MyVector9d(), 4, 3, 2);
+
+  // Tests get_num_continuous_states without a context.
+  EXPECT_EQ(4 + 3 + 2, system_.get_num_continuous_states());
+
   std::unique_ptr<Context<double>> context = system_.CreateDefaultContext();
   const ContinuousState<double>& xc = context->get_continuous_state();
   // Check that type was preserved.
@@ -658,29 +695,29 @@ class DeclaredModelPortsSystem : public LeafSystem<double> {
   DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(DeclaredModelPortsSystem);
 
   DeclaredModelPortsSystem() {
-    this->DeclareInputPort(kVectorValued, 1);
-    this->DeclareVectorInputPort(MyVector2d());
-    this->DeclareAbstractInputPort(Value<int>(22));
-    this->DeclareVectorInputPort(MyVector2d(),
+    this->DeclareInputPort("input", kVectorValued, 1);
+    this->DeclareVectorInputPort("vector_input", MyVector2d());
+    this->DeclareAbstractInputPort("abstract_input", Value<int>(22));
+    this->DeclareVectorInputPort("uniform", MyVector2d(),
                                  RandomDistribution::kUniform);
-    this->DeclareVectorInputPort(MyVector2d(),
+    this->DeclareVectorInputPort("gaussian", MyVector2d(),
                                  RandomDistribution::kGaussian);
 
     // Output port 0 uses a BasicVector base class model.
-    this->DeclareVectorOutputPort(BasicVector<double>(3),
+    this->DeclareVectorOutputPort("basic_vector", BasicVector<double>(3),
                                   &DeclaredModelPortsSystem::CalcBasicVector3);
     // Output port 1 uses a class derived from BasicVector.
-    this->DeclareVectorOutputPort(MyVector4d(),
+    this->DeclareVectorOutputPort("my_vector", MyVector4d(),
                                   &DeclaredModelPortsSystem::CalcMyVector4d);
 
     // Output port 2 uses a concrete string model.
-    this->DeclareAbstractOutputPort(std::string("45"),
+    this->DeclareAbstractOutputPort("string", std::string("45"),
                                     &DeclaredModelPortsSystem::CalcString);
 
     // Output port 3 uses the "Advanced" methods that take a model
     // and a general calc function rather than a calc method.
     this->DeclareVectorOutputPort(
-        BasicVector<double>(2),
+        "advanced", BasicVector<double>(2),
         [](const Context<double>&, BasicVector<double>* out) {
           ASSERT_NE(out, nullptr);
           EXPECT_EQ(out->size(), 2);
@@ -808,6 +845,21 @@ GTEST_TEST(ModelLeafSystemTest, ModelPortsTopology) {
   EXPECT_FALSE(in2.get_random_type());
   EXPECT_EQ(in3.get_random_type(), RandomDistribution::kUniform);
   EXPECT_EQ(in4.get_random_type(), RandomDistribution::kGaussian);
+}
+
+// Check that names can be assigned to the ports through all of the various
+// APIs.
+GTEST_TEST(ModelLeafSystemTest, ModelPortNames) {
+  DeclaredModelPortsSystem dut;
+
+  EXPECT_EQ(dut.get_input_port(0).get_name(), "input");
+  EXPECT_EQ(dut.get_input_port(1).get_name(), "vector_input");
+  EXPECT_EQ(dut.get_input_port(2).get_name(), "abstract_input");
+
+  EXPECT_EQ(dut.get_output_port(0).get_name(), "basic_vector");
+  EXPECT_EQ(dut.get_output_port(1).get_name(), "my_vector");
+  EXPECT_EQ(dut.get_output_port(2).get_name(), "string");
+  EXPECT_EQ(dut.get_output_port(3).get_name(), "advanced");
 }
 
 // Tests that the model values specified in Declare{...} are actually used by
@@ -1341,10 +1393,13 @@ class DefaultFeedthroughSystem : public LeafSystem<double> {
 
   ~DefaultFeedthroughSystem() override {}
 
-  void AddAbstractInputPort() { this->DeclareAbstractInputPort(); }
+  void AddAbstractInputPort() {
+    this->DeclareAbstractInputPort(kUseDefaultName);
+  }
 
   void AddAbstractOutputPort() {
     this->DeclareAbstractOutputPort(
+        kUseDefaultName,
         []() { return AbstractValue::Make<int>(0); },  // Dummies.
         [](const ContextBase&, AbstractValue*) {});
   }

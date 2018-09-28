@@ -621,6 +621,7 @@ class MultibodyTree {
     const JointIndex joint_index(owned_joints_.size());
     joint->set_parent_tree(this, joint_index);
     JointType<T>* raw_joint_ptr = joint.get();
+    joint_name_to_index_.insert({joint->name(), joint->index()});
     owned_joints_.push_back(std::move(joint));
     return *raw_joint_ptr;
   }
@@ -720,7 +721,6 @@ class MultibodyTree {
             name,
             *frame_on_parent, *frame_on_child,
             std::forward<Args>(args)...));
-    joint_name_to_index_.insert(std::make_pair(name, joint.index()));
     return joint;
   }
 
@@ -950,6 +950,20 @@ class MultibodyTree {
   const Mobilizer<T>& get_mobilizer(MobilizerIndex mobilizer_index) const {
     DRAKE_THROW_UNLESS(mobilizer_index < num_mobilizers());
     return *owned_mobilizers_[mobilizer_index];
+  }
+
+  /// Returns the name of a model_instance.
+  /// @throws std::logic_error when `model_instance` does not correspond to a
+  /// model in this multibody tree.
+  const std::string& GetModelInstanceName(
+      ModelInstanceIndex model_instance) const {
+    const auto it = instance_index_to_name_.find(model_instance);
+    if (it == instance_index_to_name_.end()) {
+      throw std::logic_error("There is no model instance id " +
+                             std::to_string(model_instance) +
+                             " in the model.");
+    }
+    return it->second;
   }
 
   /// @name Querying for multibody elements by name
@@ -1379,10 +1393,12 @@ class MultibodyTree {
 
   /// Given the actuation values @p u_instance for all actuators in @p
   /// model_instance, this method sets the actuation vector u for the entire
-  /// MultibodyTree model to which this actuator belongs to.
+  /// MultibodyTree model to which this actuator belongs to. This method throws
+  /// an exception if the size of `u_instance` is not equal to the number of
+  /// degrees of freedom of all of the actuated joints in `model_instance`.
   /// @param[in] u_instance Actuation values for the actuators. It must be of
   ///   size equal to the number of degrees of freedom of all of the actuated
-  ///   joints in @p model_instance.
+  ///   joints in `model_instance`.
   /// @param[out] u
   ///   The vector containing the actuation values for the entire MultibodyTree.
   void set_actuation_vector(
@@ -1390,21 +1406,41 @@ class MultibodyTree {
       const Eigen::Ref<const VectorX<T>>& u_instance,
       EigenPtr<VectorX<T>> u) const;
 
-  /// Returns a vector of generalized positions for @p model_instance from a
+  /// Returns a vector of generalized positions for `model_instance` from a
   /// vector `q_array` of generalized positions for the entire MultibodyTree
-  /// model.  This method aborts if `q_array` is not of size
+  /// model.  This method throws an exception if `q_array` is not of size
   /// MultibodyTree::num_positions().
   VectorX<T> get_positions_from_array(
       ModelInstanceIndex model_instance,
       const Eigen::Ref<const VectorX<T>>& q_array) const;
 
+  /// Sets the vector of generalized positions for `model_instance` in
+  /// `q_array` using `model_q`, leaving all other elements in the array
+  /// untouched. This method throws an exception if `q_array` is not of size
+  /// MultibodyTree::num_positions() or `model_q` is not of size
+  /// `MultibodyTree::num_positions(model_instance)`.
+  void set_positions_in_array(
+      ModelInstanceIndex model_instance,
+      const Eigen::Ref<const VectorX<T>>& model_q,
+      EigenPtr<VectorX<T>> q_array) const;
+
   /// Returns a vector of generalized velocities for @p model_instance from a
   /// vector `v_array` of generalized velocities for the entire MultibodyTree
-  /// model.  This method aborts if the input array is not of size
+  /// model.  This method throws an exception if the input array is not of size
   /// MultibodyTree::num_velocities().
   VectorX<T> get_velocities_from_array(
       ModelInstanceIndex model_instance,
       const Eigen::Ref<const VectorX<T>>& v_array) const;
+
+  /// Sets the vector of generalized velocities for `model_instance` in
+  /// `v_array` using `model_v`, leaving all other elements in the array
+  /// untouched. This method throws an exception if `v_array` is not of size
+  /// MultibodyTree::num_velocities() or `model_v` is not of size
+  /// `MultibodyTree::num_positions(model_instance)`.
+  void set_velocities_in_array(
+      ModelInstanceIndex model_instance,
+      const Eigen::Ref<const VectorX<T>>& model_v,
+      EigenPtr<VectorX<T>> v_array) const;
 
   /// @}
   // End of "Model instance accessors" section.
@@ -2439,6 +2475,7 @@ class MultibodyTree {
     tree_clone->joint_name_to_index_ = this->joint_name_to_index_;
     tree_clone->actuator_name_to_index_ = this->actuator_name_to_index_;
     tree_clone->instance_name_to_index_ = this->instance_name_to_index_;
+    tree_clone->instance_index_to_name_ = this->instance_index_to_name_;
 
     // All other internals templated on T are created with the following call to
     // FinalizeInternals().

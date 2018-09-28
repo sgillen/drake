@@ -653,7 +653,7 @@ class SystemBase : public internal::SystemMessageInterface {
   recomputation of an iterative approximation of contact forces.
   @see kinematics_ticket()
 
-  @bug Currently there is no way to declare specific variables and parameters
+  @note Currently there is no way to declare specific variables and parameters
   to be configuration-affecting so we include all state variables and
   parameters except for generalized velocities v. */
   // TODO(sherm1) Remove the above bug notice once #9171 is resolved.
@@ -669,7 +669,7 @@ class SystemBase : public internal::SystemMessageInterface {
   source values. This _does not_ include time or input ports.
   @see configuration_ticket()
 
-  @bug Currently there is no way to declare specific variables and parameters
+  @note Currently there is no way to declare specific variables and parameters
   to be configuration- or velocity-affecting so we include all state variables
   and parameters. */
   // TODO(sherm1) Remove the above bug notice once #9171 is resolved.
@@ -751,27 +751,73 @@ class SystemBase : public internal::SystemMessageInterface {
   /** (Internal use only) Adds an already-constructed input port to this System.
   Insists that the port already contains a reference to this System, and that
   the port's index is already set to the next available input port index for
-  this System. */
+  this System, that the port name is unique (just within this System), and that
+  the port name is non-empty. */
   // TODO(sherm1) Add check on suitability of `size` parameter for the port's
   // data type.
   void AddInputPort(std::unique_ptr<InputPortBase> port) {
     DRAKE_DEMAND(port != nullptr);
     DRAKE_DEMAND(&port->get_system_base() == this);
-    DRAKE_DEMAND(port->get_index() == this->get_num_input_ports());
+    DRAKE_DEMAND(port->get_index() == get_num_input_ports());
+    DRAKE_DEMAND(!port->get_name().empty());
+
+    // Check that name is unique.
+    for (InputPortIndex i{0}; i < get_num_input_ports(); i++) {
+      if (port->get_name() == get_input_port_base(i).get_name()) {
+        throw std::logic_error("System " + GetSystemName() +
+            " already has an input port named " +
+            port->get_name());
+      }
+    }
+
     input_ports_.push_back(std::move(port));
   }
 
   /** (Internal use only) Adds an already-constructed output port to this
   System. Insists that the port already contains a reference to this System, and
   that the port's index is already set to the next available output port index
-  for this System. */
+  for this System, and that the name of the port is unique.
+  @throws std::logic_error if the name of the output port is not unique. */
   // TODO(sherm1) Add check on suitability of `size` parameter for the port's
   // data type.
   void AddOutputPort(std::unique_ptr<OutputPortBase> port) {
     DRAKE_DEMAND(port != nullptr);
     DRAKE_DEMAND(&port->get_system_base() == this);
-    DRAKE_DEMAND(port->get_index() == this->get_num_output_ports());
+    DRAKE_DEMAND(port->get_index() == get_num_output_ports());
+    DRAKE_DEMAND(!port->get_name().empty());
+
+    // Check that name is unique.
+    for (OutputPortIndex i{0}; i < get_num_output_ports(); i++) {
+      if (port->get_name() == get_output_port_base(i).get_name()) {
+        throw std::logic_error("System " + GetSystemName() +
+                               " already has an output port named " +
+                               port->get_name());
+      }
+    }
+
     output_ports_.push_back(std::move(port));
+  }
+
+  /** (Internal use only) Returns a name for the next input port, using the
+  given name if it isn't kUseDefaultName, otherwise making up a name like "u3"
+  from the next available input port index.
+  @pre `given_name` must not be empty. */
+  std::string NextInputPortName(std::string given_name) const {
+    DRAKE_DEMAND(!given_name.empty());
+    return given_name == kUseDefaultName
+           ? std::string("u") + std::to_string(get_num_input_ports())
+           : std::move(given_name);
+  }
+
+  /** (Internal use only) Returns a name for the next output port, using the
+  given name if it isn't kUseDefaultName, otherwise making up a name like "y3"
+  from the next available output port index.
+  @pre `given_name` must not be empty. */
+  std::string NextOutputPortName(std::string given_name) const {
+    DRAKE_DEMAND(!given_name.empty());
+    return given_name == kUseDefaultName
+           ? std::string("y") + std::to_string(get_num_output_ports())
+           : std::move(given_name);
   }
 
   /** (Internal use only) Assigns a ticket to a new discrete variable group

@@ -70,14 +70,14 @@ class AcrobotModelTests : public ::testing::Test {
     benchmark_shoulder_->set_angle(benchmark_context_.get(), theta1);
     benchmark_elbow_->set_angle(benchmark_context_.get(), theta2);
     MatrixX<double> M_benchmark(nv, nv);
-    benchmark_plant_->model().CalcMassMatrixViaInverseDynamics(
+    benchmark_plant_->tree().CalcMassMatrixViaInverseDynamics(
         *benchmark_context_.get(), &M_benchmark);
 
     // Set the state for the parsed model and compute the mass matrix.
     shoulder_->set_angle(context_.get(), theta1);
     elbow_->set_angle(context_.get(), theta2);
     MatrixX<double> M(nv, nv);
-    plant_->model().CalcMassMatrixViaInverseDynamics(*context_.get(), &M);
+    plant_->tree().CalcMassMatrixViaInverseDynamics(*context_.get(), &M);
 
     EXPECT_TRUE(CompareMatrices(
         M, M_benchmark, kTolerance, MatrixCompareType::relative));
@@ -95,6 +95,15 @@ class AcrobotModelTests : public ::testing::Test {
   const RevoluteJoint<double>* benchmark_elbow_{nullptr};
   std::unique_ptr<systems::Context<double>> benchmark_context_;
 };
+
+// Verifies that the default joint limits when no limits are specified in the
+// SDF file are ±infinity.
+TEST_F(AcrobotModelTests, DefaultJointLimits) {
+  EXPECT_TRUE(std::isinf(shoulder_->lower_limit()));
+  EXPECT_TRUE(std::isinf(shoulder_->upper_limit()));
+  EXPECT_TRUE(std::isinf(elbow_->lower_limit()));
+  EXPECT_TRUE(std::isinf(elbow_->upper_limit()));
+}
 
 // This test verifies a number of invariants such as model sizes and that body
 // and joint models were properly added.

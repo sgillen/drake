@@ -66,21 +66,24 @@ class GeometryVisualizationImpl {
  @pre The given `scene_graph` must be contained within the supplied
       DiagramBuilder.
 
- @see geometry::DispatchLoadMessage() */
+ @see geometry::DispatchLoadMessage()
+ @ingroup visualization
+ */
 void ConnectDrakeVisualizer(systems::DiagramBuilder<double>* builder,
                             const SceneGraph<double>& scene_graph,
                             lcm::DrakeLcmInterface* lcm = nullptr);
 
-/** Explicitly dispatches an LCM load message based on the registered geometry.
- Normally this is done automatically at Simulator initialization. But if you
- have to do it yourself (likely because you are not using a Simulator), it
- should be invoked _after_ registration is complete. Typically this is used
+/** (Advanced) Explicitly dispatches an LCM load message based on the registered
+ geometry. Normally this is done automatically at Simulator initialization. But
+ if you have to do it yourself (likely because you are not using a Simulator),
+ it should be invoked _after_ registration is complete. Typically this is used
  after ConnectDrakeVisualizer() has been used to add visualization to the
- Diagram that contains the given `scene_graph`.
+ Diagram that contains the given `scene_graph`. The message goes to
+ LCM channel "DRAKE_VIEWER_LOAD_ROBOT".
 
  @see geometry::ConnectDrakeVisualizer() */
-void DispatchLoadMessage(const SceneGraph<double>& scene_graph,
-                         lcm::DrakeLcmInterface* lcm);
+void DispatchLoadMessage(
+    const SceneGraph<double>& scene_graph, lcm::DrakeLcmInterface* lcm);
 
 }  // namespace geometry
 }  // namespace drake

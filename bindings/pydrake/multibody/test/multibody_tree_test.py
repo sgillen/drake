@@ -34,6 +34,7 @@ from pydrake.multibody.benchmarks.acrobot import (
 )
 
 import copy
+import math
 import unittest
 
 import numpy as np
@@ -41,6 +42,7 @@ import numpy as np
 from pydrake.common import FindResourceOrThrow
 from pydrake.common.eigen_geometry import Isometry3
 from pydrake.systems.framework import InputPort, OutputPort
+from pydrake.math import RollPitchYaw
 
 
 def get_index_class(cls):
@@ -48,6 +50,7 @@ def get_index_class(cls):
     class_to_index_class_map = {
         Body: BodyIndex,
         ForceElement: ForceElementIndex,
+        Frame: FrameIndex,
         Joint: JointIndex,
         JointActuator: JointActuatorIndex,
     }
@@ -107,13 +110,20 @@ class TestMultibodyTree(unittest.TestCase):
         self.assertTrue(plant.is_finalized())
         self.assertTrue(plant.HasBodyNamed(name="Link1"))
         self.assertTrue(plant.HasJointNamed(name="ShoulderJoint"))
-        self._test_joint_api(plant.GetJointByName(name="ShoulderJoint"))
+        shoulder = plant.GetJointByName(name="ShoulderJoint")
+        self._test_joint_api(shoulder)
+        np.testing.assert_array_equal(shoulder.lower_limits(), [-np.inf])
+        np.testing.assert_array_equal(shoulder.upper_limits(), [np.inf])
         self._test_joint_actuator_api(
             plant.GetJointActuatorByName(name="ElbowJoint"))
         self._test_body_api(plant.GetBodyByName(name="Link1"))
         self.assertIs(
             plant.GetBodyByName(name="Link1"),
             plant.GetBodyByName(name="Link1", model_instance=model_instance))
+        self._test_frame_api(plant.GetFrameByName(name="Link1"))
+        self.assertIs(
+            plant.GetFrameByName(name="Link1"),
+            plant.GetFrameByName(name="Link1", model_instance=model_instance))
         self.assertIsInstance(
             plant.get_actuation_input_port(), InputPort)
         self.assertIsInstance(
@@ -126,6 +136,11 @@ class TestMultibodyTree(unittest.TestCase):
         cls = type(element)
         self.assertIsInstance(element.index(), get_index_class(cls))
         self.assertIsInstance(element.model_instance(), ModelInstanceIndex)
+
+    def _test_frame_api(self, frame):
+        self.assertIsInstance(frame, Frame)
+        self._test_multibody_tree_element_mixin(frame)
+        self.assertIsInstance(frame.name(), unicode)
 
     def _test_body_api(self, body):
         self.assertIsInstance(body, Body)
@@ -166,30 +181,176 @@ class TestMultibodyTree(unittest.TestCase):
 
     def test_multibody_tree_kinematics(self):
         file_name = FindResourceOrThrow(
-            "drake/multibody/benchmarks/acrobot/acrobot.sdf")
+            "drake/examples/double_pendulum/models/double_pendulum.sdf")
         plant = MultibodyPlant()
         AddModelFromSdfFile(file_name, plant)
         plant.Finalize()
         context = plant.CreateDefaultContext()
-        tree = plant.model()
+        tree = plant.tree()
         world_frame = plant.world_frame()
-        # TODO(eric.cousineau): Replace this with `GetFrameByName`.
-        link1_frame = plant.GetBodyByName("Link1").body_frame()
+        base = plant.GetBodyByName("base")
+        base_frame = plant.GetFrameByName("base")
 
         X_WL = tree.CalcRelativeTransform(
-            context, frame_A=world_frame, frame_B=link1_frame)
+            context, frame_A=world_frame, frame_B=base_frame)
         self.assertIsInstance(X_WL, Isometry3)
 
         p_AQi = tree.CalcPointsPositions(
-            context=context, frame_B=link1_frame,
+            context=context, frame_B=base_frame,
             p_BQi=np.array([[0, 1, 2], [10, 11, 12]]).T,
             frame_A=world_frame).T
         self.assertTupleEqual(p_AQi.shape, (2, 3))
 
         Jv_WL = tree.CalcFrameGeometricJacobianExpressedInWorld(
-            context=context, frame_B=link1_frame,
+            context=context, frame_B=base_frame,
             p_BoFo_B=[0, 0, 0])
         self.assertTupleEqual(Jv_WL.shape, (6, plant.num_velocities()))
+
+        # Compute body pose.
+        X_WBase = tree.EvalBodyPoseInWorld(context, base)
+        self.assertIsInstance(X_WBase, Isometry3)
+
+        # All body poses.
+        X_WB_list = tree.CalcAllBodyPosesInWorld(context)
+        self.assertEqual(len(X_WB_list), 4)
+        for X_WB in X_WB_list:
+            self.assertIsInstance(X_WB, Isometry3)
+
+        # Compute body velocities.
+        v_WB_list = tree.CalcAllBodySpatialVelocitiesInWorld(context)
+        self.assertEqual(len(v_WB_list), 4)
+        for v_WB in v_WB_list:
+            self.assertIsInstance(v_WB, SpatialVelocity)
+        # - Sanity check.
+        v_WBase_flat = np.hstack((
+            v_WB_list[0].rotational(), v_WB_list[0].translational()))
+        self.assertTrue(np.allclose(v_WBase_flat, np.zeros(6)))
+
+        # Set pose for the base.
+        X_WB_desired = Isometry3.Identity()
+        X_WB = tree.CalcRelativeTransform(context, world_frame, base_frame)
+        tree.SetFreeBodyPoseOrThrow(
+            body=base, X_WB=X_WB_desired, context=context)
+        self.assertTrue(np.allclose(X_WB.matrix(), X_WB_desired.matrix()))
+
+        # Set a spatial velocity for the base.
+        v_WB = SpatialVelocity(w=[1, 2, 3], v=[4, 5, 6])
+        tree.SetFreeBodySpatialVelocityOrThrow(
+            body=base, V_WB=v_WB, context=context)
+        v_base = tree.EvalBodySpatialVelocityInWorld(context, base)
+        self.assertTrue(np.allclose(v_base.rotational(), v_WB.rotational()))
+        self.assertTrue(np.allclose(v_base.translational(),
+                                    v_WB.translational()))
+
+    def test_multibody_state_access(self):
+        file_name = FindResourceOrThrow(
+            "drake/multibody/benchmarks/acrobot/acrobot.sdf")
+        plant = MultibodyPlant()
+        AddModelFromSdfFile(file_name, plant)
+        plant.Finalize()
+        context = plant.CreateDefaultContext()
+        tree = plant.tree()
+
+        self.assertEqual(plant.num_positions(), 2)
+        self.assertEqual(plant.num_velocities(), 2)
+
+        q0 = np.array([3.14, 2.])
+        v0 = np.array([-0.5, 1.])
+        x0 = np.concatenate([q0, v0])
+
+        # The default state is all values set to zero.
+        x = tree.get_multibody_state_vector(context)
+        self.assertTrue(np.allclose(x, np.zeros(4)))
+
+        # Write into a mutable reference to the state vector.
+        x_reff = tree.get_mutable_multibody_state_vector(context)
+        x_reff[:] = x0
+
+        # Verify we did modify the state stored in context.
+        x = tree.get_multibody_state_vector(context)
+        self.assertTrue(np.allclose(x, x0))
+
+    def test_model_instance_state_access(self):
+        # Create a multibodyplant with a kuka arm and a schunk gripper.
+        # the arm is welded to the world, the gripper is welded to the
+        # arm's end effector.
+        wsg50_sdf_path = FindResourceOrThrow(
+            "drake/manipulation/models/" +
+            "wsg_50_description/sdf/schunk_wsg_50.sdf")
+        iiwa_sdf_path = FindResourceOrThrow(
+            "drake/manipulation/models/" +
+            "iiwa_description/sdf/iiwa14_no_collision.sdf")
+
+        timestep = 0.0002
+        plant = MultibodyPlant(timestep)
+
+        iiwa_model = AddModelFromSdfFile(
+            file_name=iiwa_sdf_path, model_name='robot',
+            scene_graph=None, plant=plant)
+        gripper_model = AddModelFromSdfFile(
+            file_name=wsg50_sdf_path, model_name='gripper',
+            scene_graph=None, plant=plant)
+
+        # Weld the base of arm and gripper to reduce the number of states.
+        X_EeGripper = Isometry3.Identity()
+        X_EeGripper.set_translation([0, 0, 0.081])
+        X_EeGripper.set_rotation(
+            RollPitchYaw(np.pi / 2, 0, np.pi / 2).
+            ToRotationMatrix().matrix())
+        plant.WeldFrames(
+            A=plant.world_frame(),
+            B=plant.GetFrameByName("iiwa_link_0", iiwa_model))
+        plant.WeldFrames(
+            A=plant.GetFrameByName("iiwa_link_7", iiwa_model),
+            B=plant.GetFrameByName("body", gripper_model),
+            X_AB=X_EeGripper)
+        plant.Finalize()
+
+        # Create a context of the MBP and set the state of the context
+        # to desired values.
+        context = plant.CreateDefaultContext()
+        tree = plant.tree()
+
+        nq = plant.num_positions()
+        nv = plant.num_velocities()
+
+        q_iiwa_desired = np.zeros(7)
+        v_iiwa_desired = np.zeros(7)
+        q_gripper_desired = np.zeros(2)
+        v_gripper_desired = np.zeros(2)
+
+        q_iiwa_desired[2] = np.pi/3
+        q_gripper_desired[0] = 0.1
+        v_iiwa_desired[1] = 5.0
+        q_gripper_desired[0] = -0.3
+
+        x_plant_desired = np.zeros(nq + nv)
+        x_plant_desired[0:7] = q_iiwa_desired
+        x_plant_desired[7:9] = q_gripper_desired
+        x_plant_desired[nq:nq+7] = v_iiwa_desired
+        x_plant_desired[nq+7:nq+nv] = v_gripper_desired
+
+        x_plant = tree.get_mutable_multibody_state_vector(context)
+        x_plant[:] = x_plant_desired
+
+        # Get state from context.
+        x = tree.get_multibody_state_vector(context)
+        q = x[0:nq]
+        v = x[nq:nq+nv]
+
+        # Get positions and velocities of specific model instances
+        # from the postion/velocity vector of the plant.
+        q_iiwa = tree.get_positions_from_array(iiwa_model, q)
+        q_gripper = tree.get_positions_from_array(gripper_model, q)
+        v_iiwa = tree.get_velocities_from_array(iiwa_model, v)
+        v_gripper = tree.get_velocities_from_array(gripper_model, v)
+
+        # Assert that the get_positions_from_array return
+        # the desired values set earlier.
+        self.assertTrue(np.allclose(q_iiwa_desired, q_iiwa))
+        self.assertTrue(np.allclose(v_iiwa_desired, v_iiwa))
+        self.assertTrue(np.allclose(q_gripper_desired, q_gripper))
+        self.assertTrue(np.allclose(v_gripper_desired, v_gripper))
 
     def test_multibody_add_joint(self):
         """

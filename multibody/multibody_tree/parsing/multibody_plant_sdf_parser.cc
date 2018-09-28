@@ -1,5 +1,6 @@
 #include "drake/multibody/multibody_tree/parsing/multibody_plant_sdf_parser.h"
 
+#include <limits>
 #include <memory>
 #include <utility>
 #include <vector>
@@ -10,10 +11,10 @@
 #include "drake/multibody/multibody_tree/joints/prismatic_joint.h"
 #include "drake/multibody/multibody_tree/joints/revolute_joint.h"
 #include "drake/multibody/multibody_tree/joints/weld_joint.h"
+#include "drake/multibody/multibody_tree/parsing/parser_path_utils.h"
 #include "drake/multibody/multibody_tree/parsing/scene_graph_parser_detail.h"
 #include "drake/multibody/multibody_tree/parsing/sdf_parser_common.h"
 #include "drake/multibody/multibody_tree/uniform_gravity_field_element.h"
-#include "drake/multibody/parsers/parser_path_utils.h"
 
 namespace drake {
 namespace multibody {
@@ -210,14 +211,23 @@ std::pair<double, double> ParseJointLimits(const sdf::Joint& joint_spec) {
     throw std::runtime_error(
         "An axis must be specified for joint '" + joint_spec.Name() + "'");
   }
-  const double lower_limit = axis->Lower();
-  const double upper_limit = axis->Upper();
+
+  // SDF defaults to ±1.0e16 for joints with no limits, see
+  // http://sdformat.org/spec?ver=1.6&elem=joint#axis_limit.
+  // Drake marks joints with no limits with ±numeric_limits<double>::infinity()
+  // and therefore we make the change here.
+  const double lower_limit =
+      axis->Lower() == -1.0e16 ?
+      -std::numeric_limits<double>::infinity() : axis->Lower();
+  const double upper_limit =
+      axis->Upper() == 1.0e16 ?
+      std::numeric_limits<double>::infinity() : axis->Upper();
   if (lower_limit > upper_limit) {
     throw std::runtime_error(
         "The lower limit must be lower (or equal) than the upper limit for "
         "joint '" + joint_spec.Name() + "'.");
   }
-  return std::make_pair(axis->Lower(), axis->Upper());
+  return std::make_pair(lower_limit, upper_limit);
 }
 
 // Helper method to add joints to a MultibodyPlant given an sdf::Joint
@@ -314,10 +324,10 @@ void AddJointFromSpecification(
 // object.
 std::string LoadSdf(
     sdf::Root* root,
-    parsers::PackageMap* package_map,
+    parsing::PackageMap* package_map,
     const std::string& file_name) {
 
-  const std::string full_path = parsers::GetFullPath(file_name);
+  const std::string full_path = parsing::GetFullPath(file_name);
 
   // Load the SDF file.
   sdf::Errors errors = root->Load(full_path);
@@ -351,7 +361,7 @@ void AddLinksFromSpecification(
     const sdf::Model& model,
     multibody_plant::MultibodyPlant<double>* plant,
     geometry::SceneGraph<double>* scene_graph,
-    const parsers::PackageMap& package_map,
+    const parsing::PackageMap& package_map,
     const std::string& root_dir) {
 
   // Add all the links
@@ -418,7 +428,7 @@ ModelInstanceIndex AddModelFromSpecification(
     const std::string& model_name,
     multibody_plant::MultibodyPlant<double>* plant,
     geometry::SceneGraph<double>* scene_graph,
-    const parsers::PackageMap& package_map,
+    const parsing::PackageMap& package_map,
     const std::string& root_dir) {
 
   const ModelInstanceIndex model_instance =
@@ -448,7 +458,7 @@ ModelInstanceIndex AddModelFromSdfFile(
   DRAKE_THROW_UNLESS(!plant->is_finalized());
 
   sdf::Root root;
-  parsers::PackageMap package_map;
+  parsing::PackageMap package_map;
 
   std::string root_dir = LoadSdf(&root, &package_map, file_name);
 
@@ -485,7 +495,7 @@ std::vector<ModelInstanceIndex> AddModelsFromSdfFile(
   DRAKE_THROW_UNLESS(!plant->is_finalized());
 
   sdf::Root root;
-  parsers::PackageMap package_map;
+  parsing::PackageMap package_map;
 
   std::string root_dir = LoadSdf(&root, &package_map, file_name);
 

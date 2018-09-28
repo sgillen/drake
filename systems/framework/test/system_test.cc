@@ -41,9 +41,17 @@ class TestSystem : public System<double> {
         this->AllocateForcedUnrestrictedUpdateEventCollection());
     this->set_name("TestSystem");
   }
+
+  // Implementation is required, but unused here.
+  int get_num_continuous_states() const final {
+    DRAKE_ABORT();
+  }
+
   ~TestSystem() override {}
 
   using System::AddConstraint;  // allow access to protected method.
+  using System::DeclareInputPort;
+  using System::DeclareAbstractInputPort;
 
   std::unique_ptr<ContinuousState<double>> AllocateTimeDerivatives()
       const override {
@@ -76,6 +84,7 @@ class TestSystem : public System<double> {
     auto port = std::make_unique<LeafOutputPort<double>>(
         this,  // implicit_cast<const System<T>*>(this)
         this,  // implicit_cast<const SystemBase*>(this)
+        "y" + std::to_string(get_num_output_ports()),
         OutputPortIndex(this->get_num_output_ports()),
         assign_next_dependency_ticket(),
         kAbstractValued, 0, &cache_entry);
@@ -338,6 +347,23 @@ TEST_F(SystemTest, PortReferencesAreStable) {
   EXPECT_EQ(kAbstractValued, first_output.get_data_type());
 }
 
+TEST_F(SystemTest, PortNameTest) {
+  const auto& unnamed_input = system_.DeclareInputPort(kVectorValued, 2);
+  const auto& named_input =
+      system_.DeclareInputPort("my_input", kVectorValued, 3);
+  const auto& named_abstract_input =
+      system_.DeclareAbstractInputPort("abstract");
+
+  EXPECT_EQ(unnamed_input.get_name(), "u0");
+  EXPECT_EQ(named_input.get_name(), "my_input");
+  EXPECT_EQ(named_abstract_input.get_name(), "abstract");
+
+  // Duplicate port names should throw.
+  DRAKE_EXPECT_THROWS_MESSAGE(
+      system_.DeclareInputPort("my_input", kAbstractValued, 0),
+      std::logic_error, ".*already has an input port named.*");
+}
+
 // Tests the constraint list logic.
 TEST_F(SystemTest, SystemConstraintTest) {
   EXPECT_EQ(system_.get_num_constraints(), 0);
@@ -424,6 +450,7 @@ class ValueIOTestSystem : public System<T> {
     this->AddOutputPort(std::make_unique<LeafOutputPort<T>>(
         this,  // implicit_cast<const System<T>*>(this)
         this,  // implicit_cast<const SystemBase*>(this)
+        "absport",
         OutputPortIndex(this->get_num_output_ports()),
         this->assign_next_dependency_ticket(),
         kAbstractValued, 0 /* size */,
@@ -434,11 +461,14 @@ class ValueIOTestSystem : public System<T> {
               this->CalcStringOutput(context, output);
             })));
     this->DeclareInputPort(kVectorValued, 1);
-    this->DeclareInputPort(kVectorValued, 1, RandomDistribution::kUniform);
-    this->DeclareInputPort(kVectorValued, 1, RandomDistribution::kGaussian);
+    this->DeclareInputPort("uniform", kVectorValued, 1,
+                           RandomDistribution::kUniform);
+    this->DeclareInputPort("gaussian", kVectorValued, 1,
+                           RandomDistribution::kGaussian);
     this->AddOutputPort(std::make_unique<LeafOutputPort<T>>(
         this,  // implicit_cast<const System<T>*>(this)
         this,  // implicit_cast<const SystemBase*>(this)
+        "vecport",
         OutputPortIndex(this->get_num_output_ports()),
         this->assign_next_dependency_ticket(),
         kVectorValued, 1 /* size */,
@@ -452,7 +482,12 @@ class ValueIOTestSystem : public System<T> {
     this->set_name("ValueIOTestSystem");
   }
 
-  ~ValueIOTestSystem() override {}
+  // Implementation is required, but unused here.
+  int get_num_continuous_states() const final {
+    DRAKE_ABORT();
+  }
+
+    ~ValueIOTestSystem() override {}
 
   T DoCalcWitnessValue(const Context<T>&,
                        const WitnessFunction<T>&) const override {
@@ -794,6 +829,11 @@ class ComputationTestSystem final : public System<double> {
     EXPECT_EQ(ke, ke_count_);
     EXPECT_EQ(pc, pc_count_);
     EXPECT_EQ(pnc, pnc_count_);
+  }
+
+  // Implementation is required, but unused here.
+  int get_num_continuous_states() const final {
+    DRAKE_ABORT();
   }
 
  private:

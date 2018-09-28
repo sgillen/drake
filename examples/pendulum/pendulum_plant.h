@@ -15,7 +15,12 @@ namespace examples {
 namespace pendulum {
 
 /// A model of a simple pendulum
-/// @f[ ml^2 \ddot\theta + b\dot\theta + mgl\sin\theta = u @f]
+/// @f[ ml^2 \ddot\theta + b\dot\theta + mgl\sin\theta = \tau @f]
+///
+/// @system{PendulumPlant,
+///    @input_port{tau},
+///    @output_port{state} @output_port{geometry pose}
+/// }
 ///
 /// @tparam T The vector element type, which must be a valid Eigen scalar.
 ///
@@ -98,6 +103,8 @@ class PendulumPlant final : public systems::LeafSystem<T> {
   }
 
  private:
+  systems::OutputPortIndex AllocateGeometryPoseOutputPort();
+
   // This is the calculator method for the state output port.
   void CopyStateOut(const systems::Context<T>& context,
                     PendulumState<T>* output) const;

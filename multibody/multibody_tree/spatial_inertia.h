@@ -201,15 +201,10 @@ class SpatialInertia {
 
   /// Returns `true` if any of the elements in this spatial inertia is NaN
   /// and `false` otherwise.
-  scalar_predicate_t<T> IsNaN() const {
+  boolean<T> IsNaN() const {
     using std::isnan;
-    // TODO(jwnimmer-tri) It would be cleaner if `any_of` directly returned a
-    // scalar_predicate_t<T> , instead of returning Bool<T> which is a trivial
-    // wrapper.  (Bool<T>::value_type is the same as scalar_predicate_t<T>.)
-    // For now, we'll just unpack the wrapper manually.  In the future, the
-    // trailing `.value()` unwrap here should disappear.
     return isnan(mass_) || G_SP_E_.IsNaN() ||
-        any_of(p_PScm_E_, [](auto x){ return isnan(x); }).value();
+        any_of(p_PScm_E_, [](auto x){ return isnan(x); });
   }
 
   /// Performs a number of checks to verify that this is a physically valid
@@ -228,7 +223,7 @@ class SpatialInertia {
   /// condition when performed on a rotational inertia about a body's center of
   /// mass.
   /// @see RotationalInertia::CouldBePhysicallyValid().
-  scalar_predicate_t<T> IsPhysicallyValid() const {
+  boolean<T> IsPhysicallyValid() const {
     // The tests in RotationalInertia become a sufficient condition when
     // performed on a rotational inertia computed about a body's center of mass.
     const UnitInertia<T> G_SScm_E = G_SP_E_.ShiftToCenterOfMass(p_PScm_E_);
