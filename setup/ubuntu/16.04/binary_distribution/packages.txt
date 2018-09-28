@@ -32,7 +32,6 @@ openjdk-8-jre
 python
 python-lxml
 python-matplotlib
-python-numpy
 python-pydot
 python-scipy
 python-tk
