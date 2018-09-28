@@ -2,7 +2,10 @@
 
 from __future__ import print_function
 
+import pydrake.systems.framework as mut
+
 import copy
+import warnings
 
 import unittest
 import numpy as np
@@ -15,18 +18,20 @@ from pydrake.symbolic import (
     )
 from pydrake.systems.analysis import (
     IntegratorBase_,
+    RungeKutta2Integrator, RungeKutta3Integrator,
     Simulator, Simulator_,
     )
 from pydrake.systems.framework import (
     BasicVector, BasicVector_,
     Context_,
-    ContinuousState_,
+    ContinuousState, ContinuousState_,
     Diagram, Diagram_,
     DiagramBuilder, DiagramBuilder_,
     DiscreteUpdateEvent_,
     DiscreteValues_,
     Event_,
-    InputPortDescriptor_,
+    InputPort_,
+    kUseDefaultName,
     LeafContext_,
     LeafSystem_,
     OutputPort_,
@@ -37,7 +42,7 @@ from pydrake.systems.framework import (
     Supervector_,
     System_,
     SystemOutput_,
-    VectorBase_,
+    VectorBase, VectorBase_,
     VectorSystem_,
     )
 from pydrake.systems import primitives
@@ -78,6 +83,32 @@ class TestGeneral(unittest.TestCase):
             rhs_port = rhs.get_output_port(i)
             self.assertEqual(lhs_port.size(), rhs_port.size())
 
+    def test_system_base_api(self):
+        # Test a system with a different number of inputs from outputs.
+        system = Adder(3, 10)
+        self.assertEqual(system.get_num_input_ports(), 3)
+        self.assertEqual(system.get_num_output_ports(), 1)
+        # Test deprecated methods.
+        context = system.CreateDefaultContext()
+        with warnings.catch_warnings(record=True) as w:
+            c = system.AllocateOutput(context)
+            self.assertEqual(len(w), 1)
+        # TODO(eric.cousineau): Consolidate the main API tests for `System`
+        # to this test point.
+
+    def test_context_api(self):
+        system = Adder(3, 10)
+        context = system.CreateDefaultContext()
+        self.assertIsInstance(
+            context.get_continuous_state(), ContinuousState)
+        self.assertIsInstance(
+            context.get_mutable_continuous_state(), ContinuousState)
+        self.assertIsInstance(
+            context.get_continuous_state_vector(), VectorBase)
+        self.assertIsInstance(
+            context.get_mutable_continuous_state_vector(), VectorBase)
+        # TODO(eric.cousineau): Consolidate main API tests for `Context` here.
+
     def test_instantiations(self):
         # Quick check of instantions for given types.
         # N.B. These checks are ordered according to their binding definitions
@@ -94,7 +125,7 @@ class TestGeneral(unittest.TestCase):
         self._check_instantiations(DiagramBuilder_)
         self._check_instantiations(OutputPort_)
         self._check_instantiations(SystemOutput_)
-        self._check_instantiations(InputPortDescriptor_)
+        self._check_instantiations(InputPort_)
         self._check_instantiations(Parameters_)
         self._check_instantiations(State_)
         self._check_instantiations(ContinuousState_)
@@ -109,6 +140,10 @@ class TestGeneral(unittest.TestCase):
         self._check_instantiations(BasicVector_)
         self._check_instantiations(Supervector_)
         self._check_instantiations(Subvector_)
+        # Deprecated aliases.
+        # TODO(eric.cousineau): Make this raise a deprecation warning.
+        self._check_instantiations(mut.InputPortDescriptor_)
+        self.assertEqual(mut.InputPortDescriptor, mut.InputPort)
 
     def test_scalar_type_conversion(self):
         for T in [float, AutoDiffXd, Expression]:
@@ -136,8 +171,8 @@ class TestGeneral(unittest.TestCase):
 
             def check_output(context):
                 # Check number of output ports and value for a given context.
-                output = system.AllocateOutput(context)
-                self.assertEquals(output.get_num_ports(), 1)
+                output = system.AllocateOutput()
+                self.assertEqual(output.get_num_ports(), 1)
                 system.CalcOutput(context, output)
                 value = output.get_vector_data(0).get_value()
                 self.assertTrue(np.allclose([1], value))
@@ -157,7 +192,7 @@ class TestGeneral(unittest.TestCase):
             context.set_time(0.)
 
             context.set_accuracy(1e-4)
-            self.assertEquals(context.get_accuracy(), 1e-4)
+            self.assertEqual(context.get_accuracy(), 1e-4)
 
             # @note `simulator` now owns `context`.
             simulator = Simulator_[T](system, context)
@@ -195,10 +230,11 @@ class TestGeneral(unittest.TestCase):
         builder.Connect(adder1.get_output_port(0),
                         integrator.get_input_port(0))
 
+        # Exercise naming variants.
         builder.ExportInput(adder0.get_input_port(0))
-        builder.ExportInput(adder0.get_input_port(1))
-        builder.ExportInput(adder1.get_input_port(1))
-        builder.ExportOutput(integrator.get_output_port(0))
+        builder.ExportInput(adder0.get_input_port(1), kUseDefaultName)
+        builder.ExportInput(adder1.get_input_port(1), "third_input")
+        builder.ExportOutput(integrator.get_output_port(0), "result")
 
         diagram = builder.Build()
         # TODO(eric.cousineau): Figure out unicode handling if needed.
@@ -212,12 +248,12 @@ class TestGeneral(unittest.TestCase):
         # Create and attach inputs.
         # TODO(eric.cousineau): Not seeing any assertions being printed if no
         # inputs are connected. Need to check this behavior.
-        input0 = BasicVector([0.1, 0.2, 0.3])
+        input0 = np.array([0.1, 0.2, 0.3])
         context.FixInputPort(0, input0)
-        input1 = BasicVector([0.02, 0.03, 0.04])
+        input1 = np.array([0.02, 0.03, 0.04])
         context.FixInputPort(1, input1)
         input2 = BasicVector([0.003, 0.004, 0.005])
-        context.FixInputPort(2, input2)
+        context.FixInputPort(2, input2)  # Test the BasicVector overload.
 
         # Initialize integrator states.
         integrator_xc = (
@@ -280,3 +316,23 @@ class TestGeneral(unittest.TestCase):
 
         const_integrator = simulator.get_integrator()
         self.assertTrue(const_integrator is integrator)
+
+        # Test context-less constructors for
+        # integrator types.
+        test_integrator = RungeKutta2Integrator(
+            system=system, max_step_size=0.01)
+        test_integrator = RungeKutta3Integrator(system=system)
+
+        # Test simulator's reset_integrator,
+        # and also the full constructors for
+        # all integrator types.
+        simulator.reset_integrator(
+            RungeKutta2Integrator(
+                system=system,
+                max_step_size=0.01,
+                context=simulator.get_mutable_context()))
+
+        simulator.reset_integrator(
+            RungeKutta3Integrator(
+                system=system,
+                context=simulator.get_mutable_context()))

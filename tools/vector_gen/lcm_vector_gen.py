@@ -116,14 +116,6 @@ def generate_indices_names_accessor_impl(cc, caller_context, fields):
     put(cc, INDICES_NAMES_ACCESSOR_IMPL_END % context, 2)
 
 
-# One variant of a default constructor (all zeros).  (Depending on the
-# named_vector details, we will either use this variant or the subsequent one.)
-DEFAULT_CTOR_ZEROS = """
-  /// Default constructor.  Sets all rows to zero.
-  %(camel)s() : drake::systems::BasicVector<T>(K::kNumCoordinates) {
-    this->SetFromVector(drake::VectorX<T>::Zero(K::kNumCoordinates));
-  }
-"""
 # A second variant of a default constructor (field-by-field setting).
 DEFAULT_CTOR_CUSTOM_BEGIN_API = """
   /// Default constructor.  Sets all rows to their default value:
@@ -140,23 +132,20 @@ DEFAULT_CTOR_CUSTOM_FIELD_BODY = """
 DEFAULT_CTOR_CUSTOM_END = """
 }
 """
-DEFAULT_CTOR_FIELD_DEFAULT_VALUE = '0.0'  # When not otherwise overridden.
+DEFAULT_CTOR_FIELD_DUMMY_TOKEN = 'dummy'
 DEFAULT_CTOR_FIELD_UNKNOWN_DOC_UNITS = 'unknown'
 
 
 def generate_default_ctor(hh, caller_context, fields):
-    # If all defaults are 0.0 and unit-less, then emit the simple ctor.
-    if all([item['default_value'] == DEFAULT_CTOR_FIELD_DEFAULT_VALUE and
-            item['doc_units'] == DEFAULT_CTOR_FIELD_UNKNOWN_DOC_UNITS
-            for item in fields]):
-        put(hh, DEFAULT_CTOR_ZEROS % caller_context, 2)
-        return
     # Otherwise, emit a customized ctor.
     put(hh, DEFAULT_CTOR_CUSTOM_BEGIN_API % caller_context, 1)
     for field in fields:
         context = dict(caller_context)
         context.update(field=field['name'])
-        context.update(default_value=field['default_value'])
+        default_value = field['default_value']
+        if default_value == DEFAULT_CTOR_FIELD_DUMMY_TOKEN:
+            default_value = "a dummy value"
+        context.update(default_value=default_value)
         if field['doc_units'] == DEFAULT_CTOR_FIELD_UNKNOWN_DOC_UNITS:
             units_suffix = "with unknown units"
         else:
@@ -167,7 +156,10 @@ def generate_default_ctor(hh, caller_context, fields):
     for field in fields:
         context = dict(caller_context)
         context.update(field=field['name'])
-        context.update(default_value=field['default_value'])
+        default_value = field['default_value']
+        if default_value == DEFAULT_CTOR_FIELD_DUMMY_TOKEN:
+            default_value = "drake::dummy_value<T>::get()"
+        context.update(default_value=default_value)
         put(hh, DEFAULT_CTOR_CUSTOM_FIELD_BODY % context, 1)
     put(hh, DEFAULT_CTOR_CUSTOM_END % caller_context, 2)
 
@@ -198,7 +190,7 @@ def generate_set_to_named_variables(hh, caller_context, fields):
 
 
 DO_CLONE = """
-  %(camel)s<T>* DoClone() const override {
+  %(camel)s<T>* DoClone() const final {
     return new %(camel)s;
   }
 """
@@ -260,9 +252,9 @@ GET_COORDINATE_NAMES = """
 
 IS_VALID_BEGIN = """
   /// Returns whether the current values of this vector are well-formed.
-  drake::Bool<T> IsValid() const {
+  drake::boolean<T> IsValid() const {
     using std::isnan;
-    auto result = (T(0) == T(0));
+    drake::boolean<T> result{true};
 """
 IS_VALID = """
     result = result && !isnan(%(field)s());
@@ -297,7 +289,7 @@ def generate_is_valid(hh, caller_context, fields):
 
 CALC_INEQUALITY_CONSTRAINT_BEGIN = """
   // VectorBase override.
-  void CalcInequalityConstraint(drake::VectorX<T>* value) const override {
+  void CalcInequalityConstraint(drake::VectorX<T>* value) const final {
     value->resize(%(num_constraints)d);
 """
 CALC_INEQUALITY_CONSTRAINT_MIN_VALUE = """
@@ -354,6 +346,7 @@ VECTOR_HH_PREAMBLE = """
 #include <Eigen/Core>
 
 #include "drake/common/drake_bool.h"
+#include "drake/common/dummy_value.h"
 #include "drake/common/never_destroyed.h"
 #include "drake/common/symbolic.h"
 #include "drake/systems/framework/basic_vector.h"
@@ -365,7 +358,7 @@ VECTOR_CLASS_BEGIN = """
 
 /// Specializes BasicVector with specific getters and setters.
 template <typename T>
-class %(camel)s : public drake::systems::BasicVector<T> {
+class %(camel)s final : public drake::systems::BasicVector<T> {
  public:
   /// An abbreviation for our row index constants.
   typedef %(indices)s K;
@@ -411,18 +404,18 @@ TRANSLATOR_CLASS_DECL = """
  * Translates between LCM message objects and VectorBase objects for the
  * %(camel)s type.
  */
-class %(camel)sTranslator
+class %(camel)sTranslator final
     : public drake::systems::lcm::LcmAndVectorBaseTranslator {
  public:
   %(camel)sTranslator()
       : LcmAndVectorBaseTranslator(%(indices)s::kNumCoordinates) {}
   std::unique_ptr<drake::systems::BasicVector<double>> AllocateOutputVector()
-      const override;
+      const final;
   void Deserialize(const void* lcm_message_bytes, int lcm_message_length,
-      drake::systems::VectorBase<double>* vector_base) const override;
+      drake::systems::VectorBase<double>* vector_base) const final;
   void Serialize(double time,
       const drake::systems::VectorBase<double>& vector_base,
-      std::vector<uint8_t>* lcm_message_bytes) const override;
+      std::vector<uint8_t>* lcm_message_bytes) const final;
 };
 """
 
@@ -576,7 +569,8 @@ def generate_code(
     # Default some field attributes if they are missing.
     for item in fields:
         if len(item['default_value']) == 0:
-            item['default_value'] = DEFAULT_CTOR_FIELD_DEFAULT_VALUE
+            print("error: a default_value for {}.{} is required".format(
+                snake, item['name']))
         if len(item['doc_units']) == 0:
             item['doc_units'] = DEFAULT_CTOR_FIELD_UNKNOWN_DOC_UNITS
 

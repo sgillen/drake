@@ -15,7 +15,7 @@
 #include "drake/systems/framework/leaf_context.h"
 #include "drake/systems/framework/leaf_output_port.h"
 #include "drake/systems/framework/output_port.h"
-#include "drake/systems/framework/output_port_value.h"
+#include "drake/systems/framework/system_output.h"
 #include "drake/systems/framework/test_utilities/my_vector.h"
 
 namespace drake {
@@ -23,6 +23,11 @@ namespace systems {
 namespace {
 
 const int kSize = 3;
+
+// Note that Systems in this file are derived directly from drake::System for
+// testing purposes. User Systems should be derived only from LeafSystem which
+// handles much of the bookkeeping you'll see here, and won't need to call
+// methods that are intended only for internal use.
 
 // A shell System to test the default implementations.
 class TestSystem : public System<double> {
@@ -36,9 +41,17 @@ class TestSystem : public System<double> {
         this->AllocateForcedUnrestrictedUpdateEventCollection());
     this->set_name("TestSystem");
   }
+
+  // Implementation is required, but unused here.
+  int get_num_continuous_states() const final {
+    DRAKE_ABORT();
+  }
+
   ~TestSystem() override {}
 
   using System::AddConstraint;  // allow access to protected method.
+  using System::DeclareInputPort;
+  using System::DeclareAbstractInputPort;
 
   std::unique_ptr<ContinuousState<double>> AllocateTimeDerivatives()
       const override {
@@ -56,23 +69,27 @@ class TestSystem : public System<double> {
   void SetDefaultParameters(const Context<double>& context,
                             Parameters<double>* params) const override {}
 
-  std::unique_ptr<SystemOutput<double>> AllocateOutput(
-      const Context<double>& context) const override {
-    return nullptr;
-  }
-
-  const InputPortDescriptor<double>& AddAbstractInputPort() {
+  const InputPort<double>& AddAbstractInputPort() {
     return this->DeclareAbstractInputPort();
   }
 
   const LeafOutputPort<double>& AddAbstractOutputPort() {
-    // Create an abstract output port with no allocator or calculator.
+    // Create an abstract output port with dummy alloc and calc.
+    const CacheEntry& cache_entry = this->DeclareCacheEntry(
+        "null output port",
+        [] { return Value<int>::Make(0); },
+        [](const ContextBase&, AbstractValue*) {});
+    // TODO(sherm1) Use implicit_cast when available (from abseil). Several
+    // places in this test.
     auto port = std::make_unique<LeafOutputPort<double>>(
-        *this, *this, OutputPortIndex(get_num_output_ports()),
-        typename LeafOutputPort<double>::AllocCallback(nullptr),
-        typename LeafOutputPort<double>::CalcCallback(nullptr));
+        this,  // implicit_cast<const System<T>*>(this)
+        this,  // implicit_cast<const SystemBase*>(this)
+        "y" + std::to_string(get_num_output_ports()),
+        OutputPortIndex(this->get_num_output_ports()),
+        assign_next_dependency_ticket(),
+        kAbstractValued, 0, &cache_entry);
     LeafOutputPort<double>* const port_ptr = port.get();
-    this->CreateOutputPort(std::move(port));
+    this->AddOutputPort(std::move(port));
     return *port_ptr;
   }
 
@@ -117,12 +134,12 @@ class TestSystem : public System<double> {
 
  protected:
   BasicVector<double>* DoAllocateInputVector(
-      const InputPortDescriptor<double>& descriptor) const override {
+      const InputPort<double>& input_port) const override {
     return nullptr;
   }
 
   AbstractValue* DoAllocateInputAbstract(
-      const InputPortDescriptor<double>& descriptor) const override {
+      const InputPort<double>& input_port) const override {
     return nullptr;
   }
 
@@ -210,11 +227,11 @@ class TestSystem : public System<double> {
   }
 
  private:
-  std::unique_ptr<ContextBase> DoMakeContext() const final {
-    return std::make_unique<LeafContext<double>>();
+  std::unique_ptr<ContextBase> DoAllocateContext() const final {
+    auto context = std::make_unique<LeafContext<double>>();
+    InitializeContextBase(&*context);
+    return context;
   }
-
-  void DoValidateAllocatedContext(const ContextBase&) const final {}
 
   mutable int publish_count_ = 0;
   mutable int update_count_ = 0;
@@ -309,9 +326,9 @@ TEST_F(SystemTest, DiscreteUpdate) {
   EXPECT_EQ(1, system_.get_update_count());
 }
 
-// Tests that descriptor references remain valid even if lots of other
-// descriptors are added to the system, forcing a vector resize.
-TEST_F(SystemTest, PortDescriptorsAreStable) {
+// Tests that port references remain valid even if lots of other ports are added
+// to the system, forcing a vector resize.
+TEST_F(SystemTest, PortReferencesAreStable) {
   const auto& first_input = system_.AddAbstractInputPort();
   const auto& first_output = system_.AddAbstractOutputPort();
   for (int i = 0; i < 1000; i++) {
@@ -328,6 +345,23 @@ TEST_F(SystemTest, PortDescriptorsAreStable) {
   // Check for valid content.
   EXPECT_EQ(kAbstractValued, first_input.get_data_type());
   EXPECT_EQ(kAbstractValued, first_output.get_data_type());
+}
+
+TEST_F(SystemTest, PortNameTest) {
+  const auto& unnamed_input = system_.DeclareInputPort(kVectorValued, 2);
+  const auto& named_input =
+      system_.DeclareInputPort("my_input", kVectorValued, 3);
+  const auto& named_abstract_input =
+      system_.DeclareAbstractInputPort("abstract");
+
+  EXPECT_EQ(unnamed_input.get_name(), "u0");
+  EXPECT_EQ(named_input.get_name(), "my_input");
+  EXPECT_EQ(named_abstract_input.get_name(), "abstract");
+
+  // Duplicate port names should throw.
+  DRAKE_EXPECT_THROWS_MESSAGE(
+      system_.DeclareInputPort("my_input", kAbstractValued, 0),
+      std::logic_error, ".*already has an input port named.*");
 }
 
 // Tests the constraint list logic.
@@ -413,32 +447,47 @@ class ValueIOTestSystem : public System<T> {
         this->AllocateForcedUnrestrictedUpdateEventCollection());
 
     this->DeclareAbstractInputPort();
-    this->CreateOutputPort(std::make_unique<LeafOutputPort<T>>(
-        *this, *this, OutputPortIndex(this->get_num_output_ports()),
-        []() { return AbstractValue::Make(std::string()); },
-        [this](const Context<T>& context, AbstractValue* output) {
-          this->CalcStringOutput(context, output);
-        }));
-
+    this->AddOutputPort(std::make_unique<LeafOutputPort<T>>(
+        this,  // implicit_cast<const System<T>*>(this)
+        this,  // implicit_cast<const SystemBase*>(this)
+        "absport",
+        OutputPortIndex(this->get_num_output_ports()),
+        this->assign_next_dependency_ticket(),
+        kAbstractValued, 0 /* size */,
+        &this->DeclareCacheEntry(
+            "absport",
+            []() { return AbstractValue::Make(std::string()); },
+            [this](const ContextBase& context, AbstractValue* output) {
+              this->CalcStringOutput(context, output);
+            })));
     this->DeclareInputPort(kVectorValued, 1);
-    this->DeclareInputPort(kVectorValued, 1,
+    this->DeclareInputPort("uniform", kVectorValued, 1,
                            RandomDistribution::kUniform);
-    this->DeclareInputPort(kVectorValued, 1,
+    this->DeclareInputPort("gaussian", kVectorValued, 1,
                            RandomDistribution::kGaussian);
-    this->CreateOutputPort(std::make_unique<LeafOutputPort<T>>(
-        *this, *this, OutputPortIndex(this->get_num_output_ports()),
-        1,  // Vector size.
-        []() {
-          return std::make_unique<Value<BasicVector<T>>>(1);
-        },
-        [this](const Context<T>& context, BasicVector<T>* output) {
-          this->CalcVectorOutput(context, output);
-        }));
+    this->AddOutputPort(std::make_unique<LeafOutputPort<T>>(
+        this,  // implicit_cast<const System<T>*>(this)
+        this,  // implicit_cast<const SystemBase*>(this)
+        "vecport",
+        OutputPortIndex(this->get_num_output_ports()),
+        this->assign_next_dependency_ticket(),
+        kVectorValued, 1 /* size */,
+        &this->DeclareCacheEntry(
+            "vecport",
+            []() { return std::make_unique<Value<BasicVector<T>>>(1); },
+            [this](const ContextBase& context, AbstractValue* output) {
+              this->CalcVectorOutput(context, output);
+            })));
 
     this->set_name("ValueIOTestSystem");
   }
 
-  ~ValueIOTestSystem() override {}
+  // Implementation is required, but unused here.
+  int get_num_continuous_states() const final {
+    DRAKE_ABORT();
+  }
+
+    ~ValueIOTestSystem() override {}
 
   T DoCalcWitnessValue(const Context<T>&,
                        const WitnessFunction<T>&) const override {
@@ -454,28 +503,28 @@ class ValueIOTestSystem : public System<T> {
   }
 
   AbstractValue* DoAllocateInputAbstract(
-      const InputPortDescriptor<T>& descriptor) const override {
+      const InputPort<T>& input_port) const override {
     // Should only get called for the first input.
-    EXPECT_EQ(descriptor.get_index(), 0);
+    EXPECT_EQ(input_port.get_index(), 0);
     return AbstractValue::Make<std::string>("").release();
   }
 
   BasicVector<T>* DoAllocateInputVector(
-      const InputPortDescriptor<T>& descriptor) const override {
+      const InputPort<T>& input_port) const override {
     // Should not get called for the first (abstract) input.
-    EXPECT_GE(descriptor.get_index(), 1);
+    EXPECT_GE(input_port.get_index(), 1);
     return new TestTypedVector<T>();
   }
 
   std::unique_ptr<ContinuousState<T>> AllocateTimeDerivatives() const override {
-    return nullptr;
+    return std::make_unique<ContinuousState<T>>();
   }
 
-  std::unique_ptr<ContextBase> DoMakeContext() const final {
-    return std::make_unique<LeafContext<T>>();
+  std::unique_ptr<ContextBase> DoAllocateContext() const final {
+    auto context = std::make_unique<LeafContext<T>>();
+    this->InitializeContextBase(&*context);
+    return context;
   }
-
-  void DoValidateAllocatedContext(const ContextBase& context) const final {}
 
   std::unique_ptr<CompositeEventCollection<T>>
   AllocateCompositeEventCollection() const override {
@@ -500,7 +549,7 @@ class ValueIOTestSystem : public System<T> {
   }
 
   // Appends "output" to input(0) for output(0).
-  void CalcStringOutput(const Context<T>& context,
+  void CalcStringOutput(const ContextBase& context,
                         AbstractValue* output) const {
     const std::string* str_in =
         this->template EvalInputValue<std::string>(context, 0);
@@ -510,19 +559,12 @@ class ValueIOTestSystem : public System<T> {
   }
 
   // Sets output(1) = 2 * input(1).
-  void CalcVectorOutput(const Context<T>& context,
-                        BasicVector<T>* vec_out) const {
+  void CalcVectorOutput(const ContextBase& context_base,
+                        AbstractValue* output) const {
+    const Context<T>& context = dynamic_cast<const Context<T>&>(context_base);
     const BasicVector<T>* vec_in = this->EvalVectorInput(context, 1);
-    vec_out->get_mutable_value() = 2 * vec_in->get_value();
-  }
-
-  std::unique_ptr<SystemOutput<T>> AllocateOutput(
-      const Context<T>& context) const override {
-    std::unique_ptr<LeafSystemOutput<T>> output(
-        new LeafSystemOutput<T>);
-    output->add_port(this->get_output_port(0).Allocate());
-    output->add_port(this->get_output_port(1).Allocate());
-    return std::move(output);
+    auto& vec_out = output->template GetMutableValue<BasicVector<T>>();
+    vec_out.get_mutable_value() = 2 * vec_in->get_value();
   }
 
   void DispatchPublishHandler(
@@ -651,7 +693,7 @@ TEST_F(SystemInputErrorTest, CheckMessages) {
   EXPECT_NO_THROW(system_.EvalInputValue<BasicVector<double>>(*context_, 1));
   DRAKE_EXPECT_THROWS_MESSAGE_IF_ARMED(
       system_.EvalInputValue<int>(*context_, 1), std::logic_error,
-      ".*EvalInputValue.*expected.*int.*input port.*1.*actual.*BasicVector.*");
+      ".*EvalInputValue.*expected.*int.*input port.*1.*actual.*MyVector.*");
 
   // Now induce errors that only apply to abstract-valued input ports.
 
@@ -679,18 +721,13 @@ class SystemIOTest : public ::testing::Test {
  protected:
   void SetUp() override {
     context_ = test_sys_.CreateDefaultContext();
-    output_ = test_sys_.AllocateOutput(*context_);
+    output_ = test_sys_.AllocateOutput();
 
     // make string input
-    std::unique_ptr<Value<std::string>> str_input =
-        std::make_unique<Value<std::string>>("input");
-    context_->FixInputPort(0, std::move(str_input));
+    context_->FixInputPort(0, Value<std::string>("input"));
 
     // make vector input
-    std::unique_ptr<BasicVector<double>> vec_input =
-        std::make_unique<BasicVector<double>>(1);
-    vec_input->SetAtIndex(0, 2);
-    context_->FixInputPort(1, std::move(vec_input));
+    context_->FixInputPort(1, {2.0});
   }
 
   ValueIOTestSystem<double> test_sys_;
@@ -766,6 +803,224 @@ TEST_F(SystemIOTest, TransmogrifyAndFix) {
   EXPECT_NE(fixed_vec, nullptr);
   EXPECT_EQ(2, fixed_vec->GetAtIndex(0).value());
   EXPECT_EQ(0, fixed_vec->GetAtIndex(0).derivatives().size());
+}
+
+// This class implements various computational methods so we can check that
+// they get invoked properly. The particular results don't mean anything.
+// As above, lots of painful bookkeeping here that is normally buried by
+// LeafSystem.
+class ComputationTestSystem final : public System<double> {
+ public:
+  DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(ComputationTestSystem)
+
+  ComputationTestSystem() : System<double>(SystemScalarConverter{}) {}
+
+  // One q, one v, one z.
+  std::unique_ptr<ContinuousState<double>> AllocateTimeDerivatives()
+      const final {
+    return std::make_unique<ContinuousState<double>>(
+        std::make_unique<BasicVector<double>>(3), 1, 1, 1);  // q, v, z
+  }
+
+  // Verify that the number of calls is as expected.
+  void ExpectCount(int xcdot, int pe, int ke, int pc, int pnc) const {
+    EXPECT_EQ(xcdot, xcdot_count_);
+    EXPECT_EQ(pe, pe_count_);
+    EXPECT_EQ(ke, ke_count_);
+    EXPECT_EQ(pc, pc_count_);
+    EXPECT_EQ(pnc, pnc_count_);
+  }
+
+  // Implementation is required, but unused here.
+  int get_num_continuous_states() const final {
+    DRAKE_ABORT();
+  }
+
+ private:
+  // Two discrete variable groups of lengths 2 and 4.
+  std::unique_ptr<DiscreteValues<double>> AllocateDiscreteVariables()
+      const final {
+    std::vector<std::unique_ptr<BasicVector<double>>> data;
+    data.emplace_back(std::make_unique<BasicVector<double>>(2));
+    data.emplace_back(std::make_unique<BasicVector<double>>(4));
+    return std::make_unique<DiscreteValues<double>>(std::move(data));
+  }
+
+  std::unique_ptr<ContextBase> DoAllocateContext() const final {
+    auto context = std::make_unique<LeafContext<double>>();
+    InitializeContextBase(&*context);
+    return context;
+  }
+
+  // Derivatives can depend on time. Here x = (-1, -2, -3) * t.
+  void DoCalcTimeDerivatives(const Context<double>& context,
+                             ContinuousState<double>* derivatives) const final {
+    unused(context);
+    EXPECT_EQ(derivatives->size(), 3);
+    const double t = context.get_time();
+    (*derivatives)[0] = -1 * t;
+    (*derivatives)[1] = -2 * t;
+    (*derivatives)[2] = -3 * t;
+    ++xcdot_count_;
+  }
+
+  double DoCalcPotentialEnergy(const Context<double>& context) const final {
+    unused(context);
+    ++pe_count_;
+    return 1.;
+  }
+
+  double DoCalcKineticEnergy(const Context<double>& context) const final {
+    unused(context);
+    ++ke_count_;
+    return 2.;
+  }
+
+  double DoCalcConservativePower(const Context<double>& context) const final {
+    unused(context);
+    ++pc_count_;
+    return 3.;
+  }
+
+  // Non-conservative power can depend on time. Here it is 4*t.
+  double DoCalcNonConservativePower(
+      const Context<double>& context) const final {
+    ++pnc_count_;
+    return 4. * context.get_time();
+  }
+
+  // These are required by the base class but not used here.
+  std::unique_ptr<CompositeEventCollection<double>>
+  AllocateCompositeEventCollection() const final { return {}; }
+  void SetDefaultState(const Context<double>&, State<double>*) const final {}
+  void SetDefaultParameters(const Context<double>&,
+                            Parameters<double>*) const final {}
+  std::unique_ptr<EventCollection<PublishEvent<double>>>
+  AllocateForcedPublishEventCollection() const final { return {}; }
+  std::unique_ptr<EventCollection<DiscreteUpdateEvent<double>>>
+  AllocateForcedDiscreteUpdateEventCollection() const final { return {}; }
+  std::unique_ptr<EventCollection<UnrestrictedUpdateEvent<double>>>
+  AllocateForcedUnrestrictedUpdateEventCollection() const final { return {}; }
+  std::multimap<int, int> GetDirectFeedthroughs() const final { return {}; }
+  double DoCalcWitnessValue(const Context<double>&,
+                            const WitnessFunction<double>&) const final {
+    DRAKE_ABORT_MSG("test should not get here");
+  }
+  void AddTriggeredWitnessFunctionToCompositeEventCollection(
+      Event<double>*, CompositeEventCollection<double>*) const final {
+    DRAKE_ABORT_MSG("test should not get here");
+  }
+  BasicVector<double>* DoAllocateInputVector(
+      const InputPort<double>&) const final { return nullptr; }
+  AbstractValue* DoAllocateInputAbstract(const InputPort<double>&) const final {
+    return nullptr;
+  }
+  void DispatchPublishHandler(
+      const Context<double>& context,
+      const EventCollection<PublishEvent<double>>& events) const final {
+    DRAKE_ABORT_MSG("test should not get here");
+  }
+  void DispatchDiscreteVariableUpdateHandler(
+      const Context<double>& context,
+      const EventCollection<DiscreteUpdateEvent<double>>& events,
+      DiscreteValues<double>* discrete_state) const final {
+    DRAKE_ABORT_MSG("test should not get here");
+  }
+  void DispatchUnrestrictedUpdateHandler(
+      const Context<double>&,
+      const EventCollection<UnrestrictedUpdateEvent<double>>&,
+      State<double>*) const final {
+    DRAKE_ABORT_MSG("test should not get here");
+  }
+  std::map<PeriodicEventData, std::vector<const Event<double>*>,
+           PeriodicEventDataComparator>
+  DoGetPeriodicEvents() const final { return {}; }
+
+  mutable int xcdot_count_{};
+  mutable int pe_count_{};
+  mutable int ke_count_{};
+  mutable int pc_count_{};
+  mutable int pnc_count_{};
+};
+
+// Provides values for some of the inputs and sets up for outputs.
+class ComputationTest : public ::testing::Test {
+ protected:
+  void SetUp() final {
+    context_->EnableCaching();
+  }
+
+  ComputationTestSystem test_sys_;
+  std::unique_ptr<Context<double>> context_ =
+      test_sys_.CreateDefaultContext();
+};
+
+TEST_F(ComputationTest, Eval) {
+  context_->set_time(1.);
+
+  //                 xcdot, pe, ke, pc, pnc
+  test_sys_.ExpectCount(0, 0, 0, 0, 0);
+  EXPECT_EQ(test_sys_.EvalTimeDerivatives(*context_)[0], -1.);
+  EXPECT_EQ(test_sys_.EvalTimeDerivatives(*context_)[1], -2.);
+  EXPECT_EQ(test_sys_.EvalTimeDerivatives(*context_)[2], -3.);
+  // Caching should have kept us to a single derivative evaluation.
+  test_sys_.ExpectCount(1, 0, 0, 0, 0);
+
+  EXPECT_EQ(test_sys_.EvalPotentialEnergy(*context_), 1.);
+  test_sys_.ExpectCount(1, 1, 0, 0, 0);
+  EXPECT_EQ(test_sys_.EvalKineticEnergy(*context_), 2.);
+  test_sys_.ExpectCount(1, 1, 1, 0, 0);
+  EXPECT_EQ(test_sys_.EvalConservativePower(*context_), 3.);
+  test_sys_.ExpectCount(1, 1, 1, 1, 0);
+  EXPECT_EQ(test_sys_.EvalNonConservativePower(*context_), 4.);
+  test_sys_.ExpectCount(1, 1, 1, 1, 1);
+
+  // These should not require re-evaluation.
+  EXPECT_EQ(test_sys_.EvalPotentialEnergy(*context_), 1.);
+  EXPECT_EQ(test_sys_.EvalKineticEnergy(*context_), 2.);
+  EXPECT_EQ(test_sys_.EvalConservativePower(*context_), 3.);
+  EXPECT_EQ(test_sys_.EvalNonConservativePower(*context_), 4.);
+  test_sys_.ExpectCount(1, 1, 1, 1, 1);
+
+  // Each of the Calc methods should cause computation.
+  auto derivatives = test_sys_.AllocateTimeDerivatives();
+  test_sys_.CalcTimeDerivatives(*context_, &*derivatives);
+  test_sys_.ExpectCount(2, 1, 1, 1, 1);
+  EXPECT_EQ((*derivatives)[1], -2.);
+  EXPECT_EQ(test_sys_.CalcPotentialEnergy(*context_), 1.);
+  test_sys_.ExpectCount(2, 2, 1, 1, 1);
+  EXPECT_EQ(test_sys_.CalcKineticEnergy(*context_), 2.);
+  test_sys_.ExpectCount(2, 2, 2, 1, 1);
+  EXPECT_EQ(test_sys_.CalcConservativePower(*context_), 3.);
+  test_sys_.ExpectCount(2, 2, 2, 2, 1);
+  EXPECT_EQ(test_sys_.CalcNonConservativePower(*context_), 4.);
+  test_sys_.ExpectCount(2, 2, 2, 2, 2);
+
+  // TODO(sherm1) Pending resolution of issue #9171 we can be more precise
+  // about dependencies here. For now we'll just verify that changing
+  // some significant variables causes recomputation, not that *only*
+  // significant variables cause recomputation.
+  context_->set_time(2.);
+  EXPECT_EQ(test_sys_.EvalTimeDerivatives(*context_)[0], -2.);
+  EXPECT_EQ(test_sys_.EvalTimeDerivatives(*context_)[1], -4.);
+  EXPECT_EQ(test_sys_.EvalTimeDerivatives(*context_)[2], -6.);
+  test_sys_.ExpectCount(3, 2, 2, 2, 2);  // Above is just one evaluation.
+  EXPECT_EQ(test_sys_.EvalNonConservativePower(*context_), 8.);
+  test_sys_.ExpectCount(3, 2, 2, 2, 3);
+  // TODO(sherm1) Verify that other methods don't depend on time.
+
+  // This should mark all state variables as changed and force recomputation.
+  context_->get_mutable_state();
+  EXPECT_EQ(test_sys_.EvalTimeDerivatives(*context_)[2], -6.);  // Again.
+  test_sys_.ExpectCount(4, 2, 2, 2, 3);
+  EXPECT_EQ(test_sys_.EvalPotentialEnergy(*context_), 1.);
+  test_sys_.ExpectCount(4, 3, 2, 2, 3);
+  EXPECT_EQ(test_sys_.EvalKineticEnergy(*context_), 2.);
+  test_sys_.ExpectCount(4, 3, 3, 2, 3);
+  EXPECT_EQ(test_sys_.EvalConservativePower(*context_), 3.);
+  test_sys_.ExpectCount(4, 3, 3, 3, 3);
+  EXPECT_EQ(test_sys_.EvalNonConservativePower(*context_), 8.);  // Again.
+  test_sys_.ExpectCount(4, 3, 3, 3, 4);
 }
 
 }  // namespace

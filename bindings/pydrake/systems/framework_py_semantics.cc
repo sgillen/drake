@@ -13,7 +13,7 @@
 #include "drake/systems/framework/diagram_builder.h"
 #include "drake/systems/framework/event.h"
 #include "drake/systems/framework/leaf_context.h"
-#include "drake/systems/framework/output_port_value.h"
+#include "drake/systems/framework/system_output.h"
 
 using std::string;
 using std::unique_ptr;
@@ -29,6 +29,7 @@ void DefineFrameworkPySemantics(py::module m) {
   using namespace drake::systems;
 
   m.attr("kAutoSize") = kAutoSize;
+  m.attr("kUseDefaultName") = kUseDefaultName;
 
   py::enum_<PortDataType>(m, "PortDataType")
     .value("kVectorValued", kVectorValued)
@@ -67,17 +68,22 @@ void DefineFrameworkPySemantics(py::module m) {
         m, "Context", GetPyParam<T>())
       .def("get_num_input_ports", &Context<T>::get_num_input_ports)
       .def("FixInputPort",
-           py::overload_cast<int, unique_ptr<BasicVector<T>>>(
+           py::overload_cast<int, const BasicVector<T>&>(
                &Context<T>::FixInputPort),
-           py_reference_internal,
-           // Keep alive, ownership: `BasicVector` keeps `self` alive.
-           py::keep_alive<3, 1>())
+           py::arg("index"), py::arg("vec"),
+           py_reference_internal)
       .def("FixInputPort",
            py::overload_cast<int, unique_ptr<AbstractValue>>(
                &Context<T>::FixInputPort),
+           py::arg("index"), py::arg("value"),
            py_reference_internal,
            // Keep alive, ownership: `AbstractValue` keeps `self` alive.
            py::keep_alive<3, 1>())
+      .def("FixInputPort",
+           py::overload_cast<int, const Eigen::Ref<const VectorX<T>>&>(
+               &Context<T>::FixInputPort),
+           py::arg("index"), py::arg("data"),
+           py_reference_internal)
       .def("get_time", &Context<T>::get_time)
       .def("set_time", &Context<T>::set_time)
       .def("set_accuracy", &Context<T>::set_accuracy)
@@ -92,6 +98,12 @@ void DefineFrameworkPySemantics(py::module m) {
            py_reference_internal)
       // Sugar methods
       // - Continuous.
+      .def("get_continuous_state",
+           &Context<T>::get_continuous_state,
+           py_reference_internal)
+      .def("get_mutable_continuous_state",
+           &Context<T>::get_mutable_continuous_state,
+           py_reference_internal)
       .def("get_continuous_state_vector",
            &Context<T>::get_continuous_state_vector,
            py_reference_internal)
@@ -153,12 +165,12 @@ void DefineFrameworkPySemantics(py::module m) {
           py::keep_alive<2, 1>())
       .def("Connect",
            py::overload_cast<
-               const OutputPort<T>&, const InputPortDescriptor<T>&>(
+               const OutputPort<T>&, const InputPort<T>&>(
                &DiagramBuilder<T>::Connect))
-      .def("ExportInput", &DiagramBuilder<T>::ExportInput,
-           py_reference_internal)
-      .def("ExportOutput", &DiagramBuilder<T>::ExportOutput,
-           py_reference_internal)
+      .def("ExportInput", &DiagramBuilder<T>::ExportInput, py::arg("input"),
+           py::arg("name") = kUseDefaultName, py_reference_internal)
+      .def("ExportOutput", &DiagramBuilder<T>::ExportOutput, py::arg("output"),
+           py::arg("name") = kUseDefaultName, py_reference_internal)
       .def("Build", &DiagramBuilder<T>::Build,
            // Keep alive, transitive: `return` keeps `self` alive.
            py::keep_alive<1, 0>())
@@ -173,7 +185,6 @@ void DefineFrameworkPySemantics(py::module m) {
 
     auto system_output = DefineTemplateClassWithDefault<SystemOutput<T>>(
         m, "SystemOutput", GetPyParam<T>());
-    DefClone(&system_output);
     system_output
       .def("get_num_ports", &SystemOutput<T>::get_num_ports)
       .def("get_data", &SystemOutput<T>::get_data,
@@ -181,11 +192,26 @@ void DefineFrameworkPySemantics(py::module m) {
       .def("get_vector_data", &SystemOutput<T>::get_vector_data,
            py_reference_internal);
 
-    DefineTemplateClassWithDefault<InputPortDescriptor<T>>(
-        m, "InputPortDescriptor", GetPyParam<T>())
-      .def("size", &InputPortDescriptor<T>::size)
-      .def("get_data_type", &InputPortDescriptor<T>::get_data_type)
-      .def("get_index", &InputPortDescriptor<T>::get_index);
+    DefineTemplateClassWithDefault<InputPort<T>>(
+        m, "InputPort", GetPyParam<T>())
+      .def("size", &InputPort<T>::size)
+      .def("get_data_type", &InputPort<T>::get_data_type)
+      .def("get_index", &InputPort<T>::get_index);
+
+    // TODO(eric.cousineau): Make these deprecated module attributes so that
+    // they present deprecation messages.
+    // N.B. While this is called over again for each `T`, it is idempotent
+    // (no averse side-effects).
+    m.attr("InputPortDescriptor") = m.attr("InputPort");
+    m.attr("InputPortDescriptor_") = m.attr("InputPort_");
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+    // Use deprecated alias directly here, so that it's easy to know when to
+    // remove it from the Python code.
+    static_assert(
+      std::is_same<InputPortDescriptor<T>, InputPort<T>>::value,
+      "Remove Python aliases once this causes a compilation error this fails");
+  #pragma GCC diagnostic pop  // pop -Wdeprecated-declarations
 
     // Parameters.
     auto parameters = DefineTemplateClassWithDefault<Parameters<T>>(

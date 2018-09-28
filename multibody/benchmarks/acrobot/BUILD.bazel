@@ -2,6 +2,7 @@
 
 load(
     "@drake//tools/skylark:drake_cc.bzl",
+    "drake_cc_googletest",
     "drake_cc_library",
     "drake_cc_package_library",
 )
@@ -29,7 +30,6 @@ drake_cc_library(
 
 filegroup(
     name = "models",
-    testonly = 1,
     srcs = glob([
         "**/*.obj",
         "**/*.sdf",

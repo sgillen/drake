@@ -114,6 +114,10 @@ class SystemScalarConverter {
     AddIfSupported<S, AutoDiffXd, Expression>(subtype_preservation);
   }
 
+  /// Returns true iff no conversions are supported.  (In other words, whether
+  /// this is a default-constructed object.)
+  bool empty() const { return funcs_.empty(); }
+
   /// A std::function used to convert a System<U> into a System<T>.
   template <typename T, typename U>
   using ConverterFunction =
@@ -238,7 +242,7 @@ static std::unique_ptr<System<T>> Make(
   // is the only extrinsic property of the System and LeafSystem base classes
   // that is stored within the System itself.
   result->set_name(other.get_name());
-  return std::move(result);
+  return result;
 }
 // When Traits says not to convert.
 template <template <typename> class S, typename T, typename U>

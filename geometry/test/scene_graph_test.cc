@@ -9,6 +9,7 @@
 #include "drake/geometry/geometry_context.h"
 #include "drake/geometry/geometry_frame.h"
 #include "drake/geometry/geometry_instance.h"
+#include "drake/geometry/geometry_set.h"
 #include "drake/geometry/geometry_visualization.h"
 #include "drake/geometry/query_object.h"
 #include "drake/geometry/shape_specification.h"
@@ -26,6 +27,7 @@
 namespace drake {
 namespace geometry {
 
+using Eigen::Isometry3d;
 using systems::Context;
 using systems::System;
 using std::make_unique;
@@ -110,7 +112,7 @@ class SceneGraphTest : public ::testing::Test {
   static std::unique_ptr<GeometryInstance> make_sphere_instance(
       double radius = 1.0) {
     return make_unique<GeometryInstance>(Isometry3<double>::Identity(),
-                                         make_unique<Sphere>(radius));
+                                         make_unique<Sphere>(radius), "sphere");
   }
 
   SceneGraph<double> scene_graph_;
@@ -132,8 +134,10 @@ class SceneGraphTest : public ::testing::Test {
 TEST_F(SceneGraphTest, RegisterSourceDefaultName) {
   SourceId id = scene_graph_.RegisterSource();
   EXPECT_TRUE(id.is_valid());
+  EXPECT_NO_THROW(scene_graph_.model_inspector().GetSourceName(id));
   AllocateContext();
-  EXPECT_NO_THROW(query_object().GetSourceName(id));
+  EXPECT_THROW(scene_graph_.model_inspector().GetSourceName(id),
+               std::logic_error);
   EXPECT_TRUE(scene_graph_.SourceIsRegistered(id));
 }
 
@@ -143,8 +147,8 @@ TEST_F(SceneGraphTest, RegisterSourceSpecifiedName) {
   std::string name = "some_unique_name";
   SourceId id = scene_graph_.RegisterSource(name);
   EXPECT_TRUE(id.is_valid());
+  EXPECT_EQ(scene_graph_.model_inspector().GetSourceName(id), name);
   AllocateContext();
-  EXPECT_EQ(query_object().GetSourceName(id), name);
   EXPECT_TRUE(scene_graph_.SourceIsRegistered(id));
 }
 
@@ -334,6 +338,63 @@ TEST_F(SceneGraphTest, TransmogrifyContext) {
   EXPECT_THROW(geo_context_ad->get_geometry_state().BelongsToSource(
                    GeometryId::get_new_id(), s_id),
                std::logic_error);
+}
+
+// Tests that exercising the collision filtering logic *after* allocation leads
+// to an exception being thrown.
+TEST_F(SceneGraphTest, PostAllocationCollisionFiltering) {
+  AllocateContext();
+
+  GeometrySet geometry_set1{FrameId::get_new_id()};
+  DRAKE_EXPECT_THROWS_MESSAGE(
+      scene_graph_.ExcludeCollisionsWithin(geometry_set1), std::logic_error,
+      "The call to ExcludeCollisionsWithin is invalid; a context has already "
+      "been allocated.");
+
+  GeometrySet geometry_set2{FrameId::get_new_id()};
+  DRAKE_EXPECT_THROWS_MESSAGE(
+      scene_graph_.ExcludeCollisionsBetween(geometry_set1, geometry_set2),
+      std::logic_error,
+      "The call to ExcludeCollisionsBetween is invalid; a context has already "
+      "been allocated.");
+}
+
+// Tests the model inspector. Exercises a token piece of functionality. The
+// inspector is a wrapper on the GeometryState. It is assumed that GeometryState
+// confirms the correctness of the underlying functions. This merely tests the
+// instantiation, the exercise of a representative function, and the
+// post-allocate functionality.
+TEST_F(SceneGraphTest, ModelInspector) {
+  SourceId source_id = scene_graph_.RegisterSource();
+  ASSERT_TRUE(scene_graph_.SourceIsRegistered(source_id));
+
+  FrameId frame_1 = scene_graph_.RegisterFrame(
+      source_id, GeometryFrame{"f1", Isometry3d::Identity()});
+  FrameId frame_2 = scene_graph_.RegisterFrame(
+      source_id, GeometryFrame{"f2", Isometry3d::Identity()});
+
+  // Note: all these geometries have the same *name* -- but because they are
+  // affixed to different nodes, that should be alright.
+  GeometryId anchored_id = scene_graph_.RegisterAnchoredGeometry(
+      source_id,
+      make_unique<GeometryInstance>(Isometry3d::Identity(),
+                                    make_unique<Sphere>(1.0), "sphere"));
+  GeometryId sphere_1 = scene_graph_.RegisterGeometry(
+      source_id, frame_1,
+      make_unique<GeometryInstance>(Isometry3d::Identity(),
+                                    make_unique<Sphere>(1.0), "sphere"));
+  GeometryId sphere_2 = scene_graph_.RegisterGeometry(
+      source_id, frame_2,
+      make_unique<GeometryInstance>(Isometry3d::Identity(),
+                                    make_unique<Sphere>(1.0), "sphere"));
+
+  const SceneGraphInspector<double>& inspector = scene_graph_.model_inspector();
+
+  EXPECT_EQ(inspector.GetGeometryIdByName(frame_1, "sphere"), sphere_1);
+  EXPECT_EQ(inspector.GetGeometryIdByName(frame_2, "sphere"), sphere_2);
+  EXPECT_EQ(inspector.GetGeometryIdByName(scene_graph_.world_frame_id(),
+                                          "sphere"),
+            anchored_id);
 }
 
 // Dummy system to serve as geometry source.

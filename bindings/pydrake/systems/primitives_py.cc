@@ -3,18 +3,24 @@
 
 #include "drake/bindings/pydrake/pydrake_pybind.h"
 #include "drake/bindings/pydrake/systems/systems_pybind.h"
+#include "drake/bindings/pydrake/util/cpp_template_pybind.h"
 #include "drake/bindings/pydrake/util/drake_optional_pybind.h"
 #include "drake/systems/primitives/adder.h"
 #include "drake/systems/primitives/affine_system.h"
 #include "drake/systems/primitives/barycentric_system.h"
 #include "drake/systems/primitives/constant_value_source.h"
 #include "drake/systems/primitives/constant_vector_source.h"
+#include "drake/systems/primitives/demultiplexer.h"
+#include "drake/systems/primitives/gain.h"
 #include "drake/systems/primitives/integrator.h"
 #include "drake/systems/primitives/linear_system.h"
+#include "drake/systems/primitives/matrix_gain.h"
 #include "drake/systems/primitives/multiplexer.h"
 #include "drake/systems/primitives/pass_through.h"
+#include "drake/systems/primitives/random_source.h"
 #include "drake/systems/primitives/saturation.h"
 #include "drake/systems/primitives/signal_logger.h"
+#include "drake/systems/primitives/trajectory_source.h"
 #include "drake/systems/primitives/wrap_to_system.h"
 #include "drake/systems/primitives/zero_order_hold.h"
 
@@ -69,6 +75,18 @@ PYBIND11_MODULE(primitives, m) {
         m, "ConstantVectorSource", GetPyParam<T>())
         .def(py::init<VectorX<T>>());
 
+    DefineTemplateClassWithDefault<Demultiplexer<T>, LeafSystem<T>>(
+        m, "Demultiplexer", GetPyParam<T>())
+        .def(py::init<int, int>(),
+             py::arg("size"),
+             py::arg("output_ports_sizes") = 1);
+
+    DefineTemplateClassWithDefault<Gain<T>, LeafSystem<T>>(
+        m, "Gain", GetPyParam<T>())
+        .def(py::init<double, int>(), py::arg("k"), py::arg("size"))
+        .def(py::init<const Eigen::Ref<const Eigen::VectorXd>&>(),
+             py::arg("k"));
+
     DefineTemplateClassWithDefault<Integrator<T>, LeafSystem<T>>(
         m, "Integrator", GetPyParam<T>())
         .def(py::init<int>());
@@ -81,6 +99,11 @@ PYBIND11_MODULE(primitives, m) {
                       const Eigen::Ref<const Eigen::MatrixXd>&, double>(),
              py::arg("A"), py::arg("B"), py::arg("C"), py::arg("D"),
              py::arg("time_period") = 0.0);
+
+    DefineTemplateClassWithDefault<MatrixGain<T>, LinearSystem<T>>(
+        m, "MatrixGain", GetPyParam<T>())
+        .def(py::init<const Eigen::Ref<const Eigen::MatrixXd>&>(),
+             py::arg("D"));
 
     DefineTemplateClassWithDefault<Multiplexer<T>, LeafSystem<T>>(
         m, "Multiplexer", GetPyParam<T>())
@@ -125,6 +148,30 @@ PYBIND11_MODULE(primitives, m) {
       .def("get_output_values",
            &BarycentricMeshSystem<double>::get_output_values);
 
+  py::class_<UniformRandomSource, LeafSystem<double>>(m, "UniformRandomSource")
+      .def(py::init<int, double>(), py::arg("num_outputs"),
+           py::arg("sampling_interval_sec"));
+
+  py::class_<GaussianRandomSource, LeafSystem<double>>(m,
+                                                       "GaussianRandomSource")
+      .def(py::init<int, double>(), py::arg("num_outputs"),
+           py::arg("sampling_interval_sec"));
+
+  py::class_<ExponentialRandomSource, LeafSystem<double>>(
+      m, "ExponentialRandomSource")
+      .def(py::init<int, double>(), py::arg("num_outputs"),
+           py::arg("sampling_interval_sec"));
+
+  py::class_<TrajectorySource<double>, LeafSystem<double>>(
+        m, "TrajectorySource")
+        .def(py::init<const trajectories::Trajectory<double>&, int, bool>(),
+          py::arg("trajectory"),
+          py::arg("output_derivative_order") = 0,
+          py::arg("zero_derivatives_beyond_limits") = true);
+
+  m.def("AddRandomInputs", &AddRandomInputs, py::arg("sampling_interval_sec"),
+        py::arg("builder"));
+
   m.def("Linearize", &Linearize, py::arg("system"), py::arg("context"),
         py::arg("input_port_index") = systems::kUseFirstInputIfItExists,
         py::arg("output_port_index") = systems::kUseFirstOutputIfItExists,
@@ -144,6 +191,12 @@ PYBIND11_MODULE(primitives, m) {
 
   m.def("IsObservable", &IsObservable, py::arg("sys"),
         py::arg("threshold") = nullopt);
+
+  m.def("LogOutput", &LogOutput<double>, py::arg("src"), py::arg("builder"),
+        // Keep alive, ownership: `return` keeps `builder` alive.
+        py::keep_alive<0, 2>(),
+        // TODO(eric.cousineau): Figure out why this is necessary (#9398).
+        py_reference);
 
   // TODO(eric.cousineau): Add more systems as needed.
 }

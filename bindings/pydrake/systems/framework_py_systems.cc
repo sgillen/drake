@@ -8,6 +8,7 @@
 
 #include "drake/bindings/pydrake/pydrake_pybind.h"
 #include "drake/bindings/pydrake/systems/systems_pybind.h"
+#include "drake/bindings/pydrake/util/deprecation_pybind.h"
 #include "drake/bindings/pydrake/util/drake_optional_pybind.h"
 #include "drake/bindings/pydrake/util/eigen_pybind.h"
 #include "drake/bindings/pydrake/util/wrap_pybind.h"
@@ -31,6 +32,7 @@ using symbolic::Expression;
 using systems::System;
 using systems::LeafSystem;
 using systems::Context;
+using systems::ContinuousState;
 using systems::VectorSystem;
 using systems::PublishEvent;
 using systems::DiscreteUpdateEvent;
@@ -46,6 +48,7 @@ struct Impl {
     using Base::Base;
     // Expose protected methods for binding.
     using Base::DeclareInputPort;
+    using Base::DeclareAbstractInputPort;
   };
 
   class LeafSystemPublic : public LeafSystem<T> {
@@ -66,6 +69,7 @@ struct Impl {
 
     // Expose protected methods for binding, no need for virtual overrides
     // (ordered by how they are bound).
+    using Base::DeclareAbstractOutputPort;
     using Base::DeclareVectorOutputPort;
     using Base::DeclarePeriodicPublish;
     using Base::DeclareContinuousState;
@@ -80,6 +84,7 @@ struct Impl {
     // bind `PyLeafSystem::DoPublish` to `py::class_<LeafSystem<T>, ...>`.
     using Base::DoPublish;
     using Base::DoHasDirectFeedthrough;
+    using Base::DoCalcTimeDerivatives;
     using Base::DoCalcDiscreteVariableUpdates;
   };
 
@@ -115,6 +120,17 @@ struct Impl {
           input_port, output_port);
       // If the macro did not return, use default functionality.
       return Base::DoHasDirectFeedthrough(input_port, output_port);
+    }
+
+    void DoCalcTimeDerivatives(
+        const Context<T>& context,
+        ContinuousState<T>* derivatives) const override {
+      // See `DoPublish` for explanation.
+      PYBIND11_OVERLOAD_INT(
+          void, LeafSystem<T>, "_DoCalcTimeDerivatives",
+          &context, derivatives);
+      // If the macro did not return, use default functionality.
+      Base::DoCalcTimeDerivatives(context, derivatives);
     }
 
     void DoCalcDiscreteVariableUpdates(
@@ -244,13 +260,24 @@ struct Impl {
         .def("get_num_input_ports", &System<T>::get_num_input_ports)
         .def("get_input_port",
              &System<T>::get_input_port, py_reference_internal)
-        .def("get_num_output_ports", &System<T>::get_num_input_ports)
-        .def("get_output_port",
-             &System<T>::get_output_port, py_reference_internal)
-        .def(
-            "_DeclareInputPort", &PySystem::DeclareInputPort,
-            py_reference_internal,
-            py::arg("type"), py::arg("size"), py::arg("random_type") = nullopt)
+        .def("get_num_output_ports", &System<T>::get_num_output_ports)
+        .def("get_output_port", &System<T>::get_output_port,
+             py_reference_internal)
+        .def("_DeclareInputPort",
+             overload_cast_explicit<const InputPort<T>&, std::string,
+                 PortDataType, int, optional<RandomDistribution>>
+                 (&PySystem::DeclareInputPort),
+             py_reference_internal, py::arg("name"), py::arg("type"),
+             py::arg("size"), py::arg("random_type") = nullopt)
+        .def("_DeclareInputPort",
+             overload_cast_explicit<const InputPort<T>&, PortDataType, int,
+                 optional<RandomDistribution>>(&PySystem::DeclareInputPort),
+             py_reference_internal, py::arg("type"),
+             py::arg("size"), py::arg("random_type") = nullopt)
+        .def("_DeclareAbstractInputPort",
+             overload_cast_explicit<const InputPort<T>&, std::string>(
+                 &PySystem::DeclareAbstractInputPort),
+             py_reference_internal, py::arg("name"))
         // - Feedthrough.
         .def("HasAnyDirectFeedthrough", &System<T>::HasAnyDirectFeedthrough)
         .def("HasDirectFeedthrough",
@@ -263,7 +290,17 @@ struct Impl {
              py::arg("input_port"), py::arg("output_port"))
         // Context.
         .def("CreateDefaultContext", &System<T>::CreateDefaultContext)
-        .def("AllocateOutput", &System<T>::AllocateOutput)
+        .def("AllocateOutput",
+             overload_cast_explicit<unique_ptr<SystemOutput<T>>>(
+                 &System<T>::AllocateOutput))
+        // TODO(sherm1) Deprecate this next signature (context unused).
+        .def("AllocateOutput",
+             [](const System<T>* self, const Context<T>&) {
+               WarnDeprecated(
+                  "`System.AllocateOutput(self, Context)` is deprecated. "
+                  "Please use `System.AllocateOutput(self)` instead.");
+               return self->AllocateOutput();
+             }, py::arg("context"))
         .def(
             "EvalVectorInput",
             [](const System<T>* self, const Context<T>& arg1, int arg2) {
@@ -278,7 +315,9 @@ struct Impl {
             }, py_reference,
             // Keep alive, ownership: `return` keeps `Context` alive.
             py::keep_alive<0, 2>())
+        // Computation.
         .def("CalcOutput", &System<T>::CalcOutput)
+        .def("CalcTimeDerivatives", &System<T>::CalcTimeDerivatives)
         // Sugar.
         .def(
             "GetGraphvizString",
@@ -302,6 +341,8 @@ struct Impl {
         })
         .def("ToSymbolicMaybe", &System<T>::ToSymbolicMaybe);
 
+    using AllocCallback = typename LeafOutputPort<T>::AllocCallback;
+    using CalcCallback = typename LeafOutputPort<T>::CalcCallback;
     using CalcVectorCallback = typename LeafOutputPort<T>::CalcVectorCallback;
 
     DefineTemplateClassWithDefault<LeafSystem<T>, PyLeafSystem, System<T>>(
@@ -314,11 +355,30 @@ struct Impl {
       // being used, and pass that as the converter. However, that requires an
       // old-style `py::init`, which is deprecated in Python...
       .def(py::init<SystemScalarConverter>(), py::arg("converter"))
-      .def(
-          "_DeclareVectorOutputPort",
-          WrapCallbacks(
-              [](PyLeafSystem* self, const BasicVector<T>& arg1,
-                 CalcVectorCallback arg2) -> auto& {
+      .def("_DeclareAbstractOutputPort",
+          WrapCallbacks([](PyLeafSystem* self, const std::string& name,
+                           AllocCallback arg1, CalcCallback arg2) -> auto& {
+                return self->DeclareAbstractOutputPort(name, arg1, arg2);
+              }),
+          py_reference_internal, py::arg("name"), py::arg("alloc"),
+          py::arg("calc"))
+        .def("_DeclareAbstractOutputPort",
+             WrapCallbacks([](PyLeafSystem* self, AllocCallback arg1,
+                              CalcCallback arg2) -> auto& {
+               return self->DeclareAbstractOutputPort(arg1, arg2);
+             }),
+             py_reference_internal, py::arg("alloc"), py::arg("calc"))
+        .def("_DeclareVectorOutputPort",
+             WrapCallbacks([](PyLeafSystem* self, const std::string& name,
+                              const BasicVector<T>& arg1,
+                              CalcVectorCallback arg2) -> auto& {
+               return self->DeclareVectorOutputPort(name, arg1, arg2);
+             }),
+             py_reference_internal, py::arg("name"), py::arg("model_value"),
+             py::arg("calc"))
+        .def("_DeclareVectorOutputPort",
+          WrapCallbacks([](PyLeafSystem* self, const BasicVector<T>& arg1,
+                           CalcVectorCallback arg2) -> auto& {
                 return self->DeclareVectorOutputPort(arg1, arg2);
               }),
           py_reference_internal)
@@ -353,6 +413,7 @@ struct Impl {
       .def("_DeclarePeriodicDiscreteUpdate",
            &LeafSystemPublic::DeclarePeriodicDiscreteUpdate,
            py::arg("period_sec"), py::arg("offset_sec") = 0.)
+      .def("_DoCalcTimeDerivatives", &LeafSystemPublic::DoCalcTimeDerivatives)
       .def("_DoCalcDiscreteVariableUpdates",
            &LeafSystemPublic::DoCalcDiscreteVariableUpdates)
       // Abstract state.

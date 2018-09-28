@@ -8,7 +8,6 @@
 #include "drake/geometry/geometry_visualization.h"
 #include "drake/geometry/scene_graph.h"
 #include "drake/lcm/drake_lcm.h"
-#include "drake/lcmt_viewer_draw.hpp"
 #include "drake/multibody/multibody_tree/joints/prismatic_joint.h"
 #include "drake/multibody/multibody_tree/joints/revolute_joint.h"
 #include "drake/multibody/multibody_tree/multibody_plant/multibody_plant.h"
@@ -16,9 +15,6 @@
 #include "drake/multibody/multibody_tree/uniform_gravity_field_element.h"
 #include "drake/systems/analysis/simulator.h"
 #include "drake/systems/framework/diagram_builder.h"
-#include "drake/systems/lcm/lcm_publisher_system.h"
-#include "drake/systems/lcm/serializer.h"
-#include "drake/systems/rendering/pose_bundle_to_draw_message.h"
 
 namespace drake {
 namespace examples {
@@ -26,17 +22,15 @@ namespace multibody {
 namespace cart_pole {
 namespace {
 
-using drake::geometry::SceneGraph;
-using drake::lcm::DrakeLcm;
-using drake::multibody::Body;
+using geometry::SceneGraph;
+using lcm::DrakeLcm;
+
+// "multibody" namespace is ambiguous here without "drake::".
 using drake::multibody::multibody_plant::MultibodyPlant;
 using drake::multibody::parsing::AddModelFromSdfFile;
 using drake::multibody::PrismaticJoint;
 using drake::multibody::RevoluteJoint;
 using drake::multibody::UniformGravityFieldElement;
-using drake::systems::lcm::LcmPublisherSystem;
-using drake::systems::lcm::Serializer;
-using drake::systems::rendering::PoseBundleToDrawMessage;
 
 DEFINE_double(target_realtime_rate, 1.0,
               "Desired rate relative to real time.  See documentation for "
@@ -44,6 +38,11 @@ DEFINE_double(target_realtime_rate, 1.0,
 
 DEFINE_double(simulation_time, 10.0,
               "Desired duration of the simulation in seconds.");
+
+DEFINE_double(time_step, 0,
+            "If greater than zero, the plant is modeled as a system with "
+            "discrete updates and period equal to this time_step. "
+            "If 0, the plant is modeled as a continuous system.");
 
 int do_main() {
   systems::DiagramBuilder<double> builder;
@@ -54,54 +53,26 @@ int do_main() {
   // Make and add the cart_pole model.
   const std::string full_name = FindResourceOrThrow(
       "drake/examples/multibody/cart_pole/cart_pole.sdf");
-  MultibodyPlant<double>& cart_pole = *builder.AddSystem<MultibodyPlant>();
+  MultibodyPlant<double>& cart_pole =
+      *builder.AddSystem<MultibodyPlant>(FLAGS_time_step);
   AddModelFromSdfFile(full_name, &cart_pole, &scene_graph);
 
   // Add gravity to the model.
   cart_pole.AddForceElement<UniformGravityFieldElement>(
       -9.81 * Vector3<double>::UnitZ());
 
-  // Register geometry for visualization.
-  // TODO(amcastro-tri): Add this visual from SDF parsing once SG supports
-  // boxes (or sdformat supports meshes).
-  const Body<double>& cart = cart_pole.GetBodyByName("Cart");
-  std::string box_mesh_path =
-      FindResourceOrThrow("drake/examples/multibody/cart_pole/box_2x1.obj");
-  cart_pole.RegisterVisualGeometry(
-      cart, Isometry3<double>::Identity(),
-      geometry::Mesh(box_mesh_path, 0.12 /* scale factor */), &scene_graph);
-
   // Now the model is complete.
-  cart_pole.Finalize();
-
-  // Boilerplate used to connect the plant to a SceneGraph for
-  // visualization.
-  DrakeLcm lcm;
-  const PoseBundleToDrawMessage& converter =
-      *builder.template AddSystem<PoseBundleToDrawMessage>();
-  LcmPublisherSystem& publisher =
-      *builder.template AddSystem<LcmPublisherSystem>(
-          "DRAKE_VIEWER_DRAW",
-          std::make_unique<Serializer<drake::lcmt_viewer_draw>>(), &lcm);
-  publisher.set_publish_period(1 / 60.0);
+  cart_pole.Finalize(&scene_graph);
 
   // Sanity check on the availability of the optional source id before using it.
-  DRAKE_DEMAND(!!cart_pole.get_source_id());
+  DRAKE_DEMAND(cart_pole.geometry_source_is_registered());
 
   builder.Connect(
       cart_pole.get_geometry_poses_output_port(),
       scene_graph.get_source_pose_port(cart_pole.get_source_id().value()));
 
-  builder.Connect(scene_graph.get_pose_bundle_output_port(),
-                  converter.get_input_port(0));
-  builder.Connect(converter, publisher);
-
-  // Last thing before building the diagram; dispatch the message to load
-  // geometry.
-  geometry::DispatchLoadMessage(scene_graph);
-
-  // And build the Diagram:
-  std::unique_ptr<systems::Diagram<double>> diagram = builder.Build();
+  geometry::ConnectDrakeVisualizer(&builder, scene_graph);
+  auto diagram = builder.Build();
 
   // Create a context for this system:
   std::unique_ptr<systems::Context<double>> diagram_context =
@@ -109,6 +80,10 @@ int do_main() {
   diagram->SetDefaultContext(diagram_context.get());
   systems::Context<double>& cart_pole_context =
       diagram->GetMutableSubsystemContext(cart_pole, diagram_context.get());
+
+  // There is no input actuation in this example for the passive dynamics.
+  cart_pole_context.FixInputPort(
+      cart_pole.get_actuation_input_port().get_index(), Vector1d(0));
 
   // Get joints so that we can set initial conditions.
   const PrismaticJoint<double>& cart_slider =

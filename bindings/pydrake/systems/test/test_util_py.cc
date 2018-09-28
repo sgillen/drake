@@ -5,27 +5,26 @@
 #include "drake/bindings/pydrake/pydrake_pybind.h"
 #include "drake/bindings/pydrake/systems/systems_pybind.h"
 #include "drake/systems/framework/basic_vector.h"
+#include "drake/systems/framework/leaf_system.h"
 #include "drake/systems/framework/vector_system.h"
-#include "drake/systems/primitives/constant_vector_source.h"
 
 using std::unique_ptr;
 
 namespace drake {
 
 using systems::BasicVector;
-using systems::ConstantVectorSource;
+using systems::LeafSystem;
 
 namespace pydrake {
 namespace {
 
-// Informs listener when this class is deleted.
-template <typename T>
-class DeleteListenerSystem : public ConstantVectorSource<T> {
- public:
-  using Base = ConstantVectorSource<T>;
+using T = double;
 
+// Informs listener when this class is deleted.
+class DeleteListenerSystem : public LeafSystem<T> {
+ public:
   explicit DeleteListenerSystem(std::function<void()> delete_callback)
-    : Base(VectorX<T>::Constant(1, 0.)),
+      : LeafSystem<T>(),
       delete_callback_(delete_callback) {}
 
   ~DeleteListenerSystem() override {
@@ -35,7 +34,6 @@ class DeleteListenerSystem : public ConstantVectorSource<T> {
   std::function<void()> delete_callback_;
 };
 
-template <typename T>
 class DeleteListenerVector : public BasicVector<T> {
  public:
   explicit DeleteListenerVector(std::function<void()> delete_callback)
@@ -91,10 +89,10 @@ PYBIND11_MODULE(test_util, m) {
   py::module::import("pydrake.systems.framework");
   py::module::import("pydrake.systems.primitives");
 
-  py::class_<DeleteListenerSystem<double>, ConstantVectorSource<double>>(
+  py::class_<DeleteListenerSystem, LeafSystem<T>>(
       m, "DeleteListenerSystem")
     .def(py::init<std::function<void()>>());
-  py::class_<DeleteListenerVector<double>, BasicVector<double>>(
+  py::class_<DeleteListenerVector, BasicVector<T>>(
       m, "DeleteListenerVector")
     .def(py::init<std::function<void()>>());
 
@@ -106,7 +104,7 @@ PYBIND11_MODULE(test_util, m) {
   pysystems::AddValueInstantiation<MoveOnlyType>(m);
 
   // A 2-dimensional subclass of BasicVector.
-  py::class_<MyVector2<double>, BasicVector<double>>(m, "MyVector2")
+  py::class_<MyVector2<T>, BasicVector<T>>(m, "MyVector2")
       .def(py::init<const Eigen::Vector2d&>(), py::arg("data"));
 
   m.def("make_unknown_abstract_value", []() {
@@ -138,6 +136,12 @@ PYBIND11_MODULE(test_util, m) {
         results["has_direct_feedthrough"] = system.HasDirectFeedthrough(0, 0);
       }
       {
+        // Call `CalcTimeDerivatives` to test `DoCalcTimeDerivatives`
+        auto& state = context->get_mutable_continuous_state();
+        ContinuousState<T> state_copy(clone_vector(state.get_vector()));
+        system.CalcTimeDerivatives(*context, &state_copy);
+      }
+      {
         // Call `CalcDiscreteVariableUpdates` to test
         // `DoCalcDiscreteVariableUpdates`.
         auto& state = context->get_mutable_discrete_state();
@@ -166,7 +170,7 @@ PYBIND11_MODULE(test_util, m) {
             clone_vector(state.get_vector()));
         system.CalcDiscreteVariableUpdates(
             *context, &state_copy);
-        state.CopyFrom(state_copy);
+      state.SetFrom(state_copy);
       } else {
         auto& state = context->get_mutable_continuous_state();
         ContinuousState<T> state_dot(
@@ -179,7 +183,7 @@ PYBIND11_MODULE(test_util, m) {
             state.CopyToVector() + dt * state_dot.CopyToVector());
       }
       // Calculate output.
-      auto output = system.AllocateOutput(*context);
+      auto output = system.AllocateOutput();
       system.CalcOutput(*context, output.get());
       return output;
     });

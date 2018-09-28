@@ -16,7 +16,7 @@ namespace geometry {
 
 using systems::AbstractValue;
 using systems::Context;
-using systems::InputPortDescriptor;
+using systems::InputPort;
 using systems::LeafContext;
 using systems::LeafSystem;
 using systems::rendering::PoseBundle;
@@ -27,6 +27,8 @@ using systems::Value;
 using std::make_unique;
 using std::vector;
 
+// TODO(SeanCurtis-TRI): Fix this so that it's invocation ends with ();.
+// https://github.com/RobotLocomotion/drake/issues/8959
 #define GS_THROW_IF_CONTEXT_ALLOCATED ThrowIfContextAllocated(__FUNCTION__);
 
 namespace {
@@ -76,15 +78,15 @@ SceneGraph<T>::SceneGraph()
     : LeafSystem<T>(SystemTypeTag<geometry::SceneGraph>{}) {
   auto state_value = make_unique<GeometryStateValue<T>>();
   initial_state_ = &state_value->template GetMutableValue<GeometryState<T>>();
+  model_inspector_.set(initial_state_);
   geometry_state_index_ = this->DeclareAbstractState(std::move(state_value));
 
-  bundle_port_index_ =
-      this->DeclareAbstractOutputPort(&SceneGraph::MakePoseBundle,
-                                      &SceneGraph::CalcPoseBundle)
-          .get_index();
+  bundle_port_index_ = this->DeclareAbstractOutputPort("lcm_visualization",
+                               &SceneGraph::MakePoseBundle,
+                               &SceneGraph::CalcPoseBundle).get_index();
 
   query_port_index_ =
-      this->DeclareAbstractOutputPort(&SceneGraph::MakeQueryObject,
+      this->DeclareAbstractOutputPort("query", &SceneGraph::MakeQueryObject,
                                       &SceneGraph::CalcQueryObject)
           .get_index();
 }
@@ -97,10 +99,11 @@ SceneGraph<T>::SceneGraph(const SceneGraph<U>& other) : SceneGraph() {
   // system to persist the same state.
   if (other.initial_state_ != nullptr) {
     *initial_state_ = *(other.initial_state_->ToAutoDiffXd());
+    model_inspector_.set(initial_state_);
   }
   context_has_been_allocated_ = other.context_has_been_allocated_;
 
-  // We need to guarantee that the same source ids map to the same port indexes.
+  // We need to guarantee that the same source ids map to the same port indices.
   // We'll do this by processing the source ids in monotonically increasing
   // order. This is predicated on several principles:
   //   1. Port indices monotonically increase.
@@ -140,10 +143,10 @@ bool SceneGraph<T>::SourceIsRegistered(SourceId id) const {
 }
 
 template <typename T>
-const systems::InputPortDescriptor<T>& SceneGraph<T>::get_source_pose_port(
-    SourceId id) {
+const systems::InputPort<T>& SceneGraph<T>::get_source_pose_port(
+    SourceId id) const {
   ThrowUnlessRegistered(id, "Can't acquire pose port for unknown source id: ");
-  return this->get_input_port(input_source_ids_[id].pose_port);
+  return this->get_input_port(input_source_ids_.at(id).pose_port);
 }
 
 template <typename T>
@@ -187,12 +190,32 @@ GeometryId SceneGraph<T>::RegisterAnchoredGeometry(
 }
 
 template <typename T>
+const SceneGraphInspector<T>& SceneGraph<T>::model_inspector() const {
+  GS_THROW_IF_CONTEXT_ALLOCATED
+  return model_inspector_;
+}
+
+template <typename T>
+void SceneGraph<T>::ExcludeCollisionsWithin(const GeometrySet& geometry_set) {
+  GS_THROW_IF_CONTEXT_ALLOCATED
+  initial_state_->ExcludeCollisionsWithin(geometry_set);
+}
+
+template <typename T>
+void SceneGraph<T>::ExcludeCollisionsBetween(const GeometrySet& setA,
+                                             const GeometrySet& setB) {
+  GS_THROW_IF_CONTEXT_ALLOCATED
+  initial_state_->ExcludeCollisionsBetween(setA, setB);
+}
+
+template <typename T>
 void SceneGraph<T>::MakeSourcePorts(SourceId source_id) {
   // This will fail only if the source generator starts recycling source ids.
   DRAKE_ASSERT(input_source_ids_.count(source_id) == 0);
   // Create and store the input ports for this source id.
   SourcePorts& source_ports = input_source_ids_[source_id];
-  source_ports.pose_port = this->DeclareAbstractInputPort().get_index();
+  source_ports.pose_port = this->DeclareAbstractInputPort
+      (initial_state_->get_source_name(source_id) + "_pose").get_index();
 }
 
 template <typename T>
@@ -219,9 +242,7 @@ void SceneGraph<T>::CalcQueryObject(const Context<T>& context,
   const GeometryContext<T>* geom_context =
       dynamic_cast<const GeometryContext<T>*>(&context);
   DRAKE_DEMAND(geom_context);
-  // The result of calling calc should *always* produce a live query object.
-  output->context_ = geom_context;
-  output->scene_graph_ = this;
+  output->set(geom_context, this);
 }
 
 template <typename T>

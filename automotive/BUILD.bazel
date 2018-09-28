@@ -28,7 +28,6 @@ package(default_visibility = ["//visibility:public"])
 drake_cc_package_library(
     name = "automotive",
     deps = [
-        ":agent_trajectory",
         ":automotive_simulator",
         ":bicycle_car",
         ":box_car_vis",
@@ -38,6 +37,8 @@ drake_cc_package_library(
         ":car_vis_applicator",
         ":create_trajectory_params",
         ":curve2",
+        ":driving_command_mux",
+        ":dynamic_bicycle_car",
         ":generated_translators",
         ":generated_vectors",
         ":idm_controller",
@@ -45,7 +46,7 @@ drake_cc_package_library(
         ":lane_direction",
         ":maliput_railcar",
         ":mobil_planner",
-        ":monolane_onramp_merge",
+        ":multilane_onramp_merge",
         ":pose_selector",
         ":prius_vis",
         ":pure_pursuit",
@@ -54,8 +55,9 @@ drake_cc_package_library(
         ":road_path",
         ":simple_car",
         ":simple_powertrain",
-        ":trajectory_agent",
+        ":trajectory",
         ":trajectory_car",
+        ":trajectory_follower",
         ":trivial_right_of_way_state_provider",
     ],
 )
@@ -75,6 +77,9 @@ drake_cc_vector_gen_library(
     name = "generated_vectors",
     srcs = [
         "bicycle_car_parameters.named_vector",
+        "dynamic_bicycle_car_input.named_vector",
+        "dynamic_bicycle_car_params.named_vector",
+        "dynamic_bicycle_car_state.named_vector",
         "idm_planner_parameters.named_vector",
         "maliput_railcar_params.named_vector",
         "mobil_planner_parameters.named_vector",
@@ -94,9 +99,9 @@ drake_cc_vector_gen_translator_library(
 )
 
 drake_cc_library(
-    name = "agent_trajectory",
-    srcs = ["agent_trajectory.cc"],
-    hdrs = ["agent_trajectory.h"],
+    name = "trajectory",
+    srcs = ["trajectory.cc"],
+    hdrs = ["trajectory.h"],
     deps = [
         "//common/trajectories:piecewise_polynomial",
         "//common/trajectories:piecewise_quaternion",
@@ -122,7 +127,7 @@ drake_cc_library(
     hdrs = ["box_car_vis.h"],
     deps = [
         ":car_vis",
-        "//multibody/shapes",
+        "//attic/multibody/shapes",
         "//systems/rendering:drake_visualizer_client",
     ],
 )
@@ -173,6 +178,27 @@ drake_cc_library(
         ":generated_vectors",
         "//common:autodiff",
         "//common:autodiffxd_make_coherent",
+    ],
+)
+
+drake_cc_library(
+    name = "driving_command_mux",
+    srcs = ["driving_command_mux.cc"],
+    hdrs = ["driving_command_mux.h"],
+    deps = [
+        ":generated_vectors",
+        "//common:default_scalars",
+        "//systems/framework:leaf_system",
+    ],
+)
+
+drake_cc_library(
+    name = "dynamic_bicycle_car",
+    srcs = ["dynamic_bicycle_car.cc"],
+    hdrs = ["dynamic_bicycle_car.h"],
+    deps = [
+        ":generated_vectors",
+        "//systems/framework",
     ],
 )
 
@@ -250,12 +276,12 @@ drake_cc_library(
 )
 
 drake_cc_library(
-    name = "monolane_onramp_merge",
-    srcs = ["monolane_onramp_merge.cc"],
-    hdrs = ["monolane_onramp_merge.h"],
+    name = "multilane_onramp_merge",
+    srcs = ["multilane_onramp_merge.cc"],
+    hdrs = ["multilane_onramp_merge.h"],
     deps = [
         "//automotive/maliput/api",
-        "//automotive/maliput/monolane",
+        "//automotive/maliput/multilane",
     ],
 )
 
@@ -281,11 +307,11 @@ drake_cc_library(
     data = ["//automotive/models:prod_models"],
     deps = [
         ":car_vis",
+        "//attic/multibody/joints",
+        "//attic/multibody/parsers",
+        "//attic/multibody/rigid_body_plant:create_load_robot_message",
         "//common:find_resource",
         "//lcmtypes:viewer",
-        "//multibody/joints",
-        "//multibody/parsers",
-        "//multibody/rigid_body_plant:create_load_robot_message",
         "//systems/rendering:pose_bundle",
         "//systems/rendering:pose_vector",
     ],
@@ -335,7 +361,6 @@ drake_cc_library(
     hdrs = ["road_path.h"],
     deps = [
         ":lane_direction",
-        ":monolane_onramp_merge",
         "//automotive/maliput/api",
         "//common:essential",
         "//common:unused",
@@ -398,12 +423,12 @@ drake_cc_library(
 )
 
 drake_cc_library(
-    name = "trajectory_agent",
-    srcs = ["trajectory_agent.cc"],
-    hdrs = ["trajectory_agent.h"],
+    name = "trajectory_follower",
+    srcs = ["trajectory_follower.cc"],
+    hdrs = ["trajectory_follower.h"],
     deps = [
-        ":agent_trajectory",
         ":generated_vectors",
+        ":trajectory",
         "//common:autodiff",
         "//common:extract_double",
         "//systems/framework:leaf_system",
@@ -448,6 +473,7 @@ drake_cc_library(
     hdrs = ["automotive_simulator.h"],
     deps = [
         ":car_vis_applicator",
+        ":driving_command_mux",
         ":generated_translators",
         ":generated_vectors",
         ":idm_controller",
@@ -459,17 +485,16 @@ drake_cc_library(
         ":simple_car",
         ":trajectory_car",
         ":trivial_right_of_way_state_provider",
+        "//attic/multibody/parsers",
+        "//attic/multibody/rigid_body_plant:drake_visualizer",
         "//automotive/maliput/api",
         "//automotive/maliput/utility",
         "//common:temp_directory",
         "//lcm",
-        "//multibody/parsers",
-        "//multibody/rigid_body_plant:drake_visualizer",
         "//systems/analysis",
         "//systems/lcm:lcm_pubsub_system",
         "//systems/lcm:lcmt_drake_signal_translator",
         "//systems/primitives:constant_value_source",
-        "//systems/primitives:multiplexer",
         "//systems/rendering:pose_aggregator",
         "//systems/rendering:pose_bundle_to_draw_message",
     ],
@@ -486,34 +511,10 @@ drake_cc_binary(
     deps = [
         ":automotive_simulator",
         ":create_trajectory_params",
-        ":monolane_onramp_merge",
+        ":multilane_onramp_merge",
         "//automotive/maliput/dragway",
         "//common:text_logging_gflags",
         "//lcm",
-    ],
-)
-
-drake_cc_binary(
-    name = "car_sim_lcm",
-    srcs = [
-        "car_sim_lcm.cc",
-        "car_sim_lcm_common.cc",
-        "car_sim_lcm_common.h",
-    ],
-    add_test_rule = 1,
-    data = [
-        "//automotive/models:prod_models",
-    ],
-    test_rule_args = ["--simulation_sec=0.01"],
-    # Flaky because LCM self-test can fail (PR #7311)
-    test_rule_flaky = 1,
-    deps = [
-        ":automotive_simulator",
-        "//common:find_resource",
-        "//common:text_logging_gflags",
-        "//multibody:rigid_body_tree_construction",
-        "//multibody/rigid_body_plant",
-        "//systems/controllers:pid_controlled_system",
     ],
 )
 
@@ -564,9 +565,9 @@ drake_cc_library(
 )
 
 drake_cc_googletest(
-    name = "agent_trajectory_test",
+    name = "trajectory_test",
     deps = [
-        "//automotive:agent_trajectory",
+        "//automotive:trajectory",
         "//common/test_utilities:eigen_matrix_compare",
         "//systems/framework/test_utilities",
     ],
@@ -620,21 +621,40 @@ drake_cc_googletest(
 )
 
 drake_cc_googletest(
+    name = "driving_command_mux_test",
+    deps = [
+        ":driving_command_mux",
+        "//systems/framework",
+        "//systems/framework/test_utilities",
+    ],
+)
+
+drake_cc_googletest(
+    name = "dynamic_bicycle_car_test",
+    deps = [
+        "//automotive:dynamic_bicycle_car",
+        "//systems/framework/test_utilities",
+    ],
+)
+
+drake_cc_googletest(
     name = "maliput_railcar_test",
     deps = [
         "//automotive:maliput_railcar",
         "//automotive/maliput/api",
         "//automotive/maliput/dragway",
-        "//automotive/maliput/monolane",
+        "//automotive/maliput/multilane",
         "//common/test_utilities:eigen_matrix_compare",
         "//math:geometric_transform",
     ],
 )
 
 drake_cc_googletest(
-    name = "monolane_onramp_merge_test",
+    name = "multilane_onramp_merge_test",
     deps = [
-        ":monolane_onramp_merge",
+        ":multilane_onramp_merge",
+        "//automotive/maliput/api",
+        "//automotive/maliput/api/test_utilities",
         "//automotive/maliput/utility",
     ],
 )
@@ -652,7 +672,6 @@ drake_cc_googletest(
     name = "idm_controller_test",
     deps = [
         "//automotive:idm_controller",
-        "//automotive:monolane_onramp_merge",
         "//automotive/maliput/dragway",
         "//common/test_utilities:eigen_matrix_compare",
         "//systems/framework/test_utilities:scalar_conversion",
@@ -681,10 +700,9 @@ drake_cc_googletest(
 drake_cc_googletest(
     name = "pose_selector_test",
     deps = [
-        "//automotive:monolane_onramp_merge",
         "//automotive:pose_selector",
         "//automotive/maliput/dragway",
-        "//automotive/maliput/monolane:builder",
+        "//automotive/maliput/multilane:builder",
         "//common/test_utilities:eigen_matrix_compare",
     ],
 )
@@ -703,7 +721,7 @@ drake_cc_googletest(
     deps = [
         ":road_path",
         "//automotive/maliput/dragway",
-        "//automotive/maliput/monolane",
+        "//automotive/maliput/multilane",
         "//common/test_utilities:eigen_matrix_compare",
     ],
 )
@@ -747,7 +765,7 @@ drake_cc_googletest(
     name = "calc_ongoing_road_position_test",
     deps = [
         "//automotive:calc_ongoing_road_position",
-        "//automotive:monolane_onramp_merge",
+        "//automotive:multilane_onramp_merge",
         "//automotive/maliput/dragway",
         "//common:essential",
         "//common/test_utilities:eigen_matrix_compare",
@@ -755,9 +773,9 @@ drake_cc_googletest(
 )
 
 drake_cc_googletest(
-    name = "trajectory_agent_test",
+    name = "trajectory_follower_test",
     deps = [
-        "//automotive:trajectory_agent",
+        "//automotive:trajectory_follower",
         "//common:extract_double",
         "//systems/analysis:simulator",
         "//systems/framework/test_utilities",
@@ -794,6 +812,7 @@ drake_cc_googletest(
     name = "trivial_right_of_way_state_provider_test",
     deps = [
         ":trivial_right_of_way_state_provider",
+        "//automotive/maliput/api/test_utilities:rules_test_utilities",
     ],
 )
 
