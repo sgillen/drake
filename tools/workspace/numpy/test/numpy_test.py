@@ -7,6 +7,3 @@ import numpy as np
 assert ".runfiles" in np.__file__, (
     "You must use the Bazel-specified `numpy`! Please ensure your WORKSPACE "
     "and usage of `numpy_py_repository` are well-formed.")
-expected_version = "1.15.2"
-assert np.version.version == expected_version, \
-    (np.version.version, expected_version)

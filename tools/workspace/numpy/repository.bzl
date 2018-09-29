@@ -24,15 +24,21 @@ Arguments:
 
 load("@drake//tools/workspace:os.bzl", "determine_os")
 
-# See: https://pypi.org/project/numpy/#files
+# Generated from Git revision 8b517bd from a merge of numpy/numpy#10898 and
+# numpy/numpy#11075.
+# See `./packaging/README.md` for instructions to generate these binaries.
+# N.B. When you update the version of NumPy, ensure to update the variable
+# `expected_version` in `numpy_install_test.py` to reflect the *exact* version
+# per NumPy's build (which should be part of the *.whl's filename).
+# PR DRAFT(eric.cousineau): Upload these to S3 when they pass review.
 wheels = {
     "ubuntu_16.04": {
-        "url": "https://files.pythonhosted.org/packages/40/c5/f1ed15dd931d6667b40f1ab1c2fe1f26805fc2b6c3e25e45664f838de9d0/numpy-1.15.2-cp27-cp27mu-manylinux1_x86_64.whl",  # noqa
-        "sha256": "82f00a1e2695a0e5b89879aa25ea614530b8ebdca6d49d4834843d498e8a5e92",  # noqa
+        "url": "https://github.com/EricCousineau-TRI/experimental/raw/9f47b9bc31e5fdb6d54d6b08b2904491d8bf43c8/numpy/numpy-1.15.0.dev0%2B8b517bd-cp27-cp27mu-linux_x86_64.whl",  # noqa
+        "sha256": "bc24319c135ea2d01cded300b43cec4162936099e7569cde89862460db80481c",  # noqa
     },
     "mac": {
-        "url": "https://files.pythonhosted.org/packages/d6/47/447d4e08e18c4f0e7f935db24d8afcfc9026a84002c0e5d85103c14baaf1/numpy-1.15.2-cp27-cp27m-macosx_10_6_intel.macosx_10_9_intel.macosx_10_9_x86_64.macosx_10_10_intel.macosx_10_10_x86_64.whl",  # noqa
-        "sha256": "b5ff7dae352fd9e1edddad1348698e9fea14064460a7e39121ef9526745802e6",  # noqa
+        "url": "https://github.com/EricCousineau-TRI/experimental/raw/9f47b9bc31e5fdb6d54d6b08b2904491d8bf43c8/numpy/numpy-1.15.0.dev0%2B8b517bd-cp27-cp27m-macosx_10_13_x86_64.whl",  # noqa
+        "sha256": "0f192f999bafb9f8f353fac7bc2504e15e0768352fc601d51385816c09bfd473",  # noqa
     },
 }
 
