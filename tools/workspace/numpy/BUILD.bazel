@@ -3,12 +3,11 @@
 load("//tools/lint:lint.bzl", "add_lint_tests")
 load(
     "//tools/skylark:drake_py.bzl",
-    "drake_py_test",
+    "drake_py_unittest",
 )
 
-drake_py_test(
+drake_py_unittest(
     name = "numpy_test",
-    allow_import_unittest = True,
     deps = ["@numpy_py"],
 )
 
