@@ -5,13 +5,20 @@
 
 #include <pybind11/numpy.h>
 
-#include "drake/bindings/pybind11_ext/inference.h"
+#include "drake/bindings/pydrake/util/type_pack.h"
+#include "drake/bindings/pydrake/util/function_inference.h"
 
 // TODO(eric.cousineau): Figure out how to make this automatically hidden.
 #pragma GCC visibility push(hidden)
 
 namespace pybind11 {
 namespace detail {
+
+// Since this code lives in Drake, use existing headers.
+using drake::type_pack;
+using drake::type_pack_apply;
+using drake::type_pack_concat;
+using drake::pydrake::detail::infer_function_info;
 
 // Utilities
 

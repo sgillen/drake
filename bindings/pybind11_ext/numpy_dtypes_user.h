@@ -8,7 +8,6 @@
 #include <pybind11/numpy.h>
 #include <pybind11/operators.h>
 
-#include "drake/bindings/pybind11_ext/inference.h"
 #include "drake/bindings/pybind11_ext/numpy_ufunc.h"
 
 // N.B. For NumPy dtypes, `custom` tends to mean record-like structures, while
