@@ -103,15 +103,16 @@ struct dtype_user_instance {
 
   // Extracts C++ pointer from a given python object. No type checking is done.
   static Class* load_raw(PyObject* src) {
-    dtype_user_instance* obj = (dtype_user_instance*)src;
+    dtype_user_instance* obj = reinterpret_cast<dtype_user_instance*>(src);
     return &obj->value;
   }
 
   // Allocates an instance.
   static dtype_user_instance* alloc_py() {
     auto cls = dtype_info::get_entry<Class>().cls;
-    PyTypeObject* cls_raw = (PyTypeObject*)cls.ptr();
-    auto obj = (dtype_user_instance*)cls_raw->tp_alloc((PyTypeObject*)cls.ptr(), 0);
+    PyTypeObject* cls_raw = reinterpret_cast<PyTypeObject*>(cls.ptr());
+    auto obj = reinterpret_cast<dtype_user_instance*>(
+        cls_raw->tp_alloc(cls_raw, 0));
     // Ensure we clear out the memory.
     memset(&obj->value, 0, sizeof(Class));
     return obj;
@@ -123,13 +124,14 @@ struct dtype_user_instance {
     auto obj = alloc_py();
     // // Register.
     auto& entry = dtype_info::get_mutable_entry<Class>();
-    entry.instance_to_py[&obj->value] = (PyObject*)obj;
-    return (PyObject*)obj;
+    PyObject* pyobj = reinterpret_cast<PyObject*>(obj);
+    entry.instance_to_py[&obj->value] = pyobj;
+    return pyobj;
   }
 
   // Implementation for `tp_dealloc` slot.
-  static void tp_dealloc(PyObject* self) {
-    Class* value = load_raw(self);
+  static void tp_dealloc(PyObject* pself) {
+    Class* value = load_raw(pself);
     // Call destructor.
     value->~Class();
     // Deregister.
@@ -162,7 +164,7 @@ struct dtype_user_caster {
       // Make new instance.
       DTypePyObject* obj = DTypePyObject::alloc_py();
       obj->value = src;
-      h = reinterpret_borrow<object>((PyObject*)obj);
+      h = reinterpret_borrow<object>(reinterpret_cast<PyObject*>(obj));
       return h.release();
     }
     return h.release();
@@ -181,7 +183,7 @@ struct dtype_user_caster {
         DTypePyObject* obj = DTypePyObject::alloc_py();
         obj->value = *src;
         delete src;
-        h = reinterpret_borrow<object>((PyObject*)obj);
+        h = reinterpret_borrow<object>(reinterpret_cast<PyObject*>(obj));
         return h.release();
       }
     }
@@ -193,7 +195,8 @@ struct dtype_user_caster {
     object obj;
     if (!isinstance(src, cls)) {
       // Check if it's an `np.array` with matching dtype.
-      handle array = (PyObject*)npy_api::get().PyArray_Type_;
+      handle array = reinterpret_cast<PyObject*>(
+          npy_api::get().PyArray_Type_);
       if (isinstance(src, array)) {
         tuple shape = src.attr("shape");
         if (shape.size() == 0) {
@@ -203,7 +206,7 @@ struct dtype_user_caster {
       if (!obj && convert) {
         // Try implicit conversions.
         for (auto& converter : entry.implicit_conversions) {
-          auto temp = converter(src.ptr(), (PyTypeObject*)cls.ptr());
+          auto temp = converter(src.ptr(), reinterpret_cast<PyTypeObject*>(cls.ptr()));
           if (temp) {
             obj = reinterpret_steal<object>(temp);
             loader_life_support::add_patient(obj);
@@ -500,20 +503,21 @@ class dtype_user : public object {
     if (arrfuncs_->dotfunc)
       pybind11_fail("dtype: Cannot redefine `dot`");
     using detail::npy_intp;
-    arrfuncs_->dotfunc = (void*)+[](
+    arrfuncs_->dotfunc = reinterpret_cast<void*>(+[](
         void* ip0_, npy_intp is0, void* ip1_, npy_intp is1,
         void* op, npy_intp n, void* /*arr*/) {
-      const char *ip0 = (char*)ip0_, *ip1 = (char*)ip1_;
+      const char *ip0 = reinterpret_cast<char*>(ip0_);
+      const char *ip1 = reinterpret_cast<char*>(ip1_);
       Class r{};
       for (npy_intp i = 0; i < n; i++) {
-        const Class& v1 = *(const Class*)ip0;
-        const Class& v2 = *(const Class*)ip1;
+        const Class& v1 = *reinterpret_cast<const Class*>(ip0);
+        const Class& v2 = *reinterpret_cast<const Class*>(ip1);
           r += v1 * v2;
           ip0 += is0;
           ip1 += is1;
         }
-        *(Class*)op = r;
-    };
+        *reinterpret_cast<Class*>(op) = r;
+    });
     return *this;
   }
 
@@ -604,7 +608,8 @@ class dtype_user : public object {
     // Ensure we initialize NumPy before accessing `PyGenericArrType_Type`.
     auto& api = detail::npy_api::get();
     // Loosely uses https://stackoverflow.com/a/12505371/7829525 as well.
-    auto heap_type = (PyHeapTypeObject*)PyType_Type.tp_alloc(&PyType_Type, 0);
+    auto heap_type = reinterpret_cast<PyHeapTypeObject*>(
+        PyType_Type.tp_alloc(&PyType_Type, 0));
     if (!heap_type)
         pybind11_fail("dtype_user: Could not register heap type");
     heap_type->ht_name = pybind11::str(name).release().ptr();
@@ -633,7 +638,7 @@ class dtype_user : public object {
     tp_as_number.nb_coerce = &disable_nb_coerce;
 #endif
     // Create views into created type.
-    self() = reinterpret_borrow<object>(handle((PyObject*)&ClassObject_Type));
+    self() = reinterpret_borrow<object>(reinterpret_cast<PyObject*>(&ClassObject_Type));
     cls_ = self();
   }
 
@@ -641,8 +646,9 @@ class dtype_user : public object {
     using detail::npy_api;
     // Adapted from `numpy/core/multiarray/src/test_rational.c.src`.
     // Define NumPy description.
-    auto type = (PyTypeObject*)self().ptr();
-    typedef struct { char c; Class r; } align_test;
+    auto type = reinterpret_cast<PyTypeObject*>(self().ptr());
+    struct align_test { char c; Class r; };
+
     static detail::PyArray_ArrFuncs arrfuncs;
     static detail::PyArray_Descr descr = {
         PyObject_HEAD_INIT(0)
@@ -670,11 +676,11 @@ class dtype_user : public object {
     using detail::npy_intp;
 
     // https://docs.scipy.org/doc/numpy/reference/c-api.types-and-structures.html
-    arrfuncs.getitem = (void*)+[](void* in, void* /*arr*/) -> PyObject* {
-        auto item = (const Class*)in;
+    arrfuncs.getitem = reinterpret_cast<void*>(+[](void* in, void* /*arr*/) -> PyObject* {
+        auto item = reinterpret_cast<const Class*>(in);
         return pybind11::cast(*item).release().ptr();
-    };
-    arrfuncs.setitem = (void*)+[](PyObject* in, void* out, void* /*arr*/) {
+    });
+    arrfuncs.setitem = reinterpret_cast<void*>(+[](PyObject* in, void* out, void* /*arr*/) {
         detail::loader_life_support guard{};
         detail::dtype_user_caster<Class> caster;
         if (!caster.load(in, true)) {
@@ -683,13 +689,13 @@ class dtype_user : public object {
               "dtype_user: Could not convert during `setitem`");
           return -1;
         }
-        *(Class*)out = caster;
+        *reinterpret_cast<Class*>(out) = caster;
         return 0;
-    };
-    arrfuncs.copyswap = (void*)+[](void* dst, void* src, int swap, void* /*arr*/) {
+    });
+    arrfuncs.copyswap = reinterpret_cast<void*>(+[](void* dst, void* src, int swap, void* /*arr*/) {
         if (!src) return;
-        Class* r_dst = (Class*)dst;
-        Class* r_src = (Class*)src;
+        Class* r_dst = reinterpret_cast<Class*>(dst);
+        Class* r_src = reinterpret_cast<Class*>(src);
         if (swap) {
             PyErr_SetString(
                 PyExc_NotImplementedError,
@@ -697,44 +703,46 @@ class dtype_user : public object {
         } else {
             *r_dst = *r_src;
         }
-    };
-    arrfuncs.copyswapn = (void*)+[](void* dst, npy_intp dstride, void* src,
-                          npy_intp sstride, npy_intp n, int swap, void*) {
+    });
+    arrfuncs.copyswapn = reinterpret_cast<void*>(+[](
+            void* dst, npy_intp dstride, void* src,
+            npy_intp sstride, npy_intp n, int swap, void*) {
         if (!src) return;
         if (swap) {
             PyErr_SetString(
                 PyExc_NotImplementedError,
                 "dtype_user: `swap` not implemented");
         } else {
-            char* c_dst = (char*)dst;
-            char* c_src = (char*)src;
+            char* c_dst = reinterpret_cast<char*>(dst);
+            char* c_src = reinterpret_cast<char*>(src);
             for (int k = 0; k < n; k++) {
-                Class* r_dst = (Class*)c_dst;
-                Class* r_src = (Class*)c_src;
+                Class* r_dst = reinterpret_cast<Class*>(c_dst);
+                Class* r_src = reinterpret_cast<Class*>(c_src);
                 *r_dst = *r_src;
                 c_dst += dstride;
                 c_src += sstride;
             }
         }
-    };
+    });
     // - Ensure this doesn't overwrite our `equal` unfunc.
-    arrfuncs.compare = (void*)+[](const void* /*d1*/, const void* /*d2*/, void* /*arr*/) {
+    arrfuncs.compare = reinterpret_cast<void*>(
+        +[](const void* /*d1*/, const void* /*d2*/, void* /*arr*/) {
       pybind11_fail("dtype: `compare` should not be called for pybind11 custom dtype");
-    };
-    arrfuncs.fillwithscalar = (void*)+[](
+    });
+    arrfuncs.fillwithscalar = reinterpret_cast<void*>(+[](
             void* buffer_raw, npy_intp length, void* value_raw, void* /*arr*/) {
-        const Class* value = (const Class*)value_raw;
-        Class* buffer = (Class*)buffer_raw;
+        const Class* value = reinterpret_cast<const Class*>(value_raw);
+        Class* buffer = reinterpret_cast<Class*>(buffer_raw);
         for (int k = 0; k < length; k++) {
             buffer[k] = *value;
         }
         return 0;
-    };
+    });
     int dtype_num = api.PyArray_RegisterDataType_(&descr);
     if (dtype_num < 0)
         pybind11_fail("dtype_user: Could not register!");
     self().attr("dtype") =
-        reinterpret_borrow<object>(handle((PyObject*)&descr));
+        reinterpret_borrow<object>(reinterpret_cast<PyObject*>(&descr));
     arrfuncs_ = &arrfuncs;
     return dtype_num;
   }

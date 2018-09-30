@@ -25,14 +25,14 @@ template <typename Arg0, typename Out, typename Func>
 auto ufunc_to_ptr(Func func, type_pack<Arg0, Out>) {
   auto ufunc = [](
       char** args, npy_intp* dimensions, npy_intp* steps, void* data) {
-    Func& func = *(Func*)data;
+    Func& func_inner = *reinterpret_cast<Func*>(data);
     npy_intp step_0 = steps[0];
     npy_intp step_out = steps[1];
     npy_intp n = *dimensions;
     char *in_0 = args[0], *out = args[1];
     for (npy_intp k = 0; k < n; k++) {
       // TODO(eric.cousineau): Support pointers being changed.
-      *(Out*)out = func(*(Arg0*)in_0);
+      *reinterpret_cast<Out*>(out) = func_inner(*reinterpret_cast<Arg0*>(in_0));
       in_0 += step_0;
       out += step_out;
     }
@@ -45,7 +45,7 @@ auto ufunc_to_ptr(Func func, type_pack<Arg0, Out>) {
 template <typename Arg0, typename Arg1, typename Out, typename Func = void>
 auto ufunc_to_ptr(Func func, type_pack<Arg0, Arg1, Out>) {
   auto ufunc = [](char** args, npy_intp* dimensions, npy_intp* steps, void* data) {
-    Func& func = *(Func*)data;
+    Func& func_inner = *reinterpret_cast<Func*>(data);
     npy_intp step_0 = steps[0];
     npy_intp step_1 = steps[1];
     npy_intp step_out = steps[2];
@@ -53,7 +53,7 @@ auto ufunc_to_ptr(Func func, type_pack<Arg0, Arg1, Out>) {
     char *in_0 = args[0], *in_1 = args[1], *out = args[2];
     for (npy_intp k = 0; k < n; k++) {
       // TODO(eric.cousineau): Support pointers being fed in.
-      *(Out*)out = func(*(Arg0*)in_0, *(Arg1*)in_1);
+      *reinterpret_cast<Out*>(out) = func_inner(*reinterpret_cast<Arg0*>(in_0), *reinterpret_cast<Arg1*>(in_1));
       in_0 += step_0;
       in_1 += step_1;
       out += step_out;
@@ -98,10 +98,10 @@ void ufunc_register_cast(
   auto cast_func = +[](
     void* from_, void* to_, npy_intp n,
     void* /*fromarr*/, void* /*toarr*/) {
-    const From* from = (From*)from_;
-    To* to = (To*)to_;
+    const From* from_inner = reinterpret_cast<From*>(from_);
+    To* to_inner = reinterpret_cast<To*>(to_);
     for (npy_intp i = 0; i < n; i++)
-      to[i] = cast_lambda(from[i]);
+      to_inner[i] = cast_lambda(from_inner[i]);
   };
   auto& api = npy_api::get();
   if (!from) {
@@ -111,7 +111,7 @@ void ufunc_register_cast(
   to = npy_format_descriptor<To>::dtype();
   }
   int to_num = to.num();
-  auto from_raw = (PyArray_Descr*)from.ptr();
+  auto from_raw = reinterpret_cast<PyArray_Descr*>(from.ptr());
   if (from.num() == npy_api::NPY_OBJECT_ && !std::is_same<From, object>::value)
     pybind11_fail(
       "ufunc: Registering conversion from `dtype=object` with From != `py::object` is not supported");
@@ -137,7 +137,7 @@ public:
   }
 
   ufunc(detail::PyUFuncObject* ptr_in)
-    : ufunc(reinterpret_borrow<object>((PyObject*)ptr_in))
+    : ufunc(reinterpret_borrow<object>(reinterpret_cast<PyObject*>(ptr_in)))
   {}
 
   ufunc(handle scope, const char* name) : scope_{scope} {
@@ -165,7 +165,7 @@ public:
   }
 
   detail::PyUFuncObject* ptr() const {
-    return (detail::PyUFuncObject*)self().ptr();
+    return reinterpret_cast<detail::PyUFuncObject*>(self().ptr());
   }
 
   // Create UFunc object with core type functions if needed, and register user functions.
@@ -175,7 +175,7 @@ public:
     if (!self()) {
       // Create object and register core functions.
       auto* h = entries->create_core();
-      self() = reinterpret_borrow<object>((PyObject*)h);
+      self() = reinterpret_borrow<object>(reinterpret_cast<PyObject*>(h));
       scope_.attr(entries->name()) = self();
     }
     // Register user type functions.
@@ -255,7 +255,7 @@ private:
       int nargs = nin_ + nout_;
       core_type_args_.resize(ncore * static_cast<size_t>(nargs));
       for (size_t i = 0; i < dtype_args.size(); ++i) {
-        core_type_args_.at(t_index++) = (char)dtype_args[i];
+        core_type_args_.at(t_index++) = static_cast<char>(dtype_args[i]);
       }
     }
 
@@ -269,11 +269,12 @@ private:
     }
 
     detail::PyUFuncObject* create_core() {
-      int ncore = (int)core_funcs_.size();
+      int ncore = static_cast<int>(core_funcs_.size());
       char* name_raw = const_cast<char*>(name());
-      return (detail::PyUFuncObject*)detail::npy_api::get().PyUFunc_FromFuncAndData_(
-        core_funcs_.data(), core_data_.data(), core_type_args_.data(), ncore,
-        nin_, nout_, detail::npy_api::constants::PyUFunc_None_, name_raw, nullptr, 0);
+      return reinterpret_cast<detail::PyUFuncObject*>(
+          detail::npy_api::get().PyUFunc_FromFuncAndData_(
+            core_funcs_.data(), core_data_.data(), core_type_args_.data(), ncore,
+            nin_, nout_, detail::npy_api::constants::PyUFunc_None_, name_raw, nullptr, 0));
     }
 
     void create_user(detail::PyUFuncObject* h) {
