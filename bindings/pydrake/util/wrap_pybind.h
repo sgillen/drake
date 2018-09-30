@@ -11,6 +11,9 @@
 #include "drake/bindings/pydrake/util/wrap_function.h"
 #include "drake/common/drake_copyable.h"
 
+// TODO(eric.cousineau): Figure out how to make this automatically hidden.
+#pragma GCC visibility push(hidden)
+
 namespace drake {
 namespace pydrake {
 
@@ -172,3 +175,5 @@ struct type_caster<drake::pydrake::greedy_arg<T, Check>> : type_caster<T> {
 
 }  // namespace detail
 }  // namespace pybind11
+
+#pragma GCC visibility pop

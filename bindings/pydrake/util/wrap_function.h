@@ -6,6 +6,9 @@
 
 #include "drake/bindings/pydrake/util/function_inference.h"
 
+// TODO(eric.cousineau): Figure out how to make this automatically hidden.
+#pragma GCC visibility push(hidden)
+
 namespace drake {
 namespace pydrake {
 namespace detail {
@@ -186,3 +189,5 @@ using wrap_arg_function =
 
 }  // namespace pydrake
 }  // namespace drake
+
+#pragma GCC visibility pop

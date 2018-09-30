@@ -10,6 +10,7 @@
 
 namespace drake {
 namespace pydrake {
+namespace {
 
 // N.B. Anonymous namespace not used as it makes failure messages
 // (static_assert) harder to interpret.
@@ -390,5 +391,6 @@ GTEST_TEST(WrapFunction, ChangeCallbackOnly) {
   check_expected::run(wrapped);
 }
 
+}  // namespace
 }  // namespace pydrake
 }  // namespace drake
