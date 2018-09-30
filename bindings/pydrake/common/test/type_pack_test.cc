@@ -46,6 +46,25 @@ GTEST_TEST(TypeUtilTest, TypeTags) {
   EXPECT_TRUE((std::is_same<decltype(pack_obj), type_pack<void, void>>::value));
 }
 
+GTEST_TEST(TypeUtilTest, Concat) {
+  using A = type_pack<int, double>;
+  using B = type_pack<char, void>;
+  using AB = type_pack<int, double, char, void>;
+  EXPECT_TRUE((std::is_same<
+      decltype(type_pack_concat(A{}, B{})), AB>::value));
+}
+
+// Adds a pointer to a given type.
+template <typename T>
+using Ptr = T*;
+
+GTEST_TEST(TypeUtilTest, Apply) {
+  using A = type_pack<int, double>;
+  using B = type_pack<int*, double*>;
+  EXPECT_TRUE((std::is_same<
+      decltype(type_pack_apply<Ptr>(A{})), B>::value));
+}
+
 GTEST_TEST(TypeUtilTest, Bind) {
   using T_0 = Pack::bind<SimpleTemplate>;
   using T_0_expected = SimpleTemplate<int, double, char, void>;
