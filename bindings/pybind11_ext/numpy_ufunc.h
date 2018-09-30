@@ -7,6 +7,9 @@
 
 #include "drake/bindings/pybind11_ext/inference.h"
 
+// TODO(eric.cousineau): Figure out how to make this automatically hidden.
+#pragma GCC visibility push(hidden)
+
 namespace pybind11 {
 namespace detail {
 
@@ -307,3 +310,5 @@ private:
 };
 
 }  // namespace pybind11
+
+#pragma GCC visibility pop

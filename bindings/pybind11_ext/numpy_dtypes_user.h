@@ -14,6 +14,9 @@
 // N.B. For NumPy dtypes, `custom` tends to mean record-like structures, while
 // `user-defined` means teaching NumPy about previously opaque C structures.
 
+// TODO(eric.cousineau): Figure out how to make this automatically hidden.
+#pragma GCC visibility push(hidden)
+
 namespace pybind11 {
 namespace detail {
 
@@ -763,3 +766,5 @@ class dtype_user : public object {
       struct npy_format_descriptor<Type> \
           : public dtype_user_npy_format_descriptor<Type> {}; \
     }}
+
+#pragma GCC visibility pop

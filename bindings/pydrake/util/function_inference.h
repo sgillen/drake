@@ -5,6 +5,9 @@
 
 #include "drake/bindings/pydrake/util/type_pack.h"
 
+// TODO(eric.cousineau): Figure out how to make this automatically hidden.
+#pragma GCC visibility push(hidden)
+
 namespace drake {
 namespace pydrake {
 namespace detail {
@@ -109,3 +112,5 @@ auto infer_function_info(Func&& func) {
 }  // namespace detail
 }  // namespace pydrake
 }  // namespace drake
+
+#pragma GCC visibility pop
