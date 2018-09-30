@@ -42,15 +42,15 @@ drake_cc_library(
 drake_cc_library(
     name = "function_inference",
     hdrs = ["function_inference.h"],
-    deps = [":type_pack"],
     visibility = ["//visibility:public"],
+    deps = [":type_pack"],
 )
 
 drake_cc_library(
     name = "wrap_function",
     hdrs = ["wrap_function.h"],
-    deps = [":function_inference"],
     visibility = ["//visibility:public"],
+    deps = [":function_inference"],
 )
 
 drake_cc_library(

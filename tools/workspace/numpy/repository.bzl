@@ -73,7 +73,8 @@ def _impl(repository_ctx):
     )
     repository_ctx.symlink(
         Label("@drake//tools/workspace/numpy:package.BUILD.bazel"),
-        "BUILD.bazel")
+        "BUILD.bazel",
+    )
 
 numpy_py_repository = repository_rule(
     _impl,

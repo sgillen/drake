@@ -4,7 +4,6 @@
 #include "pybind11/pybind11.h"
 
 #include "drake/bindings/pybind11_ext/numpy_dtypes_user.h"
-
 #include "drake/bindings/pydrake/pydrake_pybind.h"
 #include "drake/common/symbolic.h"
 

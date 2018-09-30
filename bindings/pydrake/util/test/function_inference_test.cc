@@ -1,4 +1,4 @@
- #include "drake/bindings/pydrake/util/function_inference.h"
+#include "drake/bindings/pydrake/util/function_inference.h"
 
 #include <functional>
 #include <type_traits>

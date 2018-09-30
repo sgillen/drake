@@ -56,10 +56,10 @@ drake_pybind_library(
 drake_cc_library(
     name = "autodiff_types_pybind",
     hdrs = ["autodiff_types_pybind.h"],
+    visibility = ["//visibility:public"],
     deps = [
         "//bindings/pybind11_ext:numpy_dtypes_user",
     ],
-    visibility = ["//visibility:public"],
 )
 
 drake_pybind_library(
@@ -146,8 +146,8 @@ drake_pybind_library(
 drake_cc_library(
     name = "symbolic_types_pybind",
     hdrs = ["symbolic_types_pybind.h"],
-    deps = ["//bindings/pybind11_ext:numpy_dtypes_user"],
     visibility = ["//visibility:public"],
+    deps = ["//bindings/pybind11_ext:numpy_dtypes_user"],
 )
 
 drake_pybind_library(

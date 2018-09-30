@@ -4,33 +4,33 @@ load("@drake//tools/skylark:pybind.bzl", "pybind_py_library")
 drake_cc_library(
     name = "numpy_dtypes_user",
     hdrs = [
+        "inference.h",
         "numpy_dtypes_user.h",
         "numpy_ufunc.h",
-        "inference.h",
     ],
     tags = ["nolint"],
+    visibility = [
+        "//bindings:__subpackages__",
+    ],
     deps = [
         "//bindings/pydrake/util:type_pack",
         "//bindings/pydrake/util:wrap_function",
         "@pybind11",
     ],
-    visibility = [
-        "//bindings:__subpackages__",
-    ],
 )
 
 pybind_py_library(
     name = "pybind11_tests_py",
-    cc_so_name = "pybind11_tests",
-    cc_srcs = [
-        "test/test_numpy_dtypes_user.cpp",
-    ],
+    testonly = 1,
     cc_deps = [
         ":numpy_dtypes_user",
         "@pybind11//:pybind11_tests_base",
     ],
+    cc_so_name = "pybind11_tests",
+    cc_srcs = [
+        "test/test_numpy_dtypes_user.cpp",
+    ],
     py_imports = ["."],
-    testonly = 1,
 )
 
 py_test(

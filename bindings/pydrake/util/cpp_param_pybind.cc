@@ -1,6 +1,7 @@
 #include "drake/bindings/pydrake/util/cpp_param_pybind.h"
 
 #include "pybind11/eval.h"
+
 #include "drake/bindings/pybind11_ext/numpy_dtypes_user.h"
 
 namespace drake {
