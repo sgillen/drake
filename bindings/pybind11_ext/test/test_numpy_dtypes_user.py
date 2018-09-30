@@ -78,14 +78,15 @@ def test_array_creation():
     x = np.array([m.Custom(10), 1.])
     assert x.dtype == object
     # - At present, we will be leaking memory. This doesn't show up in instance
-    # count, since these items are only mutated via `operator=`; however, it will
-    # still be the case for resizing.
+    # count, since these items are only mutated via `operator=`; however, it
+    # will still be the case for resizing.
     # See https://github.com/numpy/numpy/issues/10721 for more information.
 
 
 def test_array_creation_extended():
     with pytest.raises(ValueError):
-        # Fails due to `np.copyto` relying on `np.long` conversion on uninitialized memory.
+        # Fails due to `np.copyto` relying on `np.long` conversion on
+        # uninitialized memory.
         x = np.ones((2, 2), dtype=m.Custom)
     x = np.ones((1, 2)).astype(m.Custom)
     assert check_array(x, [[m.Custom(1), m.Custom(1)]])
@@ -96,7 +97,8 @@ def test_array_creation_extended():
     # Prefer to avoid, as it complicates other implicit conversions,
     # which in general shouldn't be there, but nonetheless should be tested.
     x = np.eye(2).astype(m.Custom)
-    assert check_array(x, [[m.Custom(1), m.Custom(0)], [m.Custom(0), m.Custom(1)]])
+    assert check_array(
+        x, [[m.Custom(1), m.Custom(0)], [m.Custom(0), m.Custom(1)]])
 
 
 def check_array(actual, expected):
@@ -248,8 +250,8 @@ def test_implicit_arguments():
     y = m.binary_op(s1a, s2a)
     assert m.same(y, m.CustomStr("1 == 1000"))
     with pytest.raises(TypeError):
-        # This does not work, even when declaring implicit arguments. Most likely
-        # because NumPy needs to know an anchoring type?
+        # This does not work, even when declaring implicit arguments. Most
+        # likely because NumPy needs to know an anchoring type?
         y = m.binary_op_loop(s1a, s2a)
     # The following works because NumPy is aware of the type...
     c1 = m.Custom(s1)

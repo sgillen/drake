@@ -3,11 +3,11 @@
 load("//tools/workspace:generate_file.bzl", "generate_file")
 load("@drake//tools/workspace:github.bzl", "github_archive")
 
-_REPOSITORY = "EricCousineau-TRI/pybind11"
+_REPOSITORY = "RobotLocomotion/pybind11"
 
-_COMMIT = "3a4d863c255e7c92bfd9aa19124487b7a7ba7484"
+_COMMIT = "906b5f2743eb71c758d1c239cef27fda01239039"
 
-_SHA256 = "237a462959e1eb0f5f94cf695edf8f61cb7359f27ff9efad4636b1cfbc9f5aca"  # noqa
+_SHA256 = "ebd73ff96008faf45ea7d05a27f6e5aecf64ed11e6451649cfe85c95705c6948"  # noqa
 
 def pybind11_repository(
         name,
