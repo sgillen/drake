@@ -88,8 +88,10 @@ public:
     }
     ~Custom() {
         track_destroyed(this);
-        // TODO(eric.cousineau): Track down why this causes a segfault.
-        //print_destroyed(this);
+        // TODO(eric.cousineau): Track down why this causes a segfault. GIL
+        // doesn't fix this.
+        // py::gil_scoped_acquire acq;
+        // print_destroyed(this);
     }
     Custom(double value) : value_{value} {
         print_created(this, value);
@@ -108,6 +110,7 @@ public:
         print_copy_created(this, other);
     }
     Custom& operator=(const Custom& other) {
+        // TODO(eric.cousineau): Figure out why we need GIL here.
         py::gil_scoped_acquire acq;
         print_copy_assigned(this, other.value_);
         value_ = other.value_;
