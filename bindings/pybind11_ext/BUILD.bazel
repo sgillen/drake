@@ -13,6 +13,9 @@ cc_library(
         "//bindings/pydrake/util:wrap_function",
         "@pybind11",
     ],
+    visibility = [
+        "//bindings:__subpackages__",
+    ],
 )
 
 pybind_py_library(
