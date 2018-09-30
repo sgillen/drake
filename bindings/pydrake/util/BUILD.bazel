@@ -120,6 +120,7 @@ drake_cc_library(
     visibility = ["//visibility:public"],
     deps = [
         ":type_pack",
+        "//bindings/pybind11_ext:numpy_dtypes_user",
         "//bindings/pydrake:pydrake_pybind",
         "@pybind11",
     ],

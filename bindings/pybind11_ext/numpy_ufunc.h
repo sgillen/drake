@@ -5,7 +5,7 @@
 
 #include <pybind11/numpy.h>
 
-#include "pybind11_ext/inference.h"
+#include "drake/bindings/pybind11_ext/inference.h"
 
 namespace pybind11 {
 namespace detail {

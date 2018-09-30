@@ -9,7 +9,7 @@
 #include <gtest/gtest.h>
 #include "pybind11/embed.h"
 #include "pybind11/eval.h"
-#include "pybind11/numpy_dtypes_user.h"
+#include "drake/bindings/pybind11_ext/numpy_dtypes_user.h"
 #include "pybind11/pybind11.h"
 
 using std::string;

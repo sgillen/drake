@@ -146,6 +146,7 @@ drake_pybind_library(
 drake_cc_library(
     name = "symbolic_types_pybind",
     hdrs = ["symbolic_types_pybind.h"],
+    deps = ["//bindings/pybind11_ext:numpy_dtypes_user"],
     visibility = ["//visibility:public"],
 )
 

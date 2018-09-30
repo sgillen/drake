@@ -1,13 +1,14 @@
+load("@drake//tools/skylark:drake_cc.bzl", "drake_cc_library")
 load("@drake//tools/skylark:pybind.bzl", "pybind_py_library")
 
-cc_library(
+drake_cc_library(
     name = "numpy_dtypes_user",
     hdrs = [
         "numpy_dtypes_user.h",
         "numpy_ufunc.h",
         "inference.h",
     ],
-    includes = [".."],
+    tags = ["nolint"],
     deps = [
         "//bindings/pydrake/util:type_pack",
         "//bindings/pydrake/util:wrap_function",
