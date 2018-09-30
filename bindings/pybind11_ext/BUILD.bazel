@@ -17,6 +17,7 @@ cc_library(
 
 pybind_py_library(
     name = "pybind11_tests_py",
+    cc_so_name = "pybind11_tests",
     cc_srcs = [
         "test/test_numpy_dtypes_user.cpp",
     ],
@@ -24,6 +25,7 @@ pybind_py_library(
         ":numpy_dtypes_user",
         "@pybind11//:pybind11_tests_base",
     ],
+    py_imports = ["."],
     testonly = 1,
 )
 

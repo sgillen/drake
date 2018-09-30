@@ -1,4 +1,7 @@
+import gc
 import os
+
+import numpy as np
 import pytest
 
 from pybind11_tests import ConstructorStats
@@ -20,7 +23,7 @@ def test_scalar_ctor():
     assert id(c.self()) == id(c)
     del c
     del c1
-    pytest.gc_collect()
+    gc.collect()
     stats = ConstructorStats.get(m.Custom)
     assert stats.alive() == 0
 
