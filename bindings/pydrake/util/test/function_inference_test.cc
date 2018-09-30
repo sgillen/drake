@@ -25,8 +25,9 @@ void check_pack(type_pack<Actual...>, type_pack<Expected...>) {
   (void)Dummy{(check_type<Actual, Expected>(), 0)...};
 }
 
-template <typename ReturnExpected, typename... ArgsExpected, typename Info>
-void check_signature(Info info) {
+template <typename ReturnExpected, typename... ArgsExpected, typename InfoT>
+void check_signature(InfoT&& info) {
+  using Info = std::decay_t<InfoT>;
   check_type<typename Info::Return, ReturnExpected>();
   check_pack(typename Info::Args{}, type_pack<ArgsExpected...>{});
 }
