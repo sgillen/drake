@@ -2,19 +2,7 @@ import os
 import pytest
 
 from pybind11_tests import ConstructorStats
-from pybind11_tests import numpy_dtype_user as m
-
-np = None
-with pytest.suppress(ImportError):
-    import numpy as np
-    import sys
-    sys.stderr.write("numpy version: {} {}\n".format(
-        np.version.full_version, np.version.git_revision))
-
-pytestmark = pytest.mark.skipif(
-    not np or hasattr(m, "DISABLED"), reason="requires numpy and C++ >= 14")
-
-prefer_user_copyswap = np and 'NUMPY_PATCH' in os.environ
+import pybind11_tests.numpy_dtype_user as m
 
 
 def test_scalar_meta():
@@ -283,7 +271,6 @@ def test_reference_arguments():
         [m.Custom(11), m.Custom(12)]])
 
 
-@pytest.mark.skipif(not prefer_user_copyswap, reason="requires NumPy patch")
 def test_copy():
     x = np.array([m.Custom(1, "a")])
     y = np.copy(x)
@@ -315,3 +302,7 @@ def test_result_type():
     assert dt == m.ImplicitArg
     dt = np.result_type(m.ImplicitArg, 1.)
     assert dt == m.ImplicitArg
+
+
+if __name__ == "__main__":
+    pytest.main()

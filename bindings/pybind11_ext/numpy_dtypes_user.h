@@ -1,31 +1,21 @@
-/*
-    pybind11/numpy_dtypes_user.h: User-defined data types for NumPy
-
-    Copyright (c) 2018 Eric Cousineau <eric.cousineau@tri.global>
-
-    All rights reserved. Use of this source code is governed by a
-    BSD-style license that can be found in the LICENSE file.
-*/
-
 #pragma once
-
-#include "numpy.h"
-#include "numpy_ufunc.h"
-#include "operators.h"
-#include "detail/inference.h"
 
 #include <array>
 #include <map>
 #include <utility>
 #include <typeindex>
 
-#if defined(PYBIND11_CPP14)
+#include <pybind11/numpy.h>
+#include <pybind11/operators.h>
+
+#include "pybind11_ext/inference.h"
+#include "pybind11_ext/numpy_ufunc.h"
 
 // N.B. For NumPy dtypes, `custom` tends to mean record-like structures, while
 // `user-defined` means teaching NumPy about previously opaque C structures.
 
-NAMESPACE_BEGIN(PYBIND11_NAMESPACE)
-NAMESPACE_BEGIN(detail)
+namespace pybind11 {
+namespace detail {
 
 // The following code effectively creates a separate instance system than what
 // pybind11 nominally has. This is done because, at present, it's difficult to
@@ -311,7 +301,7 @@ struct dtype_conversion_t {
 template <typename FuncIn>
 static auto dtype_conversion_impl(
     FuncIn&& func_in, bool allow_implicit_coercion) {
-  auto func_infer = detail::function_inference::run(func_in);
+  auto func_infer = detail::infer_function_info(func_in);
   using FuncInfer = decltype(func_infer);
   using From = detail::intrinsic_t<typename FuncInfer::Args::template type_at<0>>;
   using To = detail::intrinsic_t<typename FuncInfer::Return>;
@@ -320,7 +310,7 @@ static auto dtype_conversion_impl(
       std::forward<Func>(func_infer.func), allow_implicit_coercion};
 }
 
-NAMESPACE_END(detail)
+}  // namespace detail
 
 /// Dtype methods which cannot be defined via a UFunc.
 struct dtype_method {
@@ -753,17 +743,15 @@ class dtype_user : public object {
   detail::PyArray_ArrFuncs* arrfuncs_{};
 };
 
-NAMESPACE_END(PYBIND11_NAMESPACE)
+}  // namespace pybind11
 
 // Ensures that we can (a) cast the type (semi) natively, and (b) integrate
 // with NumPy functionality.
 #define PYBIND11_NUMPY_DTYPE_USER(Type)  \
     namespace pybind11 { namespace detail { \
-        template <> \
-        struct type_caster<Type> : public dtype_user_caster<Type> {}; \
-        template <> \
-        struct npy_format_descriptor<Type> \
-            : public dtype_user_npy_format_descriptor<Type> {}; \
+      template <> \
+      struct type_caster<Type> : public dtype_user_caster<Type> {}; \
+      template <> \
+      struct npy_format_descriptor<Type> \
+          : public dtype_user_npy_format_descriptor<Type> {}; \
     }}
-
-#endif  // defined(PYBIND11_CPP14)

@@ -9,12 +9,16 @@ namespace pydrake {
 namespace detail {
 
 // Collects both a functor object and its signature for ease of inference.
-template <typename Func, typename Return, typename ... Args>
+template <typename FuncT, typename ReturnT, typename ... ArgsT>
 struct function_info {
   // TODO(eric.cousineau): Ensure that this permits copy elision when combined
   // with `std::forward<Func>(func)`, while still behaving well with primitive
   // types.
+  using Func = FuncT;
   std::decay_t<Func> func;
+
+  using Return = ReturnT;
+  using Args = type_pack<ArgsT...>;
 };
 
 // Factory method for `function_info<>`, to be used by `infer_function_info`.

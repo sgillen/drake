@@ -25,7 +25,6 @@ cc_library(
         "include/pybind11/detail/class.h",
         "include/pybind11/detail/common.h",
         "include/pybind11/detail/descr.h",
-        "include/pybind11/detail/inference.h",
         "include/pybind11/detail/init.h",
         "include/pybind11/detail/internals.h",
         "include/pybind11/detail/typeid.h",
@@ -35,8 +34,6 @@ cc_library(
         "include/pybind11/functional.h",
         "include/pybind11/iostream.h",
         "include/pybind11/numpy.h",
-        "include/pybind11/numpy_dtypes_user.h",
-        "include/pybind11/numpy_ufunc.h",
         "include/pybind11/operators.h",
         "include/pybind11/options.h",
         "include/pybind11/pybind11.h",
@@ -49,6 +46,22 @@ cc_library(
         "@eigen",
         "@python",
     ],
+)
+
+# N.B. Given how `pybind11` how it has its test code factored, we must build
+# all test modules into the same shared module.
+cc_library(
+    name = "pybind11_tests_base",
+    srcs = [
+        "tests/constructor_stats.h",
+        "tests/pybind11_tests.cpp",
+        "tests/pybind11_tests.h",
+    ],
+    deps = [
+        ":pybind11",
+    ],
+    includes = ["tests"],
+    testonly = 1,
 )
 
 cmake_config(

@@ -7,15 +7,15 @@
   BSD-style license that can be found in the LICENSE file.
 */
 
-// TODO(eric.cousineau): See what mixing non-dtypes look like for pybind...
-
 #include <cstring>
+
+#include <pybind11/stl.h>
+#include <pybind11/operators.h>
 
 #include "pybind11_tests.h"
 #include "constructor_stats.h"
-#include <pybind11/stl.h>
-#include <pybind11/operators.h>
-#include <pybind11/numpy_dtypes_user.h>
+
+#include "pybind11_ext/numpy_dtypes_user.h"
 
 using std::string;
 using std::unique_ptr;
@@ -205,8 +205,6 @@ private:
 
 }  // namespace
 
-#if defined(PYBIND11_CPP14)
-
 PYBIND11_NUMPY_DTYPE_USER(CustomStr);
 PYBIND11_NUMPY_DTYPE_USER(SimpleStruct);
 PYBIND11_NUMPY_DTYPE_USER(Custom);
@@ -383,11 +381,3 @@ TEST_SUBMODULE(numpy_dtype_user, m) {
     m.def("implicit_arg_scalar", [](ImplicitArg in) { return in; });
     m.def("implicit_arg_vector", [](py::array_t<ImplicitArg> in) { return in; });
 }
-
-#else  // defined(PYBIND11_CPP14)
-
-TEST_SUBMODULE(numpy_dtype_user, m) {
-    m.attr("DISABLED") = true;
-}
-
-#endif  // defined(PYBIND11_CPP14)
