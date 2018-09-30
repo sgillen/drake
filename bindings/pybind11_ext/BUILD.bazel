@@ -1,0 +1,55 @@
+# -*- python -*-
+
+load("@drake//tools/install:install.bzl", "install")
+load("//tools/lint:lint.bzl", "add_lint_tests")
+load("@drake//tools/skylark:drake_cc.bzl", "drake_cc_library")
+load("@drake//tools/skylark:pybind.bzl", "pybind_py_library")
+
+package(default_visibility = [
+    "//bindings:__subpackages__",
+])
+
+drake_cc_library(
+    name = "numpy_dtypes_user",
+    hdrs = [
+        "numpy_dtypes_user.h",
+        "numpy_ufunc.h",
+    ],
+    tags = ["nolint"],
+    deps = [
+        "//bindings/pydrake/util:type_pack",
+        "//bindings/pydrake/util:wrap_function",
+        "@pybind11",
+    ],
+)
+
+install(
+    name = "install",
+    targets = ["numpy_dtypes_user"],
+    visibility = ["//visibility:public"],
+)
+
+pybind_py_library(
+    name = "pybind11_tests_py",
+    testonly = 1,
+    cc_deps = [
+        ":numpy_dtypes_user",
+        "@pybind11//:pybind11_tests_base",
+    ],
+    cc_so_name = "pybind11_tests",
+    cc_srcs = [
+        "test/test_numpy_dtypes_user.cpp",
+    ],
+    py_imports = ["."],
+)
+
+py_test(
+    name = "numpy_dtypes_test",
+    srcs = ["test/test_numpy_dtypes_user.py"],
+    main = "test/test_numpy_dtypes_user.py",
+    deps = [
+        ":pybind11_tests_py",
+    ],
+)
+
+add_lint_tests()
