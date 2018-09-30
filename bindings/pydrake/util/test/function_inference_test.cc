@@ -26,7 +26,7 @@ void check_pack(type_pack<Actual...>, type_pack<Expected...>) {
 }
 
 template <typename ReturnExpected, typename... ArgsExpected, typename Info>
-void check_signature(Info& info) {
+void check_signature(Info info) {
   check_type<typename Info::Return, ReturnExpected>();
   check_pack(typename Info::Args{}, type_pack<ArgsExpected...>{});
 }
