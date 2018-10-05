@@ -3,3 +3,6 @@
 # - `cpp_template` does not offer public Drake symbols.
 from .eigen_geometry import *
 # - `deprecation` does not offer public Drake symbols.
+# N.B. Since this is generic and relatively scoped, we import the module as a
+# symbol.
+import pybind11_version

@@ -24,6 +24,12 @@ drake_runfiles_binary(
     visibility = ["//visibility:private"],
 )
 
+drake_py_binary(
+    name = "refresh_doc_modules",
+    srcs = ["refresh_doc_modules.py"],
+    deps = ["//bindings/pydrake"],
+)
+
 # TODO(jamiesnape): Refactor into a Starlark rule to share with with
 # //doc:sphinx.
 genrule(
