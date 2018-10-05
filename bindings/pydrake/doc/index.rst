@@ -6,6 +6,7 @@ pydrake
 
     pydrake.all
     pydrake.autodiffutils
+    pydrake.automotive
     pydrake.common
     pydrake.examples
     pydrake.forwarddiff
@@ -20,6 +21,7 @@ pydrake
     pydrake.systems
     pydrake.trajectories
     pydrake.util
+
 
 .. automodule:: pydrake
     :members:

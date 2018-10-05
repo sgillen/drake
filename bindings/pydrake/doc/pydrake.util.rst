@@ -6,8 +6,6 @@ pydrake.util
 
     pydrake.util.all
     pydrake.util.compatibility
-    pydrake.util.containers
-    pydrake.util.cpp_const
     pydrake.util.cpp_param
     pydrake.util.cpp_template
     pydrake.util.deprecation
