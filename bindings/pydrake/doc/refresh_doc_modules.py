@@ -15,12 +15,24 @@ from pydrake.examples import (
     rimless_wheel,
     van_der_pol,
 )
+# TODO(eric.cousineau): Indicate these as deprecated.
+from pydrake.util import (
+    cpp_const,
+    cpp_param,
+    cpp_template,
+)
+
+EXCLUDE = [
+    "pydrake.third_party",
+]
 
 
 def get_submodules(name):
     prefix = name + "."
     out = []
     for s_name in sys.modules.keys():
+        if s_name in EXCLUDE:
+            continue
         if not s_name.startswith(prefix):
             continue
         sub = s_name[len(prefix):]
