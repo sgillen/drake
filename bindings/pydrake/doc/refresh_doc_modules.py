@@ -71,6 +71,7 @@ def write_module(f_name, name, verbose):
         f.write("{}\n".format(rst_name))
         f.write("=" * len(rst_name) + "\n")
         f.write("\n")
+        f.write(".. Do not update this by hand; instead, see README.md.\n\n")
         if len(subs) > 0:
             f.write(".. toctree::\n")
             f.write("    :maxdepth: 1\n")
