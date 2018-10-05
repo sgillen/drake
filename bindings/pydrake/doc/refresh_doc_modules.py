@@ -90,9 +90,15 @@ def write_module(f_name, name, verbose):
 
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--output_dir", type=str)
-    parser.add_argument("--pre_clean", action="store_true")
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--output_dir", type=str, required=True,
+        help="Output directory; must be an absolute path, and must already "
+             "exist.")
+    parser.add_argument(
+        "--pre_clean", action="store_true",
+        help="Remove `index.rst` and all `pydrake.*.rst` files before "
+             "generating.")
     parser.add_argument("-v", "--verbose", action="store_true")
     args = parser.parse_args()
 
