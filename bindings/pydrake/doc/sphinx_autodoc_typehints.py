@@ -11,8 +11,8 @@ from pydrake.util.cpp_template import TemplateBase
 #: extended signature RE: with explicit module name separated by ::
 autodoc.py_ext_sig_re = re.compile(
     r'''^ ([\w.]+::)?            # explicit module name
-          ([\w.]+\.)?            # module and/or class name(s)
-          ([\w\[\]]+)  \s*             # thing name
+          ([\w.\[\]]+\.)?            # module and/or class name(s)
+          ([\w(?:\[.*\])?]+)  \s*             # thing name
           (?: \((.*)\)           # optional: arguments
            (?:\s* -> \s* (.*))?  #           return annotation
           )? $                   # and nothing more
@@ -25,7 +25,7 @@ class TemplateDocumenter(autodoc.ModuleLevelDocumenter):
     """
     objtype = 'template'
     member_order =  autodoc.ClassDocumenter.member_order
-    directivetype = 'attribute'
+    directivetype = 'class'
     option_spec = {}
 
     @classmethod
@@ -58,7 +58,7 @@ class TemplateDocumenter(autodoc.ModuleLevelDocumenter):
 
 def tpl_getter(obj, name, *defargs):
     if "[" in name:
-        assert name.endswith(']')
+        assert name.endswith(']'), name
         for param in obj.param_list:
             inst = obj[param]
             if inst.__name__ == name:
