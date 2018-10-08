@@ -8,6 +8,14 @@
 
 
 # -- Project information -----------------------------------------------------
+# import sys
+# print("\n".join(sys.path))
+# from sphinx import __file__
+# print(__file__)
+# exit(10)
+
+import sys
+sys.path.insert(0, '/home/eacousineau/devel/util/restbuilder')
 
 project = u'pydrake'
 copyright = u''
@@ -28,6 +36,8 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.mathjax',
     'sphinx.ext.napoleon',
+    'sphinx_autodoc_typehints',
+    # 'sphinxcontrib.restbuilder',
 ]
 
 # The suffix(es) of source filenames.
