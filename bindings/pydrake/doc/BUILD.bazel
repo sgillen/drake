@@ -50,7 +50,7 @@ genrule(
         # Run sphinx-build.
         "$(location :sphinx_build) -b html",  # HTML output.
         "-a -E -d $(@D)/.doctrees/",  # Don't use caching.
-        "-N -Q",  # Be very quiet.
+        "-N",  # Be very quiet.
         "$$(dirname $(location conf.py))",  # Source dir.
         "$(@D)/.tmpout",  # Output dir.
         "&&",
