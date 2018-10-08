@@ -1,6 +1,7 @@
 # http://www.sphinx-doc.org/en/master/extdev/appapi.html#sphinx.application.Sphinx.add_autodocumenter
 from __future__ import print_function
 
+from collections import namedtuple
 import re
 
 from sphinx.ext import autodoc
@@ -9,14 +10,55 @@ from pydrake.util.cpp_template import TemplateBase
 
 
 #: extended signature RE: with explicit module name separated by ::
-autodoc.py_ext_sig_re = re.compile(
-    r'''^ ([\w.]+::)?            # explicit module name
-          ([\w.\[\]]+\.)?            # module and/or class name(s)
-          ([\w(?:\[.*\])?]+)  \s*             # thing name
-          (?: \((.*)\)           # optional: arguments
-           (?:\s* -> \s* (.*))?  #           return annotation
-          )? $                   # and nothing more
-          ''', re.VERBOSE)
+class IrregularExpression(object):
+    FakeMatch = namedtuple('FakeMatch', 'groups')
+    py_sig_func = re.compile(
+        r'''^ \s* (?: \((.*)\)       # optional: arguments
+                  (?:\s* -> \s* (.*))?  #           return annotation
+                  )? $                   # and nothing more
+              ''', re.VERBOSE)
+
+    def match(self, s):
+        s_orig = s
+        # explicit_modname
+        explicit_modname = None
+        if "::" in s:
+            explicit_modname, s = s.split("::")
+            explicit_modname += '::'
+        pieces = []
+        piece = ''
+        num_open = 0
+        i = 0
+        for c in s:
+            if c.isspace() or c == '(':
+                break
+            if num_open == 0 and c == '.':
+                pieces.append(piece)
+                piece = ''
+            else:
+                if c == '[':
+                    num_open += 1
+                elif c == ']':
+                    num_open -= 1
+                piece += c
+            i += 1
+        pieces.append(piece)
+        func_groups = self.py_sig_func.match(s[i:]).groups()
+        path = '.'.join(pieces[:-1]) or None
+        if path:
+            path += "."
+        base = pieces[-1]
+        groups = lambda: (explicit_modname, path, base) + func_groups
+        if '[' not in s_orig:
+            olds = old.match(s_orig).groups()
+            assert olds == groups(), s_orig
+        # print(("match", s_orig))
+        # print(" - ", groups())
+        # print(" - ", )
+        return self.FakeMatch(groups)
+
+old = autodoc.py_ext_sig_re
+autodoc.py_ext_sig_re = IrregularExpression()
 
 
 class TemplateDocumenter(autodoc.ModuleLevelDocumenter):
