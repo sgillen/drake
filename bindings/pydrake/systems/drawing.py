@@ -82,6 +82,19 @@ class Test(object):
 
         return Impl
 
+    @TemplateFunction.define("MyMethod", param_list=[(int,), (float,)])
+    def MyMethod(param):
+        T, = param
+
+        def impl(x, y):
+            """
+            Instantiation. yeah.
+            """
+            return (T, x, y)
+
+        return impl
+
+
 Test.method_tpl = TemplateMethod("method_tpl", cls=Test)
 
 
