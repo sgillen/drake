@@ -238,9 +238,6 @@ def patch_resolve_name(original, self, *args, **kwargs):
     modname, objpath = original(self, *args, **kwargs)
     return modname, repair_resolve_name(objpath)
 
-patch(autodoc.ClassLevelDocumenter, 'resolve_name', patch_resolve_name)
-patch(autodoc.ModuleLevelDocumenter, 'resolve_name', patch_resolve_name)
-
 
 def patch_add_directive_header(original, self, sig):
     """Patches display of bases for classes to strip out pybind11 meta classes
@@ -266,10 +263,10 @@ def patch_add_directive_header(original, self, sig):
         self.add_line(_(u'   Bases: %s') % ', '.join(bases),
                       sourcename)
 
-patch(autodoc.ClassDocumenter, 'add_directive_header', patch_add_directive_header)
-
 
 def setup(app):
+    # Ignore `pybind11_object` as a base.
+    patch(autodoc.ClassDocumenter, 'add_directive_header', patch_add_directive_header)
     # Register directive so we can pretty-print template declarations.
     pydoc.PythonDomain.directives['template'] = pydoc.PyClasslike
     # Register custom attribute retriever.
@@ -278,4 +275,6 @@ def setup(app):
     # Hack regular expressions to make them irregular (nested).
     autodoc.py_ext_sig_re = IrregularExpression(extended=True)
     pydoc.py_sig_re = IrregularExpression(extended=False)
+    patch(autodoc.ClassLevelDocumenter, 'resolve_name', patch_resolve_name)
+    patch(autodoc.ModuleLevelDocumenter, 'resolve_name', patch_resolve_name)
     return dict(parallel_read_safe=True)
