@@ -163,13 +163,10 @@ class TemplateDocumenter(autodoc.ModuleLevelDocumenter):
         return False, members
 
     def check_module(self):
-        """Overrides base to always show template objects."""
-        # THIS MUST LAND BEFORE A PR
-        assert False
-        # TODO(eric.cousineau): Filter out `TemplateBase` instances based on
-        # their originating module. `autodoc` won't catch it normally because
-        # an instance does not have `__module__` normally defined.
-        return True
+        """Overrides base to show template objects given the correct module."""
+        if self.options.imported_members:
+            return True
+        return self.object._module_name == self.modname
 
     def add_directive_header(self, sig):
         """Overrides base to add a line to indicate instantiations."""
