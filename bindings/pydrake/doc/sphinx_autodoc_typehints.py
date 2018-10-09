@@ -86,10 +86,16 @@ class TemplateDocumenter(autodoc.ModuleLevelDocumenter):
     member_order =  autodoc.ClassDocumenter.member_order
     directivetype = 'class'
     option_spec = {}
+    # Take preference over Attributes.
+    priority = 1 + autodoc.AttributeDocumenter.priority
 
     @classmethod
     def can_document_member(cls, member, membername, isattr, parent):
-        return isinstance(member, TemplateBase)
+        ret = isinstance(member, TemplateBase)
+        print("check", type(member), membername)
+        if ret:
+            print("CAN", member)
+        return ret
 
     def get_object_members(self, want_all):
         members = []
@@ -105,7 +111,7 @@ class TemplateDocumenter(autodoc.ModuleLevelDocumenter):
 
     def import_object(self):
         out = autodoc.ModuleLevelDocumenter.import_object(self)
-        # print("import_object: ", out)
+        print("import_object: ", self.object_name, out)
         self._DBG = True
         return out
 
@@ -139,6 +145,21 @@ def tpl_getter(obj, name, *defargs):
                 return inst
         raise RuntimeError("Not a template?")
     return autodoc.safe_getattr(obj, name, *defargs)
+
+
+old = autodoc.Documenter.filter_members
+
+def rewrite(self, members, want_all):
+    ret = old(self, members, want_all)
+    s = []
+    for (name, member, isattr) in ret:
+        s.append([name, isattr])
+        if name == "MyMethod":
+            print(" - ", name, member)
+    print(("rewrite", self.object_name, s))
+    return ret
+
+autodoc.Documenter.filter_members = rewrite
 
 
 def setup(app):

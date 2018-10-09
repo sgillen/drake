@@ -11,7 +11,7 @@ from pydrake.common import temp_directory
 import matplotlib.pyplot as plt
 import pydot
 
-from pydrake.systems.framework import LeafSystem_
+# from pydrake.systems.framework import LeafSystem_
 from pydrake.systems.scalar_conversion import TemplateSystem
 from pydrake.util.cpp_template import TemplateFunction, TemplateMethod
 
@@ -20,29 +20,29 @@ from pydrake.util.cpp_template import TemplateFunction, TemplateMethod
 # `call_python_client`.
 
 
-def plot_graphviz(dot_text):
-    """Renders a DOT graph in matplotlib."""
-    # @ref https://stackoverflow.com/a/18522941/7829525
-    # Tried (reason ignored): pydotplus (`pydot` works), networkx
-    # (`read_dot` does not work robustly?), pygraphviz (coupled with
-    # `networkx`).
-    g = pydot.graph_from_dot_data(dot_text)
-    if isinstance(g, list):
-        # Per Ioannis's follow-up comment in the above link, in pydot >= 1.2.3
-        # `graph_from_dot_data` returns a list of graphs.
-        # Handle this case for now.
-        assert len(g) == 1
-        g = g[0]
-    f = NamedTemporaryFile(suffix='.png', dir=temp_directory())
-    g.write_png(f.name)
-    plt.axis('off')
+# def plot_graphviz(dot_text):
+#     """Renders a DOT graph in matplotlib."""
+#     # @ref https://stackoverflow.com/a/18522941/7829525
+#     # Tried (reason ignored): pydotplus (`pydot` works), networkx
+#     # (`read_dot` does not work robustly?), pygraphviz (coupled with
+#     # `networkx`).
+#     g = pydot.graph_from_dot_data(dot_text)
+#     if isinstance(g, list):
+#         # Per Ioannis's follow-up comment in the above link, in pydot >= 1.2.3
+#         # `graph_from_dot_data` returns a list of graphs.
+#         # Handle this case for now.
+#         assert len(g) == 1
+#         g = g[0]
+#     f = NamedTemporaryFile(suffix='.png', dir=temp_directory())
+#     g.write_png(f.name)
+#     plt.axis('off')
 
-    return plt.imshow(plt.imread(f.name), aspect="equal")
+#     return plt.imshow(plt.imread(f.name), aspect="equal")
 
 
-def plot_system_graphviz(system):
-    """Renders a System's Graphviz representation in `matplotlib`."""
-    return plot_graphviz(system.GetGraphvizString())
+# def plot_system_graphviz(system):
+#     """Renders a System's Graphviz representation in `matplotlib`."""
+#     return plot_graphviz(system.GetGraphvizString())
 
 
 class Test(object):
@@ -56,9 +56,9 @@ class Test(object):
         """Test 1 method"""
         pass
 
-    def _method_int(self, x):
-        """Test 1 int"""
-        pass
+    # def _method_int(self, x):
+    #     """Test 1 int"""
+    #     pass
 
     class Nested(object):
         """Nested 2"""
@@ -66,21 +66,21 @@ class Test(object):
             """Nested 2 method"""
             pass
 
-    @TemplateSystem.define("NestT")
-    def NestT(T):
+    # @TemplateSystem.define("NestT")
+    # def NestT(T):
 
-        class Impl(LeafSystem_[T]):
-            """
-            Example class.
-            """
-            def _construct(self, value, converter=None):
-                LeafSystem_[T].__init__(self, converter=converter)
-                self.value = value
+    #     class Impl(LeafSystem_[T]):
+    #         """
+    #         Example class.
+    #         """
+    #         def _construct(self, value, converter=None):
+    #             LeafSystem_[T].__init__(self, converter=converter)
+    #             self.value = value
 
-            def _construct_copy(self, other, converter=None):
-                Impl._construct(self, other.value, converter=converter)
+    #         def _construct_copy(self, other, converter=None):
+    #             Impl._construct(self, other.value, converter=converter)
 
-        return Impl
+    #     return Impl
 
     @TemplateFunction.define("MyMethod", param_list=[(int,), (float,)])
     def MyMethod(param):
@@ -95,29 +95,29 @@ class Test(object):
         return impl
 
 
-Test.method_tpl = TemplateMethod("method_tpl", cls=Test)
+# Test.method_tpl = TemplateMethod("method_tpl", cls=Test)
 
 
-@TemplateSystem.define("MySystem_")
-def MySystem_(T):
+# @TemplateSystem.define("MySystem_")
+# def MySystem_(T):
 
-    class Impl(LeafSystem_[T]):
-        """
-        Example class.
-        """
-        def _construct(self, value, converter=None):
-            LeafSystem_[T].__init__(self, converter=converter)
-            self.value = value
+#     class Impl(LeafSystem_[T]):
+#         """
+#         Example class.
+#         """
+#         def _construct(self, value, converter=None):
+#             LeafSystem_[T].__init__(self, converter=converter)
+#             self.value = value
 
-        def _construct_copy(self, other, converter=None):
-            Impl._construct(self, other.value, converter=converter)
+#         def _construct_copy(self, other, converter=None):
+#             Impl._construct(self, other.value, converter=converter)
 
-        def my_method(self, x):
-            return "Hello"
+#         def my_method(self, x):
+#             return "Hello"
 
-    return Impl
+#     return Impl
 
-MySystem = MySystem_[None]  # Default instantiation.
+# MySystem = MySystem_[None]  # Default instantiation.
 
 @TemplateFunction.define("MyFunc", param_list=[(int,), (float,)])
 def MyFunc(param):
