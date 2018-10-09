@@ -8,14 +8,6 @@
 
 
 # -- Project information -----------------------------------------------------
-# import sys
-# print("\n".join(sys.path))
-# from sphinx import __file__
-# print(__file__)
-# exit(10)
-
-import sys
-sys.path.insert(0, '/home/eacousineau/devel/util/restbuilder')
 
 project = u'pydrake'
 copyright = u''
@@ -43,8 +35,6 @@ extensions = [
 # The suffix(es) of source filenames.
 source_suffix = '.rst'
 
-source_encoding = 'utf-8'
-
 # The master toctree document.
 master_doc = 'index'
 
@@ -60,9 +50,3 @@ html_copy_source = False
 html_show_copyright = False
 
 html_show_sphinx = False
-
-# # Autodoc.
-
-# autodoc_default_options = {
-#     'exclude-members': '__weakref__, __del__',
-# }

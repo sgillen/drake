@@ -21,8 +21,8 @@ drake_py_binary(
     srcs = ["sphinx_build_wrapper.py"],
     data = ["@sphinx//:sphinx-build"],
     deps = [
-        "//bindings/pydrake",
         ":sphinx_pydrake",
+        "//bindings/pydrake",
         "@sphinx_py",
     ],
 )

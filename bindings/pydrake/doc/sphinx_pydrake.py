@@ -3,7 +3,7 @@
  - Document parameterized bindings of templated methods / classes
 
 For guidance, see:
- - http://www.sphinx-doc.org/en/master/extdev/appapi.html#sphinx.application.Sphinx.add_autodocumenter
+ - http://www.sphinx-doc.org/en/master/extdev/appapi.html#sphinx.application.Sphinx.add_autodocumenter  # noqa
 """
 
 # TODO(eric.cousineau): How to document only protected methods?
