@@ -3,7 +3,8 @@
 pydrake
 =======
 
-.. automodule:: pydrake.systems.framework
+
+.. autotemplate:: pydrake.systems.sensors.ImageTraits
     :members:
     :undoc-members:
     :show-inheritance:

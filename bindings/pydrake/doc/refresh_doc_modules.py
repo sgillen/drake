@@ -27,12 +27,13 @@ EXCLUDE = [
 ]
 
 FILTER = [
-    "pydrake.systems.drawing",
-    "pydrake.systems.framework",
+    "pydrake.systems.sensors",
 ]
 
 
 def _is_included(name):
+    if FILTER is None:
+        return True
     for f in FILTER:
         if name == f or f.startswith(name + "."):
             return True
@@ -100,6 +101,7 @@ def write_module(f_name, name, verbose):
         if has_cc_imported_symbols(name):
             f.write("    :imported-members:\n")
         f.write("    :undoc-members:\n")
+        f.write("    :show-inheritance:\n")
     f_dir = dirname(f_name)
     for sub in subs:
         write_module(join(f_dir, sub) + ".rst", sub, verbose)
