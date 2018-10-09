@@ -7,7 +7,6 @@ from __future__ import print_function
 
 from collections import namedtuple
 import re
-from functools import wraps
 
 import sphinx.domains.python as pydoc
 from sphinx.ext import autodoc
@@ -103,8 +102,10 @@ class TemplateDocumenter(autodoc.ModuleLevelDocumenter):
         for param in self.object.param_list:
             instantiation = self.object[param]
             if is_method:
-                instantiation = wraps(instantiation)(instantiation)
-                instantiation.__name__ = self.object._instantiation_name(param)
+                instantiation = wrap_instancemethod(
+                    self.object._module_name,
+                    self.object._instantiation_name(param),
+                    instantiation)
                 print("overwrite", instantiation)
             members.append((instantiation.__name__, instantiation))
         return False, members
@@ -131,19 +132,34 @@ class TemplateDocumenter(autodoc.ModuleLevelDocumenter):
         names = []
         for param in self.object.param_list:
             # TODO(eric.cousineau): Use attribute aliasing already present in autodoc.
-            rst = ":class:`{}`".format(self.object[param].__name__)
+            rst = ":class:`{}`".format(self.object._instantiation_name(param))
             names.append(rst)
         self.add_line(u"   Instantiations: {}".format(", ".join(names)), sourcename)
 
 
+def wrap_instancemethod(module, name, f):
+
+    def tmp(*args, **kwargs):
+        return f(*args, **kwargs)
+
+    tmp.__module__ = module
+    tmp.__name__ = name
+    tmp.__doc__ = f.__doc__
+    return tmp
+
+
 def tpl_getter(obj, name, *defargs):
+    print("getter", obj, name)
     if "[" in name:
         assert name.endswith(']'), name
         for param in obj.param_list:
             inst = obj[param]
-            if inst.__name__ == name:
+            if obj._instantiation_name(param) == name:
                 return inst
-        raise RuntimeError("Not a template?")
+        assert False, (
+            "Not a template?",
+            param, obj.param_list,
+            inst.__name__, name)
     return autodoc.safe_getattr(obj, name, *defargs)
 
 

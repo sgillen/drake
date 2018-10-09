@@ -56,9 +56,9 @@ class Test(object):
         """Test 1 method"""
         pass
 
-    # def _method_int(self, x):
-    #     """Test 1 int"""
-    #     pass
+    def _method_tpl_int(self, x):
+        """Test 1 int"""
+        pass
 
     class Nested(object):
         """Nested 2"""
@@ -95,7 +95,8 @@ class Test(object):
         return impl
 
 
-# Test.method_tpl = TemplateMethod("method_tpl", cls=Test)
+Test.method_tpl = TemplateMethod("method_tpl", cls=Test)
+Test.method_tpl.add_instantiation((int,), Test._method_tpl_int)
 
 
 # @TemplateSystem.define("MySystem_")
