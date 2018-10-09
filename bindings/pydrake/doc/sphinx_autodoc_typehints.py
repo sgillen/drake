@@ -36,7 +36,6 @@ class IrregularExpression(object):
             pos = rindex(s, "::") + 2
             explicit_modname = s[:pos]
             s = s[pos:]
-            print((explicit_modname, s))
         pieces = []
         piece = ''
         num_open = 0
@@ -98,11 +97,9 @@ class TemplateDocumenter(autodoc.ModuleLevelDocumenter):
 
     def get_object_members(self, want_all):
         members = []
-        print(self.object)
         for param in self.object.param_list:
             instantiation = self.object[param]
             members.append((instantiation.__name__, instantiation))
-            print(" - ", param)
         return False, members
 
     def import_object(self):

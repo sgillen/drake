@@ -26,6 +26,17 @@ EXCLUDE = [
     "pydrake.third_party",
 ]
 
+FILTER = [
+    "pydrake.systems.framework",
+]
+
+
+def _is_included(name):
+    for f in FILTER:
+        if name == f or f.startswith(name + "."):
+            return True
+    return False
+
 
 def get_submodules(name):
     prefix = name + "."
@@ -44,6 +55,8 @@ def get_submodules(name):
         # TODO(eric.cousineau): Figure out where these come from, and remove
         # them.
         if sys.modules[s_name] is None:
+            continue
+        if not _is_included(s_name):
             continue
         out.append(s_name)
     return sorted(out)
