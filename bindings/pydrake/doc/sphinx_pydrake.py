@@ -27,19 +27,14 @@ def rindex(s, sub):
     return len(s) - s[::-1].index(sub) - len(sub)
 
 
-def patch(obj, name):
-    """Decorator to patch a method of a class."""
+def patch(obj, name, f):
+    """Patch the method of a class."""
+    original = getattr(obj, name)
 
-    def decorator(f):
-        original = getattr(obj, name)
+    def method(*args, **kwargs):
+        return f(original, *args, **kwargs)
 
-        def method(*args, **kwargs):
-            return f(original, *args, **kwargs)
-
-        setattr(obj, name, method)
-        return method
-
-    return decorator
+    setattr(obj, name, method)
 
 
 def spoof_instancemethod(module, name, f):
@@ -219,7 +214,37 @@ def tpl_attrgetter(obj, name, *defargs):
     return autodoc.safe_getattr(obj, name, *defargs)
 
 
-@patch(autodoc.ClassDocumenter, 'add_directive_header')
+def repair_resolve_name(objpath):
+    """Rejoins any strings that were naively split.
+    """
+    # Sigh...
+    num_open = 0
+    out = []
+    cur = ''
+    for p in objpath:
+        num_open += p.count('[') - p.count(']')
+        assert num_open >= 0
+        if cur:
+            cur += '.'
+        cur += p
+        if num_open == 0:
+            out.append(cur)
+            cur = ''
+    assert len(cur) == 0
+    print('repair')
+    print(' - new: ', out)
+    print(' - old: ', objpath)
+    return out
+
+
+def patch_resolve_name(original, self, *args, **kwargs):
+    modname, objpath = original(self, *args, **kwargs)
+    return modname, repair_resolve_name(objpath)
+
+patch(autodoc.ClassLevelDocumenter, 'resolve_name', patch_resolve_name)
+patch(autodoc.ModuleLevelDocumenter, 'resolve_name', patch_resolve_name)
+
+
 def patch_add_directive_header(original, self, sig):
     """Patches display of bases for classes to strip out pybind11 meta classes
     from bases.
@@ -243,6 +268,8 @@ def patch_add_directive_header(original, self, sig):
             return
         self.add_line(_(u'   Bases: %s') % ', '.join(bases),
                       sourcename)
+
+patch(autodoc.ClassDocumenter, 'add_directive_header', patch_add_directive_header)
 
 
 def setup(app):
