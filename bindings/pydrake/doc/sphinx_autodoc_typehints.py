@@ -8,8 +8,8 @@ from sphinx.ext import autodoc
 
 from pydrake.util.cpp_template import TemplateBase
 
-import sys
-sys.stdout = sys.stderr
+# import sys
+# sys.stdout = sys.stderr
 
 #: extended signature RE: with explicit module name separated by ::
 class IrregularExpression(object):
@@ -22,6 +22,7 @@ class IrregularExpression(object):
 
     def match(self, s):
         s_orig = s
+        old_m = old.match(s_orig)
         # explicit_modname
         explicit_modname = None
         if "::" in s:
@@ -45,24 +46,30 @@ class IrregularExpression(object):
                     num_open -= 1
                 piece += c
             i += 1
+        if not piece:
+            assert old_m is None, (s_orig, old_m.groups())
+            return None
         pieces.append(piece)
         m = self.py_sig_func.match(s[i:])
         if m is None:
+            assert old_m is None, (s_orig, old_m.groups())
             return None
         func_groups = m.groups()
-        path = '.'.join(pieces[:-1]) or None
+        path = '.'.join(pieces[:-1])
         if path:
             path += "."
         else:
-            return None
+            path = None
         base = pieces[-1]
         groups = lambda: (explicit_modname, path, base) + func_groups
         if "[" not in s_orig:
-            m = old.match(s_orig)
             try:
-                assert m is not None, (s_orig, groups())
-                old_groups = m.groups()
+                assert old_m is not None, (s_orig, groups())
+                old_groups = old_m.groups()
                 assert old_groups == groups(), s_orig
+                print(groups())
+                print(old_groups)
+                print("---")
             except:
                 import traceback
                 traceback.print_stack()
@@ -111,20 +118,20 @@ class TemplateDocumenter(autodoc.ModuleLevelDocumenter):
     # def generate(self, **kwargs):
 
 
-def tpl_getter(obj, name, *defargs):
-    if "[" in name:
-        assert name.endswith(']'), name
-        for param in obj.param_list:
-            inst = obj[param]
-            if inst.__name__ == name:
-                return inst
-        raise RuntimeError("Not a template?")
-    return autodoc.safe_getattr(obj, name, *defargs)
+# def tpl_getter(obj, name, *defargs):
+#     if "[" in name:
+#         assert name.endswith(']'), name
+#         for param in obj.param_list:
+#             inst = obj[param]
+#             if inst.__name__ == name:
+#                 return inst
+#         raise RuntimeError("Not a template?")
+#     return autodoc.safe_getattr(obj, name, *defargs)
 
 
 def setup(app):
-    app.add_autodoc_attrgetter(object, tpl_getter)
-    app.add_autodocumenter(TemplateDocumenter)
+    # app.add_autodoc_attrgetter(object, tpl_getter)
+    # app.add_autodocumenter(TemplateDocumenter)
     return dict(parallel_read_safe=True)
 
 
