@@ -283,9 +283,17 @@ def patch_add_directive_header(original, self, sig):
                       sourcename)
 
 
+def autodoc_skip_member(app, what, name, obj, skip, options):
+    if "__del__" in name:
+        return True
+    return None
+
+
 def setup(app):
     # Ignore `pybind11_object` as a base.
     patch(autodoc.ClassDocumenter, 'add_directive_header', patch_add_directive_header)
+    # Skip specific members.
+    app.connect('autodoc-skip-member', autodoc_skip_member)
     # Register directive so we can pretty-print template declarations.
     pydoc.PythonDomain.directives['template'] = pydoc.PyClasslike
     # Register custom attribute retriever.

@@ -59,3 +59,9 @@ html_copy_source = False
 html_show_copyright = False
 
 html_show_sphinx = False
+
+# # Autodoc.
+
+# autodoc_default_options = {
+#     'exclude-members': '__weakref__, __del__',
+# }
