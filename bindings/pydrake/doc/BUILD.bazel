@@ -7,8 +7,8 @@ load("//tools/lint:lint.bzl", "add_lint_tests")
 load("//tools/skylark:drake_runfiles_binary.bzl", "drake_runfiles_binary")
 
 py_library(
-    name = "sphinx_autodoc_typehints",
-    srcs = ["sphinx_autodoc_typehints.py"],
+    name = "sphinx_pydrake",
+    srcs = ["sphinx_pydrake.py"],
     imports = ["."],
 )
 
@@ -22,7 +22,7 @@ drake_py_binary(
     data = ["@sphinx//:sphinx-build"],
     deps = [
         "//bindings/pydrake",
-        ":sphinx_autodoc_typehints",
+        ":sphinx_pydrake",
         "@sphinx_py",
     ],
 )

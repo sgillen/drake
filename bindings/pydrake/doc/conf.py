@@ -36,8 +36,7 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.mathjax',
     'sphinx.ext.napoleon',
-    'sphinx_autodoc_typehints',
-    # 'sphinxcontrib.restbuilder',
+    'sphinx_pydrake',
 ]
 
 # The suffix(es) of source filenames.
