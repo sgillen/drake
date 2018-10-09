@@ -11,24 +11,32 @@ from pydrake.util.cpp_template import TemplateBase
 # import sys
 # sys.stdout = sys.stderr
 
+def rindex(s, sub):
+    return len(s) - s[::-1].index(sub) - len(sub)
+
 #: extended signature RE: with explicit module name separated by ::
 class IrregularExpression(object):
     FakeMatch = namedtuple('FakeMatch', 'groups')
-    py_sig_func = re.compile(
-        r'''^ \s* (?: \((.*)\)       # optional: arguments
-                  (?:\s* -> \s* (.*))?  #           return annotation
-                  )? $                   # and nothing more
+    py_sig = re.compile(
+        r'''^     (\w.*?) \s*               # symbol
+                  (?:
+                      \((.*)\)              # optional: arguments
+                      (?:\s* -> \s* (.*))?  # return annotation
+                  )? $
               ''', re.VERBOSE)
 
-    def match(self, s):
-        s_orig = s
-        old_m = old.match(s_orig)
-        # explicit_modname
+    def match(self, full):
+        m = self.py_sig.match(full)
+        if not m:
+            return None
+        s, arg, retann = m.groups()
+        # Extract module name using a greedy match.
         explicit_modname = None
         if "::" in s:
-            pieces = s.split("::")
-            explicit_modname = '::'.join(pieces[:-1] + [''])
-            s = pieces[-1]
+            pos = rindex(s, "::") + 2
+            explicit_modname = s[:pos]
+            s = s[pos:]
+            print((explicit_modname, s))
         pieces = []
         piece = ''
         num_open = 0
@@ -47,33 +55,27 @@ class IrregularExpression(object):
                 piece += c
             i += 1
         if not piece:
-            assert old_m is None, (s_orig, old_m.groups())
             return None
         pieces.append(piece)
-        m = self.py_sig_func.match(s[i:])
-        if m is None:
-            assert old_m is None, (s_orig, old_m.groups())
-            return None
-        func_groups = m.groups()
         path = '.'.join(pieces[:-1])
         if path:
             path += "."
         else:
             path = None
         base = pieces[-1]
-        groups = lambda: (explicit_modname, path, base) + func_groups
-        if "[" not in s_orig:
-            try:
-                assert old_m is not None, (s_orig, groups())
-                old_groups = old_m.groups()
-                assert old_groups == groups(), s_orig
-                print(groups())
-                print(old_groups)
-                print("---")
-            except:
-                import traceback
-                traceback.print_stack()
-                raise
+        groups = lambda: (explicit_modname, path, base, arg, retann)
+#         if "[" not in s_orig:
+#             try:
+#                 assert old_m is not None, (s_orig, groups())
+#                 old_groups = old_m.groups()
+#                 assert old_groups == groups(), s_orig
+#                 print(groups())
+#                 print(old_groups)
+#                 print("---")
+#             except:
+#                 import traceback
+#                 traceback.print_stack()
+#                 raise
         # print(("match", s_orig, groups()))
         return self.FakeMatch(groups)
 
@@ -118,20 +120,20 @@ class TemplateDocumenter(autodoc.ModuleLevelDocumenter):
     # def generate(self, **kwargs):
 
 
-# def tpl_getter(obj, name, *defargs):
-#     if "[" in name:
-#         assert name.endswith(']'), name
-#         for param in obj.param_list:
-#             inst = obj[param]
-#             if inst.__name__ == name:
-#                 return inst
-#         raise RuntimeError("Not a template?")
-#     return autodoc.safe_getattr(obj, name, *defargs)
+def tpl_getter(obj, name, *defargs):
+    if "[" in name:
+        assert name.endswith(']'), name
+        for param in obj.param_list:
+            inst = obj[param]
+            if inst.__name__ == name:
+                return inst
+        raise RuntimeError("Not a template?")
+    return autodoc.safe_getattr(obj, name, *defargs)
 
 
 def setup(app):
-    # app.add_autodoc_attrgetter(object, tpl_getter)
-    # app.add_autodocumenter(TemplateDocumenter)
+    app.add_autodoc_attrgetter(object, tpl_getter)
+    app.add_autodocumenter(TemplateDocumenter)
     return dict(parallel_read_safe=True)
 
 
