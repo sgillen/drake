@@ -104,7 +104,7 @@ class IrregularExpression(object):
             symbol = symbol[pos:].strip()
         # Extract {path...}.{base}, accounting for brackets.
         if not symbol:
-            return
+            return None
         pieces = repair_naive_name_split(symbol.split('.'))
         assert len(pieces) > 0, (symbol, pieces)
         base = pieces[-1]
