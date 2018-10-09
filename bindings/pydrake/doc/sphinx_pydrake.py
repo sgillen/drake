@@ -104,8 +104,9 @@ class IrregularExpression(object):
         m = self.py_sig.match(full)
         if not m:
             return None
-        print(m.groups())
         symbol, arg, retann = m.groups()
+        if symbol.count(' ') > symbol.count(','):
+            return None
         # Extract module name using a greedy match.
         explicit_modname = None
         if "::" in symbol:
@@ -141,10 +142,14 @@ def yawr():
         print(full)
         r = IrregularExpression(extended=extended)
         m = r.match(full)
-        if m is None:
-            if full.count(' ') > full.count(','):
+        m_ex = r.py_sig.match(full)
+        if m_ex:
+            symbol, _, _ = m_ex.groups()
+            if symbol.count(' ') > symbol.count(','):
                 print(" - bad")
+                assert m is None, (full, m.groups())
                 continue
+        if m is None:
             assert out is None, (full, out)
         else:
             assert out == m.groups(), (full, out, m.groups())
