@@ -50,13 +50,23 @@ def spoof_instancemethod(module, name, f):
     return tmp
 
 
-rec = {}
-def build_finished(app, exc):
-    import pickle
-    name = '/tmp/py_sig_names.pkl'
-    with open(name, 'w') as f:
-        print("SAVE", name)
-        pickle.dump(rec, f)
+def repair_naive_name_split(objpath):
+    """Rejoins any strings with braces that were naively split across '.'.
+    """
+    num_open = 0
+    out = []
+    cur = ''
+    for p in objpath:
+        num_open += p.count('[') - p.count(']')
+        assert num_open >= 0
+        if cur:
+            cur += '.'
+        cur += p
+        if num_open == 0:
+            out.append(cur)
+            cur = ''
+    assert len(cur) == 0, (objpath, cur, out)
+    return out
 
 
 class IrregularExpression(object):
@@ -88,51 +98,29 @@ class IrregularExpression(object):
         self.extended = extended
 
     def match(self, full):
-        out = self._impl(full)
-        global rec
-        if out:
-            rec[full] = (self.extended, out.groups())
-        else:
-            rec[full] = (self.extended, None)
-        return out
-
-    def _impl(self, full):
         """Tests if a string matches `full`. If not, returns None."""
         # TODO(eric.cousineau): See if there's a way to speed this up with
         # pybind or re.Scanner (to tokenize).
         m = self.py_sig.match(full)
         if not m:
             return None
-        s, arg, retann = m.groups()
+        print(m.groups())
+        symbol, arg, retann = m.groups()
         # Extract module name using a greedy match.
         explicit_modname = None
-        if "::" in s:
-            pos = rindex(s, "::") + 2
-            explicit_modname = s[:pos]
-            s = s[pos:]
+        if "::" in symbol:
+            pos = rindex(symbol, "::") + 2
+            explicit_modname = symbol[:pos]
+            symbol = symbol[pos:].strip()
         # Extract {path...}.{base}, accounting for brackets.
-        path = ''
-        base = ''
-        num_open = 0
-        i = 0
-        for c in s:
-            if num_open == 0 and c.isspace() or c == '(':
-                break
-            if num_open == 0 and c == '.':
-                path += base + "."
-                base = ''
-            else:
-                if c == '[':
-                    num_open += 1
-                elif c == ']':
-                    num_open -= 1
-                base += c
-            i += 1
-        if not base:
-            # Nothing worth keeping.
-            return None
-        if not path:
-            # Clear out.
+        if not symbol:
+            return
+        pieces = repair_naive_name_split(symbol.split('.'))
+        assert len(pieces) > 0, (symbol, pieces)
+        base = pieces[-1]
+        if len(pieces) > 1:
+            path = '.'.join(pieces[:-1]) + '.'
+        else:
             path = None
         if self.extended:
             groups = (explicit_modname, path, base, arg, retann)
@@ -140,6 +128,33 @@ class IrregularExpression(object):
             assert explicit_modname is None
             groups = (path, base, arg, retann)
         return self.FakeMatch(lambda: groups)
+
+
+import sys
+sys.stdout = sys.stderr
+
+def yawr():
+    with open('/home/eacousineau/proj/tri/repo/branches/drake/tmp/drake/bindings/pydrake/doc/py_sig_names.pkl') as f:
+        import pickle
+        names = pickle.load(f)
+    for full, (extended, out) in names.iteritems():
+        print(full)
+        r = IrregularExpression(extended=extended)
+        m = r.match(full)
+        if m is None:
+            if full.count(' ') > full.count(','):
+                print(" - bad")
+                continue
+            assert out is None, (full, out)
+        else:
+            assert out == m.groups(), (full, out, m.groups())
+
+import trace
+tracer = trace.Trace(trace=1, ignoredirs=["/usr"])
+# tracer.runctx('yawr()', globals=globals(), locals=locals())
+yawr()
+
+exit(10)
 
 
 class TemplateDocumenter(autodoc.ModuleLevelDocumenter):
@@ -231,29 +246,9 @@ def tpl_attrgetter(obj, name, *defargs):
     return autodoc.safe_getattr(obj, name, *defargs)
 
 
-def repair_resolve_name(objpath):
-    """Rejoins any strings that were naively split.
-    """
-    # Sigh...
-    num_open = 0
-    out = []
-    cur = ''
-    for p in objpath:
-        num_open += p.count('[') - p.count(']')
-        assert num_open >= 0
-        if cur:
-            cur += '.'
-        cur += p
-        if num_open == 0:
-            out.append(cur)
-            cur = ''
-    assert len(cur) == 0
-    return out
-
-
 def patch_resolve_name(original, self, *args, **kwargs):
     modname, objpath = original(self, *args, **kwargs)
-    return modname, repair_resolve_name(objpath)
+    return modname, repair_naive_name_split(objpath)
 
 
 def patch_add_directive_header(original, self, sig):
@@ -294,5 +289,4 @@ def setup(app):
     pydoc.py_sig_re = IrregularExpression(extended=False)
     patch(autodoc.ClassLevelDocumenter, 'resolve_name', patch_resolve_name)
     patch(autodoc.ModuleLevelDocumenter, 'resolve_name', patch_resolve_name)
-    app.connect('build-finished', build_finished)
     return dict(parallel_read_safe=True)
