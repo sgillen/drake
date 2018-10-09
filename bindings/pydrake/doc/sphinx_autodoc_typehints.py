@@ -90,6 +90,7 @@ class TemplateDocumenter(autodoc.ModuleLevelDocumenter):
     option_spec = {
         'show-all-instantiations': autodoc.bool_option,
     }
+    option_spec.update(autodoc.ClassDocumenter.option_spec)
 
     @classmethod
     def can_document_member(cls, member, membername, isattr, parent):
@@ -203,3 +204,9 @@ def setup(app):
 # Adder_ = autodoc.safe_getattr(pydrake.all, 'Adder_')
 # print(Adder_)
 # exit(10)
+
+import pydrake.systems.framework as m
+
+
+m.LeafSystemTmp = m.LeafSystem
+m.LeafSystemTmp.__name__ = "LeafSystemTmp"
