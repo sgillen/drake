@@ -50,6 +50,25 @@ def spoof_instancemethod(module, name, f):
     return tmp
 
 
+def repair_naive_name_split(objpath):
+    """Rejoins any strings with braces that were naively split across '.'.
+    """
+    num_open = 0
+    out = []
+    cur = ''
+    for p in objpath:
+        num_open += p.count('[') - p.count(']')
+        assert num_open >= 0
+        if cur:
+            cur += '.'
+        cur += p
+        if num_open == 0:
+            out.append(cur)
+            cur = ''
+    assert len(cur) == 0, (objpath, cur, out)
+    return out
+
+
 class IrregularExpression(object):
     """Provides analogous parsing to `autodoc.py_ext_sig_re` and
     `pydoc.py_sig_re`, but permits nested parsing for class-like directives to
@@ -63,7 +82,7 @@ class IrregularExpression(object):
 
     py_sig_old = autodoc.py_ext_sig_re
     py_sig = re.compile(
-        r'''^     (\w.*?) \s*               # symbol
+        r'''^     (\w\[\]\., *?) \s*               # symbol
                   (?:
                       \((.*)\)              # optional: arguments
                       (?:\s* -> \s* (.*))?  # return annotation
@@ -85,36 +104,22 @@ class IrregularExpression(object):
         m = self.py_sig.match(full)
         if not m:
             return None
-        s, arg, retann = m.groups()
+        symbol, arg, retann = m.groups()
         # Extract module name using a greedy match.
         explicit_modname = None
-        if "::" in s:
-            pos = rindex(s, "::") + 2
-            explicit_modname = s[:pos]
-            s = s[pos:]
+        if "::" in symbol:
+            pos = rindex(symbol, "::") + 2
+            explicit_modname = symbol[:pos]
+            symbol = symbol[pos:].strip()
         # Extract {path...}.{base}, accounting for brackets.
-        path = ''
-        base = ''
-        num_open = 0
-        i = 0
-        for c in s:
-            if num_open == 0 and c.isspace() or c == '(':
-                break
-            if num_open == 0 and c == '.':
-                path += base + "."
-                base = ''
-            else:
-                if c == '[':
-                    num_open += 1
-                elif c == ']':
-                    num_open -= 1
-                base += c
-            i += 1
-        if not base:
-            # Nothing worth keeping.
-            return None
-        if not path:
-            # Clear out.
+        if not symbol:
+            return
+        pieces = repair_naive_name_split(symbol.split('.'))
+        assert len(pieces) > 0, (symbol, pieces)
+        base = pieces[-1]
+        if len(pieces) > 1:
+            path = '.'.join(pieces[:-1]) + '.'
+        else:
             path = None
         if self.extended:
             groups = (explicit_modname, path, base, arg, retann)
@@ -213,29 +218,9 @@ def tpl_attrgetter(obj, name, *defargs):
     return autodoc.safe_getattr(obj, name, *defargs)
 
 
-def repair_resolve_name(objpath):
-    """Rejoins any strings that were naively split.
-    """
-    # Sigh...
-    num_open = 0
-    out = []
-    cur = ''
-    for p in objpath:
-        num_open += p.count('[') - p.count(']')
-        assert num_open >= 0
-        if cur:
-            cur += '.'
-        cur += p
-        if num_open == 0:
-            out.append(cur)
-            cur = ''
-    assert len(cur) == 0
-    return out
-
-
 def patch_resolve_name(original, self, *args, **kwargs):
     modname, objpath = original(self, *args, **kwargs)
-    return modname, repair_resolve_name(objpath)
+    return modname, repair_naive_name_split(objpath)
 
 
 def patch_add_directive_header(original, self, sig):
