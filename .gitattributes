@@ -11,3 +11,5 @@ WORKSPACE diff=python
 *.obj -diff
 # VTK polygon data
 *.vtp -diff
+# Pytohn pickle files.
+*.pkl -diff
