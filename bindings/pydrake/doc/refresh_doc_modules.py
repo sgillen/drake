@@ -26,9 +26,7 @@ EXCLUDE = [
     "pydrake.third_party",
 ]
 
-FILTER = [
-    "pydrake.systems.sensors",
-]
+FILTER = None
 
 
 def _is_included(name):

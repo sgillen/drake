@@ -231,9 +231,6 @@ def repair_resolve_name(objpath):
             out.append(cur)
             cur = ''
     assert len(cur) == 0
-    print('repair')
-    print(' - new: ', out)
-    print(' - old: ', objpath)
     return out
 
 
