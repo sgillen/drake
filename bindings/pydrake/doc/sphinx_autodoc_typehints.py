@@ -8,6 +8,8 @@ from sphinx.ext import autodoc
 
 from pydrake.util.cpp_template import TemplateBase
 
+import sys
+sys.stdout = sys.stderr
 
 #: extended signature RE: with explicit module name separated by ::
 class IrregularExpression(object):
@@ -23,8 +25,9 @@ class IrregularExpression(object):
         # explicit_modname
         explicit_modname = None
         if "::" in s:
-            explicit_modname, s = s.split("::")
-            explicit_modname += '::'
+            pieces = s.split("::")
+            explicit_modname = '::'.join(pieces[:-1] + [''])
+            s = pieces[-1]
         pieces = []
         piece = ''
         num_open = 0
@@ -43,18 +46,28 @@ class IrregularExpression(object):
                 piece += c
             i += 1
         pieces.append(piece)
-        func_groups = self.py_sig_func.match(s[i:]).groups()
+        m = self.py_sig_func.match(s[i:])
+        if m is None:
+            return None
+        func_groups = m.groups()
         path = '.'.join(pieces[:-1]) or None
         if path:
             path += "."
+        else:
+            return None
         base = pieces[-1]
         groups = lambda: (explicit_modname, path, base) + func_groups
-        if '[' not in s_orig:
-            olds = old.match(s_orig).groups()
-            assert olds == groups(), s_orig
-        # print(("match", s_orig))
-        # print(" - ", groups())
-        # print(" - ", )
+        if "[" not in s_orig:
+            m = old.match(s_orig)
+            try:
+                assert m is not None, (s_orig, groups())
+                old_groups = m.groups()
+                assert old_groups == groups(), s_orig
+            except:
+                import traceback
+                traceback.print_stack()
+                raise
+        # print(("match", s_orig, groups()))
         return self.FakeMatch(groups)
 
 old = autodoc.py_ext_sig_re
@@ -104,11 +117,8 @@ def tpl_getter(obj, name, *defargs):
         for param in obj.param_list:
             inst = obj[param]
             if inst.__name__ == name:
-                print(" - ", name, inst)
                 return inst
-        exit(10)
         raise RuntimeError("Not a template?")
-    print(obj, name, *defargs)
     return autodoc.safe_getattr(obj, name, *defargs)
 
 
