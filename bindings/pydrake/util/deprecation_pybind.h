@@ -35,11 +35,12 @@ inline void WarnDeprecated(py::str message) {
 /// Provides a string to indicate deprecation; to replace documentation of an
 /// *overload only*. Other attributes should use `DeprecateAttribute`, which
 /// will automatically override documentation.
-inline std::string GetDeprecationDoc(const std::string& message) {
+inline std::string GetDeprecationDoc(
+    const std::string& doc, const std::string& message) {
   py::object get_deprecation_doc =
       py::module::import("pydrake.util.deprecation")
       .attr("_get_deprecation_doc");
-  return get_deprecation_doc(message).cast<std::string>();
+  return get_deprecation_doc(doc, message).cast<std::string>();
 }
 
 }  // namespace pydrake

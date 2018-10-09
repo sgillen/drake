@@ -14,7 +14,7 @@ If you would like to disable all Drake-related warnings, you may use the
 
 import sys
 import traceback
-from types import ModuleType
+import types
 import warnings
 
 # TODO(eric.cousineau): Make autocomplete ignore `ModuleShim` attributes
@@ -34,7 +34,7 @@ class ModuleShim(object):
     def __init__(self, orig_module, handler):
         assert hasattr(orig_module, "__all__"), (
             "Please define `__all__` for this module.")
-        assert isinstance(orig_module, ModuleType), (
+        assert isinstance(orig_module, types.ModuleType), (
             "{} must be a module".format(orig_module))
         # https://stackoverflow.com/a/16237698/7829525
         object.__setattr__(self, '_orig_module', orig_module)
@@ -113,6 +113,59 @@ def _warn_deprecated(message, stacklevel=2):
         message, category=DrakeDeprecationWarning, stacklevel=stacklevel)
 
 
+class _WrapDescriptor(object):
+    def __init__(self, original):
+        self._original = original
+        self.__doc__ = self._original.__doc__
+
+    def __get__(self, obj, objtype):
+        return self._original.__get__(obj, objtype)
+
+    def __set__(self, obj, value):
+        self._original.__set__(obj, value)
+
+    def __delete__(self, obj):
+        self._original.__delete__(obj)
+
+    def __str__(self):
+        return self._original.__str__()
+
+    def __repr__(self):
+        return self._original.__repr__()
+
+
+def _update_descriptor_doc(obj, message):
+    # if not hasattr(obj, '__doc__'):
+    #     return obj
+    # If Python2, we have to wrap instancemethods + built-in functions to spoof
+    # the metadata.
+    func_requires_wrap = (types.MethodType, types.BuiltinMethodType)
+    print("check", obj, type(obj))
+    if isinstance(obj, func_requires_wrap):
+        orig = obj
+        print("  IS METHOD")
+
+        def obj(*args, **kwargs): return orig(*args, **kwargs)
+
+        obj.__module__ = orig.__module__
+        obj.__name__ = orig.__name__
+        obj.__doc__ = orig.__doc__
+    # elif hasattr(obj, '__get__'):
+    #     try:
+    # #     print("  IS DESC")
+    # #     obj = _WrapDescriptor(obj)
+    # else:
+    #     print("  EH")
+    for i in range(2):
+        try:
+            obj.__doc__ = _get_deprecation_doc(obj.__doc__, message)
+            break
+        except TypeError:
+            obj = _WrapDescriptor(obj)
+    print("    Update", obj)
+    return obj
+
+
 class _DeprecatedDescriptor(object):
     """Wraps a descriptor to warn that it is deprecated any time it is
     acccessed.
@@ -120,10 +173,8 @@ class _DeprecatedDescriptor(object):
 
     def __init__(self, original, message):
         assert hasattr(original, '__get__'), "`original` must be a descriptor"
-        self._original = original
-        self.__doc__ = _get_deprecation_doc(original.__doc__, message)
+        self._original = _update_descriptor_doc(original, message)
         self._message = message
-        print(self.__doc__)
 
     def _warn(self):
         _warn_deprecated(self._message, stacklevel=4)

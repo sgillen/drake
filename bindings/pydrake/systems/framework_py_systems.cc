@@ -314,7 +314,10 @@ struct Impl {
                   "Please use `System.AllocateOutput(self)` instead.");
                return self->AllocateOutput();
              }, py::arg("context"),
-             GetDeprecationDoc(doc.System.AllocateOutput.doc).c_str())
+             GetDeprecationDoc(
+                 doc.System.AllocateOutput.doc,
+                 "`System.AllocateOutput(self, Context)` is deprecated. "
+                 "Please use `System.AllocateOutput(self)` instead.").c_str())
         .def(
             "EvalVectorInput",
             [](const System<T>* self, const Context<T>& arg1, int arg2) {
