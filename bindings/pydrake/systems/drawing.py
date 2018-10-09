@@ -11,7 +11,7 @@ from pydrake.common import temp_directory
 import matplotlib.pyplot as plt
 import pydot
 
-# from pydrake.systems.framework import LeafSystem_
+from pydrake.systems.framework import LeafSystem_
 from pydrake.systems.scalar_conversion import TemplateSystem
 from pydrake.util.cpp_template import TemplateFunction, TemplateMethod
 
@@ -99,26 +99,27 @@ Test.method_tpl = TemplateMethod("method_tpl", cls=Test)
 Test.method_tpl.add_instantiation((int,), Test._method_tpl_int)
 
 
-# @TemplateSystem.define("MySystem_")
-# def MySystem_(T):
+@TemplateSystem.define("MySystem_")
+def MySystem_(T):
 
-#     class Impl(LeafSystem_[T]):
-#         """
-#         Example class.
-#         """
-#         def _construct(self, value, converter=None):
-#             LeafSystem_[T].__init__(self, converter=converter)
-#             self.value = value
+    class Impl(LeafSystem_[T]):
+        """
+        Example class.
+        """
+        def _construct(self, value, converter=None):
+            LeafSystem_[T].__init__(self, converter=converter)
+            self.value = value
 
-#         def _construct_copy(self, other, converter=None):
-#             Impl._construct(self, other.value, converter=converter)
+        def _construct_copy(self, other, converter=None):
+            Impl._construct(self, other.value, converter=converter)
 
-#         def my_method(self, x):
-#             return "Hello"
+        def my_method(self, x):
+            """That method"""
+            return "Hello"
 
-#     return Impl
+    return Impl
 
-# MySystem = MySystem_[None]  # Default instantiation.
+MySystem = MySystem_[None]  # Default instantiation.
 
 @TemplateFunction.define("MyFunc", param_list=[(int,), (float,)])
 def MyFunc(param):
