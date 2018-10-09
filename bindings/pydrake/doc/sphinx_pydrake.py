@@ -105,6 +105,8 @@ class IrregularExpression(object):
         if not m:
             return None
         symbol, arg, retann = m.groups()
+        # Hueristic to not try and match for docstring phrases. Any space
+        # should be balanced with a comma for the symbol.
         if symbol.count(' ') > symbol.count(','):
             return None
         # Extract module name using a greedy match.
@@ -154,12 +156,12 @@ def yawr():
         else:
             assert out == m.groups(), (full, out, m.groups())
 
-import trace
-tracer = trace.Trace(trace=1, ignoredirs=["/usr"])
-# tracer.runctx('yawr()', globals=globals(), locals=locals())
-yawr()
+# import trace
+# tracer = trace.Trace(trace=1, ignoredirs=["/usr"])
+# # tracer.runctx('yawr()', globals=globals(), locals=locals())
+# yawr()
 
-exit(10)
+# exit(10)
 
 
 class TemplateDocumenter(autodoc.ModuleLevelDocumenter):
