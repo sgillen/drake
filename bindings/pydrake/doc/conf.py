@@ -35,8 +35,9 @@ release = u''
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.mathjax',
-    'sphinx.ext.napoleon',
+    # Precede napolean, since it's greedy on `autodoc-skip-member`
     'sphinx_pydrake',
+    'sphinx.ext.napoleon',
 ]
 
 # The suffix(es) of source filenames.

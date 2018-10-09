@@ -14,12 +14,14 @@ from __future__ import print_function
 
 from collections import namedtuple
 import re
+import warnings
 
 from sphinx.locale import _
 import sphinx.domains.python as pydoc
 from sphinx.ext import autodoc
 
 from pydrake.util.cpp_template import TemplateBase, TemplateMethod
+from pydrake.util.deprecation import DrakeDeprecationWarning
 
 
 def rindex(s, sub):
@@ -38,7 +40,8 @@ def patch(obj, name, f):
 
 
 def spoof_instancemethod(module, name, f):
-    """Spoofs an instancemethod, generally to just set documentation attributes
+    """Spoofs an instancemethod, generally to just set documentation
+    attributes. Only applicable in Python2.
     """
 
     def tmp(*args, **kwargs):
@@ -99,13 +102,11 @@ class IrregularExpression(object):
 
     def match(self, full):
         """Tests if a string matches `full`. If not, returns None."""
-        # TODO(eric.cousineau): See if there's a way to speed this up with
-        # pybind or re.Scanner (to tokenize).
         m = self.py_sig.match(full)
         if not m:
             return None
         symbol, arg, retann = m.groups()
-        # Hueristic to not try and match for docstring phrases. Any space
+        # Heuristic to not try and match for docstring phrases. Any space
         # should be balanced with a comma for the symbol.
         if symbol.count(' ') > symbol.count(','):
             return None
@@ -131,37 +132,6 @@ class IrregularExpression(object):
             assert explicit_modname is None
             groups = (path, base, arg, retann)
         return self.FakeMatch(lambda: groups)
-
-
-import sys
-sys.stdout = sys.stderr
-
-def yawr():
-    with open('/home/eacousineau/proj/tri/repo/branches/drake/tmp/drake/bindings/pydrake/doc/py_sig_names.pkl') as f:
-        import pickle
-        names = pickle.load(f)
-    for full, (extended, out) in names.iteritems():
-        print(full)
-        r = IrregularExpression(extended=extended)
-        m = r.match(full)
-        m_ex = r.py_sig.match(full)
-        if m_ex:
-            symbol, _, _ = m_ex.groups()
-            if symbol.count(' ') > symbol.count(','):
-                print(" - bad")
-                assert m is None, (full, m.groups())
-                continue
-        if m is None:
-            assert out is None, (full, out)
-        else:
-            assert out == m.groups(), (full, out, m.groups())
-
-# import trace
-# tracer = trace.Trace(trace=1, ignoredirs=["/usr"])
-# # tracer.runctx('yawr()', globals=globals(), locals=locals())
-# yawr()
-
-# exit(10)
 
 
 class TemplateDocumenter(autodoc.ModuleLevelDocumenter):
@@ -254,11 +224,13 @@ def tpl_attrgetter(obj, name, *defargs):
 
 
 def patch_resolve_name(original, self, *args, **kwargs):
+    """Patches implementations of `resolve_name` to handle split across braces.
+    """
     modname, objpath = original(self, *args, **kwargs)
     return modname, repair_naive_name_split(objpath)
 
 
-def patch_add_directive_header(original, self, sig):
+def patch_class_add_directive_header(original, self, sig):
     """Patches display of bases for classes to strip out pybind11 meta classes
     from bases.
     """
@@ -284,19 +256,31 @@ def patch_add_directive_header(original, self, sig):
 
 
 def autodoc_skip_member(app, what, name, obj, skip, options):
+    """Skips undesirable members.
+    """
+    # N.B. This should be registerd before `napoleon`s event.
+    # N.B. For some reason, `:exclude-members` via `autodoc_default_options`
+    # did not work. Revisit this at some point.
     if "__del__" in name:
         return True
     return None
 
 
 def setup(app):
+    """Installs Drake-specific extensions and patches.
+    """
+    # Do not warn on Drake deprecations.
+    # TODO(eric.cousineau): See if there is a way to intercept this.
+    warnings.simplefilter('ignore', DrakeDeprecationWarning)
     # Ignore `pybind11_object` as a base.
-    patch(autodoc.ClassDocumenter, 'add_directive_header', patch_add_directive_header)
+    patch(
+        autodoc.ClassDocumenter, 'add_directive_header',
+        patch_class_add_directive_header)
     # Skip specific members.
     app.connect('autodoc-skip-member', autodoc_skip_member)
     # Register directive so we can pretty-print template declarations.
     pydoc.PythonDomain.directives['template'] = pydoc.PyClasslike
-    # Register custom attribute retriever.
+    # Register autodocumentation for templates.
     app.add_autodoc_attrgetter(TemplateBase, tpl_attrgetter)
     app.add_autodocumenter(TemplateDocumenter)
     # Hack regular expressions to make them irregular (nested).
