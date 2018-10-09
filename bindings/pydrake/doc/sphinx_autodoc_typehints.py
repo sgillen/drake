@@ -13,10 +13,6 @@ from sphinx.ext import autodoc
 
 from pydrake.util.cpp_template import TemplateBase
 
-# 'ascii' codec can't encode character u'\u225c' in position 14: ordinal not in range(128)
-# Seems related: sphinx-doc/sphinx#1725
-# However, perhaps not?
-
 # import sys
 # sys.stdout = sys.stderr
 
