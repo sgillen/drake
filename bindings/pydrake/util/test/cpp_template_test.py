@@ -158,6 +158,7 @@ class TestCppTemplate(unittest.TestCase):
         template.add_instantiation(float, dummy_b)
 
         self.assertEqual(template[int](), 1)
+        self.assertIn("<function func[int] ", str(template[int]))
         self.assertEqual(template[float](), 2)
         self.assertEqual(str(template), "<TemplateFunction {}.func>".format(
             _TEST_MODULE))

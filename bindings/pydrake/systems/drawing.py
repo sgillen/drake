@@ -13,6 +13,7 @@ import pydot
 
 from pydrake.systems.framework import LeafSystem_
 from pydrake.systems.scalar_conversion import TemplateSystem
+from pydrake.util.cpp_template import TemplateFunction
 
 
 # TODO(eric.cousineau): Move `plot_graphviz` to something more accessible to
@@ -82,3 +83,15 @@ def MySystem_(T):
     return Impl
 
 MySystem = MySystem_[None]  # Default instantiation.
+
+@TemplateFunction.define("MyFunc", param_list=[(int,), (float,)])
+def MyFunc(param):
+    T, = param
+
+    def impl(x, y):
+        """
+        Instantiation. yeah.
+        """
+        return (T, x, y)
+
+    return impl

@@ -238,7 +238,7 @@ class TemplateBase(object):
                 @TemplateClass.define("MyTemplate",
                                       param_list=[(int,), (float,)])
                 def MyTemplate(param):
-                T, = param
+                    T, = param
                     class Impl(object):
                         def __init__(self):
                             self.T = T
@@ -290,7 +290,9 @@ class TemplateClass(TemplateBase):
 
 class TemplateFunction(TemplateBase):
     """Extension of `TemplateBase` for functions."""
-    pass
+    def _on_add(self, param, func):
+        func_original_name = func.__name__
+        func.__name__ = self._instantiation_name(param)
 
 
 class TemplateMethod(TemplateBase):

@@ -118,7 +118,9 @@ class TemplateDocumenter(autodoc.ModuleLevelDocumenter):
         self.add_line(u'', sourcename)
         names = []
         for param in self.object.param_list:
-            names.append(self.object[param].__name__)
+            # TODO(eric.cousineau): Use attribute aliasing already present in autodoc.
+            rst = ":class:`{}`".format(self.object[param].__name__)
+            names.append(rst)
         self.add_line(u"   Instantiations: {}".format(", ".join(names)), sourcename)
 
 

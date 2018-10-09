@@ -7,7 +7,6 @@ pydrake.systems
     :maxdepth: 1
 
     pydrake.systems.drawing
-    pydrake.systems.framework
 
 
 .. automodule:: pydrake.systems
