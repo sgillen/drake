@@ -43,6 +43,8 @@ extensions = [
 # The suffix(es) of source filenames.
 source_suffix = '.rst'
 
+source_encoding = 'utf-8'
+
 # The master toctree document.
 master_doc = 'index'
 

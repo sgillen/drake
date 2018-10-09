@@ -103,12 +103,12 @@ class TemplateDocumenter(autodoc.ModuleLevelDocumenter):
         return out
 
     def check_module(self):
+        # TODO(eric.cousineau): Filter out `TemplateBase` instances based on their originating module.
+        # `autodoc` won't catch it normally because an instance does not have `__module__` normally defined.
         return True
         # out = autodoc.ModuleLevelDocumenter.check_module(self)
         # print("check_module: ", out)
         # return out
-
-    # def generate(self, **kwargs):
 
 
 def tpl_getter(obj, name, *defargs):
@@ -123,9 +123,9 @@ def tpl_getter(obj, name, *defargs):
 
 
 def setup(app):
-    app.add_autodoc_attrgetter(object, tpl_getter)
+    app.add_autodoc_attrgetter(TemplateBase, tpl_getter)
     app.add_autodocumenter(TemplateDocumenter)
-    # Hack into expressions.
+    # Hack regular expressions to make them irregular (nested).
     autodoc.py_ext_sig_re = IrregularExpression(extended=True)
     pydoc.py_sig_re = IrregularExpression(extended=False)
     return dict(parallel_read_safe=True)
