@@ -149,12 +149,13 @@ def _update_descriptor_doc(obj, message):
 
         obj.__module__ = orig.__module__
         obj.__name__ = orig.__name__
-        obj.__doc__ = orig.__doc__    for i in range(2):
-        try:
-            obj.__doc__ = _get_deprecation_doc(obj.__doc__, message)
-            break
-        except TypeError:
-            obj = _WrapDescriptor(obj)
+        obj.__doc__ = orig.__doc__
+    elif hasattr(obj, 'fget'):
+        obj = property(
+            obj.fget, obj.fset, obj.fdel,
+            _get_deprecation_doc(obj.__doc__, message))
+        return obj
+    obj.__doc__ = _get_deprecation_doc(obj.__doc__, message)
     print("    Update", obj)
     return obj
 

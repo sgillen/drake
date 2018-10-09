@@ -143,7 +143,7 @@ class TestDeprecation(unittest.TestCase):
                 self.assertEqual(obj.deprecated_prop, 2)
                 # The next line will not show a warning.
                 self.assertEqual(prop.__get__(obj), 2)
-            self.assertEqual(prop.__doc__, ExampleClass.doc_prop)
+            self.assertTrue(prop.__doc__.startswith(ExampleClass.doc_prop))
             self.assertIn("Deprecated:", prop.__doc__)
             # Check warnings.
             self.assertEqual(len(w), 2)
