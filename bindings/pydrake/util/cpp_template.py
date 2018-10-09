@@ -302,8 +302,8 @@ def _rename_callable(f, module, name):
         return f
     # If Python2, we have to wrap instancemethods + built-in functions to spoof
     # the metadata.
-    method_types = (types.MethodType, types.BuiltinMethodType)
-    type_requires_wrap = method_types + (types.BuiltinFunctionType,)
+    type_requires_wrap = (
+        types.MethodType, types.BuiltinMethodType, types.BuiltinFunctionType,)
     if isinstance(f, type_requires_wrap):
         orig = f
 
@@ -313,7 +313,8 @@ def _rename_callable(f, module, name):
         f.__name__ = name
         f.__doc__ = orig.__doc__
         f._original_name = orig.__name__
-        if isinstance(orig, method_types):
+        cls = getattr(orig, 'im_class', None)
+        if cls:
             f = types.MethodType(f, None, orig.im_class)
     else:
         f._original_name = f.__name__
