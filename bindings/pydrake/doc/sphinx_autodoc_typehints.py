@@ -7,11 +7,12 @@ from __future__ import print_function
 
 from collections import namedtuple
 import re
+from functools import wraps
 
 import sphinx.domains.python as pydoc
 from sphinx.ext import autodoc
 
-from pydrake.util.cpp_template import TemplateBase
+from pydrake.util.cpp_template import TemplateBase, TemplateMethod
 
 # import sys
 # sys.stdout = sys.stderr
@@ -92,8 +93,13 @@ class TemplateDocumenter(autodoc.ModuleLevelDocumenter):
 
     def get_object_members(self, want_all):
         members = []
+        is_method = isinstance(self.object, TemplateMethod)
         for param in self.object.param_list:
             instantiation = self.object[param]
+            if is_method:
+                instantiation = wraps(instantiation)(instantiation)
+                instantiation.__name__ = self.object._instantiation_name(param)
+                print("overwrite", instantiation)
             members.append((instantiation.__name__, instantiation))
         return False, members
 

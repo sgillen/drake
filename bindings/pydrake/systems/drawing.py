@@ -13,7 +13,7 @@ import pydot
 
 from pydrake.systems.framework import LeafSystem_
 from pydrake.systems.scalar_conversion import TemplateSystem
-from pydrake.util.cpp_template import TemplateFunction
+from pydrake.util.cpp_template import TemplateFunction, TemplateMethod
 
 
 # TODO(eric.cousineau): Move `plot_graphviz` to something more accessible to
@@ -56,11 +56,33 @@ class Test(object):
         """Test 1 method"""
         pass
 
+    def _method_int(self, x):
+        """Test 1 int"""
+        pass
+
     class Nested(object):
         """Nested 2"""
         def method_2(self, x):
             """Nested 2 method"""
             pass
+
+    @TemplateSystem.define("NestT")
+    def NestT(T):
+
+        class Impl(LeafSystem_[T]):
+            """
+            Example class.
+            """
+            def _construct(self, value, converter=None):
+                LeafSystem_[T].__init__(self, converter=converter)
+                self.value = value
+
+            def _construct_copy(self, other, converter=None):
+                Impl._construct(self, other.value, converter=converter)
+
+        return Impl
+
+Test.method_tpl = TemplateMethod("method_tpl", cls=Test)
 
 
 @TemplateSystem.define("MySystem_")
