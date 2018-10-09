@@ -141,7 +141,7 @@ class TemplateBase(object):
         if instantiation is not TemplateBase._deferred:
             old = instantiation
             instantiation = self._on_add(param, instantiation)
-            assert instantiation is not None
+            assert instantiation is not None, (self, param, old)
             if instantiation is not old:
                 self._instantiation_alias_map[old] = instantiation
         self._instantiation_map[param] = instantiation

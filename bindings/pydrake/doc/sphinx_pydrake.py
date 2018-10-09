@@ -20,7 +20,7 @@ from sphinx.locale import _
 import sphinx.domains.python as pydoc
 from sphinx.ext import autodoc
 
-from pydrake.util.cpp_template import TemplateBase, TemplateMethod
+from pydrake.util.cpp_template import TemplateBase
 from pydrake.util.deprecation import DrakeDeprecationWarning
 
 
@@ -37,20 +37,6 @@ def patch(obj, name, f):
         return f(original, *args, **kwargs)
 
     setattr(obj, name, method)
-
-
-def spoof_instancemethod(module, name, f):
-    """Spoofs an instancemethod, generally to just set documentation
-    attributes. Only applicable in Python2.
-    """
-
-    def tmp(*args, **kwargs):
-        return f(*args, **kwargs)
-
-    tmp.__module__ = module
-    tmp.__name__ = name
-    tmp.__doc__ = f.__doc__
-    return tmp
 
 
 def repair_naive_name_split(objpath):
@@ -158,15 +144,8 @@ class TemplateDocumenter(autodoc.ModuleLevelDocumenter):
     def get_object_members(self, want_all):
         """Overrides base to return instantiations from templates."""
         members = []
-        is_method = isinstance(self.object, TemplateMethod)
         for param in self.object.param_list:
             instantiation = self.object[param]
-            if is_method:
-                # Hack naming of methods.
-                instantiation = spoof_instancemethod(
-                    self.object._module_name,
-                    self.object._instantiation_name(param),
-                    instantiation)
             members.append((instantiation.__name__, instantiation))
             if not self.options.show_all_instantiations:
                 break
@@ -208,13 +187,11 @@ def tpl_attrgetter(obj, name, *defargs):
     """
     # N.B. Rather than try to evaluate parameters from the string, we instead
     # match based on instantiation name.
-    # Because methods in Python2 cannot have their `__name__` overwritten, we
-    # use hackery with `spoof_instancemethod`.
     if "[" in name:
         assert name.endswith(']'), name
         for param in obj.param_list:
             inst = obj[param]
-            if obj._instantiation_name(param) == name:
+            if inst.__name__ == name:
                 return inst
         assert False, (
             "Not a template?",
