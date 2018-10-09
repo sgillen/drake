@@ -144,9 +144,7 @@ void init_module(py::module m) {
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
     cls.def("num_dofs", &Class::num_dofs, doc.Joint.num_dofs.doc);
 #pragma GCC diagnostic pop  // pop -Wdeprecated-declarations
-    cls.attr("message_num_dofs") = "Please use num_velocities().";
-    DeprecateAttribute(
-        cls, "num_dofs", cls.attr("message_num_dofs"));
+    DeprecateAttribute(cls, "num_dofs", "Please use num_velocities().");
   }
 
   {

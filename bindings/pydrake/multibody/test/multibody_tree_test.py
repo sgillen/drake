@@ -50,6 +50,11 @@ from pydrake.util.eigen_geometry import Isometry3
 from pydrake.systems.framework import InputPort, OutputPort
 from pydrake.math import RollPitchYaw
 
+print(Joint.num_dofs)
+print(help(Joint.num_dofs))
+print(help(Joint.__dict__['num_dofs']))
+exit(10)
+
 
 def get_index_class(cls):
     # Maps a class to its corresponding index class, accommdating inheritance.

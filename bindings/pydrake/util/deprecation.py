@@ -121,8 +121,11 @@ class _DeprecatedDescriptor(object):
     def __init__(self, original, message):
         assert hasattr(original, '__get__'), "`original` must be a descriptor"
         self._original = original
-        self.__doc__ = self._original.__doc__
+        self.__doc__ = (
+            self._original.__doc__ + "\n\n" + _get_deprecation_doc(message)
+            ).lstrip()
         self._message = message
+        print(self.__doc__)
 
     def _warn(self):
         _warn_deprecated(self._message, stacklevel=4)
@@ -138,6 +141,10 @@ class _DeprecatedDescriptor(object):
     def __delete__(self, obj):
         self._warn()
         self._original.__delete__(obj)
+
+
+def _get_deprecation_doc(message):
+    return "Deprecated: " + message
 
 
 def deprecated(message):
