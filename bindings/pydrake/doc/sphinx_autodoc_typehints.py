@@ -84,7 +84,7 @@ class TemplateDocumenter(autodoc.ModuleLevelDocumenter):
     #
     objtype = 'template'
     member_order =  autodoc.ClassDocumenter.member_order
-    directivetype = 'class'
+    directivetype = 'template'
     option_spec = {}
     # Take preference over Attributes.
     priority = 1 + autodoc.AttributeDocumenter.priority
@@ -160,6 +160,12 @@ def rewrite(self, members, want_all):
     return ret
 
 autodoc.Documenter.filter_members = rewrite
+
+
+# class PyCppTemplate(pydoc.PyClasslike):
+#     pass
+
+pydoc.PythonDomain.directives['template'] = pydoc.PyClasslike
 
 
 def setup(app):
