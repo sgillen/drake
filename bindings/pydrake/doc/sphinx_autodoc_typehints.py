@@ -169,44 +169,44 @@ def tpl_getter(obj, name, *defargs):
     return autodoc.safe_getattr(obj, name, *defargs)
 
 
-old = autodoc.Documenter.filter_members
+# Patch display of bases for classes.
 
-def rewrite(self, members, want_all):
-    ret = old(self, members, want_all)
-    s = []
-    for (name, member, isattr) in ret:
-        s.append([name, isattr])
-        if name == "MyMethod":
-            print(" - ", name, member)
-    print(("rewrite", self.object_name, s))
-    return ret
+def new_add_directive_header(self, sig):
+    _ = autodoc._
 
-autodoc.Documenter.filter_members = rewrite
+    if self.doc_as_attr:
+        self.directivetype = 'attribute'
+    autodoc.Documenter.add_directive_header(self, sig)
 
+    # add inheritance info, if wanted
+    if not self.doc_as_attr and self.options.show_inheritance:
+        sourcename = self.get_sourcename()
+        self.add_line(u'', sourcename)
+        bases = getattr(self.object, '__bases__', None)
+        if not bases:
+            return
+        bases = [b.__module__ in ('__builtin__', 'builtins') and
+                 u':class:`%s`' % b.__name__ or
+                 u':class:`%s.%s`' % (b.__module__, b.__name__)
+                 for b in bases
+                 if b.__name__ != "pybind11_object"]
+        if not bases:
+            return
+        self.add_line(_(u'   Bases: %s') % ', '.join(bases),
+                      sourcename)
 
-# class PyCppTemplate(pydoc.PyClasslike):
-#     pass
+autodoc.ClassDocumenter.add_directive_header = new_add_directive_header
 
-pydoc.PythonDomain.directives['template'] = pydoc.PyClasslike
+# TODO(eric.cousineau): How to document only protected methods?
+# e.g. `LeafSystem` only consists of private things to overload, but it's
+# important to be user-visible.
 
 
 def setup(app):
+    pydoc.PythonDomain.directives['template'] = pydoc.PyClasslike
     app.add_autodoc_attrgetter(TemplateBase, tpl_getter)
     app.add_autodocumenter(TemplateDocumenter)
     # Hack regular expressions to make them irregular (nested).
     autodoc.py_ext_sig_re = IrregularExpression(extended=True)
     pydoc.py_sig_re = IrregularExpression(extended=False)
     return dict(parallel_read_safe=True)
-
-
-# # from pydrake.all import Adder_
-# import pydrake.all
-# Adder_ = autodoc.safe_getattr(pydrake.all, 'Adder_')
-# print(Adder_)
-# exit(10)
-
-import pydrake.systems.framework as m
-
-
-m.LeafSystemTmp = m.LeafSystem
-m.LeafSystemTmp.__name__ = "LeafSystemTmp"
