@@ -1,27 +1,71 @@
-# http://www.sphinx-doc.org/en/master/extdev/appapi.html#sphinx.application.Sphinx.add_autodocumenter
-from __future__ import print_function
+"""Provides Sphinx plugins / monkey patches to:
+ - Remove excessive bases when documenting inheritance
+ - Document parameterized bindings of templated methods / classes
 
-# New sphinx:
-#  pip install typing
-#  sudo apt install python-packaging
+For guidance, see:
+ - http://www.sphinx-doc.org/en/master/extdev/appapi.html#sphinx.application.Sphinx.add_autodocumenter
+"""
+
+# TODO(eric.cousineau): How to document only protected methods?
+# e.g. `LeafSystem` only consists of private things to overload, but it's
+# important to be user-visible.
+
+from __future__ import print_function
 
 from collections import namedtuple
 import re
 
+from sphinx.locale import _
 import sphinx.domains.python as pydoc
 from sphinx.ext import autodoc
 
 from pydrake.util.cpp_template import TemplateBase, TemplateMethod
 
-# import sys
-# sys.stdout = sys.stderr
 
 def rindex(s, sub):
+    """Reverse index of a substring."""
     return len(s) - s[::-1].index(sub) - len(sub)
 
-#: extended signature RE: with explicit module name separated by ::
+
+def patch(obj, name):
+    """Decorator to patch a method of a class."""
+
+    def decorator(f):
+        original = getattr(obj, name)
+
+        def method(*args, **kwargs):
+            return f(original, *args, **kwargs)
+
+        setattr(obj, name, method)
+        return method
+
+    return decorator
+
+
+def spoof_instancemethod(module, name, f):
+    """Spoofs an instancemethod, generally to just set documentation attributes
+    """
+
+    def tmp(*args, **kwargs):
+        return f(*args, **kwargs)
+
+    tmp.__module__ = module
+    tmp.__name__ = name
+    tmp.__doc__ = f.__doc__
+    return tmp
+
+
 class IrregularExpression(object):
+    """Provides analogous parsing to `autodoc.py_ext_sig_re` and
+    `pydoc.py_sig_re`, but permits nested parsing for class-like directives to
+    work with the munged names.
+
+    These are meant to be used to monkey-patch existing compiled regular
+    expressions.
+    """
+
     FakeMatch = namedtuple('FakeMatch', 'groups')
+
     py_sig_old = autodoc.py_ext_sig_re
     py_sig = re.compile(
         r'''^     (\w.*?) \s*               # symbol
@@ -32,9 +76,17 @@ class IrregularExpression(object):
               ''', re.VERBOSE)
 
     def __init__(self, extended):
+        """
+        Args:
+            extended: For use in `autodoc` (returns explicit reST module name
+                scope).
+        """
         self.extended = extended
 
     def match(self, full):
+        """Tests if a string matches `full`. If not, returns None."""
+        # TODO(eric.cousineau): See if there's a way to speed this up with
+        # pybind or re.Scanner (to tokenize).
         m = self.py_sig.match(full)
         if not m:
             return None
@@ -45,6 +97,7 @@ class IrregularExpression(object):
             pos = rindex(s, "::") + 2
             explicit_modname = s[:pos]
             s = s[pos:]
+        # Extract {path...}.{base}, accounting for brackets.
         path = ''
         base = ''
         num_open = 0
@@ -69,93 +122,90 @@ class IrregularExpression(object):
             # Clear out.
             path = None
         if self.extended:
-            groups = lambda: (explicit_modname, path, base, arg, retann)
+            groups = (explicit_modname, path, base, arg, retann)
         else:
             assert explicit_modname is None
-            groups = lambda: (path, base, arg, retann)
-        return self.FakeMatch(groups)
+            groups = (path, base, arg, retann)
+        return self.FakeMatch(lambda: groups)
 
 
 class TemplateDocumenter(autodoc.ModuleLevelDocumenter):
+    """Specializes `Documenter` for templates from `cpp_template`.
     """
-    Specialized Documenter subclass for templates.
-    """
-    #
     objtype = 'template'
-    member_order =  autodoc.ClassDocumenter.member_order
+    member_order = autodoc.ClassDocumenter.member_order
     directivetype = 'template'
-    option_spec = {}
-    # Take preference over Attributes.
+
+    # Take priority over attributes.
     priority = 1 + autodoc.AttributeDocumenter.priority
+
     option_spec = {
         'show-all-instantiations': autodoc.bool_option,
     }
+    # Permit propagation of class-specific propreties.
     option_spec.update(autodoc.ClassDocumenter.option_spec)
 
     @classmethod
     def can_document_member(cls, member, membername, isattr, parent):
-        ret = isinstance(member, TemplateBase)
-        print("check", type(member), membername)
-        if ret:
-            print("CAN", member)
-        return ret
+        """Overrides base to check for template objects."""
+        return isinstance(member, TemplateBase)
 
     def get_object_members(self, want_all):
+        """Overrides base to return instantiations from templates."""
         members = []
         is_method = isinstance(self.object, TemplateMethod)
         for param in self.object.param_list:
             instantiation = self.object[param]
             if is_method:
-                instantiation = wrap_instancemethod(
+                # Hack naming of methods.
+                instantiation = spoof_instancemethod(
                     self.object._module_name,
                     self.object._instantiation_name(param),
                     instantiation)
-                print("overwrite", instantiation)
             members.append((instantiation.__name__, instantiation))
             if not self.options.show_all_instantiations:
                 break
         return False, members
 
-    def import_object(self):
-        out = autodoc.ModuleLevelDocumenter.import_object(self)
-        print("import_object: ", self.object_name, out)
-        self._DBG = True
-        return out
-
     def check_module(self):
-        # TODO(eric.cousineau): Filter out `TemplateBase` instances based on their originating module.
-        # `autodoc` won't catch it normally because an instance does not have `__module__` normally defined.
+        """Overrides base to always show template objects."""
+        # TODO(eric.cousineau): Filter out `TemplateBase` instances based on
+        # their originating module. `autodoc` won't catch it normally because
+        # an instance does not have `__module__` normally defined.
         return True
-        # out = autodoc.ModuleLevelDocumenter.check_module(self)
-        # print("check_module: ", out)
-        # return out
 
     def add_directive_header(self, sig):
+        """Overrides base to add a line to indicate instantiations."""
         autodoc.ModuleLevelDocumenter.add_directive_header(self, sig)
-
         sourcename = self.get_sourcename()
         self.add_line(u'', sourcename)
         names = []
         for param in self.object.param_list:
-            # TODO(eric.cousineau): Use attribute aliasing already present in autodoc.
+            # TODO(eric.cousineau): Use attribute aliasing already present in
+            # autodoc.
             rst = ":class:`{}`".format(self.object._instantiation_name(param))
             names.append(rst)
-        self.add_line(u"   Instantiations: {}".format(", ".join(names)), sourcename)
+        self.add_line(
+            u"   Instantiations: {}".format(", ".join(names)), sourcename)
 
 
-def wrap_instancemethod(module, name, f):
+def tpl_attrgetter(obj, name, *defargs):
+    """Attribute getter hook for autodoc to permit accessing instantiations via
+    instantiation names.
 
-    def tmp(*args, **kwargs):
-        return f(*args, **kwargs)
+    In ideal world, we'd be able to override instance names easily; however,
+    since Sphinx aims to permit either sweeping automation (`automodule`) or
+    specific instances (`autoclass`), we have to try and get it to play nice
+    with string retrieval.
 
-    tmp.__module__ = module
-    tmp.__name__ = name
-    tmp.__doc__ = f.__doc__
-    return tmp
-
-
-def tpl_getter(obj, name, *defargs):
-    print("getter", obj, name)
+    Note:
+        We cannot call `.. autoclass:: obj.MyTemplate[param]`, because this
+    getter is constrained to `TemplateBase` instances.
+    """
+    # N.B. Rather than try to evaluate parameters from the string, we instead
+    # match based on instantiation name.
+    # Because methods in Python2 cannot have their `__name__` overwritten, we
+    # use hackery with `spoof_instancemethod`.
     if "[" in name:
         assert name.endswith(']'), name
         for param in obj.param_list:
@@ -169,15 +219,14 @@ def tpl_getter(obj, name, *defargs):
     return autodoc.safe_getattr(obj, name, *defargs)
 
 
-# Patch display of bases for classes.
-
-def new_add_directive_header(self, sig):
-    _ = autodoc._
-
+@patch(autodoc.ClassDocumenter, 'add_directive_header')
+def patch_add_directive_header(original, self, sig):
+    """Patches display of bases for classes to strip out pybind11 meta classes
+    from bases.
+    """
     if self.doc_as_attr:
         self.directivetype = 'attribute'
     autodoc.Documenter.add_directive_header(self, sig)
-
     # add inheritance info, if wanted
     if not self.doc_as_attr and self.options.show_inheritance:
         sourcename = self.get_sourcename()
@@ -195,16 +244,12 @@ def new_add_directive_header(self, sig):
         self.add_line(_(u'   Bases: %s') % ', '.join(bases),
                       sourcename)
 
-autodoc.ClassDocumenter.add_directive_header = new_add_directive_header
-
-# TODO(eric.cousineau): How to document only protected methods?
-# e.g. `LeafSystem` only consists of private things to overload, but it's
-# important to be user-visible.
-
 
 def setup(app):
+    # Register directive so we can pretty-print template declarations.
     pydoc.PythonDomain.directives['template'] = pydoc.PyClasslike
-    app.add_autodoc_attrgetter(TemplateBase, tpl_getter)
+    # Register custom attribute retriever.
+    app.add_autodoc_attrgetter(TemplateBase, tpl_attrgetter)
     app.add_autodocumenter(TemplateDocumenter)
     # Hack regular expressions to make them irregular (nested).
     autodoc.py_ext_sig_re = IrregularExpression(extended=True)
