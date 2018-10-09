@@ -87,6 +87,9 @@ class TemplateDocumenter(autodoc.ModuleLevelDocumenter):
     option_spec = {}
     # Take preference over Attributes.
     priority = 1 + autodoc.AttributeDocumenter.priority
+    option_spec = {
+        'show-all-instantiations': autodoc.bool_option,
+    }
 
     @classmethod
     def can_document_member(cls, member, membername, isattr, parent):
@@ -108,6 +111,8 @@ class TemplateDocumenter(autodoc.ModuleLevelDocumenter):
                     instantiation)
                 print("overwrite", instantiation)
             members.append((instantiation.__name__, instantiation))
+            if not self.options.show_all_instantiations:
+                break
         return False, members
 
     def import_object(self):
