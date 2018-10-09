@@ -60,6 +60,7 @@ class TemplateBase(object):
             module_name = _get_module_name_from_stack()
         self._module_name = module_name
         self._instantiation_func = None
+        self.__doc__ = ""
 
     def __getitem__(self, param):
         """Gets concrete class associate with the given arguments.

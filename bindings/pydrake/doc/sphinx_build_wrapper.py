@@ -14,11 +14,11 @@ os.environ['LANG'] = 'en_US.UTF-8'
 argv = [sphinx_build_path] + sys.argv[1:]
 
 from sphinx import main
-import trace
+# import trace
 
-tracer = trace.Trace(ignoredirs=sys.path, trace=1, count=0) #['/usr']
-sys.exit(tracer.run('main(sys.argv)'))
+# tracer = trace.Trace(ignoredirs=sys.path, trace=1, count=0) #['/usr']
+# sys.exit(tracer.run('main(sys.argv)'))
 
-# sys.exit(main(sys.argv))
+sys.exit(main(sys.argv))
 
 # os.execv(argv[0], argv)

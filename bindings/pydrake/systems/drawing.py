@@ -11,6 +11,9 @@ from pydrake.common import temp_directory
 import matplotlib.pyplot as plt
 import pydot
 
+from pydrake.systems.framework import LeafSystem_
+from pydrake.systems.scalar_conversion import TemplateSystem
+
 
 # TODO(eric.cousineau): Move `plot_graphviz` to something more accessible to
 # `call_python_client`.
@@ -39,3 +42,43 @@ def plot_graphviz(dot_text):
 def plot_system_graphviz(system):
     """Renders a System's Graphviz representation in `matplotlib`."""
     return plot_graphviz(system.GetGraphvizString())
+
+
+class Test(object):
+    """Test 1"""
+
+    def __init__(self, y):
+        """Ctor"""
+        pass
+
+    def method_1(self, x):
+        """Test 1 method"""
+        pass
+
+    class Nested(object):
+        """Nested 2"""
+        def method_2(self, x):
+            """Nested 2 method"""
+            pass
+
+
+@TemplateSystem.define("MySystem_")
+def MySystem_(T):
+
+    class Impl(LeafSystem_[T]):
+        """
+        Example class.
+        """
+        def _construct(self, value, converter=None):
+            LeafSystem_[T].__init__(self, converter=converter)
+            self.value = value
+
+        def _construct_copy(self, other, converter=None):
+            Impl._construct(self, other.value, converter=converter)
+
+        def my_method(self, x):
+            return "Hello"
+
+    return Impl
+
+MySystem = MySystem_[None]  # Default instantiation.

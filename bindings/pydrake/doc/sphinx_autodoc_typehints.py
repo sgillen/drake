@@ -1,9 +1,14 @@
 # http://www.sphinx-doc.org/en/master/extdev/appapi.html#sphinx.application.Sphinx.add_autodocumenter
 from __future__ import print_function
 
+# New sphinx:
+#  pip install typing
+#  sudo apt install python-packaging
+
 from collections import namedtuple
 import re
 
+import sphinx.domains.python as pydoc
 from sphinx.ext import autodoc
 
 from pydrake.util.cpp_template import TemplateBase
@@ -17,6 +22,7 @@ def rindex(s, sub):
 #: extended signature RE: with explicit module name separated by ::
 class IrregularExpression(object):
     FakeMatch = namedtuple('FakeMatch', 'groups')
+    py_sig_old = autodoc.py_ext_sig_re
     py_sig = re.compile(
         r'''^     (\w.*?) \s*               # symbol
                   (?:
@@ -24,6 +30,9 @@ class IrregularExpression(object):
                       (?:\s* -> \s* (.*))?  # return annotation
                   )? $
               ''', re.VERBOSE)
+
+    def __init__(self, extended):
+        self.extended = extended
 
     def match(self, full):
         m = self.py_sig.match(full)
@@ -36,50 +45,35 @@ class IrregularExpression(object):
             pos = rindex(s, "::") + 2
             explicit_modname = s[:pos]
             s = s[pos:]
-        pieces = []
-        piece = ''
+        path = ''
+        base = ''
         num_open = 0
         i = 0
         for c in s:
             if c.isspace() or c == '(':
                 break
             if num_open == 0 and c == '.':
-                pieces.append(piece)
-                piece = ''
+                path += base + "."
+                base = ''
             else:
                 if c == '[':
                     num_open += 1
                 elif c == ']':
                     num_open -= 1
-                piece += c
+                base += c
             i += 1
-        if not piece:
+        if not base:
+            # Nothing worth keeping.
             return None
-        pieces.append(piece)
-        path = '.'.join(pieces[:-1])
-        if path:
-            path += "."
-        else:
+        if not path:
+            # Clear out.
             path = None
-        base = pieces[-1]
-        groups = lambda: (explicit_modname, path, base, arg, retann)
-#         if "[" not in s_orig:
-#             try:
-#                 assert old_m is not None, (s_orig, groups())
-#                 old_groups = old_m.groups()
-#                 assert old_groups == groups(), s_orig
-#                 print(groups())
-#                 print(old_groups)
-#                 print("---")
-#             except:
-#                 import traceback
-#                 traceback.print_stack()
-#                 raise
-        # print(("match", s_orig, groups()))
+        if self.extended:
+            groups = lambda: (explicit_modname, path, base, arg, retann)
+        else:
+            assert explicit_modname is None
+            groups = lambda: (path, base, arg, retann)
         return self.FakeMatch(groups)
-
-old = autodoc.py_ext_sig_re
-autodoc.py_ext_sig_re = IrregularExpression()
 
 
 class TemplateDocumenter(autodoc.ModuleLevelDocumenter):
@@ -131,6 +125,9 @@ def tpl_getter(obj, name, *defargs):
 def setup(app):
     app.add_autodoc_attrgetter(object, tpl_getter)
     app.add_autodocumenter(TemplateDocumenter)
+    # Hack into expressions.
+    autodoc.py_ext_sig_re = IrregularExpression(extended=True)
+    pydoc.py_sig_re = IrregularExpression(extended=False)
     return dict(parallel_read_safe=True)
 
 
