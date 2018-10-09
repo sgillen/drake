@@ -164,6 +164,8 @@ class TemplateDocumenter(autodoc.ModuleLevelDocumenter):
 
     def check_module(self):
         """Overrides base to always show template objects."""
+        # THIS MUST LAND BEFORE A PR
+        assert False
         # TODO(eric.cousineau): Filter out `TemplateBase` instances based on
         # their originating module. `autodoc` won't catch it normally because
         # an instance does not have `__module__` normally defined.
