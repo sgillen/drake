@@ -80,6 +80,7 @@ class TemplateDocumenter(autodoc.ModuleLevelDocumenter):
     """
     Specialized Documenter subclass for templates.
     """
+    #
     objtype = 'template'
     member_order =  autodoc.ClassDocumenter.member_order
     directivetype = 'class'
@@ -109,6 +110,16 @@ class TemplateDocumenter(autodoc.ModuleLevelDocumenter):
         # out = autodoc.ModuleLevelDocumenter.check_module(self)
         # print("check_module: ", out)
         # return out
+
+    def add_directive_header(self, sig):
+        autodoc.ModuleLevelDocumenter.add_directive_header(self, sig)
+
+        sourcename = self.get_sourcename()
+        self.add_line(u'', sourcename)
+        names = []
+        for param in self.object.param_list:
+            names.append(self.object[param].__name__)
+        self.add_line(u"   Instantiations: {}".format(", ".join(names)), sourcename)
 
 
 def tpl_getter(obj, name, *defargs):
