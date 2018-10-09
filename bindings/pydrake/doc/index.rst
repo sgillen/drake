@@ -3,12 +3,4 @@
 pydrake
 =======
 
-.. toctree::
-    :maxdepth: 1
-
-    pydrake.systems
-
-
-.. automodule:: pydrake
-    :members:
-    :undoc-members:
+.. autotemplate:: pydrake.systems.framework.LeafSystem_

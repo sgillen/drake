@@ -28,7 +28,7 @@ EXCLUDE = [
 
 FILTER = [
     "pydrake.systems.drawing",
-    # "pydrake.systems.framework",
+    "pydrake.systems.framework",
 ]
 
 

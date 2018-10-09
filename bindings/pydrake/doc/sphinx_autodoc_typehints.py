@@ -50,7 +50,7 @@ class IrregularExpression(object):
         num_open = 0
         i = 0
         for c in s:
-            if c.isspace() or c == '(':
+            if num_open == 0 and c.isspace() or c == '(':
                 break
             if num_open == 0 and c == '.':
                 path += base + "."
