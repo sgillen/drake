@@ -76,8 +76,7 @@ class FramesVisualizer(object):
         return self._subscriber is not None
 
     def set_enabled(self, enable):
-        if enable:
-            self._add_subscriber()
+        if enable:            self._add_subscriber()
         else:
             self._remove_subscriber()
 
@@ -101,4 +100,5 @@ def init_visualizer():
 
 
 # Creates the visualizer when this script is executed.
-frame_viz = init_visualizer()
+if __name__ == "__main__":
+    frame_viz = init_visualizer()

@@ -1,6 +1,4 @@
-# -*- python -*-
-
-exports_files(["CPPLINT.cfg"])
+load("//tools/lint:lint.bzl", "add_lint_tests")
 
 py_library(
     name = "module_py",
@@ -8,3 +6,5 @@ py_library(
     deps = ["//:module_py"],
     visibility = ["//visibility:public"],
 )
+
+add_lint_tests()

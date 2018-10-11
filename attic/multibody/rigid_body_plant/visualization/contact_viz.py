@@ -107,5 +107,6 @@ def init_visualizer():
     return my_visualizer
 
 
-# Creates the visualizer when this script is executed.
-contact_viz = init_visualizer()
+if __name__ == "__main__":
+    # Creates the visualizer when this script is executed.
+    contact_viz = init_visualizer()

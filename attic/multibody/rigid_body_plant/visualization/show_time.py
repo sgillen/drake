@@ -76,4 +76,5 @@ def init_visualizer():
 
 
 # Creates the visualizer when this script is executed.
-time_viz = init_visualizer()
+if __name__ == "__main__":
+    time_viz = init_visualizer()

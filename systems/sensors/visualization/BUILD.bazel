@@ -1,7 +1,21 @@
 load("//tools/lint:lint.bzl", "add_lint_tests")
 
-add_lint_tests(
-    python_lint_extra_srcs = [
+py_library(
+    name = "module_py",
+    srcs = ["__init__.py"],
+    deps = ["//systems/sensors:module_py"],
+    visibility = ["//visibility:public"],
+)
+
+py_library(
+    name = "director_scripts_py",
+    srcs = [
         "show_images.py",
     ],
+    deps = [
+        ":module_py",
+    ],
+    visibility = ["//tools/workspace/drake_visualizer:__pkg__"],
 )
+
+add_lint_tests()

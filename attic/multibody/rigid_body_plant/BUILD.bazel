@@ -5,6 +5,7 @@ load(
     drake_cc_googletest = "attic_drake_cc_googletest",
     drake_cc_library = "attic_drake_cc_library",
 )
+load("@drake//tools/skylark:drake_py.bzl", "drake_py_library")
 load("//tools/lint:lint.bzl", "add_lint_tests")
 
 package(default_visibility = ["//visibility:public"])
@@ -292,6 +293,26 @@ filegroup(
         "test/**/*.urdf",
         "test/**/*.xml",
     ]),
+)
+
+drake_py_library(
+    name = "director_scripts_py",
+    srcs = [
+        "visualization/__init__.py",
+        "visualization/contact_viz.py",
+        "visualization/show_frames.py",
+        "visualization/show_time.py",
+    ],
+    deps = [
+        ":module_py",
+    ],
+)
+
+py_library(
+    name = "module_py",
+    srcs = ["__init__.py"],
+    deps = ["//attic/multibody:module_py"],
+    visibility = ["//visibility:public"],
 )
 
 add_lint_tests(

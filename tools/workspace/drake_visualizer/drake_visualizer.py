@@ -1,12 +1,24 @@
+from __future__ import print_function
+
 import os
+from os.path import exists, join
 import subprocess
 import sys
 
 
 def resolve_path(relpath):
-    abspath = os.path.join(runfiles_dir, relpath)
-    assert os.path.exists(abspath), "Path does not exist: {}".format(abspath)
-    return abspath
+    test_paths = [
+        # This is for bazel run //tools:drake_visualizer.
+        join(runfiles_dir, relpath),
+    ]
+    if not relpath.startswith("external/"):
+        # This is for bazel run @drake//tools:drake_visualizer.
+        test_paths.insert(0, join(runfiles_dir, "external/drake", relpath))
+    for p in test_paths:
+        if exists(p):
+            return p
+    assert False, (
+        "No available paths:\n{}".format("\n".join(test_paths)))
 
 
 def set_path(key, relpath):
@@ -17,6 +29,7 @@ def prepend_path(key, relpath):
     os.environ[key] = resolve_path(relpath) + ":" + os.environ.get(key, '')
 
 
+assert __name__ == "__main__"
 runfiles_dir = os.environ.get("DRAKE_BAZEL_RUNFILES")
 assert runfiles_dir, (
     "This must be called by a script generated using the " +
@@ -28,13 +41,7 @@ assert runfiles_dir, (
 # on the stub py_library, to avoid any other target accidentally pulling in the
 # stubbed pydrake onto its PYTHONPATH.  Only the visualizer, when launched via
 # this wrapper script, should employ the stub.
-stub_relpath = "tools/workspace/drake_visualizer/stub"
-if os.path.exists(os.path.join(runfiles_dir, "external/drake")):
-    # This is for bazel run @drake//tools:drake_visualizer.
-    prepend_path("PYTHONPATH", "external/drake/" + stub_relpath)
-else:
-    # This is for bazel run //tools:drake_visualizer.
-    prepend_path("PYTHONPATH", stub_relpath)
+prepend_path("PYTHONPATH", "tools/workspace/drake_visualizer/stub")
 
 # Don't use DRAKE_RESOURCE_ROOT; the stub getDrakePath should always win.  This
 # also placates the drake-visualizer logic that puts it into Director mode when
@@ -59,4 +66,13 @@ elif sys.platform == "darwin":
 # Execute binary.
 bin_path = resolve_path("external/drake_visualizer/bin/drake-visualizer")
 args = [bin_path] + sys.argv[1:]
+
+# Check for default script.
+default_arg = "--use-drake-scripts"
+if default_arg in args:
+    args.remove(default_arg)
+    script_path = resolve_path(
+        "tools/workspace/drake_visualizer/drake_scripts.py")
+    args += ["--script", script_path]
+
 os.execv(bin_path, args)

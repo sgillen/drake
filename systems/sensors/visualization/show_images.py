@@ -511,8 +511,10 @@ class TestImageHandler(ImageHandler):
         image_out.DeepCopy(self._image)
         return True
 
+def init_visualizer(argv, requires_start=False):
+    global _max_depth
+    global _verbose
 
-if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '--test_image', action='store_true',
@@ -530,14 +532,8 @@ if __name__ == "__main__":
              "Use -1 for autoscaling.")
     parser.add_argument('--verbose', action='store_true')
 
-    is_drake_visualizer = 'app' in globals()
-    if is_drake_visualizer:
-        # TODO(eric.cousineau): See if there is a way to pass --args past
-        # `drake-visualizer`.
-        # At present, there is no way to change these if using
-        # `drake-visualizer`, and `directorPython` is unavailable.
-        argv = _argv
-    else:
+    requires_start = False
+    if not argv:
         argv = sys.argv
     args = parser.parse_args(argv[1:])
 
@@ -556,6 +552,15 @@ if __name__ == "__main__":
     else:
         image_viewer = DrakeLcmImageViewer(args.channel, args.frame_names)
 
-    if not is_drake_visualizer:
+    if requires_start:
         app = consoleapp.ConsoleApp()
         app.start()
+        return None
+    else:
+        return image_viewer
+
+if __name__ == "__main__":
+    if 'app' in globals:
+        image_viewer = init_visualizer(_argv, requires_start=False)
+    else:
+        init_visualizer(_argv, requires_start=True)
