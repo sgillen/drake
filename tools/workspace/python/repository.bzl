@@ -140,6 +140,8 @@ def _impl(repository_ctx):
             if include not in includes:
                 repository_ctx.symlink(source, destination)
                 includes += [include]
+    print(cflags)
+    print(includes)
 
     # Collect linker paths.
     linkopts = _exec(python_config, ["--ldflags"], "flag query").split(" ")
@@ -150,6 +152,9 @@ def _impl(repository_ctx):
             linkopts[i - 1] += " " + linkopts.pop(i)
 
     linkopts_direct_link = list(linkopts)
+
+    print(linkopts)
+    fail("")
 
     if py_info.os.is_macos:
         for i in reversed(range(len(linkopts))):
