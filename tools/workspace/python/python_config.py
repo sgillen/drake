@@ -1,3 +1,16 @@
+"""
+Copy of `python-config` from a virtualenv install.
+This is codified into a single script such that we do not need to ensure we
+have the correct `python-config` executable.
+
+An example to reproduce this file:
+
+    python -m virtualenv -p python build
+    cat build/bin/python-config
+"""
+
+from __future__ import print_function
+
 import sys
 import getopt
 import sysconfig
