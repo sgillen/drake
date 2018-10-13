@@ -106,6 +106,5 @@
         <use_parent_model_frame>1</use_parent_model_frame>
       </axis>
     </joint>
-
   </model>
 </sdf>

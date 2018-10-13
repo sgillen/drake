@@ -149,7 +149,7 @@ GTEST_TEST(MultibodyPlantSdfParserTest, ModelInstanceTest) {
   auto context = plant.CreateDefaultContext();
   const double eps = std::numeric_limits<double>::epsilon();
   auto check_frame = [&plant, instance1, &context, eps](
-      std::string name, std::string parent_name, 
+      std::string name, std::string parent_name,
       const Isometry3d& X_PF_expected) {
     const Frame<double>& frame = plant.GetFrameByName(name, instance1);
     const Frame<double>& parent_frame =

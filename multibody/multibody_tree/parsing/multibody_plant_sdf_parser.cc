@@ -476,27 +476,20 @@ ModelInstanceIndex AddModelFromSpecification(
   const ModelInstanceIndex model_instance =
     plant->AddModelInstance(model_name);
 
-  // TODO(eric.cousineau): Figure out how to properly interpret model-level
-  // frames for constructing worlds, and for explicitly referencing the model
-  // frame from a model's internal elements.
-  // TODO(eric.cousineau): Support specifying a pose for a model. This would be
-  // fixed by ensuring that joint / link frames are attached to the model frame,
-  // rather than the world frame.
   const Isometry3d X_WM = ToIsometry3(model.Pose());
-  if (!X_WM.isApprox(Isometry3d::Identity())) {
-    // This would be fixed by ensuring that 
-    throw std::runtime_error(
-        "Models cannot yet be specified at a different location");
-  }
   // Add a model frame given the instance name so that way any frames added to
   // the model are associated with this instance.
-  // plant->AddFrame(std::make_unique<FixedOffsetFrame<double>>(
-  //     name, *pose_frame, ParsePose(pose_element, true)));
   const Frame<double>& model_frame = plant->AddRigidBody(
       model_name, model_instance, SpatialInertia<double>()).body_frame();
   const std::string weld_name = model_name + "__weld_to_world";
   plant->AddJoint(std::make_unique<WeldJoint<double>>(
       weld_name, plant->world_frame(), model_frame, X_WM));
+  // TODO(eric.cousineau): Propagate X_WM through `AddJointFromSpecification`
+  // and remove this check.
+  if (!X_WM.isApprox(Isometry3d::Identity())) {
+    throw std::runtime_error(
+        "Models with non-identity <pose/> are not yet supported.");
+  }
 
   // TODO(eric.cousineau): Register frames from SDF once we have a pose graph.
   AddLinksFromSpecification(
