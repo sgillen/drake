@@ -528,11 +528,4 @@ drake_cc_googletest(
     ],
 )
 
-py_library(
-    name = "module_py",
-    srcs = ["__init__.py"],
-    visibility = ["//visibility:public"],
-    deps = ["//systems:module_py"],
-)
-
 add_lint_tests()

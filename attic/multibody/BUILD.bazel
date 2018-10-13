@@ -702,13 +702,6 @@ filegroup(
     ]),
 )
 
-py_library(
-    name = "module_py",
-    srcs = ["__init__.py"],
-    visibility = ["//visibility:public"],
-    deps = ["//attic:module_py"],
-)
-
 # The extra_srcs are required here because add_lint_tests() doesn't understand
 # how to extract labels from select() functions yet.
 add_lint_tests(
