@@ -13,7 +13,7 @@ py_library(
         "director_frames.py",
         "director_images.py",
         "director_scripts.py",
-        "director_times.py",
+        "director_time.py",
     ],
     visibility = ["//visibility:public"],
     deps = [

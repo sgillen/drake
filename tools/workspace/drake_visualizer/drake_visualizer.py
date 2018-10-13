@@ -1,5 +1,6 @@
 from __future__ import print_function
 
+import argparse
 import os
 from os.path import exists, join
 import subprocess
@@ -27,6 +28,17 @@ def set_path(key, relpath):
 
 def prepend_path(key, relpath):
     os.environ[key] = resolve_path(relpath) + ":" + os.environ.get(key, '')
+
+
+def extract_drake_scripts(argv):
+    # drake-visualizer greedily consumes arguments, so we must catch them
+    # first and pass them as an environment variable.
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument("--drake_scripts", type=str, default=None)
+    args, argv = parser.parse_known_args(argv)
+    if args.drake_scripts is not None:
+        os.environ["DRAKE_SCRIPTS"] = args.drake_scripts
+    return argv
 
 
 assert __name__ == "__main__"
@@ -65,14 +77,7 @@ elif sys.platform == "darwin":
 
 # Execute binary.
 bin_path = resolve_path("external/drake_visualizer/bin/drake-visualizer")
-args = [bin_path] + sys.argv[1:]
-
-# Check for default script.
-default_arg = "--use-drake-scripts"
-if default_arg in args:
-    args.remove(default_arg)
-    script_path = resolve_path(
-        "tools/workspace/drake_visualizer/drake_scripts.py")
-    args += ["--script", script_path]
+args = [bin_path] + extract_drake_scripts(sys.argv[1:])
+args += ["--script", resolve_path("visualization/director_scripts.py")]
 
 os.execv(bin_path, args)
