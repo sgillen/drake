@@ -3,8 +3,8 @@ load("//tools/lint:lint.bzl", "add_lint_tests")
 py_library(
     name = "module_py",
     srcs = ["__init__.py"],
-    deps = ["//systems/sensors:module_py"],
     visibility = ["//visibility:public"],
+    deps = ["//systems/sensors:module_py"],
 )
 
 py_library(
@@ -12,10 +12,10 @@ py_library(
     srcs = [
         "show_images.py",
     ],
+    visibility = ["//tools/workspace/drake_visualizer:__pkg__"],
     deps = [
         ":module_py",
     ],
-    visibility = ["//tools/workspace/drake_visualizer:__pkg__"],
 )
 
 add_lint_tests()

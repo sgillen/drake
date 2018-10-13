@@ -24,11 +24,11 @@ py_library(
 drake_py_library(
     name = "drake_scripts_py",
     srcs = ["drake_scripts.py"],
+    visibility = ["//tools:__pkg__"],
     deps = [
         "//attic/multibody/rigid_body_plant:director_scripts_py",
         "//systems/sensors/visualization:director_scripts_py",
     ],
-    visibility = ["//tools:__pkg__"],
 )
 
 add_lint_tests()

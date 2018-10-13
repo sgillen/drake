@@ -5,6 +5,6 @@ exports_files(["CPPLINT.cfg"])
 py_library(
     name = "module_py",
     srcs = ["__init__.py"],
-    deps = ["//:module_py"],
     visibility = ["//visibility:public"],
+    deps = ["//:module_py"],
 )
