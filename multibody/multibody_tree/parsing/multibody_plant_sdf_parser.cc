@@ -479,6 +479,8 @@ ModelInstanceIndex AddModelFromSpecification(
   const Isometry3d X_WM = ToIsometry3(model.Pose());
   // Add a model frame given the instance name so that way any frames added to
   // the model are associated with this instance.
+  SpatialInertia<double> zero_inertia(
+      0, Vector3d::Zero(), UnitInertia<double>(0, 0, 0, 0, 0, 0));
   const Frame<double>& model_frame = plant->AddRigidBody(
       model_name, model_instance, SpatialInertia<double>()).body_frame();
   const std::string weld_name = model_name + "__weld_to_world";
