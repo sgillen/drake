@@ -321,17 +321,6 @@ void AddJointFromSpecification(
   }
 }
 
-// Parses a pose from the given SDF element.
-Isometry3<double> ParsePose(
-    sdf::ElementPtr sdf_pose_element, bool permit_frame = false) {
-  DRAKE_DEMAND(sdf_pose_element != nullptr);
-  DRAKE_DEMAND(sdf_pose_element->GetName() == "pose");
-  if (!permit_frame) {
-    DRAKE_DEMAND(!sdf_pose_element->HasAttribute("frame"));
-  }
-  return ToIsometry3(sdf_pose_element->Get<ignition::math::Pose3d>());
-}
-
 // Helper method to load an SDF file and read the contents into an sdf::Root
 // object.
 std::string LoadSdf(
@@ -456,8 +445,10 @@ void AddFramesFromSpecification(
         // an error if a user ever specifies it?
         pose_frame = &plant->GetFrameByName(pose_frame_name, model_instance);
       }
+      const Isometry3d X_PF =
+          ToIsometry3(pose_element->Get<ignition::math::Pose3d>());
       plant->AddFrame(std::make_unique<FixedOffsetFrame<double>>(
-          name, *pose_frame, ParsePose(pose_element, true)));
+          name, *pose_frame, X_PF));
       frame_element = frame_element->GetNextElement("frame");
     }
   }
