@@ -10,8 +10,8 @@ py_library(
     name = "director_scripts_py",
     srcs = [
         "director_contact.py",
-        "director_frames.py",
-        "director_images.py",
+        "director_frame.py",
+        "director_image.py",
         "director_scripts.py",
         "director_time.py",
     ],

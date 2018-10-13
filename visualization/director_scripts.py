@@ -6,18 +6,20 @@ import sys
 
 from drake.visualization import (
     director_contact,
-    director_frames,
-    director_images,
+    director_frame,
+    director_image,
     director_time,
+    singleton_func,
 )
 
 
+@singleton_func
 def init_visualizer(argv):
     available = OrderedDict((
         ("contact", director_contact.init_visualizer),
-        ("frame", director_frames.init_visualizer),
+        ("frame", director_frame.init_visualizer),
         ("time", director_time.init_visualizer),
-        ("image", lambda: director_images.init_visualizer(argv)),
+        ("image", lambda: director_image.init_visualizer(argv)),
     ))
     print("")
     print("Drake Scripts:")

@@ -5,6 +5,8 @@ from director import applogic
 import bot_core as lcmbotcore
 import time
 
+from drake.visualization import singleton_func
+
 
 class TimeVisualizer(object):
 
@@ -65,6 +67,7 @@ class TimeVisualizer(object):
         vis.updateText(my_text, 'text')
 
 
+@singleton_func
 def init_visualizer():
     time_viz = TimeVisualizer()
 

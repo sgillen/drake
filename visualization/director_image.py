@@ -41,6 +41,8 @@ from PythonQt import QtGui
 
 import robotlocomotion as rl
 
+from drake.visualization import singleton_func
+
 _is_vtk_5 = vtk.vtkVersion().GetVTKMajorVersion() == 5
 
 _verbose = False
@@ -511,6 +513,7 @@ class TestImageHandler(ImageHandler):
         image_out.DeepCopy(self._image)
         return True
 
+@singleton_func
 def init_visualizer(argv, requires_start=False):
     global _max_depth
     global _verbose

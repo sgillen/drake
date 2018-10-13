@@ -8,6 +8,8 @@ from director.debugVis import DebugData
 import numpy as np
 import drake as lcmdrakemsg
 
+from drake.visualization import singleton_func
+
 
 class ContactVisualizer(object):
 
@@ -96,6 +98,7 @@ class ContactVisualizer(object):
                 d.getPolyData(), str(key), parent=folder, color=[0, 1, 0])
 
 
+@singleton_func
 def init_visualizer():
     # Create a visualizer instance.
     my_visualizer = ContactVisualizer()
@@ -104,6 +107,7 @@ def init_visualizer():
     applogic.MenuActionToggleHelper(
         'Tools', my_visualizer._name,
         my_visualizer.is_enabled, my_visualizer.set_enabled)
+    _instance = my_visualizer
     return my_visualizer
 
 

@@ -7,6 +7,7 @@ from director import objectmodel as om
 from director import visualization as vis
 import robotlocomotion as lcmrobotlocomotion
 
+from drake.visualization import singleton_func
 
 class FrameChannel(object):
 
@@ -89,6 +90,7 @@ class FramesVisualizer(object):
         frame_channel.handle_message(msg)
 
 
+@singleton_func
 def init_visualizer():
     frame_viz = FramesVisualizer()
 
