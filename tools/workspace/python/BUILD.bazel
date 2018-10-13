@@ -12,4 +12,6 @@ drake_py_unittest(
     deps = ["@python//:bazel_python_actionenv"],
 )
 
-add_lint_tests()
+add_lint_tests(
+    python_lint_extra_srcs = ["find_python_config.py"],
+)
