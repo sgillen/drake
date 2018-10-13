@@ -513,6 +513,7 @@ class TestImageHandler(ImageHandler):
         image_out.DeepCopy(self._image)
         return True
 
+
 @singleton_func
 def init_visualizer(argv, requires_start=False):
     global _max_depth
@@ -561,6 +562,7 @@ def init_visualizer(argv, requires_start=False):
         return None
     else:
         return image_viewer
+
 
 if __name__ == "__main__":
     if 'app' in globals:

@@ -9,6 +9,7 @@ import robotlocomotion as lcmrobotlocomotion
 
 from drake.visualization import singleton_func
 
+
 class FrameChannel(object):
 
     def __init__(self, parent_folder, channel):
@@ -77,7 +78,8 @@ class FramesVisualizer(object):
         return self._subscriber is not None
 
     def set_enabled(self, enable):
-        if enable:            self._add_subscriber()
+        if enable:
+            self._add_subscriber()
         else:
             self._remove_subscriber()
 
