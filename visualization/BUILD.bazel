@@ -4,15 +4,18 @@ py_library(
     name = "module_py",
     srcs = ["__init__.py"],
     visibility = ["//visibility:public"],
-    deps = ["//systems/sensors:module_py"],
 )
 
 py_library(
     name = "director_scripts_py",
     srcs = [
-        "show_images.py",
+        "director_contact.py",
+        "director_frames.py",
+        "director_images.py",
+        "director_scripts.py",
+        "director_times.py",
     ],
-    visibility = ["//tools/workspace/drake_visualizer:__pkg__"],
+    visibility = ["//visibility:public"],
     deps = [
         ":module_py",
     ],
