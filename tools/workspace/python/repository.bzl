@@ -45,11 +45,10 @@ def _which(repository_ctx, bin_name):
     bin = repository_ctx.which(bin_name)
     if not bin:
         fail("Could NOT find {}".format(bin_name))
-    return struct(ctx = repository_ctx, args = [bin])
+    return bin
 
-def _exec(exec_ctx, args, name = None):
-    args = exec_ctx.args + args
-    result = exec_ctx.ctx.execute(args)
+def _exec(ctx, args, name = None):
+    result = ctx.execute(args)
     if name == None:
         name = args
     if result.return_code != 0:
@@ -71,14 +70,12 @@ def _repository_python_info(repository_ctx):
             "WARNING: `python_repository`'s `version` attribute is " +
             "deprecated, and will be removed on 11/01/2018.",
         )
-    python_bin = repository_ctx.os.environ.get("PYTHON_BIN_PATH")
-    if not python_bin:
+    python = repository_ctx.os.environ.get("PYTHON_BIN_PATH")
+    if not python:
         python = _which(
             repository_ctx,
             "python{}".format(versions_supported[0]),
         )
-    else:
-        python = struct(ctx = repository_ctx, args = [python_bin])
 
     # Unfortunately, it does not seem possible to get Bazel's Python]
     # interpreter during a repository rule, thus we can only catch mismatch
@@ -87,15 +84,14 @@ def _repository_python_info(repository_ctx):
         Label("@drake//tools/workspace/python:find_python_config.py"),
         "_find_python_config.py",
     )
-    python_config = struct(
-        ctx = repository_ctx,
-        args = [_exec(python, ["_find_python_config.py"])],
+    python_config = _exec(
+        repository_ctx,
+        [python, "_find_python_config.py"],
     )
-
     version = _exec(
-        python,
-        ["-c", "from sys import version_info as v; print(\"{}.{}\"" +
-               ".format(v.major, v.minor))"],
+        repository_ctx,
+        [python, "-c", "from sys import version_info as v; print(\"{}.{}\"" +
+                       ".format(v.major, v.minor))"],
     )
 
     # Ensure we have the correct platform support.
@@ -122,7 +118,11 @@ def _impl(repository_ctx):
     )
 
     # Collect includes.
-    cflags = _exec(python_config, ["--includes"], "include query").split(" ")
+    cflags = _exec(
+        repository_ctx,
+        [python_config, "--includes"],
+        "include query",
+    ).split(" ")
     cflags = [cflag for cflag in cflags if cflag]
 
     root = repository_ctx.path("")
@@ -142,7 +142,11 @@ def _impl(repository_ctx):
                 includes += [include]
 
     # Collect linker paths.
-    linkopts = _exec(python_config, ["--ldflags"], "flag query").split(" ")
+    linkopts = _exec(
+        repository_ctx,
+        [python_config, "--ldflags"],
+        "flag query",
+    ).split(" ")
     linkopts = [linkopt for linkopt in linkopts if linkopt]
 
     for i in reversed(range(len(linkopts))):
@@ -218,7 +222,7 @@ PYTHON_BIN_PATH = "{bin_path}"
 PYTHON_VERSION = "{version}"
 PYTHON_SITE_PACKAGES_RELPATH = "{site_packages_relpath}"
 """.format(
-        bin_path = python.args[0],
+        bin_path = python,
         version = py_info.version,
         site_packages_relpath = py_info.site_packages_relpath,
     )
