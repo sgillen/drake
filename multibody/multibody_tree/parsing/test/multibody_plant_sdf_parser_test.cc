@@ -201,10 +201,10 @@ GTEST_TEST(SdfParser, IncludeTags) {
 
   // We should have loaded 3 more models.
   EXPECT_EQ(plant.num_model_instances(), 5);
-  // The models should have added 8 more bodies (+ 3 model bodies).
-  EXPECT_EQ(plant.num_bodies(), 12);
-  // The models should have added 5 more joints (+ 3 model weld joints).
-  EXPECT_EQ(plant.num_joints(), 8);
+  // The models should have added 8 more bodies.
+  EXPECT_EQ(plant.num_bodies(), 9);
+  // The models should have added 5 more joints.
+  EXPECT_EQ(plant.num_joints(), 5);
 
   // There should be a model instance with the name "robot1".
   EXPECT_TRUE(plant.HasModelInstanceNamed("robot1"));
