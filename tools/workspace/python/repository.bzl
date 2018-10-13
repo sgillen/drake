@@ -104,7 +104,9 @@ def _repository_python_info(repository_ctx):
 
     version_major, _ = version.split(".")
     site_packages_relpath = "lib/python{}/site-packages".format(version)
-    return python, python_config, struct(
+    return struct(
+        python = python,
+        python_config = python_config,
         site_packages_relpath = site_packages_relpath,
         version = version,
         version_major = version,
@@ -113,14 +115,14 @@ def _repository_python_info(repository_ctx):
 
 def _impl(repository_ctx):
     # Repository implementation.
-    python, python_config, py_info = _repository_python_info(
+    py_info = _repository_python_info(
         repository_ctx,
     )
 
     # Collect includes.
     cflags = _exec(
         repository_ctx,
-        [python_config, "--includes"],
+        [py_info.python_config, "--includes"],
         "include query",
     ).split(" ")
     cflags = [cflag for cflag in cflags if cflag]
@@ -144,7 +146,7 @@ def _impl(repository_ctx):
     # Collect linker paths.
     linkopts = _exec(
         repository_ctx,
-        [python_config, "--ldflags"],
+        [py_info.python_config, "--ldflags"],
         "flag query",
     ).split(" ")
     linkopts = [linkopt for linkopt in linkopts if linkopt]
@@ -222,7 +224,7 @@ PYTHON_BIN_PATH = "{bin_path}"
 PYTHON_VERSION = "{version}"
 PYTHON_SITE_PACKAGES_RELPATH = "{site_packages_relpath}"
 """.format(
-        bin_path = python,
+        bin_path = py_info.python,
         version = py_info.version,
         site_packages_relpath = py_info.site_packages_relpath,
     )
