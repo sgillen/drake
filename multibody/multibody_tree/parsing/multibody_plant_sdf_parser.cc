@@ -436,31 +436,28 @@ void AddLinksFromSpecification(
 void AddFramesFromSpecification(
     ModelInstanceIndex model_instance,
     sdf::ElementPtr parent_element,
+    const Frame<double>& parent_frame,
     multibody_plant::MultibodyPlant<double>* plant) {
   // Per its API documentation, `GetElement(...)` will create a new element if
   // one does not already exist rather than return `nullptr`; use
   // `HasElement(...)` instead.
-  // TODO(eric.cousineau): Verify that this interpretation of the SDF spec is
-  // accurate.
   if (parent_element->HasElement("frame")) {
     sdf::ElementPtr frame_element = parent_element->GetElement("frame");
     while (frame_element) {
       std::string name = frame_element->Get<std::string>("name");
       sdf::ElementPtr pose_element = frame_element->GetElement("pose");
-      const Frame<double>* parent_frame = &plant->world_body().body_frame();
-      if (pose_element->HasAttribute("frame")) {
-        const std::string parent_frame_name =
-            pose_element->Get<std::string>("frame");
-        if (parent_frame_name.empty()) {
-          throw std::runtime_error(
-              "The 'frame' attribute for a 'pose' element cannot be empty; it "
-              "must be a nonempty string, or not defined at all.");
-        }
-        parent_frame = &plant->GetFrameByName(
-            parent_frame_name, model_instance);
+      const Frame<double>* pose_frame = &parent_frame;
+      // SDF makes frame have a value of '' by default, even if unspecified.
+      DRAKE_DEMAND(pose_element->HasAttribute("frame"));
+      const std::string pose_frame_name =
+          pose_element->Get<std::string>("frame");
+      if (!pose_frame_name.empty()) {
+        // TODO(eric.cousineau): Prevent instance name from leaking in? Throw
+        // an error if a user ever specifies it?
+        pose_frame = &plant->GetFrameByName(pose_frame_name, model_instance);
       }
       plant->AddFrame(std::make_unique<FixedOffsetFrame<double>>(
-          name, *parent_frame, ParsePose(pose_element, true)));
+          name, *pose_frame, ParsePose(pose_element, true)));
       frame_element = frame_element->GetNextElement("frame");
     }
   }
@@ -479,10 +476,34 @@ ModelInstanceIndex AddModelFromSpecification(
   const ModelInstanceIndex model_instance =
     plant->AddModelInstance(model_name);
 
+  // TODO(eric.cousineau): Figure out how to properly interpret model-level
+  // frames for constructing worlds, and for explicitly referencing the model
+  // frame from a model's internal elements.
+  // TODO(eric.cousineau): Support specifying a pose for a model. This would be
+  // fixed by ensuring that joint / link frames are attached to the model frame,
+  // rather than the world frame.
+  const Isometry3d X_WM = ToIsometry3(model.Pose());
+  if (!X_WM.isApprox(Isometry3d::Identity())) {
+    // This would be fixed by ensuring that 
+    throw std::runtime_error(
+        "Models cannot yet be specified at a different location");
+  }
+  // Add a model frame given the instance name so that way any frames added to
+  // the model are associated with this instance.
+  // plant->AddFrame(std::make_unique<FixedOffsetFrame<double>>(
+  //     name, *pose_frame, ParsePose(pose_element, true)));
+  const Frame<double>& model_frame = plant->AddRigidBody(
+      model_name, model_instance, SpatialInertia<double>()).body_frame();
+  const std::string weld_name = model_name + "__weld_to_world";
+  plant->AddJoint(std::make_unique<WeldJoint<double>>(
+      weld_name, plant->world_frame(), model_frame, X_WM));
+
+  // TODO(eric.cousineau): Register frames from SDF once we have a pose graph.
   AddLinksFromSpecification(
       model_instance, model, plant, scene_graph, package_map, root_dir);
 
   // Add all the joints
+  // TODO(eric.cousineau): Register frames from SDF once we have a pose graph.
   for (uint64_t joint_index = 0; joint_index < model.JointCount();
        ++joint_index) {
     // Get a pointer to the SDF joint, and the joint axis information.
@@ -491,9 +512,8 @@ ModelInstanceIndex AddModelFromSpecification(
   }
 
   // Add frames at root-level of <model>.
-  // N.B. For now, the only frames per SDF's specification will be parsed at
-  // the root-level module.
-  AddFramesFromSpecification(model_instance, model.Element(), plant);
+  AddFramesFromSpecification(
+      model_instance, model.Element(), model_frame, plant);
 
   return model_instance;
 }
