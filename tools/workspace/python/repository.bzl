@@ -84,12 +84,12 @@ def _repository_python_info(repository_ctx):
     # interpreter during a repository rule, thus we can only catch mismatch
     # issues via `//tools/workspace/python:py/python_bin_test`.
     repository_ctx.symlink(
-        Label("@drake//tools/workspace/python:python_config.py"),
-        "_python_config.py",
+        Label("@drake//tools/workspace/python:find_python_config.py"),
+        "_find_python_config.py",
     )
     python_config = struct(
         ctx = repository_ctx,
-        args = python.args + ["_python_config.py"],
+        args = [_exec(python, ["_find_python_config.py"])],
     )
 
     version = _exec(
