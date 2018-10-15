@@ -110,10 +110,10 @@ filegroup(
     srcs = glob([
         "lib/libPythonQt.*",
         "lib/libddApp.*",
-        "lib/python?.?/site-packages/bot_lcmgl/**/*.py",
-        "lib/python?.?/site-packages/director/**/*.py",
-        "lib/python?.?/site-packages/director/**/*.so",
-        "lib/python?.?/site-packages/urdf_parser_py/**/*.py",
+        "lib/python*.*/site-packages/bot_lcmgl/**/*.py",
+        "lib/python*.*/site-packages/director/**/*.py",
+        "lib/python*.*/site-packages/director/**/*.so",
+        "lib/python*.*/site-packages/urdf_parser_py/**/*.py",
     ]) + [
         "bin/drake-visualizer",
         "share/doc/director/LICENSE.txt",
