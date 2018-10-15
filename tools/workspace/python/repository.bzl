@@ -69,7 +69,9 @@ def _repository_python_info(repository_ctx):
     # does in `python_configure.bzl` (https://git.io/fx4Pp).
     python_default = "python{}".format(versions_supported[0])
     python_from_env = repository_ctx.os.environ.get(
-        "PYTHON_BIN_PATH", python_default)
+        "PYTHON_BIN_PATH",
+        python_default,
+    )
     python = str(which(repository_ctx, python_from_env))
 
     # Unfortunately, it does not seem possible to get Bazel's Python]

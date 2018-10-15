@@ -201,7 +201,8 @@ def get_pybind_package_info(base_package, sub_package = None):
     return struct(
         py_imports = [package_info.base_path_rel],
         py_dest = "@PYTHON_SITE_PACKAGES@/{}".format(
-            package_info.sub_path_rel),
+            package_info.sub_path_rel,
+        ),
     )
 
 def _get_package_info(base_package, sub_package = None):
