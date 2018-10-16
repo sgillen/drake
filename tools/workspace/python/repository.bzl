@@ -58,19 +58,19 @@ def _repository_python_info(repository_ctx):
         os_key = os_result.distribution + ":" + os_result.ubuntu_release
     versions_supported = _VERSION_SUPPORT_MATRIX[os_key]
 
-    if repository_ctx.attr.version:
-        print(
-            "WARNING: `python_repository`'s `version` attribute is " +
-            "deprecated, and will be removed on 11/01/2018.",
-        )
-
     # Bazel does not easily expose its --python_path to repository rules (e.g.
     # the environment is unaffected). We must use a workaround as Tensorflow
     # does in `python_configure.bzl` (https://git.io/fx4Pp).
     # N.B. Unfortunately, it does not seem possible to get Bazel's Python
     # interpreter during a repository rule, thus we can only catch mismatch
     # issues via `//tools/workspace/python:py/python_bin_test`.
-    python_default = "python{}".format(versions_supported[0])
+    if os_result.is_macos:
+        version_supported_major, _ = versions_supported[0].split(".")
+        # N.B. On Mac, `which python{major}.{minor}` may refer to the system
+        # Python, not Homebrew Python.
+        python_default = "python{}".format(version_supported_major)
+    else:
+        python_default = "python{}".format(versions_supported[0])
     python_from_env = repository_ctx.os.environ.get(
         "PYTHON_BIN_PATH",
         python_default,
@@ -232,7 +232,6 @@ py_library(
 
 python_repository = repository_rule(
     _impl,
-    attrs = {"version": attr.string(default = "")},
     environ = [
         "PYTHON_BIN_PATH",
     ],
