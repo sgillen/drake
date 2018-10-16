@@ -88,7 +88,9 @@ def _repository_python_info(repository_ctx):
     # ensure that you manually symlink `python{major}-config` in your
     # virtualenv installation.
     python_config = str(which(
-        repository_ctx, "python{}-config".format(version_major)))
+        repository_ctx,
+        "python{}-config".format(version_major),
+    ))
 
     # Warn if we do not the correct platform support.
     if version not in versions_supported:
