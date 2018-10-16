@@ -372,6 +372,18 @@ void setSDFDynamics(XMLElement* node,
   }
 }
 
+// Finds a given body within the model instance, or returns the world if
+// requested.
+RigidBody<double>* FindBodyOrWorld(
+    RigidBodyTree<double>* tree, const std::string& name,
+    int model_instance_id) {
+  if (name == "world") {
+    return tree.world();
+  } else {
+    return tree->FindBody(name, "", model_instance_id);
+  }
+}
+
 void ParseSdfFrame(RigidBodyTree<double>* rigid_body_tree, XMLElement* node,
                    int model_instance_id) {
   const char* attr = node->Attribute("drake_ignore");
@@ -453,7 +465,7 @@ void ParseSdfJoint(RigidBodyTree<double>* model,
                         "\" doesn't have a parent node.");
   }
 
-  auto parent = model->FindBody(parent_name, "", model_instance_id);
+  auto parent = FindBodyOrWorld(model, parent_name, model_instance_id);
   if (!parent) {
     throw runtime_error(string(__FILE__) + ": " + __func__ +
                         ": ERROR: Failed to find a parent link named \"" +
