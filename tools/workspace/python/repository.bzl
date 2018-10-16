@@ -85,12 +85,9 @@ def _repository_python_info(repository_ctx):
 
     # Development Note: This should generally be the correct configuration. If
     # you are hacking with `virtualenv` (which is officially unsupported),
-    # ensure that you manually symlink `python{major}-config` in your
-    # virtualenv installation.
-    python_config = str(which(
-        repository_ctx,
-        "python{}-config".format(version_major),
-    ))
+    # ensure that you manually symlink the matching `*-config` binary in your
+    # `virtualenv` installation.
+    python_config = "{}-config".format(python)
 
     # Warn if we do not the correct platform support.
     if version not in versions_supported:
