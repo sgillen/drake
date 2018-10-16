@@ -83,16 +83,19 @@ def _repository_python_info(repository_ctx):
     ).stdout.strip()
     version_major, _ = version.split(".")
 
+    # Development Note: This should generally be the correct configuration. If
+    # you are hacking with `virtualenv` (which is officially unsupported),
+    # ensure that you manually symlink `python{major}-config` in your
+    # virtualenv installation.
     python_config = str(which(
         repository_ctx, "python{}-config".format(version_major)))
 
-    # Ensure we have the correct platform support.
+    # Warn if we do not the correct platform support.
     if version not in versions_supported:
-        msg = (
-            "Python {} is not a supported / tested version for use with " +
-            "Drake.\n  Supported versions on {}: {}\n"
-        ).format(version, os_key, versions_supported)
-        fail(msg)
+        print((
+            "\n\nWARNING: Python {} is not a supported / tested version for " +
+            "use with Drake.\n  Supported versions on {}: {}\n\n"
+        ).format(version, os_key, versions_supported))
 
     site_packages_relpath = "lib/python{}/site-packages".format(version)
     return struct(
