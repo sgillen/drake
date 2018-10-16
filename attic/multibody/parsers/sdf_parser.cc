@@ -371,25 +371,27 @@ void setSDFDynamics(XMLElement* node,
   }
 }
 
-enum class AllowWorld {
-  True,
-  False,
-};
-
 // Finds a given body within the model instance, or returns the world if
 // requested.
-RigidBody<double>* FindBody(
+RigidBody<double>* FindBodyOrWorld(
     RigidBodyTree<double>* tree, const std::string& name,
-    int model_instance_id, AllowWorld allow_world, const std::string& func) {
+    int model_instance_id) {
   if (name == "world") {
-    if (allow_world == AllowWorld::True) {
-      return tree.world();
-    } else {
-      throw runtime_error(string(__FILE__) + ": " + func +
-                        ": ERROR: 'world' is an invalid choice.");
-    }
+    return &tree->world();
   } else {
     return tree->FindBody(name, "", model_instance_id);
+  }
+}
+
+// Finds a given frame within a model intsance, or returns the world frame
+// if requested.
+std::shared_ptr<RigidBodyFrame<double>> FindFrameOrWorld(
+    RigidBodyTree<double>* tree, const std::string& name,
+    int model_instance_id) {
+  if (name == "world") {
+    return tree->findFrame("world", 0);
+  } else {
+    return tree->findFrame(name, model_instance_id);
   }
 }
 
@@ -439,9 +441,8 @@ void ParseSdfFrame(
     }
 
     // The following will throw a std::runtime_error if the link doesn't exist.
-    RigidBody<double>* link = FindBody(
-        rigid_body_tree, body_name, model_instance_id, AllowWorld::False,
-        __func__);
+    RigidBody<double>* link = FindBodyOrWorld(
+        rigid_body_tree, body_name, model_instance_id);
 
     // Create the frame
     frame = allocate_shared<RigidBodyFrame<double>>(
@@ -455,8 +456,8 @@ void ParseSdfFrame(
     }
     std::shared_ptr<RigidBodyFrame<double>> pose_frame = parent_frame;
     if (!parent_frame_name.empty()) {
-      pose_frame = rigid_body_tree->findFrame(
-          parent_frame_name, model_instance_id);
+      pose_frame = FindFrameOrWorld(
+          rigid_body_tree, parent_frame_name, model_instance_id);
     }
     const Isometry3d X_BP = pose_frame->get_transform_to_body();
     const Isometry3d X_PF = XyzRpy(xyz, rpy);
@@ -503,8 +504,7 @@ void ParseSdfJoint(RigidBodyTree<double>* model,
                         "\" doesn't have a parent node.");
   }
 
-  auto parent = FindBody(
-      model, parent_name, model_instance_id, AllowWorld::True, __func__);
+  auto parent = FindBodyOrWorld(model, parent_name, model_instance_id);
   if (!parent) {
     throw runtime_error(string(__FILE__) + ": " + __func__ +
                         ": ERROR: Failed to find a parent link named \"" +
@@ -519,8 +519,7 @@ void ParseSdfJoint(RigidBodyTree<double>* model,
                         "\" doesn't have a child node.");
   }
 
-  auto child = FindBody(
-      model, child_name, model_instance_id, AllowWorld::False, __func__);
+  auto child = model->FindBody(child_name, "", model_instance_id);
   if (!child) {
     throw runtime_error(string(__FILE__) + ": " + __func__ +
                         ": ERROR: Failed to find a child link named " +
