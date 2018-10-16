@@ -32,7 +32,7 @@ GTEST_TEST(SdfParserTest, ParseFrames) {
   const auto id_table = AddModelInstancesFromSdfFileToWorld(
       FindResourceOrThrow(
           "drake/attic/multibody/parsers/test/rbt_sdf_parser_test_model.sdf"),
-      FloatingBaseType::kFixed, &tree);
+      FloatingBaseType::kImplicitQuaternion, &tree);
   ASSERT_EQ(id_table.size(), 2);
   const int world_instance = tree.world().get_model_instance_id();
   ASSERT_EQ(id_table.at("dummy_model"), world_instance);

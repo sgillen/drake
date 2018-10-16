@@ -18,6 +18,11 @@
       <!-- We will denote this link frame as `L1`. -->
     </link>
 
+    <joint name='weld_link1' type='fixed'>
+      <parent>world</parent>
+      <child>link1</child>
+    </joint>
+
     <!-- Test new-style frames -->
     <!-- We will define this frame as `F1`. -->
     <frame name='model_scope_link1_frame'>
