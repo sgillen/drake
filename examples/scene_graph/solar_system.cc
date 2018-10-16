@@ -238,8 +238,8 @@ void SolarSystem<T>::AllocateGeometry(SceneGraph<T>* scene_graph) {
       scene_graph->RegisterFrame(source_id_, GeometryFrame("Mars", X_SM));
   body_ids_.push_back(planet_id);
   body_offset_.push_back(X_SM);
-  Vector3<double>  plane_normal_M {0, 0.1, 1};
-  axes_.push_back(plane_normal_M.normalized());
+  Vector3<double>  mars_axis_S {0, 0.1, 1};
+  axes_.push_back(mars_axis_S.normalized());
 
   // The geometry is displaced from the Mars _frame_ so that it orbits.
   const double kMarsOrbitRadius = 5.0;
@@ -273,8 +273,8 @@ void SolarSystem<T>::AllocateGeometry(SceneGraph<T>* scene_graph) {
                                                  GeometryFrame("phobos", X_MP));
   body_ids_.push_back(phobos_id);
   body_offset_.push_back(X_MP);
-  plane_normal_M << 0, 0, -1;
-  axes_.push_back(plane_normal_M.normalized());
+  mars_axis_S << 0, 0, -1;
+  axes_.push_back(mars_axis_S.normalized());
 
   // The geometry is displaced from the Phobos's frame so that it orbits.
   const double kPhobosOrbitRadius = 0.34;

@@ -105,7 +105,7 @@ GTEST_TEST(ProximityEngineTests, ExceptionTwoObjectsInObjFileForConvex) {
 // Tests for copy/move semantics.  ---------------------------------------------
 
 // Tests the copy semantics of the ProximityEngine -- the copy is a complete,
-// deep copy. Every type of shape specification should be included in this test.
+// deep copy. Every type of shape specification must be included in this test.
 GTEST_TEST(ProximityEngineTests, CopySemantics) {
   ProximityEngine<double> ref_engine;
   Sphere sphere{0.5};
