@@ -373,8 +373,7 @@ void setSDFDynamics(XMLElement* node,
 
 void ParseSdfFrame(
     RigidBodyTree<double>* rigid_body_tree, XMLElement* node,
-    int model_instance_id,
-    const std::shared_ptr<RigidBodyFrame<double>>& parent_frame) {
+    int model_instance_id) {
   const char* attr = node->Attribute("drake_ignore");
   if (attr && strcmp(attr, "true") == 0) return;
 
@@ -426,20 +425,26 @@ void ParseSdfFrame(
         name, link, xyz, rpy);
   } else {
     // New style.
-    string parent_frame_name;
+    string pose_frame_name;
     if (const char* tmp = pose->Attribute("frame")) {
-      parent_frame_name = tmp;
+      pose_frame_name = tmp;
     }
-    std::shared_ptr<RigidBodyFrame<double>> pose_frame = parent_frame;
-    if (!parent_frame_name.empty()) {
-      pose_frame = rigid_body_tree->findFrame(
-          parent_frame_name, model_instance_id);
+    if (pose_frame_name.empty()) {
+      // Due to (a) ambiguities on how model frames should be referred to and
+      // (b) the inability to specify a model instance ID for a frame (not
+      // related to the kinematic body), we do not support default names at
+      // present.
+      throw runtime_error(
+          string(__FILE__) + ":" + __func__ +
+          ": ERROR: Frame \"" + name + "\" doesn't have a 'frame' attribute. "
+          "Implicit frames are unsupported in RigidBodyTree SDF parsing.");
     }
+    std::shared_ptr<RigidBodyFrame<double>> pose_frame =
+        rigid_body_tree->findFrame(pose_frame_name, model_instance_id);
+
     const Isometry3d X_BP = pose_frame->get_transform_to_body();
     const Isometry3d X_PF = XyzRpy(xyz, rpy);
-    // WARNING: Adding a frame to the model frame (normally the world) will
-    // cause it to have a mismatched model instance ID. There is no intent to
-    // fix this in RigidBodyTree.
+
     RigidBody<double>* body = pose_frame->get_mutable_rigid_body();
     frame = allocate_shared<RigidBodyFrame<double>>(
         Eigen::aligned_allocator<RigidBodyFrame<double>>(),
@@ -814,11 +819,9 @@ void ParseModel(RigidBodyTree<double>* tree, XMLElement* node,
   }
 
   // Parses the model's Drake frame elements.
-  std::shared_ptr<RigidBodyFrame<double>> model_frame =
-      weld_to_frame ? weld_to_frame : tree->findFrame("world");
   for (XMLElement* frame_node = node->FirstChildElement("frame"); frame_node;
        frame_node = frame_node->NextSiblingElement("frame")) {
-    ParseSdfFrame(tree, frame_node, model_instance_id, model_frame);
+    ParseSdfFrame(tree, frame_node, model_instance_id);
   }
 
   // Adds the floating joint that connects the newly added robot model to the
