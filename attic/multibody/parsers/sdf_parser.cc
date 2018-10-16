@@ -371,6 +371,28 @@ void setSDFDynamics(XMLElement* node,
   }
 }
 
+enum class AllowWorld {
+  True,
+  False,
+};
+
+// Finds a given body within the model instance, or returns the world if
+// requested.
+RigidBody<double>* FindBody(
+    RigidBodyTree<double>* tree, const std::string& name,
+    int model_instance_id, AllowWorld allow_world, const std::string& func) {
+  if (name == "world") {
+    if (allow_world == AllowWorld::True) {
+      return tree.world();
+    } else {
+      throw runtime_error(string(__FILE__) + ": " + func +
+                        ": ERROR: 'world' is an invalid choice.");
+    }
+  } else {
+    return tree->FindBody(name, "", model_instance_id);
+  }
+}
+
 void ParseSdfFrame(
     RigidBodyTree<double>* rigid_body_tree, XMLElement* node,
     int model_instance_id,
@@ -417,8 +439,9 @@ void ParseSdfFrame(
     }
 
     // The following will throw a std::runtime_error if the link doesn't exist.
-    RigidBody<double>* link =
-        rigid_body_tree->FindBody(body_name, "", model_instance_id);
+    RigidBody<double>* link = FindBody(
+        rigid_body_tree, body_name, model_instance_id, AllowWorld::False,
+        __func__);
 
     // Create the frame
     frame = allocate_shared<RigidBodyFrame<double>>(
@@ -480,7 +503,8 @@ void ParseSdfJoint(RigidBodyTree<double>* model,
                         "\" doesn't have a parent node.");
   }
 
-  auto parent = model->FindBody(parent_name, "", model_instance_id);
+  auto parent = FindBody(
+      model, parent_name, model_instance_id, AllowWorld::True, __func__);
   if (!parent) {
     throw runtime_error(string(__FILE__) + ": " + __func__ +
                         ": ERROR: Failed to find a parent link named \"" +
@@ -495,7 +519,8 @@ void ParseSdfJoint(RigidBodyTree<double>* model,
                         "\" doesn't have a child node.");
   }
 
-  auto child = model->FindBody(child_name, "", model_instance_id);
+  auto child = FindBody(
+      model, child_name, model_instance_id, AllowWorld::False, __func__);
   if (!child) {
     throw runtime_error(string(__FILE__) + ": " + __func__ +
                         ": ERROR: Failed to find a child link named " +
