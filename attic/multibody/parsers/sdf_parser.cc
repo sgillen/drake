@@ -840,6 +840,7 @@ void ParseModel(RigidBodyTree<double>* tree, XMLElement* node,
   // Parses the model's Drake frame elements.
   std::shared_ptr<RigidBodyFrame<double>> model_frame =
       weld_to_frame ? weld_to_frame : tree->findFrame("world");
+  DRAKE_DEMAND(model_frame != nullptr);
   for (XMLElement* frame_node = node->FirstChildElement("frame"); frame_node;
        frame_node = frame_node->NextSiblingElement("frame")) {
     ParseSdfFrame(tree, frame_node, model_instance_id, model_frame);

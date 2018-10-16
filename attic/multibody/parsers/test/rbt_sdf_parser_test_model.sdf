@@ -6,6 +6,9 @@
   </model>
 
   <model name='sdf_parser_test_model'>
+    <!-- TODO(eric.cousineau): Make this happen. -->
+    <!-- <pose>10 20 30 0 0 0</pose> -->
+
     <!-- This is a subset of elements from:
          //multibody/multibody_tree/parsing/test:links_with_visuals_and_collisions.sdf
          This is meant to test a subset of porting backwards compatible
