@@ -206,7 +206,7 @@ def get_pybind_package_info(base_package, sub_package = None):
     )
 
 def _get_package_info(base_package, sub_package = None):
-    # TODO(eric.cousineau): Move this to `version.bzl` or somewhere more
+    # TODO(eric.cousineau): Move this to `python.bzl` or somewhere more
     # general?
     base_package = base_package.lstrip("//")
     if sub_package == None:

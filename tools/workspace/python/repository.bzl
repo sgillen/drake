@@ -35,7 +35,7 @@ load("@drake//tools/workspace:execute.bzl", "execute_or_fail", "which")
 load("@drake//tools/workspace:os.bzl", "determine_os")
 
 _VERSION_SUPPORT_MATRIX = {
-    "ubuntu:16.04": ["2.7", "3.5"],
+    "ubuntu:16.04": ["2.7"],
     "ubuntu:18.04": ["2.7"],
     "macOS:10.13": ["2.7"],
     "macOS:10.14": ["2.7"],
@@ -67,29 +67,24 @@ def _repository_python_info(repository_ctx):
     # Bazel does not easily expose its --python_path to repository rules (e.g.
     # the environment is unaffected). We must use a workaround as Tensorflow
     # does in `python_configure.bzl` (https://git.io/fx4Pp).
+    # N.B. Unfortunately, it does not seem possible to get Bazel's Python
+    # interpreter during a repository rule, thus we can only catch mismatch
+    # issues via `//tools/workspace/python:py/python_bin_test`.
     python_default = "python{}".format(versions_supported[0])
     python_from_env = repository_ctx.os.environ.get(
         "PYTHON_BIN_PATH",
         python_default,
     )
     python = str(which(repository_ctx, python_from_env))
-
-    # Unfortunately, it does not seem possible to get Bazel's Python]
-    # interpreter during a repository rule, thus we can only catch mismatch
-    # issues via `//tools/workspace/python:py/python_bin_test`.
-    repository_ctx.symlink(
-        Label("@drake//tools/workspace/python:find_python_config.py"),
-        "_find_python_config.py",
-    )
-    python_config = execute_or_fail(
-        repository_ctx,
-        [python, "_find_python_config.py"],
-    ).stdout.strip()
     version = execute_or_fail(
         repository_ctx,
         [python, "-c", "from sys import version_info as v; print(\"{}.{}\"" +
                        ".format(v.major, v.minor))"],
     ).stdout.strip()
+    version_major, _ = version.split(".")
+
+    python_config = str(which(
+        repository_ctx, "python{}-config".format(version_major)))
 
     # Ensure we have the correct platform support.
     if version not in versions_supported:
@@ -99,7 +94,6 @@ def _repository_python_info(repository_ctx):
         ).format(version, os_key, versions_supported)
         fail(msg)
 
-    version_major, _ = version.split(".")
     site_packages_relpath = "lib/python{}/site-packages".format(version)
     return struct(
         python = python,
