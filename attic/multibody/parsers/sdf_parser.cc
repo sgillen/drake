@@ -441,13 +441,13 @@ void ParseSdfFrame(
     }
 
     // The following will throw a std::runtime_error if the link doesn't exist.
-    RigidBody<double>* link = FindBodyOrWorld(
+    RigidBody<double>* body = FindBodyOrWorld(
         rigid_body_tree, body_name, model_instance_id);
-
     // Create the frame
+    const Isometry3d X_PF = XyzRpy(xyz, rpy);
     frame = allocate_shared<RigidBodyFrame<double>>(
         Eigen::aligned_allocator<RigidBodyFrame<double>>(),
-        name, link, xyz, rpy);
+        name, body, X_PF, model_instance_id);
   } else {
     // New style.
     string parent_frame_name;
@@ -467,7 +467,7 @@ void ParseSdfFrame(
     RigidBody<double>* body = pose_frame->get_mutable_rigid_body();
     frame = allocate_shared<RigidBodyFrame<double>>(
         Eigen::aligned_allocator<RigidBodyFrame<double>>(),
-        name, body, X_BP * X_PF);
+        name, body, X_BP * X_PF, model_instance_id);
   }
 
   rigid_body_tree->addFrame(frame);
