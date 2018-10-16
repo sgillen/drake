@@ -2,7 +2,6 @@
 
 #include "drake/common/find_resource.h"
 #include "drake/common/test_utilities/eigen_matrix_compare.h"
-#include "drake/common/test_utilities/expect_throws_message.h"
 #include "drake/math/rigid_transform.h"
 #include "drake/math/roll_pitch_yaw.h"
 #include "drake/multibody/joints/floating_base_types.h"
@@ -26,17 +25,14 @@ Isometry3d XyzRpy(const Vector3d& xyz, const Vector3d& rpy) {
       math::RollPitchYaw<double>(rpy).ToRotationMatrix(), xyz).GetAsIsometry3();
 }
 
-constexpr char kGoodSdf[] =
-    "drake/attic/multibody/parsers/test/rbt_sdf_parser_test_model.sdf";
-constexpr char kBadSdf[] =
-    "drake/attic/multibody/parsers/test/rbt_sdf_parser_test_model_bad.sdf";
-
 GTEST_TEST(SdfParserTest, ParseFrames) {
   // Minimal test of backporting *proper* frame parsing from MultibodyPlant to
   // RigidBodyTree.
   RigidBodyTree<double> tree;
   const auto id_table = AddModelInstancesFromSdfFileToWorld(
-      FindResourceOrThrow(kGoodSdf), FloatingBaseType::kFixed, &tree);
+      FindResourceOrThrow(
+          "drake/attic/multibody/parsers/test/rbt_sdf_parser_test_model.sdf"),
+      FloatingBaseType::kFixed, &tree);
   ASSERT_EQ(id_table.size(), 2);
   const int world_instance = tree.world().get_model_instance_id();
   ASSERT_EQ(id_table.at("dummy_model"), world_instance);
@@ -66,18 +62,14 @@ GTEST_TEST(SdfParserTest, ParseFrames) {
   check_frame(
       test_instance,
       "model_scope_link1_frame", "model_scope_link1_frame_child", X_F1F2);
+  // WARNING: Note that `world_instance` is used here.
+  const Isometry3d X_MF3 = XyzRpy(Vector3d(0.7, 0.8, 0.9), Vector3d::Zero());
+  check_frame(
+      world_instance, "world", "model_scope_model_frame_implicit", X_MF3);
 
   // Old-style frame:
   const Isometry3d X_L1O1 = XyzRpy(Vector3d(1, 2, 3), Vector3d(4, 5, 6));
   check_frame(test_instance, "link1", "old_style_frame", X_L1O1);
-
-  // Expect failure.
-  DRAKE_EXPECT_THROWS_MESSAGE(
-      AddModelInstancesFromSdfFileToWorld(
-          FindResourceOrThrow(kBadSdf), FloatingBaseType::kFixed, &tree),
-      std::runtime_error,
-      ".*model_scope_model_frame_implicit.*"
-      "Implicit frames are unsupported in RigidBodyTree.*");
 }
 
 }  // namespace
