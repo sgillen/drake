@@ -1,10 +1,14 @@
 # -*- python -*-
 
 load(
-    "//tools:drake.bzl",
+    "@drake//tools/skylark:drake_cc.bzl",
     "drake_cc_binary",
     "drake_cc_googletest",
     "drake_cc_library",
+)
+load(
+    "@drake//tools/skylark:drake_py.bzl",
+    "drake_py_binary",
 )
 load(
     "@drake//tools/vector_gen:vector_gen.bzl",
@@ -48,6 +52,20 @@ drake_cc_binary(
     ],
 )
 
+drake_py_binary(
+    name = "cuboctahedron_gen_py",
+    srcs = ["cuboctahedron_gen.py"],
+    main = "cuboctahedron_gen.py",
+)
+
+genrule(
+    name = "cuboctahedron_gen",
+    srcs = [],
+    outs = ["cuboctahedron.obj"],
+    cmd = "$(location :cuboctahedron_gen_py) \"$@\"",
+    tools = [":cuboctahedron_gen_py"],
+)
+
 filegroup(
     name = "models",
     srcs = glob([
@@ -55,6 +73,8 @@ filegroup(
         "**/*.sdf",
         "**/*.urdf",
         "**/*.xml",
+    ] + [
+        "cuboctahedron.obj",
     ]),
     visibility = ["//visibility:public"],
 )
