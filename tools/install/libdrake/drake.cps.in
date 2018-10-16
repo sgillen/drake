@@ -43,6 +43,20 @@
       "Version": "2.6.1",
       "X-CMake-Find-Args": ["MODULE"]
     },
+    "PythonInterp": {
+      "Version": "@PYTHON_VERSION@",
+      "X-CMake-Find-Args": [
+        "EXACT",
+        "MODULE"
+      ]
+    },
+    "PythonLibs": {
+      "Version": "@PYTHON_VERSION@",
+      "X-CMake-Find-Args": [
+          "EXACT",
+          "MODULE"
+      ]
+    },
     "robotlocomotion-lcmtypes": {
       "Hints": ["@prefix@/lib/cmake/robotlocomotion-lcmtypes"],
       "X-CMake-Find-Args": ["CONFIG"]
