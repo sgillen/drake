@@ -244,7 +244,7 @@ void AddJointFromSpecification(
   const Body<double>& child_body = GetBodyByLinkSpecificationName(
       model_spec, joint_spec.ChildLinkName(), model_instance, *plant);
 
-  // Get the pose of frame J in the frame of the child link C, as specified in
+    // Get the pose of frame J in the frame of the child link C, as specified in
   // <joint> <pose> ... </pose></joint>.
   // TODO(amcastro-tri): Verify sdformat supports frame specifications
   // correctly.
@@ -424,7 +424,7 @@ void AddLinksFromSpecification(
 
 template <typename T>
 const Frame<T>& GetFrameOrWorldByName(
-    MultibodyPlant<T>& plant, const std::string& name,
+    const MultibodyPlant<T>& plant, const std::string& name,
     ModelInstanceIndex model_instance) {
   if (name == "world") {
     return plant.world_frame();

@@ -35,8 +35,6 @@
       <pose frame='model_scope_link1_frame'>0.1 0 0 0 0 0</pose>
     </frame>
     <!-- We will define this frame as `F3`. -->
-    <!-- WARNING: For RBT, this frame will *NOT* have the same model instance
-         as other frames. -->
     <frame name='model_scope_model_frame_implicit'>
       <!-- This pose represents `X_MF3`. -->
       <pose>0.7 0.8 0.9 0 0 0</pose>
