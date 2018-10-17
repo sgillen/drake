@@ -7,6 +7,7 @@
 #include "drake/bindings/pydrake/pydrake_pybind.h"
 #include "drake/bindings/pydrake/systems/systems_pybind.h"
 #include "drake/lcm/drake_lcm_interface.h"
+#include "drake/systems/lcm/connect_lcm_scope.h"
 #include "drake/systems/lcm/lcm_publisher_system.h"
 #include "drake/systems/lcm/lcm_subscriber_system.h"
 #include "drake/systems/lcm/serializer.h"
@@ -66,7 +67,7 @@ PYBIND11_MODULE(_lcm_py, m) {
   using namespace drake::systems;
   // NOLINTNEXTLINE(build/namespaces): Emulate placement in namespace.
   using namespace drake::systems::lcm;
-  auto& doc = pydrake_doc.drake.systems.lcm;
+  constexpr auto& doc = pydrake_doc.drake.systems.lcm;
 
   py::module::import("pydrake.lcm");
   py::module::import("pydrake.systems.framework");
@@ -106,6 +107,12 @@ PYBIND11_MODULE(_lcm_py, m) {
             py::keep_alive<1, 3>(),
                 doc.LcmSubscriberSystem.ctor.doc);
   }
+
+  m.def("ConnectLcmScope", &ConnectLcmScope, py::arg("src"),
+        py::arg("channel"), py::arg("builder"), py::arg("lcm") = nullptr,
+        py::keep_alive<0, 2>(),
+        // TODO(eric.cousineau): Figure out why this is necessary (#9398).
+        py_reference, doc.ConnectLcmScope.doc);
 }
 
 }  // namespace pydrake

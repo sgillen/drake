@@ -12,7 +12,7 @@ namespace pydrake {
 PYBIND11_MODULE(planner, m) {
   using drake::manipulation::planner::DifferentialInverseKinematicsStatus;
   m.doc() = "Tools for manipulation planning.";
-  auto& doc = pydrake_doc.drake.manipulation.planner;
+  constexpr auto& doc = pydrake_doc.drake.manipulation.planner;
 
   py::enum_<DifferentialInverseKinematicsStatus>(
       m, "DifferentialInverseKinematicsStatus",
@@ -28,7 +28,7 @@ PYBIND11_MODULE(planner, m) {
 
   {
     using Class = manipulation::planner::DifferentialInverseKinematicsResult;
-    auto& class_doc = doc.DifferentialInverseKinematicsResult;
+    constexpr auto& class_doc = doc.DifferentialInverseKinematicsResult;
     py::class_<Class> cls(m, "DifferentialInverseKinematicsResult",
         doc.DifferentialInverseKinematicsResult.doc);
 
@@ -46,7 +46,7 @@ PYBIND11_MODULE(planner, m) {
   {
     using Class =
         manipulation::planner::DifferentialInverseKinematicsParameters;
-    auto& class_doc = doc.DifferentialInverseKinematicsParameters;
+    constexpr auto& class_doc = doc.DifferentialInverseKinematicsParameters;
 
     py::class_<Class> cls(m, "DifferentialInverseKinematicsParameters",
         doc.DifferentialInverseKinematicsParameters.doc);
@@ -105,6 +105,34 @@ PYBIND11_MODULE(planner, m) {
         py::arg("q_current"), py::arg("v_current"),
         py::arg("V"), py::arg("J"), py::arg("parameters"),
         doc.DoDifferentialInverseKinematics.doc);
+
+  m.def("DoDifferentialInverseKinematics",
+        [](const multibody::multibody_plant::MultibodyPlant<double>& robot,
+           const systems::Context<double>& context,
+           const Vector6<double>& V_WE_desired,
+           const multibody::Frame<double>& frame_E,
+           const manipulation::planner::DifferentialInverseKinematicsParameters&
+               parameters) {
+          return manipulation::planner::DoDifferentialInverseKinematics(
+              robot, context, V_WE_desired, frame_E, parameters);
+        },
+        py::arg("robot"), py::arg("context"), py::arg("V_WE_desired"),
+        py::arg("frame_E"), py::arg("parameters"),
+        doc.DoDifferentialInverseKinematics.doc_4);
+
+  m.def("DoDifferentialInverseKinematics",
+        [](const multibody::multibody_plant::MultibodyPlant<double>& robot,
+           const systems::Context<double>& context,
+           const Isometry3<double>& X_WE_desired,
+           const multibody::Frame<double>& frame_E,
+           const manipulation::planner::DifferentialInverseKinematicsParameters&
+               parameters) {
+          return manipulation::planner::DoDifferentialInverseKinematics(
+              robot, context, X_WE_desired, frame_E, parameters);
+        },
+        py::arg("robot"), py::arg("context"), py::arg("X_WE_desired"),
+        py::arg("frame_E"), py::arg("parameters"),
+        doc.DoDifferentialInverseKinematics.doc_5);
 }
 
 }  // namespace pydrake

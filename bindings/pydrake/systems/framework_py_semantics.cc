@@ -28,7 +28,7 @@ using pysystems::DefClone;
 void DefineFrameworkPySemantics(py::module m) {
   // NOLINTNEXTLINE(build/namespaces): Emulate placement in namespace.
   using namespace drake::systems;
-  auto& doc = pydrake_doc.drake.systems;
+  constexpr auto& doc = pydrake_doc.drake.systems;
 
   m.attr("kAutoSize") = kAutoSize;
   m.attr("kUseDefaultName") = kUseDefaultName;
@@ -69,8 +69,8 @@ void DefineFrameworkPySemantics(py::module m) {
     .def("CopyFrom", &AbstractValues::CopyFrom,
          doc.AbstractValues.CopyFrom.doc);
 
-  // See # 9600
-  auto bind_common_scalar_types = [&](auto dummy) {
+  // N.B. Capturing `&doc` should not be required; workaround per #9600.
+  auto bind_common_scalar_types = [m, &doc](auto dummy) {
     using T = decltype(dummy);
     DefineTemplateClassWithDefault<Context<T>>(
         m, "Context", GetPyParam<T>(), doc.Context.doc)
@@ -126,6 +126,18 @@ void DefineFrameworkPySemantics(py::module m) {
            py_reference_internal,
            doc.Context.get_mutable_continuous_state_vector.doc)
       // - Discrete.
+      .def("get_num_discrete_state_groups",
+           &Context<T>::get_num_discrete_state_groups, doc.Context
+               .get_num_discrete_state_groups.doc)
+      .def("get_discrete_state",
+           overload_cast_explicit<const DiscreteValues<T>&>(
+               &Context<T>::get_discrete_state),
+           py_reference_internal, doc.Context.get_discrete_state.doc)
+      .def("get_mutable_discrete_state",
+           overload_cast_explicit<DiscreteValues<T>&>(
+               &Context<T>::get_mutable_discrete_state),
+           py_reference_internal,
+           doc.Context.get_mutable_discrete_state.doc)
       .def("get_discrete_state_vector",
            &Context<T>::get_discrete_state_vector,
            py_reference_internal,
@@ -136,6 +148,15 @@ void DefineFrameworkPySemantics(py::module m) {
            },
            py_reference_internal,
            doc.Context.get_mutable_discrete_state_vector.doc)
+      .def("get_discrete_state",
+           overload_cast_explicit<const BasicVector<T>&, int>(
+               &Context<T>::get_discrete_state),
+           py_reference_internal, doc.Context.get_discrete_state.doc_2)
+      .def("get_mutable_discrete_state",
+           overload_cast_explicit<BasicVector<T>&, int>(
+               &Context<T>::get_mutable_discrete_state),
+           py_reference_internal,
+           doc.Context.get_mutable_discrete_state.doc_2)
       // - Abstract.
       .def("get_num_abstract_states", &Context<T>::get_num_abstract_states,
            doc.Context.get_num_abstract_states.doc)

@@ -13,8 +13,6 @@ load(
     "drake_py_test",
 )
 
-_PY_VERSION = "2.7"
-
 def pybind_py_library(
         name,
         cc_srcs = [],
@@ -62,6 +60,11 @@ def pybind_py_library(
         # This is how you tell Bazel to create a shared library.
         linkshared = 1,
         linkstatic = 1,
+        copts = [
+            # GCC and Clang don't always agree / succeed when inferring storage
+            # duration (#9600). Workaround it for now.
+            "-Wno-unused-lambda-capture",
+        ],
         # Always link to pybind11.
         deps = [
             "@pybind11",
@@ -197,8 +200,7 @@ def get_pybind_package_info(base_package, sub_package = None):
     package_info = _get_package_info(base_package, sub_package)
     return struct(
         py_imports = [package_info.base_path_rel],
-        py_dest = "lib/python{}/site-packages/{}".format(
-            _PY_VERSION,
+        py_dest = "@PYTHON_SITE_PACKAGES@/{}".format(
             package_info.sub_path_rel,
         ),
     )

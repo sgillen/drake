@@ -187,6 +187,7 @@ class TemplateSystem(TemplateClass):
                     self, *args, converter=converter, **kwargs)
 
         cls.__init__ = system_init
+        return cls
 
     def _check_if_copying(self, obj, *args, **kwargs):
         # Checks if a function signature implies a copy constructor.
@@ -214,5 +215,6 @@ class TemplateSystem(TemplateClass):
 
             converter.Add[T, U](conversion)
 
-        map(add_captured, self._T_pairs)
+        for T_pair in self._T_pairs:
+            add_captured(T_pair)
         return converter

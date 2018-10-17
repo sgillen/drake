@@ -23,6 +23,8 @@
 namespace drake {
 namespace systems {
 
+// TODO(sherm1) When API stabilizes, should list the methods above in addition
+// to describing them.
 /// A forward dynamics solver for hybrid dynamic systems represented by
 /// `System<T>` objects. Starting with an initial Context for a given System,
 /// %Simulator advances time and produces a series of Context values that forms
@@ -36,18 +38,19 @@ namespace systems {
 /// contact.
 ///
 /// Given a current Context, we expect a System to provide us with
+///
 /// - derivatives for the continuous differential equations that already satisfy
-/// the differentiated form of the constraints (typically, acceleration
-/// constraints),
+///   the differentiated form of the constraints (typically, acceleration
+///   constraints),
 /// - a projection method for least-squares correction of violated higher-level
-/// constraints (position and velocity level),
+///   constraints (position and velocity level),
 /// - a time-of-next-update method that can be used to adjust the integrator
-/// step size in preparation for a discrete update,
+///   step size in preparation for a discrete update,
 /// - a method that can update discrete variables when their update time is
-/// reached,
+///   reached,
 /// - witness (guard) functions for event isolation,
 /// - event handlers (reset functions) for making appropriate changes to state
-/// and mode variables when an event has been isolated.
+///   and mode variables when an event has been isolated.
 ///
 /// The continuous parts of the trajectory are advanced using a numerical
 /// integrator. Different integrators have different properties; if you know
@@ -59,12 +62,11 @@ namespace systems {
 ///
 /// Instantiated templates for the following kinds of T's are provided and
 /// available to link against in the containing library:
+///
 /// - double
 /// - AutoDiffXd
 ///
 /// Other instantiations are permitted but take longer to compile.
-// TODO(sherm1) When API stabilizes, should list the methods above in addition
-// to describing them.
 template <typename T>
 class Simulator {
  public:
@@ -543,10 +545,12 @@ void Simulator<T>::HandlePublish(
 
 /// Steps the simulation to the specified time.
 /// The simulation loop is as follows:
+///
 /// 1. Perform necessary discrete variable updates.
 /// 2. Publish.
 /// 3. Integrate the smooth system (the ODE or DAE)
 /// 4. Perform post-step stabilization for DAEs (if desired).
+///
 /// @param boundary_time The time to advance the context to.
 /// @pre The simulation state is valid  (i.e., no discrete updates or state
 /// projections are necessary) at the present time.
