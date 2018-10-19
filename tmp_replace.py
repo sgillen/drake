@@ -34,7 +34,7 @@ class Custom(TextProcessor):
                 print("---")
                 print(new)
                 print("\n\n")
-            return "\n".join(out)
+            return new
         new = re.sub(r"@code.*?@endcode", rep, old, flags = re.M | re.DOTALL)
         return new
 
