@@ -89,10 +89,10 @@ class MultibodyTree {
   ///
   /// Example of usage:
   /// @code
-  ///   MultibodyTree<T> model;
-  ///   // ... Code to define spatial_inertia, a SpatialInertia<T> object ...
-  ///   const RigidBody<T>& body =
-  ///       model.AddBody(std::make_unique<RigidBody<T>>(spatial_inertia));
+  /// MultibodyTree<T> model;
+  /// // ... Code to define spatial_inertia, a SpatialInertia<T> object ...
+  /// const RigidBody<T>& body =
+  ///     model.AddBody(std::make_unique<RigidBody<T>>(spatial_inertia));
   /// @endcode
   ///
   /// @throws std::logic_error if `body` is a nullptr.
@@ -154,18 +154,18 @@ class MultibodyTree {
   ///
   /// Example of usage:
   /// @code
-  ///   MultibodyTree<T> model;
-  ///   // ... Code to define spatial_inertia, a SpatialInertia<T> object ...
-  ///   // Notice RigidBody is a template on a scalar type.
-  ///   const RigidBody<T>& body = model.AddBody<RigidBody>(spatial_inertia);
+  /// MultibodyTree<T> model;
+  /// // ... Code to define spatial_inertia, a SpatialInertia<T> object ...
+  /// // Notice RigidBody is a template on a scalar type.
+  /// const RigidBody<T>& body = model.AddBody<RigidBody>(spatial_inertia);
   /// @endcode
   ///
   /// Note that for dependent names you must use the template keyword (say for
   /// instance you have a MultibodyTree<T> member within your custom class):
   ///
   /// @code
-  ///   MultibodyTree<T> model;
-  ///   auto body = model.template AddBody<RigidBody>(Args...);
+  /// MultibodyTree<T> model;
+  /// auto body = model.template AddBody<RigidBody>(Args...);
   /// @endcode
   ///
   /// @throws std::logic_error if Finalize() was already called on `this` tree.

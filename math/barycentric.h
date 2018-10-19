@@ -163,7 +163,7 @@ class BarycentricMesh {
   /// barycentric interpolation.
   ///
   /// @code
-  ///   MatrixXd mesh_values = bary.MeshValuesFrom(
+  /// MatrixXd mesh_values = bary.MeshValuesFrom(
   ///     [](const auto& x) { return Vector1d(std::sin(x[0])); });
   /// @endcode
   MatrixX<T> MeshValuesFrom(

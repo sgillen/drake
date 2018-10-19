@@ -1369,7 +1369,7 @@ class System : public SystemBase {
   /// type. The result is never nullptr.
   /// @throws std::exception if this System does not support symbolic
   ///
-  /// Usage: @code
+  /// @code
   ///   MySystem<double> plant;
   ///   std::unique_ptr<MySystem<symbolic::Expression>> sym_plant =
   ///       systems::System<double>::ToSymbolic(plant);

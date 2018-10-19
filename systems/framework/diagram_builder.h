@@ -46,8 +46,8 @@ class DiagramBuilder {
   /// as a default in order to have unique names within the diagram.
   ///
   /// @code
-  ///   DiagramBuilder<T> builder;
-  ///   auto foo = builder.AddSystem(std::make_unique<Foo<T>>());
+  /// DiagramBuilder<T> builder;
+  /// auto foo = builder.AddSystem(std::make_unique<Foo<T>>());
   /// @endcode
   ///
   /// @tparam S The type of system to add.
