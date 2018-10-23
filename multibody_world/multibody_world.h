@@ -27,16 +27,20 @@ If we want IK to work with any MBP + SG, then we have to either transfer
 ownership, or also pass in the diagram... in which case, we may have multiple
 MBPs...
 
-If we have that, we can instead provide 'model' Context values, delegate
-`ResolveContext` to the systems framework, such that we fix portions of MBPs.
-But meh.
+If we have that, we can instead provide:
+* A 'model' Context to clone
+* Some way to extract the relevant bits, i.e. `ResolveContext`
+Such that we fix portions of MBPs... but meh.
 
 Comes down to:
   Is there any use in having `diagram` be open-ended?
-    If not, we should probably just do MBW?
+  - If not, we should probably just do MBW?
       This may lead to the APIs becoming even more coupled, and we may end up
       merging the two...
-    If so, then ... ???
+      Also, most APIs wanting the two will end up using whatever tuple is the
+      most expressive... So it would end up being MBW...
+
+  - If so, then ... ???
 
 
 
