@@ -51,6 +51,49 @@ Comes down to:
 
 Typeup:
 
+My attempt at summarizing constraints and potential solutions:
+
+AFAIK, the constraints for using MBP+SG boil down to:
+* Having the carefully crafted three-tuple (MBP, SG, Diagram), where Diagram
+  owns MBP+SG and has them artfully + properly connected.
+* To allocate a context, a Diagram is *always* necessary, b/c doing
+  `plant.get_geometry_input_port().Eval(...)` requires a neighboring SG context.
+  * This comes from the fact that our (MBP, SG) interface is only usable via
+  the Systems framework, and a Diagram must own its constituent systems.
+  * We could remove the need for Diagram if we have a model `Context`, and
+  enable Systems to extract their relevant bits (it'd be hacky, though).
+
+If we go down that route:
+* My estimate is that people will naturally gravitate to MBW, and all APIs
+  will ultimately consume MBW rather than super special 3-tuple, because why
+  should they, esp. if:
+    * They don't need (AnySystem[n], ..., SG) interface
+    * If rigid collisions via simulation only work with (MBP x 1, SG)...
+* We will either have to (a) overload everything between super tuple and MBW,
+  or (b) just use MBW.
+    * If we do (b), my fear is we *may* run into the same issue as MBP vs. MBT:
+    if users really only have one interface they care about
+
+Potential options for MBW:
+  * owning super tuple, like Evan's current MBW implementation:
+    * We either have to forward all the ports, b/c the Systems framework cannot
+      make a non-encapsulated diagram / aliased ports. (API coupling makes me
+      sad...)
+    * Constrains to (MBP x 1, SG) API.
+  * optionally owning super tuple:
+    * Permits adding other systems in; *possibly* stays open to
+      (AnySystem[n], ..., SG)
+    * Have to ensure we give some methods to craft the bits (call
+      `MBP::RegisterAsSceneGraphSource`, `DB::Connect()`, `DB::Build()`, etc. at
+      the correct time
+    * Yucky semantics when handling owning vs. non-owning case.
+  * a non-owning super tuple:
+    * Easily preserves existing (MBP x N, SG) API.
+    * Annoying extra item in the tuple when you want to construct and/or
+      transfer ownership.
+    * Simple-ish.
+
+
 Looking more into `Context<>` bits:
 * To get the relevant `plant` context, you always need to know about the diagram.
 * For geometric queries, you can have `plant` evaluate on its sub-context, but that seems to implicitly pull from the `scene_graph` context.
