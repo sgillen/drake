@@ -178,7 +178,7 @@ def install(src, dst):
             pass
 
 
-def guess_is_python_extension(dst)
+def guess_is_python_extension(dst):
     # Guess by checking the relative install destination to see if it's getting
     # installed to Python libraries.
     return dst.startswith("lib/python")
