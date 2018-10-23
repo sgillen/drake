@@ -40,6 +40,11 @@ Comes down to:
       Also, most APIs wanting the two will end up using whatever tuple is the
       most expressive... So it would end up being MBW...
 
+      The question then is, how cheap is it construct this tuple?
+        If they own it, super expensive... But they *have* to own, 'cause
+        Systems.
+        If they *didn't* have to own it, then all of this would be moot...
+
   - If so, then ... ???
 
 
