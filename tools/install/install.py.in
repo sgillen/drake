@@ -148,9 +148,12 @@ def install(src, dst):
         is_py_fix_up = False
         if basename in files_to_fix_up:
             # Check if it's a Python library; this is relevant for MacOS only.
+            print("CHECK: {}".format(dst))
             if sys.platform == "darwin" and guess_is_python_extension(dst):
+                print(" - YES")
                 is_py_fix_up = True
             else:
+                print(" - NO")
                 sys.stderr.write(
                     "Multiple installation rules found for {}."
                     .format(basename))
@@ -175,7 +178,7 @@ def install(src, dst):
             pass
 
 
-def guess_is_python_extension(dst):
+def guess_is_python_extension(dst)
     # Guess by checking the relative install destination to see if it's getting
     # installed to Python libraries.
     return dst.startswith("lib/python")
