@@ -7,142 +7,56 @@
 #pragma once
 
 #include "drake/geometry/scene_graph.h"
-#include "drake/lcm/drake_lcm.h"
-#include "drake/lcmt_viewer_draw.hpp"
-#include "drake/lcmt_viewer_geometry_data.hpp"
-#include "drake/math/rotation_matrix.h"
 #include "drake/multibody/multibody_tree/multibody_plant/multibody_plant.h"
 #include "drake/systems/framework/diagram_builder.h"
-#include "drake/systems/lcm/lcm_publisher_system.h"
-#include "drake/systems/lcm/serializer.h"
-#include "drake/systems/rendering/pose_bundle_to_draw_message.h"
 
 namespace drake {
 
-/// @cond
-// Helper macro to throw an exception within methods that should not be called
-// pre-finalize.
-#define DRAKE_MBW_THROW_IF_NOT_FINALIZED() ThrowIfNotFinalized(__func__)
-/// @endcond
+/**
+ISSUE:
 
-/** Extends a Diagram in order to wrap and connect a MultibodyPlant and a
- SceneGraph, thereby allowing users to easily pose geometric queries for
- arbitrary multibody configurations. All ports from SceneGraph and
- MultibodyPlant are exported for convenience. Functionality for connecting
- to DrakeVisualizer is also provided.
+Would like to maintain separate APIs for MBP+SG, to preserve separate APIs, as
+well as
 
- Like MultibodyPlant, MultibodyWorld must be constructed in two
- phases: construction and finalization. This two-phase construction is necessary
- so that the MultibodyPlant can be initialized in the requisite manner.
- Connection to DrakeVisualizer requires yet another step. A sketch of code for
- the typical process follows:
- @code
- systems::DiagramBuilder<double> builder;
+  MBP x N --> SG x 1 ???
 
- auto& mbw = *builder.AddSystem<MultibodyWorld<double>>();
- auto& plant = mbw.mutable_multibody_plant();
+However, to do meaningful queries, we need (MBP, SG, Diagram), so that we can
+allocate contexts and extract what we want.
 
- // Make and add the cart_pole model.
- AddModelFromSdfFile(filename, &plant, &mbw.mutable_scene_graph());
+If we want IK to work with any MBP + SG, then we have to either transfer
+ownership, or also pass in the diagram... in which case, we may have multiple
+MBPs...
 
- // Add gravity to the model.
- plant.AddForceElement<UniformGravityFieldElement>(
-     -9.81 * Vector3<double>::UnitZ());
+If we have that, we can instead provide 'model' Context values, delegate
+`ResolveContext` to the systems framework, such that we fix portions of MBPs.
+But meh.
 
- // Now the model is complete.
- mbw.Finalize();
-
- // We can now connect to DrakeVisualizer.
- mbw.ConnectDrakeVisualizer(&builder);
- @endcode
- */
-template <class T>
-class MultibodyWorld {
- public:
-  DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(MultibodyWorld)
-
-  explicit MultibodyWorld(
-      
-      const MultibodyPlant* plant, const SceneGraph* graph);
+Comes down to:
+  Is there any use in having `diagram` be open-ended?
+    If not, we should probably just do MBW?
+      This may lead to the APIs becoming even more coupled, and we may end up
+      merging the two...
+    If so, then ... ???
 
 
 
-  /// Gets a constant reference to the MultibodyPlant. This function can be
-  /// called pre-Finalize.
-  const multibody::multibody_plant::MultibodyPlant<T>& plant() const {
-    return *plant_;
-  }
+Typeup:
 
-  /// Gets a mutable reference to the MultibodyPlant. This function can be
-  /// called pre-Finalize.
-  multibody::multibody_plant::MultibodyPlant<T>& mutable_plant() {
-    return *plant_;
-  }
+Looking more into `Context<>` bits:
+* To get the relevant `plant` context, you always need to know about the diagram.
+* For geometric queries, you can have `plant` evaluate on its sub-context, but that seems to implicitly pull from the `scene_graph` context.
+* If you ever want to duplicate contexts (for multithreading), you can simply `Clone()` the local context, but 
+*/
 
-  /// Gets a constant reference to the SceneGraph. This function can be
-  /// called pre-Finalize.
-  const geometry::SceneGraph<T>& scene_graph() const { return *scene_graph_; }
-
-  /// Gets a mutable reference to the SceneGraph. This function can be
-  /// called pre-Finalize.
-  geometry::SceneGraph<T>& mutable_scene_graph() { return *scene_graph_; }
-
-  /// Users *must* call Finalize() after making any additions to the
-  /// MultibodyPlant and before using this class in the Systems framework.
-  /// This should be called exactly once.
-  ///
-  /// @see multibody::multibody_plant::MultibodyPlant<T>::Finalize()
-  void Finalize();
-
-  /// Determines whether this system has been finalized (via a call to
-  /// Finalize()).
-  bool is_finalized() const {
-    return plant_->is_finalized();
-  }
-
- private:
-  // The builder that builds this Diagram.
-  std::unique_ptr<systems::DiagramBuilder<T>> builder_;
-
-  // The pointer to the MultibodyPlant created by `builder_`
-  multibody::multibody_plant::MultibodyPlant<T>* plant_{nullptr};
-
-  // The pointer to the SceneGraph created by `builder_`.
-  geometry::SceneGraph<T>* scene_graph_{nullptr};
-};
-
-template <class T>
-MultibodyWorld<T>::MultibodyWorld(double time_step) {
-  builder_ = std::make_unique<systems::DiagramBuilder<T>>();
-
-  scene_graph_ = builder_->template AddSystem<geometry::SceneGraph<T>>();
-  scene_graph_->set_name("scene_graph");
-
-  // Create the necessary connections.
-  
-
-  plant_ =
-      builder_->template AddSystem<
-          multibody::multibody_plant::MultibodyPlant<T>>(time_step);
-}
-
-template <class T>
-void MultibodyWorld<T>::Finalize() {
-  // Verify that the system is not already finalized.
-  if (is_finalized())
-    throw std::logic_error("MultibodyWorld::Finalize() has already"
-                               " been called");
-
-  // MultibodyPlant must be finalized first.
-  plant_->Finalize(scene_graph_);
-
-  // Indicate that finalization is complete.
-  finalized_ = true;
-}
-
-void Connect(
-    MultibodyPlant<T>* plant, SceneGraph<T>* scene_graph,
+template <typename T>
+void AddPlantForSceneGraph(
+    std::unique_ptr<MultibodyPlant<T>> owned_plant,
+    SceneGraph<T>* scene_graph,
     DiagramBuilder<T>* builder) {
+  auto* plant = builder.AddSystem(std::move(owned_plant));
+  if (!plant->get_source_id()) {
+    plant->RegisterAsSourceForSceneGraph(scene_graph);
+  }
   builder->Connect(
       plant->get_geometry_poses_output_port(),
       scene_graph->get_source_pose_port(plant->get_source_id().value()));
@@ -150,5 +64,81 @@ void Connect(
       scene_graph->get_query_output_port(),
       plant->get_geometry_query_input_port());
 }
+
+/**
+ Wraps a MultibodyPlant and SceneGraph for ease of use outside of the Systems
+ framework.
+ @code
+ systems::DiagramBuilder<double> builder;
+
+ MultibodyWorld<double> mbw();
+ auto& plant = mbw.mutable_multibody_plant();
+
+ // Make and add the cart_pole model.
+ AddModelFromSdfFile(filename, &plant, &mbw.mutable_scene_graph());
+
+ // Now the model is complete.
+ mbw.FinalizeAndBuild();
+ @endcode
+ */
+template <class T>
+class MultibodyWorld {
+ public:
+  DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(MultibodyWorld)
+
+  explicit MultibodyWorld(double period = 0.0)
+      : owned_plant_(new MultibodyPlant<T>(period)),
+        plant_(owned_plant_.get()),
+        owned_scene_graph_(new geometry::SceneGraph<T>>()),
+        scene_graph_(owned_scene_graph_.get()) {
+    plant_->RegisterAsSourceForSceneGraph(scene_graph_);
+  }
+
+  void FinalizeAndBuild() {
+    plant_->Finalize(scene_graph_);
+    DiagramBuilder<T> builder;
+    builder.AddSystem(std::move(owned_scene_graph_));
+    AddPlantForSceneGraph(std::move(owned_plant_), scene_graph_, &builder);
+    diagram_ = builder.Build();
+  }
+
+  std::pair<unique_ptr<Context<T>>, Context<T>*> CreateDefaultContext() const {
+    DRAKE_DEMAND(diagram_);
+    return diagram_->CreateDefaultContext();
+  }
+
+  // :( YUCK
+  Context<T>& GetMutablePlantContext(Context<T>* diagram_context) {
+    DRAKE_DEMAND(diagram_);
+    return diagram_->GetMutableSubsystemContext(*plant_, diagram_context);
+  }
+
+  // :( YUCK
+  Context<T>& GetMutableSceneGraphContext(Context<T>* diagram_context) {
+    DRAKE_DEMAND(diagram_);
+    return diagram_->GetMutableSubsystemContext(*scene_graph_, diagram_context);
+  }
+
+  const MultibodyPlant<T>& plant() const {
+    return *plant_;
+  }
+
+  MultibodyPlant<T>& mutable_plant() {
+    DRAKE_DEMAND(!diagram_);
+    return *plant_;
+  }
+
+  const geometry::SceneGraph<T>& scene_graph() const { return *scene_graph_; }
+
+  geometry::SceneGraph<T>& mutable_scene_graph() {
+    DRAKE_DEMAND(!diagram_);
+    return *scene_graph_;
+  }
+
+ private:
+  MultibodyPlant<T>* plant_{nullptr};
+  geometry::SceneGraph<T>* scene_graph_{nullptr};
+  std::unique_ptr<Diagram<T>> diagram_;
+};
 
 }  // namespace drake
