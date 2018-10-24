@@ -7,7 +7,7 @@ from director import objectmodel as om
 from director import visualization as vis
 import robotlocomotion as lcmrobotlocomotion
 
-from drake.visualization import scoped_singleton_func
+from drake.tools.workspace.drake_visualizer.plugin import scoped_singleton_func
 
 
 class FrameChannel(object):

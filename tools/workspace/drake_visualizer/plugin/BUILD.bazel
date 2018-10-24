@@ -3,17 +3,18 @@ load("//tools/lint:lint.bzl", "add_lint_tests")
 py_library(
     name = "module_py",
     srcs = ["__init__.py"],
+    deps = ["//tools/workspace/drake_visualizer:module_py"],
     visibility = ["//visibility:public"],
 )
 
 py_library(
-    name = "director_scripts_py",
+    name = "plugin",
     srcs = [
-        "director_contact.py",
-        "director_frame.py",
-        "director_image.py",
-        "director_scripts.py",
-        "director_time.py",
+        "contact.py",
+        "frame.py",
+        "image.py",
+        "use_builtin_scripts.py",
+        "time.py",
     ],
     visibility = ["//visibility:public"],
     deps = [

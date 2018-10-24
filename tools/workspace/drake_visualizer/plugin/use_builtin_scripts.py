@@ -6,11 +6,11 @@ from collections import OrderedDict
 import os
 import sys
 
-from drake.visualization import (
-    director_contact,
-    director_frame,
-    director_image,
-    director_time,
+from drake.tools.workspace.drake_visualizer.plugin import (
+    contact,
+    frame,
+    image,
+    time,
     scoped_singleton_func,
 )
 
@@ -18,10 +18,10 @@ from drake.visualization import (
 @scoped_singleton_func
 def init_visualizer():
     available = OrderedDict((
-        ("contact", director_contact.init_visualizer),
-        ("frame", director_frame.init_visualizer),
-        ("time", director_time.init_visualizer),
-        ("image", director_image.init_visualizer),
+        ("contact", contact.init_visualizer),
+        ("frame", frame.init_visualizer),
+        ("time", time.init_visualizer),
+        ("image", image.init_visualizer),
     ))
     print("")
     print("Drake Scripts:")

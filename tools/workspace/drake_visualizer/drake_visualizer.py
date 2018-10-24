@@ -76,9 +76,10 @@ elif sys.platform == "darwin":
     # Ensure that we handle DYLD_LIBRARY_PATH for @lcm.
     set_path("DYLD_LIBRARY_PATH", "external/lcm")
 
-# Execute binary.
+# Build arguments, handling builtin scripts, and execute.
+use_builtin_scripts = resolve_path(
+    "tools/workspace/drake_visualizer/plugin/use_builtin_scripts.py")
 bin_path = resolve_path("external/drake_visualizer/bin/drake-visualizer")
 args = [bin_path] + extract_use_builtin_scripts(sys.argv[1:])
-args += ["--script", resolve_path("visualization/director_scripts.py")]
-
+args += ["--script", use_builtin_scripts]
 os.execv(bin_path, args)

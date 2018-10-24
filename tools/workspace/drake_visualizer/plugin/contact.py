@@ -10,7 +10,7 @@ from six import iteritems
 
 import drake as lcmdrakemsg
 
-from drake.visualization import scoped_singleton_func
+from drake.tools.workspace.drake_visualizer.plugin import scoped_singleton_func
 
 
 class ContactVisualizer(object):
