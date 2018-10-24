@@ -107,6 +107,10 @@ def copy_or_link(src, dst):
         shutil.copy2(src,dst)
 
 
+def eprint(f):
+    sys.stderr.write(f + "\n")
+
+
 def install(src, dst):
     global subdirs
 
