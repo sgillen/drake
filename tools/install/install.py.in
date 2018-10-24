@@ -24,14 +24,7 @@ potential_binaries = []
 list_only = False
 # On linux, dynamic libraries may have their version number
 # as a suffix (e.g. my_lib.so.x.y.z).
-dylib_match = r"(.*\.so)(\.\d+)*$|(.*\.dylib)$"
-# Python C/C++ extensions are broken on Mac if library_prefix is r'lib':
-# On MacOS, both shared libraries and Python C/C++ extensions need to have
-# their image name fixed up.
-if sys.platform == "darwin":
-    library_prefix=r''
-else:
-    library_prefix=r'lib'
+dylib_match = r"(?:lib)?(.*\.so)(\.\d+)*$|(.*\.dylib)$"
 
 def is_relative_link(filepath):
     """Find if a file is a relative link.
@@ -138,33 +131,24 @@ def install(src, dst):
         installed = True
     else:
         print("-- Up-to-date: {}".format(dst_full))
-    # NOTE: Only the libraries whose filenames start with `lib` are taken into
-    # account. This workaround allows to install Python C/C++ extensions for
-    # multiple Python versions without triggering the error message below.
-    # These Python C/C++ extensions can have the same name, as long as they
-    # are in different subdirectories.
-    # Caveat: We assume that no C/C++ shared libraries depend on these Python
-    # C/C++ extensions and require some RPath fix-up.
-    re_result = re.match(library_prefix + dylib_match, os.path.basename(dst))
+    # Check for libraries.
+    re_result = re.match(dylib_match, os.path.basename(dst))
     if re_result is not None:  # It is a library
-        basename = os.path.basename(re_result.group(0))
-        # Check that dependency is only referenced once
-        # in the library dictionary. If it is referenced multiple times,
-        # we do not know which one to use, and fail fast.
-        is_binary = False
-        if basename in libraries_to_fix_up:
-            # Check if it's a Python library; this is relevant for MacOS only.
-            if sys.platform == "darwin" and dst.startswith("lib/python"):
-                is_binary = True
-            else:
+        basename = os.path.basename(re_result.group(1))
+        eprint("CATCH: {}, {}".format(basename, re_result.groups()))
+        # Put things we can guess as Python extensions in the binaries to fix.
+        if dst.startswith("lib/python") and not basename.startswith("lib"):
+            binaries_to_fix_up.append((basename, (dst_full, installed)))
+        else:
+            # Check that dependency is only referenced once
+            # in the library dictionary. If it is referenced multiple times,
+            # we do not know which one to use, and fail fast.
+            if basename in libraries_to_fix_up:
                 sys.stderr.write(
                     "Multiple installation rules found for {}."
                     .format(basename))
                 sys.exit(1)
-        if not is_binary:
             libraries_to_fix_up[basename] = (dst_full, installed)
-        else:
-            binaries_to_fix_up.append((basename, (dst_full, installed)))
     else:  # It is not a library, it may be an executable.
         # Do not check files with the following extensions (over 100 files
         # with each extension, and we are certain these are not executables).
