@@ -3,8 +3,8 @@ load("//tools/lint:lint.bzl", "add_lint_tests")
 py_library(
     name = "module_py",
     srcs = ["__init__.py"],
-    deps = ["//tools/workspace/drake_visualizer:module_py"],
     visibility = ["//visibility:public"],
+    deps = ["//tools/workspace/drake_visualizer:module_py"],
 )
 
 py_library(
@@ -13,8 +13,8 @@ py_library(
         "contact.py",
         "frame.py",
         "image.py",
-        "use_builtin_scripts.py",
         "time.py",
+        "use_builtin_scripts.py",
     ],
     visibility = ["//visibility:public"],
     deps = [

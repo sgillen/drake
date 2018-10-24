@@ -8,8 +8,8 @@ package(default_visibility = ["//visibility:public"])
 py_library(
     name = "module_py",
     srcs = ["__init__.py"],
-    deps = ["//:module_py"],
     visibility = [":__subpackages__"],
+    deps = ["//:module_py"],
 )
 
 # TODO(eric.cousineau): Consider using a `./run`-like script for this, rather
