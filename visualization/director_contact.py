@@ -10,11 +10,10 @@ from six import iteritems
 
 import drake as lcmdrakemsg
 
-from drake.visualization import singleton_func
+from drake.visualization import scoped_singleton_func
 
 
 class ContactVisualizer(object):
-
     def __init__(self):
         self._folder_name = 'Contact Results'
         self._name = "Contact Visualizer"
@@ -100,19 +99,18 @@ class ContactVisualizer(object):
                 d.getPolyData(), str(key), parent=folder, color=[0, 1, 0])
 
 
-@singleton_func
+@scoped_singleton_func
 def init_visualizer():
     # Create a visualizer instance.
     my_visualizer = ContactVisualizer()
-
     # Adds to the "Tools" menu.
     applogic.MenuActionToggleHelper(
         'Tools', my_visualizer._name,
         my_visualizer.is_enabled, my_visualizer.set_enabled)
-    _instance = my_visualizer
     return my_visualizer
 
 
+# Activate the plugin if this script is run directly; store the results to keep
+# the plugin objects in scope.
 if __name__ == "__main__":
-    # Creates the visualizer when this script is executed.
     contact_viz = init_visualizer()

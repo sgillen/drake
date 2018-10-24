@@ -30,14 +30,13 @@ def prepend_path(key, relpath):
     os.environ[key] = resolve_path(relpath) + ":" + os.environ.get(key, '')
 
 
-def extract_drake_scripts(argv):
+def extract_use_builtin_scripts(argv):
     # drake-visualizer greedily consumes arguments, so we must catch them
     # first and pass them as an environment variable.
     parser = argparse.ArgumentParser(add_help=False)
-    parser.add_argument("--drake_scripts", type=str, default=None)
+    parser.add_argument("--use_builtin_scripts", type=str, default="all")
     args, argv = parser.parse_known_args(argv)
-    if args.drake_scripts is not None:
-        os.environ["DRAKE_SCRIPTS"] = args.drake_scripts
+    os.environ["_DRAKE_VISUALIZER_BUILTIN_SCRIPTS"] = args.use_builtin_scripts
     return argv
 
 
@@ -79,7 +78,7 @@ elif sys.platform == "darwin":
 
 # Execute binary.
 bin_path = resolve_path("external/drake_visualizer/bin/drake-visualizer")
-args = [bin_path] + extract_drake_scripts(sys.argv[1:])
+args = [bin_path] + extract_use_builtin_scripts(sys.argv[1:])
 args += ["--script", resolve_path("visualization/director_scripts.py")]
 
 os.execv(bin_path, args)

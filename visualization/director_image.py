@@ -36,7 +36,7 @@ from PythonQt import QtGui
 
 import robotlocomotion as rl
 
-from drake.visualization import singleton_func
+from drake.visualization import scoped_singleton_func
 
 _is_vtk_5 = vtk.vtkVersion().GetVTKMajorVersion() == 5
 
@@ -509,58 +509,19 @@ class TestImageHandler(ImageHandler):
         return True
 
 
-@singleton_func
-def init_visualizer(argv, requires_start=False):
-    global _max_depth
-    global _verbose
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        '--test_image', action='store_true',
-        help="Use a test image handler.")
-    parser.add_argument(
-        '--channel', type=str, default=DEFAULT_CHANNEL,
-        help="Channel for LCM.")
-    parser.add_argument(
-        '--frame_names', type=str, nargs='+', default=None,
-        help="By default, will populate with first set of frames." +
-             "Otherwise, can be manually specified")
-    parser.add_argument(
-        '--max_depth', type=float, default=_max_depth,
-        help="Set the maximum depth for depth images." +
-             "Use -1 for autoscaling.")
-    parser.add_argument('--verbose', action='store_true')
-
-    requires_start = False
-    if not argv:
-        argv = sys.argv
-    args = parser.parse_args(argv[1:])
-
-    # Uncomment this line to test the viewer if `directorPython` is not found.
-    # args.test_image = True
-
-    _max_depth = args.max_depth
-    _verbose = args.verbose
-
-    if args.test_image:
+@scoped_singleton_func
+def init_visualizer(debug=False):
+    if not debug:
+        return DrakeLcmImageViewer(DEFAULT_CHANNEL)
+    else:
         print("Using test image viewer")
-        image_viewer = ImageArrayWidget([
+        return ImageArrayWidget([
             TestImageHandler(do_color=True),
             TestImageHandler(do_color=False),
             ])
-    else:
-        image_viewer = DrakeLcmImageViewer(args.channel, args.frame_names)
-
-    if requires_start:
-        app = consoleapp.ConsoleApp()
-        app.start()
-        return None
-    else:
-        return image_viewer
 
 
+# Activate the plugin if this script is run directly; store the results to keep
+# the plugin objects in scope.
 if __name__ == "__main__":
-    if 'app' in globals:
-        image_viewer = init_visualizer(_argv, requires_start=False)
-    else:
-        init_visualizer(_argv, requires_start=True)
+    image_viz = init_visualizer()

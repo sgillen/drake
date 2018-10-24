@@ -7,7 +7,7 @@ from director import objectmodel as om
 from director import visualization as vis
 import robotlocomotion as lcmrobotlocomotion
 
-from drake.visualization import singleton_func
+from drake.visualization import scoped_singleton_func
 
 
 class FrameChannel(object):
@@ -92,7 +92,7 @@ class FramesVisualizer(object):
         frame_channel.handle_message(msg)
 
 
-@singleton_func
+@scoped_singleton_func
 def init_visualizer():
     frame_viz = FramesVisualizer()
 
@@ -103,6 +103,7 @@ def init_visualizer():
     return frame_viz
 
 
-# Creates the visualizer when this script is executed.
+# Activate the plugin if this script is run directly; store the results to keep
+# the plugin objects in scope.
 if __name__ == "__main__":
     frame_viz = init_visualizer()
