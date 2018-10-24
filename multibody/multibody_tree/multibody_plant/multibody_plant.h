@@ -44,6 +44,7 @@ namespace multibody_plant {
 /// concepts/notation.
 ///
 /// %MultibodyPlant provides a user-facing API to:
+///
 /// - add bodies, joints, force elements, and constraints,
 /// - register geometries to a provided SceneGraph instance,
 /// - create and manipulate its Context,
@@ -123,8 +124,10 @@ namespace multibody_plant {
 ///
 /// %MultibodyPlant users can register geometry with a SceneGraph for
 /// essentially two purposes; a) visualization and, b) contact modeling.
-// TODO(SeanCurtis-TRI): update this comment as the number of SceneGraph
-// roles changes.
+/// @cond
+/// // TODO(SeanCurtis-TRI): update this comment as the number of SceneGraph
+/// // roles changes.
+/// @endcond
 /// Before any geometry registration takes place, a user **must** first make a
 /// call to RegisterAsSourceForSceneGraph() in order to register the
 /// %MultibodyPlant as a client of a SceneGraph instance, point at which the
@@ -148,10 +151,11 @@ namespace multibody_plant {
 /// 3. Call to Finalize(), user is done specifying the model.
 /// 4. Connect SceneGraph::get_query_output_port() to
 ///    get_geometry_query_input_port().
+///
 /// Refer to the documentation provided in each of the methods above for further
 /// details.
 ///
-/// @section Finalize() stage
+/// @section finalize_stage Finalize() stage
 ///
 /// Once the user is done adding modeling elements and registering geometry, a
 /// call to Finalize() must be performed. This call will:
@@ -799,6 +803,53 @@ class MultibodyPlant : public MultibodyTreeSystem<T> {
   }
   /// @}
 
+  /// @name Accessing the state
+
+  /// Evaluates the pose `X_WB` of a body B in the world frame W.
+  /// @param[in] context
+  ///   The context storing the state of the multibody system.
+  /// @param[in] body_B
+  ///   The body B for which the pose is requested.
+  /// @retval X_WB
+  ///   The pose of body frame B in the world frame W.
+  /// @throws std::logic_error if called pre-finalize.
+  const Isometry3<T>& EvalBodyPoseInWorld(
+      const systems::Context<T>& context,
+      const Body<T>& body_B) const;
+
+  /// Sets `context` to store the pose `X_WB` of a given `body` B in the world
+  /// frame W.
+  /// @param[in] context
+  ///   The context to store the pose `X_WB` of `body_B`.
+  /// @param[in] body_B
+  ///   The body B corresponding to the pose `X_WB` to be stored in `context`.
+  /// @retval X_WB
+  ///   The pose of body frame B in the world frame W.
+  /// @note In general setting the pose and/or velocity of a body in the model
+  /// would involve a complex inverse kinematics problem. This method allows us
+  /// to simplify this process when we know the body is free in space.
+  /// @throws std::exception if `body` is not a free body in the model.
+  /// @throws std::logic_error if called pre-finalize.
+  void SetFreeBodyPoseInWorldFrame(
+      systems::Context<T>* context,
+      const Body<T>& body, const Isometry3<T>& X_WB) const;
+
+  /// Updates `context` to store the pose `X_FB` of a given `body` B in a frame
+  /// F.
+  /// Frame F must be anchored, meaning that it is either directly welded to the
+  /// world frame W or, more generally, that there is a kinematic path between
+  /// frame F and the world frame W that only includes weld joints.
+  /// @throws std::logic_error if called pre-finalize.
+  /// @throws std::logic_error if frame F is not anchored to the world.
+  void SetFreeBodyPoseInAnchoredFrame(
+      systems::Context<T>* context,
+      const Frame<T>& frame_F, const Body<T>& body,
+      const Isometry3<T>& X_FB) const;
+
+  // TODO(amcastro-tri): Add state accessors for free body spatial velocities.
+
+  /// @}
+
   /// Registers `this` plant to serve as a source for an instance of
   /// SceneGraph. This registration allows %MultibodyPlant to
   /// register geometry with `scene_graph` for visualization and/or
@@ -829,7 +880,7 @@ class MultibodyPlant : public MultibodyTreeSystem<T> {
   ///   The geometry::Shape used for visualization. E.g.: geometry::Sphere,
   ///   geometry::Cylinder, etc.
   /// @param[in] name
-  ///   The name for the geometry. It must satsify the requirements defined in
+  ///   The name for the geometry. It must satisfy the requirements defined in
   ///   drake::geometry::GeometryInstance.
   /// @param[in] material
   ///   The visual material to assign to the geometry.
@@ -932,17 +983,49 @@ class MultibodyPlant : public MultibodyTreeSystem<T> {
   /// scene_graph.ExcludeCollisionsWithin(set);
   /// ```
   ///
-  /// Note: There is a *very* specific order of operations.
-  ///   1. Bodies and geometries must be added to the %MultibodyPlant.
-  ///   2. The %MultibodyPlant must be finalized (via Finalize()).
-  ///   3. Create GeometrySet instances from bodies (via this method).
-  ///   4. Invoke SceneGraph::ExcludeCollisions*() to filter collisions.
-  ///   5. Allocate context.
+  /// @note There is a *very* specific order of operations:
+  ///
+  /// 1. Bodies and geometries must be added to the %MultibodyPlant.
+  /// 2. The %MultibodyPlant must be finalized (via Finalize()).
+  /// 3. Create GeometrySet instances from bodies (via this method).
+  /// 4. Invoke SceneGraph::ExcludeCollisions*() to filter collisions.
+  /// 5. Allocate context.
+  ///
   /// Changing the order will cause exceptions to be thrown.
   ///
   /// @throws std::exception if called pre-finalize.
   geometry::GeometrySet CollectRegisteredGeometries(
       const std::vector<const Body<T>*>& bodies) const;
+
+  /// Returns all bodies that are transitively welded, or rigidly affixed, to
+  /// `body`, per these two definitions:
+  ///
+  /// 1. A body is always considered welded to itself.
+  /// 2. Two unique bodies are considered welded together exclusively by the
+  /// presence of a weld joint, not by other constructs that prevent mobility
+  /// (e.g. constraints).
+  ///
+  /// Meant to be used with `CollectRegisteredGeometries`.
+  ///
+  /// The following example demonstrates filtering collisions between all
+  /// bodies rigidly affixed to a door (which could be moving) and all bodies
+  /// rigidly affixed to the world:
+  /// @code
+  /// GeometrySet g_world = plant.CollectRegisteredGeometries(
+  ///     plant.GetBodiesWeldedTo(plant.world_body()));
+  /// GeometrySet g_door = plant.CollectRegisteredGeometries(
+  ///     plant.GetBodiesWeldedTo(plant.GetBodyByName("door")));
+  /// scene_graph.ExcludeCollisionsBetweeen(g_world, g_door);
+  /// @endcode
+  /// @note Usages akin to this example may introduce redundant collision
+  /// filtering; this will not have a functional impact, but may have a minor
+  /// performance impact.
+  ///
+  /// @returns all bodies rigidly fixed to `body`. This does not return the
+  /// bodies in any prescribed order.
+  /// @throws std::exception if called pre-finalize.
+  /// @throws std::exception if `body` is not part of this plant.
+  std::vector<const Body<T>*> GetBodiesWeldedTo(const Body<T>& body) const;
 
   /// Returns the friction coefficients provided during geometry registration
   /// for the given geometry `id`. We call these the "default" coefficients but
@@ -983,14 +1066,12 @@ class MultibodyPlant : public MultibodyTreeSystem<T> {
   /// connection with a SceneGraph.
   /// @throws std::exception if this system was not registered with a
   /// SceneGraph.
-  /// @throws std::exception if called pre-finalize. See Finalize().
   const systems::InputPort<T>& get_geometry_query_input_port() const;
 
   /// Returns the output port of frames' poses to communicate with a
   /// SceneGraph.
   /// @throws std::exception if this system was not registered with a
   /// SceneGraph.
-  /// @throws std::exception if called pre-finalize. See Finalize().
   const systems::OutputPort<T>& get_geometry_poses_output_port() const;
   /// @}
 
@@ -1465,23 +1546,9 @@ class MultibodyPlant : public MultibodyTreeSystem<T> {
   // 2. RegisterAsSourceForSceneGraph() was called on `this` plant.
   // 3. `scene_graph` points to the same SceneGraph instance previously
   //    passed to RegisterAsSourceForSceneGraph().
-  // 4. The body is *not* the world body.
   geometry::GeometryId RegisterGeometry(
       const Body<T>& body, const Isometry3<double>& X_BG,
       const geometry::Shape& shape,
-      const std::string& name,
-      const optional<geometry::VisualMaterial>& material,
-      geometry::SceneGraph<T>* scene_graph);
-
-  // Helper method to register anchored geometry to the world, either visual or
-  // collision. This associates a GeometryId with the world body.
-  // This assumes:
-  // 1. Finalize() was not called on `this` plant.
-  // 2. RegisterAsSourceForSceneGraph() was called on `this` plant.
-  // 3. `scene_graph` points to the same SceneGraph instance previously
-  //    passed to RegisterAsSourceForSceneGraph().
-  geometry::GeometryId RegisterAnchoredGeometry(
-      const Isometry3<double>& X_WG, const geometry::Shape& shape,
       const std::string& name,
       const optional<geometry::VisualMaterial>& material,
       geometry::SceneGraph<T>* scene_graph);
