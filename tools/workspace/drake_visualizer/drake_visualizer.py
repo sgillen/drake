@@ -41,7 +41,7 @@ def extract_drake_scripts(argv):
     return argv
 
 
-assert __name__ == "__main__"
+assert __name__ == "__main__", __name__
 runfiles_dir = os.environ.get("DRAKE_BAZEL_RUNFILES")
 assert runfiles_dir, (
     "This must be called by a script generated using the " +
