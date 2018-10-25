@@ -270,7 +270,8 @@ class AcrobotPlantTests : public ::testing::Test {
     const std::string full_name = FindResourceOrThrow(
         "drake/multibody/benchmarks/acrobot/acrobot.sdf");
     plant_ = builder.AddSystem<MultibodyPlant>();
-    AddModelFromSdfFile(full_name, plant_, scene_graph_);
+    plant_->RegisterAsSourceForSceneGraph(scene_graph_);
+    AddModelFromSdfFile(full_name, plant_);
     // Add gravity to the model.
     plant_->AddForceElement<UniformGravityFieldElement>(
         -9.81 * Vector3<double>::UnitZ());
@@ -294,10 +295,14 @@ class AcrobotPlantTests : public ::testing::Test {
         "you must call Finalize\\(\\) first.");
 
     // Finalize() the plant.
-    plant_->Finalize(scene_graph_);
+    plant_->Finalize();
+
+    EXPECT_TRUE(plant_->HasSceneGraph());
+    EXPECT_EQ(scene_graph_, &plant_->scene_graph());
 
     // And build the Diagram:
     diagram_ = builder.Build();
+    plant_->RegisterParentDiagram(diagram_.get());
 
     link1_ = &plant_->GetBodyByName(parameters_.link1_name());
     link2_ = &plant_->GetBodyByName(parameters_.link2_name());

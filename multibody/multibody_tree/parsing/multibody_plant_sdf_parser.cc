@@ -584,6 +584,8 @@ std::vector<ModelInstanceIndex> AddModelsFromSdfFile(
 
   if (scene_graph != nullptr && !plant->geometry_source_is_registered()) {
     plant->RegisterAsSourceForSceneGraph(scene_graph);
+  } else if (scene_graph == nullptr && plant->HasSceneGraph()) {
+    scene_graph = &plant->scene_graph();
   }
 
   std::vector<ModelInstanceIndex> model_instances;

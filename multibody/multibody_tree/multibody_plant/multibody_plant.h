@@ -21,6 +21,7 @@
 #include "drake/multibody/multibody_tree/multibody_tree_system.h"
 #include "drake/multibody/multibody_tree/rigid_body.h"
 #include "drake/multibody/multibody_tree/uniform_gravity_field_element.h"
+#include "drake/systems/framework/diagram.h"
 #include "drake/systems/framework/leaf_system.h"
 #include "drake/systems/framework/scalar_conversion_traits.h"
 
@@ -868,6 +869,45 @@ class MultibodyPlant : public MultibodyTreeSystem<T> {
   /// @throws std::exception if called more than once.
   geometry::SourceId RegisterAsSourceForSceneGraph(
       geometry::SceneGraph<T>* scene_graph);
+
+  bool HasSceneGraph() const {
+    return scene_graph_ != nullptr;
+  }
+
+  bool SupportsGeometry() const {
+    return HasSceneGraph() && parent_diagram_ != nullptr;
+  }
+
+  geometry::SceneGraph<T>& scene_graph() {
+    DRAKE_DEMAND(HasSceneGraph());
+    return *scene_graph_;
+  }
+
+  const geometry::SceneGraph<T>& scene_graph() const {
+    DRAKE_DEMAND(HasSceneGraph());
+    return *scene_graph_;
+  }
+
+  void RegisterParentDiagram(const systems::Diagram<T>* parent_diagram) {
+    DRAKE_DEMAND(HasSceneGraph());
+    DRAKE_DEMAND(parent_diagram_ == nullptr);
+    parent_diagram_ = parent_diagram;
+  }
+
+  std::pair<systems::Context<T>*, std::unique_ptr<systems::Context<T>>>
+  CreateDefaultContextPair() const {
+    std::unique_ptr<systems::Context<T>> owned_context;
+    systems::Context<T>* context{};
+    if (SupportsGeometry()) {
+      owned_context = parent_diagram_->CreateDefaultContext();
+      context = &parent_diagram_->GetMutableSubsystemContext(
+          *this, owned_context.get());
+    } else {
+      owned_context = this->CreateDefaultContext();
+      context = owned_context.get();
+    }
+    return {context, std::move(owned_context)};
+  }
 
   /// Registers geometry in a SceneGraph with a given geometry::Shape to be
   /// used for visualization of a given `body`.
@@ -1828,10 +1868,11 @@ class MultibodyPlant : public MultibodyTreeSystem<T> {
   systems::OutputPortIndex geometry_pose_port_;
 
   // For geometry registration with a GS, we save a pointer to the GS instance
-  // on which this plants calls RegisterAsSourceForSceneGraph(). This is
-  // ONLY (and it MUST ONLY be used) used to verify that successive registration
-  // calls are performed on the same instance of GS.
-  const geometry::SceneGraph<T>* scene_graph_{nullptr};
+  // on which this plants calls RegisterAsSourceForSceneGraph().
+  geometry::SceneGraph<T>* scene_graph_{nullptr};
+
+  // DIRTY NASTY
+  const systems::Diagram<T>* parent_diagram_{nullptr};
 
   // Input/Output port indexes:
   // A vector containing actuation ports for each model instance indexed by

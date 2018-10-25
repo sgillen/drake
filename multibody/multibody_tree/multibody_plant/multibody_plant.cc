@@ -245,9 +245,6 @@ geometry::SourceId MultibodyPlant<T>::RegisterAsSourceForSceneGraph(
   DRAKE_THROW_UNLESS(scene_graph != nullptr);
   DRAKE_THROW_UNLESS(!geometry_source_is_registered());
   source_id_ = scene_graph->RegisterSource();
-  // Save the GS pointer so that on later geometry registrations we can verify
-  // the user is making calls on the same GS instance. Only used for that
-  // purpose, it gets nullified at Finalize().
   scene_graph_ = scene_graph;
   body_index_to_frame_id_[world_index()] = scene_graph->world_frame_id();
   DeclareSceneGraphPorts();
@@ -258,9 +255,9 @@ template <typename T>
 geometry::GeometryId MultibodyPlant<T>::RegisterVisualGeometry(
     const Body<T>& body, const Isometry3<double>& X_BG,
     const geometry::Shape& shape, const std::string& name,
-    geometry::SceneGraph<T>* scene_graph) {
+    geometry::SceneGraph<T>*) {
   return RegisterVisualGeometry(body, X_BG, shape, name,
-                                geometry::VisualMaterial(), scene_graph);
+                                geometry::VisualMaterial(), scene_graph_);
 }
 
 template <typename T>
@@ -564,7 +561,6 @@ void MultibodyPlant<T>::SetUpJointLimitsParameters() {
 template<typename T>
 void MultibodyPlant<T>::FinalizePlantOnly() {
   DeclareStateCacheAndPorts();
-  scene_graph_ = nullptr;  // must not be used after Finalize().
   if (num_collision_geometries() > 0 &&
       penalty_method_contact_parameters_.time_scale < 0)
     set_penetration_allowance();
@@ -589,14 +585,7 @@ void MultibodyPlant<T>::FinalizePlantOnly() {
 template <typename T>
 void MultibodyPlant<T>::FilterAdjacentBodies(SceneGraph<T>* scene_graph) {
   if (geometry_source_is_registered()) {
-    if (scene_graph == nullptr) {
-      throw std::logic_error(
-          "This MultibodyPlant has been registered as a SceneGraph geometry "
-              "source. Finalize() should be invoked with a pointer to the "
-              "SceneGraph instance");
-    }
-
-    if (scene_graph != scene_graph_) {
+    if (scene_graph && scene_graph != scene_graph_) {
       throw std::logic_error(
           "Finalizing on a SceneGraph instance must be performed on the SAME "
               "instance of SceneGraph used on the first call to "
@@ -617,7 +606,7 @@ void MultibodyPlant<T>::FilterAdjacentBodies(SceneGraph<T>* scene_graph) {
       optional<FrameId> parent_id = GetBodyFrameIdIfExists(parent.index());
 
       if (child_id && parent_id) {
-        scene_graph->ExcludeCollisionsBetween(
+        scene_graph_->ExcludeCollisionsBetween(
             geometry::GeometrySet(*child_id),
             geometry::GeometrySet(*parent_id));
       }
@@ -629,12 +618,7 @@ template <typename T>
 void MultibodyPlant<T>::ExcludeCollisionsWithVisualGeometry(
     geometry::SceneGraph<T>* scene_graph) {
   if (geometry_source_is_registered()) {
-    if (scene_graph == nullptr) {
-      throw std::logic_error(
-          "This MultibodyPlant has been registered as a SceneGraph geometry "
-              "source. Finalize() should be invoked with a pointer to the "
-              "SceneGraph instance");
-    }
+    DRAKE_DEMAND(!scene_graph || scene_graph == scene_graph_);
     geometry::GeometrySet visual;
     for (const auto& body_geometries : visual_geometries_) {
       visual.Add(body_geometries);
@@ -643,8 +627,8 @@ void MultibodyPlant<T>::ExcludeCollisionsWithVisualGeometry(
     for (const auto& body_geometries : collision_geometries_) {
       collision.Add(body_geometries);
     }
-    scene_graph->ExcludeCollisionsWithin(visual);
-    scene_graph->ExcludeCollisionsBetween(visual, collision);
+    scene_graph_->ExcludeCollisionsWithin(visual);
+    scene_graph_->ExcludeCollisionsBetween(visual, collision);
   }
 }
 
