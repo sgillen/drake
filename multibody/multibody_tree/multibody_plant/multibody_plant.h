@@ -877,8 +877,30 @@ class MultibodyPlant : public MultibodyTreeSystem<T> {
     RegisterAsSourceForScenenGraph(owned_scene_graph_.get());
   }
 
+  std::vector<systems::AbstractValues> AllocateAbstractState() const override {
+    // TODO(eric.cousineau): Leverage caching...
+    auto value = systems::Value<systems::Context<T>>(
+        owned_scene_graph_->CreateDefaultContext());
+    return {value};
+  }
+
   bool OwnsSceneGraph() const {
     return owned_scene_graph_ != nullptr;
+  }
+
+  void UpdateSceneGraphContext(
+      const systems::Context<T>& context,
+      systems::Context<T>* sg_context) const {
+    DRAKE_DEMAND(OwnsSceneGraph());
+    auto* value = get_geometry_poses_output_port().EvalAbstract(context);
+    sg_context.GetModelValue(
+        scene_graph_->get_source_pose_port()).SetFrom(*value);
+  }
+
+  std::unique_ptr<systems::Context<T>> CreateSceneGraphContext(
+      const systems::Context<T>& context) const {
+    
+    scene_graph_->CreateDefaultContext();
   }
 
   bool HasSceneGraph() const {
