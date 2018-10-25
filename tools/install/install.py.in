@@ -11,20 +11,27 @@ import stat
 import sys
 from subprocess import check_output, check_call
 
+# Stores subdirectories that have already been created.
 subdirs = set()
+# Stored from command-line.
 prefix = None
 # Mapping used to (a) check for unique shared library names and (b) provide a
 # mapping from library name to paths for RPath fixes (where (a) is essential).
-libraries_to_fix_up = {}
+# Structure: Map[ basename (Str) => Tuple(full_path, installed) ]
+libraries_to_fix_rpath = {}
 # These are binaries (or Python shared libraries) that require RPath fixes (and
-# thus depend on `libraries_to_fix_up`), but by definition are not depended
+# thus depend on `libraries_to_fix_rpath`), but by definition are not depended
 # upon by other components, and thus need not be unique.
-binaries_to_fix_up = []
-potential_binaries = []
+# Structure: List[ Tuple(basename, Tuple(full_path, installed) ) ]
+binaries_to_fix_rpath = []
+# Files that are not libraries, but may still require fixing.
+# Structure: List[Str]
+potential_binaries_to_fix_rpath = []
+# Stores result of `--list` argument.
 list_only = False
-# On linux, dynamic libraries may have their version number
-# as a suffix (e.g. my_lib.so.x.y.z).
-dylib_match = r"(?:lib)?(.*\.so)(\.\d+)*$|(.*\.dylib)$"
+# Used for matching against libraries and extracting useful components.
+dylib_match = re.compile(r"(.*\.so)(\.\d+)*$|(.*\.dylib)$")
+
 
 def is_relative_link(filepath):
     """Find if a file is a relative link.
@@ -47,26 +54,36 @@ def is_relative_link(filepath):
     else:
         return None
 
+
 def find_binary_executables():
     """Finds installed files that are binary executables to fix them up later.
 
-    Takes `potential_binaries` as input list, and updates
-    `binaries_to_fix_up` with executables that need to be fixed up.
+    Takes `potential_binaries_to_fix_rpath` as input list, and updates
+    `binaries_to_fix_rpath` with executables that need to be fixed up.
     """
-    if not potential_binaries:
+    if not potential_binaries_to_fix_rpath:
         return
     # Checking file type with command `file` is the safest way to find
     # executables. Files without an extension are likely to be executables, but
     # it is not always the case.
-    file_output = check_output(["file"] + potential_binaries)
+    file_output = check_output(["file"] + potential_binaries_to_fix_rpath)
     # On Linux, executables can be ELF shared objects.
-    executable_pattern = r"(.*):.*(ELF.*executable|shared object.*|Mach-O.*executable.*)"  # noqa
-    executable_match = re.compile(executable_pattern)
+    executable_match = re.compile(
+        r"(.*):.*(ELF.*executable|shared object.*|Mach-O.*executable.*)")
     for line in file_output.splitlines():
         re_result = executable_match.match(line)
         if re_result is not None:
-            binaries_to_fix_up.append(
+            binaries_to_fix_rpath.append(
                 (re_result.group(1), (re_result.group(1), 1)))
+
+
+def may_be_binary(dst_full):
+    # Try to minimize the amount of work that `find_binary_executables` must do.
+    extensions = [".h", ".py", ".obj", ".cmake", ".1", ".hpp", ".txt"]
+    for extension in extensions:
+        if dst_full.endswith(extension):
+            return False
+    return True
 
 
 def needs_install(src, dst):
@@ -100,10 +117,6 @@ def copy_or_link(src, dst):
         shutil.copy2(src,dst)
 
 
-def eprint(f):
-    sys.stderr.write(f + "\n")
-
-
 def install(src, dst):
     global subdirs
 
@@ -131,38 +144,24 @@ def install(src, dst):
         installed = True
     else:
         print("-- Up-to-date: {}".format(dst_full))
-    # Check for libraries.
-    re_result = re.match(dylib_match, os.path.basename(dst))
-    if re_result is not None:  # It is a library
-        basename = os.path.basename(re_result.group(1))
-        eprint("CATCH: {}, {}".format(basename, re_result.groups()))
-        # Put things we can guess as Python extensions in the binaries to fix.
+    basename = os.path.basename(dst)
+    if re.match(dylib_match, basename):  # It is a library.
         if dst.startswith("lib/python") and not basename.startswith("lib"):
-            binaries_to_fix_up.append((basename, (dst_full, installed)))
+            # Assume this is a Python C extension.
+            binaries_to_fix_rpath.append((basename, (dst_full, installed)))
         else:
             # Check that dependency is only referenced once
             # in the library dictionary. If it is referenced multiple times,
             # we do not know which one to use, and fail fast.
-            if basename in libraries_to_fix_up:
+            if basename in libraries_to_fix_rpath:
                 sys.stderr.write(
                     "Multiple installation rules found for {}."
                     .format(basename))
                 sys.exit(1)
-            libraries_to_fix_up[basename] = (dst_full, installed)
+            libraries_to_fix_rpath[basename] = (dst_full, installed)
     else:  # It is not a library, it may be an executable.
-        # Do not check files with the following extensions (over 100 files
-        # with each extension, and we are certain these are not executables).
-        if (installed and
-                not dst_full.endswith(".h") and
-                not dst_full.endswith(".py") and
-                not dst_full.endswith(".obj") and
-                not dst_full.endswith(".cmake") and
-                not dst_full.endswith(".1") and
-                not dst_full.endswith(".hpp") and
-                not dst_full.endswith(".txt")):
-            potential_binaries.append(dst_full)
-        else:
-            pass
+        if installed and may_be_binary(dst_full):
+            potential_binaries_to_fix_rpath.append(dst_full)
 
 
 def fix_rpaths_and_strip():
@@ -170,7 +169,7 @@ def fix_rpaths_and_strip():
     find_binary_executables()
     # Only fix files that are installed now.
     fix_items = itertools.chain(
-        libraries_to_fix_up.iteritems(), binaries_to_fix_up)
+        libraries_to_fix_rpath.iteritems(), binaries_to_fix_rpath)
     fix_files = [(k, v[0]) for k, v in fix_items if v[1]]
     for basename, dst_full in fix_files:
         if os.path.islink(dst_full):
@@ -210,10 +209,10 @@ def macos_fix_rpaths(basename, dst_full):
         dep_basename = os.path.basename(relative_path)
         # Look for the absolute path in the dictionary of fixup files to
         # find library paths.
-        if dep_basename not in libraries_to_fix_up:
+        if dep_basename not in libraries_to_fix_rpath:
             continue
         lib_dirname = os.path.dirname(dst_full)
-        diff_path = os.path.relpath(libraries_to_fix_up[dep_basename][0],
+        diff_path = os.path.relpath(libraries_to_fix_rpath[dep_basename][0],
                                     lib_dirname)
         check_call(
             ['install_name_tool',
@@ -268,11 +267,11 @@ def linux_fix_rpaths(dst_full):
             # Look for the absolute path in the dictionary of libraries using
             # the library name without its possible version number.
             soname, _, _ = re_result.groups()
-            if soname not in libraries_to_fix_up:
+            if soname not in libraries_to_fix_rpath:
                 continue
             lib_dirname = os.path.dirname(dst_full)
             diff_path = os.path.dirname(
-                os.path.relpath(libraries_to_fix_up[soname][0], lib_dirname)
+                os.path.relpath(libraries_to_fix_rpath[soname][0], lib_dirname)
             )
             rpath.append('$ORIGIN' + '/' + diff_path)
         # System library not in ld.so search path.
