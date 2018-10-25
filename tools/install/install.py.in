@@ -17,12 +17,12 @@ subdirs = set()
 prefix = None
 # Mapping used to (a) check for unique shared library names and (b) provide a
 # mapping from library name to paths for RPath fixes (where (a) is essential).
-# Structure: Map[ basename (Str) => Tuple(full_path, installed) ]
+# Structure: Map[ basename (Str) => full_path ]
 libraries_to_fix_rpath = {}
 # These are binaries (or Python shared libraries) that require RPath fixes (and
 # thus depend on `libraries_to_fix_rpath`), but by definition are not depended
 # upon by other components, and thus need not be unique.
-# Structure: List[ Tuple(basename, Tuple(full_path, installed) ) ]
+# Structure: List[ Tuple(basename, full_path) ]
 binaries_to_fix_rpath = []
 # Files that are not libraries, but may still require fixing.
 # Structure: List[Str]
@@ -73,8 +73,9 @@ def find_binary_executables():
     for line in file_output.splitlines():
         re_result = executable_match.match(line)
         if re_result is not None:
-            binaries_to_fix_rpath.append(
-                (re_result.group(1), (re_result.group(1), 1)))
+            dst_full = re_result.group(1)
+            basename = os.path.basename(dst_full)
+            binaries_to_fix_rpath.append((basename, dst_full))
 
 
 def may_be_binary(dst_full):
@@ -133,7 +134,6 @@ def install(src, dst):
             os.makedirs(subdir_full)
         subdirs.add(subdir)
 
-    installed = False
     dst_full = os.path.join(prefix, dst)
     # Install file, if not up to date.
     if needs_install(src, dst):
@@ -141,14 +141,17 @@ def install(src, dst):
         if os.path.exists(dst_full):
             os.remove(dst_full)
         copy_or_link(src, dst_full)
-        installed = True
     else:
+        # TODO(eric.cousineau): Unclear how RPath-patched file can be deemed
+        # "up-to-date" by comparison?
         print("-- Up-to-date: {}".format(dst_full))
+        # No need to check patching.
+        return
     basename = os.path.basename(dst)
     if re.match(dylib_match, basename):  # It is a library.
         if dst.startswith("lib/python") and not basename.startswith("lib"):
             # Assume this is a Python C extension.
-            binaries_to_fix_rpath.append((basename, (dst_full, installed)))
+            binaries_to_fix_rpath.append((basename, dst_full))
         else:
             # Check that dependency is only referenced once
             # in the library dictionary. If it is referenced multiple times,
@@ -158,10 +161,9 @@ def install(src, dst):
                     "Multiple installation rules found for {}."
                     .format(basename))
                 sys.exit(1)
-            libraries_to_fix_rpath[basename] = (dst_full, installed)
-    else:  # It is not a library, it may be an executable.
-        if installed and may_be_binary(dst_full):
-            potential_binaries_to_fix_rpath.append(dst_full)
+            libraries_to_fix_rpath[basename] = dst_full
+    elif may_be_binary(dst_full):  # May be an executable.
+        potential_binaries_to_fix_rpath.append(dst_full)
 
 
 def fix_rpaths_and_strip():
@@ -170,8 +172,7 @@ def fix_rpaths_and_strip():
     # Only fix files that are installed now.
     fix_items = itertools.chain(
         libraries_to_fix_rpath.iteritems(), binaries_to_fix_rpath)
-    fix_files = [(k, v[0]) for k, v in fix_items if v[1]]
-    for basename, dst_full in fix_files:
+    for basename, dst_full in fix_items:
         if os.path.islink(dst_full):
             # Skip files that are links. However, they need to be in the
             # dictionary to fixup other library and executable paths.
@@ -212,7 +213,7 @@ def macos_fix_rpaths(basename, dst_full):
         if dep_basename not in libraries_to_fix_rpath:
             continue
         lib_dirname = os.path.dirname(dst_full)
-        diff_path = os.path.relpath(libraries_to_fix_rpath[dep_basename][0],
+        diff_path = os.path.relpath(libraries_to_fix_rpath[dep_basename],
                                     lib_dirname)
         check_call(
             ['install_name_tool',
@@ -271,7 +272,7 @@ def linux_fix_rpaths(dst_full):
                 continue
             lib_dirname = os.path.dirname(dst_full)
             diff_path = os.path.dirname(
-                os.path.relpath(libraries_to_fix_rpath[soname][0], lib_dirname)
+                os.path.relpath(libraries_to_fix_rpath[soname], lib_dirname)
             )
             rpath.append('$ORIGIN' + '/' + diff_path)
         # System library not in ld.so search path.
