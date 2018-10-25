@@ -1,4 +1,4 @@
-# Note that this script runs in the main context of drake-visulizer,
+# Note that this script runs in the main context of drake-visualizer,
 # where many modules and variables already exist in the global scope.
 from director import lcmUtils
 from director import applogic

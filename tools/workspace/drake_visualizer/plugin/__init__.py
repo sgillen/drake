@@ -1,6 +1,6 @@
-import weakref
 from functools import wraps
 from warnings import warn
+import weakref
 
 
 def scoped_singleton_func(f):
