@@ -870,12 +870,19 @@ class MultibodyPlant : public MultibodyTreeSystem<T> {
   geometry::SourceId RegisterAsSourceForSceneGraph(
       geometry::SceneGraph<T>* scene_graph);
 
-  bool HasSceneGraph() const {
-    return scene_graph_ != nullptr;
+  void CreateSceneGraph() {
+    DRAKE_DEAMND(!HasSceneGraph());
+    DRAKE_DEMAND(!OwnsSceneGraph());
+    owned_scene_graph_.reset(new geometry::SceneGraph<T>());
+    RegisterAsSourceForScenenGraph(owned_scene_graph_.get());
   }
 
-  bool SupportsGeometry() const {
-    return HasSceneGraph() && parent_diagram_ != nullptr;
+  bool OwnsSceneGraph() const {
+    return owned_scene_graph_ != nullptr;
+  }
+
+  bool HasSceneGraph() const {
+    return scene_graph_ != nullptr;
   }
 
   geometry::SceneGraph<T>& scene_graph() {
@@ -886,27 +893,6 @@ class MultibodyPlant : public MultibodyTreeSystem<T> {
   const geometry::SceneGraph<T>& scene_graph() const {
     DRAKE_DEMAND(HasSceneGraph());
     return *scene_graph_;
-  }
-
-  void RegisterParentDiagram(const systems::Diagram<T>* parent_diagram) {
-    DRAKE_DEMAND(HasSceneGraph());
-    DRAKE_DEMAND(parent_diagram_ == nullptr);
-    parent_diagram_ = parent_diagram;
-  }
-
-  std::pair<systems::Context<T>*, std::unique_ptr<systems::Context<T>>>
-  CreateDefaultContextPair() const {
-    std::unique_ptr<systems::Context<T>> owned_context;
-    systems::Context<T>* context{};
-    if (SupportsGeometry()) {
-      owned_context = parent_diagram_->CreateDefaultContext();
-      context = &parent_diagram_->GetMutableSubsystemContext(
-          *this, owned_context.get());
-    } else {
-      owned_context = this->CreateDefaultContext();
-      context = owned_context.get();
-    }
-    return {context, std::move(owned_context)};
   }
 
   /// Registers geometry in a SceneGraph with a given geometry::Shape to be
@@ -1867,6 +1853,7 @@ class MultibodyPlant : public MultibodyTreeSystem<T> {
   systems::InputPortIndex geometry_query_port_;
   systems::OutputPortIndex geometry_pose_port_;
 
+  std::unique_ptr<geometry::SceneGraph<T>> owned_scene_graph_{nullptr};
   // For geometry registration with a GS, we save a pointer to the GS instance
   // on which this plants calls RegisterAsSourceForSceneGraph().
   geometry::SceneGraph<T>* scene_graph_{nullptr};
