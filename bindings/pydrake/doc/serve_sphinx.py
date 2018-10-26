@@ -108,5 +108,6 @@ def main():
     serve_sphinx_base.main(
         input_dir=input_dir, strict=False, src_func=write_doc_modules)
 
+
 if __name__ == "__main__":
-    main()    
+    main()

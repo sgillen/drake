@@ -7,23 +7,23 @@ load("//tools/lint:lint.bzl", "add_lint_tests")
 
 drake_py_binary(
     name = "serve_sphinx",
-    main = "serve_sphinx.py",
     srcs = [
         "serve_sphinx.py",
         "sphinx_pydrake.py",  # Plugin.
     ],
-    deps = [
-        "//doc:serve_sphinx_base",
-        "//bindings/pydrake",  # We must import `pydrake` to document it.
-    ],
-    imports = ["."],
     data = [
         "conf.py",
         "index.rst",
     ],
+    imports = ["."],
+    main = "serve_sphinx.py",
     # Some (currently disabled) Sphinx extensions try to reach out to the
     # network; we should fail-fast if someone tries to turn them on.
     tags = ["block-network"],
+    deps = [
+        "//bindings/pydrake",  # We must import `pydrake` to document it.
+        "//doc:serve_sphinx_base",
+    ],
 )
 
 add_lint_tests(python_lint_exclude = [":conf.py"])

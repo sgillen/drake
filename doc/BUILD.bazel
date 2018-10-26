@@ -17,16 +17,13 @@ drake_py_binary(
 drake_py_library(
     name = "serve_sphinx_base",
     srcs = ["serve_sphinx_base.py"],
-    deps = [":sphinx_build"],
     imports = ["."],
+    deps = [":sphinx_build"],
 )
 
 drake_py_binary(
     name = "serve_sphinx",
     srcs = ["serve_sphinx.py"],
-    deps = [
-        ":serve_sphinx_base",
-    ],
     data = glob([
         "**/*.rst",
     ]) + [
@@ -39,6 +36,9 @@ drake_py_binary(
     # Some (currently disabled) Sphinx extensions try to reach out to the
     # network; we should fail-fast if someone tries to turn them on.
     tags = ["block-network"],
+    deps = [
+        ":serve_sphinx_base",
+    ],
 )
 
 add_lint_tests(python_lint_exclude = [":conf.py"])
