@@ -21,7 +21,7 @@ def die(s):
     exit(1)
 
 
-def main(input_dir, src_func=None):
+def main(input_dir, strict, src_func=None):
     assert isfile(_SPHINX_BUILD), "Please execute via 'bazel run'"
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -63,9 +63,9 @@ def main(input_dir, src_func=None):
     print("Generating documentation...")
     if strict:
         # Turn warnings into errors; else be quiet.
-        warning_flags = ["-W", "-N", "-q"]
+        warning_args = ["-W", "-N", "-q"]
     else:
-        warning_flags = [
+        warning_args = [
             "-N", "-Q",  # Be very quiet.
             "-T",  # Traceback (for plugin)
         ]
