@@ -33,6 +33,8 @@ drake_py_binary(
         "images/doxygen_instructions/visual_studio_build_targets.png",
         "sample_vimrc",
     ],
+    add_test_rule = 1,
+    test_rule_args = ["--browser=false", "--out_dir=<test>"],
     # Some (currently disabled) Sphinx extensions try to reach out to the
     # network; we should fail-fast if someone tries to turn them on.
     tags = ["block-network"],

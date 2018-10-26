@@ -1,6 +1,7 @@
 from __future__ import print_function
 
 import argparse
+import os
 from os import listdir, symlink, mkdir
 from os.path import abspath, dirname, isabs, isdir, isfile, join
 from shutil import rmtree
@@ -40,6 +41,8 @@ def main(input_dir, strict, src_func=None):
         out_dir = abspath("sphinx-tmp")
         if isdir(out_dir):
             rmtree(out_dir)
+    elif out_dir == "<test>":
+        out_dir = join(os.environ["TEST_TMPDIR"], "doc")
     if not isabs(out_dir):
         die("--out_dir must be absolute path: {}".format(out_dir))
     if isdir(out_dir):

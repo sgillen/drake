@@ -13,8 +13,9 @@ drake_py_binary(
     ],
     data = [
         "conf.py",
-        "index.rst",
     ],
+    add_test_rule = 1,
+    test_rule_args = ["--browser=false", "--out_dir=<test>"],
     imports = ["."],
     main = "serve_sphinx.py",
     # Some (currently disabled) Sphinx extensions try to reach out to the
