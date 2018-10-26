@@ -40,16 +40,12 @@ if out_dir is None:
         rmtree(out_dir)
 
 # Generate documentation.
+# N.B. This prints out a link to the documentation.
 subprocess.check_call([
     sys.executable, "bindings/pydrake/doc/gen_sphinx.py",
     "--out_dir", out_dir])
-file_url = "file://{}".format(join(out_dir, "index.html"))
 
-# Users can click these as a backup, if the auto-open below doesn't work.
-print("Sphinx preview docs are available at:", file=sys.stderr)
-print("  " + file_url, file=sys.stderr)
-print("", file=sys.stderr)
 # Try the default browser.
 if args.browser:
     print("Opening webbrowser", file=sys.stderr)
-    webbrowser.open(file_url)
+    webbrowser.open("file://{}".format(join(out_dir, "index.html")))

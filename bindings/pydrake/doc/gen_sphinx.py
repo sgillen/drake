@@ -59,7 +59,8 @@ def main():
         rmtree(tmp_dir)
     else:
         print("DEBUG: Temporary files: {}".format(tmp_dir))
-    print("Documentation: file://{}".format(join(out_dir, "index.html")))
+    print("Sphinx preview documentation:")
+    print("  file://{}".format(join(out_dir, "index.html")))
 
 
 if __name__ == "__main__":
