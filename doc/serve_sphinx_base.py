@@ -8,7 +8,7 @@ from subprocess import check_call
 import sys
 import webbrowser
 
-_SPHINX_BUILD = "bindings/pydrake/doc/sphinx_build.py"
+_SPHINX_BUILD = "doc/sphinx_build.py"
 
 
 def str2bool(value):
@@ -21,7 +21,7 @@ def die(s):
     exit(1)
 
 
-def main(src_func=None):
+def main(input_dir, src_func=None):
     assert isfile(_SPHINX_BUILD), "Please execute via 'bazel run'"
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -46,7 +46,6 @@ def main(src_func=None):
         die("--out_dir must not exist: {}".format(out_dir))
     mkdir(out_dir)
 
-    input_dir = dirname(abspath(__file__))
     tmp_dir = join(out_dir, "_tmp")
     doctree_dir = join(tmp_dir, "doctrees")
     src_dir = join(tmp_dir, "src")
@@ -62,13 +61,19 @@ def main(src_func=None):
         src_func(src_dir)
 
     print("Generating documentation...")
+    if strict:
+        # Turn warnings into errors; else be quiet.
+        warning_flags = ["-W", "-N", "-q"]
+    else:
+        warning_flags = [
+            "-N", "-Q",  # Be very quiet.
+            "-T",  # Traceback (for plugin)
+        ]
     check_call([
         sys.executable, _SPHINX_BUILD,
         "-b", "html",  # HTML output.
         "-a", "-E",  # Don't use caching.
-        "-d", doctree_dir,
-        "-N", "-Q",  # Be very quiet.
-        "-T",  # Traceback.
+        "-d", doctree_dir] + warning_args + [
         src_dir,  # Source dir.
         out_dir,
     ])
