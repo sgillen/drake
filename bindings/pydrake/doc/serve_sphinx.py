@@ -9,13 +9,11 @@ from __future__ import print_function
 
 import argparse
 import os
+from os.path import abspath, isdir, join
+from shutil import rmtree
 import subprocess
 import sys
 import webbrowser
-import zipfile
-
-from six.moves.SimpleHTTPServer import SimpleHTTPRequestHandler
-from six.moves.socketserver import TCPServer
 
 
 def str2bool(value):
@@ -24,6 +22,8 @@ def str2bool(value):
 
 
 parser = argparse.ArgumentParser()
+parser.add_argument(
+    "--out_dir", type=str, default=None)
 parser.register('type', 'bool', str2bool)
 parser.add_argument(
     "--browser", type='bool', default=True, metavar='BOOL',
@@ -33,42 +33,23 @@ parser.add_argument(
     help="Port for serving doc pages with a HTTP server.")
 args = parser.parse_args()
 
-# Unpack zipfile and chdir into it.
-with zipfile.ZipFile("bindings/pydrake/doc/sphinx.zip", "r") as archive:
-    archive.extractall("sphinx-tmp")
-os.chdir("sphinx-tmp")
-file_url = "file://%s/index.html " % os.path.abspath(os.getcwd())
+out_dir = args.out_dir
+if out_dir is None:
+    out_dir = abspath("sphinx-tmp")
+    if isdir(out_dir):
+        rmtree(out_dir)
 
-
-# An HTTP handler without logging.
-class Handler(SimpleHTTPRequestHandler):
-    def log_request(*_):
-        pass
-
-
-# Serve the current directory for local browsing.
-sockaddr = ("127.0.0.1", args.port)
-TCPServer.allow_reuse_address = True
-httpd = TCPServer(sockaddr, Handler)
-http_url = "http://%s:%s/index.html" % sockaddr
+# Generate documentation.
+subprocess.check_call([
+    sys.executable, "bindings/pydrake/doc/gen_sphinx.py",
+    "--out_dir", out_dir])
+file_url = "file://{}".format(join(out_dir, "index.html"))
 
 # Users can click these as a backup, if the auto-open below doesn't work.
 print("Sphinx preview docs are available at:", file=sys.stderr)
-print("", file=sys.stderr)
-print("  " + http_url, file=sys.stderr)
-print("", file=sys.stderr)
 print("  " + file_url, file=sys.stderr)
 print("", file=sys.stderr)
-
-# Try the default browser, then wait.
+# Try the default browser.
 if args.browser:
     print("Opening webbrowser", file=sys.stderr)
-    if sys.platform == "darwin":
-        # macOS
-        webbrowser.open(http_url)
-    else:
-        # Ubuntu
-        webbrowser.open("./index.html")
-
-print("Serving and waiting ... use Ctrl-C to exit.", file=sys.stderr)
-httpd.serve_forever()
+    webbrowser.open(file_url)
