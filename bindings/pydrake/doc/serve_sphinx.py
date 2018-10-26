@@ -28,9 +28,6 @@ parser.register('type', 'bool', str2bool)
 parser.add_argument(
     "--browser", type='bool', default=True, metavar='BOOL',
     help="Open browser. Disable this if you are frequently recompiling.")
-parser.add_argument(
-    "--port", type=int, default=8001, metavar='PORT',
-    help="Port for serving doc pages with a HTTP server.")
 args = parser.parse_args()
 
 out_dir = args.out_dir
@@ -38,7 +35,6 @@ if out_dir is None:
     out_dir = abspath("sphinx-tmp")
     if isdir(out_dir):
         rmtree(out_dir)
-
 # Generate documentation.
 # N.B. This prints out a link to the documentation.
 subprocess.check_call([
