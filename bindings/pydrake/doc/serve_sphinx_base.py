@@ -6,10 +6,14 @@ from os.path import abspath, dirname, isabs, isdir, isfile, join
 from shutil import rmtree
 from subprocess import check_call
 import sys
-
-from refresh_doc_modules import refresh_doc_modules
+import webbrowser
 
 _SPHINX_BUILD = "bindings/pydrake/doc/sphinx_build.py"
+
+
+def str2bool(value):
+    # From: https://stackoverflow.com/a/19233287/7829525
+    return value.lower() in ("yes", "y", "true", "t", "1")
 
 
 def die(s):
@@ -17,15 +21,25 @@ def die(s):
     exit(1)
 
 
-def main():
+def main(src_func=None):
     assert isfile(_SPHINX_BUILD), "Please execute via 'bazel run'"
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--out_dir", type=str, required=True)
+        "--out_dir", type=str, default=None)
     parser.add_argument(
         "--debug", action="store_true")
+    parser.register('type', 'bool', str2bool)
+    parser.add_argument(
+        "--browser", type='bool', default=True, metavar='BOOL',
+        help="Open browser. Disable this if you are frequently recompiling.")
     args = parser.parse_args()
     out_dir = args.out_dir
+    if out_dir is None:
+        # Backwards-compatibility: Don't require that users specify
+        # `--out_dir`; generate to same location as before.
+        out_dir = abspath("sphinx-tmp")
+        if isdir(out_dir):
+            rmtree(out_dir)
     if not isabs(out_dir):
         die("--out_dir must be absolute path: {}".format(out_dir))
     if isdir(out_dir):
@@ -42,8 +56,11 @@ def main():
     for f in listdir(input_dir):
         src_f = join(src_dir, f)
         symlink(join(input_dir, f), src_f)
-    # Generate doc modules.
-    refresh_doc_modules(output_dir=src_dir)
+
+    # Optionally generate additional input files as source.
+    if src_func:
+        src_func(src_dir)
+
     print("Generating documentation...")
     check_call([
         sys.executable, _SPHINX_BUILD,
@@ -59,9 +76,9 @@ def main():
         rmtree(tmp_dir)
     else:
         print("DEBUG: Temporary files: {}".format(tmp_dir))
-    print("Sphinx preview documentation:")
-    print("  file://{}".format(join(out_dir, "index.html")))
-
-
-if __name__ == "__main__":
-    main()
+    print("Sphinx preview docs are available at:")
+    file_url = "file://{}".format(join(out_dir, "index.html"))
+    print("  {}".format(file_url))
+    # Try the default browser.
+    if args.browser:
+        webbrowser.open(file_url)

@@ -2,51 +2,44 @@
 
 package(default_visibility = ["//visibility:private"])
 
-load("@drake//tools/skylark:drake_py.bzl", "drake_py_binary")
+load("@drake//tools/skylark:drake_py.bzl", "drake_py_binary", "drake_py_library")
 load("//tools/lint:lint.bzl", "add_lint_tests")
-load("//tools/skylark:drake_runfiles_binary.bzl", "drake_runfiles_binary")
-
-py_library(
-    name = "sphinx_pydrake",
-)
 
 drake_py_binary(
     name = "sphinx_build",
     srcs = ["sphinx_build.py"],
-    deps = [
-        ":sphinx_pydrake",
-    ],
 )
 
-# TODO(jamiesnape): Refactor to share logic with //doc:serve_sphinx.
-drake_py_binary(
-    name = "gen_sphinx",
-    main = "gen_sphinx.py",
+drake_py_library(
+    name = "serve_sphinx_base",
     srcs = [
-        "gen_sphinx.py",
-        "refresh_doc_modules.py",
-        "sphinx_pydrake.py",
+        "serve_sphinx_base.py",
     ],
-    data = [
-        "conf.py",
-        "index.rst",
-    ],
-    imports = ["."],
     deps = [
         ":sphinx_build",
-        "//bindings/pydrake",
     ],
-    # Some (currently disabled) Sphinx extensions try to reach out to the
-    # network; we should fail-fast if someone tries to turn them on.
-    tags = ["block-network"],
 )
 
 drake_py_binary(
     name = "serve_sphinx",
-    srcs = ["serve_sphinx.py"],
-    deps = [
-        ":gen_sphinx",
+    main = "serve_sphinx.py",
+    srcs = [
+        "serve_sphinx.py",
+        "refresh_doc_modules.py",  # Source generation.
+        "sphinx_pydrake.py",  # Plugin.
     ],
-)
+    deps = [
+        ":serve_sphinx_base",
+        "//bindings/pydrake",
+    ],
+    imports = ["."],
+    data = [
+        "conf.py",
+        "index.rst",
+    ],
+    # Some (currently disabled) Sphinx extensions try to reach out to the
+    # network; we should fail-fast if someone tries to turn them on.
+    tags = ["block-network"],
+)       
 
 add_lint_tests(python_lint_exclude = [":conf.py"])
