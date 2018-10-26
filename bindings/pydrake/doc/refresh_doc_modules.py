@@ -95,7 +95,22 @@ def write_module(f_name, name, verbose):
         write_module(join(f_dir, sub) + ".rst", sub, verbose)
 
 
-def main():
+def refresh_doc_modules(output_dir, pre_clean=False, verbose=False):
+    if not isabs(output_dir):
+        raise RuntimeError("Please provide an absolute path.")
+    index_file = join(output_dir, "index.rst")
+    if pre_clean:
+        old_files = glob.glob(join(output_dir, "pydrake.*.rst"))
+        if isfile(index_file):
+            old_files.append(index_file)
+        for old_file in sorted(old_files):
+            if verbose:
+                print("Remove: {}".format(old_file))
+            os.remove(old_file)
+    write_module(index_file, "pydrake", verbose)
+
+
+def main():    
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--output_dir", type=str, required=True,
@@ -107,25 +122,7 @@ def main():
              "generating.")
     parser.add_argument("-v", "--verbose", action="store_true")
     args = parser.parse_args()
-
-    output_dir = args.output_dir
-    if not isabs(output_dir):
-        sys.stderr.write(
-            "Please provide an absolute path.\n")
-        sys.exit(1)
-    pre_clean = args.pre_clean
-    verbose = args.verbose
-
-    index_file = join(output_dir, "index.rst")
-    if pre_clean:
-        old_files = glob.glob(join(output_dir, "pydrake.*.rst"))
-        if isfile(index_file):
-            old_files.append(index_file)
-        for old_file in sorted(old_files):
-            if verbose:
-                print("Remove: {}".format(old_file))
-            os.remove(old_file)
-    write_module(index_file, "pydrake", verbose)
+    refresh_doc_modules(args.output_dir, args.pre_clean, args.verbose)
 
 
 if __name__ == "__main__":
