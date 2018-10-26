@@ -1,5 +1,5 @@
 """
-Generates site documentation.
+Generates documentation for `drake.mit.edu`.
 """
 
 from os.path import abspath, dirname

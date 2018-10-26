@@ -10,12 +10,11 @@ drake_py_binary(
     main = "serve_sphinx.py",
     srcs = [
         "serve_sphinx.py",
-        "refresh_doc_modules.py",  # Source generation.
         "sphinx_pydrake.py",  # Plugin.
     ],
     deps = [
         "//doc:serve_sphinx_base",
-        "//bindings/pydrake",
+        "//bindings/pydrake",  # We must import `pydrake` to document it.
     ],
     imports = ["."],
     data = [

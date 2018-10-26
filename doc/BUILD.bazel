@@ -16,12 +16,8 @@ drake_py_binary(
 
 drake_py_library(
     name = "serve_sphinx_base",
-    srcs = [
-        "serve_sphinx_base.py",
-    ],
-    deps = [
-        ":sphinx_build",
-    ],
+    srcs = ["serve_sphinx_base.py"],
+    deps = [":sphinx_build"],
     imports = ["."],
 )
 
