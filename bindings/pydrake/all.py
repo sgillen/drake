@@ -40,3 +40,4 @@ from .multibody.all import *
 from .solvers.all import *
 from .systems.all import *
 # - `third_party` does not offer public Drake library symbols.
+from .util.all import *  # Backwards compatibility.

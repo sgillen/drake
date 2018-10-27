@@ -17,6 +17,7 @@ load(
 load(
     "//tools/skylark:pybind.bzl",
     "drake_pybind_library",
+    "generate_pybind_documentation_header",
     "get_drake_py_installs",
     "get_pybind_package_info",
 )
@@ -29,21 +30,38 @@ package(default_visibility = [
 # bindings.
 PACKAGE_INFO = get_pybind_package_info(base_package = "//bindings")
 
-# N.B. Due to leaky scoping, we include `__init__.py` in `common:module_py`,
-# but still need a library for the file to simplify installation.
+# This provides `pydrake.__init__`, as well as `pydrake.common.__init__` (and
+# `.deprecation`). Downstream libraries should expect that these transitive
+# dependencies will be available, and thus do not need to explicitly depend on
+# these modules.
 drake_py_library(
-    name = "_init_py",
+    name = "module_py",
     srcs = [
         "__init__.py",
     ],
-    imports = PACKAGE_INFO.py_imports,
+    deps = [
+        # We use `common:_init_py` to avoid dependency cycles.
+        "//bindings:bazel_workaround_4594_libdrake_py",
+        "//bindings/pydrake/common:_init_py",
+        "//bindings/pydrake/common:deprecation_py",
+    ],
 )
 
-drake_py_library(
-    name = "module_py",
-    deps = [
-        "//bindings/pydrake/common",
+generate_pybind_documentation_header(
+    name = "generate_pybind_documentation_header",
+    out = "documentation_pybind.h",
+    # TODO(eric.cousineau): This is a minimal, hand-curated set of targets,
+    # made due to compilation errors when using `drake_shared_library` /
+    # `build_components.bzl`. Use either one of these once #9530 is resolved.
+    targets = [
+        "//math",
     ],
+)
+
+drake_cc_library(
+    name = "documentation_pybind",
+    hdrs = ["documentation_pybind.h"],
+    tags = ["nolint"],
 )
 
 drake_cc_library(
@@ -71,7 +89,8 @@ drake_pybind_library(
     package_info = PACKAGE_INFO,
     py_deps = [
         ":math_py",
-        "//bindings/pydrake/common",
+        ":module_py",
+        "//bindings/pydrake/common:deprecation_py",
     ],
     py_srcs = [
         "autodiffutils.py",
@@ -111,7 +130,7 @@ drake_pybind_library(
     cc_srcs = ["geometry_py.cc"],
     package_info = PACKAGE_INFO,
     py_deps = [
-        "//bindings/pydrake/common",
+        ":module_py",
         "//bindings/pydrake/systems:framework_py",
     ],
 )
@@ -125,7 +144,7 @@ drake_pybind_library(
     cc_srcs = ["lcm_py.cc"],
     package_info = PACKAGE_INFO,
     py_deps = [
-        "//bindings/pydrake/common",
+        ":module_py",
     ],
 )
 
@@ -135,7 +154,8 @@ drake_pybind_library(
     cc_srcs = ["math_py.cc"],
     package_info = PACKAGE_INFO,
     py_deps = [
-        "//bindings/pydrake/common",
+        ":module_py",
+        "//bindings/pydrake/common:eigen_geometry_py",
     ],
 )
 
@@ -155,7 +175,8 @@ drake_pybind_library(
     package_info = PACKAGE_INFO,
     py_deps = [
         ":math_py",
-        "//bindings/pydrake/common",
+        ":module_py",
+        "//bindings/pydrake/common:compatibility_py",
     ],
     py_srcs = ["symbolic.py"],
 )
@@ -166,13 +187,8 @@ drake_pybind_library(
     cc_srcs = ["trajectories_py.cc"],
     package_info = PACKAGE_INFO,
     py_deps = [
-        "//bindings/pydrake/common",
+        ":module_py",
     ],
-)
-
-alias(
-    name = "common_py",
-    actual = "//bindings/pydrake/common",
 )
 
 PY_LIBRARIES_WITH_INSTALL = [
@@ -196,7 +212,6 @@ PY_LIBRARIES_WITH_INSTALL = [
 ]
 
 PY_LIBRARIES = [
-    ":_init_py",
     ":backwards_compatibility_py",
     ":module_py",
 ]
@@ -225,6 +240,20 @@ install(
     py_dest = PACKAGE_INFO.py_dest,
     visibility = ["//visibility:public"],
     deps = get_drake_py_installs(PY_LIBRARIES_WITH_INSTALL),
+)
+
+drake_py_unittest(
+    name = "documentation_pybind_test",
+    data = [
+        ":documentation_pybind.h",
+    ],
+)
+
+drake_cc_googletest(
+    name = "documentation_pybind_usage_test",
+    deps = [
+        ":documentation_pybind",
+    ],
 )
 
 drake_py_unittest(
@@ -280,12 +309,6 @@ drake_py_unittest(
         ":odr_test_module_py",
         ":symbolic_py",
     ],
-)
-
-drake_py_unittest(
-    name = "common_test",
-    data = ["//examples/atlas:models"],
-    deps = ["//bindings/pydrake/common"],
 )
 
 drake_py_unittest(
