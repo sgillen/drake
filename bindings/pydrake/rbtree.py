@@ -2,7 +2,7 @@ from __future__ import absolute_import
 
 import warnings
 
-from .util.deprecation import DrakeDeprecationWarning
+from .common.deprecation import DrakeDeprecationWarning
 
 # N.B. This is a shim that will be removed soon-ish.
 

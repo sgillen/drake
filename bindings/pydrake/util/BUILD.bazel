@@ -25,20 +25,22 @@ package(default_visibility = [
 # bindings.
 PACKAGE_INFO = get_pybind_package_info("//bindings")
 
-# N.B. For simplicity, `common:module_py` will depend on this module.
 drake_py_library(
     name = "module_py",
     srcs = [
         "__init__.py",
         "all.py",
     ],
-    visibility = ["//visibility:public"],
+    deps = [
+        "//bindings/pydrake/common",
+    ],
 )
 
-# Roll-up alias.
-alias(
+# Package roll-up (for Bazel dependencies).
+drake_py_library(
     name = "util",
-    actual = "//bindings/pydrake/common",
+    imports = PACKAGE_INFO.py_imports,
+    deps = [":module_py"],
 )
 
 PY_LIBRARIES = [

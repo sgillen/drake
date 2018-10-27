@@ -33,6 +33,33 @@ package(default_visibility = [
 # bindings.
 PACKAGE_INFO = get_pybind_package_info("//bindings")
 
+# N.B. We use an intermediate `_init_py` between `module_py` to avoid
+# dependency cycles with `pydrake:module_py`.
+# TODO(eric.cousineau): Decouple this module from the full-fledged
+# `libdrake.so`.
+drake_pybind_library(
+    name = "_init_py",
+    cc_so_name = "_module_py",
+    cc_srcs = ["module_py.cc"],
+    package_info = PACKAGE_INFO,
+    py_srcs = [
+        "__init__.py",
+    ],
+    visibility = [
+        "//bindings/pydrake:__pkg__",
+    ],
+)
+
+drake_py_library(
+    name = "module_py",
+    deps = [
+        # This `_init_py` is redundant since `pydrake:module_py` uses it, but
+        # it is placed here for clarity.
+        ":_init_py",
+        "//bindings/pydrake:module_py",
+    ],
+)
+
 drake_cc_library(
     name = "type_pack",
     hdrs = ["type_pack.h"],
@@ -50,26 +77,6 @@ drake_cc_library(
     hdrs = ["wrap_pybind.h"],
     visibility = ["//visibility:public"],
     deps = [":wrap_function"],
-)
-
-# TODO(eric.cousineau): Decouple this module from the full-fledged
-# `libdrake.so`.
-drake_pybind_library(
-    name = "module_py",
-    cc_so_name = "_module_py",
-    cc_srcs = ["module_py.cc"],
-    package_info = PACKAGE_INFO,
-    py_deps = [
-        ":deprecation_py",
-        "//bindings:bazel_workaround_4594_libdrake_py",
-        "//bindings/pydrake:_init_py",
-        # TODO(eric.cousineau): Simplify dependency for `pydrake:module_py`.
-        # For backwards compatibility.
-        "//bindings/pydrake/util:module_py",
-    ],
-    py_srcs = [
-        "__init__.py",
-    ],
 )
 
 drake_py_library(
@@ -203,8 +210,8 @@ drake_py_library(
 )
 
 PY_LIBRARIES_WITH_INSTALL = [
+    ":_init_py",
     ":eigen_geometry_py",
-    ":module_py",
 ]
 
 PY_LIBRARIES = [
@@ -214,6 +221,7 @@ PY_LIBRARIES = [
     ":cpp_param_py",
     ":cpp_template_py",
     ":deprecation_py",
+    ":module_py",
     ":pybind11_version_py",
 ]
 
@@ -236,6 +244,12 @@ install(
     targets = PY_LIBRARIES + [":all_py"],
     py_dest = PACKAGE_INFO.py_dest,
     deps = get_drake_py_installs(PY_LIBRARIES_WITH_INSTALL),
+)
+
+drake_py_unittest(
+    name = "module_test",
+    data = ["//examples/atlas:models"],
+    deps = [":module_py"],
 )
 
 drake_cc_googletest(

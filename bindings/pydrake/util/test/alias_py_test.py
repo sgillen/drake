@@ -7,5 +7,6 @@ from pydrake.util.cpp_param import get_param_canonical
 from pydrake.util.cpp_template import TemplateBase
 from pydrake.util.deprecation import DrakeDeprecationWarning
 from pydrake.util.eigen_geometry import Quaternion
+from pydrake.util.pybind11_version import repository
 
 print("Done")

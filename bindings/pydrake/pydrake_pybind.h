@@ -108,8 +108,8 @@ Instead, you must temporarily violate IWYU because it will be satisfied by
 `drake_pybind_library`, which will incorporate `libdrake.so` and the transitive
 headers.
 
-If singletons are required (e.g. for `util/cpp_param_pybind`), consider storing
-the singleton values using Python.
+If singletons are required (e.g. for `common/cpp_param_pybind`), consider
+storing the singleton values using Python.
 
 If you are developing bindings for a small portion of Drake and would like to
 avoid rebuilding a large number of components when testing, consider editing
