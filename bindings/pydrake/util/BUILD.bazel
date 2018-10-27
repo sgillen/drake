@@ -15,7 +15,7 @@ load(
     "//tools/skylark:pybind.bzl",
     "get_pybind_package_info",
 )
-load(":build_macros.bzl", "util_cc_header_alias")
+load(":build_macros.bzl", "util_cc_header_alias", "util_target_aliases")
 
 package(default_visibility = [
     "//bindings/pydrake:__subpackages__",
@@ -64,6 +64,19 @@ cc_header_alias_names = [
     util_cc_header_alias(name = name)
     for name in cc_header_alias_names
 ]
+
+# Add target aliases for remaining Python libraries.
+util_target_aliases(
+    names = [
+        "compatibility_py",
+        "deprecation_py",
+        "eigen_geometry_py",
+        "cpp_template_py",
+        "cpp_const_py",
+        "cpp_param_py",
+        "pybind11_version_py",
+    ],
+)
 
 install(
     name = "install",

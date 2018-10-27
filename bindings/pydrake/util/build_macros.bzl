@@ -5,7 +5,7 @@ _HEADER_TEMPLATE = """
 #pragma once
 
 // N.B. This is an auto-generated header for backwards compatibility.
-// This header will be deprecated on 2018/11/01.
+// This header will be deprecated on 2018/12/01.
 #include <drake/{package}/{header}>
 """.lstrip()
 
@@ -27,3 +27,10 @@ def util_cc_header_alias(name):
         hdrs = [header],
         deps = ["//" + package + ":" + name],
     )
+
+def util_target_aliases(names):
+    for name in names:
+        native.alias(
+            name = name,
+            actual = "//bindings/pydrake/common:" + name,
+        )
