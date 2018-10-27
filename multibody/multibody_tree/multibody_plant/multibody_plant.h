@@ -1846,7 +1846,7 @@ class MultibodyPlant : public MultibodyTreeSystem<T> {
   // on which this plants calls RegisterAsSourceForSceneGraph(). This is
   // ONLY (and it MUST ONLY be used) used to verify that successive registration
   // calls are performed on the same instance of GS.
-  const geometry::SceneGraph<T>* scene_graph_{nullptr};
+  geometry::SceneGraph<T>* scene_graph_{nullptr};
 
   // Input/Output port indexes:
   // A vector containing actuation ports for each model instance indexed by

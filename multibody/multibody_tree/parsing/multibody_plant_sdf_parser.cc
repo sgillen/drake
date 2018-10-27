@@ -513,6 +513,17 @@ ModelInstanceIndex AddModelFromSpecification(
 
   return model_instance;
 }
+
+void CheckSceneGraph(
+    multibody_plant::MultibodyPlant<double>* plant,
+    geometry::SceneGraph<double>** scene_graph) {  
+  if (*scene_graph != nullptr && !plant->geometry_source_is_registered()) {
+    plant->RegisterAsSourceForSceneGraph(*scene_graph);
+  } else if (*scene_graph == nullptr && plant->HasSceneGraph()) {
+    *scene_graph = &plant->scene_graph();
+  }
+}
+
 }  // namespace
 
 ModelInstanceIndex AddModelFromSdfFile(
@@ -535,9 +546,7 @@ ModelInstanceIndex AddModelFromSdfFile(
   // Get the only model in the file.
   const sdf::Model& model = *root.ModelByIndex(0);
 
-  if (scene_graph != nullptr && !plant->geometry_source_is_registered()) {
-    plant->RegisterAsSourceForSceneGraph(scene_graph);
-  }
+  CheckSceneGraph(plant, &scene_graph);
 
   const std::string model_name =
       model_name_in.empty() ? model.Name() : model_name_in;
@@ -582,11 +591,7 @@ std::vector<ModelInstanceIndex> AddModelsFromSdfFile(
     throw std::runtime_error("A <world> and <model> cannot be siblings.");
   }
 
-  if (scene_graph != nullptr && !plant->geometry_source_is_registered()) {
-    plant->RegisterAsSourceForSceneGraph(scene_graph);
-  } else if (scene_graph == nullptr && plant->HasSceneGraph()) {
-    scene_graph = &plant->scene_graph();
-  }
+  CheckSceneGraph(plant, &scene_graph);
 
   std::vector<ModelInstanceIndex> model_instances;
 
