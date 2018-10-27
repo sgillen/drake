@@ -519,7 +519,7 @@ void CheckSceneGraph(
     geometry::SceneGraph<double>** scene_graph) {  
   if (*scene_graph != nullptr && !plant->geometry_source_is_registered()) {
     plant->RegisterAsSourceForSceneGraph(*scene_graph);
-  } else if (*scene_graph == nullptr && plant->HasSceneGraph()) {
+  } else if (*scene_graph == nullptr && plant->geometry_source_is_registered()) {
     *scene_graph = &plant->scene_graph();
   }
 }

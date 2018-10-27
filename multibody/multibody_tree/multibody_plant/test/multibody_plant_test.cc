@@ -659,6 +659,11 @@ GTEST_TEST(MultibodyPlantTest, FilterAdjacentBodiesSourceErrors) {
     EXPECT_NO_THROW(plant.Finalize());
   }
 
+  const std::string failure_pattern =
+      "Geometry registration calls must be performed on the SAME instance "
+      "of SceneGraph used on the first call to "
+      "RegisterAsSourceForSceneGraph\\(\\)";
+
   // Case: Registered as source, but *wrong* scene graph passed to Finalize() -
   // error.
   {
@@ -666,16 +671,14 @@ GTEST_TEST(MultibodyPlantTest, FilterAdjacentBodiesSourceErrors) {
     plant.RegisterAsSourceForSceneGraph(&scene_graph);
     SceneGraph<double> other_graph;
     DRAKE_EXPECT_THROWS_MESSAGE(
-        plant.Finalize(&other_graph), std::logic_error,
-        "Finalizing on a SceneGraph instance must be performed on the SAME "
-            "instance of SceneGraph used on the first call to "
-            "RegisterAsSourceForSceneGraph\\(\\)");
+        plant.Finalize(&other_graph), std::logic_error, failure_pattern);
   }
 
-  // Case: Not registered as source, but passed SceneGraph in anyways.
+  // Case: Not registered as source, but passed SceneGraph in anyways - error.
   {
     MultibodyPlant<double> plant;
-    EXPECT_NO_THROW(plant.Finalize(&scene_graph));
+    DRAKE_EXPECT_THROWS_MESSAGE(
+        plant.Finalize(&scene_graph), std::logic_error, failure_pattern);
   }
 }
 
