@@ -5,7 +5,7 @@ which overrides any `-W` command-line arguments. To change this behavior, you
 can do something like:
 
 >>> import warnings
->>> from pydrake.util.deprecation import DrakeDeprecationWarning
+>>> from pydrake.common.deprecation import DrakeDeprecationWarning
 >>> warnings.simplefilter("always", DrakeDeprecationWarning)
 
 If you would like to disable all Drake-related warnings, you may use the
@@ -102,7 +102,7 @@ class ModuleShim(object):
 class DrakeDeprecationWarning(DeprecationWarning):
     """Extends `DeprecationWarning` to permit Drake-specific warnings to
     be filtered by default, without having side effects on other libraries."""
-    addendum = ("\n    Please see `help(pydrake.util.deprecation)` " +
+    addendum = ("\n    Please see `help(pydrake.common.deprecation)` " +
                 "for more information.")
 
     def __init__(self, message, *args):
