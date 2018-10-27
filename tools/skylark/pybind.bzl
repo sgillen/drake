@@ -3,7 +3,7 @@
 # @see bazelbuild/bazel#3493 for needing `@drake//` when loading `install`.
 load("@drake//tools/install:install.bzl", "install")
 load(
-    "//tools:drake.bzl",
+    "@drake//tools/skylark:drake_cc.bzl",
     "drake_cc_binary",
     "drake_cc_googletest",
 )
@@ -12,8 +12,6 @@ load(
     "drake_py_library",
     "drake_py_test",
 )
-
-_PY_VERSION = "2.7"
 
 def pybind_py_library(
         name,
@@ -62,6 +60,11 @@ def pybind_py_library(
         # This is how you tell Bazel to create a shared library.
         linkshared = 1,
         linkstatic = 1,
+        copts = [
+            # GCC and Clang don't always agree / succeed when inferring storage
+            # duration (#9600). Workaround it for now.
+            "-Wno-unused-lambda-capture",
+        ],
         # Always link to pybind11.
         deps = [
             "@pybind11",
@@ -116,9 +119,8 @@ def drake_pybind_library(
         By default, this includes `pydrake_pybind` and
         `//:drake_shared_library`.
     @param cc_so_name (optional)
-        Shared object name. By default, this is `_${name}`, so that the C++
-        code can be then imported in a more controlled fashion in Python.
-        If overridden, this could be the public interface exposed to the user.
+        Shared object name. By default, this is `${name}` (without the `_py`
+        suffix if it's present).
     @param package_info
         This should be the result of `get_pybind_package_info` called from the
         current package. This dictates how `PYTHONPATH` is configured, and
@@ -129,7 +131,10 @@ def drake_pybind_library(
     if package_info == None:
         fail("`package_info` must be supplied.")
     if not cc_so_name:
-        cc_so_name = "_" + name
+        if name.endswith("_py"):
+            cc_so_name = name[:-3]
+        else:
+            cc_so_name = name
     install_name = name + "_install"
     targets = pybind_py_library(
         name = name,
@@ -197,8 +202,7 @@ def get_pybind_package_info(base_package, sub_package = None):
     package_info = _get_package_info(base_package, sub_package)
     return struct(
         py_imports = [package_info.base_path_rel],
-        py_dest = "lib/python{}/site-packages/{}".format(
-            _PY_VERSION,
+        py_dest = "@PYTHON_SITE_PACKAGES@/{}".format(
             package_info.sub_path_rel,
         ),
     )
@@ -318,7 +322,11 @@ def _generate_pybind_documentation_header_impl(ctx):
 
     args = ctx.actions.args()
     args.add_all(compile_flags, uniquify = True)
+    args.add("-output=" + ctx.outputs.out.path)
     args.add("-quiet")
+    args.add("-root-name=" + ctx.attr.root_name)
+    for p in ctx.attr.exclude_hdr_patterns:
+        args.add("-exclude-hdr-patterns=" + p)
 
     # Replace with ctx.fragments.cpp.cxxopts in Bazel 0.17+.
     args.add("-std=c++14")
@@ -330,16 +338,20 @@ def _generate_pybind_documentation_header_impl(ctx):
         inputs = transitive_headers,
         tools = [mkdoc],
         arguments = [args],
-        command = "{} $@ > {}".format(mkdoc.path, ctx.outputs.out.path),
+        command = "{} $@".format(mkdoc.path),
     )
 
 # Generates a header that defines variables containing a representation of the
 # contents of Doxygen comments for each class, function, etc. in the
 # transitive headers of the given targets.
+# @param targets Targets with header files that should have documentation
+# strings generated.
+# @param root_name Name of the root struct in generated file.
+# @param exclude_hdr_patterns Headers whose symbols should be ignored. Can be
+# glob patterns.
 generate_pybind_documentation_header = rule(
     attrs = {
         "targets": attr.label_list(
-            allow_files = True,
             mandatory = True,
         ),
         "_mkdoc": attr.label(
@@ -349,6 +361,8 @@ generate_pybind_documentation_header = rule(
             executable = True,
         ),
         "out": attr.output(mandatory = True),
+        "root_name": attr.string(default = "pydrake_doc"),
+        "exclude_hdr_patterns": attr.string_list(),
     },
     fragments = ["cpp"],
     implementation = _generate_pybind_documentation_header_impl,

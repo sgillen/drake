@@ -34,15 +34,22 @@ drake_py_library(
 drake_pybind_library(
     name = "planner_py",
     cc_deps = [
-        "//bindings/pydrake/common:drake_optional_pybind",
-        "//bindings/pydrake/common:eigen_pybind",
+        "//bindings/pydrake:documentation_pybind",
+        "//bindings/pydrake/util:drake_optional_pybind",
+        "//bindings/pydrake/util:eigen_pybind",
     ],
-    cc_so_name = "planner",
     cc_srcs = ["planner_py.cc"],
     package_info = PACKAGE_INFO,
     py_deps = [
         ":module_py",
     ],
+)
+
+drake_py_library(
+    name = "simple_ui_py",
+    srcs = ["simple_ui.py"],
+    imports = PACKAGE_INFO.py_imports,
+    deps = [":module_py"],
 )
 
 PY_LIBRARIES_WITH_INSTALL = [
@@ -51,12 +58,28 @@ PY_LIBRARIES_WITH_INSTALL = [
 
 PY_LIBRARIES = [
     ":module_py",
+    ":simple_ui_py",
 ]
 
 drake_py_unittest(
     name = "planner_test",
+    data = [
+        "//multibody/benchmarks/acrobot:models",
+    ],
     deps = [
         ":planner_py",
+        "//bindings/pydrake/multibody",
+    ],
+)
+
+drake_py_unittest(
+    name = "simple_ui_test",
+    data = [
+        "//multibody/benchmarks/acrobot:models",
+    ],
+    deps = [
+        ":simple_ui_py",
+        "//bindings/pydrake/multibody",
     ],
 )
 

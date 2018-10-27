@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
 # -*- coding: UTF-8 -*-
 #
-#  Syntax: mkdoc.py [-I<path> ..] [-quiet] [.. a list of header files ..]
+#  Syntax:
+#     mkdoc.py [-output=<file>] [-I<path> ..] [-quiet] [.. header files ..]
 #
 #  Extract documentation from C++ header files to use it in Python bindings
 #
 
 from collections import OrderedDict, defaultdict
+from fnmatch import fnmatch
 import os
-import sys
 import platform
+import sys
 import re
 from tempfile import NamedTemporaryFile
 import textwrap
@@ -44,7 +46,9 @@ RECURSE_LIST = [
 PRINT_LIST = CLASS_KINDS + FUNCTION_KINDS + [
     CursorKind.ENUM_DECL,
     CursorKind.ENUM_CONSTANT_DECL,
-    CursorKind.FIELD_DECL
+    CursorKind.FIELD_DECL,
+    CursorKind.TYPE_ALIAS_DECL,  # using x = y
+    CursorKind.TYPEDEF_DECL
 ]
 
 CPP_OPERATORS = {
@@ -63,8 +67,10 @@ CPP_OPERATORS = OrderedDict(
 SKIP_FULL_NAMES = [
     'Eigen',
     'detail',
+    'google',
     'internal',
     'std',
+    'tinyxml2',
 ]
 
 SKIP_PARTIAL_NAMES = [
@@ -72,6 +78,8 @@ SKIP_PARTIAL_NAMES = [
     'operator delete',
     'operator=',
     'operator->',
+    'operator<<',
+    'operator>>',
 ]
 
 SKIP_ACCESS = [
@@ -85,35 +93,38 @@ def utf8(s):
 
 
 class Symbol(object):
-    def __init__(self, node, name, include, line, comment):
-        self.node = node
-        self.name = name
+    """
+    Contains a cursor and additional processed metadata.
+    """
+    def __init__(self, cursor, name_chain, include, line, comment):
+        self.cursor = cursor
+        self.name_chain = name_chain
         self.include = include
         self.line = line
         self.comment = comment
 
     def sorting_key(self):
-        return (self.name, self.include, self.line)
+        return (self.name_chain, self.include, self.line)
 
 
 def eprint(*args):
     print(*args, file=sys.stderr)
 
 
-def is_accepted_symbol(node):
+def is_accepted_cursor(cursor):
     """
     Determines if a symbol should be visited or not.
     """
-    name = utf8(node.spelling)
+    name = utf8(cursor.spelling)
     if name in SKIP_FULL_NAMES:
         return False
     for bad in SKIP_PARTIAL_NAMES:
         if bad in name:
             return False
-    if node.access_specifier in SKIP_ACCESS:
+    if cursor.access_specifier in SKIP_ACCESS:
         return False
-    # TODO(eric.cousineau): Remove `node.is_default_method()`? May make things
-    # unstable.
+    # TODO(eric.cousineau): Remove `cursor.is_default_method()`? May make
+    # things unstable.
     # TODO(eric.cousineau): Figure out how to strip forward declarations.
     return True
 
@@ -145,9 +156,9 @@ def process_comment(comment):
         s = s.strip()
         if s.startswith('/*'):
             s = s[2:].lstrip('*')
-        elif s.endswith('*/'):
+        if s.endswith('*/'):
             s = s[:-2].rstrip('*')
-        elif s.startswith('///'):
+        if s.startswith('///'):
             s = s[3:]
         if s.startswith('*'):
             s = s[1:]
@@ -161,16 +172,19 @@ def process_comment(comment):
             result2 += s[leading_spaces:] + '\n'
         result = result2
 
-    # Doxygen tags
-    cpp_group = r'([\w:]+)'
-    param_group = r'([\[\w:\]]+)'
-
     s = result
-    s = re.sub(r'[@\\]c\s+%s' % cpp_group, r'``\1``', s)
-    s = re.sub(r'[@\\]p\s+%s' % cpp_group, r'``\1``', s)
-    s = re.sub(r'[@\\]a\s+%s' % cpp_group, r'*\1*', s)
-    s = re.sub(r'[@\\]e\s+%s' % cpp_group, r'*\1*', s)
-    s = re.sub(r'[@\\]em\s+%s' % cpp_group, r'*\1*', s)
+
+    # Remove HTML comments. Must occur before Doxygen commands are parsed
+    # since they may be used to workaround limitations related to line breaks
+    # in Doxygen.
+    s = re.sub(r'<!--(.*?)-->', r'', s, flags=re.DOTALL)
+
+    # Doxygen tags
+    cpp_group = r'([\w:*()]+)'
+    param_group = r'([\[\w,\]]+)'
+
+    s = re.sub(r'[@\\][cp]\s+%s' % cpp_group, r'``\1``', s)
+    s = re.sub(r'[@\\](?:a|e|em)\s+%s' % cpp_group, r'*\1*', s)
     s = re.sub(r'[@\\]b\s+%s' % cpp_group, r'**\1**', s)
     s = re.sub(r'[@\\]ingroup\s+%s' % cpp_group, r'', s)
     s = re.sub(r'[@\\]param%s?\s+%s' % (param_group, cpp_group),
@@ -180,56 +194,177 @@ def process_comment(comment):
     s = re.sub(r'[@\\]retval\s+%s' % cpp_group,
                r'\n\n$Returns ``\1``:\n\n', s)
 
-    for in_, out_ in {
-        'result': 'Returns',
-        'returns': 'Returns',
-        'return': 'Returns',
-        'authors': 'Authors',
-        'author': 'Authors',
-        'copyright': 'Copyright',
-        'date': 'Date',
-        'note': 'Note',
-        'remarks': 'Remark',
-        'remark': 'Remark',
-        'sa': 'See also',
-        'see': 'See also',
-        'extends': 'Extends',
-        'throws': 'Throws',
-        'throw': 'Throws'
-    }.items():
+    # Ordering is significant for command names with a common prefix.
+    for in_, out_ in (
+        ('result', 'Returns'),
+        ('returns', 'Returns'),
+        ('return', 'Returns'),
+        ('attention', 'Attention'),
+        ('authors', 'Authors'),
+        ('author', 'Authors'),
+        ('bug', 'Bug report'),
+        ('copyright', 'Copyright'),
+        ('date', 'Date'),
+        ('deprecated', 'Deprecated'),
+        ('exception', 'Raises'),
+        ('invariant', 'Invariant'),
+        ('note', 'Note'),
+        ('post', 'Postcondition'),
+        ('pre', 'Precondition'),
+        ('remarks', 'Remark'),
+        ('remark', 'Remark'),
+        ('sa', 'See also'),
+        ('see', 'See also'),
+        ('since', 'Since'),
+        ('extends', 'Extends'),
+        ('throws', 'Raises'),
+        ('throw', 'Raises'),
+        ('test', 'Test case'),
+        ('todo', 'Todo'),
+        ('version', 'Version'),
+        ('warning', 'Warning'),
+    ):
         s = re.sub(r'[@\\]%s\s*' % in_, r'\n\n$%s:\n\n' % out_, s)
 
     s = re.sub(r'[@\\]details\s*', r'\n\n', s)
-    s = re.sub(r'[@\\]brief\s*', r'', s)
-    s = re.sub(r'[@\\]short\s*', r'', s)
+    s = re.sub(r'[@\\](?:brief|short)\s*', r'', s)
     s = re.sub(r'[@\\]ref\s*', r'', s)
 
-    s = re.sub(r'[@\\]code\s?(.*?)\s?[@\\]endcode',
-               r"```\n\1\n```\n", s, flags=re.DOTALL)
+    for start_, end_ in (
+        ('code', 'endcode'),
+        ('verbatim', 'endverbatim')
+    ):
+        s = re.sub(r'[@\\]%s(?:\{\.\w+\})?\s?(.*?)\s?[@\\]%s' % (start_, end_),
+                   r"```\n\1\n```\n", s, flags=re.DOTALL)
 
-    s = re.sub(r'%(\S+)', r'\1', s)
+    s = re.sub(r'[@\\](?:end)?htmlonly\s+', r'', s)
 
-    # HTML/TeX tags
-    s = re.sub(r'<tt>(.*?)</tt>', r'``\1``', s, flags=re.DOTALL)
-    s = re.sub(r'<pre>(.*?)</pre>', r"```\n\1\n```\n", s, flags=re.DOTALL)
-    s = re.sub(r'<em>(.*?)</em>', r'*\1*', s, flags=re.DOTALL)
-    s = re.sub(r'<b>(.*?)</b>', r'**\1**', s, flags=re.DOTALL)
-    s = re.sub(r'[@\\]f\$(.*?)[@\\]f\$', r'$\1$', s, flags=re.DOTALL)
-    s = re.sub(r'<li>', r'\n\n* ', s)
-    s = re.sub(r'</?ul>', r'', s)
-    s = re.sub(r'</li>', r'\n\n', s)
+    # These commands are always prefixed with an @ sign.
+    s = re.sub(r'@[{}]\s*', r'', s)
+
+    # Doxygen list commands.
+    s = re.sub(r'[@\\](?:arg|li)\s+', r'\n\n* ', s)
+
+    # Doxygen LaTeX commands.
+    s = re.sub(r'[@\\]f\$\s*(.*?)\s*[@\\]f\$', r':math:`\1`', s,
+               flags=re.DOTALL)
+    s = re.sub(r'[@\\]f\[\s*(.*?)\s*[@\\]f\]', r'\n\n.. math:: \1\n\n', s,
+               flags=re.DOTALL)
+    s = re.sub(r'[@\\]f\{([\w*]+)\}\s*(.*?)\s*[@\\]f\}',
+               r'\n\n.. math:: \\begin{\1}\2\\end{\1}\n\n', s, flags=re.DOTALL)
+
+    # Remove these commands that take no argument. Ordering is significant for
+    # command names with a common prefix.
+    for cmd_ in (
+        '~english',
+        '~',
+        'callergraph',
+        'callgraph',
+        'hidecallergraph',
+        'hidecallgraph',
+        'hideinitializer',
+        'nosubgrouping',
+        'privatesection',
+        'private',
+        'protectedsection',
+        'protected',
+        'publicsection',
+        'public',
+        'pure',
+        'showinitializer',
+        'static',
+        'tableofcontents',
+    ):
+        s = re.sub(r'[@\\]%s\s+' % cmd_, r'', s)
+
+    # Remove these pairs of commands and any text in between.
+    for start_, end_ in (
+        ('cond', 'endcond'),
+        ('docbookonly', 'enddocbookonly'),
+        ('dot', 'enddot'),
+        ('internal', 'endinternal'),
+        ('latexonly', 'endlatexonly'),
+        ('manonly', 'endmanonly'),
+        ('msc', 'endmsc'),
+        ('rtfonly', 'endrtfonly'),
+        ('secreflist', 'endsecreflist'),
+        ('startuml', 'enduml'),
+        ('xmlonly', 'endxmlonly'),
+    ):
+        s = re.sub(r'[@\\]%s\s?(.*?)\s?[@\\]%s' % (start_, end_), r'', s,
+                   flags=re.DOTALL)
+
+        # Some command pairs may bridge multiple comment blocks, so individual
+        # start and end commands may appear alone.
+        s = re.sub(r'[@\\]%s\s+' % start_, r'', s)
+        s = re.sub(r'[@\\]%s\s+' % end_, r'', s)
+
+    # Remove auto-linking character. Be sure to remove only leading % signs.
+    s = re.sub(r'(\s+)%(\S+)', r'\1\2', s)
+
+    # HTML tags. Support both lowercase and uppercase tags.
+    s = re.sub(r'<tt>(.*?)</tt>', r'``\1``', s,
+               flags=re.DOTALL | re.IGNORECASE)
+    s = re.sub(r'<pre>(.*?)</pre>', r"```\n\1\n```\n", s,
+               flags=re.DOTALL | re.IGNORECASE)
+    s = re.sub(r'<em>(.*?)</em>', r'*\1*', s, flags=re.DOTALL | re.IGNORECASE)
+    s = re.sub(r'<b>(.*?)</b>', r'**\1**', s, flags=re.DOTALL | re.IGNORECASE)
+
+    s = re.sub(r'<li>', r'\n\n* ', s, flags=re.IGNORECASE)
+    s = re.sub(r'</?ol( start=[0-9]+)?>', r'', s, flags=re.IGNORECASE)
+    s = re.sub(r'</?ul>', r'', s, flags=re.IGNORECASE)
+    s = re.sub(r'</li>', r'\n\n', s, flags=re.IGNORECASE)
+
+    s = re.sub(r'<br/?>', r'\n\n', s, flags=re.IGNORECASE)
 
     s = s.replace('``true``', '``True``')
     s = s.replace('``false``', '``False``')
 
     # Exceptions
     s = s.replace('std::bad_alloc', 'MemoryError')
+    s = s.replace('std::bad_any_cast', 'RuntimeError')
+    s = s.replace('std::bad_array_new_length', 'MemoryError')
+    s = s.replace('std::bad_cast', 'RuntimeError')
+    s = s.replace('std::bad_exception', 'RuntimeError')
+    s = s.replace('std::bad_function_call', 'RuntimeError')
+    s = s.replace('std::bad_optional_access', 'RuntimeError')
+    s = s.replace('std::bad_typeid', 'RuntimeError')
+    s = s.replace('std::bad_variant_access', 'RuntimeError')
+    s = s.replace('std::bad_weak_ptr', 'RuntimeError')
     s = s.replace('std::domain_error', 'ValueError')
     s = s.replace('std::exception', 'RuntimeError')
+    s = s.replace('std::future_error', 'RuntimeError')
     s = s.replace('std::invalid_argument', 'ValueError')
     s = s.replace('std::length_error', 'ValueError')
+    s = s.replace('std::logic_error', 'RuntimeError')
     s = s.replace('std::out_of_range', 'ValueError')
+    s = s.replace('std::overflow_error', 'RuntimeError')
     s = s.replace('std::range_error', 'ValueError')
+    s = s.replace('std::regex_error', 'RuntimeError')
+    s = s.replace('std::runtime_error', 'RuntimeError')
+    s = s.replace('std::system_error', 'RuntimeError')
+    s = s.replace('std::underflow_error', 'RuntimeError')
+
+    # Doxygen escaped characters.
+    s = re.sub(r'[@\\]n\s+', r'\n\n', s)
+
+    # Ordering of ---, --, @, and \ is significant.
+    for escaped_ in (
+        '---',
+        '--',
+        '::',
+        '\.',
+        '"',
+        '&',
+        '#',
+        '%',
+        '<',
+        '>',
+        '\$',
+        '@',
+        '\\\\',
+    ):
+        s = re.sub(r'[@\\](%s)' % escaped_, r'\1', s)
 
     # Re-flow text
     wrapper = textwrap.TextWrapper()
@@ -244,38 +379,45 @@ def process_comment(comment):
     for x in re.split(r'(```)', s):
         if x == '```':
             if not in_code_segment:
-                result += '```\n'
+                result += '\n::\n'
             else:
-                result += '\n```\n\n'
+                result += '\n\n'
             in_code_segment = not in_code_segment
         elif in_code_segment:
-            result += x.strip()
+            result += '    '.join(('\n' + x.strip()).splitlines(True))
         else:
             for y in re.split(r'(?: *\n *){2,}', x):
-                wrapped = wrapper.fill(re.sub(r'\s+', ' ', y).strip())
-                if len(wrapped) > 0 and wrapped[0] == '$':
-                    result += wrapped[1:] + '\n'
-                    wrapper.initial_indent = \
-                        wrapper.subsequent_indent = ' ' * 4
+                lines = re.split(r'(?: *\n *)', y)
+                # Do not re-flow lists.
+                if re.match('^(?:[*+\-]|[0-9]+[.)]) ', lines[0]):
+                    result += y + '\n\n'
                 else:
-                    if len(wrapped) > 0:
-                        result += wrapped + '\n\n'
-                    wrapper.initial_indent = wrapper.subsequent_indent = ''
+                    wrapped = wrapper.fill(re.sub(r'\s+', ' ', y).strip())
+                    if len(wrapped) > 0 and wrapped[0] == '$':
+                        result += wrapped[1:] + '\n'
+                        wrapper.initial_indent = \
+                            wrapper.subsequent_indent = ' ' * 4
+                    else:
+                        if len(wrapped) > 0:
+                            result += wrapped + '\n\n'
+                        wrapper.initial_indent = wrapper.subsequent_indent = ''
     return result.rstrip().lstrip('\n')
 
 
-def get_name_chain(node):
+def get_name_chain(cursor):
     """
     Extracts the pieces for a namespace-qualified name for a symbol.
     """
-    name = [utf8(node.spelling)]
-    p = node.semantic_parent
+    name_chain = [utf8(cursor.spelling)]
+    p = cursor.semantic_parent
     while p.kind != CursorKind.TRANSLATION_UNIT:
-        piece = utf8(p.spelling)  # Pass-through for anonymous structs.
-        if len(piece) > 0:
-            name.insert(0, piece)
+        piece = utf8(p.spelling)
+        name_chain.insert(0, piece)
         p = p.semantic_parent
-    return tuple(name)
+    # Do not try to specify names for anonymous structs.
+    while '' in name_chain:
+        name_chain.remove('')
+    return tuple(name_chain)
 
 
 class SymbolTree(object):
@@ -285,105 +427,124 @@ class SymbolTree(object):
     """
 
     def __init__(self):
-        self.root = SymbolTree.Leaf()
+        self.root = SymbolTree.Node()
 
-    def append(self, symbol):
-        leaf = self.root
-        for piece in symbol.name:
-            leaf = leaf.get_child(piece)
-        leaf.symbols.append(symbol)
+    def get_node(self, name_chain):
+        """
+        Gets symbol node for a name chain, creating a fresh node if
+        necessary.
+        """
+        node = self.root
+        for piece in name_chain:
+            node = node.get_child(piece)
+        return node
 
-    class Leaf(object):
+    class Node(object):
+        """Node for a given name chain."""
         def __init__(self):
-            self.symbols = []
-            self.children_map = defaultdict(SymbolTree.Leaf)
+            # First encountered occurence of a symbol when extracting, used to
+            # label symbols that do not have documentation. Will only be None
+            # for the root node.
+            self.first_symbol = None
+            # May be empty if no documented symbols are present.
+            self.doc_symbols = []
+            # Maps name to child nodes.
+            self.children_map = defaultdict(SymbolTree.Node)
 
         def get_child(self, piece):
             return self.children_map[piece]
 
 
-def extract(include_map, node, output):
+def extract(include_file_map, cursor, symbol_tree):
     """
     Extracts libclang cursors and add to a symbol tree.
     """
-    if node.kind == CursorKind.TRANSLATION_UNIT:
-        for i in node.get_children():
-            extract(include_map, i, output)
+    if cursor.kind == CursorKind.TRANSLATION_UNIT:
+        for i in cursor.get_children():
+            extract(include_file_map, i, symbol_tree)
         return
-    assert node.location.file is not None
-    filename = utf8(node.location.file.name)
-    include = include_map.get(filename)
+    assert cursor.location.file is not None
+    filename = utf8(cursor.location.file.name)
+    include = include_file_map.get(filename)
+    line = cursor.location.line
     if include is None:
         return
-    if not is_accepted_symbol(node):
+    if not is_accepted_cursor(cursor):
         return
-    if node.kind in RECURSE_LIST:
-        for i in node.get_children():
-            extract(include_map, i, output)
-    if node.kind in PRINT_LIST:
-        if len(node.spelling) > 0:
+    name_chain = None
+
+    def get_node():
+        name_chain = get_name_chain(cursor)
+        node = symbol_tree.get_node(name_chain)
+        if node.first_symbol is None:
+            node.first_symbol = Symbol(
+                cursor, name_chain, include, line, None)
+        return name_chain, node
+
+    if cursor.kind in RECURSE_LIST:
+        if name_chain is None:
+            name_chain, node = get_node()
+        for i in cursor.get_children():
+            extract(include_file_map, i, symbol_tree)
+    if cursor.kind in PRINT_LIST:
+        if name_chain is None:
+            name_chain, node = get_node()
+        if len(cursor.spelling) > 0:
             comment = utf8(
-                node.raw_comment) if node.raw_comment is not None else ''
+                cursor.raw_comment) if cursor.raw_comment is not None else ''
             comment = process_comment(comment)
-            name = get_name_chain(node)
-            line = node.location.line
-            output.append(Symbol(node, name, include, line, comment))
+            symbol = Symbol(cursor, name_chain, include, line, comment)
+            node.doc_symbols.append(symbol)
 
 
-def print_symbols(name, leaf, level=0):
+def print_symbols(f, name, node, level=0):
     """
-    Prints C++ code for containing documentation.
+    Prints C++ code for releveant documentation.
     """
-    if len(leaf.symbols) == 0:
-        full_name = name
-    else:
-        top = leaf.symbols[0]
-        full_pieces = top.name
-        assert name == full_pieces[-1]
-        full_name = "::".join(full_pieces)
-        # Override variable.
-        if top.node.kind == CursorKind.CONSTRUCTOR:
-            name = "ctor"
-
-    name = sanitize_name(name)
-
     indent = '  ' * level
 
-    def iprint(s): return print((indent + s).rstrip())
-    iprint('// {}'.format(full_name))
+    def iprint(s):
+        f.write((indent + s).rstrip() + "\n")
+
+    name_var = name
+    if not node.first_symbol:
+        assert level == 0
+        full_name = name
+    else:
+        name_chain = node.first_symbol.name_chain
+        assert name == name_chain[-1]
+        full_name = "::".join(name_chain)
+        # Override variable.
+        if node.first_symbol.cursor.kind == CursorKind.CONSTRUCTOR:
+            name_var = "ctor"
+
+    name_var = sanitize_name(name_var)
+    # We may get empty symbols if `libclang` produces warnings.
+    assert len(name_var) > 0, node.first_symbol.sorting_key()
+    iprint('// Symbol: {}'.format(full_name))
     modifier = ""
     if level == 0:
         modifier = "constexpr "
-    iprint('{}struct /* {} */ {{'.format(modifier, name))
-    iprint('')
-    symbol_iter = sorted(leaf.symbols, key=Symbol.sorting_key)
+    iprint('{}struct /* {} */ {{'.format(modifier, name_var))
+    # Print documentation items.
+    symbol_iter = sorted(node.doc_symbols, key=Symbol.sorting_key)
     for i, symbol in enumerate(symbol_iter):
-        assert full_pieces == symbol.name
-        var = "doc"
+        assert name_chain == symbol.name_chain
+        doc_var = "doc"
         if i > 0:
-            var += "_{}".format(i + 1)
+            doc_var += "_{}".format(i + 1)
         delim = "\n"
         if "\n" not in symbol.comment and len(symbol.comment) < 40:
             delim = " "
-        iprint('  // {}:{}'.format(symbol.include, symbol.line))
-        iprint('  const char* {} ={}R"""({})""";'.format(var, delim,
-                                                         symbol.comment))
-        iprint('')
-    keys = sorted(leaf.children_map.keys())
+        iprint('  // Source: {}:{}'.format(symbol.include, symbol.line))
+        iprint('  const char* {} ={}R"""({})""";'.format(
+            doc_var, delim, symbol.comment))
+    # Recurse into child elements.
+    keys = sorted(node.children_map.keys())
     for key in keys:
-        child = leaf.children_map[key]
-        print_symbols(key, child, level=level + 1)
-    iprint('}} {};'.format(name))
-    iprint('')
-
-
-def drake_genfile_path_to_include_path(filename):
-    # TODO(eric.cousineau): Is there a simple way to generalize this, given
-    # include paths?
-    pieces = filename.split('/')
-    assert pieces.count('drake') == 1
-    drake_index = pieces.index('drake')
-    return '/'.join(pieces[drake_index:])
+        child = node.children_map[key]
+        print_symbols(f, key, child, level=level + 1)
+    iprint('}} {};'.format(name_var))
 
 
 class FileDict(object):
@@ -391,7 +552,7 @@ class FileDict(object):
     Provides a dictionary that hashes based on a file's true path.
     """
 
-    def __init__(self, items):
+    def __init__(self, items=[]):
         self._d = {self._key(file): value for file, value in items}
 
     def _key(self, file):
@@ -406,6 +567,10 @@ class FileDict(object):
     def __getitem__(self, file):
         key = self._key(file)
         return self._d[key]
+
+    def __setitem__(self, file, value):
+        key = self._key(file)
+        self._d[key] = value
 
 
 def main():
@@ -428,15 +593,21 @@ def main():
 
     quiet = False
     std = '-std=c++11'
-    root_name = 'pydrake_doc'
+    root_name = 'mkdoc_doc'
+    ignore_patterns = []
+    output_filename = None
 
     for item in sys.argv[1:]:
         if item == '-quiet':
             quiet = True
+        elif item.startswith('-output='):
+            output_filename = item[len('-output='):]
         elif item.startswith('-std='):
             std = item
         elif item.startswith('-root-name='):
             root_name = item[len('-root-name='):]
+        elif item.startswith('-exclude-hdr-patterns='):
+            ignore_patterns.append(item[len('-exclude-hdr-patterns='):])
         elif item.startswith('-'):
             parameters.append(item)
         else:
@@ -444,13 +615,15 @@ def main():
 
     parameters.append(std)
 
-    if len(filenames) == 0:
-        eprint('Syntax: %s [.. a list of header files ..]' % sys.argv[0])
+    if output_filename is None or len(filenames) == 0:
+        eprint('Syntax: %s -output=<file> [.. a list of header files ..]'
+               % sys.argv[0])
         exit(-1)
 
-    # N.B. We substitue the `GENERATED FILE...` bits in this fashion because
+    f = open(output_filename, 'w')
+    # N.B. We substitute the `GENERATED FILE...` bits in this fashion because
     # otherwise Reviewable gets confused.
-    print('''#pragma once
+    f.write('''#pragma once
 
 // {0} {1}
 // This file contains docstrings for the Python bindings that were
@@ -460,31 +633,65 @@ def main():
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-variable"
 #endif
+
 '''.format('GENERATED FILE', 'DO NOT EDIT'))
 
-    includes = list(map(drake_genfile_path_to_include_path, filenames))
-    include_map = FileDict(zip(filenames, includes))
-    # TODO(eric.cousineau): Sort files based on include path?
-    with NamedTemporaryFile('w') as include_file:
-        for include in includes:
-            include_file.write("#include \"{}\"\n".format(include))
-        include_file.flush()
+    # Determine project include directories.
+    # N.B. For simplicity when using with Bazel, we do not try to get canonical
+    # file paths for determining include files.
+    include_paths = []
+    for param in parameters:
+        # Only check for normal include directories.
+        if param.startswith("-I"):
+            include_paths.append(param[2:])
+    # Use longest include directories first to get shortest include file
+    # overall.
+    include_paths = list(sorted(include_paths, key=len))[::-1]
+    include_files = []
+    # Create mapping from filename to include file.
+    include_file_map = FileDict()
+    for filename in filenames:
+        for include_path in include_paths:
+            prefix = include_path + "/"
+            if filename.startswith(prefix):
+                include_file = filename[len(prefix):]
+                break
+        else:
+            raise RuntimeError(
+                "Filename not incorporated into -I includes: {}".format(
+                    filename))
+        for p in ignore_patterns:
+            if fnmatch(include_file, p):
+                break
+        else:
+            include_files.append(include_file)
+            include_file_map[filename] = include_file
+    assert len(include_files) > 0
+    # Generate the glue include file, which will include all relevant include
+    # files, and parse.
+    with NamedTemporaryFile('w') as glue_include_file:
+        for include_file in sorted(include_files):
+            line = "#include \"{}\"".format(include_file)
+            glue_include_file.write(line + "\n")
+            f.write("// " + line + "\n")
+        f.write("\n")
+        glue_include_file.flush()
         if not quiet:
-            eprint("Parse header...")
+            eprint("Parse headers...")
         index = cindex.Index(
             cindex.conf.lib.clang_createIndex(False, True))
-        tu = index.parse(include_file.name, parameters)
-
+        translation_unit = index.parse(glue_include_file.name, parameters)
+    # Extract symbols.
     if not quiet:
         eprint("Extract relevant symbols...")
-    output = SymbolTree()
-    extract(include_map, tu.cursor, output)
-
+    symbol_tree = SymbolTree()
+    extract(include_file_map, translation_unit.cursor, symbol_tree)
+    # Write header file.
     if not quiet:
         eprint("Writing header file...")
-    print_symbols(root_name, output.root)
+    print_symbols(f, root_name, symbol_tree.root)
 
-    print('''
+    f.write('''
 #if defined(__GNUG__)
 #pragma GCC diagnostic pop
 #endif

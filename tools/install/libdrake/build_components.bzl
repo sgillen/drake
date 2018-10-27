@@ -35,6 +35,7 @@ LIBDRAKE_COMPONENTS = [
     "//automotive",
     "//automotive/maliput/api",
     "//automotive/maliput/dragway",
+    "//automotive/maliput/geometry_base",
     "//automotive/maliput/multilane",
     "//automotive/maliput/rndf",
     "//automotive/maliput/simplerulebook",
@@ -69,7 +70,6 @@ LIBDRAKE_COMPONENTS = [
     "//multibody/multibody_tree/multibody_plant",
     "//multibody/multibody_tree/multibody_plant:contact_results_to_lcm",  # unpackaged  # noqa
     "//multibody/multibody_tree/parsing",
-    "//multibody/parsing",
     "//perception",
     "//solvers",
     "//systems/analysis",
