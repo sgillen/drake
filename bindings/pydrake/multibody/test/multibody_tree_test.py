@@ -47,7 +47,7 @@ from six import text_type as unicode
 import numpy as np
 
 from pydrake.common import FindResourceOrThrow
-from pydrake.common.eigen_geometry import Isometry3
+from pydrake.util.eigen_geometry import Isometry3
 from pydrake.systems.framework import InputPort, OutputPort
 from pydrake.math import RollPitchYaw
 

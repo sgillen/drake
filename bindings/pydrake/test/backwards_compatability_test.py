@@ -2,7 +2,7 @@ import unittest
 import sys
 import warnings
 
-from pydrake.common.deprecation import DrakeDeprecationWarning
+from pydrake.util.deprecation import DrakeDeprecationWarning
 
 
 class TestBackwardsCompatibility(unittest.TestCase):
