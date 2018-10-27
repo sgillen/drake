@@ -297,12 +297,10 @@ class AcrobotPlantTests : public ::testing::Test {
     // Finalize() the plant.
     plant_->Finalize();
 
-    EXPECT_TRUE(plant_->HasSceneGraph());
     EXPECT_EQ(scene_graph_, &plant_->scene_graph());
 
     // And build the Diagram:
     diagram_ = builder.Build();
-    plant_->RegisterParentDiagram(diagram_.get());
 
     link1_ = &plant_->GetBodyByName(parameters_.link1_name());
     link2_ = &plant_->GetBodyByName(parameters_.link2_name());

@@ -870,39 +870,6 @@ class MultibodyPlant : public MultibodyTreeSystem<T> {
   geometry::SourceId RegisterAsSourceForSceneGraph(
       geometry::SceneGraph<T>* scene_graph);
 
-  void CreateSceneGraph() {
-    DRAKE_DEAMND(!HasSceneGraph());
-    DRAKE_DEMAND(!OwnsSceneGraph());
-    owned_scene_graph_.reset(new geometry::SceneGraph<T>());
-    RegisterAsSourceForScenenGraph(owned_scene_graph_.get());
-  }
-
-  std::vector<systems::AbstractValues> AllocateAbstractState() const override {
-    // TODO(eric.cousineau): Leverage caching...
-    auto value = systems::Value<systems::Context<T>>(
-        owned_scene_graph_->CreateDefaultContext());
-    return {value};
-  }
-
-  bool OwnsSceneGraph() const {
-    return owned_scene_graph_ != nullptr;
-  }
-
-  void UpdateSceneGraphContext(
-      const systems::Context<T>& context,
-      systems::Context<T>* sg_context) const {
-    DRAKE_DEMAND(OwnsSceneGraph());
-    auto* value = get_geometry_poses_output_port().EvalAbstract(context);
-    sg_context.GetModelValue(
-        scene_graph_->get_source_pose_port()).SetFrom(*value);
-  }
-
-  std::unique_ptr<systems::Context<T>> CreateSceneGraphContext(
-      const systems::Context<T>& context) const {
-    
-    scene_graph_->CreateDefaultContext();
-  }
-
   bool HasSceneGraph() const {
     return scene_graph_ != nullptr;
   }
@@ -1875,13 +1842,11 @@ class MultibodyPlant : public MultibodyTreeSystem<T> {
   systems::InputPortIndex geometry_query_port_;
   systems::OutputPortIndex geometry_pose_port_;
 
-  std::unique_ptr<geometry::SceneGraph<T>> owned_scene_graph_{nullptr};
   // For geometry registration with a GS, we save a pointer to the GS instance
-  // on which this plants calls RegisterAsSourceForSceneGraph().
-  geometry::SceneGraph<T>* scene_graph_{nullptr};
-
-  // DIRTY NASTY
-  const systems::Diagram<T>* parent_diagram_{nullptr};
+  // on which this plants calls RegisterAsSourceForSceneGraph(). This is
+  // ONLY (and it MUST ONLY be used) used to verify that successive registration
+  // calls are performed on the same instance of GS.
+  const geometry::SceneGraph<T>* scene_graph_{nullptr};
 
   // Input/Output port indexes:
   // A vector containing actuation ports for each model instance indexed by
