@@ -267,6 +267,7 @@ drake_py_unittest(
     deps = [
         ":benchmarks_py",
         ":multibody_tree_py",
+        "//bindings/pydrake:geometry_py",
     ],
 )
 

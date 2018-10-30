@@ -47,6 +47,7 @@ from six import text_type as unicode
 import numpy as np
 
 from pydrake.common import FindResourceOrThrow
+from pydrake.geometry import SceneGraph
 from pydrake.util.eigen_geometry import Isometry3
 from pydrake.systems.framework import InputPort, OutputPort
 from pydrake.math import RollPitchYaw
@@ -467,3 +468,23 @@ class TestMultibodyTree(unittest.TestCase):
         self.assertTrue(contact_results.num_contacts() == 1)
         self.assertTrue(
             isinstance(contact_results.contact_info(0), PointPairContactInfo))
+
+    def test_scene_graph_collision_query(self):
+        # Perhaps use a different model?
+        tree = builder.AddSystem(mut.MultibodyPlant())
+        scene_graph = builder.AddSystem(SceneGraph())
+        tree.RegisterAsSourceForSceneGraph(scene_graph)
+        # Change to what you need
+        AddModelFromSdfFile(<your file here>, plant)
+        builder.Connect(
+            scene_graph.get_query_output_port(),
+            tree.get_geometry_query_input_port())
+        builder.Connect(
+            tree.get_geometry_poses_output_port(),
+            scene_graph.get_source_pose_port(tree.get_source_id()))
+        diagram = builder.Build()
+        # Mutate the context as you need...
+        context = builder.CreateDefaultContext()
+        sg_context = diagram.GetMutableSubsystemContext(context)
+        point_pair = scene_graph.get_query_output_port().Eval(sg_context)
+        # Query your point pairs...
