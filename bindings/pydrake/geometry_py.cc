@@ -53,6 +53,11 @@ PYBIND11_MODULE(geometry, m) {
   BindIdentifier<GeometryId>(m, "GeometryId");
 
   py::module::import("pydrake.systems.framework");
+  py::class_<SceneGraphInspector<T>>(m, "SceneGraphInspector",
+                                     doc.SceneGraphInspector.doc)
+      .def("GetFrameId", &SceneGraphInspector<T>::GetFrameId,
+           py::arg("geometry_id"), doc.SceneGraphInspector.GetFrameId.doc);
+
   py::class_<SceneGraph<T>, LeafSystem<T>>(m, "SceneGraph", doc.SceneGraph.doc)
       .def(py::init<>(), doc.SceneGraph.ctor.doc_4)
       .def("get_source_pose_port", &SceneGraph<T>::get_source_pose_port,
@@ -65,7 +70,14 @@ PYBIND11_MODULE(geometry, m) {
       .def("RegisterSource",
            py::overload_cast<const std::string&>(  // BR
                &SceneGraph<T>::RegisterSource),
-           py::arg("name") = "", doc.SceneGraph.RegisterSource.doc);
+           py::arg("name") = "", doc.SceneGraph.RegisterSource.doc)
+      .def("model_inspector", &SceneGraph<T>::model_inspector,
+           py_reference_internal, doc.SceneGraph.model_inspector.doc);
+
+  py::class_<QueryObject<T>>(m, "QueryObject", doc.QueryObject.doc)
+      .def("ComputePointPairPenetration",
+           &QueryObject<T>::ComputePointPairPenetration,
+           doc.QueryObject.ComputePointPairPenetration.doc);
 
   py::module::import("pydrake.systems.lcm");
   m.def("ConnectDrakeVisualizer",

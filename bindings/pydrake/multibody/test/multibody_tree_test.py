@@ -34,9 +34,13 @@ from pydrake.multibody.benchmarks.acrobot import (
     AcrobotParameters,
     MakeAcrobotPlant,
 )
+
 from pydrake.geometry import (
     PenetrationAsPointPair,
-    GeometryId)
+    GeometryId,
+    SceneGraph,
+)
+from pydrake.systems.framework import DiagramBuilder
 
 
 import copy
@@ -467,3 +471,42 @@ class TestMultibodyTree(unittest.TestCase):
         self.assertTrue(contact_results.num_contacts() == 1)
         self.assertTrue(
             isinstance(contact_results.contact_info(0), PointPairContactInfo))
+
+    def _create_plant_and_scene_graph(self, sdf_file):
+        builder = DiagramBuilder()
+        plant = builder.AddSystem(MultibodyPlant())
+        scene_graph = builder.AddSystem(SceneGraph())
+        plant.RegisterAsSourceForSceneGraph(scene_graph)
+        # Change to what you need
+        self.assertTrue(sdf_file.endswith(".sdf"))
+        AddModelFromSdfFile(sdf_file, plant)
+        plant.Finalize()
+        builder.Connect(
+            scene_graph.get_query_output_port(),
+            plant.get_geometry_query_input_port())
+        builder.Connect(
+            plant.get_geometry_poses_output_port(),
+            scene_graph.get_source_pose_port(plant.get_source_id()))
+        diagram = builder.Build()
+        return plant, scene_graph, diagram
+
+    def test_scene_graph_collision_query(self):
+        # Perhaps use a different model?
+        plant, scene_graph, diagram = self._create_plant_and_scene_graph(
+            FindResourceOrThrow(
+                "drake/bindings/pydrake/multibody/test/two_bodies.sdf"))
+        # Mutate the context as you need...
+        context = diagram.CreateDefaultContext()
+        sg_context = diagram.GetMutableSubsystemContext(scene_graph, context)
+        query_object = scene_graph.get_query_output_port().Eval(sg_context)
+        point_pairs = query_object.CalcPointPairPenetrations()
+        self.assertGreater(len(point_pairs), 0)
+        point_pair = point_pairs[0]
+        self.assertIsInstance(point_pair, PointPairPenetration)
+        inspector = scene_graph.model_inspector()
+        self.assertIs(
+            plant.GetBodyFrameFromFrameId(inspector.GetFrameId(point_pair.id_A)),
+            plant.GetFrameByName("link1"))
+        self.assertIs(
+            plant.GetBodyFrameFromFrameId(inspector.GetFrameId(point_pair.id_B)),
+            plant.GetFrameByName("link2"))
