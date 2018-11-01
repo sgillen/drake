@@ -79,7 +79,6 @@ PYBIND11_MODULE(geometry, m) {
       .def("ComputePointPairPenetration",
            &QueryObject<T>::ComputePointPairPenetration,
            doc.QueryObject.ComputePointPairPenetration.doc);
-
   pysystems::AddValueInstantiation<QueryObject<T>>(m);
 
   py::module::import("pydrake.systems.lcm");

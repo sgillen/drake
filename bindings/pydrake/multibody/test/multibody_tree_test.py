@@ -71,6 +71,20 @@ def get_index_class(cls):
     raise RuntimeError("Unknown class: {}".format(cls))
 
 
+def add_plant_and_scene_graph(builder):
+    # TODO(eric.cousineau): Hoist to C++.
+    plant = builder.AddSystem(MultibodyPlant())
+    scene_graph = builder.AddSystem(SceneGraph())
+    plant.RegisterAsSourceForSceneGraph(scene_graph)
+    builder.Connect(
+        scene_graph.get_query_output_port(),
+        plant.get_geometry_query_input_port())
+    builder.Connect(
+        plant.get_geometry_poses_output_port(),
+        scene_graph.get_source_pose_port(plant.get_source_id()))
+    return plant, scene_graph
+
+
 class TestMultibodyTreeMath(unittest.TestCase):
     def test_spatial_velocity(self):
         velocity = SpatialVelocity()
@@ -472,36 +486,24 @@ class TestMultibodyTree(unittest.TestCase):
         self.assertTrue(
             isinstance(contact_results.contact_info(0), PointPairContactInfo))
 
-    def _create_plant_and_scene_graph(self, sdf_file):
-        builder = DiagramBuilder()
-        plant = builder.AddSystem(MultibodyPlant())
-        scene_graph = builder.AddSystem(SceneGraph())
-        plant.RegisterAsSourceForSceneGraph(scene_graph)
-        # Change to what you need
-        self.assertTrue(sdf_file.endswith(".sdf"))
-        AddModelFromSdfFile(sdf_file, plant, scene_graph)
-        plant.Finalize(scene_graph)
-        builder.Connect(
-            scene_graph.get_query_output_port(),
-            plant.get_geometry_query_input_port())
-        builder.Connect(
-            plant.get_geometry_poses_output_port(),
-            scene_graph.get_source_pose_port(plant.get_source_id()))
-        diagram = builder.Build()
-        return plant, scene_graph, diagram
-
     def test_scene_graph_collision_query(self):
         # Perhaps use a different model?
-        plant, scene_graph, diagram = self._create_plant_and_scene_graph(
+        builder = DiagramBuilder()
+        plant, scene_graph = add_plant_and_scene_graph(builder)
+        AddModelFromSdfFile(
             FindResourceOrThrow(
-                "drake/bindings/pydrake/multibody/test/two_bodies.sdf"))
+                "drake/bindings/pydrake/multibody/test/two_bodies.sdf"),
+            plant, scene_graph)
+        plant.Finalize(scene_graph)
+        diagram = builder.Build()
         # Mutate the context as you need...
         context = diagram.CreateDefaultContext()
         sg_context = diagram.GetMutableSubsystemContext(scene_graph, context)
-        value = scene_graph.get_query_output_port().EvalAbstract(sg_context)
-        query_object = value.get_value()
+        # TODO(eric.cousineau): This causes a segfault. Investigate why.
         # query_object = scene_graph.get_query_output_port().Eval(sg_context)
-        print(query_object)
+        query_object = (
+            scene_graph.get_query_output_port().EvalAbstract(sg_context)
+            .get_value())
         point_pairs = query_object.ComputePointPairPenetration()
         self.assertGreater(len(point_pairs), 0)
         point_pair = point_pairs[0]
