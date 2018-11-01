@@ -71,11 +71,11 @@ PYBIND11_MODULE(geometry, m) {
       .def("RegisterSource",
            py::overload_cast<const std::string&>(  // BR
                &SceneGraph<T>::RegisterSource),
-           py::arg("name") = "", doc.SceneGraph.RegisterSource.doc)
-      .def("model_inspector", &SceneGraph<T>::model_inspector,
-           py_reference_internal, doc.SceneGraph.model_inspector.doc);
+           py::arg("name") = "", doc.SceneGraph.RegisterSource.doc);
 
   py::class_<QueryObject<T>>(m, "QueryObject", doc.QueryObject.doc)
+      .def("inspector", &QueryObject<T>::inspector, py_reference_internal,
+           doc.QueryObject.inspector.doc)
       .def("ComputePointPairPenetration",
            &QueryObject<T>::ComputePointPairPenetration,
            doc.QueryObject.ComputePointPairPenetration.doc);

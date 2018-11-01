@@ -479,8 +479,8 @@ class TestMultibodyTree(unittest.TestCase):
         plant.RegisterAsSourceForSceneGraph(scene_graph)
         # Change to what you need
         self.assertTrue(sdf_file.endswith(".sdf"))
-        AddModelFromSdfFile(sdf_file, plant)
-        plant.Finalize()
+        AddModelFromSdfFile(sdf_file, plant, scene_graph)
+        plant.Finalize(scene_graph)
         builder.Connect(
             scene_graph.get_query_output_port(),
             plant.get_geometry_query_input_port())
@@ -498,16 +498,17 @@ class TestMultibodyTree(unittest.TestCase):
         # Mutate the context as you need...
         context = diagram.CreateDefaultContext()
         sg_context = diagram.GetMutableSubsystemContext(scene_graph, context)
-        query_object = scene_graph.get_query_output_port().Eval(sg_context)
+        value = scene_graph.get_query_output_port().EvalAbstract(sg_context)
+        query_object = value.get_value()
+        # query_object = scene_graph.get_query_output_port().Eval(sg_context)
         print(query_object)
-        point_pairs = query_object.CalcPointPairPenetrations()
+        point_pairs = query_object.ComputePointPairPenetration()
         self.assertGreater(len(point_pairs), 0)
         point_pair = point_pairs[0]
-        self.assertIsInstance(point_pair, PointPairPenetration)
-        inspector = scene_graph.model_inspector()
-        self.assertIs(
-            plant.GetBodyFrameFromFrameId(inspector.GetFrameId(point_pair.id_A)),
-            plant.GetFrameByName("link1"))
-        self.assertIs(
-            plant.GetBodyFrameFromFrameId(inspector.GetFrameId(point_pair.id_B)),
-            plant.GetFrameByName("link2"))
+        self.assertIsInstance(point_pair, PenetrationAsPointPair)
+        inspector = query_object.inspector()
+        bodies = {plant.GetBodyFromFrameId(inspector.GetFrameId(id_))
+                  for id_ in [point_pair.id_A, point_pair.id_B]}
+        self.assertSetEqual(
+            bodies,
+            {plant.GetBodyByName("body1"), plant.GetBodyByName("body2")})
