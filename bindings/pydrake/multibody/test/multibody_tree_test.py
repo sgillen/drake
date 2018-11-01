@@ -499,6 +499,7 @@ class TestMultibodyTree(unittest.TestCase):
         context = diagram.CreateDefaultContext()
         sg_context = diagram.GetMutableSubsystemContext(scene_graph, context)
         query_object = scene_graph.get_query_output_port().Eval(sg_context)
+        print(query_object)
         point_pairs = query_object.CalcPointPairPenetrations()
         self.assertGreater(len(point_pairs), 0)
         point_pair = point_pairs[0]
