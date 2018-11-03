@@ -1052,7 +1052,7 @@ class RigidBodyTree {
         }
       }
       for (const auto& group_name : names_of_groups_to_delete) {
-        body_ptr->get_mutable_group_to_collision_ids_map().erase(group_name);
+        body_ptr->RemoveGroup(group_name);
       }
     }
   }

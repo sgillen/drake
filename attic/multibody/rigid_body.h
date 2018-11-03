@@ -252,6 +252,8 @@ class RigidBody {
       const std::string& group_name,
       const drake::multibody::collision::ElementId& id);
 
+  void RemoveGroup(const std::string& group_name);
+
   /**
    * @returns A reference to an `std::vector` of collision elements that
    * represent the collision geometry of this rigid body.
@@ -263,6 +265,7 @@ class RigidBody {
    * Returns a reference to an `std::vector` of collision elements that
    * represent the collision geometry of this rigid body.
    */
+  DRAKE_DEPRECATED("Do not use this.");
   std::vector<drake::multibody::collision::ElementId>&
   get_mutable_collision_element_ids();
 
@@ -280,6 +283,7 @@ class RigidBody {
    * element IDs. These are the collision element groups created through calls
    * to RigidBody::AddCollisionElementToGroup().
    */
+  DRAKE_DEPRECATED("Do not use this.");
   std::map<std::string, std::vector<drake::multibody::collision::ElementId>>&
   get_mutable_group_to_collision_ids_map();
 
