@@ -243,6 +243,16 @@ class RigidBody {
                            drake::multibody::collision::Element* element);
 
   /**
+   * (Advanced) Remove collision element.
+   * @param[in] group_name Collision element's group name.
+   * @param[in] id Element id.
+   * @pre Element of `id` must have been added and belong to `group_name`.
+   */
+  void RemoveCollisionElement(
+      const std::string& group_name,
+      const drake::multibody::collision::ElementId& id);
+
+  /**
    * @returns A reference to an `std::vector` of collision elements that
    * represent the collision geometry of this rigid body.
    */

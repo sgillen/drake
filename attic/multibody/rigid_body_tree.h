@@ -1043,9 +1043,9 @@ class RigidBodyTree {
       for (const auto& group : body_ptr->get_group_to_collision_ids_map()) {
         const std::string& group_name = group.first;
         if (test(group_name)) {
-          auto& ids = body_ptr->get_mutable_collision_element_ids();
+          auto ids = body_ptr->get_collision_element_ids();
           for (const auto& id : group.second) {
-            ids.erase(std::find(ids.begin(), ids.end(), id));
+            body_ptr->RemoveCollisionElement(group_name, id);
             collision_model_->RemoveElement(id);
           }
           names_of_groups_to_delete.push_back(group_name);
