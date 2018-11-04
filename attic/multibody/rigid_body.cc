@@ -141,8 +141,9 @@ void RigidBody<T>::RemoveCollisionElement(
       &collision_element_groups_[group_name]);
   RemoveOrFail(
       [id](const auto& x) {
-        drake::log()->debug("  collision_elements_: {} - {}", x->getId(), x->getId() == id);
-        return x->getId() == id;
+        auto x_id = x->getId();
+        drake::log()->debug("  collision_elements_: {} - {}", x_id, x_id == id);
+        return x_id == id;
       },
       &collision_elements_);
 }
