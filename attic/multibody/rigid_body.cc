@@ -105,6 +105,7 @@ void RigidBody<T>::AddCollisionElement(
     const std::string& group_name,
     drake::multibody::collision::Element* element) {
   drake::multibody::collision::ElementId id = element->getId();
+  drake::log()->debug("AddCollisionElement: {}", id);
   collision_element_ids_.push_back(id);
   collision_element_groups_[group_name].push_back(id);
   collision_elements_.push_back(element);
@@ -125,14 +126,24 @@ template <typename T>
 void RigidBody<T>::RemoveCollisionElement(
     const std::string& group_name,
     const drake::multibody::collision::ElementId& id) {
+  drake::log()->debug("RemoveCollisionElement: {}", id);
   RemoveOrFail(
-      [id](const auto& x) { return x == id; },
+      [id](const auto& x) {
+        drake::log()->debug("  collision_element_ids_: {} - {}", x, x == id);
+        return x == id;
+      },
       &collision_element_ids_);
   RemoveOrFail(
-      [id](const auto& x) { return x == id; },
+      [id](const auto& x) {
+        drake::log()->debug("  collision_element_groups_[group_name]: {} - {}", x, x == id);
+        return x == id;
+      },
       &collision_element_groups_[group_name]);
   RemoveOrFail(
-      [id](const auto& x) { return x->getId() == id; },
+      [id](const auto& x) {
+        drake::log()->debug("  collision_elements_: {} - {}", x->getId(), x->getId() == id);
+        return x->getId() == id;
+      },
       &collision_elements_);
 }
 
