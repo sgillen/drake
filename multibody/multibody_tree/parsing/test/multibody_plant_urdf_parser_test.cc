@@ -29,13 +29,18 @@ GTEST_TEST(MultibodyPlantUrdfParserTest, DoublePendulum) {
   plant.Finalize();
 
   const MultibodyTree<double>& tree = plant.tree();
-  EXPECT_EQ(tree.num_bodies(), 4);
-  EXPECT_EQ(tree.num_frames(), 10);
+  EXPECT_EQ(tree.num_bodies(), 5);
+  EXPECT_EQ(tree.num_frames(), 13);
 
   ASSERT_TRUE(tree.HasFrameNamed("frame_on_link1"));
   ASSERT_TRUE(tree.HasFrameNamed("frame_on_link2"));
   ASSERT_TRUE(tree.HasFrameNamed("link1_com"));
   ASSERT_TRUE(tree.HasFrameNamed("link2_com"));
+
+  // Implicit frame (empty link).
+  ASSERT_TRUE(tree.HasFrameNamed("implicit_frame"));
+  // Explicit Drake frame.
+  ASSERT_TRUE(tree.HasFrameNamed("explicit_drake_frame"));
 
   // Sample a couple of frames.
   const Frame<double>& frame_on_link1 = tree.GetFrameByName("frame_on_link1");

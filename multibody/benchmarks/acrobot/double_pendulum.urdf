@@ -53,4 +53,18 @@
     link="link1" name="link1_com" rpy="0 0 0" xyz="0 -0.5 0"/>
   <frame
     link="link2" name="link2_com" rpy="0 0 0" xyz="0 -0.5 0"/>
+
+  <!-- Check empty links -->
+  <link name="implicit_frame"/>
+
+  <joint name="implicit_frame_weld" type="fixed">
+    <parent link="base"/>
+    <child link="implicit_frame"/>
+    <origin rpy="0 0 0" xyz="0.1 0.2 0.3"/>
+  </joint>
+  <!-- Check Drake-specific frame tag -->
+  <frame
+      name="explicit_drake_frame" link="implicit_frame"
+      rpy="0 0 0" xyz="1 2 3"/>
+
 </robot>
