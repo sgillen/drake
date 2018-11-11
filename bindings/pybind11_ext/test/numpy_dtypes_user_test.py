@@ -86,7 +86,7 @@ class TestNumpyDtypesUser(unittest.TestCase):
         A = np.array([
             mut.Symbol(), mut.LengthValueImplicit(1)], dtype=mut.Symbol)
         self.check_symbol(A[0], "")
-        self.check_symbol(A[0], "length(1)")
+        self.check_symbol(A[1], "length(1)")
 
         # Mixed creation without implicit casts, yields dtype=object.
         O = np.array([mut.Symbol(), 1.])
