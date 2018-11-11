@@ -6,9 +6,9 @@ import numpy_dtypes_user as mut
 
 
 class TestNumpyDtypesUser(unittest.TestCase):
-    def check_symbol(self, x, value):
+    def check_symbol(self, x, value, message=None):
         self.assertIsInstance(x, mut.Symbol)
-        self.assertEqual(str(x), value)
+        self.assertEqual(str(x), value, message)
 
     def check_symbol_all(self, X, value):
         for x in X.flat:
@@ -70,14 +70,35 @@ class TestNumpyDtypesUser(unittest.TestCase):
         self.assertEqual(to_length[0].value(), 1)
 
     def test_array_cast_implicit(self):
-        # Implicit casts by assignment.
-        A = np.array([mut.Symbol()])
-        A[0] = mut.LengthValueImplicit(1)
-        A[:] = mut.LengthValueImplicit(1)
+        # By assignment.
+        a = mut.Symbol("a")
+        A = np.array([a])
+
+        def reset():
+            A[:] = a
+
+        b_length = mut.LengthValueImplicit(1)
+        # - Implicitly convertible types.
+        A[0] = b_length
+        self.check_symbol(A[0], "length(1)")
+        A[:] = b_length
+        self.check_symbol(A[0], "length(1)")
+        # - Permitted as in place operation.
+        reset()
+        A += mut.LengthValueImplicit(1)
+        self.check_symbol(A[0], "(a) + (length(1))")
+        # Explicit: Scalar assignment not permitted.
+        b_str = mut.StrValueExplicit("b")
         with self.assertRaises(TypeError):
-            A[0] = mut.StrValueExplicit("a")
+            A[0] = b_str
         # N.B. For some reason, NumPy considers this explicit coercion...
-        A[:] = mut.StrValueExplicit("a")
+        A[:] = b_str
+        self.check_symbol(A[0], "b")
+        # - Permitted as in place operation.
+        reset()
+        A += mut.StrValueExplicit("b")
+        self.check_symbol(A[0], "(a) + (b)")
+        reset()
 
     def test_array_creation_mixed(self):
         # Mixed creation with implicitly convertible types.
@@ -147,7 +168,7 @@ class TestNumpyDtypesUser(unittest.TestCase):
             self.check_symbol(fop(a, b), value)
             c = mut.Symbol(a)
             fiop(c, b)
-            self.check_symbol(c, value)
+            self.check_symbol(c, value, (a, b, c, value))
 
             # Array.
             A = np.array([a, a])
@@ -163,12 +184,16 @@ class TestNumpyDtypesUser(unittest.TestCase):
 
         a = mut.Symbol("a")
         b = mut.Symbol("b")
+        b_length = mut.LengthValueImplicit(1)
+        b_str = mut.StrValueExplicit("b")
 
         # N.B. Implicit casting is not easily testable here; see array tests.
         # Operators.
         def fop(x, y): return x + y
         def fiop(x, y): x += y
         op_with_inplace(a, b, fop, fiop, "(a) + (b)")
+        op_with_inplace(a, b_length, fop, fiop, "(a) + (length(1))")
+        op_with_inplace(a, b_str, fop, fiop, "(a) + (b)")
 
         def fop(x, y): return x - y
         def fiop(x, y): x -= y
