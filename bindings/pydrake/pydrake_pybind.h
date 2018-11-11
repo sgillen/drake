@@ -276,7 +276,8 @@ This is a brief recipe for debugging with GDB
         source_dir=${workspace}/bazel-${name}
         source /tmp/env.sh
         cd ${target_bin_path}.runfiles/${name}
-        gdb --directory ${source_dir} --args python ${target_bin_path} --trace=user -f
+        gdb --directory ${source_dir} --args python ${target_bin_path}
+--trace=user -f
     )
 
 This allows you to use GDB from the terminal, while being able to inspect the
@@ -333,7 +334,8 @@ template <typename PyClass>
 void DefCopyAndDeepCopy(PyClass* ppy_class) {
   using Class = typename PyClass::type;
   PyClass& py_class = *ppy_class;
-  py_class.def("__copy__", [](const Class* self) { return Class{*self}; })
+  py_class  // BR
+      .def("__copy__", [](const Class* self) { return Class{*self}; })
       .def("__deepcopy__",
            [](const Class* self, py::dict /* memo */) { return Class{*self}; });
 }

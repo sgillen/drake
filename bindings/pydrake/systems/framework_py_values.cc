@@ -56,15 +56,15 @@ void DefineFrameworkPyValues(py::module m) {
             m, "BasicVector", GetPyParam<T>(), doc.BasicVector.doc);
     DefClone(&basic_vector);
     basic_vector
-      // N.B. Place `init<VectorX<T>>` `init<int>` so that we do not implicitly
-      // convert scalar-size `np.array` objects to `int` (since this is normally
-      // permitted).
-      // N.B. Also ensure that we use `greedy_arg` to prevent ambiguous
-      // overloads when using scalars vs. lists vs. numpy arrays. See
-      // `greedy_arg` for more information.
-      .def(py::init([](greedy_arg<VectorX<T>> in) {
-        return new BasicVector<T>(*in);
-      }), doc.BasicVector.ctor.doc_1args_vec, py::arg("data"))
+        // N.B. Place `init<VectorX<T>>` `init<int>` so that we do not
+        // implicitly convert scalar-size `np.array` objects to `int` (since
+        // this is normally permitted). N.B. Also ensure that we use
+        // `greedy_arg` to prevent ambiguous overloads when using scalars vs.
+        // lists vs. numpy arrays. See `greedy_arg` for more information.
+        .def(py::init([](greedy_arg<VectorX<T>> in) {
+               return new BasicVector<T>(*in);
+             }),
+             doc.BasicVector.ctor.doc_1args_Vec)
         .def(py::init<int>(), py::arg("size"), doc.BasicVector.ctor.doc_1args_size)
         .def("get_value",
             [](const BasicVector<T>* self) -> Eigen::Ref<const VectorX<T>> {

@@ -366,7 +366,7 @@ class TestSymbolicExpression(SymbolicTestCase):
         algebra.check_value((1 - e_xv), "(1 - x)")
 
         # - In place.
-        e = copy(e_xv)  # N.B. No array construnction needed
+        e = copy.copy(e_xv)  # N.B. No array construnction needed
         e -= e_yv
         algebra.check_value(e, (x - y))
         e -= zv
@@ -676,8 +676,8 @@ class TestSymbolicExpression(SymbolicTestCase):
         self.assertEqualStructure(e.Substitute(env), x + y + 5)
 
     def test_copy(self):
-        self._check_scalar(copy.copy(e_x), e_x)
-        self._check_scalar(copy.deepcopy(e_x), e_x)
+        self.assertEqualStructure(copy.copy(e_x), e_x)
+        self.assertEqualStructure(copy.deepcopy(e_x), e_x)
 
     # See `math_overloads_test` for more comprehensive checks on math
     # functions.
