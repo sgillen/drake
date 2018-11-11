@@ -161,7 +161,7 @@ public:
       finalize();
   }
 
-  // Gets a NumPy UFunc by name.
+  // Gets a NumPy builtin UFunc by name.
   static ufunc get_builtin(const char* name) {
     module numpy = module::import("numpy");
     return ufunc(numpy.attr(name));

@@ -37,16 +37,34 @@ class TestNumpyDtypesUser(unittest.TestCase):
         self.assertEqual(str(a), "a")
         self.assertEqual(a.str(), "a")
 
-    def test_array_creation(self):
+    def test_array_creation_basics(self):
         # Uniform creation.
         A = np.array([mut.Symbol("a")])
         self.assertEqual(A.dtype, mut.Symbol)
         self.assertEqual(A[0].str(), "a")
 
+    def test_array_cast_explicit(self):
+        A = np.array([mut.Symbol()])
+
+        def check_cast(dtype):
+            B = A.astype(dtype)
+            self.assertEqual(B.dtype, dtype)
+            C = B.astype(mut.Symbol)
+            self.assertEqual(C.dtype, mut.Symbol)
+
+        # Test round-trip casting.
+        check_cast(mut.Symbol)
+        check_cast(np.object)
+
+    def test_array_cast_implicit(self):
+        # Implicit casts by assignment.
+        pass
+
+    def test_array_creation_mixed(self):
         # Mixed creation -> object.
         O = np.array([mut.Symbol(), 1.])
         self.assertEqual(O.dtype, np.object)
-        # - Cast.
+        # - Explicit Cast.
         A = O.astype(mut.Symbol)
         self.assertEqual(A.dtype, mut.Symbol)
         self.check_symbol(A[0], "")
@@ -57,7 +75,22 @@ class TestNumpyDtypesUser(unittest.TestCase):
             # Requires implicit conversion double. No dice.
             A = np.array([mut.Symbol(), 1.], dtype=mut.Symbol)
 
-    def test_array_constants(self):
+    def test_array_ufunc(self):
+        # - Symbol
+        a = mut.Symbol("a")
+        b = mut.Symbol("b")
+        C = mut.custom_binary_ufunc([a, a], [b, b])
+        self.assertEqual(C.shape, (2,))
+        self.check_symbol_all(C, "custom(a, b)")
+        # - LengthValue
+        al = mut.LengthValue(1)
+        bl = mut.LengthValue(2)
+        Cl = mut.custom_binary_ufunc([al, al], [bl, bl])
+        self.assertEqual(Cl.shape, (2,))
+        for c in Cl:
+            self.assertEqual(c.value(), 3)
+
+    def test_array_creation_constants(self):
         # Zeros: More so an `empty` array.
         Z = np.full((2,), mut.Symbol())
         self.assertEqual(Z.dtype, mut.Symbol)

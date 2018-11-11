@@ -36,6 +36,10 @@ class LengthValue {
  public:
   LengthValue(int value) : value_(value) {}
   int value() const { return value_; }
+
+  bool operator==(const LengthValue& other) const {
+    return value_ == other.value_;
+  }
  private:
   int value_{};
 };
@@ -151,6 +155,8 @@ PYBIND11_NUMPY_DTYPE_USER(Symbol);
 namespace {
 
 PYBIND11_MODULE(numpy_dtypes_user, m) {
+  // N.B. You must pre-declare all types that must interact using UFuncs, as
+  // they must already be registered at that point of defining the UFunc.
   py::dtype_user<LengthValue> length(m, "LengthValue");
   py::dtype_user<StrValue> str(m, "StrValue");
   py::dtype_user<Symbol> sym(m, "Symbol");
@@ -159,7 +165,8 @@ PYBIND11_MODULE(numpy_dtypes_user, m) {
       .def(py::init<int>())
       .def("value", &LengthValue::value)
       .def("__repr__", MakeRepr("LengthValue", &LengthValue::value))
-      .def("__str__", MakeStr(&LengthValue::value));
+      .def("__str__", MakeStr(&LengthValue::value))
+      .def_loop(py::self == py::self);
 
   str  // BR
       .def(py::init<string>())
@@ -188,6 +195,7 @@ PYBIND11_MODULE(numpy_dtypes_user, m) {
       .def_loop(py::dtype_method::explicit_conversion<Symbol, int>())
       .def_loop(py::dtype_method::implicit_conversion<Symbol, LengthValue>())
       // Operators.
+      // N.B. Inplace operators do not have UFuncs in NumPy.
       // - Math.
       .def_loop(py::self + py::self)
       .def(py::self += py::self)
@@ -216,6 +224,15 @@ PYBIND11_MODULE(numpy_dtypes_user, m) {
       .def_loop("abs", &func::abs)
       .def_loop("cos", &func::cos)
       .def_loop("sin", &func::sin);
+
+  py::ufunc(m, "custom_binary_ufunc")
+      .def_loop<Symbol>([](const Symbol& lhs, const Symbol& rhs) {
+        return Symbol::format("custom({}, {})", lhs, rhs);
+      })
+      .def_loop<LengthValue>(
+          [](const LengthValue& lhs, const LengthValue& rhs) {
+            return LengthValue(lhs.value() + rhs.value());
+          });
 }
 
 }  // namespace
