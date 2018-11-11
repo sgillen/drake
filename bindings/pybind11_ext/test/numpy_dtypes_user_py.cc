@@ -79,7 +79,7 @@ class Symbol {
     return Symbol(fmt::format(pattern, args...));
   }
 
-  // Closed under the following operators
+  // Closed under the following operators:
   Symbol& operator+=(const Symbol& rhs) { return inplace_binary("+", rhs); }
   Symbol operator+(const Symbol& rhs) const { return binary("+", rhs); }
   Symbol& operator-=(const Symbol& rhs) { return inplace_binary("-", rhs); }

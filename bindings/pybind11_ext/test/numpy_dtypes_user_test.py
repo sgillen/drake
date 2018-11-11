@@ -140,6 +140,7 @@ class TestNumpyDtypesUser(unittest.TestCase):
             I = np.ones((2,), dtype=mut.Symbol)
 
     def test_algebra(self):
+        """Tests scalar and array algebra."""
 
         def op_with_inplace(a, b, fop, fiop, value):
             # Scalar.
@@ -165,28 +166,28 @@ class TestNumpyDtypesUser(unittest.TestCase):
 
         # N.B. Implicit casting is not easily testable here; see array tests.
         # Operators.
-        def fop(a, b): return a + b
-        def fiop(c, b): c += b
+        def fop(x, y): return x + y
+        def fiop(x, y): x += y
         op_with_inplace(a, b, fop, fiop, "(a) + (b)")
 
-        def fop(a, b): return a - b
-        def fiop(c, b): c -= b
+        def fop(x, y): return x - y
+        def fiop(x, y): x -= y
         op_with_inplace(a, b, fop, fiop, "(a) - (b)")
 
-        def fop(a, b): return a * b
-        def fiop(c, b): c *= b
+        def fop(x, y): return x * y
+        def fiop(x, y): x *= y
         op_with_inplace(a, b, fop, fiop, "(a) * (b)")
 
-        def fop(a, b): return a / b
-        def fiop(c, b): c /= b
+        def fop(x, y): return x / y
+        def fiop(x, y): x /= y
         op_with_inplace(a, b, fop, fiop, "(a) / (b)")
 
-        def fop(a, b): return a & b
-        def fiop(c, b): c &= b
+        def fop(x, y): return x & y
+        def fiop(x, y): x &= y
         op_with_inplace(a, b, fop, fiop, "(a) & (b)")
 
-        def fop(a, b): return a | b
-        def fiop(c, b): c |= b
+        def fop(x, y): return x | y
+        def fiop(x, y): x |= y
         op_with_inplace(a, b, fop, fiop, "(a) | (b)")
 
         def op(a, b, fop, value):
@@ -198,9 +199,20 @@ class TestNumpyDtypesUser(unittest.TestCase):
             self.check_symbol(c2, value)
 
         # Logical.
-        op(a, b, lambda a, b: a == b, "(a) == (b)")
-        op(a, b, lambda a, b: a != b, "(a) != (b)")
-        op(a, b, lambda a, b: a < b, "(a) < (b)")
-        op(a, b, lambda a, b: a <= b, "(a) <= (b)")
-        op(a, b, lambda a, b: a > b, "(a) > (b)")
-        op(a, b, lambda a, b: a >= b, "(a) >= (b)")
+        def fop(x, y): return x == y
+        op(a, b, fop, "(a) == (b)")
+
+        def fop(x, y): return x != y
+        op(a, b, fop, "(a) != (b)")
+
+        def fop(x, y): return x < y
+        op(a, b, fop, "(a) < (b)")
+
+        def fop(x, y): return x <= y
+        op(a, b, fop, "(a) <= (b)")
+
+        def fop(x, y): return x > y
+        op(a, b, fop, "(a) > (b)")
+
+        def fop(x, y): return x >= y
+        op(a, b, fop, "(a) >= (b)")
