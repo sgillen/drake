@@ -270,9 +270,20 @@ PYBIND11_MODULE(numpy_dtypes_user, m) {
       .def_loop<Symbol>([](const Symbol& lhs, const Symbol& rhs) {
         return Symbol::format("custom({}, {})", lhs, rhs);
       })
+      .def_loop<Symbol>([](const Symbol& lhs, const OrderCheck& rhs) {
+        return Symbol::format("custom-order-rhs({})", lhs);
+      })
+      .def_loop<Symbol>([](const OrderCheck& lhs, const Symbol& rhs) {
+        return Symbol::format("custom-order-lhs({})", rhs);
+      })
       .def_loop<LengthValueImplicit>(
           [](const LengthValueImplicit& lhs, const LengthValueImplicit& rhs) {
             return LengthValueImplicit(lhs.value() + rhs.value());
+          })
+      .def_loop<StrValueExplicit>(
+          [](const StrValueExplicit& lhs, const StrValueExplicit& rhs) {
+            return StrValueExplicit(fmt::format(
+                "custom-str({}, {})", lhs.value(), rhs.value()));
           });
 }
 

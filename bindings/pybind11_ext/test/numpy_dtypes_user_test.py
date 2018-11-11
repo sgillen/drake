@@ -129,16 +129,60 @@ class TestNumpyDtypesUser(unittest.TestCase):
         # - Symbol
         a = mut.Symbol("a")
         b = mut.Symbol("b")
-        C = mut.custom_binary_ufunc([a, a], [b, b])
+        c = mut.custom_binary_ufunc(a, b)
+        self.check_symbol(c, "custom(a, b)")
+        A = [a, a]
+        B = [b, b]
+        C = mut.custom_binary_ufunc(A, B)
         self.assertEqual(C.shape, (2,))
         self.check_symbol_all(C, "custom(a, b)")
+
         # - LengthValueImplicit
-        al = mut.LengthValueImplicit(1)
-        bl = mut.LengthValueImplicit(2)
-        Cl = mut.custom_binary_ufunc([al, al], [bl, bl])
-        self.assertEqual(Cl.shape, (2,))
-        for c in Cl:
+        a_length = mut.LengthValueImplicit(1)
+        b_length = mut.LengthValueImplicit(2)
+        c_length = mut.custom_binary_ufunc(a_length, b_length)
+        self.assertEqual(c_length.value(), 3)
+        A_length = [a_length, a_length]
+        B_length = [b_length, b_length]
+        C_length = mut.custom_binary_ufunc(A_length, B_length)
+        self.assertEqual(C_length.shape, (2,))
+        for c in C_length:
             self.assertEqual(c.value(), 3)
+
+        # - StrValueExplicit
+        a_str = mut.StrValueExplicit("sa")
+        b_str = mut.StrValueExplicit("sb")
+        c_str = mut.custom_binary_ufunc(a_str, b_str)
+        self.assertEqual(c_str.value(), "custom-str(sa, sb)")
+        A_str = [a_str, a_str]
+        B_str = [b_str, b_str]
+        C_str = mut.custom_binary_ufunc(A_str, B_str)
+        self.assertEqual(C_str.shape, (2,))
+        for c in C_str:
+            self.assertEqual(c.value(), "custom-str(sa, sb)")
+
+        # - Mixing.
+        # - - Implicit.
+        print(mut.custom_binary_ufunc(a_length, b))
+        print(mut.custom_binary_ufunc(a, b_length))
+
+        print(mut.custom_binary_ufunc(A_length, B))
+        print(mut.custom_binary_ufunc(A, B_length))
+
+        print(mut.custom_binary_ufunc(a_str, b))
+        print(mut.custom_binary_ufunc(a, b_str))
+
+        print(mut.custom_binary_ufunc(A_str, B))
+        print(mut.custom_binary_ufunc(A, B_str))
+
+        # - Explicit.
+        a_order = mut.OrderCheck()
+        A_order = [a_order, a_order]
+        print(mut.custom_binary_ufunc(a_order, b))
+        print(mut.custom_binary_ufunc(a, a_order))
+
+        print(mut.custom_binary_ufunc(A_order, B))
+        print(mut.custom_binary_ufunc(A, A_order))
 
     def test_array_creation_constants(self):
         # Zeros: More so an `empty` array.
