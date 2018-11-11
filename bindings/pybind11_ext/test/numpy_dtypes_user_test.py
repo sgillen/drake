@@ -44,13 +44,14 @@ class TestNumpyDtypesUser(unittest.TestCase):
         self.assertEqual(A[0].str(), "a")
 
     def test_array_cast_explicit(self):
-        # Check round-trip for semantically trivial casts.
+        # Check idempotent round-trip casts.
         A = np.array([mut.Symbol("a")])
-        for dtype in (mut.Symbol, np.object):
+        for dtype in (mut.Symbol, np.object, mut.StrValueExplicit):
             B = A.astype(dtype)
             self.assertEqual(B.dtype, dtype)
             C = B.astype(mut.Symbol)
             self.assertEqual(C.dtype, mut.Symbol)
+            self.check_symbol(C[0], "a")
         # Check registered explicit casts.
         # - From.
         from_float = np.array([1.]).astype(mut.Symbol)
