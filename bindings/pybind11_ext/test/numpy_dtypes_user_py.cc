@@ -52,6 +52,12 @@ class StrValueExplicit {
   std::shared_ptr<string> value_{};
 };
 
+// No construction possible from this; purely for testing explicit operator
+// overloads.
+struct OrderCheck {
+  std::string value() const { return "order"; }
+};
+
 // Tests operator overloads.
 class Symbol {
  public:
@@ -101,6 +107,14 @@ class Symbol {
   Symbol operator&&(const Symbol& rhs) const { return binary("&&", rhs); }
   Symbol operator||(const Symbol& rhs) const { return binary("||", rhs); }
 
+  // - Not closed.
+  Symbol& operator+=(const OrderCheck& rhs) {
+    return inplace_binary("+", rhs.value());
+  }
+  Symbol operator+(const OrderCheck& rhs) const {
+    return binary("+", rhs.value());
+  }
+
  private:
   Symbol binary(const char* op, const Symbol& rhs) const {
     Symbol lhs(*this);
@@ -117,6 +131,10 @@ class Symbol {
   // N.B. This is not used for Copy-on-Write optimizations.
   std::shared_ptr<string> str_;
 };
+
+Symbol operator+(const OrderCheck& lhs, const Symbol& rhs) {
+  return Symbol::format("({}) + ({})", lhs.value(), rhs);
+}
 
 std::ostream& operator<<(std::ostream& os, const Symbol& s) {
   return os << s.str();
@@ -151,6 +169,7 @@ auto MakeStr(Return (Class::*method)() const) {
 
 PYBIND11_NUMPY_DTYPE_USER(LengthValueImplicit);
 PYBIND11_NUMPY_DTYPE_USER(StrValueExplicit);
+PYBIND11_NUMPY_DTYPE_USER(OrderCheck);
 PYBIND11_NUMPY_DTYPE_USER(Symbol);
 
 namespace {
@@ -160,6 +179,7 @@ PYBIND11_MODULE(numpy_dtypes_user, m) {
   // they must already be registered at that point of defining the UFunc.
   py::dtype_user<LengthValueImplicit> length(m, "LengthValueImplicit");
   py::dtype_user<StrValueExplicit> str(m, "StrValueExplicit");
+  py::dtype_user<OrderCheck> order(m, "OrderCheck");
   py::dtype_user<Symbol> sym(m, "Symbol");
 
   length  // BR
@@ -174,6 +194,11 @@ PYBIND11_MODULE(numpy_dtypes_user, m) {
       .def("value", &StrValueExplicit::value)
       .def("__repr__", MakeRepr("StrValueExplicit", &StrValueExplicit::value))
       .def("__str__", MakeStr(&StrValueExplicit::value));
+
+  order  // BR
+      .def(py::init())
+      .def("__repr__", MakeRepr("OrderCheck", &OrderCheck::value))
+      .def("__str__", MakeStr(&OrderCheck::value));
 
   sym  // BR
       // Nominal definitions.
@@ -229,6 +254,10 @@ PYBIND11_MODULE(numpy_dtypes_user, m) {
       .def_loop(py::self <= py::self)
       .def_loop(py::self > py::self)
       .def_loop(py::self >= py::self)
+      // - Not closed.
+      .def_loop(py::self + OrderCheck{})
+      .def_loop(OrderCheck{} + py::self)
+      .def(py::self += OrderCheck{})
       // .def_loop(py::self && py::self)
       // .def_loop(py::self || py::self)
       // Explicit UFunc.

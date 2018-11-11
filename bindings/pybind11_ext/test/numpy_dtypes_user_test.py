@@ -264,6 +264,18 @@ class TestNumpyDtypesUser(unittest.TestCase):
         def fop(x, y): return x >= y
         self.check_binary(a, b, fop, "(a) >= (b)")
 
+    def test_algebra_order_check(self):
+        # By construction, `OrderCheck` only interfaces with `Symbol` by
+        # explicit operator overloads; no casting / construction is done.
+        a = mut.Symbol("a")
+        order = mut.OrderCheck()
+
+        def fop(x, y): return x + y
+        def fiop(x, y): x += y; return x
+
+        self.check_binary_with_inplace(a, order, fop, fiop, "(a) + (order)")
+        self.check_binary(order, a, fop, "(order) + (a)")
+
     def test_algebra_implicit_casting(self):
         # N.B. Only tested on a single operator, `__add__` and `__iadd__`.
         a = mut.Symbol("a")
