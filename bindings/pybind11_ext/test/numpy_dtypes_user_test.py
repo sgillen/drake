@@ -32,37 +32,68 @@ class TestNumpyDtypesUser(unittest.TestCase):
         self.assertEqual(str(a), "a")
         self.assertEqual(a.str(), "a")
 
-    def test_scalar_algebra(self):
-        a = mut.Symbol("a")
-        b = mut.Symbol("b")
+    def test_algebra(self):
 
-        def op(fop, value):
-            self.check_symbol(fop(a, b), value)
-
-        def op_with_inplace(fop, fiop, value):
+        def op_with_inplace(a, b, fop, fiop, value):
+            # Scalar.
             self.check_symbol(fop(a, b), value)
             c = mut.Symbol(a)
             fiop(c, b)
             self.check_symbol(c, value)
 
+            # Array.
+            A = np.array([a, a])
+            B = np.array([b, b])
+            c1, c2 = fop(A, B)
+            self.check_symbol(c1, value)
+            self.check_symbol(c2, value)
+            C = np.array(A)
+            fiop(C, B)
+            c1, c2 = C
+            self.check_symbol(c1, value)
+            self.check_symbol(c2, value)
+
+        a = mut.Symbol("a")
+        b = mut.Symbol("b")
+
         # N.B. Implicit casting is not easily testable here; see array tests.
         # Operators.
+        def fop(a, b): return a + b
         def fiop(c, b): c += b
-        op_with_inplace(lambda a, b: a + b, fiop, "(a) + (b)")
+        op_with_inplace(a, b, fop, fiop, "(a) + (b)")
+
+        def fop(a, b): return a - b
         def fiop(c, b): c -= b
-        op_with_inplace(lambda a, b: a - b, fiop, "(a) - (b)")
+        op_with_inplace(a, b, fop, fiop, "(a) - (b)")
+
+        def fop(a, b): return a * b
         def fiop(c, b): c *= b
-        op_with_inplace(lambda a, b: a * b, fiop, "(a) * (b)")
+        op_with_inplace(a, b, fop, fiop, "(a) * (b)")
+
+        def fop(a, b): return a / b
         def fiop(c, b): c /= b
-        op_with_inplace(lambda a, b: a / b, fiop, "(a) / (b)")
+        op_with_inplace(a, b, fop, fiop, "(a) / (b)")
+
+        def fop(a, b): return a & b
         def fiop(c, b): c &= b
-        op_with_inplace(lambda a, b: a & b, fiop, "(a) & (b)")
+        op_with_inplace(a, b, fop, fiop, "(a) & (b)")
+
+        def fop(a, b): return a | b
         def fiop(c, b): c |= b
-        op_with_inplace(lambda a, b: a | b, fiop, "(a) | (b)")
+        op_with_inplace(a, b, fop, fiop, "(a) | (b)")
+
+        def op(a, b, fop, value):
+            self.check_symbol(fop(a, b), value)
+            A = np.array([a, a])
+            B = np.array([b, b])
+            c1, c2 = fop(A, B)
+            self.check_symbol(c1, value)
+            self.check_symbol(c2, value)
+
         # Logical.
-        op(lambda a, b: a == b, "(a) == (b)")
-        op(lambda a, b: a != b, "(a) != (b)")
-        op(lambda a, b: a < b, "(a) < (b)")
-        op(lambda a, b: a <= b, "(a) <= (b)")
-        op(lambda a, b: a > b, "(a) > (b)")
-        op(lambda a, b: a >= b, "(a) >= (b)")
+        op(a, b, lambda a, b: a == b, "(a) == (b)")
+        op(a, b, lambda a, b: a != b, "(a) != (b)")
+        op(a, b, lambda a, b: a < b, "(a) < (b)")
+        op(a, b, lambda a, b: a <= b, "(a) <= (b)")
+        op(a, b, lambda a, b: a > b, "(a) > (b)")
+        op(a, b, lambda a, b: a >= b, "(a) >= (b)")
