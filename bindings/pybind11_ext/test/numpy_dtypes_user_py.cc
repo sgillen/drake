@@ -52,18 +52,6 @@ class StrValueExplicit {
   std::shared_ptr<string> value_{};
 };
 
-#define OP_BINARY(op) \
-    Symbol operator op(const Symbol& rhs) const { \
-      Symbol value(*this); value.inplace_binary(#op, rhs); return value; \
-    }
-#define OP_BINARY_WITH_INPLACE(op, iop) \
-    Symbol& operator iop(const Symbol& rhs) { \
-      return inplace_binary(#op, rhs); \
-    } \
-    Symbol operator op(const Symbol& rhs) const { \
-      Symbol value(*this); value iop rhs; return value; \
-    }
-
 // Tests operator overloads.
 class Symbol {
  public:
@@ -92,22 +80,33 @@ class Symbol {
   }
 
   // Operators.
-  OP_BINARY_WITH_INPLACE(+, +=)
-  OP_BINARY_WITH_INPLACE(-, -=)
-  OP_BINARY_WITH_INPLACE(*, *=)
-  OP_BINARY_WITH_INPLACE(/, /=)
-  OP_BINARY_WITH_INPLACE(&, &=)
-  OP_BINARY_WITH_INPLACE(|, |=)
-  OP_BINARY(==)
-  OP_BINARY(!=)
-  OP_BINARY(<)
-  OP_BINARY(<=)
-  OP_BINARY(>)
-  OP_BINARY(>=)
-  OP_BINARY(&&)
-  OP_BINARY(||)
+  Symbol& operator+=(const Symbol& rhs) { return inplace_binary("+", rhs); }
+  Symbol operator+(const Symbol& rhs) const { return binary("+", rhs); }
+  Symbol& operator-=(const Symbol& rhs) { return inplace_binary("-", rhs); }
+  Symbol operator-(const Symbol& rhs) const { return binary("-", rhs); }
+  Symbol& operator*=(const Symbol& rhs) { return inplace_binary("*", rhs); }
+  Symbol operator*(const Symbol& rhs) const { return binary("*", rhs); }
+  Symbol& operator/=(const Symbol& rhs) { return inplace_binary("/", rhs); }
+  Symbol operator/(const Symbol& rhs) const { return binary("/", rhs); }
+  Symbol& operator&=(const Symbol& rhs) { return inplace_binary("&", rhs); }
+  Symbol operator&(const Symbol& rhs) const { return binary("&", rhs); }
+  Symbol& operator|=(const Symbol& rhs) { return inplace_binary("|", rhs); }
+  Symbol operator|(const Symbol& rhs) const { return binary("|", rhs); }
+  Symbol operator==(const Symbol& rhs) const { return binary("==", rhs); }
+  Symbol operator!=(const Symbol& rhs) const { return binary("!=", rhs); }
+  Symbol operator<(const Symbol& rhs) const { return binary("<", rhs); }
+  Symbol operator<=(const Symbol& rhs) const { return binary("<=", rhs); }
+  Symbol operator>(const Symbol& rhs) const { return binary(">", rhs); }
+  Symbol operator>=(const Symbol& rhs) const { return binary(">=", rhs); }
+  Symbol operator&&(const Symbol& rhs) const { return binary("&&", rhs); }
+  Symbol operator||(const Symbol& rhs) const { return binary("||", rhs); }
 
  private:
+  Symbol binary(const char* op, const Symbol& rhs) const {
+    Symbol lhs(*this);
+    lhs.inplace_binary(op, rhs);
+    return lhs;
+  }
   Symbol& inplace_binary(const char* op, const Symbol& rhs) {
     *str_ = fmt::format("({}) {} ({})", str(), op, rhs.str());
     return *this;
@@ -118,9 +117,6 @@ class Symbol {
   // N.B. This is not used for Copy-on-Write optimizations.
   std::shared_ptr<string> str_;
 };
-
-#undef OP_BINARY
-#undef OP_BINARY_WITH_INPLACE
 
 std::ostream& operator<<(std::ostream& os, const Symbol& s) {
   return os << s.str();
