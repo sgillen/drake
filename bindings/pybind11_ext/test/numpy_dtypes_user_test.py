@@ -171,90 +171,112 @@ class TestNumpyDtypesUser(unittest.TestCase):
         with self.assertRaises(ValueError):
             I = np.ones((2,), dtype=mut.Symbol)
 
-    def test_algebra(self):
-        """Tests scalar and array algebra."""
+    def check_binary(self, a, b, fop, value):
+        self.check_symbol(fop(a, b), value)
+        A = np.array([a, a])
+        B = np.array([b, b])
+        c1, c2 = fop(A, B)
+        self.check_symbol(c1, value)
+        self.check_symbol(c2, value)
 
-        def op_with_inplace(a, b, fop, fiop, value, require_same=True):
-            # Scalar.
-            self.check_symbol(fop(a, b), value)
-            c = mut.Symbol(a)
-            d = fiop(c, b)
-            if require_same:
-                self.assertIs(c, d)
-            self.check_symbol(d, value)
+    def check_binary_with_inplace(
+            self, a, b, fop, fiop, value, inplace_same=True):
+        """
+        Args:
+            a: Left-hand operand.
+            b: Right-hand operand.
+            fop: Binary operator function function (x, y) -> z.
+            fiop: Binary operator inplace function (x, y). Must return `x`.
+            value: Expected value.
+            inplace_same:
+                For the scalar case, expects that `a += b` will not implicitly
+                create a new instance (per Python's math rules). If False, a new
+                instance must be created.
+        """
+        # Scalar.
+        self.check_symbol(fop(a, b), value)
+        c = mut.Symbol(a)
+        d = fiop(c, b)
+        if inplace_same:
+            self.assertIs(c, d)
+        else:
+            self.assertIsNot(c, d)
+        self.check_symbol(d, value)
 
-            # Array.
-            A = np.array([a, a])
-            B = np.array([b, b])
-            c1, c2 = fop(A, B)
-            self.check_symbol(c1, value)
-            self.check_symbol(c2, value)
-            C = np.array(A)
-            fiop(C, B)
-            c1, c2 = C
-            self.check_symbol(c1, value)
-            self.check_symbol(c2, value)
+        # Array.
+        A = np.array([a, a])
+        B = np.array([b, b])
+        c1, c2 = fop(A, B)
+        self.check_symbol(c1, value)
+        self.check_symbol(c2, value)
+        C = np.array(A)
+        fiop(C, B)
+        c1, c2 = C
+        self.check_symbol(c1, value)
+        self.check_symbol(c2, value)
 
+    def test_algebra_closed(self):
+        """Tests scalar and array algebra with implicit conversions."""
         a = mut.Symbol("a")
         b = mut.Symbol("b")
 
         # Operators.
         def fop(x, y): return x + y
         def fiop(x, y): x += y; return x
-        op_with_inplace(a, b, fop, fiop, "(a) + (b)")
-        # Casting is tested only on this first operator.
-        b_length = mut.LengthValueImplicit(1)
-        b_str = mut.StrValueExplicit("b")
-        # - No overload, inferred via conversion.
-        op_with_inplace(a, b_length, fop, fiop, "(a) + (length(1))", require_same=False)
-        # N.B. Oddly, the current structure permits this explicit conversion to
-        # happen.
-        op_with_inplace(a, b_str, fop, fiop, "(a) + (b)", require_same=False)
-        # - Explicit overload.
+        self.check_binary_with_inplace(a, b, fop, fiop, "(a) + (b)")
 
         def fop(x, y): return x - y
         def fiop(x, y): x -= y; return x
-        op_with_inplace(a, b, fop, fiop, "(a) - (b)")
+        self.check_binary_with_inplace(a, b, fop, fiop, "(a) - (b)")
 
         def fop(x, y): return x * y
         def fiop(x, y): x *= y; return x
-        op_with_inplace(a, b, fop, fiop, "(a) * (b)")
+        self.check_binary_with_inplace(a, b, fop, fiop, "(a) * (b)")
 
         def fop(x, y): return x / y
         def fiop(x, y): x /= y; return x
-        op_with_inplace(a, b, fop, fiop, "(a) / (b)")
+        self.check_binary_with_inplace(a, b, fop, fiop, "(a) / (b)")
 
         def fop(x, y): return x & y
         def fiop(x, y): x &= y; return x
-        op_with_inplace(a, b, fop, fiop, "(a) & (b)")
+        self.check_binary_with_inplace(a, b, fop, fiop, "(a) & (b)")
 
         def fop(x, y): return x | y
         def fiop(x, y): x |= y; return x
-        op_with_inplace(a, b, fop, fiop, "(a) | (b)")
-
-        def op(a, b, fop, value):
-            self.check_symbol(fop(a, b), value)
-            A = np.array([a, a])
-            B = np.array([b, b])
-            c1, c2 = fop(A, B)
-            self.check_symbol(c1, value)
-            self.check_symbol(c2, value)
+        self.check_binary_with_inplace(a, b, fop, fiop, "(a) | (b)")
 
         # Logical.
         def fop(x, y): return x == y
-        op(a, b, fop, "(a) == (b)")
+        self.check_binary(a, b, fop, "(a) == (b)")
 
         def fop(x, y): return x != y
-        op(a, b, fop, "(a) != (b)")
+        self.check_binary(a, b, fop, "(a) != (b)")
 
         def fop(x, y): return x < y
-        op(a, b, fop, "(a) < (b)")
+        self.check_binary(a, b, fop, "(a) < (b)")
 
         def fop(x, y): return x <= y
-        op(a, b, fop, "(a) <= (b)")
+        self.check_binary(a, b, fop, "(a) <= (b)")
 
         def fop(x, y): return x > y
-        op(a, b, fop, "(a) > (b)")
+        self.check_binary(a, b, fop, "(a) > (b)")
 
         def fop(x, y): return x >= y
-        op(a, b, fop, "(a) >= (b)")
+        self.check_binary(a, b, fop, "(a) >= (b)")
+
+    def test_algebra_implicit_casting(self):
+        # N.B. Only tested on a single operator, `__add__` and `__iadd__`.
+        a = mut.Symbol("a")
+
+        def fop(x, y): return x + y
+        def fiop(x, y): x += y; return x
+
+        # N.B. Implicitly convertible types will enable true in-place
+        # operations. Explicitly convertible types requires a new value.
+        b_length = mut.LengthValueImplicit(1)
+        self.check_binary_with_inplace(
+            a, b_length, fop, fiop, "(a) + (length(1))", inplace_same=True)
+
+        b_str = mut.StrValueExplicit("b")
+        self.check_binary_with_inplace(
+            a, b_str, fop, fiop, "(a) + (b)", inplace_same=False)
