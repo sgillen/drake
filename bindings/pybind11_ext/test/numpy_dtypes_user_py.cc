@@ -54,8 +54,8 @@ class StrValueExplicit {
 
 // No construction possible from this; purely for testing explicit operator
 // overloads.
-struct OrderCheck {
-  std::string value() const { return "order"; }
+struct OperandExplicit {
+  std::string value() const { return "operand"; }
 };
 
 // Tests operator overloads.
@@ -108,10 +108,10 @@ class Symbol {
   Symbol operator||(const Symbol& rhs) const { return binary("||", rhs); }
 
   // - Not closed.
-  Symbol& operator+=(const OrderCheck& rhs) {
+  Symbol& operator+=(const OperandExplicit& rhs) {
     return inplace_binary("+", rhs.value());
   }
-  Symbol operator+(const OrderCheck& rhs) const {
+  Symbol operator+(const OperandExplicit& rhs) const {
     return binary("+", rhs.value());
   }
 
@@ -132,7 +132,7 @@ class Symbol {
   std::shared_ptr<string> str_;
 };
 
-Symbol operator+(const OrderCheck& lhs, const Symbol& rhs) {
+Symbol operator+(const OperandExplicit& lhs, const Symbol& rhs) {
   return Symbol::format("({}) + ({})", lhs.value(), rhs);
 }
 
@@ -169,7 +169,7 @@ auto MakeStr(Return (Class::*method)() const) {
 
 PYBIND11_NUMPY_DTYPE_USER(LengthValueImplicit);
 PYBIND11_NUMPY_DTYPE_USER(StrValueExplicit);
-PYBIND11_NUMPY_DTYPE_USER(OrderCheck);
+PYBIND11_NUMPY_DTYPE_USER(OperandExplicit);
 PYBIND11_NUMPY_DTYPE_USER(Symbol);
 
 namespace {
@@ -179,7 +179,7 @@ PYBIND11_MODULE(numpy_dtypes_user, m) {
   // they must already be registered at that point of defining the UFunc.
   py::dtype_user<LengthValueImplicit> length(m, "LengthValueImplicit");
   py::dtype_user<StrValueExplicit> str(m, "StrValueExplicit");
-  py::dtype_user<OrderCheck> order(m, "OrderCheck");
+  py::dtype_user<OperandExplicit> operand(m, "OperandExplicit");
   py::dtype_user<Symbol> sym(m, "Symbol");
 
   length  // BR
@@ -195,10 +195,10 @@ PYBIND11_MODULE(numpy_dtypes_user, m) {
       .def("__repr__", MakeRepr("StrValueExplicit", &StrValueExplicit::value))
       .def("__str__", MakeStr(&StrValueExplicit::value));
 
-  order  // BR
+  operand  // BR
       .def(py::init())
-      .def("__repr__", MakeRepr("OrderCheck", &OrderCheck::value))
-      .def("__str__", MakeStr(&OrderCheck::value));
+      .def("__repr__", MakeRepr("OperandExplicit", &OperandExplicit::value))
+      .def("__str__", MakeStr(&OperandExplicit::value));
 
   sym  // BR
       // Nominal definitions.
@@ -255,9 +255,9 @@ PYBIND11_MODULE(numpy_dtypes_user, m) {
       .def_loop(py::self > py::self)
       .def_loop(py::self >= py::self)
       // - Not closed.
-      .def_loop(py::self + OrderCheck{})
-      .def_loop(OrderCheck{} + py::self)
-      .def(py::self += OrderCheck{})
+      .def_loop(py::self + OperandExplicit{})
+      .def_loop(OperandExplicit{} + py::self)
+      .def(py::self += OperandExplicit{})
       // .def_loop(py::self && py::self)
       // .def_loop(py::self || py::self)
       // Explicit UFunc.
@@ -270,11 +270,11 @@ PYBIND11_MODULE(numpy_dtypes_user, m) {
       .def_loop<Symbol>([](const Symbol& lhs, const Symbol& rhs) {
         return Symbol::format("custom({}, {})", lhs, rhs);
       })
-      .def_loop<Symbol>([](const Symbol& lhs, const OrderCheck& rhs) {
-        return Symbol::format("custom-order-rhs({})", lhs);
+      .def_loop<Symbol>([](const Symbol& lhs, const OperandExplicit& rhs) {
+        return Symbol::format("custom-operand-rhs({})", lhs);
       })
-      .def_loop<Symbol>([](const OrderCheck& lhs, const Symbol& rhs) {
-        return Symbol::format("custom-order-lhs({})", rhs);
+      .def_loop<Symbol>([](const OperandExplicit& lhs, const Symbol& rhs) {
+        return Symbol::format("custom-operand-lhs({})", rhs);
       })
       .def_loop<LengthValueImplicit>(
           [](const LengthValueImplicit& lhs, const LengthValueImplicit& rhs) {

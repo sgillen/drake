@@ -176,7 +176,7 @@ class TestNumpyDtypesUser(unittest.TestCase):
         print(mut.custom_binary_ufunc(A, B_str))
 
         # - Explicit.
-        a_order = mut.OrderCheck()
+        a_order = mut.OperandExplicit()
         A_order = [a_order, a_order]
         print(mut.custom_binary_ufunc(a_order, b))
         print(mut.custom_binary_ufunc(a, a_order))
@@ -318,16 +318,16 @@ class TestNumpyDtypesUser(unittest.TestCase):
         self.check_binary(a, b, fop, "(a) >= (b)")
 
     def test_algebra_order_check(self):
-        # By construction, `OrderCheck` only interfaces with `Symbol` by
+        # By construction, `OperandExplicit` only interfaces with `Symbol` by
         # explicit operator overloads; no casting / construction is done.
         a = mut.Symbol("a")
-        order = mut.OrderCheck()
+        operand = mut.OperandExplicit()
 
         def fop(x, y): return x + y
         def fiop(x, y): x += y; return x
 
-        self.check_binary_with_inplace(a, order, fop, fiop, "(a) + (order)")
-        self.check_binary(order, a, fop, "(order) + (a)")
+        self.check_binary_with_inplace(a, operand, fop, fiop, "(a) + (operand)")
+        self.check_binary(operand, a, fop, "(operand) + (a)")
 
     def test_algebra_implicit_casting(self):
         # N.B. Only tested on a single operator, `__add__` and `__iadd__`.
