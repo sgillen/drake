@@ -171,6 +171,7 @@ PYBIND11_MODULE(numpy_dtypes_user, m) {
       // Nominal definitions.
       .def(py::init())
       .def(py::init<const string&>())
+      .def(py::init<double>())
       .def(py::init<const Symbol&>())
       .def("__repr__", MakeRepr("Symbol", &Symbol::str))
       .def("__str__", MakeStr(&Symbol::str))

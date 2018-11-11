@@ -400,6 +400,9 @@ class dtype_user : public object {
       // dtype in this case will be `object`.
       if (!isinstance(obj, cls)) {
         // This will catch type mismatch errors.
+        // TODO(eric.cousineau): Not having the correct constructor registered
+        // can causes segfaults when the error  is begin printed out...
+        // Consider changing this...
         obj = cls(obj);
       }
       return obj.cast<Class>();
