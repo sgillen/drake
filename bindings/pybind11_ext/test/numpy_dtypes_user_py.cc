@@ -180,7 +180,9 @@ PYBIND11_MODULE(numpy_dtypes_user, m) {
       .def(py::init())
       .def(py::init<const string&>())
       .def(py::init<double>())
-      .def(py::init<const StrValueExplicit&>())
+      // N.B. Constructing `StrValueExplicit` only matters for user experience,
+      // since it's explicit. However, implicit conversions *must* have an
+      // accompanying constructor.
       .def(py::init<const LengthValueImplicit&>())
       .def(py::init<const Symbol&>())
       .def("__repr__", MakeRepr("Symbol", &Symbol::str))
@@ -192,7 +194,7 @@ PYBIND11_MODULE(numpy_dtypes_user, m) {
            py::return_value_policy::reference)
       // Casting.
       // - From
-      // WARNING: All conversions here *must* have an accompanying constructor.
+      // WARNING: See above about implicit conversions + constructors.
       .def_loop(py::dtype_method::explicit_conversion<double, Symbol>())
       .def_loop(py::dtype_method::explicit_conversion<
           StrValueExplicit, Symbol>())

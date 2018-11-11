@@ -79,8 +79,8 @@ class TestNumpyDtypesUser(unittest.TestCase):
 
         b_length = mut.LengthValueImplicit(1)
         # - Implicitly convertible types.
-        A[0] = b_length
-        self.check_symbol(A[0], "length(1)")
+        # A[0] = b_length
+        # self.check_symbol(A[0], "length(1)")
         A[:] = b_length
         self.check_symbol(A[0], "length(1)")
         # - Permitted as in place operation.
@@ -119,6 +119,11 @@ class TestNumpyDtypesUser(unittest.TestCase):
         self.check_symbol(A[0], "")
         self.check_symbol(A[1], "float(1)")
 
+        # Mixed creation with explicitly convertible types - does not work.
+        with self.assertRaises(TypeError):
+            A = np.array([
+                mut.Symbol(), mut.StrValueExplicit("a")], dtype=mut.Symbol)
+
     def test_array_ufunc(self):
         # - Symbol
         a = mut.Symbol("a")
@@ -148,27 +153,35 @@ class TestNumpyDtypesUser(unittest.TestCase):
         I = np.ones((2,)).astype(mut.Symbol)
         self.check_symbol_all(I, "float(1)")
 
-        # WARNING: The following are all BAD. AVOID THEM (as of NumPy v1.15.2).
+    def test_array_creation_constants_bad(self):
+        """
+        WARNING: The following are all BAD. AVOID THEM (as of NumPy v1.15.2).
+        """
         # BAD Memory: `np.empty` works with uninitialized memory.
+        # Printing will most likely cause a segfault.
         E = np.empty((2,), dtype=mut.Symbol)
         self.assertEqual(E.dtype, mut.Symbol)
         # BAD Memory: `np.zeros` works by using `memzero`.
+        # Printing will most likely cause a segfault.
         Z = np.zeros((2,), dtype=mut.Symbol)
         self.assertEqual(Z.dtype, mut.Symbol)
         # BAD Semantics: This requires that `np.long` be added as an implicit
         # conversion.
+        # Could add implicit conversion, but that may wreak havoc.
         with self.assertRaises(ValueError):
             I = np.ones((2,), dtype=mut.Symbol)
 
     def test_algebra(self):
         """Tests scalar and array algebra."""
 
-        def op_with_inplace(a, b, fop, fiop, value):
+        def op_with_inplace(a, b, fop, fiop, value, require_same=True):
             # Scalar.
             self.check_symbol(fop(a, b), value)
             c = mut.Symbol(a)
-            fiop(c, b)
-            self.check_symbol(c, value, (a, b, c, value))
+            d = fiop(c, b)
+            if require_same:
+                self.assertIs(c, d)
+            self.check_symbol(d, value)
 
             # Array.
             A = np.array([a, a])
@@ -184,35 +197,39 @@ class TestNumpyDtypesUser(unittest.TestCase):
 
         a = mut.Symbol("a")
         b = mut.Symbol("b")
-        b_length = mut.LengthValueImplicit(1)
-        b_str = mut.StrValueExplicit("b")
 
-        # N.B. Implicit casting is not easily testable here; see array tests.
         # Operators.
         def fop(x, y): return x + y
-        def fiop(x, y): x += y
+        def fiop(x, y): x += y; return x
         op_with_inplace(a, b, fop, fiop, "(a) + (b)")
-        op_with_inplace(a, b_length, fop, fiop, "(a) + (length(1))")
-        op_with_inplace(a, b_str, fop, fiop, "(a) + (b)")
+        # Casting is tested only on this first operator.
+        b_length = mut.LengthValueImplicit(1)
+        b_str = mut.StrValueExplicit("b")
+        # - No overload, inferred via conversion.
+        op_with_inplace(a, b_length, fop, fiop, "(a) + (length(1))", require_same=False)
+        # N.B. Oddly, the current structure permits this explicit conversion to
+        # happen.
+        op_with_inplace(a, b_str, fop, fiop, "(a) + (b)", require_same=False)
+        # - Explicit overload.
 
         def fop(x, y): return x - y
-        def fiop(x, y): x -= y
+        def fiop(x, y): x -= y; return x
         op_with_inplace(a, b, fop, fiop, "(a) - (b)")
 
         def fop(x, y): return x * y
-        def fiop(x, y): x *= y
+        def fiop(x, y): x *= y; return x
         op_with_inplace(a, b, fop, fiop, "(a) * (b)")
 
         def fop(x, y): return x / y
-        def fiop(x, y): x /= y
+        def fiop(x, y): x /= y; return x
         op_with_inplace(a, b, fop, fiop, "(a) / (b)")
 
         def fop(x, y): return x & y
-        def fiop(x, y): x &= y
+        def fiop(x, y): x &= y; return x
         op_with_inplace(a, b, fop, fiop, "(a) & (b)")
 
         def fop(x, y): return x | y
-        def fiop(x, y): x |= y
+        def fiop(x, y): x |= y; return x
         op_with_inplace(a, b, fop, fiop, "(a) | (b)")
 
         def op(a, b, fop, value):
