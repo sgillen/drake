@@ -32,21 +32,21 @@ The simplest mechanism is to do super simple symbolics.
 */
 
 // Tests for conversions.
-class LengthValue {
+class LengthValueImplicit {
  public:
-  LengthValue(int value) : value_(value) {}
+  LengthValueImplicit(int value) : value_(value) {}
   int value() const { return value_; }
 
-  bool operator==(const LengthValue& other) const {
+  bool operator==(const LengthValueImplicit& other) const {
     return value_ == other.value_;
   }
  private:
   int value_{};
 };
 
-class StrValue {
+class StrValueExplicit {
  public:
-  explicit StrValue(const string& value) : value_(new string(value)) {}
+  explicit StrValueExplicit(const string& value) : value_(new string(value)) {}
   const string& value() const { return *value_; }
  private:
   std::shared_ptr<string> value_{};
@@ -71,15 +71,18 @@ class Symbol {
   Symbol(const Symbol& other) : Symbol(other.str()) {}
   // Implicit conversion.
   Symbol(string str) : str_(new string(str)) {}
-  Symbol(const StrValue& other) : Symbol(other.value()) {}
+  Symbol(const StrValueExplicit& other) : Symbol(other.value()) {}
+  Symbol(const LengthValueImplicit& other)
+      : Symbol(fmt::format("length({})", other.value())) {}
   Symbol(double value) : Symbol(fmt::format("float({})", value)) {}
 
   string str() const { return *str_; }
 
   // To be explicit.
   operator int() const { return str_->size(); }
+  operator StrValueExplicit() const { return StrValueExplicit(*str_); }
   // To be implicit.
-  operator LengthValue() const { return str_->size(); }
+  operator LengthValueImplicit() const { return str_->size(); }
 
   template <typename... Args>
   static Symbol format(string pattern, const Args&... args) {
@@ -148,8 +151,8 @@ auto MakeStr(Return (Class::*method)() const) {
 
 }  // namespace
 
-PYBIND11_NUMPY_DTYPE_USER(LengthValue);
-PYBIND11_NUMPY_DTYPE_USER(StrValue);
+PYBIND11_NUMPY_DTYPE_USER(LengthValueImplicit);
+PYBIND11_NUMPY_DTYPE_USER(StrValueExplicit);
 PYBIND11_NUMPY_DTYPE_USER(Symbol);
 
 namespace {
@@ -157,22 +160,22 @@ namespace {
 PYBIND11_MODULE(numpy_dtypes_user, m) {
   // N.B. You must pre-declare all types that must interact using UFuncs, as
   // they must already be registered at that point of defining the UFunc.
-  py::dtype_user<LengthValue> length(m, "LengthValue");
-  py::dtype_user<StrValue> str(m, "StrValue");
+  py::dtype_user<LengthValueImplicit> length(m, "LengthValueImplicit");
+  py::dtype_user<StrValueExplicit> str(m, "StrValueExplicit");
   py::dtype_user<Symbol> sym(m, "Symbol");
 
   length  // BR
       .def(py::init<int>())
-      .def("value", &LengthValue::value)
-      .def("__repr__", MakeRepr("LengthValue", &LengthValue::value))
-      .def("__str__", MakeStr(&LengthValue::value))
+      .def("value", &LengthValueImplicit::value)
+      .def("__repr__", MakeRepr("LengthValueImplicit", &LengthValueImplicit::value))
+      .def("__str__", MakeStr(&LengthValueImplicit::value))
       .def_loop(py::self == py::self);
 
   str  // BR
       .def(py::init<string>())
-      .def("value", &StrValue::value)
-      .def("__repr__", MakeRepr("StrValue", &StrValue::value))
-      .def("__str__", MakeStr(&StrValue::value));
+      .def("value", &StrValueExplicit::value)
+      .def("__repr__", MakeRepr("StrValueExplicit", &StrValueExplicit::value))
+      .def("__str__", MakeStr(&StrValueExplicit::value));
 
   sym  // BR
       // Nominal definitions.
@@ -190,10 +193,16 @@ PYBIND11_MODULE(numpy_dtypes_user, m) {
       // Casting.
       // - From
       .def_loop(py::dtype_method::explicit_conversion<double, Symbol>())
-      .def_loop(py::dtype_method::explicit_conversion<StrValue, Symbol>())
+      .def_loop(py::dtype_method::explicit_conversion<
+          StrValueExplicit, Symbol>())
+      .def_loop(py::dtype_method::implicit_conversion<
+          LengthValueImplicit, Symbol>())
       // - To
       .def_loop(py::dtype_method::explicit_conversion<Symbol, int>())
-      .def_loop(py::dtype_method::implicit_conversion<Symbol, LengthValue>())
+      .def_loop(py::dtype_method::explicit_conversion<
+          Symbol, StrValueExplicit>())
+      .def_loop(py::dtype_method::implicit_conversion<
+          Symbol, LengthValueImplicit>())
       // Operators.
       // N.B. Inplace operators do not have UFuncs in NumPy.
       // - Math.
@@ -229,9 +238,9 @@ PYBIND11_MODULE(numpy_dtypes_user, m) {
       .def_loop<Symbol>([](const Symbol& lhs, const Symbol& rhs) {
         return Symbol::format("custom({}, {})", lhs, rhs);
       })
-      .def_loop<LengthValue>(
-          [](const LengthValue& lhs, const LengthValue& rhs) {
-            return LengthValue(lhs.value() + rhs.value());
+      .def_loop<LengthValueImplicit>(
+          [](const LengthValueImplicit& lhs, const LengthValueImplicit& rhs) {
+            return LengthValueImplicit(lhs.value() + rhs.value());
           });
 }
 

@@ -55,18 +55,23 @@ class TestNumpyDtypesUser(unittest.TestCase):
         # - From.
         from_float = np.array([1.]).astype(mut.Symbol)
         self.check_symbol(from_float[0], "float(1)")
-        from_str = np.array([mut.StrValue("abc")]).astype(mut.Symbol)
+        from_str = np.array([mut.StrValueExplicit("abc")]).astype(mut.Symbol)
         self.check_symbol(from_str[0], "abc")
+        from_length = np.array([mut.LengthValueImplicit(1)]).astype(mut.Symbol)
+        self.check_symbol(from_length[0], "length(1)")
         # - To.
         # N.B. `np.int` may not be the same as `np.int32`; C++ uses `np.int32`.
         to_int = A.astype(np.int32)
         self.assertEqual(to_int[0], 1)
-        to_length = A.astype(mut.LengthValue)
+        to_str = A.astype(mut.StrValueExplicit)
+        self.assertEqual(to_str[0].value(), "a")
+        to_length = A.astype(mut.LengthValueImplicit)
         self.assertEqual(to_length[0].value(), 1)
 
     def test_array_cast_implicit(self):
         # Implicit casts by assignment.
-        pass
+        A = np.array([mut.Symbol()])
+        A[0] = mut.
 
     def test_array_creation_mixed(self):
         # Mixed creation -> object.
@@ -90,9 +95,9 @@ class TestNumpyDtypesUser(unittest.TestCase):
         C = mut.custom_binary_ufunc([a, a], [b, b])
         self.assertEqual(C.shape, (2,))
         self.check_symbol_all(C, "custom(a, b)")
-        # - LengthValue
-        al = mut.LengthValue(1)
-        bl = mut.LengthValue(2)
+        # - LengthValueImplicit
+        al = mut.LengthValueImplicit(1)
+        bl = mut.LengthValueImplicit(2)
         Cl = mut.custom_binary_ufunc([al, al], [bl, bl])
         self.assertEqual(Cl.shape, (2,))
         for c in Cl:
