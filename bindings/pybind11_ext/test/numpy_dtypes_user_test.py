@@ -6,18 +6,19 @@ import numpy_dtypes_user as mut
 
 
 class TestNumpyDtypesUser(unittest.TestCase):
+    def test_scalar_meta(self):
+        """Tests basic metadata."""
+        self.assertTrue(issubclass(mut.Symbol, np.generic))
+        self.assertIsInstance(np.dtype(mut.Symbol), np.dtype)
+
     def check_symbol(self, x, value, message=None):
+        """Checks a symbol against a given string."""
         self.assertIsInstance(x, mut.Symbol)
         self.assertEqual(str(x), value, message)
 
     def check_symbol_all(self, X, value):
         for x in X.flat:
             self.assertEqual(str(x), value)
-
-    def test_scalar_meta(self):
-        """Tests basic metadata."""
-        self.assertTrue(issubclass(mut.Symbol, np.generic))
-        self.assertIsInstance(np.dtype(mut.Symbol), np.dtype)
 
     def test_scalar_basics(self):
         """
@@ -146,12 +147,20 @@ class TestNumpyDtypesUser(unittest.TestCase):
         self.check_symbol_all(Z, "")
 
         # Zeros: For making an "empty" array, but using float conversion.
-        Zf = np.zeros((2,)).astype(mut.Symbol)
-        self.check_symbol_all(Zf, "float(0)")
+        Z_from_float = np.zeros((2,)).astype(mut.Symbol)
+        self.check_symbol_all(Z_from_float, "float(0)")
 
         # Ones: Uses float conversion.
-        I = np.ones((2,)).astype(mut.Symbol)
-        self.check_symbol_all(I, "float(1)")
+        O_from_float = np.ones((2,)).astype(mut.Symbol)
+        self.check_symbol_all(O_from_float, "float(1)")
+
+        # Linear algebra.
+        I_from_float = np.eye(2).astype(mut.Symbol)
+        self.check_symbol(I_from_float[0, 0], "float(1)")
+        self.check_symbol(I_from_float[0, 1], "float(0)")
+        self.check_symbol(I_from_float[1, 0], "float(0)")
+        self.check_symbol(I_from_float[1, 1], "float(1)")
+        self.check_symbol_all(np.diag(I_from_float), "float(1)")
 
     def test_array_creation_constants_bad(self):
         """
