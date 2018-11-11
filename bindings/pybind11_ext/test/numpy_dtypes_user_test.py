@@ -6,8 +6,12 @@ import numpy_dtypes_user as mut
 
 
 class TestNumpyDtypesUser(unittest.TestCase):
-    def check_symbol(self, sym, value):
-        self.assertEqual(sym.str(), value)
+    def check_symbol(self, x, value):
+        self.assertEqual(str(x), value)
+
+    def check_symbol_all(self, X, value):
+        for x in X.flat:
+            self.assertEqual(str(x), value)
 
     def test_scalar_meta(self):
         """Tests basic metadata."""
@@ -31,6 +35,51 @@ class TestNumpyDtypesUser(unittest.TestCase):
         self.assertEqual(repr(a), "<Symbol 'a'>")
         self.assertEqual(str(a), "a")
         self.assertEqual(a.str(), "a")
+
+    def test_array_creation(self):
+        # Uniform creation.
+        A = np.array([mut.Symbol("a")])
+        self.assertEqual(A.dtype, mut.Symbol)
+        self.assertEqual(A[0].str(), "a")
+
+        # Mixed creation -> object.
+        A = np.array([mut.Symbol(), 1.])
+        self.assertEqual(A.dtype, np.object)
+
+        # Mixed creation, but explicit.
+        with self.assertRaises(TypeError):
+            # Requires implicit conversion double. No dice.
+            A = np.array([mut.Symbol(), 1.], dtype=mut.Symbol)
+        A = np.array([mut.Symbol(), 1.])
+        print(A)
+        print(A.astype(mut.Symbol))
+        self.assertEqual(A.dtype, mut.Symbol)
+
+    def test_array_constants(self):
+        # Zeros: More so an `empty` array.
+        Z = np.full((2,), mut.Symbol())
+        self.assertEqual(Z.dtype, mut.Symbol)
+        self.check_symbol_all(Z, "")
+
+        # Zeros: For making an "empty" array, but using float conversion.
+        Zf = np.zeros((2,)).astype(mut.Symbol)
+        self.check_symbol_all(Zf, "float(0)")
+
+        # Ones: Uses float conversion.
+        I = np.ones((2,)).astype(mut.Symbol)
+        self.check_symbol_all(I, "float(1)")
+
+        # WARNING: The following are all BAD. AVOID THEM (as of NumPy v1.15.2).
+        # BAD Memory: `np.empty` works with uninitialized memory.
+        E = np.empty((2,), dtype=mut.Symbol)
+        self.assertEqual(E.dtype, mut.Symbol)
+        # BAD Memory: `np.zeros` works by using `memzero`.
+        Z = np.zeros((2,), dtype=mut.Symbol)
+        self.assertEqual(Z.dtype, mut.Symbol)
+        # BAD Semantics: This requires that `np.long` be added as an implicit
+        # conversion.
+        with self.assertRaises(ValueError):
+            I = np.ones((2,), dtype=mut.Symbol)
 
     def test_algebra(self):
 

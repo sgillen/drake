@@ -68,9 +68,9 @@ class Symbol {
   // Implicit conversion.
   Symbol(string str) : str_(new string(str)) {}
   Symbol(const StrValue& other) : Symbol(other.value()) {}
-  Symbol(double value) : Symbol("float(" + to_string(value) + ")") {}
+  Symbol(double value) : Symbol(fmt::format("float({})", value)) {}
 
-  const string& str() const { return *str_; }
+  string str() const { return *str_; }
 
   // To be explicit.
   operator int() const { return str_->size(); }
@@ -181,6 +181,7 @@ PYBIND11_MODULE(numpy_dtypes_user, m) {
            py::return_value_policy::reference)
       // Casting.
       // - From
+      .def_loop(py::dtype_method::explicit_conversion<double, Symbol>())
       .def_loop(py::dtype_method::explicit_conversion<StrValue, Symbol>())
       // - To
       .def_loop(py::dtype_method::explicit_conversion<Symbol, int>())
