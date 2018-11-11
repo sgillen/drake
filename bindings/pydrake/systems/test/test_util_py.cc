@@ -16,6 +16,8 @@ namespace drake {
 using systems::BasicVector;
 using systems::LeafSystem;
 using systems::Simulator;
+using systems::System;
+using systems::Context;
 
 namespace pydrake {
 namespace {
@@ -79,6 +81,23 @@ class MyVector2 : public BasicVector<T> {
   }
 };
 
+// Stolen from `Simulator::Initialize`.
+// TODO(eric.cousineau): Somehow leverage `Simulator` bits, factoring that
+// functionality out.
+template <typename T>
+void DispatchInitializationEvents(
+    const System<T>& system, const Context<T>& context) {
+  // Process all the initialization events.
+  auto init_events = system.AllocateCompositeEventCollection();
+  system.GetInitializationEvents(context, init_events.get());
+  DRAKE_DEMAND(!init_events->get_unrestricted_update_events().HasEvents());
+  DRAKE_DEMAND(!init_events->get_discrete_update_events().HasEvents());
+  auto& pub_events = init_events->get_publish_events();
+  if (pub_events.HasEvents()) {
+    system.Publish(context, pub_events);
+  }
+}
+
 }  // namespace
 
 PYBIND11_MODULE(test_util, m) {
@@ -119,9 +138,12 @@ PYBIND11_MODULE(test_util, m) {
     };
 
     m.def("call_leaf_system_overrides", [clone_vector](
-        const LeafSystem<T>& system) {
+                                            const LeafSystem<T>& system) {
       py::dict results;
       auto context = system.AllocateContext();
+      // Check initialization events.
+      DispatchInitializationEvents(system, *context);
+
       {
         // Call `Publish` to test `DoPublish`.
         auto events =
@@ -149,35 +171,31 @@ PYBIND11_MODULE(test_util, m) {
         // If there is an abstract / unrestricted update, this assumes that
         // `dt_discrete < dt_abstract`.
         systems::LeafCompositeEventCollection<T> events;
-        results["discrete_next_t"] = system.CalcNextUpdateTime(
-            *context, &events);
+        results["discrete_next_t"] = system.CalcNextUpdateTime(*context, &events);
       }
       return results;
     });
 
     m.def("call_vector_system_overrides", [clone_vector](
-        const VectorSystem<T>& system, Context<T>* context,
-        bool is_discrete, double dt) {
+                                              const VectorSystem<T>& system,
+                                              Context<T>* context,
+                                              bool is_discrete, double dt) {
       // While this is not convention, update state first to ensure that our
       // output incorporates it correctly, for testing purposes.
       // TODO(eric.cousineau): Add (Continuous|Discrete)State::Clone().
       if (is_discrete) {
         auto& state = context->get_mutable_discrete_state();
-        DiscreteValues<T> state_copy(
-            clone_vector(state.get_vector()));
-        system.CalcDiscreteVariableUpdates(
-            *context, &state_copy);
-      state.CopyFrom(state_copy);
+        DiscreteValues<T> state_copy(clone_vector(state.get_vector()));
+        system.CalcDiscreteVariableUpdates(*context, &state_copy);
+        state.CopyFrom(state_copy);
       } else {
         auto& state = context->get_mutable_continuous_state();
-        ContinuousState<T> state_dot(
-            clone_vector(state.get_vector()),
-            state.get_generalized_position().size(),
-            state.get_generalized_velocity().size(),
-            state.get_misc_continuous_state().size());
+        ContinuousState<T> state_dot(clone_vector(state.get_vector()),
+                                     state.get_generalized_position().size(),
+                                     state.get_generalized_velocity().size(),
+                                     state.get_misc_continuous_state().size());
         system.CalcTimeDerivatives(*context, &state_dot);
-        state.SetFromVector(
-            state.CopyToVector() + dt * state_dot.CopyToVector());
+        state.SetFromVector(state.CopyToVector() + dt * state_dot.CopyToVector());
       }
       // Calculate output.
       auto output = system.AllocateOutput();
@@ -185,77 +203,6 @@ PYBIND11_MODULE(test_util, m) {
       return output;
     });
   };
-
-  m.def("call_leaf_system_overrides", [clone_vector](
-                                          const LeafSystem<T>& system) {
-    py::dict results;
-    auto context = system.AllocateContext();
-    {
-      // Leverage simulator to call initialization events.
-      Simulator<T> simulator(system);
-      // Do not publish at initialization because we want to track publishes
-      // from only events of trigger type `kInitialization`.
-      simulator.set_publish_at_initialization(false);
-      simulator.Initialize();
-    }
-    {
-      // Call `Publish` to test `DoPublish`.
-      auto events =
-          LeafEventCollection<PublishEvent<T>>::MakeForcedEventCollection();
-      system.Publish(*context, *events);
-    }
-    {
-      // Call `HasDirectFeedthrough` to test `DoHasDirectFeedthrough`.
-      results["has_direct_feedthrough"] = system.HasDirectFeedthrough(0, 0);
-    }
-    {
-      // Call `CalcTimeDerivatives` to test `DoCalcTimeDerivatives`
-      auto& state = context->get_mutable_continuous_state();
-      ContinuousState<T> state_copy(clone_vector(state.get_vector()));
-      system.CalcTimeDerivatives(*context, &state_copy);
-    }
-    {
-      // Call `CalcDiscreteVariableUpdates` to test
-      // `DoCalcDiscreteVariableUpdates`.
-      auto& state = context->get_mutable_discrete_state();
-      DiscreteValues<T> state_copy(clone_vector(state.get_vector()));
-      system.CalcDiscreteVariableUpdates(*context, &state_copy);
-
-      // From t=0, return next update time for testing discrete time.
-      // If there is an abstract / unrestricted update, this assumes that
-      // `dt_discrete < dt_abstract`.
-      systems::LeafCompositeEventCollection<double> events;
-      results["discrete_next_t"] = system.CalcNextUpdateTime(*context, &events);
-    }
-    return results;
-  });
-
-  m.def("call_vector_system_overrides", [clone_vector](
-                                            const VectorSystem<T>& system,
-                                            Context<T>* context,
-                                            bool is_discrete, double dt) {
-    // While this is not convention, update state first to ensure that our
-    // output incorporates it correctly, for testing purposes.
-    // TODO(eric.cousineau): Add (Continuous|Discrete)State::Clone().
-    if (is_discrete) {
-      auto& state = context->get_mutable_discrete_state();
-      DiscreteValues<T> state_copy(clone_vector(state.get_vector()));
-      system.CalcDiscreteVariableUpdates(*context, &state_copy);
-      state.SetFrom(state_copy);
-    } else {
-      auto& state = context->get_mutable_continuous_state();
-      ContinuousState<T> state_dot(clone_vector(state.get_vector()),
-                                   state.get_generalized_position().size(),
-                                   state.get_generalized_velocity().size(),
-                                   state.get_misc_continuous_state().size());
-      system.CalcTimeDerivatives(*context, &state_dot);
-      state.SetFromVector(state.CopyToVector() + dt * state_dot.CopyToVector());
-    }
-    // Calculate output.
-    auto output = system.AllocateOutput();
-    system.CalcOutput(*context, output.get());
-    return output;
-  });
   type_visit(bind_common_scalar_types, pysystems::CommonScalarPack{});
 }
 

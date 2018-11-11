@@ -347,6 +347,7 @@ void DefineFrameworkPySemantics(py::module m) {
              // Keep alive, ownership: `value` keeps `self` alive.
              py::keep_alive<2, 1>(), py::arg("abstract_params"),
              doc.Parameters.set_abstract_parameters.doc)
+        .def("CopyFrom", &Parameters<T>::CopyFrom, doc.Parameters.CopyFrom.doc)
         .def("SetFrom", &Parameters<T>::SetFrom, doc.Parameters.SetFrom.doc);
 
     // State.

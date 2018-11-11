@@ -14,12 +14,12 @@ from pydrake.systems.analysis import (
 from pydrake.systems.framework import (
     AbstractValue,
     BasicVector, BasicVector_,
-    Context,
+    Context, Context_,
     DiagramBuilder, DiagramBuilder_,
     kUseDefaultName,
     LeafSystem, LeafSystem_,
     PortDataType,
-    PublishEvent,
+    PublishEvent, PublishEvent_,
     TriggerType,
     VectorSystem, VectorSystem_,
     )
@@ -187,7 +187,7 @@ class TestCustom(unittest.TestCase):
                 self._DeclarePeriodicDiscreteUpdate(
                     period_sec=0.1, offset_sec=0.)
                 self._DeclareInitializationEvent(
-                    event=PublishEvent(
+                    event=PublishEvent_[T](
                         trigger_type=TriggerType.kInitialization,
                         callback=self._on_initialize))
                 self._DeclareContinuousState(2)
@@ -234,8 +234,8 @@ class TestCustom(unittest.TestCase):
                 self.called_discrete = True
 
             def _on_initialize(self, context, event):
-                test.assertIsInstance(context, Context)
-                test.assertIsInstance(event, PublishEvent)
+                test.assertIsInstance(context, Context_[T])
+                test.assertIsInstance(event, PublishEvent_[T])
                 test.assertFalse(self.called_initialize)
                 self.called_initialize = True
 
