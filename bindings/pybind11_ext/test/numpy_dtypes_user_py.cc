@@ -8,6 +8,7 @@
 #include <pybind11/stl.h>
 
 #include <fmt/format.h>
+#include <fmt/ostream.h>
 
 #include "drake/bindings/pybind11_ext/numpy_dtypes_user.h"
 

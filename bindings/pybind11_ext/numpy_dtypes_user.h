@@ -256,6 +256,10 @@ inline const char* get_ufunc_name(const char* name) {
     {"__neg__", "negative"},
     {"__pos__", "numpy_does_not_have_positive__pos__"},  // Cause errror.
     {"__mul__", "multiply"},
+    // https://docs.scipy.org/doc/numpy/reference/routines.bitwise.html
+    {"__and__", "bitwise_and"},
+    {"__or__", "bitwise_or"},
+    {"__xor__", "bitwise_xor"},
     // TODO(eric.cousineau): Figure out how to appropriately map `true_divide`
     // vs. `divide` when the output type is adjusted?
     {"__truediv__", "divide"},
