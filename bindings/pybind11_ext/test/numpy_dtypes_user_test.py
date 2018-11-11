@@ -44,17 +44,25 @@ class TestNumpyDtypesUser(unittest.TestCase):
         self.assertEqual(A[0].str(), "a")
 
     def test_array_cast_explicit(self):
-        A = np.array([mut.Symbol()])
-
-        def check_cast(dtype):
+        # Check round-trip for semantically trivial casts.
+        A = np.array([mut.Symbol("a")])
+        for dtype in (mut.Symbol, np.object):
             B = A.astype(dtype)
             self.assertEqual(B.dtype, dtype)
             C = B.astype(mut.Symbol)
             self.assertEqual(C.dtype, mut.Symbol)
-
-        # Test round-trip casting.
-        check_cast(mut.Symbol)
-        check_cast(np.object)
+        # Check registered explicit casts.
+        # - From.
+        from_float = np.array([1.]).astype(mut.Symbol)
+        self.check_symbol(from_float[0], "float(1)")
+        from_str = np.array([mut.StrValue("abc")]).astype(mut.Symbol)
+        self.check_symbol(from_str[0], "abc")
+        # - To.
+        # N.B. `np.int` may not be the same as `np.int32`; C++ uses `np.int32`.
+        to_int = A.astype(np.int32)
+        self.assertEqual(to_int[0], 1)
+        to_length = A.astype(mut.LengthValue)
+        self.assertEqual(to_length[0].value(), 1)
 
     def test_array_cast_implicit(self):
         # Implicit casts by assignment.
