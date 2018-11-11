@@ -35,9 +35,34 @@ class TestNumpyDtypesUser(unittest.TestCase):
     def test_scalar_algebra(self):
         a = mut.Symbol("a")
         b = mut.Symbol("b")
+
+        def op(fop, value):
+            self.check_symbol(fop(a, b), value)
+
+        def op_with_inplace(fop, fiop, value):
+            self.check_symbol(fop(a, b), value)
+            c = mut.Symbol(a)
+            fiop(c, b)
+            self.check_symbol(c, value)
+
         # N.B. Implicit casting is not easily testable here; see array tests.
         # Operators.
-        self.check_symbol(a + b, "(a) + (b)")
-        c = mut.Symbol(a)
-        c += b
-        self.check_symbol(c, "(a) + (b)")
+        def fiop(c, b): c += b
+        op_with_inplace(lambda a, b: a + b, fiop, "(a) + (b)")
+        def fiop(c, b): c -= b
+        op_with_inplace(lambda a, b: a - b, fiop, "(a) - (b)")
+        def fiop(c, b): c *= b
+        op_with_inplace(lambda a, b: a * b, fiop, "(a) * (b)")
+        def fiop(c, b): c /= b
+        op_with_inplace(lambda a, b: a / b, fiop, "(a) / (b)")
+        def fiop(c, b): c &= b
+        op_with_inplace(lambda a, b: a & b, fiop, "(a) & (b)")
+        def fiop(c, b): c |= b
+        op_with_inplace(lambda a, b: a | b, fiop, "(a) | (b)")
+        # Logical.
+        op(lambda a, b: a == b, "(a) == (b)")
+        op(lambda a, b: a != b, "(a) != (b)")
+        op(lambda a, b: a < b, "(a) < (b)")
+        op(lambda a, b: a <= b, "(a) <= (b)")
+        op(lambda a, b: a > b, "(a) > (b)")
+        op(lambda a, b: a >= b, "(a) >= (b)")

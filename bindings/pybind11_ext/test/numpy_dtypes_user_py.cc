@@ -87,6 +87,8 @@ class Symbol {
   OP_BINARY_WITH_INPLACE(-, -=)
   OP_BINARY_WITH_INPLACE(*, *=)
   OP_BINARY_WITH_INPLACE(/, /=)
+  OP_BINARY_WITH_INPLACE(&, &=)
+  OP_BINARY_WITH_INPLACE(|, |=)
   OP_BINARY(==)
   OP_BINARY(!=)
   OP_BINARY(<)
@@ -95,8 +97,6 @@ class Symbol {
   OP_BINARY(>=)
   OP_BINARY(&&)
   OP_BINARY(||)
-  OP_BINARY(&)
-  OP_BINARY(|)
 
  private:
   Symbol& inplace_binary(const char* op, const Symbol& rhs) {
@@ -186,6 +186,7 @@ PYBIND11_MODULE(numpy_dtypes_user, m) {
       .def_loop(py::dtype_method::explicit_conversion<Symbol, int>())
       .def_loop(py::dtype_method::implicit_conversion<Symbol, LengthValue>())
       // Operators.
+      // - Math.
       .def_loop(py::self + py::self)
       .def(py::self += py::self)
       .def_loop(py::self - py::self)
@@ -194,6 +195,12 @@ PYBIND11_MODULE(numpy_dtypes_user, m) {
       .def(py::self *= py::self)
       .def_loop(py::self / py::self)
       .def(py::self /= py::self)
+      // - Bitwise.
+      .def_loop(py::self & py::self)
+      .def(py::self &= py::self)
+      .def_loop(py::self | py::self)
+      .def(py::self |= py::self)
+      // - Logical.
       .def_loop(py::self == py::self)
       .def_loop(py::self != py::self)
       .def_loop(py::self < py::self)
@@ -202,8 +209,6 @@ PYBIND11_MODULE(numpy_dtypes_user, m) {
       .def_loop(py::self >= py::self)
       // .def_loop(py::self && py::self)
       // .def_loop(py::self || py::self)
-      .def_loop(py::self & py::self)
-      .def_loop(py::self | py::self)
       // Explicit UFunc.
       .def_loop("__pow__", &func::pow)
       .def_loop("abs", &func::abs)
