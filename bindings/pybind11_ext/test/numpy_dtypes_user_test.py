@@ -7,6 +7,7 @@ import numpy_dtypes_user as mut
 
 class TestNumpyDtypesUser(unittest.TestCase):
     def check_symbol(self, x, value):
+        self.assertIsInstance(x, mut.Symbol)
         self.assertEqual(str(x), value)
 
     def check_symbol_all(self, X, value):
@@ -43,17 +44,18 @@ class TestNumpyDtypesUser(unittest.TestCase):
         self.assertEqual(A[0].str(), "a")
 
         # Mixed creation -> object.
-        A = np.array([mut.Symbol(), 1.])
-        self.assertEqual(A.dtype, np.object)
+        O = np.array([mut.Symbol(), 1.])
+        self.assertEqual(O.dtype, np.object)
+        # - Cast.
+        A = O.astype(mut.Symbol)
+        self.assertEqual(A.dtype, mut.Symbol)
+        self.check_symbol(A[0], "")
+        self.check_symbol(A[1], "float(1)")
 
         # Mixed creation, but explicit.
         with self.assertRaises(TypeError):
             # Requires implicit conversion double. No dice.
             A = np.array([mut.Symbol(), 1.], dtype=mut.Symbol)
-        A = np.array([mut.Symbol(), 1.])
-        print(A)
-        print(A.astype(mut.Symbol))
-        self.assertEqual(A.dtype, mut.Symbol)
 
     def test_array_constants(self):
         # Zeros: More so an `empty` array.
