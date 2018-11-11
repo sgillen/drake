@@ -7,14 +7,12 @@
 #include <pybind11/operators.h>
 #include <pybind11/stl.h>
 
-// NOLINTNEXTLINE[build/include]
-#include "constructor_stats.h"
-// NOLINTNEXTLINE[build/include]
-#include "pybind11_tests.h"
+#include <fmt/format.h>
 
 #include "drake/bindings/pybind11_ext/numpy_dtypes_user.h"
 
 using std::string;
+using std::to_string;
 using std::unique_ptr;
 
 namespace py = pybind11;
@@ -35,11 +33,11 @@ The simplest mechanism is to do super simple symbolics.
 // Tests for conversions.
 class LengthValue {
  public:
-  explicit LengthValue(int value) : value_(value) {}
+  LengthValue(int value) : value_(value) {}
   int value() const { return value_; }
  private:
   int value_{};
-}
+};
 
 class StrValue {
  public:
@@ -50,8 +48,8 @@ class StrValue {
 };
 
 #define OP_BINARY(op) \
-    Symbol operator op(const Symbol& rhs) const {
-      Symbol value(*this); value.inplace_binary(op, rhs); return value; \
+    Symbol operator op(const Symbol& rhs) const { \
+      Symbol value(*this); value.inplace_binary(#op, rhs); return value; \
     }
 #define OP_BINARY_WITH_INPLACE(op, iop) \
     Symbol& operator iop(const Symbol& rhs) { \
@@ -61,9 +59,6 @@ class StrValue {
       Symbol value(*this); value iop rhs; return value; \
     }
 
-class Symbol;
-Symbol format(string pattern, const Symbol&... s);
-
 // Tests operator overloads.
 class Symbol {
  public:
@@ -71,7 +66,7 @@ class Symbol {
   Symbol(const Symbol& other) : Symbol(other.str()) {}
   // Implicit conversion.
   Symbol(string str) : str_(new string(str)) {}
-  Sybmol(const StrValue& other) : Symbol(other.value()) {}
+  Symbol(const StrValue& other) : Symbol(other.value()) {}
   Symbol(double value) : Symbol("float(" + to_string(value) + ")") {}
 
   const string& str() const { return *str_; }
@@ -80,6 +75,11 @@ class Symbol {
   operator int() const { return str_->size(); }
   // To be implicit.
   operator LengthValue() const { return str_->size(); }
+
+  template <typename... Args>
+  static Symbol format(string pattern, const Args&... args) {
+    return Symbol(fmt::format(pattern, args...));
+  }
 
   // Operators.
   OP_BINARY_WITH_INPLACE(+, +=)
@@ -116,17 +116,13 @@ std::ostream& operator<<(std::ostream& os, const Symbol& s) {
   return os << s.str();
 }
 
-Symbol format(string pattern, const Symbol&... s) {
-  return Symbol(fmt::format(pattern, s...));
-}
-
 namespace func {
 
-Symbol abs(const Symbol& s) { return format("abs({})", s); }
-Symbol cos(const Symbol& s) { return format("cos({})", s); }
-Symbol sin(const Symbol& s) { return format("sin({})", s); }
-Symbol pow(const Symbol& a, const Symbol& b) const {
-  return format("({}) ^ ({})", a, b);
+Symbol abs(const Symbol& s) { return Symbol::format("abs({})", s); }
+Symbol cos(const Symbol& s) { return Symbol::format("cos({})", s); }
+Symbol sin(const Symbol& s) { return Symbol::format("sin({})", s); }
+Symbol pow(const Symbol& a, const Symbol& b) {
+  return Symbol::format("({}) ^ ({})", a, b);
 }
 
 }  // namespace func
@@ -134,18 +130,26 @@ Symbol pow(const Symbol& a, const Symbol& b) const {
 template <typename Class, typename Return>
 auto MakeRepr(const string& name, Return (Class::*method)() const) {
   return [name, method](Class* self) {
-    return py::str("<{} '{}'>", name, self->*method());
-  }
+    return py::str("<{} '{}'>").format(name, (self->*method)());
+  };
 }
 
 template <typename Class, typename Return>
-auto MakeStr(const string& name, Return (Class::*method)() const) {
-  return [method](Class* self) { return py::str(self->*method()); };
+auto MakeStr(Return (Class::*method)() const) {
+  return [method](Class* self) {
+    return py::str("{}").format((self->*method)());
+  };
 }
 
 }  // namespace
 
-TEST_SUBMODULE(numpy_dtypes_user, m) {
+PYBIND11_NUMPY_DTYPE_USER(LengthValue);
+PYBIND11_NUMPY_DTYPE_USER(StrValue);
+PYBIND11_NUMPY_DTYPE_USER(Symbol);
+
+namespace {
+
+PYBIND11_MODULE(numpy_dtypes_user, m) {
   py::dtype_user<LengthValue> length(m, "LengthValue");
   py::dtype_user<StrValue> str(m, "StrValue");
   py::dtype_user<Symbol> sym(m, "Symbol");
@@ -154,7 +158,7 @@ TEST_SUBMODULE(numpy_dtypes_user, m) {
       .def(py::init<int>())
       .def("value", &LengthValue::value)
       .def("__repr__", MakeRepr("LengthValue", &LengthValue::value))
-      .def("__str__", MakeStr(&LengthValue::value))
+      .def("__str__", MakeStr(&LengthValue::value));
 
   str  // BR
       .def(py::init<string>())
@@ -179,7 +183,7 @@ TEST_SUBMODULE(numpy_dtypes_user, m) {
       .def_loop(py::dtype_method::explicit_conversion<StrValue, Symbol>())
       // - To
       .def_loop(py::dtype_method::explicit_conversion<Symbol, int>())
-      .def_loop(py::dtype_method::implicit_conversion<Symbol, LengthValue>());
+      .def_loop(py::dtype_method::implicit_conversion<Symbol, LengthValue>())
       // Operators.
       .def_loop(py::self + py::self)
       .def(py::self += py::self)
@@ -195,8 +199,8 @@ TEST_SUBMODULE(numpy_dtypes_user, m) {
       .def_loop(py::self <= py::self)
       .def_loop(py::self > py::self)
       .def_loop(py::self >= py::self)
-      .def_loop(py::self && py::self)
-      .def_loop(py::self || py::self)
+      // .def_loop(py::self && py::self)
+      // .def_loop(py::self || py::self)
       .def_loop(py::self & py::self)
       .def_loop(py::self | py::self)
       // Explicit UFunc.
@@ -205,3 +209,5 @@ TEST_SUBMODULE(numpy_dtypes_user, m) {
       .def_loop("cos", &func::cos)
       .def_loop("sin", &func::sin);
 }
+
+}  // namespace

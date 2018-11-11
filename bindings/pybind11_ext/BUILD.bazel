@@ -3,6 +3,7 @@
 load("@drake//tools/install:install.bzl", "install")
 load("//tools/lint:lint.bzl", "add_lint_tests")
 load("@drake//tools/skylark:drake_cc.bzl", "drake_cc_library")
+load("@drake//tools/skylark:drake_py.bzl", "drake_py_unittest")
 load("@drake//tools/skylark:pybind.bzl", "pybind_py_library")
 
 package(default_visibility = [
@@ -30,26 +31,20 @@ install(
 )
 
 pybind_py_library(
-    name = "pybind11_tests_py",
+    name = "numpy_dtypes_user_py",
     testonly = 1,
     cc_deps = [
         ":numpy_dtypes_user",
-        "@pybind11//:pybind11_tests_base",
+        "@fmt",
     ],
-    cc_so_name = "pybind11_tests",
-    cc_srcs = [
-        "test/test_numpy_dtypes_user.cpp",
-    ],
+    cc_so_name = "numpy_dtypes_user",
+    cc_srcs = ["test/numpy_dtypes_user_py.cc"],
     py_imports = ["."],
 )
 
-py_test(
-    name = "numpy_dtypes_test",
-    srcs = ["test/test_numpy_dtypes_user.py"],
-    main = "test/test_numpy_dtypes_user.py",
-    deps = [
-        ":pybind11_tests_py",
-    ],
+drake_py_unittest(
+    name = "numpy_dtypes_user_test",
+    deps = [":numpy_dtypes_user_py"],
 )
 
 add_lint_tests()
