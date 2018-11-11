@@ -245,26 +245,35 @@ struct cast_is_known_safe<T,
 
 // Maps a common Python function name to a NumPy UFunc name, or just returns
 // the original name (for trigonometric functions).
-inline const char* get_ufunc_name(const char* name) {
+inline std::string get_ufunc_name(std::string name) {
   static const std::map<std::string, const char*> m = {
     // https://docs.python.org/2.7/reference/datamodel.html#emulating-numeric-types
     // Use nominal ordering (e.g. `__add__`, not `__radd__`) as ordering will be handled
     // by ufunc registration.
     // Use Python 3 operator names (e.g. `__truediv__`)
     // https://docs.scipy.org/doc/numpy/reference/routines.math.html
+    // Anything that is mapped to `nullptr` implies that NumPy does not support
+    // this ufunc.
     {"__add__", "add"},
+    {"__iadd__", nullptr},
     {"__neg__", "negative"},
-    {"__pos__", "numpy_does_not_have_positive__pos__"},  // Cause errror.
+    {"__pos__", nullptr},
     {"__mul__", "multiply"},
+    {"__imul__", nullptr},
     // https://docs.scipy.org/doc/numpy/reference/routines.bitwise.html
     {"__and__", "bitwise_and"},
+    {"__iand__", nullptr},
     {"__or__", "bitwise_or"},
+    {"__ior__", nullptr},
     {"__xor__", "bitwise_xor"},
+    {"__ixor__", nullptr},
     // TODO(eric.cousineau): Figure out how to appropriately map `true_divide`
     // vs. `divide` when the output type is adjusted?
     {"__truediv__", "divide"},
+    {"__itruediv__", nullptr},
     {"__pow__", "power"},
     {"__sub__", "subtract"},
+    {"__isub__", nullptr},
     {"__abs__", "absolute"},
     // https://docs.scipy.org/doc/numpy/reference/routines.logic.html
     {"__gt__", "greater"},
@@ -282,10 +291,15 @@ inline const char* get_ufunc_name(const char* name) {
     // TODO(eric.cousineau): Add something for junction-style logic?
   };
   auto iter = m.find(name);
-  if (iter != m.end())
+  if (iter != m.end()) {
+    if (!iter->second) {
+      throw std::runtime_error("Invalid NumPy operator: " + name);
+    }
     return iter->second;
-  else
+  }
+  else {
     return name;
+  }
 }
 
 // Provides implementation of `npy_format_decsriptor` for a user-defined dtype.
@@ -401,8 +415,8 @@ class dtype_user : public object {
       if (!isinstance(obj, cls)) {
         // This will catch type mismatch errors.
         // TODO(eric.cousineau): Not having the correct constructor registered
-        // can causes segfaults when the error  is begin printed out...
-        // Consider changing this...
+        // can causes segfaults when the error is begin printed out, due to the
+        // indirection of `_dtype_init`. Consider changing this...
         obj = cls(obj);
       }
       return obj.cast<Class>();
@@ -443,9 +457,10 @@ class dtype_user : public object {
     constexpr auto ot_norm = (ot == detail::op_r) ? detail::op_l : ot;
     using op_norm_ = detail::op_<id, ot_norm, L, R>;
     using op_norm_impl = typename op_norm_::template info<PyClass>::op;
-    const char* ufunc_name = detail::get_ufunc_name(op_norm_impl::name());
-    ufunc::get_builtin(ufunc_name).def_loop<Class>(&op_norm_impl::execute);
-    if (std::string(ufunc_name) == "divide") {
+    std::string ufunc_name = detail::get_ufunc_name(op_norm_impl::name());
+    ufunc::get_builtin(ufunc_name.c_str())  // BR
+        .def_loop<Class>(&op_norm_impl::execute);
+    if (ufunc_name == "divide") {
       ufunc::get_builtin("true_divide").def_loop<Class>(&op_norm_impl::execute);
     }
     return *this;
@@ -459,7 +474,6 @@ class dtype_user : public object {
     using op_ = detail::op_<id, ot, L, R>;
     using op_impl = typename op_::template info<PyClass>::op;
     this->def(op_impl::name(), &op_impl::execute, is_operator());
-
     // Define dtype operators.
     return def_loop(op, dtype_method::ufunc_only());
   }
@@ -469,8 +483,8 @@ class dtype_user : public object {
   template <typename Func>
   dtype_user& def_loop(const char* name, const Func& func) {
     cls().def(name, func);
-    const char* ufunc_name = detail::get_ufunc_name(name);
-    ufunc::get_builtin(ufunc_name).def_loop<Class>(func);
+    std::string ufunc_name = detail::get_ufunc_name(name);
+    ufunc::get_builtin(ufunc_name.c_str()).def_loop<Class>(func);
     return *this;
   }
 
@@ -557,8 +571,11 @@ class dtype_user : public object {
 
   template <typename Func>
   void add_init(Func&& f, const char* doc) {
-    // Do not construct this with the name `__init__` as `cpp_function` will
-    // try to have this register the instance, and most likely segfault.
+    // Do not construct this with the name `__init__` as `pybind11`s 
+    // constructor implementations via `cpp_function` are rigidly fixed to
+    // its instance registration system (which we don't want).
+    // Because of this, if there is an error in constructors when testing
+    // overloads, `repr()` may be called on an object in an invalid state.
     this->def("_dtype_init", std::forward<Func>(f));
     // Ensure that this is called by a non-pybind11-instance `__init__`.
     dict d = self().attr("__dict__");

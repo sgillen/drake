@@ -71,12 +71,14 @@ class Symbol {
   Symbol(const Symbol& other) : Symbol(other.str()) {}
   // Implicit conversion.
   Symbol(string str) : str_(new string(str)) {}
-  Symbol(const StrValueExplicit& other) : Symbol(other.value()) {}
+  explicit Symbol(const StrValueExplicit& other) : Symbol(other.value()) {}
   Symbol(const LengthValueImplicit& other)
       : Symbol(fmt::format("length({})", other.value())) {}
   Symbol(double value) : Symbol(fmt::format("float({})", value)) {}
 
-  string str() const { return *str_; }
+  // N.B. Due to constraints of `pybind11`s architecture, we must try to handle
+  // `str` conversion from an invalid state. See `add_init`.
+  string str() const { return str_ ? *str_ : "<invalid>"; }
 
   // To be explicit.
   operator int() const { return str_->size(); }
@@ -182,6 +184,8 @@ PYBIND11_MODULE(numpy_dtypes_user, m) {
       .def(py::init())
       .def(py::init<const string&>())
       .def(py::init<double>())
+      .def(py::init<const StrValueExplicit&>())
+      .def(py::init<const LengthValueImplicit&>())
       .def(py::init<const Symbol&>())
       .def("__repr__", MakeRepr("Symbol", &Symbol::str))
       .def("__str__", MakeStr(&Symbol::str))
@@ -192,6 +196,7 @@ PYBIND11_MODULE(numpy_dtypes_user, m) {
            py::return_value_policy::reference)
       // Casting.
       // - From
+      // WARNING: All conversions here *must* have an accompanying constructor.
       .def_loop(py::dtype_method::explicit_conversion<double, Symbol>())
       .def_loop(py::dtype_method::explicit_conversion<
           StrValueExplicit, Symbol>())

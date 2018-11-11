@@ -72,10 +72,23 @@ class TestNumpyDtypesUser(unittest.TestCase):
         # Implicit casts by assignment.
         A = np.array([mut.Symbol()])
         A[0] = mut.LengthValueImplicit(1)
-        A[0] = mut.StrValueExplicit("a")
+        A[:] = mut.LengthValueImplicit(1)
+        with self.assertRaises(TypeError):
+            A[0] = mut.StrValueExplicit("a")
+        # N.B. For some reason, NumPy considers this explicit coercion...
+        A[:] = mut.StrValueExplicit("a")
 
     def test_array_creation_mixed(self):
-        # Mixed creation -> object.
+        # Mixed creation with implicitly convertible types.
+        with self.assertRaises(TypeError):
+            # No type specified, NumPy gets confused.
+            O = np.array([mut.Symbol(), mut.LengthValueImplicit(1)])
+        A = np.array([
+            mut.Symbol(), mut.LengthValueImplicit(1)], dtype=mut.Symbol)
+        self.check_symbol(A[0], "")
+        self.check_symbol(A[0], "length(1)")
+
+        # Mixed creation without implicit casts, yields dtype=object.
         O = np.array([mut.Symbol(), 1.])
         self.assertEqual(O.dtype, np.object)
         # - Explicit Cast.
@@ -83,11 +96,6 @@ class TestNumpyDtypesUser(unittest.TestCase):
         self.assertEqual(A.dtype, mut.Symbol)
         self.check_symbol(A[0], "")
         self.check_symbol(A[1], "float(1)")
-
-        # Mixed creation, but explicit.
-        with self.assertRaises(TypeError):
-            # Requires implicit conversion double. No dice.
-            A = np.array([mut.Symbol(), 1.], dtype=mut.Symbol)
 
     def test_array_ufunc(self):
         # - Symbol
