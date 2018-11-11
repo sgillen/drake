@@ -333,7 +333,8 @@ template <typename PyClass>
 void DefCopyAndDeepCopy(PyClass* ppy_class) {
   using Class = typename PyClass::type;
   PyClass& py_class = *ppy_class;
-  py_class.def("__copy__", [](const Class* self) { return Class{*self}; })
+  py_class  // BR
+      .def("__copy__", [](const Class* self) { return Class{*self}; })
       .def("__deepcopy__",
            [](const Class* self, py::dict /* memo */) { return Class{*self}; });
 }

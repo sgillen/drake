@@ -368,8 +368,8 @@ class dtype_user : public object {
   using Class = Class_;
   using DTypePyObject = detail::dtype_user_instance<Class>;
 
-  dtype_user(handle scope, const char* name) : cls_(none()) {
-    register_type(name);
+  dtype_user(handle scope, const char* name, const char* doc = "") : cls_(none()) {
+    register_type(name, doc);
     scope.attr(name) = self();
     auto& entry = detail::dtype_info::get_mutable_entry<Class>(true);
     entry.cls = self();
@@ -411,14 +411,14 @@ class dtype_user : public object {
   }
 
   template <typename ... Args>
-  dtype_user& def(detail::initimpl::constructor<Args...>&&) {
+  dtype_user& def(detail::initimpl::constructor<Args...>&&, const char* doc = "") {
     // See notes in `add_init`.
     // N.B. Do NOT use `Class*` as the argument, since that may incur recursion.
     add_init([](object py_self, Args... args) {
       // Old-style. No factories for now.
         Class* self = DTypePyObject::load_raw(py_self.ptr());
       new (self) Class(std::forward<Args>(args)...);
-    });
+    }, doc);
     return *this;
   }
 
@@ -547,7 +547,7 @@ class dtype_user : public object {
   }
 
   template <typename Func>
-  void add_init(Func&& f) {
+  void add_init(Func&& f, const char* doc) {
     // Do not construct this with the name `__init__` as `cpp_function` will
     // try to have this register the instance, and most likely segfault.
     this->def("_dtype_init", std::forward<Func>(f));
@@ -559,7 +559,7 @@ class dtype_user : public object {
           [init](handle self, args args, kwargs kwargs) {
             // Dispatch.
             init(self, *args, **kwargs);
-          }, is_method(self()));
+          }, is_method(self()), doc);
       self().attr("__init__") = func;
     }
   }
@@ -606,7 +606,7 @@ class dtype_user : public object {
     return 1;
   }
 
-  void register_type(const char* name) {
+  void register_type(const char* name, const char* doc) {
     // Ensure we initialize NumPy before accessing `PyGenericArrType_Type`.
     auto& api = detail::npy_api::get();
     // Loosely uses https://stackoverflow.com/a/12505371/7829525 as well.
@@ -624,6 +624,7 @@ class dtype_user : public object {
     ClassObject_Type.tp_basicsize = sizeof(DTypePyObject);
     ClassObject_Type.tp_getset = 0;
     ClassObject_Type.tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HEAPTYPE;
+    ClassObject_Type.tp_doc = doc;
     if (PyType_Ready(&ClassObject_Type) != 0)
         pybind11_fail("dtype_user: Unable to initialize class");
     // TODO(eric.cousineau): Figure out how to catch recursions with

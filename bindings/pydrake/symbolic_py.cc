@@ -128,7 +128,7 @@ PYBIND11_MODULE(symbolic, m) {
       .def_loop(py::self != Expression())
       .def_loop(py::self != py::self)
       .def_loop(py::self != double());
-  DefCopyAndDeepCopy(&var_cls);
+  DefCopyAndDeepCopy(&var_cls.cls());
 
   // TODO(m-chaturvedi) Add Pybind11 documentation for operator overloads, etc.
   py::class_<Variables>(m, "Variables", doc.Variables.doc)
@@ -335,7 +335,6 @@ PYBIND11_MODULE(symbolic, m) {
       .def_loop("__abs__", "abs", &symbolic::abs)
       .def_loop("exp", &symbolic::exp)
       .def_loop("sqrt", &symbolic::sqrt)
-      // TODO(eric.cousineau): Move `__pow__` here.
       .def_loop("sin", &symbolic::sin)
       .def_loop("cos", &symbolic::cos)
       .def_loop("tan", &symbolic::tan)
@@ -352,32 +351,6 @@ PYBIND11_MODULE(symbolic, m) {
 
   MirrorDef<decltype(expr_cls), py::module>(&expr_cls, &math)
       .def("atan", &symbolic::atan);
-
-  // Import aliases.
-  // TODO(eric.cousineau): Deprecate, then remove these in lieu of `np.{func}`
-  py::exec(R"""(
-from pydrake.math import (
-    log,
-    abs,
-    exp,
-    pow,
-    sqrt,
-    sin,
-    cos,
-    tan,
-    asin,
-    acos,
-    atan,
-    atan2,
-    sinh,
-    cosh,
-    tanh,
-    min,
-    max,
-    ceil,
-    floor
-)
-)""");
 
   m.def("if_then_else", [](bool cond, double true_value, double false_value) {
     return cond ? true_value : false_value;
