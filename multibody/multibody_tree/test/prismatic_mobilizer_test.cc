@@ -4,7 +4,9 @@
 
 #include "drake/common/eigen_types.h"
 #include "drake/common/test_utilities/eigen_matrix_compare.h"
+#include "drake/math/rigid_transform.h"
 #include "drake/multibody/multibody_tree/multibody_tree.h"
+#include "drake/multibody/multibody_tree/multibody_tree_system.h"
 #include "drake/multibody/multibody_tree/rigid_body.h"
 #include "drake/systems/framework/context.h"
 
@@ -13,9 +15,7 @@ namespace multibody {
 namespace multibody_tree {
 namespace {
 
-using Eigen::Isometry3d;
 using Eigen::Matrix3d;
-using Eigen::Translation3d;
 using Eigen::Vector3d;
 using std::make_unique;
 using std::unique_ptr;
@@ -34,29 +34,35 @@ class PrismaticMobilizerTest : public ::testing::Test {
     // these tests since they are all kinematic.
     const SpatialInertia<double> M_B;
 
+    // Create an empty model.
+    auto model = std::make_unique<MultibodyTree<double>>();
+
     // Add a body so we can add a mobilizer to it.
-    body_ = &model_.AddBody<RigidBody>(M_B);
+    body_ = &model->AddBody<RigidBody>(M_B);
 
     // Add a prismatic mobilizer between the world and the body:
-    slider_ = &model_.AddMobilizer<PrismaticMobilizer>(
-        model_.world_body().body_frame(), body_->body_frame(), axis_F_);
+    slider_ = &model->AddMobilizer<PrismaticMobilizer>(
+        model->world_body().body_frame(), body_->body_frame(), axis_F_);
 
-    // We are done adding modeling elements. Finalize the model:
-    model_.Finalize();
+    // We are done adding modeling elements. Transfer tree to system and get
+    // a Context.
+    system_ = std::make_unique<MultibodyTreeSystem<double>>(std::move(model));
+    context_ = system_->CreateDefaultContext();
 
-    // Create a context to store the state for this model:
-    context_ = model_.CreateDefaultContext();
     // Performance critical queries take a MultibodyTreeContext to avoid dynamic
     // casting.
     mbt_context_ = dynamic_cast<MultibodyTreeContext<double>*>(context_.get());
     ASSERT_NE(mbt_context_, nullptr);
   }
 
+  const MultibodyTree<double>& tree() const { return system_->tree(); }
+
  protected:
-  MultibodyTree<double> model_;
+  std::unique_ptr<MultibodyTreeSystem<double>> system_;
+  std::unique_ptr<Context<double>> context_;
+
   const RigidBody<double>* body_{nullptr};
   const PrismaticMobilizer<double>* slider_{nullptr};
-  std::unique_ptr<Context<double>> context_;
   MultibodyTreeContext<double>* mbt_context_{nullptr};
   // Prismatic mobilizer axis, expressed in the inboard frame F.
   // It's intentionally left non-normalized to verify the mobilizer properly
@@ -108,15 +114,17 @@ TEST_F(PrismaticMobilizerTest, ZeroState) {
 TEST_F(PrismaticMobilizerTest, CalcAcrossMobilizerTransform) {
   const double translation = 1.5;
   slider_->set_translation(context_.get(), translation);
-  const Isometry3d X_FM = slider_->CalcAcrossMobilizerTransform(*mbt_context_);
+  const math::RigidTransformd X_FM(
+      slider_->CalcAcrossMobilizerTransform(*mbt_context_));
 
-  const Isometry3d X_FM_expected(
-      Translation3d(axis_F_.normalized() * translation));
+  const math::RigidTransformd X_FM_expected(
+      Vector3d(axis_F_.normalized() * translation));
 
   // Though checked below, we make it explicit here that this mobilizer should
   // introduce no rotations at all.
-  EXPECT_EQ(X_FM.linear(), Matrix3d::Identity());
-  EXPECT_TRUE(CompareMatrices(X_FM.matrix(), X_FM_expected.matrix(),
+  EXPECT_EQ(X_FM.rotation().matrix(), Matrix3d::Identity());
+  EXPECT_TRUE(CompareMatrices(X_FM.GetAsMatrix34(),
+                              X_FM_expected.GetAsMatrix34(),
                               kTolerance, MatrixCompareType::relative));
 }
 

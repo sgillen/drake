@@ -13,13 +13,14 @@ package(default_visibility = ["//visibility:public"])
 drake_cc_package_library(
     name = "rendering",
     deps = [
-        ":drake_visualizer_client",
         ":frame_velocity",
+        ":multibody_position_to_geometry_pose",
         ":pose_aggregator",
         ":pose_bundle",
         ":pose_bundle_to_draw_message",
         ":pose_stamped_t_pose_vector_translator",
         ":pose_vector",
+        ":render_pose_to_geometry_pose",
     ],
 )
 
@@ -94,14 +95,25 @@ drake_cc_library(
 )
 
 drake_cc_library(
-    name = "drake_visualizer_client",
-    srcs = ["drake_visualizer_client.cc"],
-    hdrs = ["drake_visualizer_client.h"],
+    name = "multibody_position_to_geometry_pose",
+    srcs = ["multibody_position_to_geometry_pose.cc"],
+    hdrs = ["multibody_position_to_geometry_pose.h"],
     deps = [
-        "//attic/multibody/shapes",
-        "//lcmtypes:viewer",
-        "//math:geometric_transform",
-        "@eigen",
+        "//common:pointer_cast",
+        "//geometry:frame_kinematics",
+        "//multibody/multibody_tree/multibody_plant",
+        "//systems/framework:leaf_system",
+    ],
+)
+
+drake_cc_library(
+    name = "render_pose_to_geometry_pose",
+    srcs = ["render_pose_to_geometry_pose.cc"],
+    hdrs = ["render_pose_to_geometry_pose.h"],
+    deps = [
+        ":pose_vector",
+        "//geometry:frame_kinematics",
+        "//systems/framework:leaf_system",
     ],
 )
 
@@ -146,14 +158,23 @@ drake_cc_googletest(
 )
 
 drake_cc_googletest(
-    name = "drake_visualizer_client_test",
-    data = [
-        "//attic/multibody/shapes:test_models",
-    ],
+    name = "multibody_position_to_geometry_pose_test",
+    data = ["//manipulation/models/iiwa_description:models"],
     deps = [
-        ":drake_visualizer_client",
+        ":multibody_position_to_geometry_pose",
         "//common:find_resource",
-        "//lcmtypes:viewer",
+        "//common/test_utilities",
+        "//multibody/multibody_tree/parsing:multibody_plant_sdf_parser",
+        "//systems/framework/test_utilities",
+    ],
+)
+
+drake_cc_googletest(
+    name = "render_pose_to_geometry_pose_test",
+    deps = [
+        ":render_pose_to_geometry_pose",
+        "//common/test_utilities",
+        "//systems/framework/test_utilities",
     ],
 )
 

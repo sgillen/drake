@@ -131,20 +131,52 @@ class DiagramBuilder {
   /// Declares that input port @p dest is connected to output port @p src.
   void Connect(const OutputPort<T>& src,
                const InputPort<T>& dest) {
-    DRAKE_DEMAND(src.size() == dest.size());
     InputPortLocator dest_id{dest.get_system(), dest.get_index()};
     OutputPortLocator src_id{&src.get_system(), src.get_index()};
-    ThrowIfInputAlreadyWired(dest_id);
     ThrowIfSystemNotRegistered(&src.get_system());
     ThrowIfSystemNotRegistered(dest.get_system());
+    ThrowIfInputAlreadyWired(dest_id);
+    if (src.get_data_type() != dest.get_data_type()) {
+      throw std::logic_error(fmt::format(
+          "DiagramBuilder::Connect: Cannot mix vector-valued and abstract-"
+          "valued ports while connecting output port {} of System {} to "
+          "input port {} of System {}",
+          src.get_name(), src.get_system().get_name(),
+          dest.get_name(), dest.get_system()->get_name()));
+    }
+    if ((src.get_data_type() != kAbstractValued) &&
+        (src.size() != dest.size())) {
+      throw std::logic_error(fmt::format(
+          "DiagramBuilder::Connect: Mismatched vector sizes while connecting "
+          "output port {} of System {} (size {}) to "
+          "input port {} of System {} (size {})",
+          src.get_name(), src.get_system().get_name(), src.size(),
+          dest.get_name(), dest.get_system()->get_name(), dest.size()));
+    }
+    if (src.get_data_type() == kAbstractValued) {
+      auto model_output = src.Allocate();
+      auto model_input = dest.get_system()->AllocateInputAbstract(dest);
+      const std::type_info& output_type = model_output->static_type_info();
+      const std::type_info& input_type = model_input->static_type_info();
+      if (output_type != input_type) {
+        throw std::logic_error(fmt::format(
+            "DiagramBuilder::Connect: Mismatched value types while connecting "
+            "output port {} of System {} (type {}) to "
+            "input port {} of System {} (type {})",
+            src.get_name(), src.get_system().get_name(),
+            NiceTypeName::Get(output_type),
+            dest.get_name(), dest.get_system()->get_name(),
+            NiceTypeName::Get(input_type)));
+      }
+    }
     connection_map_[dest_id] = src_id;
   }
 
   /// Declares that sole input port on the @p dest system is connected to sole
-  /// output port on the @p src system.  Throws an exception if the sole-port
-  /// precondition is not met (i.e., if @p dest has no input ports, or @p dest
-  /// has more than one input port, or @p src has no output ports, or @p src
-  /// has more than one output port).
+  /// output port on the @p src system.
+  /// @throws std::exception if the sole-port precondition is not met (i.e.,
+  /// if @p dest has no input ports, or @p dest has more than one input port,
+  /// or @p src has no output ports, or @p src has more than one output port).
   void Connect(const System<T>& src, const System<T>& dest) {
     DRAKE_THROW_UNLESS(src.get_num_output_ports() == 1);
     DRAKE_THROW_UNLESS(dest.get_num_input_ports() == 1);
@@ -152,10 +184,10 @@ class DiagramBuilder {
   }
 
   /// Cascades @p src and @p dest.  The sole input port on the @p dest system
-  /// is connected to sole output port on the @p src system.  Throws an
-  /// exception if the sole-port precondition is not met (i.e., if @p dest has
-  /// no input ports, or @p dest has more than one input port, or @p src has no
-  /// output ports, or @p src has more than one output port).
+  /// is connected to sole output port on the @p src system.
+  /// @throws std::exception if the sole-port precondition is not met (i.e., if
+  /// @p dest has no input ports, or @p dest has more than one input port, or
+  /// @p src has no output ports, or @p src has more than one output port).
   void Cascade(const System<T>& src, const System<T>& dest) {
     Connect(src, dest);
   }
@@ -210,16 +242,16 @@ class DiagramBuilder {
   }
 
   /// Builds the Diagram that has been described by the calls to Connect,
-  /// ExportInput, and ExportOutput. Throws std::logic_error if the graph is
-  /// not buildable.
+  /// ExportInput, and ExportOutput.
+  /// @throws std::logic_error if the graph is not buildable.
   std::unique_ptr<Diagram<T>> Build() {
     std::unique_ptr<Diagram<T>> diagram(new Diagram<T>(Compile()));
     return diagram;
   }
 
   /// Configures @p target to have the topology that has been described by
-  /// the calls to Connect, ExportInput, and ExportOutput. Throws
-  /// std::logic_error if the graph is not buildable.
+  /// the calls to Connect, ExportInput, and ExportOutput.
+  /// @throws std::logic_error if the graph is not buildable.
   ///
   /// Only Diagram subclasses should call this method. The target must not
   /// already be initialized.
@@ -246,7 +278,13 @@ class DiagramBuilder {
   }
 
   void ThrowIfSystemNotRegistered(const System<T>* system) const {
-    DRAKE_THROW_UNLESS(systems_.find(system) != systems_.end());
+    DRAKE_DEMAND(system != nullptr);
+    if (systems_.count(system) == 0) {
+      throw std::logic_error(fmt::format(
+          "DiagramBuilder: Cannot operate on ports of System {} "
+          "until it has been registered using AddSystem",
+          system->get_name()));
+    }
   }
 
   // Helper method to do the algebraic loop test. It recursively performs the

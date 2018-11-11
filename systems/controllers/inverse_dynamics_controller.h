@@ -48,6 +48,7 @@ namespace controllers {
  *      inverse dynamics computation.
  *
  * Instantiated templates for the following kinds of T's are provided:
+ *
  * - double
  *
  * @ingroup control_systems
@@ -103,6 +104,8 @@ class InverseDynamicsController : public Diagram<T>,
       const VectorX<double>& ki,
       const VectorX<double>& kd,
       bool has_reference_acceleration);
+
+  ~InverseDynamicsController() override;
 
   /**
    * Sets the integral part of the PidController to @p value.

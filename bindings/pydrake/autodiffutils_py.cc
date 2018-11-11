@@ -11,14 +11,14 @@
 #include "drake/bindings/pydrake/util/wrap_pybind.h"
 
 using Eigen::AutoDiffScalar;
-using std::sin;
 using std::cos;
 using std::isfinite;
+using std::sin;
 
 namespace drake {
 namespace pydrake {
 
-PYBIND11_MODULE(_autodiffutils_py, m) {
+PYBIND11_MODULE(autodiffutils, m) {
   m.doc() = "Bindings for Eigen AutoDiff Scalars";
 
   // Install NumPy warning filtres.

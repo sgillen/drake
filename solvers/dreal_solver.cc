@@ -416,7 +416,7 @@ optional<DrealSolver::IntervalBox> DrealSolver::Minimize(
   }
 }
 
-bool DrealSolver::available() const { return true; }
+bool DrealSolver::is_available() { return true; }
 
 namespace {
 
@@ -425,7 +425,7 @@ namespace {
 double GetDoubleOption(MathematicalProgram* const prog,
                        const string& option_name, const double default_value) {
   double value{default_value};
-  const map<string, double>& double_options{
+  const std::unordered_map<string, double>& double_options{
       prog->GetSolverOptionsDouble(DrealSolver::id())};
   const auto it = double_options.find(option_name);
   if (it != double_options.end()) {
@@ -439,7 +439,7 @@ double GetDoubleOption(MathematicalProgram* const prog,
 int GetIntOption(MathematicalProgram* const prog, const string& option_name,
                  const int default_value) {
   int value{default_value};
-  const map<string, int>& int_options{
+  const std::unordered_map<string, int>& int_options{
       prog->GetSolverOptionsInt(DrealSolver::id())};
   const auto it = int_options.find(option_name);
   if (it != int_options.end()) {
@@ -501,7 +501,7 @@ symbolic::Formula ExtractLinearComplementarityConstraints(
 // Extracts generic constraints in @p prog into a symbolic formula. This is a
 // helper function used in DrealSolver::Solve.
 //
-// @throw std::logic_error if there is a generic-constraint which does not
+// @throws std::logic_error if there is a generic-constraint which does not
 // provide symbolic evaluation.
 symbolic::Formula ExtractGenericConstraints(const MathematicalProgram& prog) {
   return ExtractConstraints(prog.generic_constraints());

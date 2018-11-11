@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <stdexcept>
+#include <unordered_set>
 #include <utility>
 
 #include "drake/common/autodiff.h"
@@ -300,20 +301,6 @@ void MultibodyTree<T>::CreateModelInstances() {
 }
 
 template <typename T>
-std::unique_ptr<systems::LeafContext<T>>
-MultibodyTree<T>::CreateDefaultContext() const {
-  if (!topology_is_valid()) {
-    throw std::logic_error(
-        "Attempting to create a Context for a MultibodyTree with an invalid "
-        "topology. MultibodyTree::Finalize() must be called before attempting "
-        "to create a context.");
-  }
-  auto context = std::make_unique<MultibodyTreeContext<T>>(topology_);
-  SetDefaultContext(context.get());
-  return std::move(context);
-}
-
-template <typename T>
 void MultibodyTree<T>::SetDefaultContext(systems::Context<T> *context) const {
   for (const auto& mobilizer : owned_mobilizers_) {
     mobilizer->set_zero_configuration(context);
@@ -462,9 +449,8 @@ void MultibodyTree<T>::CalcVelocityKinematicsCache(
   // TODO(amcastro-tri): Loop over bodies to compute velocity kinematics updates
   // corresponding to flexible bodies.
 
-  // TODO(amcastro-tri): Eval H_PB_W from the cache.
-  std::vector<Vector6<T>> H_PB_W_cache(num_velocities());
-  CalcAcrossNodeGeometricJacobianExpressedInWorld(context, pc, &H_PB_W_cache);
+  const std::vector<Vector6<T>>& H_PB_W_cache =
+      tree_system_->EvalAcrossNodeGeometricJacobianExpressedInWorld(context);
 
   // Performs a base-to-tip recursion computing body velocities.
   // This skips the world, depth = 0.
@@ -885,21 +871,6 @@ void MultibodyTree<T>::CalcPointsGeometricJacobianExpressedInWorld(
   DRAKE_THROW_UNLESS(Jv_WQi->rows() == 3 * num_points);
   DRAKE_THROW_UNLESS(Jv_WQi->cols() == num_velocities());
 
-  // If a user is re-using this Jacobian within a loop the first thing we'll
-  // want to do is to re-initialize it to zero.
-  Jv_WQi->setZero();
-
-  // Body to which frame B is attached to:
-  const Body<T>& body_B = frame_B.body();
-
-  // Do nothing for the world body and return a zero Jacobian.
-  // That is, Jv_WQi * v = 0, always, for the world body.
-  if (body_B.index() == world_index()) {
-    // Since B = W, we must set p_WQi_set = p_BQi_set.
-    *p_WQi_set = p_BQi_set;
-    return;
-  }
-
   // Compute p_WQi for each point Qi in the set P_BQi_set.
   CalcPointsPositions(context,
                       frame_B, p_BQi_set,        /* From frame B */
@@ -910,96 +881,201 @@ void MultibodyTree<T>::CalcPointsGeometricJacobianExpressedInWorld(
 }
 
 template <typename T>
-void MultibodyTree<T>::CalcPointsGeometricJacobianExpressedInWorld(
+VectorX<T> MultibodyTree<T>::CalcBiasForPointsGeometricJacobianExpressedInWorld(
     const systems::Context<T>& context,
-    const Frame<T>& frame_B, const Eigen::Ref<const MatrixX<T>>& p_WQi_set,
-    EigenPtr<MatrixX<T>> Jv_WQi) const {
-  DRAKE_THROW_UNLESS(p_WQi_set.rows() == 3);
-  const int num_points = p_WQi_set.cols();
-  DRAKE_THROW_UNLESS(Jv_WQi != nullptr);
-  DRAKE_THROW_UNLESS(Jv_WQi->rows() == 3 * num_points);
-  DRAKE_THROW_UNLESS(Jv_WQi->cols() == num_velocities());
-
-  // If a user is re-using this Jacobian within a loop the first thing we'll
-  // want to do is to re-initialize it to zero.
-  Jv_WQi->setZero();
-
-  // Body to which frame B is attached to:
-  const Body<T>& body_B = frame_B.body();
-
-  // Do nothing for the world body and return a zero Jacobian.
-  // That is, Jv_WQi * v = 0, always, for the world body.
-  if (body_B.index() == world_index()) {
-    return;
-  }
-
-  // Compute kinematic path from body B to the world:
-  std::vector<BodyNodeIndex> path_to_world;
-  topology_.GetKinematicPathToWorld(body_B.node_index(), &path_to_world);
+    const Frame<T>& frame_F,
+    const Eigen::Ref<const MatrixX<T>>& p_FQ_list) const {
+  DRAKE_THROW_UNLESS(p_FQ_list.rows() == 3);
 
   const PositionKinematicsCache<T>& pc = EvalPositionKinematics(context);
+  const VelocityKinematicsCache<T>& vc = EvalVelocityKinematics(context);
 
-  // TODO(amcastro-tri): Eval H_PB_W from the cache.
-  std::vector<Vector6<T>> H_PB_W_cache(num_velocities());
-  CalcAcrossNodeGeometricJacobianExpressedInWorld(context, pc, &H_PB_W_cache);
+  // For a frame F instantaneously moving with a body frame B, the spatial
+  // acceleration of the frame F shifted to frame Fq with origin at point Q
+  // fixed in frame F, can be computed as:
+  //   A_WFq = Jv_WFq⋅v̇ + Ab_WFq,
+  // where Jv_WFq is the geometric Jacobian of frame Fq and Ab_WFq is the bias
+  // term for that Jacobian, defined as Ab_WFq = J̇v_WFq⋅v. The bias terms
+  // contains the Coriolis and centrifugal contributions to the total spatial
+  // acceleration due to non-zero velocities. Therefore, the bias term for
+  // Jv_WFq is the spatial acceleration of Fq when v̇ = 0, that is:
+  //   Ab_WFq = A_WFq(q, v, v̇ = 0)
+  // Given the position p_BQ_W of point Q on body frame B, we can compute the
+  // spatial acceleration Ab_WFq from the body spatial acceleration A_WB by
+  // simply performing a shift operation:
+  //   Ab_WFq = A_WB.Shift(p_BQ_W, w_WB)
+  // where the shift operation also includes the angular velocity w_WB of B in
+  // W since rigid shifts on acceleration will usually include additional
+  // centrifugal and Coriolis terms, see SpatialAcceleration::Shift() for a
+  // detailed derivation of these terms.
 
-  // Performs a scan of all bodies in the kinematic path from body_B to the
-  // world computing each node's contribution to Jv_WQi.
-  const int Jnrows = 3 * num_points;  // Number of rows in Jv_WQi.
-  // Skip the world (ilevel = 0).
-  for (size_t ilevel = 1; ilevel < path_to_world.size(); ++ilevel) {
-    BodyNodeIndex body_node_index = path_to_world[ilevel];
-    const BodyNode<T>& node = *body_nodes_[body_node_index];
-    const BodyNodeTopology& node_topology = node.get_topology();
-    const int start_index_in_v = node_topology.mobilizer_velocities_start_in_v;
-    const int num_velocities = node_topology.num_mobilizer_velocities;
+  // TODO(amcastro-tri): Consider caching Ab_WB(q, v), the bias term for each
+  // body, and compute the bias as Ab_WBq = Ab_WB.Shift(p_BQ_W, w_WB).
+  // Where the body bias terms is defined s.t. A_WB = J_WB⋅v̇ + Ab_WB or,
+  // Ab_WB = J̇_WB⋅v
 
-    // Across-node Jacobian.
-    Eigen::Map<const MatrixUpTo6<T>> H_PB_W =
-        node.GetJacobianFromArray(H_PB_W_cache);
-    auto J_PBq_W = Jv_WQi->block(0, start_index_in_v, Jnrows, num_velocities);
+  std::vector<SpatialAcceleration<T>> A_WB_array(num_bodies());
+  const VectorX<T> vdot = VectorX<T>::Zero(num_velocities());
+  CalcSpatialAccelerationsFromVdot(context, pc, vc, vdot, &A_WB_array);
 
-    // Position of this node's body Bi in the world W.
-    const Vector3<T>& p_WBi = pc.get_X_WB(node.index()).translation();
+  const Body<T>& body_B = frame_F.body();
+  // Bias for body B spatial acceleration.
+  const SpatialAcceleration<T>& Ab_WB = A_WB_array[body_B.node_index()];
 
-    for (int ipoint = 0; ipoint < num_points; ++ipoint) {
-      const auto p_WQi = p_WQi_set.col(ipoint);
-      // Position of point Qi measured from Bi, expressed in the world W.
-      const Vector3<T> p_BiQi_W = p_WQi - p_WBi;
+  const int num_points = p_FQ_list.cols();
 
-      // Alias to Hv_PBqi_W for the ipoint-th point. Hv denotes the
-      // translational components of the entire geometric Jacobian H.
-      auto Hv_PBqi_W = J_PBq_W.block(3 * ipoint, 0, 3, num_velocities);
+  // Allocate output vector.
+  VectorX<T> Ab_WB_array(3 * num_points);
 
-      // Aliases to angular and translational components in H_PB_W:
-      const auto Hw_PB_W = H_PB_W.template topRows<3>();
-      const auto Hv_PB_W = H_PB_W.template bottomRows<3>();
+  for (int ipoint = 0; ipoint < num_points; ++ipoint) {
+    const Vector3<T> p_FQi = p_FQ_list.col(ipoint);
 
-      // Now "shift" H_PB_W to H_PBqi_W.
-      // We do it by shifting one column at a time:
-      Hv_PBqi_W = Hv_PB_W + Hw_PB_W.colwise().cross(p_BiQi_W);
-    }  // ipoint.
-  }  // body_node_index
+    // Body B's orientation.
+    const Matrix3<T>& R_WB = pc.get_X_WB(body_B.node_index()).linear();
+
+    // We need to compute p_BQi_W, the position of Qi in B, expressed in W.
+    const Isometry3<T> X_BF = frame_F.GetFixedPoseInBodyFrame();
+    const Vector3<T> p_BQi = X_BF * p_FQi;
+    const Vector3<T> p_BQi_W = R_WB * p_BQi;
+
+    // Body B's velocity in the world frame W.
+    const Vector3<T>& w_WB = vc.get_V_WB(body_B.node_index()).rotational();
+
+    // Shift body B's bias term to point Qi.
+    const SpatialAcceleration<T> Ab_WBq = Ab_WB.Shift(p_BQi_W, w_WB);
+
+    // Output translational component only.
+    Ab_WB_array.template segment<3>(3 * ipoint) = Ab_WBq.translational();
+  }
+
+  return Ab_WB_array;
+}
+
+template <typename T>
+void MultibodyTree<T>::CalcPointsGeometricJacobianExpressedInWorld(
+    const systems::Context<T>& context,
+    const Frame<T>& frame_F, const Eigen::Ref<const MatrixX<T>>& p_WQ_list,
+    EigenPtr<MatrixX<T>> Jv_WFq) const {
+  DRAKE_THROW_UNLESS(p_WQ_list.rows() == 3);
+  const int num_points = p_WQ_list.cols();
+  DRAKE_THROW_UNLESS(Jv_WFq != nullptr);
+  DRAKE_THROW_UNLESS(Jv_WFq->rows() == 3 * num_points);
+  DRAKE_THROW_UNLESS(Jv_WFq->cols() == num_velocities());
+  CalcFrameJacobianExpressedInWorld(
+      context, frame_F, p_WQ_list,
+      nullptr /* angular terms not needed */, Jv_WFq);
 }
 
 template <typename T>
 void MultibodyTree<T>::CalcFrameGeometricJacobianExpressedInWorld(
     const systems::Context<T>& context,
-    const Frame<T>& frame_B, const Eigen::Ref<const Vector3<T>>& p_BoFo_B,
-    EigenPtr<MatrixX<T>> Jv_WF) const {
-  DRAKE_THROW_UNLESS(Jv_WF != nullptr);
-  DRAKE_THROW_UNLESS(Jv_WF->rows() == 6);
-  DRAKE_THROW_UNLESS(Jv_WF->cols() == num_velocities());
+    const Frame<T>& frame_F, const Eigen::Ref<const Vector3<T>>& p_FQ,
+    EigenPtr<MatrixX<T>> Jv_WFq) const {
+  DRAKE_THROW_UNLESS(Jv_WFq != nullptr);
+  DRAKE_THROW_UNLESS(Jv_WFq->rows() == 6);
+  DRAKE_THROW_UNLESS(Jv_WFq->cols() == num_velocities());
+  // Compute the position of Fq's origin Q in the world frame.
+  Vector3<T> p_WoQ_W;
+  CalcPointsPositions(context,
+                      frame_F, p_FQ,             /* From frame F */
+                      world_frame(), &p_WoQ_W);  /* To world frame W */
 
-  // If a user is re-using this Jacobian within a loop the first thing we'll
-  // want to do is to re-initialize it to zero.
-  Jv_WF->setZero();
+  auto Jv_WFq_angular = Jv_WFq->template topRows<3>();
+  auto Jv_WFq_translational = Jv_WFq->template bottomRows<3>();
 
-  // Body to which frame B is attached to:
-  const Body<T>& body_B = frame_B.body();
+  CalcFrameJacobianExpressedInWorld(
+      context, frame_F, p_WoQ_W,
+      &Jv_WFq_angular, &Jv_WFq_translational);
+}
 
-  // Do nothing for the world body and return a zero Jacobian.
-  // That is, Jv_WQi * v = 0, always, for the world body.
+template <typename T>
+Vector6<T> MultibodyTree<T>::CalcBiasForFrameGeometricJacobianExpressedInWorld(
+    const systems::Context<T>& context,
+    const Frame<T>& frame_F, const Eigen::Ref<const Vector3<T>>& p_FQ) const {
+  const PositionKinematicsCache<T>& pc = EvalPositionKinematics(context);
+  const VelocityKinematicsCache<T>& vc = EvalVelocityKinematics(context);
+
+  // For a frame F moving instantaneously with its body frame B, the spatial
+  // acceleration of the frame F shifted to frame Fq with origin at point Q
+  // fixed in frame F, can be computed as:
+  //   A_WFq = Jv_WFq⋅v̇ + Ab_WFq,
+  // where Jv_WFq is the frame geometric Jacobian for frame Fq and Ab_WFq is the
+  // bias term for that Jacobian, defined as Ab_WFq = J̇v_WFq⋅v. The bias term
+  // contains the Coriolis and centrifugal contributions to the total spatial
+  // acceleration due to non-zero velocities. Therefore, the bias term for
+  // Jv_WFq is the spatial acceleration of Fq when v̇ = 0, that is:
+  //   Ab_WFq = A_WFq(q, v, v̇ = 0)
+  // Given the position p_BQ_W of point Q in body frame B, we can compute the
+  // spatial acceleration Ab_WFq from the body spatial acceleration A_WB by
+  // simply performing a shift operation:
+  //   Ab_WFq = A_WB.Shift(p_BQ_W, w_WB)
+  // where the shift operation also includes the angular velocity w_WB of B in
+  // W since rigid shifts on acceleration will usually include additional
+  // centrifugal and Coriolis terms, see SpatialAcceleration::Shift() for a
+  // detailed derivation of these terms.
+
+  // TODO(amcastro-tri): Consider caching Ab_WB(q, v), the bias term for each
+  // body, and compute the bias as Ab_WBq = Ab_WB.Shift(p_BQ_W, w_WB).
+  // Where the body bias terms is defined s.t. A_WB = J_WB⋅v̇ + Ab_WB or,
+  // Ab_WB = J̇_WB⋅v
+
+  std::vector<SpatialAcceleration<T>> A_WB_array(num_bodies());
+  const VectorX<T> vdot = VectorX<T>::Zero(num_velocities());
+  CalcSpatialAccelerationsFromVdot(context, pc, vc, vdot, &A_WB_array);
+
+  const Body<T>& body_B = frame_F.body();
+  // Bias for body B spatial acceleration.
+  const SpatialAcceleration<T>& Ab_WB = A_WB_array[body_B.node_index()];
+
+  // Body B's orientation.
+  const Matrix3<T>& R_WB = pc.get_X_WB(body_B.node_index()).linear();
+
+  // We need to compute p_BoQ_W, the position of Q from B's origin Bo,
+  // expressed in W.
+  const Isometry3<T> X_BF = frame_F.GetFixedPoseInBodyFrame();
+  const Vector3<T> p_BQ = X_BF * p_FQ;
+  const Vector3<T> p_BQ_W = R_WB * p_BQ;
+
+  // Body B's velocity in the world frame W.
+  const Vector3<T>& w_WB = vc.get_V_WB(body_B.node_index()).rotational();
+
+  // Shift body B's bias term to frame Q.
+  const SpatialAcceleration<T> Ab_WQ = Ab_WB.Shift(p_BQ_W, w_WB);
+
+  return Ab_WQ.get_coeffs();
+}
+
+template <typename T>
+void MultibodyTree<T>::CalcFrameJacobianExpressedInWorld(
+    const systems::Context<T>& context,
+    const Frame<T>& frame_F,
+    const Eigen::Ref<const MatrixX<T>>& p_WQ_list,
+    EigenPtr<MatrixX<T>> Jw_WFq, EigenPtr<MatrixX<T>> Jv_WFq) const {
+  // The user must request at least one of the terms.
+  DRAKE_THROW_UNLESS(Jw_WFq != nullptr || Jv_WFq != nullptr);
+
+  // If non-nullptr, check the proper size of the output Jacobian matrices.
+  if (Jw_WFq) {
+    DRAKE_THROW_UNLESS(Jw_WFq->rows() == 3);
+    DRAKE_THROW_UNLESS(Jw_WFq->cols() == num_velocities());
+  }
+  const int num_points = p_WQ_list.cols();
+  const int Jv_nrows = 3 * num_points;
+  if (Jv_WFq) {
+    DRAKE_THROW_UNLESS(Jv_WFq->rows() == Jv_nrows);
+    DRAKE_THROW_UNLESS(Jv_WFq->cols() == num_velocities());
+  }
+
+  // If a user is re-using one of these Jacobians within a loop the first thing
+  // we'll want to do is to re-initialize it to zero.
+  if (Jw_WFq) Jw_WFq->setZero();
+  if (Jv_WFq) Jv_WFq->setZero();
+
+  // Body to which frame F is attached to:
+  const Body<T>& body_B = frame_F.body();
+
+  // Do nothing for bodies anchored to the world and return zero Jacobians.
+  // That is, Jw_WQi * v = 0 and Jv_WQi * v = 0, always, for anchored bodies.
   if (body_B.index() == world_index()) return;
 
   // Compute kinematic path from body B to the world:
@@ -1008,18 +1084,11 @@ void MultibodyTree<T>::CalcFrameGeometricJacobianExpressedInWorld(
 
   const PositionKinematicsCache<T>& pc = EvalPositionKinematics(context);
 
-  // TODO(amcastro-tri): Eval H_PB_W from the cache.
-  std::vector<Vector6<T>> H_PB_W_cache(num_velocities());
-  CalcAcrossNodeGeometricJacobianExpressedInWorld(context, pc, &H_PB_W_cache);
-
-  // Compute the position of F's origin in the world frame.
-  Vector3<T> p_WoFo_W;
-  CalcPointsPositions(context,
-                      frame_B, p_BoFo_B,             /* From frame B */
-                      world_frame(), &p_WoFo_W);  /* To world frame W */
+  const std::vector<Vector6<T>>& H_PB_W_cache =
+      tree_system_->EvalAcrossNodeGeometricJacobianExpressedInWorld(context);
 
   // Performs a scan of all bodies in the kinematic path from the world to
-  // body_B, computing each node's contribution to Jv_WF.
+  // body_B, computing each node's contribution to the Jacobians.
   // Skip the world (ilevel = 0).
   for (size_t ilevel = 1; ilevel < path_to_world.size(); ++ilevel) {
     BodyNodeIndex body_node_index = path_to_world[ilevel];
@@ -1032,32 +1101,55 @@ void MultibodyTree<T>::CalcFrameGeometricJacobianExpressedInWorld(
     Eigen::Map<const MatrixUpTo6<T>> H_PB_W =
         node.GetJacobianFromArray(H_PB_W_cache);
 
-    // Output block corresponding to mobilities in the current node.
-    // This correspond to the geometric Jacobian to compute the spatial velocity
-    // of frame Bf (frame B shifted to Fo) measured in the inboard body frame P
-    // and expressed in world. That is, V_PBf_W = J_PBf_W * v(B), with v(B) the
-    // mobilities that correspond to the current node.
-    auto J_PBf_W = Jv_WF->block(0, start_index_in_v, 6, num_velocities);
-
-    // Position of this node's body Bi in the world W.
-    const Vector3<T>& p_WBi = pc.get_X_WB(node.index()).translation();
-
-    // Position of origin Fo measured from Bi, expressed in the world W.
-    const Vector3<T> p_BiFo_W = p_WoFo_W - p_WBi;
-
-    // Mutable aliases to Hw_PBf_W and Hv_PBf_W. Hw (Hv) denotes the
-    // rotational (translational) components of the full geometric Jacobian.
-    auto Hw_PBf_W = J_PBf_W.template topRows<3>();
-    auto Hv_PBf_W = J_PBf_W.template bottomRows<3>();
-
     // Aliases to angular and translational components in H_PB_W:
     const auto Hw_PB_W = H_PB_W.template topRows<3>();
     const auto Hv_PB_W = H_PB_W.template bottomRows<3>();
 
-    // Now "shift" (See SpatialVelocity::Shift()) H_PB_W to H_PBf_W.
-    // We do it by shifting one column at a time:
-    Hw_PBf_W = Hw_PB_W;  // angular component statys the same.
-    Hv_PBf_W = Hv_PB_W + Hw_PB_W.colwise().cross(p_BiFo_W);
+    // The angular term is the same for all points since the angular
+    // velocity of frame Fq, obtained by shifting frame F to origin at point Q,
+    // is the same as that of frame F, for all point Q in the input list.
+    if (Jw_WFq) {
+      // Output block corresponding to the contribution of the mobilities in
+      // level ilevel to the angular Jacobian Jw_WFq.
+      auto Jw_PFq_W = Jw_WFq->block(0, start_index_in_v, 3, num_velocities);
+
+      // Note: w_PFq_W = w_PF_W = w_PB_W.
+      Jw_PFq_W = Hw_PB_W;
+    }
+
+    if (Jv_WFq) {
+      // Output block corresponding to mobilities in the current node.
+      // This correspond to the geometric Jacobian to compute the translational
+      // velocity of frame Fq (same as that of point Q) measured in the inboard
+      // body frame P and expressed in world. That is, v_PQ_W = v_PFq_W =
+      // Jv_PFq_W * v(B), with v(B) the mobilities that correspond to the
+      // current node.
+      auto Jv_PFq_W =
+          Jv_WFq->block(0, start_index_in_v, Jv_nrows, num_velocities);
+
+      // Position of the body Bi for the node at level ilevel in the world W.
+      const Vector3<T>& p_WBi = pc.get_X_WB(node.index()).translation();
+
+      for (int ipoint = 0; ipoint < num_points; ++ipoint) {
+        const Vector3<T>& p_WQ = p_WQ_list.col(ipoint);
+
+        // Position of point Q measured from Bi, expressed in the world W.
+        const Vector3<T> p_BiQ_W = p_WQ - p_WBi;
+
+        // We stack the Jacobian for each translational velocity in the same
+        // order the input points Q are provided in the input list.
+        const int ipoint_row = 3 * ipoint;
+
+        // Mutable alias into J_PFq_W for the translational terms for the
+        // ipoint-th point.
+        auto Hv_PFqi_W = Jv_PFq_W.block(ipoint_row, 0, 3, num_velocities);
+
+        // Now "shift" H_PB_W to H_PBqi_W.
+        // We do it by shifting one column at a time:
+        // Note: V_PFq_W equals V_PBq_W since F moves with B.
+        Hv_PFqi_W = Hv_PB_W + Hw_PB_W.colwise().cross(p_BiQ_W);
+      }  // ipoint.
+    }
   }  // body_node_index
 }
 
@@ -1108,33 +1200,6 @@ T MultibodyTree<T>::DoCalcConservativePower(
   return conservative_power;
 }
 
-template<typename T>
-const PositionKinematicsCache<T>& MultibodyTree<T>::EvalPositionKinematics(
-    const systems::Context<T>& context) const {
-  // TODO(amcastro-tri): Replace by cache_evaluator_->EvalPositionKinematics()
-  // when MultibodyCachingEvaluatorInterface lands.
-  const auto& mbt_context =
-      dynamic_cast<const MultibodyTreeContext<T>&>(context);
-  PositionKinematicsCache<T>& pc =
-      mbt_context.get_mutable_position_kinematics_cache();
-  CalcPositionKinematicsCache(context, &pc);
-  return pc;
-}
-
-template<typename T>
-const VelocityKinematicsCache<T>& MultibodyTree<T>::EvalVelocityKinematics(
-    const systems::Context<T>& context) const {
-  // TODO(amcastro-tri): Replace by cache_evaluator_->EvalVelocityKinematics()
-  // when MultibodyCachingEvaluatorInterface lands.
-  const PositionKinematicsCache<T>& pc = EvalPositionKinematics(context);
-  const auto& mbt_context =
-      dynamic_cast<const MultibodyTreeContext<T>&>(context);
-  VelocityKinematicsCache<T>& vc =
-      mbt_context.get_mutable_velocity_kinematics_cache();
-  CalcVelocityKinematicsCache(context, pc, &vc);
-  return vc;
-}
-
 template <typename T>
 void MultibodyTree<T>::ThrowIfFinalized(const char* source_method) const {
   if (topology_is_valid()) {
@@ -1163,9 +1228,8 @@ void MultibodyTree<T>::CalcArticulatedBodyInertiaCache(
   const auto& mbt_context =
       dynamic_cast<const MultibodyTreeContext<T>&>(context);
 
-  // TODO(bobbyluig): Eval H_PB_W from the cache.
-  std::vector<Vector6<T>> H_PB_W_cache(num_velocities());
-  CalcAcrossNodeGeometricJacobianExpressedInWorld(context, pc, &H_PB_W_cache);
+  const std::vector<Vector6<T>>& H_PB_W_cache =
+      tree_system_->EvalAcrossNodeGeometricJacobianExpressedInWorld(context);
 
   // Perform tip-to-base recursion, skipping the world.
   for (int depth = tree_height() - 1; depth > 0; depth--) {
@@ -1179,6 +1243,124 @@ void MultibodyTree<T>::CalcArticulatedBodyInertiaCache(
           mbt_context, pc, H_PB_W, abc);
     }
   }
+}
+
+template <typename T>
+MatrixX<double> MultibodyTree<T>::MakeStateSelectorMatrix(
+    const std::vector<JointIndex>& user_to_joint_index_map) const {
+  DRAKE_MBT_THROW_IF_NOT_FINALIZED();
+
+  // We create a set in order to verify that joint indexes appear only once.
+  std::unordered_set<JointIndex> already_selected_joints;
+  for (const auto& joint_index : user_to_joint_index_map) {
+    const bool inserted = already_selected_joints.insert(joint_index).second;
+    if (!inserted) {
+      throw std::logic_error(
+          "Joint named '" + get_joint(joint_index).name() +
+              "' is repeated multiple times.");
+    }
+  }
+
+  // Determine the size of the vector of "selected" states xₛ.
+  int num_selected_positions = 0;
+  int num_selected_velocities = 0;
+  for (JointIndex joint_index : user_to_joint_index_map) {
+    num_selected_positions += get_joint(joint_index).num_positions();
+    num_selected_velocities += get_joint(joint_index).num_velocities();
+  }
+  const int num_selected_states =
+      num_selected_positions + num_selected_velocities;
+
+  // With state x of size n and selected state xₛ of size nₛ, Sx has size
+  // nₛ x n so that xₛ = Sx⋅x.
+  MatrixX<double> Sx =
+      MatrixX<double>::Zero(num_selected_states, num_states());
+
+  const int nq = num_positions();
+  // We place all selected positions first, followed by all the selected
+  // velocities, as in the original state x.
+  int selected_positions_index = 0;
+  int selected_velocities_index = num_selected_positions;
+  for (JointIndex joint_index : user_to_joint_index_map) {
+    const auto& joint = get_joint(joint_index);
+
+    const int pos_start = joint.position_start();
+    const int num_pos = joint.num_positions();
+    const int vel_start = joint.velocity_start();
+    const int num_vel = joint.num_velocities();
+
+    Sx.block(selected_positions_index, pos_start, num_pos, num_pos) =
+        MatrixX<double>::Identity(num_pos, num_pos);
+
+    Sx.block(selected_velocities_index, nq + vel_start, num_vel, num_vel) =
+        MatrixX<double>::Identity(num_vel, num_vel);
+
+    selected_positions_index += num_pos;
+    selected_velocities_index += num_vel;
+  }
+
+  return Sx;
+}
+
+template <typename T>
+MatrixX<double> MultibodyTree<T>::MakeStateSelectorMatrixFromJointNames(
+    const std::vector<std::string>& selected_joints) const {
+  std::vector<JointIndex> selected_joints_indexes;
+  for (const auto& joint_name : selected_joints) {
+    selected_joints_indexes.push_back(GetJointByName(joint_name).index());
+  }
+  return MakeStateSelectorMatrix(selected_joints_indexes);
+}
+
+template <typename T>
+MatrixX<double> MultibodyTree<T>::MakeActuatorSelectorMatrix(
+    const std::vector<JointActuatorIndex>& user_to_actuator_index_map) const {
+  DRAKE_MBT_THROW_IF_NOT_FINALIZED();
+
+  const int num_selected_actuators = user_to_actuator_index_map.size();
+
+  // The actuation selector matrix maps the vector of "selected" actuators to
+  // the full vector of actuators: u = Sᵤ⋅uₛ.
+  MatrixX<double> Su =
+      MatrixX<double>::Zero(num_actuated_dofs(), num_selected_actuators);
+  int user_index = 0;
+  for (JointActuatorIndex actuator_index : user_to_actuator_index_map) {
+    Su(actuator_index, user_index) = 1.0;
+    ++user_index;
+  }
+
+  return Su;
+}
+
+template <typename T>
+MatrixX<double> MultibodyTree<T>::MakeActuatorSelectorMatrix(
+    const std::vector<JointIndex>& user_to_joint_index_map) const {
+  DRAKE_MBT_THROW_IF_NOT_FINALIZED();
+
+  std::vector<JointActuatorIndex> joint_to_actuator_index(num_joints());
+  for (JointActuatorIndex actuator_index(0);
+       actuator_index < num_actuators(); ++actuator_index) {
+    const auto& actuator = get_joint_actuator(actuator_index);
+    joint_to_actuator_index[actuator.joint().index()] = actuator_index;
+  }
+
+  // Build a list of actuators in the order given by user_to_joint_index_map,
+  // which must contain actuated joints. We verify this.
+  std::vector<JointActuatorIndex> user_to_actuator_index_map;
+  for (JointIndex joint_index : user_to_joint_index_map) {
+    const auto& joint = get_joint(joint_index);
+
+    // If the map has an invalid index then this joint does not have an
+    // actuator.
+    if (!joint_to_actuator_index[joint_index].is_valid()) {
+      throw std::logic_error(
+          "Joint '" + joint.name() + "' does not have an actuator.");
+    }
+
+    user_to_actuator_index_map.push_back(joint_to_actuator_index[joint_index]);
+  }
+
+  return MakeActuatorSelectorMatrix(user_to_actuator_index_map);
 }
 
 // Explicitly instantiates on the most common scalar types.

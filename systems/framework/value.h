@@ -122,6 +122,11 @@ class AbstractValue {
   /// this returns the typeid of the most-derived type of the contained object.
   virtual const std::type_info& type_info() const = 0;
 
+  /// Returns typeid(T) for this Value<T> object. If T is polymorphic, this
+  /// does NOT reflect the typeid of the most-derived type of the contained
+  /// object; the result is always the base type T.
+  virtual const std::type_info& static_type_info() const = 0;
+
   /// Returns a human-readable name for the underlying type T. This may be
   /// slow but is useful for error messages. If T is polymorphic, this returns
   /// the typeid of the most-derived type of the contained object.
@@ -130,14 +135,13 @@ class AbstractValue {
         NiceTypeName::Demangle(type_info().name()));
   }
 
+  // TODO(david-german-tri): Once this uses static_cast under the hood in
+  // Release builds, lower-case it.
   /// Returns the value wrapped in this AbstractValue, which must be of
   /// exactly type T.  T cannot be a superclass, abstract or otherwise.
   /// In Debug builds, if the types don't match, an std::logic_error will be
   /// thrown with a helpful error message. In Release builds, this is not
   /// guaranteed.
-  ///
-  /// TODO(david-german-tri): Once this uses static_cast under the hood in
-  /// Release builds, lower-case it.
   template <typename T>
   const T& GetValue() const {
     return DownCastOrMaybeThrow<T>()->get_value();
@@ -348,6 +352,10 @@ class Value : public AbstractValue {
 
   void SetFromOrThrow(const AbstractValue& other) override {
     value_ = Traits::to_storage(other.GetValueOrThrow<T>());
+  }
+
+  const std::type_info& static_type_info() const final {
+    return typeid(T);
   }
 
   const std::type_info& type_info() const override {

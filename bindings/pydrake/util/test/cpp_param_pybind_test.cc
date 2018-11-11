@@ -102,6 +102,9 @@ int main(int argc, char** argv) {
   // Define custom class only once here.
   py::class_<CustomCppType>(m, "CustomCppType");
 
+  // For Python3
+  py::globals().attr("update")(m.attr("__dict__"));
+
   // Define custom dtype.
   py::dtype_user<CustomDType>(m, "CustomDType")
     .def("__str__", [](const CustomDType*) {

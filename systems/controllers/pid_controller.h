@@ -35,6 +35,7 @@ namespace controllers {
  * @tparam T The vector element type, which must be a valid Eigen scalar.
  *
  * Instantiated templates for the following kinds of T's are provided:
+ *
  * - double
  * - AutoDiffXd
  * - symbolic::Expression
@@ -183,7 +184,8 @@ class PidController : public StateFeedbackControllerInterface<T>,
    * controller, since the internal wiring is unimportant and hard for human
    * viewers to parse.
    */
-  void GetGraphvizFragment(std::stringstream* dot) const override;
+  void GetGraphvizFragment(int max_depth,
+                           std::stringstream* dot) const override;
 
   void DoCalcTimeDerivatives(const Context<T>& context,
                              ContinuousState<T>* derivatives) const override;

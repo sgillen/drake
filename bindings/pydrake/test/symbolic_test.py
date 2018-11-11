@@ -1,13 +1,15 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, division, print_function
 
+import copy
 import unittest
+
 import numpy as np
+import six
+
 import pydrake.symbolic as sym
 from pydrake.test.algebra_test_util import ScalarAlgebra, VectorizedAlgebra
 from pydrake.util.containers import EqualToDict
-from copy import copy
-
 
 # TODO(eric.cousineau): Replace usages of `sym` math functions with the
 # overloads from `pydrake.math`.
@@ -559,7 +561,7 @@ class TestSymbolicExpression(SymbolicTestCase):
         # Ensure that we throw on `__nonzero__`.
         with self.assertRaises(RuntimeError) as cm:
             value = bool(e_x == e_x)
-        message = cm.exception.message
+        message = str(cm.exception)
         self.assertTrue(
             all([s in message for s in ["__nonzero__", "EqualToDict"]]),
             message)
@@ -673,6 +675,10 @@ class TestSymbolicExpression(SymbolicTestCase):
         env = {x: x + 2, y:  y + 3}
         self.assertEqualStructure(e.Substitute(env), x + y + 5)
 
+    def test_copy(self):
+        self._check_scalar(copy.copy(e_x), e_x)
+        self._check_scalar(copy.deepcopy(e_x), e_x)
+
     # See `math_overloads_test` for more comprehensive checks on math
     # functions.
 
@@ -710,10 +716,15 @@ class TestSymbolicFormula(SymbolicTestCase):
         self.assertTrue(f1 != f3)
 
     def test_static_true_false(self):
-        tt = sym.Formula.True()
-        ff = sym.Formula.False()
+        tt = sym.Formula.True_()
+        ff = sym.Formula.False_()
         self.assertEqual(x == x, tt)
         self.assertEqual(x != x, ff)
+        if six.PY2:
+            # Use `getattr` to avoid syntax errors in Python3 since `True` and
+            # `False` are reserved keywords.
+            self.assertEqual(getattr(sym.Formula, "True")(), tt)
+            self.assertEqual(getattr(sym.Formula, "False")(), ff)
 
     def test_repr(self):
         self.assertEqual(repr(x > y), '<Formula "(x > y)">')
@@ -932,12 +943,12 @@ class TestSymbolicPolynomial(SymbolicTestCase):
         p = sym.Polynomial()
         self.assertEqualStructure(p, p)
         self.assertIsInstance(p == p, sym.Formula)
-        self.assertEqual(p == p, sym.Formula.True())
+        self.assertEqual(p == p, sym.Formula.True_())
         self.assertTrue(p.EqualTo(p))
         q = sym.Polynomial(sym.Expression(10))
         self.assertNotEqualStructure(p, q)
         self.assertIsInstance(p != q, sym.Formula)
-        self.assertEqual(p != q, sym.Formula.True())
+        self.assertEqual(p != q, sym.Formula.True_())
         self.assertFalse(p.EqualTo(q))
 
     def test_repr(self):

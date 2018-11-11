@@ -28,4 +28,4 @@ class TestInstall(unittest.TestCase):
         for cmd in lines:
             cmd = cmd.strip()
             print("+ {}".format(cmd))
-            install_test_helper.check_call(os.path.join(os.getcwd(), cmd))
+            install_test_helper.check_call([os.path.join(os.getcwd(), cmd)])

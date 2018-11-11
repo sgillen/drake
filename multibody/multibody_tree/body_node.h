@@ -6,6 +6,7 @@
 #include "drake/common/drake_assert.h"
 #include "drake/common/drake_copyable.h"
 #include "drake/common/eigen_types.h"
+#include "drake/math/rigid_transform.h"
 #include "drake/multibody/multibody_tree/acceleration_kinematics_cache.h"
 #include "drake/multibody/multibody_tree/articulated_body_inertia_cache.h"
 #include "drake/multibody/multibody_tree/body.h"
@@ -58,6 +59,7 @@ namespace internal {
 ///
 /// In summary, there will a %BodyNode for each Body in the MultibodyTree which
 /// encompasses:
+///
 /// - a body B in a given MultibodyTree,
 /// - the outboard frame M attached to this body B,
 /// - the inboard frame F attached to the unique parent body P of body B,
@@ -180,8 +182,10 @@ class BodyNode : public MultibodyTreeElement<BodyNode<T>, BodyNodeIndex> {
   /// This method is used by MultibodyTree within a base-to-tip loop to compute
   /// this node's kinematics that only depend on generalized positions.
   /// This method aborts in Debug builds when:
+  ///
   /// - Called on the _root_ node.
   /// - `pc` is nullptr.
+  ///
   /// @param[in] context The context with the state of the MultibodyTree model.
   /// @param[out] pc A pointer to a valid, non nullptr, kinematics cache.
   /// @pre CalcPositionKinematicsCache_BaseToTip() must have already been called
@@ -369,7 +373,7 @@ class BodyNode : public MultibodyTreeElement<BodyNode<T>, BodyNodeIndex> {
   ///   generalized velocities in the model. This method assumes the caller,
   ///   MultibodyTree<T>::CalcAccelerationKinematicsCache(), provides a vector
   ///   of the right size.
-  /// @param[in, out] A_WB_array_ptr
+  /// @param[in,out] A_WB_array_ptr
   ///   A pointer to a valid, non nullptr, vector of spatial accelerations
   ///   containing the spatial acceleration `A_WB` for each body. On input, it
   ///   must contain already pre-computed spatial accelerations for the inboard
@@ -682,7 +686,8 @@ class BodyNode : public MultibodyTreeElement<BodyNode<T>, BodyNodeIndex> {
     DRAKE_DEMAND(frame_M.body().index() == body_B.index());
     const Isometry3<T> X_BM = frame_M.CalcPoseInBodyFrame(context);
     const Vector3<T>& p_BoMo_B = X_BM.translation();
-    const Matrix3<T>& R_WB = get_X_WB(pc).linear();
+    const Isometry3<T>& X_WB = get_X_WB(pc);
+    const Matrix3<T>& R_WB = X_WB.linear();
     const Vector3<T> p_BoMo_W = R_WB * p_BoMo_B;
 
     // Output spatial force that would need to be exerted by this node's
@@ -888,7 +893,7 @@ class BodyNode : public MultibodyTreeElement<BodyNode<T>, BodyNodeIndex> {
   /// called for all the child nodes of `this` node (and, by recursive
   /// precondition, all successor nodes in the tree.)
   ///
-  /// @throws when called on the _root_ node or `abc` is nullptr.
+  /// @throws std::exception when called on the _root_ node or `abc` is nullptr.
   void CalcArticulatedBodyInertiaCache_TipToBase(
       const MultibodyTreeContext<T>& context,
       const PositionKinematicsCache<T>& pc,
@@ -975,7 +980,7 @@ class BodyNode : public MultibodyTreeElement<BodyNode<T>, BodyNodeIndex> {
     const Isometry3<T>& X_WB = get_X_WB(pc);
 
     // Get R_WB.
-    const Matrix3<T> R_WB = X_WB.linear();
+    const math::RotationMatrix<T> R_WB(X_WB.linear());
 
     // Compute the spatial inertia for this body and re-express in W frame.
     const SpatialInertia<T> M_B = body_B.CalcSpatialInertiaInBodyFrame(context);
@@ -1406,7 +1411,7 @@ class BodyNode : public MultibodyTreeElement<BodyNode<T>, BodyNodeIndex> {
     const Isometry3<T>& X_WB = get_X_WB(pc);
 
     // Orientation of B in W.
-    const Matrix3<T> R_WB = X_WB.linear();
+    const math::RotationMatrix<T> R_WB(X_WB.linear());
 
     // Body spatial velocity in W.
     const SpatialVelocity<T>& V_WB = get_V_WB(vc);

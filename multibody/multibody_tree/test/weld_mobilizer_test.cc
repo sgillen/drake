@@ -4,7 +4,9 @@
 
 #include "drake/common/eigen_types.h"
 #include "drake/common/test_utilities/eigen_matrix_compare.h"
+#include "drake/math/rigid_transform.h"
 #include "drake/multibody/multibody_tree/multibody_tree.h"
+#include "drake/multibody/multibody_tree/multibody_tree_system.h"
 #include "drake/multibody/multibody_tree/rigid_body.h"
 #include "drake/systems/framework/context.h"
 
@@ -13,9 +15,6 @@ namespace multibody {
 namespace multibody_tree {
 namespace {
 
-using Eigen::Isometry3d;
-using Eigen::Matrix3d;
-using Eigen::Translation3d;
 using Eigen::Vector3d;
 using Eigen::VectorXd;
 using std::make_unique;
@@ -35,45 +34,52 @@ class WeldMobilizerTest : public ::testing::Test {
     // these tests since they are all kinematic.
     const SpatialInertia<double> M_B;
 
-    // Add a body so we can add a mobilizer to it.
-    body_ = &model_.AddBody<RigidBody>(M_B);
+    // Create an empty model.
+    auto model = std::make_unique<MultibodyTree<double>>();
 
-    X_WB_ = Translation3d(1.0, 2.0, 3.0);
+    // Add a body so we can add a mobilizer to it.
+    auto& body = model->AddBody<RigidBody>(M_B);
+
+    X_WB_ = math::RigidTransformd(Vector3d(1.0, 2.0, 3.0));
 
     // Add a weld mobilizer between the world and the body:
-    weld_body_to_world_ = &model_.AddMobilizer<WeldMobilizer>(
-        model_.world_body().body_frame(), body_->body_frame(), X_WB_);
+    weld_body_to_world_ = &model->AddMobilizer<WeldMobilizer>(
+        model->world_body().body_frame(), body.body_frame(),
+        X_WB_.GetAsIsometry3());
 
-    // We are done adding modeling elements. Finalize the model:
-    model_.Finalize();
+    // We are done adding modeling elements. Transfer tree to system and get
+    // a Context.
+    system_ = std::make_unique<MultibodyTreeSystem<double>>(std::move(model));
+    context_ = system_->CreateDefaultContext();
 
-    // Create a context to store the state for this model:
-    context_ = model_.CreateDefaultContext();
     // Performance critical queries take a MultibodyTreeContext to avoid dynamic
     // casting.
     mbt_context_ = dynamic_cast<MultibodyTreeContext<double>*>(context_.get());
     ASSERT_NE(mbt_context_, nullptr);
   }
 
+  const MultibodyTree<double>& tree() const { return system_->tree(); }
+
  protected:
-  MultibodyTree<double> model_;
-  const RigidBody<double>* body_{nullptr};
-  const WeldMobilizer<double>* weld_body_to_world_{nullptr};
+  std::unique_ptr<MultibodyTreeSystem<double>> system_;
   std::unique_ptr<Context<double>> context_;
   MultibodyTreeContext<double>* mbt_context_{nullptr};
+
+  const WeldMobilizer<double>* weld_body_to_world_{nullptr};
   // Pose of body B in the world frame W.
-  Isometry3d X_WB_;
+  math::RigidTransformd X_WB_;
 };
 
 TEST_F(WeldMobilizerTest, ZeroSizedState) {
-  EXPECT_EQ(model_.num_positions(), 0);
-  EXPECT_EQ(model_.num_velocities(), 0);
+  EXPECT_EQ(tree().num_positions(), 0);
+  EXPECT_EQ(tree().num_velocities(), 0);
 }
 
 TEST_F(WeldMobilizerTest, CalcAcrossMobilizerTransform) {
-  const Isometry3d X_FM =
-      weld_body_to_world_->CalcAcrossMobilizerTransform(*mbt_context_);
-  EXPECT_TRUE(CompareMatrices(X_FM.matrix(), X_WB_.matrix(),
+  const math::RigidTransformd X_FM(
+      weld_body_to_world_->CalcAcrossMobilizerTransform(*mbt_context_));
+  EXPECT_TRUE(CompareMatrices(X_FM.GetAsMatrix34(),
+                              X_WB_.GetAsMatrix34(),
                               kTolerance, MatrixCompareType::relative));
 }
 
