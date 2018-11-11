@@ -71,7 +71,8 @@ class TestNumpyDtypesUser(unittest.TestCase):
     def test_array_cast_implicit(self):
         # Implicit casts by assignment.
         A = np.array([mut.Symbol()])
-        A[0] = mut.
+        A[0] = mut.LengthValueImplicit(1)
+        A[0] = mut.StrValueExplicit("a")
 
     def test_array_creation_mixed(self):
         # Mixed creation -> object.
