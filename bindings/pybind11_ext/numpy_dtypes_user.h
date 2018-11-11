@@ -323,7 +323,9 @@ struct dtype_method {
 
   template <typename From, typename To>
   static auto explicit_conversion() {
-    return detail::dtype_conversion_impl([](const From& in) -> To { return in; }, false);
+    return detail::dtype_conversion_impl([](const From& in) -> To {
+      return To(in);
+    }, false);
   }
 
   template <typename Func>

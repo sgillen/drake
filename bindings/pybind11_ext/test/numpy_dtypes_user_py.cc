@@ -32,6 +32,23 @@ Goals:
 The simplest mechanism is to do super simple symbolics.
 */
 
+// Tests for conversions.
+class LengthValue {
+ public:
+  explicit LengthValue(int value) : value_(value) {}
+  int value() const { return value_; }
+ private:
+  int value_{};
+}
+
+class StrValue {
+ public:
+  explicit StrValue(const string& value) : value_(new string(value)) {}
+  const string& value() const { return *value_; }
+ private:
+  std::shared_ptr<string> value_{};
+};
+
 #define OP_BINARY(op) \
     Symbol operator op(const Symbol& rhs) const {
       Symbol value(*this); value.inplace_binary(op, rhs); return value; \
@@ -44,14 +61,8 @@ The simplest mechanism is to do super simple symbolics.
       Symbol value(*this); value iop rhs; return value; \
     }
 
-// Tests for conversions.
-class LengthValue {
- public:
-  LengthValue(int value) : value_(value) {}
-  int value() const { return value_; }
- private:
-  int value_{};
-}
+class Symbol;
+Symbol format(string pattern, const Symbol&... s);
 
 // Tests operator overloads.
 class Symbol {
@@ -60,10 +71,14 @@ class Symbol {
   Symbol(const Symbol& other) : Symbol(other.str()) {}
   // Implicit conversion.
   Symbol(string str) : str_(new string(str)) {}
+  Sybmol(const StrValue& other) : Symbol(other.value()) {}
   Symbol(double value) : Symbol("float(" + to_string(value) + ")") {}
 
   const string& str() const { return *str_; }
 
+  // To be explicit.
+  operator int() const { return str_->size(); }
+  // To be implicit.
   operator LengthValue() const { return str_->size(); }
 
   // Operators.
@@ -77,6 +92,10 @@ class Symbol {
   OP_BINARY(<=)
   OP_BINARY(>)
   OP_BINARY(>=)
+  OP_BINARY(&&)
+  OP_BINARY(||)
+  OP_BINARY(&)
+  OP_BINARY(|)
 
  private:
   Symbol& inplace_binary(const char* op, const Symbol& rhs) {
@@ -90,33 +109,99 @@ class Symbol {
   std::shared_ptr<string> str_;
 };
 
+#undef OP_BINARY
+#undef OP_BINARY_WITH_INPLACE
+
+std::ostream& operator<<(std::ostream& os, const Symbol& s) {
+  return os << s.str();
+}
+
+Symbol format(string pattern, const Symbol&... s) {
+  return Symbol(fmt::format(pattern, s...));
+}
+
+namespace func {
+
+Symbol abs(const Symbol& s) { return format("abs({})", s); }
+Symbol cos(const Symbol& s) { return format("cos({})", s); }
+Symbol sin(const Symbol& s) { return format("sin({})", s); }
+Symbol pow(const Symbol& a, const Symbol& b) const {
+  return format("({}) ^ ({})", a, b);
+}
+
+}  // namespace func
+
+template <typename Class, typename Return>
+auto MakeRepr(const string& name, Return (Class::*method)() const) {
+  return [name, method](Class* self) {
+    return py::str("<{} '{}'>", name, self->*method());
+  }
+}
+
+template <typename Class, typename Return>
+auto MakeStr(const string& name, Return (Class::*method)() const) {
+  return [method](Class* self) { return py::str(self->*method()); };
+}
+
 }  // namespace
 
 TEST_SUBMODULE(numpy_dtypes_user, m) {
   py::dtype_user<LengthValue> length(m, "LengthValue");
-  length  // BR
-      .def(py::init<int>());
-
+  py::dtype_user<StrValue> str(m, "StrValue");
   py::dtype_user<Symbol> sym(m, "Symbol");
+
+  length  // BR
+      .def(py::init<int>())
+      .def("value", &LengthValue::value)
+      .def("__repr__", MakeRepr("LengthValue", &LengthValue::value))
+      .def("__str__", MakeStr(&LengthValue::value))
+
+  str  // BR
+      .def(py::init<string>())
+      .def("value", &StrValue::value)
+      .def("__repr__", MakeRepr("StrValue", &StrValue::value))
+      .def("__str__", MakeStr(&StrValue::value));
+
   sym  // BR
+      // Nominal definitions.
       .def(py::init())
       .def(py::init<const string&>())
       .def(py::init<const Symbol&>())
-      .def("__repr__",
-           [](const Symbol& self) {
-             return py::str("<Symbol '{}'>".format(self.str()));
-           })
-      .def("__str__", [](const Symbol& self) { return self.str(); })
+      .def("__repr__", MakeRepr("Symbol", &Symbol::str))
+      .def("__str__", MakeStr(&Symbol::str))
       .def("str", &Symbol::str)
-      // Test referecing.
+      // - Test referencing.
       .def("self_reference",
            [](const Symbol& self) { return &self; },
            py::return_value_policy::reference)
       // Casting.
-      .def_loop(py::dtype
-      .def_loop(py::dtype_method::explicit_conversion(
-          &Symbol::operator LengthValue))
-          [](const Symbol
-
-
+      // - From
+      .def_loop(py::dtype_method::explicit_conversion<StrValue, Symbol>())
+      // - To
+      .def_loop(py::dtype_method::explicit_conversion<Symbol, int>())
+      .def_loop(py::dtype_method::implicit_conversion<Symbol, LengthValue>());
+      // Operators.
+      .def_loop(py::self + py::self)
+      .def(py::self += py::self)
+      .def_loop(py::self - py::self)
+      .def(py::self -= py::self)
+      .def_loop(py::self * py::self)
+      .def(py::self *= py::self)
+      .def_loop(py::self / py::self)
+      .def(py::self /= py::self)
+      .def_loop(py::self == py::self)
+      .def_loop(py::self != py::self)
+      .def_loop(py::self < py::self)
+      .def_loop(py::self <= py::self)
+      .def_loop(py::self > py::self)
+      .def_loop(py::self >= py::self)
+      .def_loop(py::self && py::self)
+      .def_loop(py::self || py::self)
+      .def_loop(py::self & py::self)
+      .def_loop(py::self | py::self)
+      // Explicit UFunc.
+      .def_loop("__pow__", &func::pow)
+      .def_loop("abs", &func::abs)
+      .def_loop("cos", &func::cos)
+      .def_loop("sin", &func::sin);
 }
