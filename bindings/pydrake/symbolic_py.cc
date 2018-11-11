@@ -46,7 +46,7 @@ PYBIND11_MODULE(symbolic, m) {
   py::dtype_user<Expression> expr_cls(m, "Expression", doc.Expression.doc);
   py::dtype_user<Formula> formula_cls(m, "Formula", doc.Formula.doc);
 
-  var_cls
+  var_cls  // BR
       .def(py::init<const string&>(), doc.Variable.ctor.doc)
       .def("get_id", &Variable::get_id, doc.Variable.get_id.doc)
       .def("__str__", &Variable::to_string, doc.Variable.to_string.doc)
@@ -76,20 +76,18 @@ PYBIND11_MODULE(symbolic, m) {
       // `dot` for NumPy since it expects a closed operation.
       // TODO(eric.cousineau): See if `dot` can be defined at some point.
       // Pow.
+      .def_loop("__pow__", [](const Variable& self,
+                              double other) { return pow(self, other); })
       .def_loop("__pow__",
-           [](const Variable& self, double other) { return pow(self, other); })
+                [](const Variable& self, const Variable& other) {
+                  return pow(self, other);
+                })
       .def_loop("__pow__",
-           [](const Variable& self, const Variable& other) {
-             return pow(self, other);
-           })
-      .def_loop("__pow__",
-           [](const Variable& self, const Expression& other) {
-             return pow(self, other);
-           })
+                [](const Variable& self, const Expression& other) {
+                  return pow(self, other);
+                })
       // See comment about `np.square` in AutoDiff<> bindings.
-      .def_loop("square", [](const Variable& self) {
-        return self * self;
-      })
+      .def_loop("square", [](const Variable& self) { return self * self; })
       // We add `EqualTo` instead of `equal_to` to maintain consistency among
       // symbolic classes (Variable, Expression, Formula, Polynomial) on Python
       // side. This enables us to achieve polymorphism via ducktyping in Python.
@@ -191,7 +189,7 @@ PYBIND11_MODULE(symbolic, m) {
   });
 
   DefImplicitConversionsFromNumericTypes(&expr_cls);
-  expr_cls
+  expr_cls  // BR
       .def(py::init<>(), doc.Expression.ctor.doc_3)
       .def(py::init<double>(), doc.Expression.ctor.doc_4)
       .def(py::init<const Variable&>(), doc.Expression.ctor.doc_5)
@@ -304,9 +302,7 @@ PYBIND11_MODULE(symbolic, m) {
       .def_loop(py::self != Variable())
       .def_loop(py::self != double())
       // See comment about `np.square` in AutoDiff<> bindings.
-      .def_loop("square", [](const Expression& self) {
-        return self * self;
-      })
+      .def_loop("square", [](const Expression& self) { return self * self; })
       .def("Differentiate", &Expression::Differentiate,
            doc.Expression.Differentiate.doc)
       .def("Jacobian", &Expression::Jacobian);
@@ -325,12 +321,18 @@ PYBIND11_MODULE(symbolic, m) {
       // TODO(eric.cousineau): Figure out how to consolidate with the below
       // methods.
       // Pow.
-      .def_loop("__pow__", "pow", [](const Expression& self,
-                         const double other) { return pow(self, other); })
-      .def_loop("__pow__", "pow", [](const Expression& self,
-                         const Variable& other) { return pow(self, other); })
-      .def_loop("__pow__", "pow", [](const Expression& self,
-                         const Expression& other) { return pow(self, other); })
+      .def_loop("__pow__", "pow",
+                [](const Expression& self, const double other) {
+                  return pow(self, other);
+                })
+      .def_loop("__pow__", "pow",
+                [](const Expression& self, const Variable& other) {
+                  return pow(self, other);
+                })
+      .def_loop("__pow__", "pow",
+                [](const Expression& self, const Expression& other) {
+                  return pow(self, other);
+                })
       .def_loop("log", &symbolic::log)
       .def_loop("__abs__", "abs", &symbolic::abs)
       .def_loop("exp", &symbolic::exp)
@@ -399,8 +401,10 @@ PYBIND11_MODULE(symbolic, m) {
            [](const Formula& self) {
              return fmt::format("<Formula \"{}\">", self.to_string());
            })
-      .def_loop("__eq__", [](const Formula& self,
-                        const Formula& other) { return self.EqualTo(other); })
+      .def_loop("__eq__",
+                [](const Formula& self, const Formula& other) {
+                  return self.EqualTo(other);
+                })
       .def("__ne__", [](const Formula& self,
                         const Formula& other) { return !self.EqualTo(other); })
       .def("__hash__",

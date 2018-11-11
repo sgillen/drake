@@ -14,10 +14,10 @@ using std::unique_ptr;
 namespace drake {
 
 using systems::BasicVector;
+using systems::Context;
 using systems::LeafSystem;
 using systems::Simulator;
 using systems::System;
-using systems::Context;
 
 namespace pydrake {
 namespace {
@@ -85,8 +85,8 @@ class MyVector2 : public BasicVector<T> {
 // TODO(eric.cousineau): Somehow leverage `Simulator` bits, factoring that
 // functionality out.
 template <typename T>
-void DispatchInitializationEvents(
-    const System<T>& system, const Context<T>& context) {
+void DispatchInitializationEvents(const System<T>& system,
+                                  const Context<T>& context) {
   // Process all the initialization events.
   auto init_events = system.AllocateCompositeEventCollection();
   system.GetInitializationEvents(context, init_events.get());
@@ -171,37 +171,39 @@ PYBIND11_MODULE(test_util, m) {
         // If there is an abstract / unrestricted update, this assumes that
         // `dt_discrete < dt_abstract`.
         systems::LeafCompositeEventCollection<T> events;
-        results["discrete_next_t"] = system.CalcNextUpdateTime(*context, &events);
+        results["discrete_next_t"] =
+            system.CalcNextUpdateTime(*context, &events);
       }
       return results;
     });
 
-    m.def("call_vector_system_overrides", [clone_vector](
-                                              const VectorSystem<T>& system,
-                                              Context<T>* context,
-                                              bool is_discrete, double dt) {
-      // While this is not convention, update state first to ensure that our
-      // output incorporates it correctly, for testing purposes.
-      // TODO(eric.cousineau): Add (Continuous|Discrete)State::Clone().
-      if (is_discrete) {
-        auto& state = context->get_mutable_discrete_state();
-        DiscreteValues<T> state_copy(clone_vector(state.get_vector()));
-        system.CalcDiscreteVariableUpdates(*context, &state_copy);
-        state.CopyFrom(state_copy);
-      } else {
-        auto& state = context->get_mutable_continuous_state();
-        ContinuousState<T> state_dot(clone_vector(state.get_vector()),
-                                     state.get_generalized_position().size(),
-                                     state.get_generalized_velocity().size(),
-                                     state.get_misc_continuous_state().size());
-        system.CalcTimeDerivatives(*context, &state_dot);
-        state.SetFromVector(state.CopyToVector() + dt * state_dot.CopyToVector());
-      }
-      // Calculate output.
-      auto output = system.AllocateOutput();
-      system.CalcOutput(*context, output.get());
-      return output;
-    });
+    m.def("call_vector_system_overrides",
+          [clone_vector](const VectorSystem<T>& system, Context<T>* context,
+                         bool is_discrete, double dt) {
+            // While this is not convention, update state first to ensure that
+            // our output incorporates it correctly, for testing purposes.
+            // TODO(eric.cousineau): Add (Continuous|Discrete)State::Clone().
+            if (is_discrete) {
+              auto& state = context->get_mutable_discrete_state();
+              DiscreteValues<T> state_copy(clone_vector(state.get_vector()));
+              system.CalcDiscreteVariableUpdates(*context, &state_copy);
+              state.CopyFrom(state_copy);
+            } else {
+              auto& state = context->get_mutable_continuous_state();
+              ContinuousState<T> state_dot(
+                  clone_vector(state.get_vector()),
+                  state.get_generalized_position().size(),
+                  state.get_generalized_velocity().size(),
+                  state.get_misc_continuous_state().size());
+              system.CalcTimeDerivatives(*context, &state_dot);
+              state.SetFromVector(state.CopyToVector() +
+                                  dt * state_dot.CopyToVector());
+            }
+            // Calculate output.
+            auto output = system.AllocateOutput();
+            system.CalcOutput(*context, output.get());
+            return output;
+          });
   };
   type_visit(bind_common_scalar_types, pysystems::CommonScalarPack{});
 }

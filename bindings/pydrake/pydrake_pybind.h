@@ -276,7 +276,8 @@ This is a brief recipe for debugging with GDB
         source_dir=${workspace}/bazel-${name}
         source /tmp/env.sh
         cd ${target_bin_path}.runfiles/${name}
-        gdb --directory ${source_dir} --args python ${target_bin_path} --trace=user -f
+        gdb --directory ${source_dir} --args python ${target_bin_path}
+--trace=user -f
     )
 
 This allows you to use GDB from the terminal, while being able to inspect the

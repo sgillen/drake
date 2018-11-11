@@ -29,103 +29,96 @@ PYBIND11_MODULE(autodiffutils, m) {
 
   py::dtype_user<AutoDiffXd> autodiff(m, "AutoDiffXd");
   DefImplicitConversionsFromNumericTypes(&autodiff);
-  autodiff
-    .def(py::init<double>())
-    .def(py::init<const double&, const Eigen::VectorXd&>())
-    // Downcasting must be explicit, to prevent inadvertent information loss.
-    .def_loop(py::dtype_method::explicit_conversion(
-        [](const AutoDiffXd& self) -> double { return self.value(); }))
-    // General methods.
-    .def("value", [](const AutoDiffXd& self) {
-      return self.value();
-    })
-    .def("derivatives", [](const AutoDiffXd& self) {
-      return self.derivatives();
-    })
-    .def("__str__", [](const AutoDiffXd& self) {
-      return py::str("AD{{{}, nderiv={}}}").format(
-          self.value(), self.derivatives().size());
-    })
-    .def("__repr__", [](const AutoDiffXd& self) {
-      return py::str("<AutoDiffXd {} nderiv={}>").format(
-          self.value(), self.derivatives().size());
-    })
-    // Arithmetic
-    .def_loop(-py::self)
-    .def_loop(py::self + py::self)
-    .def_loop(py::self + double())
-    .def_loop(double() + py::self)
-    .def_loop(py::self - py::self)
-    .def_loop(py::self - double())
-    .def_loop(double() - py::self)
-    .def_loop(py::self * py::self)
-    .def_loop(py::self * double())
-    .def_loop(double() * py::self)
-    .def_loop(py::self / py::self)
-    .def_loop(py::self / double())
-    .def_loop(double() / py::self)
-    // Logical comparison
-    .def_loop(py::self == py::self)
-    .def_loop(py::self == double())
-    .def_loop(py::self != py::self)
-    .def_loop(py::self != double())
-    // .def_loop(double() != py::self)
-    .def_loop(py::self < py::self)
-    .def_loop(py::self < double())
-    .def_loop(double() < py::self)
-    .def_loop(py::self <= py::self)
-    .def_loop(py::self <= double())
-    .def_loop(double() <= py::self)
-    .def_loop(py::self > py::self)
-    .def_loop(py::self > double())
-    .def_loop(double() > py::self)
-    .def_loop(py::self >= py::self)
-    .def_loop(py::self >= double())
-    .def_loop(double() >= py::self)
-    // Dot-product
-    .def_loop(py::dtype_method::dot())
-    // N.B. Certain versions of NumPy require `square` be specifically
-    // defined.
-    .def_loop("square", [](const AutoDiffXd& self) {
-      return self * self;
-    })
-    .def_loop("isfinite", [](const AutoDiffXd& self) {
-      return isfinite(self.value());
-    });
+  autodiff  // BR
+      .def(py::init<double>())
+      .def(py::init<const double&, const Eigen::VectorXd&>())
+      // Downcasting must be explicit, to prevent inadvertent information loss.
+      .def_loop(py::dtype_method::explicit_conversion(
+          [](const AutoDiffXd& self) -> double { return self.value(); }))
+      // General methods.
+      .def("value", [](const AutoDiffXd& self) { return self.value(); })
+      .def("derivatives",
+           [](const AutoDiffXd& self) { return self.derivatives(); })
+      .def("__str__",
+           [](const AutoDiffXd& self) {
+             return py::str("AD{{{}, nderiv={}}}")
+                 .format(self.value(), self.derivatives().size());
+           })
+      .def("__repr__",
+           [](const AutoDiffXd& self) {
+             return py::str("<AutoDiffXd {} nderiv={}>")
+                 .format(self.value(), self.derivatives().size());
+           })
+      // Arithmetic
+      .def_loop(-py::self)
+      .def_loop(py::self + py::self)
+      .def_loop(py::self + double())
+      .def_loop(double() + py::self)
+      .def_loop(py::self - py::self)
+      .def_loop(py::self - double())
+      .def_loop(double() - py::self)
+      .def_loop(py::self * py::self)
+      .def_loop(py::self * double())
+      .def_loop(double() * py::self)
+      .def_loop(py::self / py::self)
+      .def_loop(py::self / double())
+      .def_loop(double() / py::self)
+      // Logical comparison
+      .def_loop(py::self == py::self)
+      .def_loop(py::self == double())
+      .def_loop(py::self != py::self)
+      .def_loop(py::self != double())
+      // .def_loop(double() != py::self)
+      .def_loop(py::self < py::self)
+      .def_loop(py::self < double())
+      .def_loop(double() < py::self)
+      .def_loop(py::self <= py::self)
+      .def_loop(py::self <= double())
+      .def_loop(double() <= py::self)
+      .def_loop(py::self > py::self)
+      .def_loop(py::self > double())
+      .def_loop(double() > py::self)
+      .def_loop(py::self >= py::self)
+      .def_loop(py::self >= double())
+      .def_loop(double() >= py::self)
+      // Dot-product
+      .def_loop(py::dtype_method::dot())
+      // N.B. Certain versions of NumPy require `square` be specifically
+      // defined.
+      .def_loop("square", [](const AutoDiffXd& self) { return self * self; })
+      .def_loop("isfinite",
+                [](const AutoDiffXd& self) { return isfinite(self.value()); });
 
   // Add overloads for `math` functions.
   auto math = py::module::import("pydrake.math");
   UfuncMirrorDef<decltype(autodiff)>(&autodiff, math)
-    .def_loop("__pow__", "pow",
-         [](const AutoDiffXd& base, int exponent) {
-           return pow(base, exponent);
-         })
-    .def_loop("__abs__", "abs", [](const AutoDiffXd& x) { return abs(x); })
-    .def_loop("log", [](const AutoDiffXd& x) { return log(x); })
-    .def_loop("exp", [](const AutoDiffXd& x) { return exp(x); })
-    .def_loop("sqrt", [](const AutoDiffXd& x) { return sqrt(x); })
-    .def_loop("sin", [](const AutoDiffXd& x) { return sin(x); })
-    .def_loop("cos", [](const AutoDiffXd& x) { return cos(x); })
-    .def_loop("tan", [](const AutoDiffXd& x) { return tan(x); })
-    .def_loop("arcsin", "asin", [](const AutoDiffXd& x) { return asin(x); })
-    .def_loop("arccos", "acos", [](const AutoDiffXd& x) { return acos(x); })
-    .def_loop("arctan2", "atan2",
-        [](const AutoDiffXd& y, const AutoDiffXd& x) {
-            return atan2(y, x);
-        })
-    .def_loop("sinh", [](const AutoDiffXd& x) { return sinh(x); })
-    .def_loop("cosh", [](const AutoDiffXd& x) { return cosh(x); })
-    .def_loop("tanh", [](const AutoDiffXd& x) { return tanh(x); })
-    .def_loop("fmin", "min",
-        [](const AutoDiffXd& x, const AutoDiffXd& y) {
-            return min(x, y);
-        })
-    .def_loop("fmax", "max",
-        [](const AutoDiffXd& x, const AutoDiffXd& y) {
-            return max(x, y);
-        })
-    .def_loop("ceil", [](const AutoDiffXd& x) { return ceil(x); })
-    .def_loop("floor", [](const AutoDiffXd& x) { return floor(x); });
+      .def_loop("__pow__", "pow",
+                [](const AutoDiffXd& base, int exponent) {
+                  return pow(base, exponent);
+                })
+      .def_loop("__abs__", "abs", [](const AutoDiffXd& x) { return abs(x); })
+      .def_loop("log", [](const AutoDiffXd& x) { return log(x); })
+      .def_loop("exp", [](const AutoDiffXd& x) { return exp(x); })
+      .def_loop("sqrt", [](const AutoDiffXd& x) { return sqrt(x); })
+      .def_loop("sin", [](const AutoDiffXd& x) { return sin(x); })
+      .def_loop("cos", [](const AutoDiffXd& x) { return cos(x); })
+      .def_loop("tan", [](const AutoDiffXd& x) { return tan(x); })
+      .def_loop("arcsin", "asin", [](const AutoDiffXd& x) { return asin(x); })
+      .def_loop("arccos", "acos", [](const AutoDiffXd& x) { return acos(x); })
+      .def_loop(
+          "arctan2", "atan2",
+          [](const AutoDiffXd& y, const AutoDiffXd& x) { return atan2(y, x); })
+      .def_loop("sinh", [](const AutoDiffXd& x) { return sinh(x); })
+      .def_loop("cosh", [](const AutoDiffXd& x) { return cosh(x); })
+      .def_loop("tanh", [](const AutoDiffXd& x) { return tanh(x); })
+      .def_loop(
+          "fmin", "min",
+          [](const AutoDiffXd& x, const AutoDiffXd& y) { return min(x, y); })
+      .def_loop(
+          "fmax", "max",
+          [](const AutoDiffXd& x, const AutoDiffXd& y) { return max(x, y); })
+      .def_loop("ceil", [](const AutoDiffXd& x) { return ceil(x); })
+      .def_loop("floor", [](const AutoDiffXd& x) { return floor(x); });
 }
 
 }  // namespace pydrake

@@ -497,10 +497,11 @@ struct Impl {
                return new PyVectorSystem(inputs, outputs);
              }),
              doc.VectorSystem.ctor.doc)
-        .def(py::init(
-            [](int inputs, int outputs, SystemScalarConverter converter) {
-              return new PyVectorSystem(std::move(converter), inputs, outputs);
-            }), py::arg("inputs"), py::arg("outputs"), py::arg("converter"));
+        .def(py::init([](int inputs, int outputs,
+                         SystemScalarConverter converter) {
+               return new PyVectorSystem(std::move(converter), inputs, outputs);
+             }),
+             py::arg("inputs"), py::arg("outputs"), py::arg("converter"));
     // TODO(eric.cousineau): Bind virtual methods once we provide a function
     // wrapper to convert `Map<Derived>*` arguments.
     // N.B. This could be mitigated by using `EigenPtr` in public interfaces in
