@@ -242,11 +242,15 @@ class TestNumpyDtypesUser(unittest.TestCase):
         check_array(
             mut.custom_binary_ufunc(A, X_order), 2 * ["custom-operand-rhs(a)"])
 
-    def test_reference_argument(self):
+    def test_eigen_aliases(self):
         a = mut.Symbol("a")
         A = np.array([a, a])
         mut.add_one(A)
         self.check_symbol(A[0], "(a) + (float(1))")
+        # Check reference to live stuff.
+        c = mut.SymbolContainer(2, 2)
+        mut.add_one(c.symbols())
+        self.check_symbol(c.symbols()[0, 0], "() + (float(1))")
 
     def check_binary(self, a, b, fop, value):
         self.check_symbol(fop(a, b), value)

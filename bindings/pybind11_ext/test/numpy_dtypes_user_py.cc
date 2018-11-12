@@ -163,7 +163,7 @@ std::ostream& operator<<(std::ostream& os, const Symbol& s) {
   return os << s.str();
 }
 
-namespace func {
+namespace math {
 
 Symbol abs(const Symbol& s) { return Symbol::format("abs({})", s); }
 Symbol cos(const Symbol& s) { return Symbol::format("cos({})", s); }
@@ -172,7 +172,7 @@ Symbol pow(const Symbol& a, const Symbol& b) {
   return Symbol::format("({}) ^ ({})", a, b);
 }
 
-}  // namespace func
+}  // namespace math
 
 template <typename Class, typename Return>
 auto MakeRepr(const string& name, Return (Class::*method)() const) {
@@ -187,6 +187,16 @@ auto MakeStr(Return (Class::*method)() const) {
     return py::str("{}").format((self->*method)());
   };
 }
+
+// Simple container to check referencing of symbols.
+class SymbolContainer {
+ public:
+  SymbolContainer(int rows, int cols) : symbols_(rows, cols) {}
+  Eigen::Ref<MatrixX<Symbol>> symbols() { return symbols_; }
+
+ private:
+  MatrixX<Symbol> symbols_;
+};
 
 }  // namespace
 
@@ -208,7 +218,8 @@ PYBIND11_MODULE(numpy_dtypes_user, m) {
   length  // BR
       .def(py::init<int>())
       .def("value", &LengthValueImplicit::value)
-      .def("__repr__", MakeRepr("LengthValueImplicit", &LengthValueImplicit::value))
+      .def("__repr__",
+           MakeRepr("LengthValueImplicit", &LengthValueImplicit::value))
       .def("__str__", MakeStr(&LengthValueImplicit::value))
       .def_loop(py::self == py::self);
 
@@ -287,10 +298,10 @@ PYBIND11_MODULE(numpy_dtypes_user, m) {
       // .def_loop(py::self || py::self)
       // Explicit UFunc.
       .def_loop(py::dtype_method::dot())
-      .def_loop("__pow__", &func::pow)
-      .def_loop("abs", &func::abs)
-      .def_loop("cos", &func::cos)
-      .def_loop("sin", &func::sin);
+      .def_loop("__pow__", &math::pow)
+      .def_loop("abs", &math::abs)
+      .def_loop("cos", &math::cos)
+      .def_loop("sin", &math::sin);
 
   py::ufunc(m, "custom_binary_ufunc")
       .def_loop<Symbol>([](const Symbol& lhs, const Symbol& rhs) {
@@ -316,6 +327,11 @@ PYBIND11_MODULE(numpy_dtypes_user, m) {
         [](Eigen::Ref<MatrixX<Symbol>> value) {
           value.array() += Symbol(1.);
         });
+
+  py::class_<SymbolContainer>(m, "SymbolContainer")
+      .def(py::init<int, int>(), py::arg("rows"), py::arg("cols"))
+      .def("symbols", &SymbolContainer::symbols,
+           py::return_value_policy::reference_internal);
 }
 
 }  // namespace
