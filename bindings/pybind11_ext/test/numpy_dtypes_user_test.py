@@ -326,8 +326,8 @@ class TestNumpyDtypesUser(unittest.TestCase):
         def fop(x, y): return x + y
         def fiop(x, y): x += y; return x
 
-        self.check_binary_with_inplace(a, operand, fop, fiop, "(a) + (operand)")
-        self.check_binary(operand, a, fop, "(operand) + (a)")
+        self.check_binary_with_inplace(a, operand, fop, fiop, "(a) + operand")
+        self.check_binary(operand, a, fop, "operand + (a)")
 
     def test_algebra_implicit_casting(self):
         # N.B. Only tested on a single operator, `__add__` and `__iadd__`.

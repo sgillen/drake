@@ -54,9 +54,7 @@ class StrValueExplicit {
 
 // No construction possible from this; purely for testing explicit operator
 // overloads.
-struct OperandExplicit {
-  std::string value() const { return "operand"; }
-};
+struct OperandExplicit {};
 
 // Tests operator overloads.
 class Symbol {
@@ -108,11 +106,14 @@ class Symbol {
   Symbol operator||(const Symbol& rhs) const { return binary("||", rhs); }
 
   // - Not closed.
-  Symbol& operator+=(const OperandExplicit& rhs) {
-    return inplace_binary("+", rhs.value());
+  Symbol& operator+=(const OperandExplicit&) {
+    *str_ = fmt::format("({}) + operand", *this);
+    return *this;
   }
-  Symbol operator+(const OperandExplicit& rhs) const {
-    return binary("+", rhs.value());
+  Symbol operator+(const OperandExplicit&) const {
+    Symbol lhs(*this);
+    lhs += OperandExplicit{};
+    return lhs;
   }
 
  private:
@@ -132,8 +133,8 @@ class Symbol {
   std::shared_ptr<string> str_;
 };
 
-Symbol operator+(const OperandExplicit& lhs, const Symbol& rhs) {
-  return Symbol::format("({}) + ({})", lhs.value(), rhs);
+Symbol operator+(const OperandExplicit&, const Symbol& rhs) {
+  return Symbol::format("operand + ({})", rhs);
 }
 
 std::ostream& operator<<(std::ostream& os, const Symbol& s) {
@@ -197,8 +198,10 @@ PYBIND11_MODULE(numpy_dtypes_user, m) {
 
   operand  // BR
       .def(py::init())
-      .def("__repr__", MakeRepr("OperandExplicit", &OperandExplicit::value))
-      .def("__str__", MakeStr(&OperandExplicit::value));
+      .def("__repr__",
+           [](const OperandExplicit&) { return "<OperandExplicit>"; })
+      .def("__str__",
+           [](const OperandExplicit&) { return "<OperandExplicit>"; });
 
   sym  // BR
       // Nominal definitions.
