@@ -36,7 +36,8 @@ Goals:
 The simplest mechanism is to do super simple symbolics.
 */
 
-// Tests for conversions.
+// Captures length of a given `Symbol`. Can implicitly convert to and from a
+// `Symbol.
 class LengthValueImplicit {
  public:
   LengthValueImplicit(int value) : value_(value) {}
@@ -49,6 +50,8 @@ class LengthValueImplicit {
   int value_{};
 };
 
+// Captures value of a given `Symbol`. Can explicitly convert to and from a
+// `Symbol.
 class StrValueExplicit {
  public:
   explicit StrValueExplicit(const string& value) : value_(new string(value)) {}
@@ -61,7 +64,6 @@ class StrValueExplicit {
 // overloads.
 struct OperandExplicit {};
 
-// Tests operator overloads.
 class Symbol {
  public:
   Symbol() : Symbol("") {}
