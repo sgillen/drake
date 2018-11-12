@@ -74,7 +74,7 @@ class Symbol {
       : Symbol(fmt::format("length({})", other.value())) {}
   Symbol(double value) : Symbol(fmt::format("float({})", value)) {}
 
-  Symbol(const Symbol& other) : Symbol(other.str()) {}
+  Symbol(const Symbol& other) : Symbol(other.value()) {}
 
   // `operator=` must be overloaded so that we do not copy the underyling
   // `shared_ptr` (when creating an array repeating from the same scalar).
@@ -92,7 +92,7 @@ class Symbol {
   // N.B. Due to constraints of `pybind11`s architecture, we must try to handle
   // `str` conversion from an invalid state. See `add_init`.
   // WARNING: If the user encounters `memzero` memory, this case must handled.
-  string str() const { return str_ ? *str_ : "<invalid>"; }
+  string value() const { return str_ ? *str_ : "<invalid>"; }
 
   // To be explicit.
   operator int() const { return str_->size(); }
@@ -145,7 +145,7 @@ class Symbol {
     return lhs;
   }
   Symbol& inplace_binary(const char* op, const Symbol& rhs) {
-    *str_ = fmt::format("({}) {} ({})", str(), op, rhs.str());
+    *str_ = fmt::format("({}) {} ({})", value(), op, rhs.value());
     return *this;
   }
 
@@ -160,7 +160,7 @@ Symbol operator+(const OperandExplicit&, const Symbol& rhs) {
 }
 
 std::ostream& operator<<(std::ostream& os, const Symbol& s) {
-  return os << s.str();
+  return os << s.value();
 }
 
 namespace math {
@@ -246,9 +246,9 @@ PYBIND11_MODULE(numpy_dtypes_user, m) {
       // accompanying constructor.
       .def(py::init<const LengthValueImplicit&>())
       .def(py::init<const Symbol&>())
-      .def("__repr__", MakeRepr("Symbol", &Symbol::str))
-      .def("__str__", MakeStr(&Symbol::str))
-      .def("str", &Symbol::str)
+      .def("__repr__", MakeRepr("Symbol", &Symbol::value))
+      .def("__str__", MakeStr(&Symbol::value))
+      .def("value", &Symbol::value)
       // - Test referencing.
       .def("self_reference",
            [](const Symbol& self) { return &self; },

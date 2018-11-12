@@ -12,14 +12,18 @@ class TestNumpyDtypesUser(unittest.TestCase):
         self.assertTrue(issubclass(mut.Symbol, np.generic))
         self.assertIsInstance(np.dtype(mut.Symbol), np.dtype)
 
-    def check_symbol(self, x, value, message=None):
-        """Checks a symbol against a given string."""
-        self.assertIsInstance(x, mut.Symbol)
-        self.assertEqual(str(x), value, message)
+    def check_scalar(self, actual, expected):
+        accepted = (mut.Symbol, mut.StrValueExplicit, mut.LengthValueImplicit)
+        if isinstance(actual, accepted):
+            self.assertEqual(actual.value(), expected)
+        else:
+            raise RuntimeError("Invalid scalar: {}".format(repr(expected)))
 
-    def check_symbol_all(self, X, value):
-        for x in X.flat:
-            self.assertEqual(str(x), value)
+    def check_array(self, value, expected):
+        expected = np.array(expected, dtype=np.object)
+        self.assertEqual(value.shape, expected.shape)
+        for a, b in zip(value.flat, expected.flat):
+            self.check_scalar(a, b)
 
     def test_scalar_basics(self):
         """
@@ -27,27 +31,27 @@ class TestNumpyDtypesUser(unittest.TestCase):
         Important to do since we had to redo the instance registry to inherit
         from `np.generic` :(
         """
+        # TODO(eric.cousineau): Consider using `pybind11`s `ConstructorStats`
+        # to do instance tracking.
         c1 = mut.Symbol()
         c2 = mut.Symbol()
         self.assertIsNot(c1, c2)
         self.assertIs(c1, c1.self_reference())
-        # TODO(eric.cousineau): Consider using `pybind11`s `ConstructorStats`
-        # to do instance tracking.
         # Test functions.
         a = mut.Symbol("a")
         self.assertEqual(repr(a), "<Symbol 'a'>")
         self.assertEqual(str(a), "a")
-        self.assertEqual(a.str(), "a")
+        self.assertEqual(a.value(), "a")
 
         b = copy.copy(a)
         self.assertIsNot(a, b)
-        self.assertEqual(a.str(), b.str())
+        self.assertEqual(a.value(), b.value())
 
     def test_array_creation_basics(self):
         # Uniform creation.
         A = np.array([mut.Symbol("a")])
         self.assertEqual(A.dtype, mut.Symbol)
-        self.assertEqual(A[0].str(), "a")
+        self.assertEqual(A[0].value(), "a")
 
     def test_array_cast_explicit(self):
         # Check idempotent round-trip casts.
@@ -57,15 +61,15 @@ class TestNumpyDtypesUser(unittest.TestCase):
             self.assertEqual(B.dtype, dtype)
             C = B.astype(mut.Symbol)
             self.assertEqual(C.dtype, mut.Symbol)
-            self.check_symbol(C[0], "a")
+            self.check_scalar(C[0], "a")
         # Check registered explicit casts.
         # - From.
         from_float = np.array([1.]).astype(mut.Symbol)
-        self.check_symbol(from_float[0], "float(1)")
+        self.check_scalar(from_float[0], "float(1)")
         from_str = np.array([mut.StrValueExplicit("abc")]).astype(mut.Symbol)
-        self.check_symbol(from_str[0], "abc")
+        self.check_scalar(from_str[0], "abc")
         from_length = np.array([mut.LengthValueImplicit(1)]).astype(mut.Symbol)
-        self.check_symbol(from_length[0], "length(1)")
+        self.check_scalar(from_length[0], "length(1)")
         # - To.
         # N.B. `np.int` may not be the same as `np.int32`; C++ uses `np.int32`.
         to_int = A.astype(np.int32)
@@ -86,24 +90,24 @@ class TestNumpyDtypesUser(unittest.TestCase):
         b_length = mut.LengthValueImplicit(1)
         # - Implicitly convertible types.
         # A[0] = b_length
-        # self.check_symbol(A[0], "length(1)")
+        # self.check_scalar(A[0], "length(1)")
         A[:] = b_length
-        self.check_symbol(A[0], "length(1)")
+        self.check_scalar(A[0], "length(1)")
         # - Permitted as in place operation.
         reset()
         A += mut.LengthValueImplicit(1)
-        self.check_symbol(A[0], "(a) + (length(1))")
+        self.check_scalar(A[0], "(a) + (length(1))")
         # Explicit: Scalar assignment not permitted.
         b_str = mut.StrValueExplicit("b")
         with self.assertRaises(TypeError):
             A[0] = b_str
         # N.B. For some reason, NumPy considers this explicit coercion...
         A[:] = b_str
-        self.check_symbol(A[0], "b")
+        self.check_scalar(A[0], "b")
         # - Permitted as in place operation.
         reset()
         A += mut.StrValueExplicit("b")
-        self.check_symbol(A[0], "(a) + (b)")
+        self.check_scalar(A[0], "(a) + (b)")
         reset()
 
     def test_array_creation_mixed(self):
@@ -113,8 +117,8 @@ class TestNumpyDtypesUser(unittest.TestCase):
             O = np.array([mut.Symbol(), mut.LengthValueImplicit(1)])
         A = np.array([
             mut.Symbol(), mut.LengthValueImplicit(1)], dtype=mut.Symbol)
-        self.check_symbol(A[0], "")
-        self.check_symbol(A[1], "length(1)")
+        self.check_scalar(A[0], "")
+        self.check_scalar(A[1], "length(1)")
 
         # Mixed creation without implicit casts, yields dtype=object.
         O = np.array([mut.Symbol(), 1.])
@@ -122,8 +126,8 @@ class TestNumpyDtypesUser(unittest.TestCase):
         # - Explicit Cast.
         A = O.astype(mut.Symbol)
         self.assertEqual(A.dtype, mut.Symbol)
-        self.check_symbol(A[0], "")
-        self.check_symbol(A[1], "float(1)")
+        self.check_scalar(A[0], "")
+        self.check_scalar(A[1], "float(1)")
 
         # Mixed creation with explicitly convertible types - does not work.
         with self.assertRaises(TypeError):
@@ -134,23 +138,22 @@ class TestNumpyDtypesUser(unittest.TestCase):
         # Zeros: More so an `empty` array.
         Z = np.full((2,), mut.Symbol())
         self.assertEqual(Z.dtype, mut.Symbol)
-        self.check_symbol_all(Z, "")
+        self.check_array(Z, 2 * [""])
 
         # Zeros: For making an "empty" array, but using float conversion.
         Z_from_float = np.zeros((2,)).astype(mut.Symbol)
-        self.check_symbol_all(Z_from_float, "float(0)")
+        self.check_array(Z_from_float, 2 * ["float(0)"])
 
         # Ones: Uses float conversion.
         O_from_float = np.ones((2,)).astype(mut.Symbol)
-        self.check_symbol_all(O_from_float, "float(1)")
+        self.check_array(O_from_float, 2 * ["float(1)"])
 
         # Linear algebra.
         I_from_float = np.eye(2).astype(mut.Symbol)
-        self.check_symbol(I_from_float[0, 0], "float(1)")
-        self.check_symbol(I_from_float[0, 1], "float(0)")
-        self.check_symbol(I_from_float[1, 0], "float(0)")
-        self.check_symbol(I_from_float[1, 1], "float(1)")
-        self.check_symbol_all(np.diag(I_from_float), "float(1)")
+        self.check_array(
+            I_from_float,
+            [["float(1)", "float(0)"], ["float(0)", "float(1)"]])
+        self.check_array(np.diag(I_from_float), 2 * ["float(1)"])
 
     def test_array_creation_constants_bad(self):
         """
@@ -171,95 +174,82 @@ class TestNumpyDtypesUser(unittest.TestCase):
             I = np.ones((2,), dtype=mut.Symbol)
 
     def test_array_ufunc(self):
-
-        def check_scalar(actual, expected):
-            if isinstance(actual, mut.Symbol):
-                self.check_symbol(actual, expected)
-            else:
-                self.assertEqual(actual.value(), expected)
-
-        def check_array(value, expected):
-            expected = np.array(expected, dtype=np.object)
-            self.assertEqual(value.shape, expected.shape)
-            for a, b in zip(value.flat, expected.flat):
-                check_scalar(a, b)
-
         # - Symbol
         a = mut.Symbol("a")
         b = mut.Symbol("b")
-        check_scalar(mut.custom_binary_ufunc(a, b), "custom-symbol(a, b)")
+        self.check_scalar(mut.custom_binary_ufunc(a, b), "custom-symbol(a, b)")
         A = [a, a]
         B = [b, b]
-        check_array(mut.custom_binary_ufunc(A, B), ["custom-symbol(a, b)"] * 2)
+        self.check_array(mut.custom_binary_ufunc(A, B), ["custom-symbol(a, b)"] * 2)
 
         # Duplicating values for other tests.
         # - LengthValueImplicit
         x_length = mut.LengthValueImplicit(10)
-        check_scalar(mut.custom_binary_ufunc(x_length, x_length), 20)
+        self.check_scalar(mut.custom_binary_ufunc(x_length, x_length), 20)
         X_length = [x_length, x_length]
-        check_array(mut.custom_binary_ufunc(X_length, X_length), 2 * [20])
+        self.check_array(mut.custom_binary_ufunc(X_length, X_length), 2 * [20])
         # - StrValueExplicit
         x_str = mut.StrValueExplicit("x")
-        check_scalar(mut.custom_binary_ufunc(x_str, x_str), "custom-str(x, x)")
+        self.check_scalar(mut.custom_binary_ufunc(x_str, x_str), "custom-str(x, x)")
         X_str = [x_str, x_str]
-        check_array(
+        self.check_array(
             mut.custom_binary_ufunc(X_str, X_str), 2 * ["custom-str(x, x)"])
 
         # - Mixing.
         # N.B. For UFuncs, order affects the resulting output when implicit or
         # explicit convesions are present.
         # - - Symbol + LengthValueImplicit
-        check_scalar(
+        self.check_scalar(
             mut.custom_binary_ufunc(x_length, a), 11)
-        check_array(
+        self.check_array(
             mut.custom_binary_ufunc(X_length, A), 2 * [11])
-        check_scalar(
+        self.check_scalar(
             mut.custom_binary_ufunc(a, x_length),
             "custom-symbol(a, length(10))")
-        check_array(
+        self.check_array(
             mut.custom_binary_ufunc(A, X_length),
             2 * ["custom-symbol(a, length(10))"])
         # - - Symbol + StrValueExplicit
-        check_scalar(
+        self.check_scalar(
             mut.custom_binary_ufunc(x_str, a), "custom-str(x, a)")
-        check_array(
+        self.check_array(
             mut.custom_binary_ufunc(X_str, A), 2 * ["custom-str(x, a)"])
-        check_scalar(
+        self.check_scalar(
             mut.custom_binary_ufunc(a, x_str),
             "custom-symbol(a, x)")
-        check_array(
+        self.check_array(
             mut.custom_binary_ufunc(A, X_str),
             2 * ["custom-symbol(a, x)"])
         # - - Symbol + OperandExplicit
         x_order = mut.OperandExplicit()
         X_order = [x_order, x_order]
-        check_scalar(
+        self.check_scalar(
             mut.custom_binary_ufunc(x_order, a), "custom-operand-lhs(a)")
-        check_array(
+        self.check_array(
             mut.custom_binary_ufunc(X_order, A), 2 * ["custom-operand-lhs(a)"])
-        check_scalar(
+        self.check_scalar(
             mut.custom_binary_ufunc(a, x_order), "custom-operand-rhs(a)")
-        check_array(
+        self.check_array(
             mut.custom_binary_ufunc(A, X_order), 2 * ["custom-operand-rhs(a)"])
 
     def test_eigen_aliases(self):
         a = mut.Symbol("a")
         A = np.array([a, a])
         mut.add_one(A)
-        self.check_symbol(A[0], "(a) + (float(1))")
+        self.check_scalar(A[0], "(a) + (float(1))")
         # Check reference to live stuff.
         c = mut.SymbolContainer(2, 2)
         mut.add_one(c.symbols())
-        self.check_symbol(c.symbols()[0, 0], "() + (float(1))")
+        self.check_scalar(c.symbols()[0, 0], "() + (float(1))")
 
     def check_binary(self, a, b, fop, value):
         """Checks a binary operator for both scalar and array cases."""
-        self.check_symbol(fop(a, b), value)
+        self.check_scalar(fop(a, b), value)
         A = np.array([a, a])
         B = np.array([b, b])
         c1, c2 = fop(A, B)
-        self.check_symbol(c1, value)
-        self.check_symbol(c2, value)
+        self.check_scalar(c1, value)
+        self.check_scalar(c2, value)
 
     def check_binary_with_inplace(
             self, a, b, fop, fiop, value, inplace_same=True):
@@ -276,29 +266,29 @@ class TestNumpyDtypesUser(unittest.TestCase):
                 instance must be created.
         """
         # Scalar.
-        self.check_symbol(fop(a, b), value)
+        self.check_scalar(fop(a, b), value)
         c = mut.Symbol(a)
         d = fiop(c, b)
         if inplace_same:
             self.assertIs(c, d)
         else:
             self.assertIsNot(c, d)
-        self.check_symbol(d, value)
+        self.check_scalar(d, value)
 
         # Array.
         A = np.array([a, a])
         B = np.array([b, b])
         c1, c2 = fop(A, B)
-        self.check_symbol(c1, value)
-        self.check_symbol(c2, value)
+        self.check_scalar(c1, value)
+        self.check_scalar(c2, value)
         C = np.array(A)
         D = fiop(C, B)
         # Regardless of the operation, numpy arrays should not generate
         # temporaries for inplace operations.
         self.assertIs(C, D)
         c1, c2 = C
-        self.check_symbol(c1, value)
-        self.check_symbol(c2, value)
+        self.check_scalar(c1, value)
+        self.check_scalar(c2, value)
 
     def test_algebra_closed(self):
         """Tests scalar and array algebra with implicit conversions."""
@@ -366,13 +356,13 @@ class TestNumpyDtypesUser(unittest.TestCase):
         b = mut.Symbol("b")
         L = np.array([a, b])
         R = np.array([b, a])
-        self.check_symbol(np.dot(L, R), "(() + ((a) * (b))) + ((b) * (a))")
+        self.check_scalar(np.dot(L, R), "(() + ((a) * (b))) + ((b) * (a))")
         # Vector.
         L.shape = (1, 2)
         R.shape = (2, 1)
         Y = np.dot(L, R)
         self.assertEqual(Y.shape, (1, 1))
-        self.check_symbol(Y[0, 0], "(() + ((a) * (b))) + ((b) * (a))")
+        self.check_scalar(Y[0, 0], "(() + ((a) * (b))) + ((b) * (a))")
 
     def test_algebra_order_check(self):
         # By construction, `OperandExplicit` only interfaces with `Symbol` by
