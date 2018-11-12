@@ -142,10 +142,10 @@ class TestNumpyDtypesUser(unittest.TestCase):
         # - Symbol
         a = mut.Symbol("a")
         b = mut.Symbol("b")
-        check_scalar(mut.custom_binary_ufunc(a, b), "custom(a, b)")
+        check_scalar(mut.custom_binary_ufunc(a, b), "custom-symbol(a, b)")
         A = [a, a]
         B = [b, b]
-        check_array(mut.custom_binary_ufunc(A, B), ["custom(a, b)"] * 2)
+        check_array(mut.custom_binary_ufunc(A, B), ["custom-symbol(a, b)"] * 2)
 
         # Duplicating values for other tests.
         # - LengthValueImplicit
@@ -161,30 +161,41 @@ class TestNumpyDtypesUser(unittest.TestCase):
             mut.custom_binary_ufunc(X_str, X_str), 2 * ["custom-str(x, x)"])
 
         # - Mixing.
-        # - - Implicit.
+        # N.B. For UFuncs, order affects the resulting output when implicit or
+        # explicit convesions are present.
+        # - - Symbol + LengthValueImplicit
         check_scalar(
-            mut.custom_binary_ufunc(x_length, a), "custom(length(10), a)")
+            mut.custom_binary_ufunc(x_length, a), 11)
         check_array(
-            mut.custom_binary_ufunc(X_length, A), 2 * ["custom(length(10), a)"])
+            mut.custom_binary_ufunc(X_length, A), 2 * [11])
         check_scalar(
-            mut.custom_binary_ufunc(a, x_length), "custom(a, length(10))")
+            mut.custom_binary_ufunc(a, x_length),
+            "custom-symbol(a, length(10))")
+        check_array(
+            mut.custom_binary_ufunc(A, X_length),
+            2 * ["custom-symbol(a, length(10))"])
+        # - - Symbol + StrValueExplicit
         check_scalar(
-            mut.custom_binary_ufunc(X_length, A), 2 * ["custom(length(10), a)"])
-
-        print(mut.custom_binary_ufunc(x_str, a))
-        print(mut.custom_binary_ufunc(a, x_str))
-
-        print(mut.custom_binary_ufunc(X_str, A))
-        print(mut.custom_binary_ufunc(A, X_str))
-
-        # - Explicit.
+            mut.custom_binary_ufunc(x_str, a), "custom-str(x, a)")
+        check_array(
+            mut.custom_binary_ufunc(X_str, A), 2 * ["custom-str(x, a)"])
+        check_scalar(
+            mut.custom_binary_ufunc(a, x_str),
+            "custom-symbol(a, x)")
+        check_array(
+            mut.custom_binary_ufunc(A, X_str),
+            2 * ["custom-symbol(a, x)"])
+        # - - Symbol + OperandExplicit
         x_order = mut.OperandExplicit()
         X_order = [x_order, x_order]
-        print(mut.custom_binary_ufunc(x_order, a))
-        print(mut.custom_binary_ufunc(a, x_order))
-
-        print(mut.custom_binary_ufunc(X_order, A))
-        print(mut.custom_binary_ufunc(A, X_order))
+        check_scalar(
+            mut.custom_binary_ufunc(x_order, a), "custom-operand-lhs(a)")
+        check_array(
+            mut.custom_binary_ufunc(X_order, A), 2 * ["custom-operand-lhs(a)"])
+        check_scalar(
+            mut.custom_binary_ufunc(a, x_order), "custom-operand-rhs(a)")
+        check_array(
+            mut.custom_binary_ufunc(A, X_order), 2 * ["custom-operand-rhs(a)"])
 
     def test_array_creation_constants(self):
         # Zeros: More so an `empty` array.

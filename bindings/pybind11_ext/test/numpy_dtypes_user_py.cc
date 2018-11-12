@@ -271,7 +271,7 @@ PYBIND11_MODULE(numpy_dtypes_user, m) {
 
   py::ufunc(m, "custom_binary_ufunc")
       .def_loop<Symbol>([](const Symbol& lhs, const Symbol& rhs) {
-        return Symbol::format("custom({}, {})", lhs, rhs);
+        return Symbol::format("custom-symbol({}, {})", lhs, rhs);
       })
       .def_loop<Symbol>([](const Symbol& lhs, const OperandExplicit& rhs) {
         return Symbol::format("custom-operand-rhs({})", lhs);
