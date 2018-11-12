@@ -125,6 +125,47 @@ class TestNumpyDtypesUser(unittest.TestCase):
             A = np.array([
                 mut.Symbol(), mut.StrValueExplicit("a")], dtype=mut.Symbol)
 
+    def test_array_creation_constants(self):
+        # Zeros: More so an `empty` array.
+        Z = np.full((2,), mut.Symbol())
+        self.assertEqual(Z.dtype, mut.Symbol)
+        self.check_symbol_all(Z, "")
+
+        # Zeros: For making an "empty" array, but using float conversion.
+        Z_from_float = np.zeros((2,)).astype(mut.Symbol)
+        self.check_symbol_all(Z_from_float, "float(0)")
+
+        # Ones: Uses float conversion.
+        O_from_float = np.ones((2,)).astype(mut.Symbol)
+        self.check_symbol_all(O_from_float, "float(1)")
+
+        # Linear algebra.
+        I_from_float = np.eye(2).astype(mut.Symbol)
+        self.check_symbol(I_from_float[0, 0], "float(1)")
+        self.check_symbol(I_from_float[0, 1], "float(0)")
+        self.check_symbol(I_from_float[1, 0], "float(0)")
+        self.check_symbol(I_from_float[1, 1], "float(1)")
+        self.check_symbol_all(np.diag(I_from_float), "float(1)")
+
+    def test_array_creation_constants_bad(self):
+        """
+        WARNING: The following are all BAD. AVOID THEM (as of NumPy v1.15.2).
+        """
+        # BAD Memory: `np.empty` works with uninitialized memory.
+        # Printing will most likely cause a segfault.
+        E = np.empty((2,), dtype=mut.Symbol)
+        self.assertEqual(E.dtype, mut.Symbol)
+        # BAD Memory: `np.zeros` works by using `memzero`.
+        # Printing will most likely cause a segfault.
+        Z = np.zeros((2,), dtype=mut.Symbol)
+        self.assertEqual(Z.dtype, mut.Symbol)
+        # BAD Semantics: This requires that `np.long` be added as an implicit
+        # conversion.
+        # Could add implicit conversion, but that may wreak havoc.
+        with self.assertRaises(ValueError):
+            I = np.ones((2,), dtype=mut.Symbol)
+
+
     def test_array_ufunc(self):
 
         def check_scalar(actual, expected):
@@ -196,46 +237,6 @@ class TestNumpyDtypesUser(unittest.TestCase):
             mut.custom_binary_ufunc(a, x_order), "custom-operand-rhs(a)")
         check_array(
             mut.custom_binary_ufunc(A, X_order), 2 * ["custom-operand-rhs(a)"])
-
-    def test_array_creation_constants(self):
-        # Zeros: More so an `empty` array.
-        Z = np.full((2,), mut.Symbol())
-        self.assertEqual(Z.dtype, mut.Symbol)
-        self.check_symbol_all(Z, "")
-
-        # Zeros: For making an "empty" array, but using float conversion.
-        Z_from_float = np.zeros((2,)).astype(mut.Symbol)
-        self.check_symbol_all(Z_from_float, "float(0)")
-
-        # Ones: Uses float conversion.
-        O_from_float = np.ones((2,)).astype(mut.Symbol)
-        self.check_symbol_all(O_from_float, "float(1)")
-
-        # Linear algebra.
-        I_from_float = np.eye(2).astype(mut.Symbol)
-        self.check_symbol(I_from_float[0, 0], "float(1)")
-        self.check_symbol(I_from_float[0, 1], "float(0)")
-        self.check_symbol(I_from_float[1, 0], "float(0)")
-        self.check_symbol(I_from_float[1, 1], "float(1)")
-        self.check_symbol_all(np.diag(I_from_float), "float(1)")
-
-    def test_array_creation_constants_bad(self):
-        """
-        WARNING: The following are all BAD. AVOID THEM (as of NumPy v1.15.2).
-        """
-        # BAD Memory: `np.empty` works with uninitialized memory.
-        # Printing will most likely cause a segfault.
-        E = np.empty((2,), dtype=mut.Symbol)
-        self.assertEqual(E.dtype, mut.Symbol)
-        # BAD Memory: `np.zeros` works by using `memzero`.
-        # Printing will most likely cause a segfault.
-        Z = np.zeros((2,), dtype=mut.Symbol)
-        self.assertEqual(Z.dtype, mut.Symbol)
-        # BAD Semantics: This requires that `np.long` be added as an implicit
-        # conversion.
-        # Could add implicit conversion, but that may wreak havoc.
-        with self.assertRaises(ValueError):
-            I = np.ones((2,), dtype=mut.Symbol)
 
     def check_binary(self, a, b, fop, value):
         self.check_symbol(fop(a, b), value)
