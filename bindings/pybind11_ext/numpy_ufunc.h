@@ -1,7 +1,7 @@
 #pragma once
 
 /// @file
-/// Simple glue for NumPy UFuncs
+/// Simple glue for NumPy UFuncs.
 
 #include <memory>
 #include <string>
@@ -147,37 +147,56 @@ void ufunc_register_cast(
 
 }  // namespace detail
 
+/**
+Defines a UFunc in NumPy.
+Handles either 1 or 2 arguments (for unary or binary arguments).
+@pre All classes used must have corresponding dtypes in NumPy.
+@note You must specify the class that is going to own the UFunc, due to
+NumPy's API design.
+
+Example:
+
+    py::ufunc(m, "custom_ufunc")
+        .def_loop<CustomClass>([](const CustomClass& a) { ... });
+ */
 class ufunc : public object {
  public:
-  // NOLINTNEXTLINE(runtime/explicit)
-  ufunc(object ptr_in) : object(ptr_in) {
-    // TODO(eric.cousineau): Check type.
-    if (!self() || self().is_none())
-      pybind11_fail("ufunc: Cannot create from empty or None object");
-    entries.reset(new entries_t(ptr()));
-  }
-
-  explicit ufunc(detail::PyUFuncObject* ptr_in)
-    : ufunc(reinterpret_borrow<object>(reinterpret_cast<PyObject*>(ptr_in)))
-  {}
-
+  /// Enables defining a new UFunc `name`  in `scope`.
   ufunc(handle scope, const char* name) : scope_{scope} {
     entries.reset(new entries_t(name));
   }
 
-  ufunc(const ufunc&) = default;
-
-  ~ufunc() {
-    if (entries)
-      finalize();
+  // Wraps a reference to an existing UFunc.
+  // NOLINTNEXTLINE(runtime/explicit)
+  ufunc(object ptr_in) : object(ptr_in) {
+    // TODO(eric.cousineau): Check type.
+    if (!self() || self().is_none()) {
+      pybind11_fail("ufunc: Cannot wrap from empty or None object");
+    }
+    entries.reset(new entries_t(ptr()));
   }
 
-  // Gets a NumPy builtin UFunc by name.
+  /// Constructs from a raw pointer.
+  explicit ufunc(detail::PyUFuncObject* ptr_in)
+    : ufunc(reinterpret_borrow<object>(reinterpret_cast<PyObject*>(ptr_in)))
+  {}
+
+  ufunc(const ufunc&) = default;
+
+  /// "Flushes" queued UFunc definitions.
+  ~ufunc() {
+    if (entries) {
+      finalize();
+    }
+  }
+
+  /// Gets a NumPy builtin UFunc by name.
   static ufunc get_builtin(const char* name) {
     module numpy = module::import("numpy");
     return ufunc(numpy.attr(name));
   }
 
+  /// Queues a function to be realized as a UFunc loop.
   template <typename Type, typename Func>
   ufunc& def_loop(Func func_in) {
     auto func = detail::infer_function_info(func_in).func;
@@ -185,9 +204,14 @@ class ufunc : public object {
     return *this;
   }
 
+  /// Retrieves raw pointer.
   detail::PyUFuncObject* ptr() const {
     return reinterpret_cast<detail::PyUFuncObject*>(self().ptr());
   }
+
+ private:
+  object& self() { return *this; }
+  const object& self() const { return *this; }
 
   // Create UFunc object with core type functions if needed, and register user
   // functions.
@@ -207,10 +231,6 @@ class ufunc : public object {
     (void)new std::shared_ptr<entries_t>(entries);
   }
 
- private:
-  object& self() { return *this; }
-  const object& self() const { return *this; }
-
   // Registers a function pointer as a UFunc, mapping types to dtype nums.
   template <typename Type, typename ... Args>
   void do_register(detail::ufunc_ptr<Args...> user) {
@@ -219,14 +239,13 @@ class ufunc : public object {
     constexpr int nout = 1;
     entries->init_or_check_args(nin, nout);
 
-    int dtype = dtype::of<Type>().num();
-    int dummy[] = {(detail::assert_ufunc_dtype_valid<Args>(), 0)...};
+    const int dtype = dtype::of<Type>().num();
+    const int dummy[] = {(detail::assert_ufunc_dtype_valid<Args>(), 0)...};
     (void)dummy;
-    std::vector<int> dtype_args = {dtype::of<Args>().num()...};
-    // Determine if we need to make a new ufunc.
+    const std::vector<int> dtype_args = {dtype::of<Args>().num()...};
     bool is_core = true;
     for (int i = 0; i < N; ++i) {
-      size_t ii = static_cast<size_t>(i);
+      const size_t ii = static_cast<size_t>(i);
       if (dtype_args[ii] >= detail::npy_api::constants::NPY_USERDEF_)
         is_core = false;
     }
@@ -246,6 +265,7 @@ class ufunc : public object {
   // These are only used if we have something new.
   handle scope_{};
 
+  // Contains UFunc entries to flush into actual UFunc registrations.
   class entries_t {
    public:
     // Initialize from existing object.
@@ -278,7 +298,7 @@ class ufunc : public object {
       // Store core functionn.
       core_funcs_.push_back(func);
       core_data_.push_back(data);
-      size_t ncore = core_funcs_.size();
+      const size_t ncore = core_funcs_.size();
       size_t t_index = core_type_args_.size();
       int nargs = nin_ + nout_;
       core_type_args_.resize(ncore * static_cast<size_t>(nargs));
@@ -299,7 +319,7 @@ class ufunc : public object {
     }
 
     detail::PyUFuncObject* create_core() {
-      int ncore = static_cast<int>(core_funcs_.size());
+      const int ncore = static_cast<int>(core_funcs_.size());
       char* name_raw = const_cast<char*>(name());
       return reinterpret_cast<detail::PyUFuncObject*>(
           detail::npy_api::get().PyUFunc_FromFuncAndData_(
@@ -309,7 +329,7 @@ class ufunc : public object {
     }
 
     void create_user(detail::PyUFuncObject* h) {
-      size_t nuser = user_funcs_.size();
+      const size_t nuser = user_funcs_.size();
       for (size_t i = 0; i < nuser; ++i) {
         if (detail::npy_api::get().PyUFunc_RegisterLoopForType_(
                 h, user_types_[i], user_funcs_[i],
