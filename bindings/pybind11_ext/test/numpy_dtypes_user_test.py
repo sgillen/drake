@@ -120,17 +120,17 @@ class TestNumpyDtypesUser(unittest.TestCase):
         # Mixed creation with implicitly convertible types.
         with self.assertRaises(TypeError):
             # No type specified, NumPy gets confused.
-            O = np.array([mut.Symbol(), mut.LengthValueImplicit(1)])
+            O_ = np.array([mut.Symbol(), mut.LengthValueImplicit(1)])
         A = np.array([
             mut.Symbol(), mut.LengthValueImplicit(1)], dtype=mut.Symbol)
         self.check_scalar(A[0], "")
         self.check_scalar(A[1], "length(1)")
 
         # Mixed creation without implicit casts, yields dtype=object.
-        O = np.array([mut.Symbol(), 1.])
-        self.assertEqual(O.dtype, np.object)
+        O_ = np.array([mut.Symbol(), 1.])
+        self.assertEqual(O_.dtype, np.object)
         # - Explicit Cast.
-        A = O.astype(mut.Symbol)
+        A = O_.astype(mut.Symbol)
         self.assertEqual(A.dtype, mut.Symbol)
         self.check_scalar(A[0], "")
         self.check_scalar(A[1], "float(1)")
@@ -177,7 +177,7 @@ class TestNumpyDtypesUser(unittest.TestCase):
         # conversion.
         # Could add implicit conversion, but that may wreak havoc.
         with self.assertRaises(ValueError):
-            I = np.ones((2,), dtype=mut.Symbol)
+            I_ = np.ones((2,), dtype=mut.Symbol)
 
     def test_array_ufunc(self):
         # - Symbol
@@ -271,8 +271,8 @@ class TestNumpyDtypesUser(unittest.TestCase):
             value: Expected value.
             inplace_same:
                 For the scalar case, expects that `a += b` will not implicitly
-                create a new instance (per Python's math rules). If False, a new
-                instance must be created.
+                create a new instance (per Python's math rules). If False, a
+                new instance must be created.
         """
         # Scalar.
         self.check_scalar(fop(a, b), value)
@@ -306,32 +306,51 @@ class TestNumpyDtypesUser(unittest.TestCase):
 
         # Operators.
         def fop(x, y): return x + y
-        def fiop(x, y): x += y; return x
+
+        def fiop(x, y):
+            x += y
+            return x
         self.check_binary_with_inplace(a, a, fop, fiop, "(a) + (a)")
         self.check_binary_with_inplace(a, b, fop, fiop, "(a) + (b)")
 
         def fop(x, y): return x - y
-        def fiop(x, y): x -= y; return x
+
+        def fiop(x, y):
+            x -= y
+            return x
         self.check_binary_with_inplace(a, a, fop, fiop, "(a) - (a)")
         self.check_binary_with_inplace(a, b, fop, fiop, "(a) - (b)")
 
         def fop(x, y): return x * y
-        def fiop(x, y): x *= y; return x
+
+        def fiop(x, y):
+            x *= y
+            return x
         self.check_binary_with_inplace(a, a, fop, fiop, "(a) * (a)")
         self.check_binary_with_inplace(a, b, fop, fiop, "(a) * (b)")
 
-        def fop(x, y): return x / y
-        def fiop(x, y): x /= y; return x
+        def fop(x, y):
+            return x / y
+
+        def fiop(x, y):
+            x /= y
+            return x
         self.check_binary_with_inplace(a, a, fop, fiop, "(a) / (a)")
         self.check_binary_with_inplace(a, b, fop, fiop, "(a) / (b)")
 
         def fop(x, y): return x & y
-        def fiop(x, y): x &= y; return x
+
+        def fiop(x, y):
+            x &= y
+            return x
         self.check_binary_with_inplace(a, a, fop, fiop, "(a) & (a)")
         self.check_binary_with_inplace(a, b, fop, fiop, "(a) & (b)")
 
         def fop(x, y): return x | y
-        def fiop(x, y): x |= y; return x
+
+        def fiop(x, y):
+            x |= y
+            return x
         self.check_binary_with_inplace(a, a, fop, fiop, "(a) | (a)")
         self.check_binary_with_inplace(a, b, fop, fiop, "(a) | (b)")
 
@@ -380,8 +399,10 @@ class TestNumpyDtypesUser(unittest.TestCase):
         operand = mut.OperandExplicit()
 
         def fop(x, y): return x + y
-        def fiop(x, y): x += y; return x
 
+        def fiop(x, y):
+            x += y
+            return x
         self.check_binary_with_inplace(a, operand, fop, fiop, "(a) + operand")
         self.check_binary(operand, a, fop, "operand + (a)")
 
@@ -390,7 +411,10 @@ class TestNumpyDtypesUser(unittest.TestCase):
         a = mut.Symbol("a")
 
         def fop(x, y): return x + y
-        def fiop(x, y): x += y; return x
+
+        def fiop(x, y):
+            x += y
+            return x
 
         # N.B. Implicitly convertible types will enable true in-place
         # operations. Explicitly convertible types requires a new value.

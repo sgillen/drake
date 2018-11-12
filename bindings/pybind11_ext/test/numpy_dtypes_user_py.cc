@@ -40,6 +40,7 @@ The simplest mechanism is to do super simple symbolics.
 // `Symbol.
 class LengthValueImplicit {
  public:
+  // NOLINTNEXTLINE(runtime/explicit)
   LengthValueImplicit(int value) : value_(value) {}
   int value() const { return value_; }
 
@@ -67,15 +68,8 @@ struct OperandExplicit {};
 class Symbol {
  public:
   Symbol() : Symbol("") {}
-  // Implicit conversion.
-  Symbol(string str) : str_(new string(str)) {}
-  explicit Symbol(const StrValueExplicit& other) : Symbol(other.value()) {}
-  Symbol(const LengthValueImplicit& other)
-      : Symbol(fmt::format("length({})", other.value())) {}
-  Symbol(double value) : Symbol(fmt::format("float({})", value)) {}
 
   Symbol(const Symbol& other) : Symbol(other.value()) {}
-
   // `operator=` must be overloaded so that we do not copy the underyling
   // `shared_ptr` (when creating an array repeating from the same scalar).
   Symbol& operator=(const Symbol& other) {
@@ -86,8 +80,16 @@ class Symbol {
     return *this;
   }
 
-  // Symbol& Symbol(Symbol&&) = delete;
-  // Symbol& operator=(Symbol&& other) = delete;
+  explicit Symbol(string str) : str_(new string(str)) {}
+
+  // Explicit conversion.
+  explicit Symbol(const StrValueExplicit& other) : Symbol(other.value()) {}
+
+  // Implicit conversion.
+  // NOLINTNEXTLINE(runtime/explicit)
+  Symbol(const LengthValueImplicit& other)
+      : Symbol(fmt::format("length({})", other.value())) {}
+  explicit Symbol(double value) : Symbol(fmt::format("float({})", value)) {}
 
   // N.B. Due to constraints of `pybind11`s architecture, we must try to handle
   // `str` conversion from an invalid state. See `add_init`.
@@ -292,6 +294,7 @@ PYBIND11_MODULE(numpy_dtypes_user, m) {
       .def_loop(py::self >= py::self)
       // - Not closed.
       .def_loop(py::self + OperandExplicit{})
+      // NOLINTNEXTLINE(whitespace/braces)
       .def_loop(OperandExplicit{} + py::self)
       .def(py::self += OperandExplicit{})
       // .def_loop(py::self && py::self)
