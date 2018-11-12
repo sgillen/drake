@@ -1,3 +1,4 @@
+import copy
 import unittest
 
 import numpy as np
@@ -37,6 +38,10 @@ class TestNumpyDtypesUser(unittest.TestCase):
         self.assertEqual(repr(a), "<Symbol 'a'>")
         self.assertEqual(str(a), "a")
         self.assertEqual(a.str(), "a")
+
+        b = copy.copy(a)
+        self.assertIsNot(a, b)
+        self.assertEqual(a.str(), b.str())
 
     def test_array_creation_basics(self):
         # Uniform creation.
