@@ -264,6 +264,7 @@ PYBIND11_MODULE(numpy_dtypes_user, m) {
       // .def_loop(py::self && py::self)
       // .def_loop(py::self || py::self)
       // Explicit UFunc.
+      .def_loop(py::dtype_method::dot())
       .def_loop("__pow__", &func::pow)
       .def_loop("abs", &func::abs)
       .def_loop("cos", &func::cos)

@@ -331,6 +331,19 @@ class TestNumpyDtypesUser(unittest.TestCase):
         def fop(x, y): return x >= y
         self.check_binary(a, b, fop, "(a) >= (b)")
 
+    def test_linear_algebra(self):
+        a = mut.Symbol("a")
+        b = mut.Symbol("b")
+        L = np.array([a, b])
+        R = np.array([b, a])
+        self.check_symbol(np.dot(L, R), "(() + ((a) * (b))) + ((b) * (a))")
+        # Vector.
+        L.shape = (1, 2)
+        R.shape = (2, 1)
+        Y = np.dot(L, R)
+        self.assertEqual(Y.shape, (1, 1))
+        self.check_symbol(Y[0, 0], "(() + ((a) * (b))) + ((b) * (a))")
+
     def test_algebra_order_check(self):
         # By construction, `OperandExplicit` only interfaces with `Symbol` by
         # explicit operator overloads; no casting / construction is done.
