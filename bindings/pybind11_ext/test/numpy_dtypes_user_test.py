@@ -423,3 +423,5 @@ class TestNumpyDtypesUser(unittest.TestCase):
         b_str = mut.StrValueExplicit("b")
         self.check_binary_with_inplace(
             a, b_str, fop, fiop, "(a) + (b)", inplace_same=False)
+
+    # TODO(eric.cousineau): Check trigonometric UFuncs.
