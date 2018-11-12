@@ -9,8 +9,8 @@
 
 #include <pybind11/numpy.h>
 
-#include "drake/bindings/pydrake/util/type_pack.h"
 #include "drake/bindings/pydrake/util/function_inference.h"
+#include "drake/bindings/pydrake/util/type_pack.h"
 
 // TODO(eric.cousineau): Figure out how to make this automatically hidden.
 #pragma GCC visibility push(hidden)

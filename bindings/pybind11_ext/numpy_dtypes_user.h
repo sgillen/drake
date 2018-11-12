@@ -2,8 +2,10 @@
 
 #include <array>
 #include <map>
-#include <utility>
+#include <string>
 #include <typeindex>
+#include <utility>
+#include <vector>
 
 #include <pybind11/numpy.h>
 #include <pybind11/operators.h>
@@ -90,7 +92,8 @@ struct dtype_info {
 
   // TODO(eric.cousineau): Store in internals.
   static internals& get_mutable_internals() {
-    static internals* ptr = &get_or_create_shared_data<internals>("_numpy_dtype_user_internals");
+    static internals* ptr =
+        &get_or_create_shared_data<internals>("_numpy_dtype_user_internals");
     return *ptr;
   }
 };
@@ -121,7 +124,8 @@ struct dtype_user_instance {
   }
 
   // Implementation for `tp_new` slot.
-  static PyObject* tp_new(PyTypeObject* /*type*/, PyObject* /*args*/, PyObject* /*kwds*/) {
+  static PyObject* tp_new(
+      PyTypeObject* /*type*/, PyObject* /*args*/, PyObject* /*kwds*/) {
     // N.B. `__init__` should call the in-place constructor.
     auto obj = alloc_py();
     // // Register.
@@ -146,9 +150,9 @@ struct dtype_user_instance {
     auto& entry = dtype_info::get_entry<Class>();
     void* raw = const_cast<Class*>(value);
     auto it = entry.instance_to_py.find(raw);
-    if (it == entry.instance_to_py.end())
+    if (it == entry.instance_to_py.end()) {
       return {};
-    else {
+    } else {
       return reinterpret_borrow<object>(it->second);
     }
   }
@@ -208,7 +212,8 @@ struct dtype_user_caster {
       if (!obj && convert) {
         // Try implicit conversions.
         for (auto& converter : entry.implicit_conversions) {
-          auto temp = converter(src.ptr(), reinterpret_cast<PyTypeObject*>(cls.ptr()));
+          auto temp = converter(
+              src.ptr(), reinterpret_cast<PyTypeObject*>(cls.ptr()));
           if (temp) {
             obj = reinterpret_steal<object>(temp);
             loader_life_support::add_patient(obj);
@@ -221,8 +226,7 @@ struct dtype_user_caster {
     }
     if (!obj) {
       return false;
-    }
-    else {
+    } else {
       ptr_ = DTypePyObject::load_raw(obj.ptr());
       return true;
     }
@@ -247,13 +251,13 @@ struct cast_is_known_safe<T,
 // the original name (for trigonometric functions).
 inline std::string get_ufunc_name(std::string name) {
   static const std::map<std::string, const char*> m = {
-    // https://docs.python.org/2.7/reference/datamodel.html#emulating-numeric-types
-    // Use nominal ordering (e.g. `__add__`, not `__radd__`) as ordering will be handled
-    // by ufunc registration.
-    // Use Python 3 operator names (e.g. `__truediv__`)
-    // https://docs.scipy.org/doc/numpy/reference/routines.math.html
     // Anything that is mapped to `nullptr` implies that NumPy does not support
     // this ufunc.
+    // https://docs.python.org/2.7/reference/datamodel.html#emulating-numeric-types  // NOLINT(whitespace/line_length)
+    // Use nominal ordering (e.g. `__add__`, not `__radd__`) as ordering will
+    // be handled by ufunc registration.
+    // Use Python 3 operator names (e.g. `__truediv__`)
+    // https://docs.scipy.org/doc/numpy/reference/routines.math.html
     {"__add__", "add"},
     {"__iadd__", nullptr},
     {"__neg__", "negative"},
@@ -282,7 +286,7 @@ inline std::string get_ufunc_name(std::string name) {
     {"__le__", "less_equal"},
     {"__eq__", "equal"},
     {"__ne__", "not_equal"},
-    {"__bool__", "nonzero"}, // Python3
+    {"__bool__", "nonzero"},  // Python3
     {"__nonzero__", "nonzero"},  // Python2.7
     {"__invert__", "logical_not"},
     // Are these necessary?
@@ -296,8 +300,7 @@ inline std::string get_ufunc_name(std::string name) {
       throw std::runtime_error("Invalid NumPy operator: " + name);
     }
     return iter->second;
-  }
-  else {
+  } else {
     return name;
   }
 }
@@ -326,7 +329,8 @@ static auto dtype_conversion_impl(
     FuncIn&& func_in, bool allow_implicit_coercion) {
   auto func_infer = detail::infer_function_info(func_in);
   using FuncInfer = decltype(func_infer);
-  using From = detail::intrinsic_t<typename FuncInfer::Args::template type_at<0>>;
+  using From = detail::intrinsic_t<
+      typename FuncInfer::Args::template type_at<0>>;
   using To = detail::intrinsic_t<typename FuncInfer::Return>;
   using Func = typename FuncInfer::Func;
   return dtype_conversion_t<From, To, Func>{
@@ -353,7 +357,8 @@ struct dtype_method {
 
   template <typename From, typename To>
   static auto implicit_conversion() {
-    return detail::dtype_conversion_impl([](const From& in) -> To { return in; }, true);
+    return detail::dtype_conversion_impl(
+        [](const From& in) -> To { return in; }, true);
   }
 
   template <typename Func>
@@ -372,11 +377,9 @@ Constraints:
 * The type *may* not have its constructor called; however, its memory *will* be
 initialized to zero, so it's assignment should be robust against being assigned
 from zero memory.
-* The type *won't* always be destroyed, because NumPy does not have slots to
-define this yet.
+* This type's instance *won't* always be destroyed, because NumPy does not have
+slots to define this yet.
  */
-// TODO(eric.cousineau): When defining operator overloads, it'd be nice if
-// things like `operator==` didn't have its own implicit behavior...
 template <typename Class_>
 class dtype_user : public object {
  public:
@@ -388,7 +391,8 @@ class dtype_user : public object {
   using Class = Class_;
   using DTypePyObject = detail::dtype_user_instance<Class>;
 
-  dtype_user(handle scope, const char* name, const char* doc = "") : cls_(none()) {
+  dtype_user(handle scope, const char* name, const char* doc = "")
+      : cls_(none()) {
     register_type(name, doc);
     scope.attr(name) = self();
     auto& entry = detail::dtype_info::get_mutable_entry<Class>(true);
@@ -404,9 +408,9 @@ class dtype_user : public object {
     // layout as `PyObject*`, thus can be registered in lieu of `PyObject*` -
     // this also effectively increases the refcount and releases the object.
     this->def_loop(dtype_method::explicit_conversion(
-        [](const Class& self) { return pybind11::cast(self); }));
+        [](const Class& self) -> object { return pybind11::cast(self); }));
     object cls = self();
-    this->def_loop(dtype_method::explicit_conversion([cls](object obj) -> Class {
+    auto object_to_cls = [cls](object obj) -> Class {
       // N.B. We use the *constructor* rather than implicit conversions because
       // implicit conversions may not be sufficient when dealing with `object`
       // dtypes. As an example, a class can only explicitly cast to float, but
@@ -420,21 +424,27 @@ class dtype_user : public object {
         obj = cls(obj);
       }
       return obj.cast<Class>();
-    }));
+    };
+    this->def_loop(dtype_method::explicit_conversion(object_to_cls));
   }
 
   ~dtype_user() {
+    // This will be called once the `pybind11` module ends, and thus should
+    // warn the user if they've left this class in a bad state.
     check();
   }
 
+  /// Forwards method definition to `py::class_`.
   template <typename ... Args>
   dtype_user& def(const char* name, Args&&... args) {
     cls().def(name, std::forward<Args>(args)...);
     return *this;
   }
 
+  /// Defines a constructor.
   template <typename ... Args>
-  dtype_user& def(detail::initimpl::constructor<Args...>&&, const char* doc = "") {
+  dtype_user& def(
+      detail::initimpl::constructor<Args...>&&, const char* doc = "") {
     // See notes in `add_init`.
     // N.B. Do NOT use `Class*` as the argument, since that may incur recursion.
     add_init([](object py_self, Args... args) {
@@ -445,7 +455,7 @@ class dtype_user : public object {
     return *this;
   }
 
-  /// Define UFunc loop operator.
+  /// Defines UFunc loop operator.
   template <detail::op_id id, detail::op_type ot,
       typename L, typename R>
   dtype_user& def_loop(
@@ -466,7 +476,7 @@ class dtype_user : public object {
     return *this;
   }
 
-  /// Define Python and UFunc loop operator.
+  /// Defines Python and UFunc loop operator.
   template <detail::op_id id, detail::op_type ot,
       typename L, typename R>
   dtype_user& def_loop(const detail::op_<id, ot, L, R>& op) {
@@ -488,7 +498,7 @@ class dtype_user : public object {
     return *this;
   }
 
-  /// Defines a nominal operator.
+  /// Forwards operator defintiion to `py::class_`.
   template <detail::op_id id, detail::op_type ot,
       typename L, typename R, typename... Extra>
   dtype_user& def(
@@ -500,7 +510,8 @@ class dtype_user : public object {
   /// Defines loop cast, and optionally permit implicit conversions.
   template <typename From, typename To, typename Func>
   dtype_user& def_loop(
-      detail::dtype_conversion_t<From, To, Func> conv, dtype from = {}, dtype to = {}) {
+      detail::dtype_conversion_t<From, To, Func> conv,
+      dtype from = {}, dtype to = {}) {
     detail::ufunc_register_cast<From, To>(
         conv.func, conv.allow_implicit_coercion, from, to);
     // Define implicit conversion on the class.
@@ -551,9 +562,11 @@ class dtype_user : public object {
   PyClass& cls() { return cls_; }
 
  private:
+  // Provides mutable explicit upcast reference (for assignment).
   object& self() { return *this; }
   const object& self() const { return *this; }
 
+  // Checks definition invariants.
   void check() const {
     auto warn = [](const std::string& msg) {
       // TODO(eric.cousineau): Figure out better warning type.
@@ -569,9 +582,10 @@ class dtype_user : public object {
       warn("dtype: Class is missing explicit __str__!");
   }
 
+  // Adds constructor. See comments within for explanation.
   template <typename Func>
   void add_init(Func&& f, const char* doc) {
-    // Do not construct this with the name `__init__` as `pybind11`s 
+    // Do not construct this with the name `__init__` as `pybind11`s
     // constructor implementations via `cpp_function` are rigidly fixed to
     // its instance registration system (which we don't want).
     // Because of this, if there is an error in constructors when testing
@@ -590,14 +604,17 @@ class dtype_user : public object {
     }
   }
 
+  // Handles conversions from `nb_*` methods in Python type objects. Uses
+  // available conversions if possible, otherwise will cause an error to be
+  // thrown when called.
   template <typename T>
   static PyObject* handle_nb_conversion(PyObject* from) {
     auto& entry = detail::dtype_info::get_entry<Class>();
-    auto& map = entry.nb_implicit_conversions;
+    auto& conversions = entry.nb_implicit_conversions;
     // Check for available conversions.
     std::type_index id(typeid(T));
-    auto iter = map.find(id);
-    if (iter != map.end()) {
+    auto iter = conversions.find(id);
+    if (iter != conversions.end()) {
       return iter->second(from);
     } else {
       PyErr_SetString(
@@ -607,24 +624,27 @@ class dtype_user : public object {
     }
   }
 
+  // Handles registering native `nb_*` type conversions.
   template <typename To, typename Func>
   void register_nb_conversion(std::true_type, const Func& func) {
     auto& entry = detail::dtype_info::get_mutable_entry<Class>();
     std::type_index id(typeid(To));
-    auto& map = entry.nb_implicit_conversions;
-    assert(map.find(id) == map.end());
+    auto& conversions = entry.nb_implicit_conversions;
+    assert(conversions.find(id) == conversions.end());
     static Func func_static = func;
-    detail::nb_conversion_t nb_conversion = +[](PyObject* from_py) -> PyObject* {
-      Class* from = pybind11::cast<Class*>(from_py);
-      To to = func_static(*from);
-      return pybind11::cast<To>(to).release().ptr();
-    };
-    map[id] = nb_conversion;
+    detail::nb_conversion_t nb_conversion =
+        +[](PyObject* from_py) -> PyObject* {
+          Class* from = pybind11::cast<Class*>(from_py);
+          To to = func_static(*from);
+          return pybind11::cast<To>(to).release().ptr();
+        };
+    conversions[id] = nb_conversion;
   }
 
   template <typename To, typename Func>
   void register_nb_conversion(std::false_type, const Func&) {}
 
+  // Disables `nb_coerce`.
   static int disable_nb_coerce(PyObject**, PyObject**) {
     PyErr_SetString(
       PyExc_TypeError,
@@ -632,6 +652,7 @@ class dtype_user : public object {
     return 1;
   }
 
+  // Registers Python type.
   void register_type(const char* name, const char* doc) {
     // Ensure we initialize NumPy before accessing `PyGenericArrType_Type`.
     auto& api = detail::npy_api::get();
@@ -667,10 +688,12 @@ class dtype_user : public object {
     tp_as_number.nb_coerce = &disable_nb_coerce;
 #endif
     // Create views into created type.
-    self() = reinterpret_borrow<object>(reinterpret_cast<PyObject*>(&ClassObject_Type));
+    self() = reinterpret_borrow<object>(
+        reinterpret_cast<PyObject*>(&ClassObject_Type));
     cls_ = self();
   }
 
+  // Registers NumPy dtype entry.
   int register_numpy() {
     using detail::npy_api;
     // Adapted from `numpy/core/multiarray/src/test_rational.c.src`.
@@ -681,20 +704,20 @@ class dtype_user : public object {
     static detail::PyArray_ArrFuncs arrfuncs;
     static detail::PyArray_Descr descr = {
         PyObject_HEAD_INIT(0)
-        type,                   /* typeobj */
-        'V',                    /* kind (V = arbitrary) */
-        'r',                    /* type */
-        '=',                    /* byteorder */
+        type,                     /* typeobj */
+        'V',                      /* kind (V = arbitrary) */
+        'r',                      /* type */
+        '=',                      /* byteorder */
         npy_api::NPY_NEEDS_PYAPI_ | npy_api::NPY_USE_GETITEM_ |
             npy_api::NPY_USE_SETITEM_ |
             npy_api::NPY_NEEDS_INIT_, /* flags */
-        0,                      /* type_num */
-        sizeof(Class),          /* elsize */
-        offsetof(align_test,r), /* alignment */
-        0,                      /* subarray */
-        0,                      /* fields */
-        0,                      /* names */
-        &arrfuncs,  /* f */
+        0,                        /* type_num */
+        sizeof(Class),            /* elsize */
+        offsetof(align_test, r),  /* alignment */
+        0,                        /* subarray */
+        0,                        /* fields */
+        0,                        /* names */
+        &arrfuncs,                /* f */
     };
 
     auto& api = npy_api::get();
@@ -705,71 +728,78 @@ class dtype_user : public object {
     using detail::npy_intp;
 
     // https://docs.scipy.org/doc/numpy/reference/c-api.types-and-structures.html
-    arrfuncs.getitem = reinterpret_cast<void*>(+[](void* in, void* /*arr*/) -> PyObject* {
-        auto item = reinterpret_cast<const Class*>(in);
-        return pybind11::cast(*item).release().ptr();
-    });
-    arrfuncs.setitem = reinterpret_cast<void*>(+[](PyObject* in, void* out, void* /*arr*/) {
-        detail::loader_life_support guard{};
-        detail::dtype_user_caster<Class> caster;
-        if (!caster.load(in, true)) {
-          PyErr_SetString(
-              PyExc_TypeError,
-              "dtype_user: Could not convert during `setitem`");
-          return -1;
-        }
-        *reinterpret_cast<Class*>(out) = caster;
-        return 0;
-    });
-    arrfuncs.copyswap = reinterpret_cast<void*>(+[](void* dst, void* src, int swap, void* /*arr*/) {
-        if (!src) return;
-        Class* r_dst = reinterpret_cast<Class*>(dst);
-        Class* r_src = reinterpret_cast<Class*>(src);
-        if (swap) {
+    arrfuncs.getitem = reinterpret_cast<void*>(
+        +[](void* in, void* /*arr*/) -> PyObject* {
+          auto item = reinterpret_cast<const Class*>(in);
+          return pybind11::cast(*item).release().ptr();
+        });
+    arrfuncs.setitem = reinterpret_cast<void*>(
+        +[](PyObject* in, void* out, void* /*arr*/) {
+          detail::loader_life_support guard{};
+          detail::dtype_user_caster<Class> caster;
+          if (!caster.load(in, true)) {
             PyErr_SetString(
-                PyExc_NotImplementedError,
-                "dtype_user: `swap` not implemented");
-        } else {
-            *r_dst = *r_src;
-        }
-    });
-    arrfuncs.copyswapn = reinterpret_cast<void*>(+[](
-            void* dst, npy_intp dstride, void* src,
+                PyExc_TypeError,
+                "dtype_user: Could not convert during `setitem`");
+            return -1;
+          }
+          *reinterpret_cast<Class*>(out) = caster;
+          return 0;
+        });
+    arrfuncs.copyswap = reinterpret_cast<void*>(
+        +[](void* dst, void* src, int swap, void* /*arr*/) {
+          if (!src) return;
+          Class* r_dst = reinterpret_cast<Class*>(dst);
+          Class* r_src = reinterpret_cast<Class*>(src);
+          if (swap) {
+              PyErr_SetString(
+                  PyExc_NotImplementedError,
+                  "dtype_user: `swap` not implemented");
+          } else {
+              *r_dst = *r_src;
+          }
+        });
+    arrfuncs.copyswapn = reinterpret_cast<void*>(
+        +[](void* dst, npy_intp dstride, void* src,
             npy_intp sstride, npy_intp n, int swap, void*) {
-        if (!src) return;
-        if (swap) {
-            PyErr_SetString(
-                PyExc_NotImplementedError,
-                "dtype_user: `swap` not implemented");
-        } else {
-            char* c_dst = reinterpret_cast<char*>(dst);
-            char* c_src = reinterpret_cast<char*>(src);
-            for (int k = 0; k < n; k++) {
-                Class* r_dst = reinterpret_cast<Class*>(c_dst);
-                Class* r_src = reinterpret_cast<Class*>(c_src);
-                *r_dst = *r_src;
-                c_dst += dstride;
-                c_src += sstride;
-            }
-        }
-    });
+          if (!src) return;
+          if (swap) {
+              PyErr_SetString(
+                  PyExc_NotImplementedError,
+                  "dtype_user: `swap` not implemented");
+          } else {
+              char* c_dst = reinterpret_cast<char*>(dst);
+              char* c_src = reinterpret_cast<char*>(src);
+              for (int k = 0; k < n; k++) {
+                  Class* r_dst = reinterpret_cast<Class*>(c_dst);
+                  Class* r_src = reinterpret_cast<Class*>(c_src);
+                  *r_dst = *r_src;
+                  c_dst += dstride;
+                  c_src += sstride;
+              }
+          }
+        });
     // - Ensure this doesn't overwrite our `equal` unfunc.
     arrfuncs.compare = reinterpret_cast<void*>(
         +[](const void* /*d1*/, const void* /*d2*/, void* /*arr*/) {
-      pybind11_fail("dtype: `compare` should not be called for pybind11 custom dtype");
-    });
-    arrfuncs.fillwithscalar = reinterpret_cast<void*>(+[](
-            void* buffer_raw, npy_intp length, void* value_raw, void* /*arr*/) {
-        const Class* value = reinterpret_cast<const Class*>(value_raw);
-        Class* buffer = reinterpret_cast<Class*>(buffer_raw);
-        for (int k = 0; k < length; k++) {
-            buffer[k] = *value;
-        }
-        return 0;
-    });
+          pybind11_fail(
+              "dtype: `compare` should not be called for pybind11 "
+              "custom dtype");
+        });
+    arrfuncs.fillwithscalar = reinterpret_cast<void*>(
+        +[](void* buffer_raw, npy_intp length, void* value_raw,
+            void* /*arr*/) {
+          const Class* value = reinterpret_cast<const Class*>(value_raw);
+          Class* buffer = reinterpret_cast<Class*>(buffer_raw);
+          for (int k = 0; k < length; k++) {
+              buffer[k] = *value;
+          }
+          return 0;
+        });
     int dtype_num = api.PyArray_RegisterDataType_(&descr);
-    if (dtype_num < 0)
-        pybind11_fail("dtype_user: Could not register!");
+    if (dtype_num < 0) {
+      pybind11_fail("dtype_user: Could not register!");
+    }
     self().attr("dtype") =
         reinterpret_borrow<object>(reinterpret_cast<PyObject*>(&descr));
     arrfuncs_ = &arrfuncs;
