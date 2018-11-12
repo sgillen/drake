@@ -253,6 +253,7 @@ class TestNumpyDtypesUser(unittest.TestCase):
         self.check_symbol(c.symbols()[0, 0], "() + (float(1))")
 
     def check_binary(self, a, b, fop, value):
+        """Checks a binary operator for both scalar and array cases."""
         self.check_symbol(fop(a, b), value)
         A = np.array([a, a])
         B = np.array([b, b])
@@ -291,7 +292,10 @@ class TestNumpyDtypesUser(unittest.TestCase):
         self.check_symbol(c1, value)
         self.check_symbol(c2, value)
         C = np.array(A)
-        fiop(C, B)
+        D = fiop(C, B)
+        # Regardless of the operation, numpy arrays should not generate
+        # temporaries for inplace operations.
+        self.assertIs(C, D)
         c1, c2 = C
         self.check_symbol(c1, value)
         self.check_symbol(c2, value)
