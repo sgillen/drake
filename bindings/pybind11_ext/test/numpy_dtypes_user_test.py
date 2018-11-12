@@ -42,8 +42,14 @@ class TestNumpyDtypesUser(unittest.TestCase):
         self.assertEqual(repr(a), "<Symbol 'a'>")
         self.assertEqual(str(a), "a")
         self.assertEqual(a.value(), "a")
-
+        # Copying.
+        # N.B. Normally, `pybind11` does not implicitly define copy semantics.
+        # However, for these NumPy dtypes it is made implicit (relying on the
+        # copy constructor).
         b = copy.copy(a)
+        self.assertIsNot(a, b)
+        self.assertEqual(a.value(), b.value())
+        b = copy.deepcopy(a)
         self.assertIsNot(a, b)
         self.assertEqual(a.value(), b.value())
 
@@ -177,10 +183,12 @@ class TestNumpyDtypesUser(unittest.TestCase):
         # - Symbol
         a = mut.Symbol("a")
         b = mut.Symbol("b")
-        self.check_scalar(mut.custom_binary_ufunc(a, b), "custom-symbol(a, b)")
+        self.check_scalar(
+            mut.custom_binary_ufunc(a, b), "custom-symbol(a, b)")
         A = [a, a]
         B = [b, b]
-        self.check_array(mut.custom_binary_ufunc(A, B), ["custom-symbol(a, b)"] * 2)
+        self.check_array(
+            mut.custom_binary_ufunc(A, B), ["custom-symbol(a, b)"] * 2)
 
         # Duplicating values for other tests.
         # - LengthValueImplicit
@@ -190,7 +198,8 @@ class TestNumpyDtypesUser(unittest.TestCase):
         self.check_array(mut.custom_binary_ufunc(X_length, X_length), 2 * [20])
         # - StrValueExplicit
         x_str = mut.StrValueExplicit("x")
-        self.check_scalar(mut.custom_binary_ufunc(x_str, x_str), "custom-str(x, x)")
+        self.check_scalar(
+            mut.custom_binary_ufunc(x_str, x_str), "custom-str(x, x)")
         X_str = [x_str, x_str]
         self.check_array(
             mut.custom_binary_ufunc(X_str, X_str), 2 * ["custom-str(x, x)"])
