@@ -4,12 +4,11 @@
 #include <memory>
 #include <string>
 
+#include <Eigen/Dense>
 #include <fmt/format.h>
 #include <fmt/ostream.h>
-#include <Eigen/Dense>
-
-#include <pybind11/operators.h>
 #include <pybind11/eigen.h>
+#include <pybind11/operators.h>
 #include <pybind11/stl.h>
 
 #include "drake/bindings/pybind11_ext/numpy_dtypes_user.h"
