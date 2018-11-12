@@ -30,8 +30,9 @@ namespace detail {
 
 typedef PyObject* (*nb_conversion_t)(PyObject*);
 
-// Watered down version of `detail::type_info`, specifically for
-// NumPy user dtypes.
+// Stores dtype-specific information, as well as static access to relevant
+// internals.
+// Effectively a watered down version of `detail::type_info`.
 struct dtype_info {
   handle cls;
   int dtype_num{-1};
@@ -59,10 +60,12 @@ struct dtype_info {
     return get_mutable_internals().at(std::type_index(typeid(T)));
   }
 
+  // Provides immutable entry for a registered type, given the typeid.
   static const dtype_info& get_entry(std::type_index id) {
     return get_mutable_internals().at(id);
   }
 
+  // Provides immutable entry for a registered type, or nullptr.
   static const dtype_info* maybe_get_entry(std::type_index id) {
     const auto& internals = get_mutable_internals();
     auto iter = internals.find(id);
@@ -73,6 +76,8 @@ struct dtype_info {
     }
   }
 
+  // Finds the corresponding typeid for a `cls`, return `nullptr` if nothing is
+  // found.
   static const std::type_index* find_entry(object cls) {
     auto& map = get_internals();
     for (auto& iter : map) {
@@ -84,7 +89,6 @@ struct dtype_info {
   }
 
  private:
-  // Preferablly not to have to define this......
   using internals = std::map<std::type_index, dtype_info>;
   static const internals& get_internals() {
     return get_mutable_internals();
@@ -98,7 +102,8 @@ struct dtype_info {
   }
 };
 
-// Provides `PyObject`-extension, akin to `detail::instance`.
+// CPython extension of `PyObject` for per-instance information of a
+// user-defind dtype. Akin to `detail::instance`.
 template <typename Class>
 struct dtype_user_instance {
   PyObject_HEAD
@@ -158,11 +163,13 @@ struct dtype_user_instance {
   }
 };
 
-// Implementation of `type_caster` interface `dtype_user_instance<>`s.
+// Implementation of `type_caster` to interface `dtype_user_instance<>`s.
 template <typename Class>
 struct dtype_user_caster {
   static constexpr auto name = detail::_<Class>();
   using DTypePyObject = dtype_user_instance<Class>;
+
+  // Casts a const lvalue reference to a Python object.
   static handle cast(const Class& src, return_value_policy, handle) {
     object h = DTypePyObject::find_existing(&src);
     // TODO(eric.cousineau): Handle parenting?
@@ -176,6 +183,7 @@ struct dtype_user_caster {
     return h.release();
   }
 
+  // Casts a pointer to a Python object.
   static handle cast(const Class* src, return_value_policy policy, handle) {
     object h = DTypePyObject::find_existing(src);
     if (h) {
@@ -195,6 +203,8 @@ struct dtype_user_caster {
     }
   }
 
+  // Load from Python to C++. The result will be retrieved by the casting
+  // operators below.
   bool load(handle src, bool convert) {
     auto& entry = dtype_info::get_entry<Class>();
     auto cls = entry.cls;
@@ -231,12 +241,18 @@ struct dtype_user_caster {
       return true;
     }
   }
+
   // Copy `type_caster_base`.
   template <typename T_> using cast_op_type =
       pybind11::detail::cast_op_type<T_>;
 
+  // Retrieves result after `load()`.
   operator Class&() { return *ptr_; }
+  // Retrieves result after `load()`.
   operator Class*() { return ptr_; }
+
+ private:
+  // Stores result after `load()`.
   Class* ptr_{};
 };
 
@@ -317,13 +333,14 @@ struct dtype_user_npy_format_descriptor {
     }
 };
 
-
+// Stores information about a conversion.
 template <typename From, typename To, typename Func>
 struct dtype_conversion_t {
   Func func;
   bool allow_implicit_coercion{};
 };
 
+// Infers the correct signature for `dtype_conversion_t` from a function.
 template <typename FuncIn>
 static auto dtype_conversion_impl(
     FuncIn&& func_in, bool allow_implicit_coercion) {
@@ -339,33 +356,40 @@ static auto dtype_conversion_impl(
 
 }  // namespace detail
 
-/// Dtype methods which cannot be defined via a UFunc.
+/// Provides user control over definition of UFuncs.
 struct dtype_method {
+  /// Defines `np.dot` for a given type.
   struct dot {};
 
+  /// Uses constructor / casting for explicit conversion.
   template <typename From, typename To>
   static auto explicit_conversion() {
-    return detail::dtype_conversion_impl([](const From& in) -> To {
+    return detail::dtype_conversion_impl([](const From& in) {
       return To(in);
     }, false);
   }
 
+  /// Provides function for explicit conversion.
   template <typename Func>
   static auto explicit_conversion(Func&& func) {
     return detail::dtype_conversion_impl(std::forward<Func>(func), false);
   }
 
+  /// Uses constructor / casting for implicit conversion.
   template <typename From, typename To>
   static auto implicit_conversion() {
     return detail::dtype_conversion_impl(
         [](const From& in) -> To { return in; }, true);
   }
 
+  /// Provides function for implicit conversion.
   template <typename Func>
   static auto implicit_conversion(Func&& func) {
     return detail::dtype_conversion_impl(std::forward<Func>(func), true);
   }
 
+  /// Implies that only a `ufunc` should be defined, and the corresponding class
+  /// method should not be defined.
   struct ufunc_only {};
 };
 
@@ -557,8 +581,8 @@ class dtype_user : public object {
     return *this;
   }
 
-  /// Access a class_ view of the type. Please be careful when adding methods
-  /// or attributes, as they may conflict with how NumPy works.
+  /// Access a `py::class_` view of the type. Please be careful when adding
+  /// methods or attributes, as they may conflict with how NumPy works.
   PyClass& cls() { return cls_; }
 
  private:
