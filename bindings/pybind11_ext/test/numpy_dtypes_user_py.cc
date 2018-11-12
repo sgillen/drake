@@ -4,11 +4,13 @@
 #include <memory>
 #include <string>
 
-#include <pybind11/operators.h>
-#include <pybind11/stl.h>
-
 #include <fmt/format.h>
 #include <fmt/ostream.h>
+#include <Eigen/Dense>
+
+#include <pybind11/operators.h>
+#include <pybind11/eigen.h>
+#include <pybind11/stl.h>
 
 #include "drake/bindings/pybind11_ext/numpy_dtypes_user.h"
 
@@ -19,6 +21,9 @@ using std::unique_ptr;
 namespace py = pybind11;
 
 namespace {
+
+template <typename T>
+using MatrixX = Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>;
 
 /*
 Goals:
@@ -60,7 +65,6 @@ struct OperandExplicit {};
 class Symbol {
  public:
   Symbol() : Symbol("") {}
-  Symbol(const Symbol& other) : Symbol(other.str()) {}
   // Implicit conversion.
   Symbol(string str) : str_(new string(str)) {}
   explicit Symbol(const StrValueExplicit& other) : Symbol(other.value()) {}
@@ -68,8 +72,21 @@ class Symbol {
       : Symbol(fmt::format("length({})", other.value())) {}
   Symbol(double value) : Symbol(fmt::format("float({})", value)) {}
 
+  Symbol(const Symbol& other) : Symbol(other.str()) {}
+  Symbol& operator=(const Symbol& other) {
+    // WARNING: Because NumPy can assign from `memzero` memory, we must handle
+    // this case.
+    if (!str_) str_.reset(new string());
+    *str_ = *other.str_;
+    return *this;
+  }
+
+  // Symbol& Symbol(Symbol&&) = delete;
+  // Symbol& operator=(Symbol&& other) = delete;
+
   // N.B. Due to constraints of `pybind11`s architecture, we must try to handle
   // `str` conversion from an invalid state. See `add_init`.
+  // WARNING: If the user encounters `memzero` memory, this case must handled.
   string str() const { return str_ ? *str_ : "<invalid>"; }
 
   // To be explicit.
@@ -289,6 +306,11 @@ PYBIND11_MODULE(numpy_dtypes_user, m) {
             return StrValueExplicit(fmt::format(
                 "custom-str({}, {})", lhs.value(), rhs.value()));
           });
+
+  m.def("add_one",
+        [](Eigen::Ref<MatrixX<Symbol>> value) {
+          value.array() += Symbol(1.);
+        });
 }
 
 }  // namespace

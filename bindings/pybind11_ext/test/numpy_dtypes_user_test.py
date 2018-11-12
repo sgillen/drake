@@ -170,7 +170,6 @@ class TestNumpyDtypesUser(unittest.TestCase):
         with self.assertRaises(ValueError):
             I = np.ones((2,), dtype=mut.Symbol)
 
-
     def test_array_ufunc(self):
 
         def check_scalar(actual, expected):
@@ -242,6 +241,12 @@ class TestNumpyDtypesUser(unittest.TestCase):
             mut.custom_binary_ufunc(a, x_order), "custom-operand-rhs(a)")
         check_array(
             mut.custom_binary_ufunc(A, X_order), 2 * ["custom-operand-rhs(a)"])
+
+    def test_reference_argument(self):
+        a = mut.Symbol("a")
+        A = np.array([a, a])
+        mut.add_one(A)
+        self.check_symbol(A[0], "(a) + (float(1))")
 
     def check_binary(self, a, b, fop, value):
         self.check_symbol(fop(a, b), value)
