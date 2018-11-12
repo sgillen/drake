@@ -73,6 +73,9 @@ class Symbol {
   Symbol(double value) : Symbol(fmt::format("float({})", value)) {}
 
   Symbol(const Symbol& other) : Symbol(other.str()) {}
+
+  // `operator=` must be overloaded so that we do not copy the underyling
+  // `shared_ptr` (when creating an array repeating from the same scalar).
   Symbol& operator=(const Symbol& other) {
     // WARNING: Because NumPy can assign from `memzero` memory, we must handle
     // this case.

@@ -300,45 +300,57 @@ class TestNumpyDtypesUser(unittest.TestCase):
         # Operators.
         def fop(x, y): return x + y
         def fiop(x, y): x += y; return x
+        self.check_binary_with_inplace(a, a, fop, fiop, "(a) + (a)")
         self.check_binary_with_inplace(a, b, fop, fiop, "(a) + (b)")
 
         def fop(x, y): return x - y
         def fiop(x, y): x -= y; return x
+        self.check_binary_with_inplace(a, a, fop, fiop, "(a) - (a)")
         self.check_binary_with_inplace(a, b, fop, fiop, "(a) - (b)")
 
         def fop(x, y): return x * y
         def fiop(x, y): x *= y; return x
+        self.check_binary_with_inplace(a, a, fop, fiop, "(a) * (a)")
         self.check_binary_with_inplace(a, b, fop, fiop, "(a) * (b)")
 
         def fop(x, y): return x / y
         def fiop(x, y): x /= y; return x
+        self.check_binary_with_inplace(a, a, fop, fiop, "(a) / (a)")
         self.check_binary_with_inplace(a, b, fop, fiop, "(a) / (b)")
 
         def fop(x, y): return x & y
         def fiop(x, y): x &= y; return x
+        self.check_binary_with_inplace(a, a, fop, fiop, "(a) & (a)")
         self.check_binary_with_inplace(a, b, fop, fiop, "(a) & (b)")
 
         def fop(x, y): return x | y
         def fiop(x, y): x |= y; return x
+        self.check_binary_with_inplace(a, a, fop, fiop, "(a) | (a)")
         self.check_binary_with_inplace(a, b, fop, fiop, "(a) | (b)")
 
         # Logical.
         def fop(x, y): return x == y
+        self.check_binary(a, a, fop, "(a) == (a)")
         self.check_binary(a, b, fop, "(a) == (b)")
 
         def fop(x, y): return x != y
+        self.check_binary(a, a, fop, "(a) != (a)")
         self.check_binary(a, b, fop, "(a) != (b)")
 
         def fop(x, y): return x < y
+        self.check_binary(a, a, fop, "(a) < (a)")
         self.check_binary(a, b, fop, "(a) < (b)")
 
         def fop(x, y): return x <= y
+        self.check_binary(a, a, fop, "(a) <= (a)")
         self.check_binary(a, b, fop, "(a) <= (b)")
 
         def fop(x, y): return x > y
+        self.check_binary(a, a, fop, "(a) > (a)")
         self.check_binary(a, b, fop, "(a) > (b)")
 
         def fop(x, y): return x >= y
+        self.check_binary(a, a, fop, "(a) >= (a)")
         self.check_binary(a, b, fop, "(a) >= (b)")
 
     def test_linear_algebra(self):
