@@ -71,19 +71,19 @@ class TestNumpyDtypesUser(unittest.TestCase):
         # Check registered explicit casts.
         # - From.
         from_float = np.array([1.]).astype(mut.Symbol)
-        self.check_scalar(from_float[0], "float(1)")
+        self.check_array(from_float, ["float(1)"])
         from_str = np.array([mut.StrValueExplicit("abc")]).astype(mut.Symbol)
-        self.check_scalar(from_str[0], "abc")
+        self.check_array(from_str, ["abc"])
         from_length = np.array([mut.LengthValueImplicit(1)]).astype(mut.Symbol)
-        self.check_scalar(from_length[0], "length(1)")
+        self.check_array(from_length, ["length(1)"])
         # - To.
         # N.B. `np.int` may not be the same as `np.int32`; C++ uses `np.int32`.
         to_int = A.astype(np.int32)
         self.assertEqual(to_int[0], 1)
         to_str = A.astype(mut.StrValueExplicit)
-        self.assertEqual(to_str[0].value(), "a")
+        self.check_array(to_str, ["a"])
         to_length = A.astype(mut.LengthValueImplicit)
-        self.assertEqual(to_length[0].value(), 1)
+        self.check_array(to_length, [1])
 
     def test_array_cast_implicit(self):
         # By assignment.
@@ -95,25 +95,25 @@ class TestNumpyDtypesUser(unittest.TestCase):
 
         b_length = mut.LengthValueImplicit(1)
         # - Implicitly convertible types.
-        # A[0] = b_length
-        # self.check_scalar(A[0], "length(1)")
+        A[0] = b_length
+        self.check_array(A, ["length(1)"])
         A[:] = b_length
-        self.check_scalar(A[0], "length(1)")
+        self.check_array(A, ["length(1)"])
         # - Permitted as in place operation.
         reset()
         A += mut.LengthValueImplicit(1)
-        self.check_scalar(A[0], "(a) + (length(1))")
+        self.check_array(A, ["(a) + (length(1))"])
         # Explicit: Scalar assignment not permitted.
         b_str = mut.StrValueExplicit("b")
         with self.assertRaises(TypeError):
             A[0] = b_str
         # N.B. For some reason, NumPy considers this explicit coercion...
         A[:] = b_str
-        self.check_scalar(A[0], "b")
+        self.check_array(A, ["b"])
         # - Permitted as in place operation.
         reset()
         A += mut.StrValueExplicit("b")
-        self.check_scalar(A[0], "(a) + (b)")
+        self.check_array(A, ["(a) + (b)"])
         reset()
 
     def test_array_creation_mixed(self):
@@ -123,8 +123,7 @@ class TestNumpyDtypesUser(unittest.TestCase):
             O_ = np.array([mut.Symbol(), mut.LengthValueImplicit(1)])
         A = np.array([
             mut.Symbol(), mut.LengthValueImplicit(1)], dtype=mut.Symbol)
-        self.check_scalar(A[0], "")
-        self.check_scalar(A[1], "length(1)")
+        self.check_array(A, ["", "length(1)"])
 
         # Mixed creation without implicit casts, yields dtype=object.
         O_ = np.array([mut.Symbol(), 1.])
@@ -132,8 +131,7 @@ class TestNumpyDtypesUser(unittest.TestCase):
         # - Explicit Cast.
         A = O_.astype(mut.Symbol)
         self.assertEqual(A.dtype, mut.Symbol)
-        self.check_scalar(A[0], "")
-        self.check_scalar(A[1], "float(1)")
+        self.check_array(A, ["", "float(1)"])
 
         # Mixed creation with explicitly convertible types - does not work.
         with self.assertRaises(TypeError):
@@ -249,7 +247,7 @@ class TestNumpyDtypesUser(unittest.TestCase):
         # Check reference to live stuff.
         c = mut.SymbolContainer(2, 2)
         mut.add_one(c.symbols())
-        self.check_scalar(c.symbols()[0, 0], "() + (float(1))")
+        self.check_array(c.symbols(), 2 * [2 * ["() + (float(1))"]])
 
     def check_binary(self, a, b, fop, value):
         """Checks a binary operator for both scalar and array cases."""
