@@ -208,7 +208,7 @@ PYBIND11_NUMPY_DTYPE_USER(Symbol);
 
 namespace {
 
-PYBIND11_MODULE(numpy_dtypes_user, m) {
+PYBIND11_MODULE(numpy_dtypes_user_test_util, m) {
   // N.B. You must pre-declare all types that must interact using UFuncs, as
   // they must already be registered at that point of defining the UFunc.
   py::dtype_user<LengthValueImplicit> length(m, "LengthValueImplicit");

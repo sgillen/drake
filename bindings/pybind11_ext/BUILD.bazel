@@ -31,20 +31,20 @@ install(
 )
 
 pybind_py_library(
-    name = "numpy_dtypes_user_py",
+    name = "numpy_dtypes_user_test_util_py",
     testonly = 1,
     cc_deps = [
         ":numpy_dtypes_user",
         "@fmt",
     ],
-    cc_so_name = "numpy_dtypes_user",
-    cc_srcs = ["test/numpy_dtypes_user_py.cc"],
+    cc_so_name = "numpy_dtypes_user_test_util",
+    cc_srcs = ["test/numpy_dtypes_user_test_util_py.cc"],
     py_imports = ["."],
 )
 
 drake_py_unittest(
     name = "numpy_dtypes_user_test",
-    deps = [":numpy_dtypes_user_py"],
+    deps = [":numpy_dtypes_user_test_util_py"],
 )
 
 add_lint_tests()

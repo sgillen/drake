@@ -3,7 +3,7 @@ import unittest
 
 import numpy as np
 
-import numpy_dtypes_user as mut
+import numpy_dtypes_user_test_util as mut
 
 
 class TestNumpyDtypesUser(unittest.TestCase):
