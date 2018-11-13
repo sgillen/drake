@@ -43,6 +43,8 @@ drake_pybind_library(
     cc_so_name = "_module_py",
     cc_srcs = ["module_py.cc"],
     package_info = PACKAGE_INFO,
+    # Ensure the correct version of `numpy` is used throughout `pydrake`.
+    py_deps = ["@numpy_py"],
     py_srcs = [
         "__init__.py",
     ],
