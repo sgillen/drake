@@ -22,6 +22,7 @@
 #include "drake/multibody/multibody_tree/multibody_plant/multibody_plant.h"
 #include "drake/multibody/multibody_tree/multibody_tree.h"
 #include "drake/multibody/multibody_tree/parsing/multibody_plant_sdf_parser.h"
+#include "drake/multibody/multibody_tree/parsing/multibody_plant_urdf_parser.h"
 
 namespace drake {
 namespace pydrake {
@@ -667,6 +668,16 @@ void init_parsing(py::module m) {
             &AddModelFromSdfFile),
         py::arg("file_name"), py::arg("plant"),
         py::arg("scene_graph") = nullptr, doc.AddModelFromSdfFile.doc_2);
+  m.def("AddModelFromUrdfFile",
+        py::overload_cast<const string&, const string&, MultibodyPlant<T>*,
+                          SceneGraph<T>*>(&AddModelFromUrdfFile),
+        py::arg("file_name"), py::arg("model_name"), py::arg("plant"),
+        py::arg("scene_graph") = nullptr, doc.AddModelFromUrdfFile.doc);
+  m.def("AddModelFromUrdfFile",
+        py::overload_cast<const string&, MultibodyPlant<T>*, SceneGraph<T>*>(
+            &AddModelFromUrdfFile),
+        py::arg("file_name"), py::arg("plant"),
+        py::arg("scene_graph") = nullptr, doc.AddModelFromUrdfFile.doc_2);
 }
 
 void init_all(py::module m) {

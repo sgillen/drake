@@ -29,6 +29,7 @@ from pydrake.multibody.multibody_tree.multibody_plant import (
 )
 from pydrake.multibody.multibody_tree.parsing import (
     AddModelFromSdfFile,
+    AddModelFromUrdfFile,
 )
 from pydrake.multibody.benchmarks.acrobot import (
     AcrobotParameters,
@@ -209,16 +210,28 @@ class TestMultibodyTree(unittest.TestCase):
         self.assertIsInstance(joint_actuator.joint(), Joint)
 
     def test_multibody_plant_parsing(self):
-        file_name = FindResourceOrThrow(
+        # SDF
+        sdf_file = FindResourceOrThrow(
             "drake/multibody/benchmarks/acrobot/acrobot.sdf")
         plant = MultibodyPlant(time_step=0.01)
         model_instance = AddModelFromSdfFile(
-            file_name=file_name, plant=plant)
+            file_name=sdf_file, plant=plant)
         self.assertIsInstance(model_instance, ModelInstanceIndex)
 
         plant = MultibodyPlant(time_step=0.01)
-        model_instance = AddModelFromSdfFile(
-            file_name=file_name, model_name="acrobot", plant=plant)
+        AddModelFromSdfFile(
+            file_name=sdf_file, model_name="acrobot", plant=plant)
+
+        # URDF
+        urdf_file = FindResourceOrThrow(
+            "drake/multibody/benchmarks/acrobot/double_pendulum.urdf")
+        plant = MultibodyPlant(time_step=0.01)
+        AddModelFromUrdfFile(file_name=urdf_file, plant=plant)
+
+        plant = MultibodyPlant(time_step=0.01)
+        AddModelFromUrdfFile(
+            file_name=urdf_file, model_name="double_pendulum", plant=plant)
+
 
     def test_multibody_tree_kinematics(self):
         file_name = FindResourceOrThrow(
