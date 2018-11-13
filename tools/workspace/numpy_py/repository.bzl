@@ -45,13 +45,13 @@ load("@drake//tools/workspace:os.bzl", "determine_os")
 wheels = {
     # As of 2018-11-12, Ubuntu 16.04 distributes NumPy 1.11.0.
     "ubuntu_16.04": {
-        "hash_path": "40/c5/f1ed15dd931d6667b40f1ab1c2fe1f26805fc2b6c3e25e45664f838de9d0",  # noqa
+        "pypi_path": "40/c5/f1ed15dd931d6667b40f1ab1c2fe1f26805fc2b6c3e25e45664f838de9d0",  # noqa
         "filename": "numpy-1.15.2-cp27-cp27mu-manylinux1_x86_64.whl",
         "sha256": "82f00a1e2695a0e5b89879aa25ea614530b8ebdca6d49d4834843d498e8a5e92",  # noqa
     },
     # As of 2018-11-12, Ubuntu 18.04 distributes NumPy 1.13.3.
     "ubuntu_18.04": {
-        "hash_path": "40/c5/f1ed15dd931d6667b40f1ab1c2fe1f26805fc2b6c3e25e45664f838de9d0",  # noqa
+        "pypi_path": "40/c5/f1ed15dd931d6667b40f1ab1c2fe1f26805fc2b6c3e25e45664f838de9d0",  # noqa
         "filename": "numpy-1.15.2-cp27-cp27mu-manylinux1_x86_64.whl",  # noqa
         "sha256": "82f00a1e2695a0e5b89879aa25ea614530b8ebdca6d49d4834843d498e8a5e92",  # noqa
     },
@@ -78,9 +78,11 @@ def _impl(repository_ctx):
         wheel = wheels.get(platform)
         if wheel == None:
             fail("Unsupported platform: {}".format(platform))
+        # TODO(eric.cousineau): Use `pypi.bzl` once it can be used as a
+        # repository rule.
         urls = [
             url.format(**wheel)
-            for url in repository_ctx.attr.mirrors["pypi-general"]
+            for url in repository_ctx.attr.mirrors.get("pypi")
         ]
         repository_ctx.download_and_extract(
             url = urls,
