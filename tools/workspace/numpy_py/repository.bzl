@@ -39,16 +39,19 @@ load("@drake//tools/workspace:os.bzl", "determine_os")
 
 # See: https://pypi.org/project/numpy/#files
 wheels = {
+    # As of 2018-11-12, Ubuntu 16.04 distributes NumPy 1.11.0.
     "ubuntu_16.04": {
         "hash_path": "40/c5/f1ed15dd931d6667b40f1ab1c2fe1f26805fc2b6c3e25e45664f838de9d0",  # noqa
         "filename": "numpy-1.15.2-cp27-cp27mu-manylinux1_x86_64.whl",
         "sha256": "82f00a1e2695a0e5b89879aa25ea614530b8ebdca6d49d4834843d498e8a5e92",  # noqa
     },
+    # As of 2018-11-12, Ubuntu 18.04 distributes NumPy 1.13.3.
     "ubuntu_18.04": {
         "hash_path": "40/c5/f1ed15dd931d6667b40f1ab1c2fe1f26805fc2b6c3e25e45664f838de9d0",  # noqa
         "filename": "numpy-1.15.2-cp27-cp27mu-manylinux1_x86_64.whl",  # noqa
         "sha256": "82f00a1e2695a0e5b89879aa25ea614530b8ebdca6d49d4834843d498e8a5e92",  # noqa
     },
+    # Mac Homebrew typically distributes the latest version.
 }
 
 def _impl(repository_ctx):
@@ -61,7 +64,7 @@ def _impl(repository_ctx):
         fail(os_result.error)
 
     if os_result.is_macos:
-        # Add no-op BUILD file to leverage Homebrew.
+        # Add no-op BUILD file to use Homebrew version of NumPy.
         repository_ctx.symlink(
             Label("@drake//tools/workspace/numpy_py:package.noop.BUILD.bazel"),
             "BUILD.bazel",
