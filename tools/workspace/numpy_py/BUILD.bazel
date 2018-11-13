@@ -6,18 +6,4 @@ load(
     "drake_py_unittest",
 )
 
-drake_py_unittest(
-    name = "numpy_test",
-    deps = ["@numpy_py"],
-)
-
-# Used in `./package.BUILD.bazel`, in `install(..., install_tests = [...])`.
-exports_files(
-    srcs = ["test/numpy_install_test.py"],
-)
-
-add_lint_tests(
-    python_lint_extra_srcs = [
-        ":test/numpy_install_test.py",
-    ],
-)
+add_lint_tests()

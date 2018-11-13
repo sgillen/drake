@@ -26,9 +26,6 @@ py_library(
 
 install(
     name = "install",
-    install_tests = [
-        "@drake//tools/workspace/numpy:test/numpy_install_test.py",
-    ],
     data = [":data"],
     data_dest = "lib/python2.7/site-packages",
     visibility = ["//visibility:public"],

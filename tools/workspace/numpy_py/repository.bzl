@@ -87,6 +87,6 @@ def _impl(repository_ctx):
 numpy_py_repository = repository_rule(
     _impl,
     attrs = dict(
-        mirrors = attr.string_list_dict(mandatory=True),
+        mirrors = attr.string_list_dict(mandatory = True),
     ),
 )
