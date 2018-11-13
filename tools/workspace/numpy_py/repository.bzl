@@ -78,6 +78,7 @@ def _impl(repository_ctx):
         wheel = wheels.get(platform)
         if wheel == None:
             fail("Unsupported platform: {}".format(platform))
+
         # TODO(eric.cousineau): Use `pypi.bzl` once it can be used as a
         # repository rule.
         urls = [

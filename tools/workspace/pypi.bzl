@@ -26,6 +26,7 @@ def pypi_archive(
                 name = "six",
                 pypi_path = "16/d8/bc6316cf98419719bd59c91742194c111b6f2e85abac88e496adefaf7afe",  # noqa
                 filename = "six-1.11.0.tar.gz",
+                strip_prefix = "six-1.11.0",
                 build_file = "package.BUILD.bazel",
                 sha256 = "0123456789abcdef...",
             )

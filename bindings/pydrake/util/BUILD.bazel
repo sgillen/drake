@@ -59,6 +59,7 @@ drake_py_library(
     name = "module_py",
     srcs = ["__init__.py"],
     imports = PACKAGE_INFO.py_imports,
+    # Ensure the correct version of `numpy` is used throughout `pydrake`.
     deps = ["@numpy_py"],
 )
 
