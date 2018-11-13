@@ -30,6 +30,10 @@ wheels = {
         "url": "https://files.pythonhosted.org/packages/40/c5/f1ed15dd931d6667b40f1ab1c2fe1f26805fc2b6c3e25e45664f838de9d0/numpy-1.15.2-cp27-cp27mu-manylinux1_x86_64.whl",  # noqa
         "sha256": "82f00a1e2695a0e5b89879aa25ea614530b8ebdca6d49d4834843d498e8a5e92",  # noqa
     },
+    "ubuntu_18.04": {
+        "url": "https://files.pythonhosted.org/packages/40/c5/f1ed15dd931d6667b40f1ab1c2fe1f26805fc2b6c3e25e45664f838de9d0/numpy-1.15.2-cp27-cp27mu-manylinux1_x86_64.whl",  # noqa
+        "sha256": "82f00a1e2695a0e5b89879aa25ea614530b8ebdca6d49d4834843d498e8a5e92",  # noqa
+    },
     "mac": {
         "url": "https://files.pythonhosted.org/packages/d6/47/447d4e08e18c4f0e7f935db24d8afcfc9026a84002c0e5d85103c14baaf1/numpy-1.15.2-cp27-cp27m-macosx_10_6_intel.macosx_10_9_intel.macosx_10_9_x86_64.macosx_10_10_intel.macosx_10_10_x86_64.whl",  # noqa
         "sha256": "b5ff7dae352fd9e1edddad1348698e9fea14064460a7e39121ef9526745802e6",  # noqa
