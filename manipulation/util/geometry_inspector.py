@@ -1,27 +1,34 @@
 """
-Simple tool that parses an SDF file from the command line and runs a simple
-system which takes joint positions from a JointSlider gui and publishes the
-resulting geometry poses to drake_visualizer.
+Simple tool that parses an SDF or URDF file from the command line and runs a
+simple system which takes joint positions from a JointSlider gui and publishes
+the resulting geometry poses to drake_visualizer.
 
-Make sure to `bazel run //tools:drake_visualizer` before executing this to see
-the visualization.
+Make sure to run `//tools:drake_visualizer` via `bazel-bin` before executing
+this to see the visualization.
 
-Example usages (each on one line):
-bazel run //bindings/pydrake/multibody:geometry_inspector --
-  $HOME/drake/manipulation/models/iiwa_description/sdf/iiwa14_no_collision.sdf
+To simply load a model and show it in multiple visualizers, see `show_model`.
 
-bazel run geometry_inspector --
-  $HOME/drake/multibody/benchmarks/acrobot/acrobot.sdf --position 0.1 0.2
+Individual examples usages (one per group):
+
+    cd drake
+    bazel run //manipulation/util:geometry_inspector -- \
+        ./manipulation/models/iiwa_description/sdf/iiwa14_no_collision.sdf
+
+    cd drake
+    bazel run //manipulation/util:geometry_inspector --
+        ./multibody/benchmarks/acrobot/acrobot.sdf --position 0.1 0.2
 """
-# TODO(russt): Add support for URDF, too.
 
+from __future__ import print_function
 import argparse
+
 import numpy as np
 
 from pydrake.geometry import ConnectDrakeVisualizer, SceneGraph
 from pydrake.manipulation.simple_ui import JointSliders
 from pydrake.multibody.multibody_tree.multibody_plant import MultibodyPlant
-from pydrake.multibody.multibody_tree.parsing import AddModelFromSdfFile
+from pydrake.multibody.multibody_tree.parsing import (
+    AddModelFromSdfFile, AddModelFromUrdfFile)
 from pydrake.systems.analysis import Simulator
 from pydrake.systems.framework import DiagramBuilder
 from pydrake.systems.rendering import MultibodyPositionToGeometryPose
@@ -67,7 +74,14 @@ scene_graph = builder.AddSystem(SceneGraph())
 # Construct a MultibodyPlant and load the SDF into it.
 plant = MultibodyPlant()
 plant.RegisterAsSourceForSceneGraph(scene_graph)
-AddModelFromSdfFile(args.filename, plant)
+if args.filename.endswith(".sdf"):
+    AddModelFromSdfFile(args.filename, plant)
+elif args.filename.endswith(".urdf"):
+    AddModelFromUrdfFile(args.filename, plant)
+else:
+    print("Extension must be `*.sdf` or `*.urdf`: {}".format(args.filename),
+          file=sys.stderr)
+    sys.exit(1)
 plant.Finalize(scene_graph)
 
 # Add sliders to set positions of the joints.
