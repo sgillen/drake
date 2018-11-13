@@ -2,7 +2,11 @@
 # vi: set ft=python :
 
 """
-Provides NumPy from a wheel file.
+Provides NumPy from a wheel file, or uses system version if it's known to be
+the minimum required version.
+
+See `check_required_numpy_version` in `pydrake/util/compatibility.py` for more
+information about the required version.
 
 Example:
     WORKSPACE:

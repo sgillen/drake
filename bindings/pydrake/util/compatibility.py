@@ -9,7 +9,12 @@ from pydrake.util.deprecation import _warn_deprecated
 
 
 def check_required_numpy_version(_actual=np.version.version):
-    """Fails fast if a minimum version of NumPy is not present."""
+    """Fails fast if a minimum version of NumPy is not present.
+
+    pydrake requires NumPy >= 0.15.0 namely for the following patches:
+        https://github.com/numpy/numpy/pull/10898
+        https://github.com/numpy/numpy/pull/11076
+    """
     actual = NumpyVersion(_actual)
     minimum = NumpyVersion('1.15.0')
     if actual < minimum:
