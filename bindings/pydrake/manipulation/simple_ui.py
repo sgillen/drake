@@ -210,6 +210,7 @@ class SchunkWsgButtons(LeafSystem):
     def _DoPublish(self, context, event):
         self.window.update_idletasks()
         self.window.update()
+        return LeafSystem._DoPublish(self, context, event)
 
     def CalcPositionOutput(self, context, output):
         if self._open_state:

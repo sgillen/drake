@@ -1,5 +1,7 @@
 
 import argparse
+import sys
+import trace
 
 import Tkinter as tk
 import numpy as np
@@ -100,6 +102,7 @@ class EndEffectorTeleop(LeafSystem):
     def _DoPublish(self, context, event):
         self.window.update_idletasks()
         self.window.update()
+        return LeafSystem._DoPublish(self, context, event)
 
     def _DoCalcOutput(self, context, output):
         output.get_mutable_value().set_rotation(RollPitchYaw(self.roll.get(),
@@ -182,7 +185,7 @@ class DifferentialIK(LeafSystem):
 
         x = self.robot.tree().GetMutablePositionsAndVelocities(
             self.robot_context)
-        x[:robot.num_positions()] = q_last
+        x[:self.robot.num_positions()] = q_last
         result = DoDifferentialInverseKinematics(self.robot,
                                                  self.robot_context,
                                                  X_WE_desired, self.frame_E,
@@ -194,6 +197,8 @@ class DifferentialIK(LeafSystem):
         else:
             discrete_state.get_mutable_vector().\
                 SetFromVector(q_last + self.time_step*result.joint_velocities)
+        return LeafSystem._DoCalcDiscreteVariableUpdates(
+            self, context, events, discrete_state)
 
     def CopyPositionOut(self, context, output):
         output.SetFromVector(context.get_discrete_state_vector().get_value())
@@ -317,4 +322,7 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    ignoredirs = ["/usr", sys.prefix]
+    tracer = trace.Trace(trace=1, count=0, ignoredirs=ignoredirs)
+    tracer.run('main()')
+    # main()
