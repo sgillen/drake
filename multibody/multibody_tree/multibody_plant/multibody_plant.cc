@@ -11,6 +11,7 @@
 #include "drake/geometry/geometry_frame.h"
 #include "drake/geometry/geometry_instance.h"
 #include "drake/math/orthonormal_basis.h"
+#include "drake/math/rotation_matrix.h"
 #include "drake/multibody/multibody_tree/joints/prismatic_joint.h"
 #include "drake/multibody/multibody_tree/joints/revolute_joint.h"
 
@@ -187,7 +188,7 @@ struct JointLimitsPenaltyParametersEstimator {
               body->default_spatial_inertia().template cast<T>();
           const Isometry3<T> X_PJ = frame.GetFixedPoseInBodyFrame();
           const Vector3<T>& p_PJ = X_PJ.translation();
-          const Matrix3<T>& R_PJ = X_PJ.linear();
+          const math::RotationMatrix<T> R_PJ(X_PJ.linear());
           const SpatialInertia<T> M_PJo_J =
               M_PPo_P.Shift(p_PJ).ReExpress(R_PJ);
           const RotationalInertia<T> I_PJo_J =
@@ -220,13 +221,13 @@ struct JointLimitsPenaltyParametersEstimator {
 };
 }  // namespace internal
 
-template<typename T>
-MultibodyPlant<T>::MultibodyPlant(double time_step) :
-    systems::LeafSystem<T>(systems::SystemTypeTag<
-        drake::multibody::multibody_plant::MultibodyPlant>()),
-    time_step_(time_step) {
+template <typename T>
+MultibodyPlant<T>::MultibodyPlant(double time_step)
+    : MultibodyTreeSystem<T>(
+          systems::SystemTypeTag<multibody::multibody_plant::MultibodyPlant>{},
+          nullptr, time_step > 0),
+      time_step_(time_step) {
   DRAKE_THROW_UNLESS(time_step >= 0);
-  tree_ = std::make_unique<MultibodyTree<T>>();
   visual_geometries_.emplace_back();  // Entries for the "world" body.
   collision_geometries_.emplace_back();
 }
@@ -235,7 +236,7 @@ template<typename T>
 const WeldJoint<T>& MultibodyPlant<T>::WeldFrames(
     const Frame<T>& A, const Frame<T>& B, const Isometry3<double>& X_AB) {
   const std::string joint_name = A.name() + "_welds_to_" + B.name();
-  return tree_->AddJoint(
+  return this->mutable_tree().AddJoint(
       std::make_unique<WeldJoint<T>>(joint_name, A, B, X_AB));
 }
 
@@ -245,10 +246,11 @@ geometry::SourceId MultibodyPlant<T>::RegisterAsSourceForSceneGraph(
   DRAKE_THROW_UNLESS(scene_graph != nullptr);
   DRAKE_THROW_UNLESS(!geometry_source_is_registered());
   source_id_ = scene_graph->RegisterSource();
-  // Save the GS pointer so that on later geometry registrations we can verify
-  // the user is making calls on the same GS instance. Only used for that
-  // purpose, it gets nullified at Finalize().
+  // Save the GS pointer so that on later geometry registrations can use this
+  // instance. This will be nullified at Finalize().
   scene_graph_ = scene_graph;
+  body_index_to_frame_id_[world_index()] = scene_graph->world_frame_id();
+  DeclareSceneGraphPorts();
   return source_id_.value();
 }
 
@@ -273,22 +275,14 @@ geometry::GeometryId MultibodyPlant<T>::RegisterVisualGeometry(
   // supplanted by providing a cleaner interface between parsing MBP and SG
   // elements.
   DRAKE_MBP_THROW_IF_FINALIZED();
-  DRAKE_THROW_UNLESS(scene_graph != nullptr);
   DRAKE_THROW_UNLESS(geometry_source_is_registered());
-  if (scene_graph != scene_graph_) {
-    throw std::logic_error(
-        "Geometry registration calls must be performed on the SAME instance of "
-        "SceneGraph used on the first call to "
-        "RegisterAsSourceForSceneGraph()");
-  }
-  GeometryId id;
+  CheckUserProvidedSceneGraph(scene_graph);
+
   // TODO(amcastro-tri): Consider doing this after finalize so that we can
-  // register anchored geometry on ANY body welded to the world.
-  if (body.index() == world_index()) {
-    id = RegisterAnchoredGeometry(X_BG, shape, name, material, scene_graph);
-  } else {
-    id = RegisterGeometry(body, X_BG, shape, name, material, scene_graph);
-  }
+  // register geometry that has a fixed path to world to the world body (i.e.,
+  // as anchored geometry).
+  GeometryId id = RegisterGeometry(body, X_BG, shape, name, material,
+      scene_graph_);
   const int visual_index = geometry_id_to_visual_index_.size();
   geometry_id_to_visual_index_[id] = visual_index;
   DRAKE_ASSERT(num_bodies() == static_cast<int>(visual_geometries_.size()));
@@ -309,15 +303,9 @@ geometry::GeometryId MultibodyPlant<T>::RegisterCollisionGeometry(
     const CoulombFriction<double>& coulomb_friction,
     SceneGraph<T>* scene_graph) {
   DRAKE_MBP_THROW_IF_FINALIZED();
-  DRAKE_THROW_UNLESS(scene_graph != nullptr);
   DRAKE_THROW_UNLESS(geometry_source_is_registered());
-  if (scene_graph != scene_graph_) {
-    throw std::logic_error(
-        "Geometry registration calls must be performed on the SAME instance of "
-        "SceneGraph used on the first call to "
-        "RegisterAsSourceForSceneGraph()");
-  }
-  GeometryId id;
+  CheckUserProvidedSceneGraph(scene_graph);
+
   // We use an "invisible" color with alpha channel set to zero so that
   // collision geometry does not render on top of visual geometry in our
   // visualizer.
@@ -326,14 +314,10 @@ geometry::GeometryId MultibodyPlant<T>::RegisterCollisionGeometry(
   const geometry::VisualMaterial invisible_material(
       Vector4<double>(0.0, 0.0, 0.0, 0.0));
   // TODO(amcastro-tri): Consider doing this after finalize so that we can
-  // register anchored geometry on ANY body welded to the world.
-  if (body.index() == world_index()) {
-    id = RegisterAnchoredGeometry(X_BG, shape, name, invisible_material,
-                                  scene_graph);
-  } else {
-    id = RegisterGeometry(body, X_BG, shape, name, invisible_material,
-                          scene_graph);
-  }
+  // register geometry that has a fixed path to world to the world body (i.e.,
+  // as anchored geometry).
+  GeometryId id = RegisterGeometry(body, X_BG, shape, name, invisible_material,
+      scene_graph_);
   const int collision_index = geometry_id_to_collision_index_.size();
   geometry_id_to_collision_index_[id] = collision_index;
   DRAKE_ASSERT(
@@ -362,14 +346,33 @@ geometry::GeometrySet MultibodyPlant<T>::CollectRegisteredGeometries(
     optional<FrameId> frame_id = GetBodyFrameIdIfExists(body->index());
     if (frame_id) {
       geometry_set.Add(frame_id.value());
-    } else if (body->index() == world_index()) {
-      // TODO(SeanCurtis-TRI): MBP shouldn't be storing these GeometryIds.
-      // Remove this when SG supports world frame id that can be mapped to
-      // MBP's world body.
-      geometry_set.Add(collision_geometries_[body->index()]);
     }
   }
   return geometry_set;
+}
+
+template <typename T>
+std::vector<const Body<T>*> MultibodyPlant<T>::GetBodiesWeldedTo(
+    const Body<T>& body) const {
+  DRAKE_MBP_THROW_IF_NOT_FINALIZED();
+  // TODO(eric.cousineau): This is much slower than it should be; this could be
+  // sped up by either (a) caching these results at finalization and store a
+  // mapping from body to a subgraph or (b) starting the search from the query
+  // body.
+  auto sub_graphs = tree().get_topology().CreateListOfWeldedBodies();
+  // Find subgraph that contains this body.
+  auto predicate = [&body](auto& sub_graph) {
+    return sub_graph.count(body.index()) > 0;
+  };
+  auto sub_graph_iter = std::find_if(
+      sub_graphs.begin(), sub_graphs.end(), predicate);
+  DRAKE_THROW_UNLESS(sub_graph_iter != sub_graphs.end());
+  // Map body indices to pointers.
+  std::vector<const Body<T>*> sub_graph_bodies;
+  for (BodyIndex sub_graph_body_index : *sub_graph_iter) {
+    sub_graph_bodies.push_back(&tree().get_body(sub_graph_body_index));
+  }
+  return sub_graph_bodies;
 }
 
 template <typename T>
@@ -379,14 +382,12 @@ geometry::GeometryId MultibodyPlant<T>::RegisterGeometry(
     const std::string& name,
     const optional<geometry::VisualMaterial>& material,
     SceneGraph<T>* scene_graph) {
-  // This should never be called with the world index.
-  DRAKE_DEMAND(body.index() != world_index());
   DRAKE_ASSERT(!is_finalized());
   DRAKE_ASSERT(geometry_source_is_registered());
-  DRAKE_ASSERT(scene_graph == scene_graph_);
+  CheckUserProvidedSceneGraph(scene_graph);
   // If not already done, register a frame for this body.
   if (!body_has_registered_frame(body)) {
-    FrameId frame_id = scene_graph->RegisterFrame(
+    FrameId frame_id = scene_graph_->RegisterFrame(
         source_id_.value(),
         GeometryFrame(
             body.name(),
@@ -408,41 +409,59 @@ geometry::GeometryId MultibodyPlant<T>::RegisterGeometry(
     geometry_instance =
         std::make_unique<GeometryInstance>(X_BG, shape.Clone(), name);
   }
-  GeometryId geometry_id = scene_graph->RegisterGeometry(
+  GeometryId geometry_id = scene_graph_->RegisterGeometry(
       source_id_.value(), body_index_to_frame_id_[body.index()],
       std::move(geometry_instance));
   geometry_id_to_body_index_[geometry_id] = body.index();
   return geometry_id;
 }
 
-template <typename T>
-geometry::GeometryId MultibodyPlant<T>::RegisterAnchoredGeometry(
-    const Isometry3<double>& X_WG, const geometry::Shape& shape,
-    const std::string& name, const optional<geometry::VisualMaterial>& material,
-    SceneGraph<T>* scene_graph) {
-  DRAKE_ASSERT(!is_finalized());
-  DRAKE_ASSERT(geometry_source_is_registered());
-  DRAKE_ASSERT(scene_graph == scene_graph_);
+template<typename T>
+const Isometry3<T>& MultibodyPlant<T>::EvalBodyPoseInWorld(
+    const systems::Context<T>& context,
+    const Body<T>& body_B) const {
+  DRAKE_MBP_THROW_IF_NOT_FINALIZED();
+  return tree().EvalBodyPoseInWorld(context, body_B);
+}
 
-  std::unique_ptr<geometry::GeometryInstance> geometry_instance;
-  if (material) {
-    geometry_instance = std::make_unique<GeometryInstance>(
-        X_WG, shape.Clone(), name, material.value());
-  } else {
-    geometry_instance =
-        std::make_unique<GeometryInstance>(X_WG, shape.Clone(), name);
+template<typename T>
+void MultibodyPlant<T>::SetFreeBodyPoseInWorldFrame(
+    systems::Context<T>* context,
+    const Body<T>& body, const Isometry3<T>& X_WB) const {
+  DRAKE_MBP_THROW_IF_NOT_FINALIZED();
+  tree().SetFreeBodyPoseOrThrow(body, X_WB, context);
+}
+
+template<typename T>
+void MultibodyPlant<T>::SetFreeBodyPoseInAnchoredFrame(
+    systems::Context<T>* context,
+    const Frame<T>& frame_F, const Body<T>& body,
+    const Isometry3<T>& X_FB) const {
+  DRAKE_MBP_THROW_IF_NOT_FINALIZED();
+
+  if (!tree().get_topology().IsBodyAnchored(frame_F.body().index())) {
+    throw std::logic_error(
+        "Frame '" + frame_F.name() + "' must be anchored to the world frame.");
   }
-  GeometryId geometry_id = scene_graph->RegisterAnchoredGeometry(
-      source_id_.value(), std::move(geometry_instance));
-  geometry_id_to_body_index_[geometry_id] = world_index();
-  return geometry_id;
+
+  // Pose of frame F in its parent body frame P.
+  const Isometry3<T> X_PF = frame_F.GetFixedPoseInBodyFrame();
+  // Pose of frame F's parent body P in the world.
+  const Isometry3<T>& X_WP = EvalBodyPoseInWorld(*context, frame_F.body());
+  // Pose of "body" B in the world frame.
+  const Isometry3<T> X_WB = X_WP * X_PF * X_FB;
+  SetFreeBodyPoseInWorldFrame(context, body, X_WB);
 }
 
 template<typename T>
 void MultibodyPlant<T>::Finalize(geometry::SceneGraph<T>* scene_graph) {
-  tree_->Finalize();
-  FilterAdjacentBodies(scene_graph);
-  ExcludeCollisionsWithVisualGeometry(scene_graph);
+  // After finalizing the base class, tree is read-only.
+  MultibodyTreeSystem<T>::Finalize();
+  CheckUserProvidedSceneGraph(scene_graph);
+  if (geometry_source_is_registered()) {
+    FilterAdjacentBodies();
+    ExcludeCollisionsWithVisualGeometry();
+  }
   FinalizePlantOnly();
 }
 
@@ -535,10 +554,7 @@ void MultibodyPlant<T>::SetUpJointLimitsParameters() {
 
 template<typename T>
 void MultibodyPlant<T>::FinalizePlantOnly() {
-  DeclareStateAndPorts();
-  // Only declare ports to communicate with a SceneGraph if the plant is
-  // provided with a valid source id.
-  if (source_id_) DeclareSceneGraphPorts();
+  DeclareStateCacheAndPorts();
   scene_graph_ = nullptr;  // must not be used after Finalize().
   if (num_collision_geometries() > 0 &&
       penalty_method_contact_parameters_.time_scale < 0)
@@ -562,73 +578,64 @@ void MultibodyPlant<T>::FinalizePlantOnly() {
 }
 
 template <typename T>
-void MultibodyPlant<T>::FilterAdjacentBodies(SceneGraph<T>* scene_graph) {
-  if (geometry_source_is_registered()) {
-    if (scene_graph == nullptr) {
+void MultibodyPlant<T>::CheckUserProvidedSceneGraph(
+    const geometry::SceneGraph<T>* scene_graph) const {
+  if (scene_graph != nullptr) {
+    if (!geometry_source_is_registered()) {
       throw std::logic_error(
-          "This MultibodyPlant has been registered as a SceneGraph geometry "
-              "source. Finalize() should be invoked with a pointer to the "
-              "SceneGraph instance");
+          "This MultibodyPlant instance does not have a SceneGraph registered. "
+          "Geometry registration calls must be performed after "
+          "RegisterAsSourceForSceneGraph() (which is implicitly called via "
+          "parsing methods when passed a SceneGraph instance).");
     }
-
     if (scene_graph != scene_graph_) {
       throw std::logic_error(
-          "Finalizing on a SceneGraph instance must be performed on the SAME "
-              "instance of SceneGraph used on the first call to "
-              "RegisterAsSourceForSceneGraph()");
-    }
-    // Disallow collisions between adjacent bodies. Adjacency is implied by the
-    // existence of a joint between bodies.
-    for (JointIndex j{0}; j < tree_->num_joints(); ++j) {
-      const Joint<T>& joint = tree_->get_joint(j);
-      const Body<T>& child = joint.child_body();
-      const Body<T>& parent = joint.parent_body();
-      // TODO(SeanCurtis-TRI): Determine the correct action for a body
-      // joined to the world -- should it filter out collisions between the
-      // body and all *anchored* geometry? That seems really heavy-handed. So,
-      // for now, we skip the joints to the world.
-      if (parent.index() == world_index()) continue;
-      optional<FrameId> child_id = GetBodyFrameIdIfExists(child.index());
-      optional<FrameId> parent_id = GetBodyFrameIdIfExists(parent.index());
-
-      if (child_id && parent_id) {
-        scene_graph->ExcludeCollisionsBetween(
-            geometry::GeometrySet(*child_id),
-            geometry::GeometrySet(*parent_id));
-      }
+          "Geometry registration calls must be performed on the SAME instance "
+          "of SceneGraph used on the first call to "
+          "RegisterAsSourceForSceneGraph() (which is implicitly called via "
+          "parsing methods when passed a SceneGraph instance).");
     }
   }
 }
 
 template <typename T>
-void MultibodyPlant<T>::ExcludeCollisionsWithVisualGeometry(
-    geometry::SceneGraph<T>* scene_graph) {
-  if (geometry_source_is_registered()) {
-    if (scene_graph == nullptr) {
-      throw std::logic_error(
-          "This MultibodyPlant has been registered as a SceneGraph geometry "
-              "source. Finalize() should be invoked with a pointer to the "
-              "SceneGraph instance");
+void MultibodyPlant<T>::FilterAdjacentBodies() {
+  DRAKE_DEMAND(geometry_source_is_registered());
+  // Disallow collisions between adjacent bodies. Adjacency is implied by the
+  // existence of a joint between bodies.
+  for (JointIndex j{0}; j < tree().num_joints(); ++j) {
+    const Joint<T>& joint = tree().get_joint(j);
+    const Body<T>& child = joint.child_body();
+    const Body<T>& parent = joint.parent_body();
+    // TODO(SeanCurtis-TRI): Determine the correct action for a body
+    // joined to the world -- should it filter out collisions between the
+    // body and all *anchored* geometry? That seems really heavy-handed. So,
+    // for now, we skip the joints to the world.
+    if (parent.index() == world_index()) continue;
+    optional<FrameId> child_id = GetBodyFrameIdIfExists(child.index());
+    optional<FrameId> parent_id = GetBodyFrameIdIfExists(parent.index());
+
+    if (child_id && parent_id) {
+      scene_graph_->ExcludeCollisionsBetween(
+          geometry::GeometrySet(*child_id),
+          geometry::GeometrySet(*parent_id));
     }
-    geometry::GeometrySet visual;
-    for (const auto& body_geometries : visual_geometries_) {
-      visual.Add(body_geometries);
-    }
-    geometry::GeometrySet collision;
-    for (const auto& body_geometries : collision_geometries_) {
-      collision.Add(body_geometries);
-    }
-    scene_graph->ExcludeCollisionsWithin(visual);
-    scene_graph->ExcludeCollisionsBetween(visual, collision);
   }
 }
 
-template<typename T>
-std::unique_ptr<systems::LeafContext<T>>
-MultibodyPlant<T>::DoMakeLeafContext() const {
-  DRAKE_THROW_UNLESS(is_finalized());
-  return std::make_unique<MultibodyTreeContext<T>>(
-      tree_->get_topology(), is_discrete());
+template <typename T>
+void MultibodyPlant<T>::ExcludeCollisionsWithVisualGeometry() {
+  DRAKE_DEMAND(geometry_source_is_registered());
+  geometry::GeometrySet visual;
+  for (const auto& body_geometries : visual_geometries_) {
+    visual.Add(body_geometries);
+  }
+  geometry::GeometrySet collision;
+  for (const auto& body_geometries : collision_geometries_) {
+    collision.Add(body_geometries);
+  }
+  scene_graph_->ExcludeCollisionsWithin(visual);
+  scene_graph_->ExcludeCollisionsBetween(visual, collision);
 }
 
 template<typename T>
@@ -1078,7 +1085,7 @@ VectorX<T> MultibodyPlant<T>::AssembleActuationInput(
   for (ModelInstanceIndex model_instance_index(0);
        model_instance_index < num_model_instances(); ++model_instance_index) {
     const int instance_num_dofs =
-        tree_->num_actuated_dofs(model_instance_index);
+        tree().num_actuated_dofs(model_instance_index);
     if (instance_num_dofs == 0) {
       continue;
     }
@@ -1108,9 +1115,9 @@ void MultibodyPlant<T>::DoCalcTimeDerivatives(
   // Mass matrix.
   MatrixX<T> M(nv, nv);
   // Forces.
-  MultibodyForces<T> forces(*tree_);
+  MultibodyForces<T> forces(tree());
   // Bodies' accelerations, ordered by BodyNodeIndex.
-  std::vector<SpatialAcceleration<T>> A_WB_array(tree_->num_bodies());
+  std::vector<SpatialAcceleration<T>> A_WB_array(tree().num_bodies());
   // Generalized accelerations.
   VectorX<T> vdot = VectorX<T>::Zero(nv);
 
@@ -1119,12 +1126,12 @@ void MultibodyPlant<T>::DoCalcTimeDerivatives(
 
   // Compute forces applied through force elements. This effectively resets
   // the forces to zero and adds in contributions due to force elements.
-  tree_->CalcForceElementsContribution(context, pc, vc, &forces);
+  tree().CalcForceElementsContribution(context, pc, vc, &forces);
 
   // If there is any input actuation, add it to the multibody forces.
   AddJointActuationForces(context, &forces);
 
-  tree_->CalcMassMatrixViaInverseDynamics(context, &M);
+  tree().CalcMassMatrixViaInverseDynamics(context, &M);
 
   // WARNING: to reduce memory foot-print, we use the input applied arrays also
   // as output arrays. This means that both the array of applied body forces and
@@ -1145,7 +1152,7 @@ void MultibodyPlant<T>::DoCalcTimeDerivatives(
         context, pc, vc, point_pairs, &F_BBo_W_array);
   }
 
-  tree_->CalcInverseDynamics(
+  tree().CalcInverseDynamics(
       context, pc, vc, vdot,
       F_BBo_W_array, tau_array,
       &A_WB_array,
@@ -1157,7 +1164,7 @@ void MultibodyPlant<T>::DoCalcTimeDerivatives(
   auto v = x.bottomRows(nv);
   VectorX<T> xdot(this->num_multibody_states());
   VectorX<T> qdot(this->num_positions());
-  tree_->MapVelocityToQDot(context, v, &qdot);
+  tree().MapVelocityToQDot(context, v, &qdot);
   xdot << qdot, vdot;
   derivatives->SetFromVector(xdot);
 }
@@ -1233,17 +1240,17 @@ void MultibodyPlant<T>::DoCalcDiscreteVariableUpdates(
 
   // Mass matrix and its factorization.
   MatrixX<T> M0(nv, nv);
-  tree_->CalcMassMatrixViaInverseDynamics(context0, &M0);
+  tree().CalcMassMatrixViaInverseDynamics(context0, &M0);
   auto M0_ldlt = M0.ldlt();
 
   // Forces at the previous time step.
-  MultibodyForces<T> forces0(*tree_);
+  MultibodyForces<T> forces0(tree());
 
   const PositionKinematicsCache<T>& pc0 = EvalPositionKinematics(context0);
   const VelocityKinematicsCache<T>& vc0 = EvalVelocityKinematics(context0);
 
   // Compute forces applied through force elements.
-  tree_->CalcForceElementsContribution(context0, pc0, vc0, &forces0);
+  tree().CalcForceElementsContribution(context0, pc0, vc0, &forces0);
 
   // If there is any input actuation, add it to the multibody forces.
   AddJointActuationForces(context0, &forces0);
@@ -1256,7 +1263,7 @@ void MultibodyPlant<T>::DoCalcDiscreteVariableUpdates(
 
   // Workspace for inverse dynamics:
   // Bodies' accelerations, ordered by BodyNodeIndex.
-  std::vector<SpatialAcceleration<T>> A_WB_array(tree_->num_bodies());
+  std::vector<SpatialAcceleration<T>> A_WB_array(tree().num_bodies());
   // Generalized accelerations.
   VectorX<T> vdot = VectorX<T>::Zero(nv);
   // Body forces (alias to forces0).
@@ -1265,7 +1272,7 @@ void MultibodyPlant<T>::DoCalcDiscreteVariableUpdates(
   // With vdot = 0, this computes:
   //   -tau = C(q, v)v - tau_app - ∑ J_WBᵀ(q) Fapp_Bo_W.
   VectorX<T>& minus_tau = forces0.mutable_generalized_forces();
-  tree_->CalcInverseDynamics(
+  tree().CalcInverseDynamics(
       context0, pc0, vc0, vdot,
       F_BBo_W_array, minus_tau,
       &A_WB_array,
@@ -1352,7 +1359,7 @@ void MultibodyPlant<T>::DoCalcDiscreteVariableUpdates(
   VectorX<T> v_next = implicit_stribeck_solver_->get_generalized_velocities();
 
   VectorX<T> qdot_next(this->num_positions());
-  tree_->MapVelocityToQDot(context0, v_next, &qdot_next);
+  tree().MapVelocityToQDot(context0, v_next, &qdot_next);
   VectorX<T> q_next = q0 + dt * qdot_next;
 
   VectorX<T> x_next(this->num_multibody_states());
@@ -1371,15 +1378,15 @@ void MultibodyPlant<T>::DoMapQDotToVelocity(
     const Eigen::Ref<const VectorX<T>>& qdot,
     systems::VectorBase<T>* generalized_velocity) const {
   if (is_discrete()) return;
-  const int nq = tree_->num_positions();
-  const int nv = tree_->num_velocities();
+  const int nq = tree().num_positions();
+  const int nv = tree().num_velocities();
 
   DRAKE_ASSERT(qdot.size() == nq);
   DRAKE_DEMAND(generalized_velocity != nullptr);
   DRAKE_DEMAND(generalized_velocity->size() == nv);
 
   VectorX<T> v(nv);
-  tree_->MapQDotToVelocity(context, qdot, &v);
+  tree().MapQDotToVelocity(context, qdot, &v);
   generalized_velocity->SetFromVector(v);
 }
 
@@ -1389,32 +1396,28 @@ void MultibodyPlant<T>::DoMapVelocityToQDot(
     const Eigen::Ref<const VectorX<T>>& generalized_velocity,
     systems::VectorBase<T>* positions_derivative) const {
   if (is_discrete()) return;
-  const int nq = tree_->num_positions();
-  const int nv = tree_->num_velocities();
+  const int nq = tree().num_positions();
+  const int nv = tree().num_velocities();
 
   DRAKE_ASSERT(generalized_velocity.size() == nv);
   DRAKE_DEMAND(positions_derivative != nullptr);
   DRAKE_DEMAND(positions_derivative->size() == nq);
 
   VectorX<T> qdot(nq);
-  tree_->MapVelocityToQDot(context, generalized_velocity, &qdot);
+  tree().MapVelocityToQDot(context, generalized_velocity, &qdot);
   positions_derivative->SetFromVector(qdot);
 }
 
 template<typename T>
-void MultibodyPlant<T>::DeclareStateAndPorts() {
+void MultibodyPlant<T>::DeclareStateCacheAndPorts() {
   // The model must be finalized.
   DRAKE_DEMAND(this->is_finalized());
 
   if (is_discrete()) {
     this->DeclarePeriodicDiscreteUpdate(time_step_);
-    this->DeclareDiscreteState(num_multibody_states());
-  } else {
-    this->DeclareContinuousState(
-        BasicVector<T>(tree_->num_states()),
-        tree_->num_positions(),
-        tree_->num_velocities(), 0 /* num_z */);
   }
+
+  // TODO(sherm1) Add ContactResults cache entry.
 
   // Declare per model instance actuation ports.
   int num_actuated_instances = 0;
@@ -1423,7 +1426,7 @@ void MultibodyPlant<T>::DeclareStateAndPorts() {
   for (ModelInstanceIndex model_instance_index(0);
        model_instance_index < num_model_instances(); ++model_instance_index) {
     const int instance_num_dofs =
-        tree_->num_actuated_dofs(model_instance_index);
+        tree().num_actuated_dofs(model_instance_index);
     if (instance_num_dofs == 0) {
       continue;
     }
@@ -1431,7 +1434,7 @@ void MultibodyPlant<T>::DeclareStateAndPorts() {
     last_actuated_instance = model_instance_index;
     instance_actuation_ports_[model_instance_index] =
         this->DeclareVectorInputPort(
-                tree_->GetModelInstanceName(model_instance_index) +
+                tree().GetModelInstanceName(model_instance_index) +
                     "_actuation",
                 systems::BasicVector<T>(instance_num_dofs))
             .get_index();
@@ -1453,7 +1456,7 @@ void MultibodyPlant<T>::DeclareStateAndPorts() {
   for (ModelInstanceIndex model_instance_index(0);
        model_instance_index < num_model_instances(); ++model_instance_index) {
     const int instance_num_states =
-        tree_->num_states(model_instance_index);
+        tree().num_states(model_instance_index);
     if (instance_num_states == 0) {
       continue;
     }
@@ -1464,7 +1467,7 @@ void MultibodyPlant<T>::DeclareStateAndPorts() {
     };
     instance_continuous_state_output_ports_[model_instance_index] =
         this->DeclareVectorOutputPort(
-                tree_->GetModelInstanceName(model_instance_index) +
+                tree().GetModelInstanceName(model_instance_index) +
                     "_continuous_state",
                 BasicVector<T>(instance_num_states), calc)
             .get_index();
@@ -1476,7 +1479,7 @@ void MultibodyPlant<T>::DeclareStateAndPorts() {
   for (ModelInstanceIndex model_instance_index(0);
        model_instance_index < num_model_instances(); ++model_instance_index) {
     const int instance_num_velocities =
-        tree_->num_velocities(model_instance_index);
+        tree().num_velocities(model_instance_index);
     if (instance_num_velocities == 0) {
       continue;
     }
@@ -1487,7 +1490,7 @@ void MultibodyPlant<T>::DeclareStateAndPorts() {
     };
     instance_generalized_contact_forces_output_ports_[model_instance_index] =
         this->DeclareVectorOutputPort(
-                tree_->GetModelInstanceName(model_instance_index) +
+                tree().GetModelInstanceName(model_instance_index) +
                     "_generalized_contact_forces",
                 BasicVector<T>(instance_num_velocities), calc)
             .get_index();
@@ -1524,18 +1527,9 @@ void MultibodyPlant<T>::CopyContinuousStateOut(
     const Context<T>& context, BasicVector<T>* state_vector) const {
   DRAKE_MBP_THROW_IF_NOT_FINALIZED();
 
-  VectorX<T> continuous_state_vector =
-      GetStateVector(context).CopyToVector();
-
-  VectorX<T> instance_state_vector(tree_->num_states(model_instance));
-  instance_state_vector.head(num_positions(model_instance)) =
-      tree_->get_positions_from_array(
-          model_instance, continuous_state_vector.head(num_positions()));
-  instance_state_vector.tail(num_velocities(model_instance)) =
-      tree_->get_velocities_from_array(
-          model_instance, continuous_state_vector.tail(num_velocities()));
-
-  state_vector->set_value(instance_state_vector);
+  VectorX<T> instance_state_vector =
+      tree().GetPositionsAndVelocities(context, model_instance);
+  state_vector->SetFromVector(instance_state_vector);
 }
 
 template <typename T>
@@ -1556,7 +1550,7 @@ void MultibodyPlant<T>::CopyGeneralizedContactForcesOut(
   // Generalized velocities and generalized forces are ordered in the same way.
   // Thus we can call get_velocities_from_array().
   const VectorX<T> instance_tau_contact =
-      tree_->get_velocities_from_array(model_instance, tau_contact);
+      tree().GetVelocitiesFromArray(model_instance, tau_contact);
 
   tau_vector->set_value(instance_tau_contact);
 }
@@ -1596,7 +1590,7 @@ MultibodyPlant<T>::get_continuous_state_output_port(
   DRAKE_MBP_THROW_IF_NOT_FINALIZED();
   DRAKE_THROW_UNLESS(model_instance.is_valid());
   DRAKE_THROW_UNLESS(model_instance < num_model_instances());
-  DRAKE_THROW_UNLESS(tree_->num_states(model_instance) > 0);
+  DRAKE_THROW_UNLESS(tree().num_states(model_instance) > 0);
   return this->get_output_port(
       instance_continuous_state_output_ports_.at(model_instance));
 }
@@ -1609,7 +1603,7 @@ MultibodyPlant<T>::get_generalized_contact_forces_output_port(
   DRAKE_THROW_UNLESS(is_discrete());
   DRAKE_THROW_UNLESS(model_instance.is_valid());
   DRAKE_THROW_UNLESS(model_instance < num_model_instances());
-  DRAKE_THROW_UNLESS(tree_->num_states(model_instance) > 0);
+  DRAKE_THROW_UNLESS(tree().num_states(model_instance) > 0);
   return this->get_output_port(
       instance_generalized_contact_forces_output_ports_.at(model_instance));
 }
@@ -1624,19 +1618,28 @@ MultibodyPlant<T>::get_contact_results_output_port() const {
 
 template <typename T>
 void MultibodyPlant<T>::DeclareSceneGraphPorts() {
-  geometry_query_port_ =
-      this->DeclareAbstractInputPort("geometry_query").get_index();
-  // This presupposes that the source id has been assigned and _all_ frames have
-  // been registered.
-  std::vector<FrameId> ids;
-  for (auto it : body_index_to_frame_id_) {
-    ids.push_back(it.second);
-  }
-  geometry_pose_port_ =
-      this->DeclareAbstractOutputPort("geometry_pose",
-                                      FramePoseVector<T>(*source_id_, ids),
-                                      &MultibodyPlant::CalcFramePoseOutput)
-          .get_index();
+  geometry_query_port_ = this->DeclareAbstractInputPort(
+      "geometry_query", systems::Value<geometry::QueryObject<T>>{}).get_index();
+  // Allocate pose port.
+  // TODO(eric.cousineau): Simplify this logic.
+  typename systems::LeafOutputPort<T>::AllocCallback pose_alloc = [this]() {
+    // This presupposes that the source id has been assigned and _all_ frames
+    // have been registered.
+    std::vector<FrameId> ids;
+    for (auto it : this->body_index_to_frame_id_) {
+      if (it.first == world_index()) continue;
+      ids.push_back(it.second);
+    }
+    return systems::AbstractValue::Make(
+        FramePoseVector<T>(*this->source_id_, ids));
+  };
+  typename systems::LeafOutputPort<T>::CalcCallback pose_callback = [this](
+      const Context<T>& context, systems::AbstractValue* value) {
+    this->CalcFramePoseOutput(
+        context, &value->GetMutableValue<FramePoseVector<T>>());
+  };
+  geometry_pose_port_ = this->DeclareAbstractOutputPort(
+      "geometry_pose", pose_alloc, pose_callback).get_index();
 }
 
 template <typename T>
@@ -1644,8 +1647,11 @@ void MultibodyPlant<T>::CalcFramePoseOutput(
     const Context<T>& context, FramePoseVector<T>* poses) const {
   DRAKE_MBP_THROW_IF_NOT_FINALIZED();
   DRAKE_ASSERT(source_id_ != nullopt);
+  // NOTE: The body index to frame id map *always* includes the world body but
+  // the world body does *not* get reported in the frame poses; only dynamic
+  // frames do.
   DRAKE_ASSERT(
-      poses->size() == static_cast<int>(body_index_to_frame_id_.size()));
+      poses->size() == static_cast<int>(body_index_to_frame_id_.size() - 1));
   const PositionKinematicsCache<T>& pc = EvalPositionKinematics(context);
 
   // TODO(amcastro-tri): Make use of Body::EvalPoseInWorld(context) once caching
@@ -1653,7 +1659,8 @@ void MultibodyPlant<T>::CalcFramePoseOutput(
   poses->clear();
   for (const auto it : body_index_to_frame_id_) {
     const BodyIndex body_index = it.first;
-    const Body<T>& body = tree_->get_body(body_index);
+    if (body_index == world_index()) continue;
+    const Body<T>& body = tree().get_body(body_index);
 
     // NOTE: The GeometryFrames for each body were registered in the world
     // frame, so we report poses in the world frame.
@@ -1665,7 +1672,6 @@ void MultibodyPlant<T>::CalcFramePoseOutput(
 template <typename T>
 const OutputPort<T>& MultibodyPlant<T>::get_geometry_poses_output_port()
 const {
-  DRAKE_MBP_THROW_IF_NOT_FINALIZED();
   DRAKE_DEMAND(geometry_source_is_registered());
   return systems::System<T>::get_output_port(geometry_pose_port_);
 }
@@ -1673,21 +1679,8 @@ const {
 template <typename T>
 const systems::InputPort<T>&
 MultibodyPlant<T>::get_geometry_query_input_port() const {
-  DRAKE_MBP_THROW_IF_NOT_FINALIZED();
   DRAKE_DEMAND(geometry_source_is_registered());
   return systems::System<T>::get_input_port(geometry_query_port_);
-}
-
-template<typename T>
-const PositionKinematicsCache<T>& MultibodyPlant<T>::EvalPositionKinematics(
-    const systems::Context<T>& context) const {
-  return tree_->EvalPositionKinematics(context);
-}
-
-template<typename T>
-const VelocityKinematicsCache<T>& MultibodyPlant<T>::EvalVelocityKinematics(
-    const systems::Context<T>& context) const {
-  return tree_->EvalVelocityKinematics(context);
 }
 
 template <typename T>

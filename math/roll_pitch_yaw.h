@@ -7,7 +7,6 @@
 
 #include "drake/common/drake_assert.h"
 #include "drake/common/drake_copyable.h"
-#include "drake/common/drake_deprecated.h"
 #include "drake/common/eigen_types.h"
 #include "drake/common/symbolic.h"
 
@@ -29,7 +28,7 @@ class RotationMatrix;
 ///        ⎣    0       0   1⎦   ⎣-sin(p)  0  cos(p)⎦   ⎣0  sin(r)   cos(r)⎦
 ///      =       R_AB          *        R_BC          *        R_CD
 /// ```
-/// Note: In this discussion, A is the Space frame and D is the Body frame.
+/// @note In this discussion, A is the Space frame and D is the Body frame.
 /// One way to visualize this rotation sequence is by introducing intermediate
 /// frames B and C (useful constructs to understand this rotation sequence).
 /// Initially, the frames are aligned so `Di = Ci = Bi = Ai (i = x, y, z)`
@@ -55,6 +54,7 @@ class RotationMatrix;
 /// @tparam T The underlying scalar type. Must be a valid Eigen scalar.
 ///
 /// Instantiated templates for the following kinds of T's are provided:
+///
 /// - double
 /// - AutoDiffXd
 ///
@@ -634,45 +634,9 @@ template <typename T>
 Vector3<T> CalcRollPitchYawFromQuaternionAndRotationMatrix(
     const Eigen::Quaternion<T>& quaternion, const Matrix3<T>& R);
 
-/// (Deprecated), use @ref math::RollPitchYaw(quaternion).
-// TODO(mitiguy) Delete this code that was deprecated on April 27, 2018.
-template <typename T>
-DRAKE_DEPRECATED("This code is deprecated per issue #8323. "
-                 "Use constructor RollPitchYaw(quaternion).")
-Vector3<T> QuaternionToSpaceXYZ(const Eigen::Quaternion<T>& quaternion) {
-  return RollPitchYaw<T>(quaternion).vector();
-}
-
 /// Abbreviation (alias/typedef) for a RollPitchYaw double scalar type.
 /// @relates RollPitchYaw
 using RollPitchYawd = RollPitchYaw<double>;
-
-/// (Deprecated), use @ref math::RollPitchYaw(rpy).ToQuaternion().
-// TODO(mitiguy) Delete this code that was deprecated on April 16, 2018.
-template <typename Derived>
-DRAKE_DEPRECATED("This code is deprecated per issue #8323. "
-                 "Use RollPitchYaw::ToQuaternion().")
-Quaternion<typename Derived::Scalar> RollPitchYawToQuaternion(
-    const Eigen::MatrixBase<Derived>& rpy) {
-  EIGEN_STATIC_ASSERT_VECTOR_SPECIFIC_SIZE(Eigen::MatrixBase<Derived>, 3);
-  using Scalar = typename Derived::Scalar;
-  const RollPitchYaw<Scalar> roll_pitch_yaw(rpy(0), rpy(1), rpy(2));
-  const Eigen::Quaternion<Scalar> quaternion = roll_pitch_yaw.ToQuaternion();
-}
-
-/// (Deprecated), use @ref math::RollPitchYaw(rpy).ToQuaternion().
-// TODO(mitiguy) Delete this code that was deprecated on April 16, 2018.
-template <typename Derived>
-DRAKE_DEPRECATED("This code is deprecated per issue #8323. "
-                 "Use RollPitchYaw::ToQuaternion().")
-Vector4<typename Derived::Scalar> rpy2quat(
-    const Eigen::MatrixBase<Derived>& rpy) {
-  EIGEN_STATIC_ASSERT_VECTOR_SPECIFIC_SIZE(Eigen::MatrixBase<Derived>, 3);
-  using Scalar = typename Derived::Scalar;
-  const RollPitchYaw<Scalar> roll_pitch_yaw(rpy(0), rpy(1), rpy(2));
-  const Eigen::Quaternion<Scalar> q = roll_pitch_yaw.ToQuaternion();
-  return Eigen::Vector4d(q.w(), q.x(), q.y(), q.z());
-}
 
 }  // namespace math
 }  // namespace drake

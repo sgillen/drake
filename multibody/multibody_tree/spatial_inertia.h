@@ -10,6 +10,7 @@
 #include "drake/common/drake_copyable.h"
 #include "drake/common/eigen_types.h"
 #include "drake/math/cross_product.h"
+#include "drake/math/rotation_matrix.h"
 #include "drake/multibody/multibody_tree/math/spatial_algebra.h"
 #include "drake/multibody/multibody_tree/rotational_inertia.h"
 #include "drake/multibody/multibody_tree/unit_inertia.h"
@@ -87,6 +88,7 @@ namespace multibody {
 /// @tparam T The underlying scalar type. Must be a valid Eigen scalar.
 ///
 /// Instantiated templates for the following kinds of T's are provided:
+///
 /// - double
 /// - AutoDiffXd
 /// - symbolic::Expression
@@ -210,6 +212,7 @@ class SpatialInertia {
   /// Performs a number of checks to verify that this is a physically valid
   /// spatial inertia.
   /// The checks performed are:
+  ///
   /// - No NaN entries.
   /// - Non-negative mass.
   /// - Non-negative principal moments about the center of mass.
@@ -218,6 +221,7 @@ class SpatialInertia {
   ///   - `Ixx + Iyy >= Izz`
   ///   - `Ixx + Izz >= Iyy`
   ///   - `Iyy + Izz >= Ixx`
+  ///
   /// These are the tests performed by
   /// RotationalInertia::CouldBePhysicallyValid() which become a sufficient
   /// condition when performed on a rotational inertia about a body's center of
@@ -281,30 +285,38 @@ class SpatialInertia {
   /// taken about a point P and expressed in frame E, this method computes the
   /// same inertia re-expressed in another frame A.
   /// This operation is performed in-place modifying the original object.
-  ///
   /// @param[in] R_AE Rotation matrix from frame E to frame A.
   /// @returns A reference to `this` rotational inertia about the same point P
   ///          but now re-expressed in frame A, that is, `M_SP_A`.
-  ///
-  /// @warning This method does not check whether the input matrix `R_AE`
-  /// represents a valid rotation or not. It is the resposibility of users to
-  /// provide valid rotation matrices.
-  SpatialInertia& ReExpressInPlace(const Matrix3<T>& R_AE) {
+  SpatialInertia& ReExpressInPlace(const math::RotationMatrix<T>& R_AE) {
     p_PScm_E_ = R_AE * p_PScm_E_;    // Now p_PScm_A
     G_SP_E_.ReExpressInPlace(R_AE);  // Now I_SP_A
     return *this;                    // Now M_SP_A
   }
 
+// TODO(mitiguy) Delete this deprecated code after February 5, 2019.
+  DRAKE_DEPRECATED("Use SpatialInertia::ReExpressInPlace(RotationMatrix<T>&). "
+                   "Code will be deleted after February 5, 2019.")
+  SpatialInertia& ReExpressInPlace(const Matrix3<T>& R_AE) {
+    return ReExpressInPlace(math::RotationMatrix<T>(R_AE));
+  }
+
   /// Given `this` spatial inertia `M_SP_E` for some body or composite body S,
   /// taken about a point P and expressed in frame E, this method computes the
   /// same inertia re-expressed in another frame A.
-  ///
-  /// @param[in] R_AE Rotation matrix from frame E to frame A.
+  /// @param[in] R_AE RotationMatrix relating frames A and E.
   /// @retval M_SP_A The same spatial inertia of S about P but now
   ///                re-expressed in frame A.
   /// @see ReExpressInPlace() for details.
-  SpatialInertia ReExpress(const Matrix3<T>& R_AE) const {
+  SpatialInertia ReExpress(const math::RotationMatrix<T>& R_AE) const {
     return SpatialInertia(*this).ReExpressInPlace(R_AE);
+  }
+
+// TODO(mitiguy) Delete this deprecated code after February 5, 2019.
+  DRAKE_DEPRECATED("Use SpatialInertia:ReExpress(RotationMatrix<T>&). "
+                   "Code will be deleted after February 5, 2019.")
+  SpatialInertia ReExpress(const Matrix3<T>& R_AE) const {
+    return ReExpress(math::RotationMatrix<T>(R_AE));
   }
 
   /// Given `this` spatial inertia `M_SP_E` for some body or composite body S,
@@ -346,8 +358,8 @@ class SpatialInertia {
   /// @param[in] p_PQ_E Vector from the original about point P to the new
   ///                   about point Q, expressed in the same frame E `this`
   ///                   spatial inertia is expressed in.
-  /// @retval `M_SQ_E` This same spatial inertia for body or composite body S
-  ///                  but computed about about a new point Q.
+  /// @retval M_SQ_E    This same spatial inertia for body or composite body S
+  ///                   but computed about about a new point Q.
   SpatialInertia Shift(const Vector3<T>& p_PQ_E) const {
     return SpatialInertia(*this).ShiftInPlace(p_PQ_E);
   }

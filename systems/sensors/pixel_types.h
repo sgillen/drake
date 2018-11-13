@@ -2,6 +2,7 @@
 
 #include <cstdint>
 
+#include "drake/common/hash.h"
 #include "drake/common/symbolic.h"
 
 namespace drake {
@@ -12,9 +13,10 @@ namespace sensors {
 /// The naming rule for the enum members is:
 /// k + (pixel format) + (bit per a channel) + (data type for channels).
 /// For the type for channels, one of the following capital letters is used.
-///   - I: int
-///   - U: unsigned int
-///   - F: float
+///
+/// - I: int
+/// - U: unsigned int
+/// - F: float
 enum class PixelType {
   /// The pixel format used by ImageRgb8U.
   kRgb8U = 0,
@@ -128,3 +130,10 @@ struct ImageTraits<PixelType::kExpr> {
 }  // namespace sensors
 }  // namespace systems
 }  // namespace drake
+
+// Enable the pixel type enumeration to be used as a map key.
+namespace std {
+template <>
+struct hash<drake::systems::sensors::PixelType>
+    : public drake::DefaultHash {};
+}  // namespace std

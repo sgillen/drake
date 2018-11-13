@@ -140,67 +140,65 @@ namespace internal {
 
 lcmt_viewer_load_robot GeometryVisualizationImpl::BuildLoadMessage(
     const GeometryState<double>& state) {
-  using internal::InternalAnchoredGeometry;
   using internal::InternalGeometry;
 
   lcmt_viewer_load_robot message{};
   // Populate the message.
+  // This includes the world frame.
   const int frame_count = state.get_num_frames();
-  const int anchored_count =
-      static_cast<int>(state.anchored_geometry_index_id_map_.size());
+  const int anchored_count = state.GetNumFrameGeometries(
+      InternalFrame::world_frame_id());
 
-  // Include the world frame as one of the frames (if there are anchored
-  // geometries).
-  int total_link_count = frame_count + (anchored_count > 0 ? 1 : 0);
+  // If no anchored frames were found, remove the world frame from the count of
+  // total frames/links.
+  int total_link_count = anchored_count > 0 ? frame_count : frame_count - 1;
   message.num_links = total_link_count;
   message.link.resize(total_link_count);
 
   int link_index = 0;
   // Load anchored geometry into the world frame.
-  {
-    if (anchored_count) {
-      message.link[0].name = "world";
-      message.link[0].robot_num = 0;
-      message.link[0].num_geom = anchored_count;
-      message.link[0].geom.resize(anchored_count);
-      int geom_index = 0;
-      for (const auto& pair : state.anchored_geometries_) {
-        const InternalAnchoredGeometry& geometry = pair.second;
-        const Shape& shape = geometry.get_shape();
-        const Eigen::Vector4d& color =
-            geometry.get_visual_material().diffuse();
-        message.link[0].geom[geom_index] = MakeGeometryData(
-            shape, geometry.get_pose_in_parent(), color);
-        ++geom_index;
-      }
-      link_index = 1;
+  if (anchored_count) {
+    message.link[0].name = "world";
+    message.link[0].robot_num = 0;
+    message.link[0].num_geom = anchored_count;
+    message.link[0].geom.resize(anchored_count);
+    int geom_index = 0;
+    const InternalFrame& world_frame =
+        state.frames_.at(InternalFrame::world_frame_id());
+    for (const GeometryId id : world_frame.child_geometries()) {
+      const InternalGeometry& geometry = state.geometries_.at(id);
+      const Shape& shape = geometry.shape();
+      const Eigen::Vector4d& color = geometry.visual_material().diffuse();
+      message.link[0].geom[geom_index] = MakeGeometryData(
+          shape, geometry.X_FG(), color);
+      ++geom_index;
     }
+    link_index = 1;
   }
 
   // Load dynamic geometry into their own frames.
   for (const auto& pair : state.frames_) {
     const internal::InternalFrame& frame = pair.second;
-    SourceId s_id = state.get_source_id(frame.get_id());
+    // The world frame is handled specifically above.
+    if (frame.is_world()) continue;
+    SourceId s_id = state.get_source_id(frame.id());
     const std::string& src_name = state.get_source_name(s_id);
     // TODO(SeanCurtis-TRI): The name in the load message *must* match the name
     // in the update message. Make sure this code and the SceneGraph output
     // use a common code-base to translate (source_id, frame) -> name.
-    message.link[link_index].name = src_name + "::" + frame.get_name();
-    message.link[link_index].robot_num = frame.get_frame_group();
+    message.link[link_index].name = src_name + "::" + frame.name();
+    message.link[link_index].robot_num = frame.frame_group();
     const int geom_count = static_cast<int>(
-        frame.get_child_geometries().size());
+        frame.child_geometries().size());
     message.link[link_index].num_geom = geom_count;
     message.link[link_index].geom.resize(geom_count);
     int geom_index = 0;
-    for (GeometryId geom_id : frame.get_child_geometries()) {
+    for (GeometryId geom_id : frame.child_geometries()) {
       const InternalGeometry& geometry = state.geometries_.at(geom_id);
-      GeometryIndex index = geometry.get_engine_index();
-      const Isometry3<double> X_FG = state.X_FG_.at(index);
-      const Shape& shape = geometry.get_shape();
-      const Eigen::Vector4d& color =
-          geometry.get_visual_material().diffuse();
+      const Shape& shape = geometry.shape();
+      const Eigen::Vector4d& color = geometry.visual_material().diffuse();
       message.link[link_index].geom[geom_index] =
-          MakeGeometryData(shape, X_FG, color);
+          MakeGeometryData(shape, geometry.X_FG(), color);
       ++geom_index;
     }
     ++link_index;
@@ -224,9 +222,11 @@ void DispatchLoadMessage(const SceneGraph<double>& scene_graph,
   Publish(lcm, "DRAKE_VIEWER_LOAD_ROBOT", message);
 }
 
-void ConnectDrakeVisualizer(systems::DiagramBuilder<double>* builder,
-                            const SceneGraph<double>& scene_graph,
-                            lcm::DrakeLcmInterface* lcm_optional) {
+systems::lcm::LcmPublisherSystem* ConnectDrakeVisualizer(
+    systems::DiagramBuilder<double>* builder,
+    const SceneGraph<double>& scene_graph,
+    const systems::OutputPort<double>& pose_bundle_output_port,
+    lcm::DrakeLcmInterface* lcm_optional) {
   using systems::lcm::LcmPublisherSystem;
   using systems::lcm::Serializer;
   using systems::rendering::PoseBundleToDrawMessage;
@@ -255,9 +255,17 @@ void ConnectDrakeVisualizer(systems::DiagramBuilder<double>* builder,
   });
 
   // Note that this will fail if scene_graph is not actually in builder.
-  builder->Connect(scene_graph.get_pose_bundle_output_port(),
-                   converter->get_input_port(0));
+  builder->Connect(pose_bundle_output_port, converter->get_input_port(0));
   builder->Connect(*converter, *publisher);
+
+  return publisher;
+}
+
+systems::lcm::LcmPublisherSystem* ConnectDrakeVisualizer(
+    systems::DiagramBuilder<double>* builder,
+    const SceneGraph<double>& scene_graph, lcm::DrakeLcmInterface* lcm) {
+  return ConnectDrakeVisualizer(builder, scene_graph,
+                                scene_graph.get_pose_bundle_output_port(), lcm);
 }
 
 }  // namespace geometry

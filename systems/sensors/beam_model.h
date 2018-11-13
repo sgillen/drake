@@ -2,13 +2,13 @@
 
 #include "drake/common/drake_copyable.h"
 #include "drake/systems/framework/leaf_system.h"
-#include "drake/systems/sensors/depth_sensor_specification.h"
 #include "drake/systems/sensors/gen/beam_model_params.h"
 
 namespace drake {
 namespace systems {
 namespace sensors {
 
+// TODO(russt): Add support for symbolic.
 /// Implements the "Beam Models of Range Finders" from section 6.3 of
 ///   Probabilistic Robotics (2006), by Thrun, Burgard, and Fox
 ///
@@ -43,19 +43,17 @@ namespace sensors {
 /// variable inputs.
 ///
 /// Instantiated templates for the following kinds of T's are provided:
+///
 /// - double
 /// - AutoDiffXd
 ///
 /// @ingroup sensor_systems
-// TODO(russt): Add support for symbolic.
 template <typename T>
 class BeamModel final : public LeafSystem<T> {
  public:
   DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(BeamModel)
 
   BeamModel(int num_depth_readings, double max_range);
-
-  explicit BeamModel(const DepthSensorSpecification& specification);
 
   /// Scalar-converting copy constructor.  See @ref system_scalar_conversion.
   template <typename U>

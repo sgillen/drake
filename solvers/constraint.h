@@ -25,6 +25,11 @@
 namespace drake {
 namespace solvers {
 
+// TODO(eric.cousineau): Consider enabling the constraint class directly to
+// specify new slack variables.
+// TODO(eric.cousineau): Consider parameterized constraints:  e.g. the
+// acceleration constraints in the rigid body dynamics are constraints
+// on vdot and f, but are "parameterized" by q and v.
 /**
  * A constraint is a function + lower and upper bounds.
  *
@@ -35,11 +40,6 @@ namespace solvers {
  * It should support evaluating the constraint, and adding it to an optimization
  * problem.
  */
-// TODO(eric.cousineau): Consider enabling the constraint class directly to
-// specify new slack variables.
-// TODO(eric.cousineau): Consider parameterized constraints:  e.g. the
-// acceleration constraints in the rigid body dynamics are constraints
-// on vdot and f, but are "parameterized" by q and v.
 class Constraint : public EvaluatorBase {
  public:
   DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(Constraint)
@@ -477,7 +477,7 @@ class PolynomialConstraint : public EvaluatorConstraint<PolynomialEvaluator> {
 // IntegerConstraint, ...
 
 /**
- * Implements a constraint of the form @f lb <= Ax <= ub @f
+ * Implements a constraint of the form @f$ lb <= Ax <= ub @f$
  */
 class LinearConstraint : public Constraint {
  public:
@@ -554,7 +554,7 @@ class LinearConstraint : public Constraint {
 };
 
 /**
- * Implements a constraint of the form @f Ax = b @f
+ * Implements a constraint of the form @f$ Ax = b @f$
  */
 class LinearEqualityConstraint : public LinearConstraint {
  public:
@@ -600,7 +600,7 @@ class LinearEqualityConstraint : public LinearConstraint {
 };
 
 /**
- * Implements a constraint of the form @f lb <= x <= ub @f
+ * Implements a constraint of the form @f$ lb <= x <= ub @f$
  *
  * Note: the base Constraint class (as implemented at the moment) could
  * play this role.  But this class enforces that it is ONLY a bounding

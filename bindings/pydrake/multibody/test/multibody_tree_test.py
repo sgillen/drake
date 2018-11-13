@@ -23,7 +23,9 @@ from pydrake.multibody.multibody_tree.math import (
     SpatialVelocity,
 )
 from pydrake.multibody.multibody_tree.multibody_plant import (
+    ContactResults,
     MultibodyPlant,
+    PointPairContactInfo,
 )
 from pydrake.multibody.multibody_tree.parsing import (
     AddModelFromSdfFile,
@@ -33,10 +35,19 @@ from pydrake.multibody.benchmarks.acrobot import (
     MakeAcrobotPlant,
 )
 
+from pydrake.geometry import (
+    GeometryId,
+    PenetrationAsPointPair,
+    SceneGraph,
+)
+from pydrake.systems.framework import DiagramBuilder
+
+
 import copy
 import math
 import unittest
 
+from six import text_type as unicode
 import numpy as np
 
 from pydrake.common import FindResourceOrThrow
@@ -54,10 +65,24 @@ def get_index_class(cls):
         Joint: JointIndex,
         JointActuator: JointActuatorIndex,
     }
-    for key_cls, index_cls in class_to_index_class_map.iteritems():
+    for key_cls, index_cls in class_to_index_class_map.items():
         if issubclass(cls, key_cls):
             return index_cls
     raise RuntimeError("Unknown class: {}".format(cls))
+
+
+def add_plant_and_scene_graph(builder):
+    # TODO(eric.cousineau): Hoist to C++.
+    plant = builder.AddSystem(MultibodyPlant())
+    scene_graph = builder.AddSystem(SceneGraph())
+    plant.RegisterAsSourceForSceneGraph(scene_graph)
+    builder.Connect(
+        scene_graph.get_query_output_port(),
+        plant.get_geometry_query_input_port())
+    builder.Connect(
+        plant.get_geometry_poses_output_port(),
+        scene_graph.get_source_pose_port(plant.get_source_id()))
+    return plant, scene_graph
 
 
 class TestMultibodyTreeMath(unittest.TestCase):
@@ -88,7 +113,7 @@ class TestMultibodyTree(unittest.TestCase):
             "drake/multibody/benchmarks/acrobot/acrobot.sdf")
         plant = MultibodyPlant(time_step=0.01)
         model_instance = AddModelFromSdfFile(
-            file_name=file_name, plant=plant, scene_graph=None)
+            file_name=file_name, plant=plant)
         self.assertIsInstance(model_instance, ModelInstanceIndex)
         plant.Finalize()
         benchmark = MakeAcrobotPlant(AcrobotParameters(), True)
@@ -109,11 +134,17 @@ class TestMultibodyTree(unittest.TestCase):
             plant.num_actuated_dofs(), benchmark.num_actuated_dofs())
         self.assertTrue(plant.is_finalized())
         self.assertTrue(plant.HasBodyNamed(name="Link1"))
+        self.assertTrue(plant.HasBodyNamed(
+            name="Link1", model_instance=model_instance))
         self.assertTrue(plant.HasJointNamed(name="ShoulderJoint"))
+        self.assertTrue(plant.HasJointNamed(
+            name="ShoulderJoint", model_instance=model_instance))
         shoulder = plant.GetJointByName(name="ShoulderJoint")
         self._test_joint_api(shoulder)
         np.testing.assert_array_equal(shoulder.lower_limits(), [-np.inf])
         np.testing.assert_array_equal(shoulder.upper_limits(), [np.inf])
+        self.assertIs(shoulder, plant.GetJointByName(
+            name="ShoulderJoint", model_instance=model_instance))
         self._test_joint_actuator_api(
             plant.GetJointActuatorByName(name="ElbowJoint"))
         self._test_body_api(plant.GetBodyByName(name="Link1"))
@@ -124,12 +155,23 @@ class TestMultibodyTree(unittest.TestCase):
         self.assertIs(
             plant.GetFrameByName(name="Link1"),
             plant.GetFrameByName(name="Link1", model_instance=model_instance))
+        self.assertEqual(
+            model_instance, plant.GetModelInstanceByName(name="acrobot"))
         self.assertIsInstance(
             plant.get_actuation_input_port(), InputPort)
         self.assertIsInstance(
             plant.get_continuous_state_output_port(), OutputPort)
         self.assertIsInstance(
             plant.get_contact_results_output_port(), OutputPort)
+        tree = plant.tree()
+        self.assertIsInstance(tree.num_frames(), int)
+        self.assertIsInstance(tree.get_body(body_index=BodyIndex(0)), Body)
+        self.assertIs(shoulder, tree.get_joint(joint_index=JointIndex(0)))
+        self.assertIsInstance(tree.get_joint_actuator(
+            actuator_index=JointActuatorIndex(0)), JointActuator)
+        self.assertIsInstance(tree.get_frame(frame_index=FrameIndex(0)), Frame)
+        self.assertEqual("acrobot", tree.GetModelInstanceName(
+            model_instance=model_instance))
 
     def _test_multibody_tree_element_mixin(self, element):
         self.assertIsInstance(element.get_parent_tree(), MultibodyTree)
@@ -171,13 +213,12 @@ class TestMultibodyTree(unittest.TestCase):
             "drake/multibody/benchmarks/acrobot/acrobot.sdf")
         plant = MultibodyPlant(time_step=0.01)
         model_instance = AddModelFromSdfFile(
-            file_name=file_name, plant=plant, scene_graph=None)
+            file_name=file_name, plant=plant)
         self.assertIsInstance(model_instance, ModelInstanceIndex)
 
         plant = MultibodyPlant(time_step=0.01)
         model_instance = AddModelFromSdfFile(
-            file_name=file_name, model_name="acrobot", plant=plant,
-            scene_graph=None)
+            file_name=file_name, model_name="acrobot", plant=plant)
 
     def test_multibody_tree_kinematics(self):
         file_name = FindResourceOrThrow(
@@ -259,15 +300,15 @@ class TestMultibodyTree(unittest.TestCase):
         x0 = np.concatenate([q0, v0])
 
         # The default state is all values set to zero.
-        x = tree.get_multibody_state_vector(context)
+        x = tree.GetPositionsAndVelocities(context)
         self.assertTrue(np.allclose(x, np.zeros(4)))
 
         # Write into a mutable reference to the state vector.
-        x_reff = tree.get_mutable_multibody_state_vector(context)
+        x_reff = tree.GetMutablePositionsAndVelocities(context)
         x_reff[:] = x0
 
         # Verify we did modify the state stored in context.
-        x = tree.get_multibody_state_vector(context)
+        x = tree.GetPositionsAndVelocities(context)
         self.assertTrue(np.allclose(x, x0))
 
     def test_model_instance_state_access(self):
@@ -285,11 +326,9 @@ class TestMultibodyTree(unittest.TestCase):
         plant = MultibodyPlant(timestep)
 
         iiwa_model = AddModelFromSdfFile(
-            file_name=iiwa_sdf_path, model_name='robot',
-            scene_graph=None, plant=plant)
+            file_name=iiwa_sdf_path, model_name='robot', plant=plant)
         gripper_model = AddModelFromSdfFile(
-            file_name=wsg50_sdf_path, model_name='gripper',
-            scene_graph=None, plant=plant)
+            file_name=wsg50_sdf_path, model_name='gripper', plant=plant)
 
         # Weld the base of arm and gripper to reduce the number of states.
         X_EeGripper = Isometry3.Identity()
@@ -330,22 +369,22 @@ class TestMultibodyTree(unittest.TestCase):
         x_plant_desired[nq:nq+7] = v_iiwa_desired
         x_plant_desired[nq+7:nq+nv] = v_gripper_desired
 
-        x_plant = tree.get_mutable_multibody_state_vector(context)
+        x_plant = tree.GetMutablePositionsAndVelocities(context)
         x_plant[:] = x_plant_desired
 
         # Get state from context.
-        x = tree.get_multibody_state_vector(context)
+        x = tree.GetPositionsAndVelocities(context)
         q = x[0:nq]
         v = x[nq:nq+nv]
 
         # Get positions and velocities of specific model instances
         # from the postion/velocity vector of the plant.
-        q_iiwa = tree.get_positions_from_array(iiwa_model, q)
-        q_gripper = tree.get_positions_from_array(gripper_model, q)
-        v_iiwa = tree.get_velocities_from_array(iiwa_model, v)
-        v_gripper = tree.get_velocities_from_array(gripper_model, v)
+        q_iiwa = tree.GetPositionsFromArray(iiwa_model, q)
+        q_gripper = tree.GetPositionsFromArray(gripper_model, q)
+        v_iiwa = tree.GetVelocitiesFromArray(iiwa_model, v)
+        v_gripper = tree.GetVelocitiesFromArray(gripper_model, v)
 
-        # Assert that the get_positions_from_array return
+        # Assert that the GetPositionsFromArray return
         # the desired values set earlier.
         self.assertTrue(np.allclose(q_iiwa_desired, q_iiwa))
         self.assertTrue(np.allclose(v_iiwa_desired, v_iiwa))
@@ -365,7 +404,7 @@ class TestMultibodyTree(unittest.TestCase):
         num_joints = 2
         plant = MultibodyPlant()
         instances = []
-        for i in xrange(num_joints + 1):
+        for i in range(num_joints + 1):
             instance = AddModelFromSdfFile(
                 instance_file, "instance_{}".format(i), plant)
             instances.append(instance)
@@ -397,3 +436,74 @@ class TestMultibodyTree(unittest.TestCase):
 
         for joint in joints:
             self._test_joint_api(joint)
+
+    def test_multibody_dynamics(self):
+        file_name = FindResourceOrThrow(
+            "drake/multibody/benchmarks/acrobot/acrobot.sdf")
+        plant = MultibodyPlant()
+        AddModelFromSdfFile(file_name, plant)
+        plant.Finalize()
+        context = plant.CreateDefaultContext()
+        tree = plant.tree()
+
+        H = tree.CalcMassMatrixViaInverseDynamics(context)
+        Cv = tree.CalcBiasTerm(context)
+
+        self.assertTrue(H.shape == (2, 2))
+        self.assertTrue(Cv.shape == (2, ))
+
+    def test_contact(self):
+        # PenetrationAsContactPair
+        point_pair = PenetrationAsPointPair()
+        self.assertTrue(isinstance(point_pair.id_A, GeometryId))
+        self.assertTrue(isinstance(point_pair.id_B, GeometryId))
+        self.assertTrue(point_pair.p_WCa.shape == (3,))
+        self.assertTrue(point_pair.p_WCb.shape == (3,))
+        self.assertTrue(isinstance(point_pair.depth, float))
+
+        # PointPairContactInfo
+        id_A = BodyIndex(0)
+        id_B = BodyIndex(1)
+        contact_info = PointPairContactInfo(
+            bodyA_index=id_A, bodyB_index=id_B,
+            f_Bc_W=np.array([0, 0, 1]), p_WC=np.array([0, 0, 0]),
+            separation_speed=0, slip_speed=0, point_pair=point_pair)
+        self.assertTrue(
+            isinstance(contact_info.bodyA_index(), BodyIndex))
+        self.assertTrue(
+            isinstance(contact_info.bodyB_index(), BodyIndex))
+        self.assertTrue(contact_info.contact_force().shape == (3,))
+        self.assertTrue(contact_info.contact_point().shape == (3,))
+        self.assertTrue(isinstance(contact_info.slip_speed(), float))
+
+        # ContactResults
+        contact_results = ContactResults()
+        contact_results.AddContactInfo(contact_info)
+        self.assertTrue(contact_results.num_contacts() == 1)
+        self.assertTrue(
+            isinstance(contact_results.contact_info(0), PointPairContactInfo))
+
+    def test_scene_graph_queries(self):
+        builder = DiagramBuilder()
+        plant, scene_graph = add_plant_and_scene_graph(builder)
+        AddModelFromSdfFile(
+            FindResourceOrThrow(
+                "drake/bindings/pydrake/multibody/test/two_bodies.sdf"),
+            plant, scene_graph)
+        plant.Finalize(scene_graph)
+        diagram = builder.Build()
+        # The model `two_bodies` has two (implicitly) floating bodies that are
+        # placed in the same position. The default state would be for these two
+        # bodies to be coincident, and thus collide.
+        context = diagram.CreateDefaultContext()
+        sg_context = diagram.GetMutableSubsystemContext(scene_graph, context)
+        query_object = scene_graph.get_query_output_port().Eval(sg_context)
+        # Implicitly require that this should be size 1.
+        point_pair, = query_object.ComputePointPairPenetration()
+        self.assertIsInstance(point_pair, PenetrationAsPointPair)
+        inspector = query_object.inspector()
+        bodies = {plant.GetBodyFromFrameId(inspector.GetFrameId(id_))
+                  for id_ in [point_pair.id_A, point_pair.id_B]}
+        self.assertSetEqual(
+            bodies,
+            {plant.GetBodyByName("body1"), plant.GetBodyByName("body2")})

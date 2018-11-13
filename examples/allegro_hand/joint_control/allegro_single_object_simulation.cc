@@ -64,6 +64,7 @@ void DoMain() {
 
   MultibodyPlant<double>& plant =
       *builder.AddSystem<MultibodyPlant>(FLAGS_max_time_step);
+  plant.RegisterAsSourceForSceneGraph(&scene_graph);
   std::string hand_model_path;
   if (FLAGS_use_right_hand)
     hand_model_path = FindResourceOrThrow(
@@ -76,10 +77,8 @@ void DoMain() {
 
   const std::string object_model_path = FindResourceOrThrow(
       "drake/examples/allegro_hand/joint_control/simple_mug.sdf");
-  multibody::parsing::AddModelFromSdfFile(hand_model_path, &plant,
-                                          &scene_graph);
-  multibody::parsing::AddModelFromSdfFile(object_model_path, &plant,
-                                          &scene_graph);
+  multibody::parsing::AddModelFromSdfFile(hand_model_path, &plant);
+  multibody::parsing::AddModelFromSdfFile(object_model_path, &plant);
 
   // Weld the hand to the world frame
   const auto& joint_hand_root = plant.GetBodyByName("hand_root");
@@ -93,7 +92,7 @@ void DoMain() {
         -9.81 * Eigen::Vector3d::UnitZ());
 
   // Finished building the plant
-  plant.Finalize(&scene_graph);
+  plant.Finalize();
 
   // Visualization
   geometry::ConnectDrakeVisualizer(&builder, scene_graph);
@@ -105,25 +104,16 @@ void DoMain() {
                   plant.get_geometry_query_input_port());
 
   // Publish contact results for visualization.
-  const auto& contact_results_to_lcm =
-      *builder.AddSystem<multibody::multibody_plant::ContactResultsToLcmSystem>(
-          plant);
-  const auto& contact_results_publisher = *builder.AddSystem(
-      systems::lcm::LcmPublisherSystem::Make<lcmt_contact_results_for_viz>(
-          "CONTACT_RESULTS", &lcm));
-  // Contact results to lcm msg.
-  builder.Connect(plant.get_contact_results_output_port(),
-                  contact_results_to_lcm.get_input_port(0));
-  builder.Connect(contact_results_to_lcm.get_output_port(0),
-                  contact_results_publisher.get_input_port());
+  multibody::multibody_plant::ConnectContactResultsToDrakeVisualizer(
+      &builder, plant, &lcm);
 
   // PID controller for position control of the finger joints
   VectorX<double> kp, kd, ki;
-  MatrixX<double> Px, Py;
-  GetControlPortMapping(plant, &Px, &Py);
+  MatrixX<double> Sx, Sy;
+  GetControlPortMapping(plant, &Sx, &Sy);
   SetPositionControlledGains(&kp, &ki, &kd);
   auto& hand_controller = *builder.AddSystem<
-      systems::controllers::PidController>(Px, Py, kp, ki, kd);
+      systems::controllers::PidController>(Sx, Sy, kp, ki, kd);
   builder.Connect(plant.get_continuous_state_output_port(),
                   hand_controller.get_input_port_estimated_state());
   builder.Connect(hand_controller.get_output_port_control(),
@@ -133,11 +123,11 @@ void DoMain() {
   // output the status of the hand finger joints related DOFs, and put them in
   // the pre-defined order that is easy for understanding.
   const auto& hand_status_converter =
-      *builder.AddSystem<systems::MatrixGain<double>>(Px);
+      *builder.AddSystem<systems::MatrixGain<double>>(Sx);
   builder.Connect(plant.get_continuous_state_output_port(),
                   hand_status_converter.get_input_port());
   const auto& hand_output_torque_converter =
-      *builder.AddSystem<systems::MatrixGain<double>>(Py);
+      *builder.AddSystem<systems::MatrixGain<double>>(Sy);
   builder.Connect(hand_controller.get_output_port_control(),
                   hand_output_torque_converter.get_input_port());
 
@@ -212,6 +202,8 @@ void DoMain() {
       VectorX<double>::Zero(plant.num_actuators()));
 
   simulator.StepTo(FLAGS_simulation_time);
+
+  lcm.StopReceiveThread();
 }
 
 }  // namespace

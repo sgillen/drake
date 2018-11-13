@@ -24,7 +24,6 @@
 #include "drake/systems/analysis/semi_explicit_euler_integrator.h"
 #include "drake/systems/analysis/simulator.h"
 #include "drake/systems/framework/diagram_builder.h"
-#include "drake/systems/lcm/lcm_publisher_system.h"
 #include "drake/systems/primitives/sine.h"
 
 namespace drake {
@@ -42,13 +41,12 @@ using drake::math::RollPitchYaw;
 using drake::math::RotationMatrix;
 using drake::multibody::Body;
 using drake::multibody::multibody_plant::CoulombFriction;
-using drake::multibody::multibody_plant::ContactResultsToLcmSystem;
+using drake::multibody::multibody_plant::ConnectContactResultsToDrakeVisualizer;
 using drake::multibody::multibody_plant::MultibodyPlant;
 using drake::multibody::parsing::AddModelFromSdfFile;
 using drake::multibody::PrismaticJoint;
 using drake::multibody::UniformGravityFieldElement;
 using drake::systems::ImplicitEulerIntegrator;
-using drake::systems::lcm::LcmPublisherSystem;
 using drake::systems::RungeKutta2Integrator;
 using drake::systems::RungeKutta3Integrator;
 using drake::systems::SemiExplicitEulerIntegrator;
@@ -125,13 +123,11 @@ const double kPadMinorRadius = 6e-3;   // 6 mm.
 // small spheres, approximates a torus attached to the finger.
 //
 // @param[in] plant the MultiBodyPlant in which to add the pads.
-// @param[in] scene_graph the associated SceneGraph.
 // @param[in] pad_offset the ring offset along the x-axis in the finger
 // coordinate frame, i.e., how far the ring protrudes from the center of the
 // finger.
 // @param[in] finger the Body representing the finger
 void AddGripperPads(MultibodyPlant<double>* plant,
-                    SceneGraph<double>* scene_graph,
                     const double pad_offset, const Body<double>& finger) {
   const int sample_count = FLAGS_ring_samples;
   const double sample_rotation = FLAGS_ring_orient * M_PI / 180.0;  // radians.
@@ -159,13 +155,11 @@ void AddGripperPads(MultibodyPlant<double>* plant,
         FLAGS_ring_static_friction, FLAGS_ring_static_friction);
 
     plant->RegisterCollisionGeometry(finger, X_FS, Sphere(kPadMinorRadius),
-                                     "collision" + std::to_string(i), friction,
-                                     scene_graph);
+                                     "collision" + std::to_string(i), friction);
 
     const geometry::VisualMaterial red(Vector4<double>(1.0, 0.0, 0.0, 1.0));
     plant->RegisterVisualGeometry(finger, X_FS, Sphere(kPadMinorRadius),
-                                  "visual" + std::to_string(i), red,
-                                  scene_graph);
+                                  "visual" + std::to_string(i), red);
   }
 }
 
@@ -181,13 +175,14 @@ int do_main() {
       FLAGS_time_stepping ?
       *builder.AddSystem<MultibodyPlant>(FLAGS_max_time_step) :
       *builder.AddSystem<MultibodyPlant>();
+  plant.RegisterAsSourceForSceneGraph(&scene_graph);
   std::string full_name =
       FindResourceOrThrow("drake/examples/simple_gripper/simple_gripper.sdf");
-  AddModelFromSdfFile(full_name, &plant, &scene_graph);
+  AddModelFromSdfFile(full_name, &plant);
 
   full_name =
       FindResourceOrThrow("drake/examples/simple_gripper/simple_mug.sdf");
-  AddModelFromSdfFile(full_name, &plant, &scene_graph);
+  AddModelFromSdfFile(full_name, &plant);
 
   // Obtain the "translate_joint" axis so that we know the direction of the
   // forced motions. We do not apply gravity if motions are forced in the
@@ -222,17 +217,17 @@ int do_main() {
     // We then fix everything to the right finger and leave the left finger
     // "free" with no applied forces (thus we see it not moving).
     const double finger_width = 0.007;  // From the visual in the SDF file.
-    AddGripperPads(&plant, &scene_graph, -pad_offset, right_finger);
-    AddGripperPads(&plant, &scene_graph,
+    AddGripperPads(&plant, -pad_offset, right_finger);
+    AddGripperPads(&plant,
                    -(FLAGS_grip_width + finger_width) + pad_offset,
                    right_finger);
   } else {
-    AddGripperPads(&plant, &scene_graph, -pad_offset, right_finger);
-    AddGripperPads(&plant, &scene_graph, +pad_offset, left_finger);
+    AddGripperPads(&plant, -pad_offset, right_finger);
+    AddGripperPads(&plant, +pad_offset, left_finger);
   }
 
   // Now the model is complete.
-  plant.Finalize(&scene_graph);
+  plant.Finalize();
 
   // Set how much penetration (in meters) we are willing to accept.
   plant.set_penetration_allowance(FLAGS_penetration_allowance);
@@ -273,16 +268,7 @@ int do_main() {
       scene_graph.get_source_pose_port(plant.get_source_id().value()));
 
   // Publish contact results for visualization.
-  const auto& contact_results_to_lcm =
-      *builder.AddSystem<ContactResultsToLcmSystem>(plant);
-  const auto& contact_results_publisher = *builder.AddSystem(
-      LcmPublisherSystem::Make<lcmt_contact_results_for_viz>(
-          "CONTACT_RESULTS", &lcm));
-  // Contact results to lcm msg.
-  builder.Connect(plant.get_contact_results_output_port(),
-                  contact_results_to_lcm.get_input_port(0));
-  builder.Connect(contact_results_to_lcm.get_output_port(0),
-                  contact_results_publisher.get_input_port());
+  ConnectContactResultsToDrakeVisualizer(&builder, plant, &lcm);
 
   // Sinusoidal force input. We want the gripper to follow a trajectory of the
   // form x(t) = X0 * sin(ω⋅t). By differentiating once, we can compute the
@@ -322,6 +308,7 @@ int do_main() {
   // Create a context for this system:
   std::unique_ptr<systems::Context<double>> diagram_context =
       diagram->CreateDefaultContext();
+  diagram_context->EnableCaching();
   diagram->SetDefaultContext(diagram_context.get());
   systems::Context<double>& plant_context =
       diagram->GetMutableSubsystemContext(plant, diagram_context.get());

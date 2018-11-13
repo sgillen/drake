@@ -127,6 +127,15 @@ class RigidBodyTree {
   }
 
   /**
+   * When @p val is true, diagnostics in compile() will be printed with
+   * drake::log()->info(). When false, drake::log()->debug() will be used
+   * instead.
+   */
+  void print_joint_welding_diagnostics(bool wants_to_print) {
+    print_weld_diasnostics_ = wants_to_print;
+  }
+
+  /**
    * Adds a new model instance to this `RigidBodyTree`. The model instance is
    * identified by a unique model instance ID, which is the return value of
    * this method.
@@ -371,7 +380,7 @@ class RigidBodyTree {
   /// Computes the pose `X_WB` of @p body's frame B in the world frame W.
   /// @param cache Reference to the KinematicsCache.
   /// @param body Reference to the RigidBody.
-  /// @retval `X_WB`
+  /// @retval X_WB
   drake::Isometry3<T> CalcBodyPoseInWorldFrame(
       const KinematicsCache<T>& cache, const RigidBody<T>& body) const {
     return CalcFramePoseInWorldFrame(
@@ -384,7 +393,7 @@ class RigidBodyTree {
   /// RigidBodyTree.
   /// @param cache Reference to the KinematicsCache.
   /// @param frame_F Reference to the RigidBodyFrame.
-  /// @retval `X_WF`
+  /// @retval X_WF
   drake::Isometry3<T> CalcFramePoseInWorldFrame(
       const KinematicsCache<T>& cache, const RigidBodyFrame<T>& frame_F) const {
     return CalcFramePoseInWorldFrame(cache, frame_F.get_rigid_body(),
@@ -396,7 +405,7 @@ class RigidBodyTree {
   /// @param cache Reference to the KinematicsCache.
   /// @param body Reference to the RigidBody.
   /// @param X_BF The pose of frame F in body frame B.
-  /// @retval `X_WF`
+  /// @retval X_WF
   drake::Isometry3<T> CalcFramePoseInWorldFrame(
       const KinematicsCache<T>& cache, const RigidBody<T>& body,
       const drake::Isometry3<T>& X_BF) const;
@@ -405,7 +414,7 @@ class RigidBodyTree {
   /// expressed in the world frame W.
   /// @param cache Reference to the KinematicsCache.
   /// @param body Reference to the RigidBody.
-  /// @retval `V_WB`
+  /// @retval V_WB
   drake::Vector6<T> CalcBodySpatialVelocityInWorldFrame(
       const KinematicsCache<T>& cache, const RigidBody<T>& body) const;
 
@@ -415,7 +424,7 @@ class RigidBodyTree {
   /// @p frame_F attaches to has to be owned by this RigidBodyTree.
   /// @param cache Reference to the KinematicsCache.
   /// @param frame_F Reference to the RigidBodyFrame.
-  /// @retval `V_WF`
+  /// @retval V_WF
   drake::Vector6<T> CalcFrameSpatialVelocityInWorldFrame(
       const KinematicsCache<T>& cache, const RigidBodyFrame<T>& frame_F) const {
     return CalcFrameSpatialVelocityInWorldFrame(
@@ -428,7 +437,7 @@ class RigidBodyTree {
   /// @param cache Reference to the KinematicsCache.
   /// @param body Reference to the RigidBody.
   /// @param X_BF The pose of frame F in body frame B.
-  /// @retval `V_WF`
+  /// @retval V_WF
   drake::Vector6<T> CalcFrameSpatialVelocityInWorldFrame(
       const KinematicsCache<T>& cache, const RigidBody<T>& body,
       const drake::Isometry3<T>& X_BF) const;
@@ -443,7 +452,7 @@ class RigidBodyTree {
   /// @param in_terms_of_qdot `true` for `J_WF` computed with respect to the
   /// time derivative of the generalized position such that
   /// `V_WF = J_WF * qdot`. `false` for `J_WF` computed with respect to `v`.
-  /// @retval `J_WF`
+  /// @retval J_WF
   drake::Matrix6X<T> CalcFrameSpatialVelocityJacobianInWorldFrame(
       const KinematicsCache<T>& cache, const RigidBody<T>& body,
       const drake::Isometry3<T>& X_BF,
@@ -476,7 +485,7 @@ class RigidBodyTree {
   /// @param in_terms_of_qdot `true` for `J_WF` computed with respect to the
   /// time derivative of the generalized position such that
   /// `V_WF = J_WF * qdot`. `false` for `J_WF` computed with respect to `v`.
-  /// @retval `J_WF`
+  /// @retval J_WF
   drake::Matrix6X<T> CalcFrameSpatialVelocityJacobianInWorldFrame(
       const KinematicsCache<T>& cache, const RigidBodyFrame<T>& frame_F,
       bool in_terms_of_qdot = false) const {
@@ -515,7 +524,7 @@ class RigidBodyTree {
   /// @param in_terms_of_qdot `true` for `J_WB` computed with respect to the
   /// time derivative of the generalized position such that
   /// `V_WB = J_WB * qdot`. `false` for `J_WB` computed with respect to `v`.
-  /// @retval `J_WB`
+  /// @retval J_WB
   drake::Matrix6X<T> CalcBodySpatialVelocityJacobianInWorldFrame(
       const KinematicsCache<T>& cache, const RigidBody<T>& body,
       bool in_terms_of_qdot = false) const {
@@ -1018,7 +1027,8 @@ class RigidBodyTree {
       RigidBody<T>& body, const std::string& group_name);
 
   /// Retrieve a `const` pointer to an element of the collision model.
-  /// Note: The use of Find (instead of get) and the use of CamelCase both
+  ///
+  /// @note The use of Find (instead of get) and the use of CamelCase both
   /// imply a potential runtime cost are carried over from the collision model
   /// accessor method.
   const drake::multibody::collision::Element* FindCollisionElement(
@@ -1033,16 +1043,15 @@ class RigidBodyTree {
       for (const auto& group : body_ptr->get_group_to_collision_ids_map()) {
         const std::string& group_name = group.first;
         if (test(group_name)) {
-          auto& ids = body_ptr->get_mutable_collision_element_ids();
-          for (const auto& id : group.second) {
-            ids.erase(std::find(ids.begin(), ids.end(), id));
+          names_of_groups_to_delete.push_back(group_name);
+          for (auto id : group.second) {
             collision_model_->RemoveElement(id);
           }
-          names_of_groups_to_delete.push_back(group_name);
         }
       }
       for (const auto& group_name : names_of_groups_to_delete) {
-        body_ptr->get_mutable_group_to_collision_ids_map().erase(group_name);
+        drake::internal::RigidBodyAttorney::
+            RemoveCollisionGroupAndElements(body_ptr.get(), group_name);
       }
     }
   }
@@ -1255,7 +1264,7 @@ class RigidBodyTree {
 
    @throws std::runtime_error based on the criteria of DiscardZeroGradient()
    only if @p throws_if_missing_gradient is true.
-   **/
+   */
   template <typename U>
   std::vector<drake::multibody::collision::PointPair<U>>
   ComputeMaximumDepthCollisionPoints(const KinematicsCache<U>& cache,
@@ -1693,6 +1702,10 @@ class RigidBodyTree {
   Eigen::MatrixXd B;  // the B matrix maps inputs into joint-space forces
 
  private:
+  // drake::log()->info() is used for prints if true, and
+  // drake::log()->debug() is used otherwise.
+  bool print_weld_diasnostics_{false};
+
   // The number of generalized position states in this rigid body tree.
   int num_positions_{};
 

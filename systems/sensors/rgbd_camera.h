@@ -23,8 +23,6 @@ namespace systems {
 namespace sensors {
 /// An RGB-D camera system that provides RGB, depth and label images using
 /// visual elements of RigidBodyTree.
-/// Its image resolution is fixed at VGA (640 x 480 pixels) for all three
-/// images. The default depth sensing range is from 0.5 m to 5.0 m.
 ///
 /// Let `W` be the world coordinate system. In addition to `W`, there are three
 /// more coordinate systems that are associated with an RgbdCamera. They are
@@ -46,46 +44,26 @@ namespace sensors {
 /// and `D`, see the class documentation of CameraInfo.
 ///
 /// Output image format:
-///   - The RGB image has four channels in the following order: red, green
-///     blue, alpha. Each channel is represented by a uint8_t.
 ///
-///   - The depth image has a depth channel represented by a float. The value
-///     stored in the depth channel holds *the Z value in `D`.*  Note that this
-///     is different from the range data used by laser range finders (like that
-///     provided by DepthSensor) in which the depth value represents the
-///     distance from the sensor origin to the object's surface.
+/// - The RGB image has four channels in the following order: red, green
+///   blue, alpha. Each channel is represented by a uint8_t.
 ///
-///   - The label image has single channel represented by a int16_t. The value
-///     stored in the channel holds a model ID which corresponds to an object
-///     in the scene. For the pixels corresponding to no body, namely the sky
-///     and the flat terrain, we assign Label::kNoBody and Label::kFlatTerrain,
-///     respectively.
+/// - The depth image has a depth channel represented by a float. The value
+///   stored in the depth channel holds *the Z value in `D`.*  Note that this
+///   is different from the range data used by laser range finders (like that
+///   provided by DepthSensor) in which the depth value represents the
+///   distance from the sensor origin to the object's surface.
+///
+/// - The label image has single channel represented by a int16_t. The value
+///   stored in the channel holds a model ID which corresponds to an object
+///   in the scene. For the pixels corresponding to no body, namely the sky
+///   and the flat terrain, we assign Label::kNoBody and Label::kFlatTerrain,
+///   respectively.
 ///
 /// @ingroup sensor_systems
 class RgbdCamera final : public LeafSystem<double> {
  public:
   DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(RgbdCamera)
-
-  /// Converts a depth image obtained from RgbdCamera to a point cloud.  If a
-  /// pixel in the depth image has NaN depth value, all the `(x, y, z)` values
-  /// in the converted point will be NaN.
-  /// Similarly, if a pixel has either InvalidDepth::kTooFar or
-  /// InvalidDepth::kTooClose, the converted point will be
-  /// InvalidDepth::kTooFar. Note that this matches the convention used by the
-  /// Point Cloud Library (PCL).
-  ///
-  /// @param[in] depth_image The input depth image obtained from RgbdCamera.
-  ///
-  /// @param[in] camera_info The input camera info which is used for conversion.
-  ///
-  /// @param[out] point_cloud The pointer of output point cloud.
-  // TODO(kunimatsu-tri) Use drake::perception::PointCloud instead of
-  // Eigen::Matrix3Xf and create new constants there instead of reusing
-  // InvalidDepth.
-  // TODO(kunimatsu-tri) Move this to drake::perception.
-  static void ConvertDepthImageToPointCloud(const ImageDepth32F& depth_image,
-                                            const CameraInfo& camera_info,
-                                            Eigen::Matrix3Xf* point_cloud);
 
   /// A constructor that uses the default RgbdRendererVTK renderer and
   /// defines `B` using Euler angles.
@@ -109,20 +87,20 @@ class RgbdCamera final : public LeafSystem<double> {
   /// defines the orientation component of `X_WB`.
   ///
   /// @param z_near The minimum depth distance RgbdCamera can measure.
-  /// The default is 0.5 meters.
   ///
   /// @param z_far The maximum depth distance RgbdCamera can measure.
-  /// The default is 5 meters.
   ///
   /// @param fov_y The RgbdCamera's vertical field of view.
-  /// The default is PI / 4.
   ///
   /// @param show_window A flag for showing a visible window.  If this is false,
   /// offscreen rendering is executed. This is useful for debugging purposes.
-  /// The default is true.
+  ///
+  /// @param width Width of output image.
+  ///
+  /// @param height Height of output image.
   ///
   /// @param flat_terrain A flag to add a flat terrain at z = 0 in the world
-  /// coordinate system.  The default is true.
+  /// coordinate system.
   ///
   /// @throws std::logic_error When the number of rigid bodies in the scene
   /// exceeds the maximum limit 1535.
@@ -158,20 +136,20 @@ class RgbdCamera final : public LeafSystem<double> {
   /// @param frame The frame in @tree to which this camera is attached.
   ///
   /// @param z_near The minimum depth distance RgbdCamera can measure.
-  /// The default is 0.5 meters.
   ///
   /// @param z_far The maximum depth distance RgbdCamera can measure.
-  /// The default is 5 meters.
   ///
   /// @param fov_y The RgbdCamera's vertical field of view.
-  /// The default is PI / 4.
   ///
   /// @param show_window A flag for showing a visible window.  If this is false,
   /// offscreen rendering is executed. This is useful for debugging purposes.
-  /// The default is true.
+  ///
+  /// @param width Width of output image.
+  ///
+  /// @param height Height of output image.
   ///
   /// @param flat_terrain A flag to add a flat terrain at z = 0 in the world
-  /// coordinate system.  The default is true.
+  /// coordinate system.
   ///
   /// @throws std::logic_error When the number of rigid bodies in the scene
   /// exceeds the maximum limit 1535.
@@ -212,6 +190,9 @@ class RgbdCamera final : public LeafSystem<double> {
   /// Camera configuration parameters are obtained from the RenderingConfig
   /// settings in the renderer. The renderer will be owned by this camera.
   ///
+  /// @param flat_terrain A flag to add a flat terrain at z = 0 in the world
+  /// coordinate system.
+  ///
   /// @throws std::logic_error When the number of rigid bodies in the scene
   /// exceeds the maximum limit 1535.
   RgbdCamera(const std::string& name,
@@ -241,6 +222,9 @@ class RgbdCamera final : public LeafSystem<double> {
   /// @param renderer The rendering backend to render images for the camera.
   /// Camera configuration parameters are obtained from the RenderingConfig
   /// settings in the renderer. The renderer will be owned by this camera.
+  ///
+  /// @param flat_terrain A flag to add a flat terrain at z = 0 in the world
+  /// coordinate system.
   ///
   /// @throws std::logic_error When the number of rigid bodies in the scene
   /// exceeds the maximum limit 1535.

@@ -25,6 +25,9 @@ namespace math {
 /// relates right-handed orthogonal unit vectors Ax, Ay, Az fixed in frame A
 /// to right-handed orthogonal unit vectors Bx, By, Bz fixed in frame B.
 /// The monogram notation for the rotation matrix relating A to B is `R_AB`.
+/// An example that gives context to this rotation matrix is `v_A = R_AB * v_B`,
+/// where `v_B` denotes an arbitrary vector v expressed in terms of Bx, By, Bz
+/// and `v_A` denotes vector v expressed in terms of Ax, Ay, Az.
 /// See @ref multibody_quantities for monogram notation for dynamics.
 /// See @ref orientation_discussion "a discussion on rotation matrices".
 ///
@@ -45,6 +48,7 @@ namespace math {
 /// @tparam T The underlying scalar type. Must be a valid Eigen scalar.
 ///
 /// Instantiated templates for the following kinds of T's are provided:
+///
 /// - double
 /// - AutoDiffXd
 /// - symbolic::Expression
@@ -55,12 +59,12 @@ class RotationMatrix {
 
   /// Constructs a 3x3 identity %RotationMatrix -- which corresponds to
   /// aligning two frames (so that unit vectors Ax = Bx, Ay = By, Az = Bz).
-  RotationMatrix() {}
+  RotationMatrix() : R_AB_(Matrix3<T>::Identity()) {}
 
   /// Constructs a %RotationMatrix from a Matrix3.
   /// @param[in] R an allegedly valid rotation matrix.
   /// @throws std::logic_error in debug builds if R fails IsValid(R).
-  explicit RotationMatrix(const Matrix3<T>& R) : R_AB_() { set(R); }
+  explicit RotationMatrix(const Matrix3<T>& R) { set(R); }
 
   /// Constructs a %RotationMatrix from an Eigen::Quaternion.
   /// @param[in] quaternion a non-zero, finite quaternion which may or may not
@@ -80,8 +84,7 @@ class RotationMatrix {
     // Extra cost for two_over_norm_squared =  4 multiplies,  3 adds, 1 divide.
     // Extra cost if normalized = 4 multiplies, 3 adds, 1 sqrt, 1 divide.
     const T two_over_norm_squared = T(2) / quaternion.squaredNorm();
-    R_AB_ = QuaternionToRotationMatrix(quaternion, two_over_norm_squared);
-    DRAKE_ASSERT_VOID(ThrowIfNotValid(R_AB_));
+    set(QuaternionToRotationMatrix(quaternion, two_over_norm_squared));
   }
 
   /// Constructs a %RotationMatrix from an Eigen::AngleAxis.
@@ -101,10 +104,10 @@ class RotationMatrix {
     const Vector3<T>& lambda = theta_lambda.axis();
     const T norm = lambda.norm();
     const T& theta = theta_lambda.angle();
-    R_AB_ = Eigen::AngleAxis<T>(theta, lambda / norm).toRotationMatrix();
-    DRAKE_ASSERT_VOID(ThrowIfNotValid(R_AB_));
+    set(Eigen::AngleAxis<T>(theta, lambda / norm).toRotationMatrix());
   }
 
+  // TODO(@mitiguy) Add Sherm/Goldstein's way to visualize rotation sequences.
   /// Constructs a %RotationMatrix from an %RollPitchYaw.  In other words,
   /// makes the %RotationMatrix for a Space-fixed (extrinsic) X-Y-Z rotation by
   /// "roll-pitch-yaw" angles `[r, p, y]`, which is equivalent to a Body-fixed
@@ -121,7 +124,7 @@ class RotationMatrix {
   ///        ⎣    0       0   1⎦   ⎣-sin(p)  0  cos(p)⎦   ⎣0  sin(r)   cos(r)⎦
   ///      =       R_AB          *        R_BC          *        R_CD
   /// ```
-  /// Note: In this discussion, A is the Space frame and D is the Body frame.
+  /// @note In this discussion, A is the Space frame and D is the Body frame.
   /// One way to visualize this rotation sequence is by introducing intermediate
   /// frames B and C (useful constructs to understand this rotation sequence).
   /// Initially, the frames are aligned so `Di = Ci = Bi = Ai (i = x, y, z)`.
@@ -134,7 +137,6 @@ class RotationMatrix {
   /// @li 3rd rotation R_AB: Frames D, C, B (collectively -- as if welded)
   /// rotate relative to frame A by a roll angle `y` about `Bz = Az`.
   /// Note: B and A are no longer aligned.
-  /// TODO(@mitiguy) Add Sherm/Goldstein's way to visualize rotation sequences.
   explicit RotationMatrix(const RollPitchYaw<T>& rpy) {
     const T& r = rpy.roll_angle();
     const T& p = rpy.pitch_angle();
@@ -153,9 +155,49 @@ class RotationMatrix {
     const T Rzx = -s1;
     const T Rzy = c1 * s0;
     const T Rzz = c1 * c0;
-    R_AB_.row(0) << Rxx, Rxy, Rxz;
-    R_AB_.row(1) << Ryx, Ryy, Ryz;
-    R_AB_.row(2) << Rzx, Rzy, Rzz;
+    SetFromOrthonormalRows(Vector3<T>(Rxx, Rxy, Rxz),
+                           Vector3<T>(Ryx, Ryy, Ryz),
+                           Vector3<T>(Rzx, Rzy, Rzz));
+  }
+
+  /// (Advanced) Makes the %RotationMatrix `R_AB` from right-handed orthogonal
+  /// unit vectors `Bx`, `By`, `Bz` so the columns of `R_AB` are `[Bx, By, Bz]`.
+  /// @param[in] Bx first unit vector in right-handed orthogonal set.
+  /// @param[in] By second unit vector in right-handed orthogonal set.
+  /// @param[in] Bz third unit vector in right-handed orthogonal set.
+  /// @throws std::logic_error in debug builds if `R_AB` fails IsValid(R_AB).
+  /// @note In release builds, the caller can subsequently test if `R_AB` is,
+  /// in fact, a valid %RotationMatrix by calling `R_AB.IsValid()`.
+  /// @note The rotation matrix `R_AB` relates two sets of right-handed
+  /// orthogonal unit vectors, namely Ax, Ay, Az and Bx, By, Bz.
+  /// The rows of `R_AB` are Ax, Ay, Az expressed in frame B (i.e.,`Ax_B`,
+  /// `Ay_B`, `Az_B`).  The columns of `R_AB` are Bx, By, Bz expressed in
+  /// frame A (i.e., `Bx_A`, `By_A`, `Bz_A`).
+  static RotationMatrix<T> MakeFromOrthonormalColumns(
+      const Vector3<T>& Bx, const Vector3<T>& By, const Vector3<T>& Bz) {
+    RotationMatrix<T> R(DoNotInitializeMemberFields{});
+    R.SetFromOrthonormalColumns(Bx, By, Bz);
+    return R;
+  }
+
+  /// (Advanced) Makes the %RotationMatrix `R_AB` from right-handed orthogonal
+  /// unit vectors `Ax`, `Ay`, `Az` so the rows of `R_AB` are `[Ax, Ay, Az]`.
+  /// @param[in] Ax first unit vector in right-handed orthogonal set.
+  /// @param[in] Ay second unit vector in right-handed orthogonal set.
+  /// @param[in] Az third unit vector in right-handed orthogonal set.
+  /// @throws std::logic_error in debug builds if `R_AB` fails IsValid(R_AB).
+  /// @note In release builds, the caller can subsequently test if `R_AB` is,
+  /// in fact, a valid %RotationMatrix by calling `R_AB.IsValid()`.
+  /// @note The rotation matrix `R_AB` relates two sets of right-handed
+  /// orthogonal unit vectors, namely Ax, Ay, Az and Bx, By, Bz.
+  /// The rows of `R_AB` are Ax, Ay, Az expressed in frame B (i.e.,`Ax_B`,
+  /// `Ay_B`, `Az_B`).  The columns of `R_AB` are Bx, By, Bz expressed in
+  /// frame A (i.e., `Bx_A`, `By_A`, `Bz_A`).
+  static RotationMatrix<T> MakeFromOrthonormalRows(
+      const Vector3<T>& Ax, const Vector3<T>& Ay, const Vector3<T>& Az) {
+    RotationMatrix<T> R(DoNotInitializeMemberFields{});
+    R.SetFromOrthonormalRows(Ax, Ay, Az);
+    return R;
   }
 
   /// Makes the %RotationMatrix `R_AB` associated with rotating a frame B
@@ -545,6 +587,10 @@ class RotationMatrix {
   static constexpr double kInternalToleranceForOrthonormality_{
       128 * std::numeric_limits<double>::epsilon() };
 
+  // Constructs a RotationMatrix without initializing the underlying 3x3 matrix.
+  struct DoNotInitializeMemberFields{};
+  explicit RotationMatrix(DoNotInitializeMemberFields) {}
+
   // Constructs a %RotationMatrix from a Matrix3.  No check is performed to test
   // whether or not the parameter R is a valid rotation matrix.
   // @param[in] R an allegedly valid rotation matrix.
@@ -556,6 +602,41 @@ class RotationMatrix {
   // test whether or not the parameter R is a valid rotation matrix.
   // @param[in] R an allegedly valid rotation matrix.
   void SetUnchecked(const Matrix3<T>& R) { R_AB_ = R; }
+
+  // Sets `this` %RotationMatrix `R_AB` from right-handed orthogonal unit
+  // vectors `Bx`, `By`, `Bz` so that the columns of `this` are `[Bx, By, Bz]`.
+  // @param[in] Bx first unit vector in right-handed orthogonal basis.
+  // @param[in] By second unit vector in right-handed orthogonal basis.
+  // @param[in] Bz third unit vector in right-handed orthogonal basis.
+  // @throws std::logic_error in debug builds if `R_AB` fails IsValid(R_AB).
+  // @note The rotation matrix `R_AB` relates two sets of right-handed
+  // orthogonal unit vectors, namely `Ax`, `Ay`, `Az` and `Bx`, `By`, `Bz`.
+  // The rows of `R_AB` are `Ax`, `Ay`, `Az` whereas the
+  // columns of `R_AB` are `Bx`, `By`, `Bz`.
+  void SetFromOrthonormalColumns(const Vector3<T>& Bx,
+                                 const Vector3<T>& By,
+                                 const Vector3<T>& Bz) {
+    R_AB_.col(0) = Bx;
+    R_AB_.col(1) = By;
+    R_AB_.col(2) = Bz;
+    DRAKE_ASSERT_VOID(ThrowIfNotValid(R_AB_));
+  }
+
+  // Sets `this` %RotationMatrix `R_AB` from right-handed orthogonal unit
+  // vectors `Ax`, `Ay`, `Az` so that the rows of `this` are `[Ax, Ay, Az]`.
+  // @param[in] Ax first unit vector in right-handed orthogonal basis.
+  // @param[in] Ay second unit vector in right-handed orthogonal basis.
+  // @param[in] Az third unit vector in right-handed orthogonal basis.
+  // @throws std::logic_error in debug builds if `R_AB` fails R_AB.IsValid().
+  // @see SetFromOrthonormalColumns() for additional notes.
+  void SetFromOrthonormalRows(const Vector3<T>& Ax,
+                              const Vector3<T>& Ay,
+                              const Vector3<T>& Az) {
+    R_AB_.row(0) = Ax;
+    R_AB_.row(1) = Ay;
+    R_AB_.row(2) = Az;
+    DRAKE_ASSERT_VOID(ThrowIfNotValid(R_AB_));
+  }
 
   // Computes the infinity norm of R - `other` (i.e., the maximum absolute
   // value of the difference between the elements of R and `other`).
@@ -694,8 +775,8 @@ class RotationMatrix {
   }
 
   // Stores the underlying rotation matrix relating two frames (e.g. A and B).
-  // The default initialization is the identity matrix.
-  Matrix3<T> R_AB_{Matrix3<T>::Identity()};
+  // For speed, `R_AB_` is uninitialized (public constructors set its value).
+  Matrix3<T> R_AB_;
 };
 
 /// Abbreviation (alias/typedef) for a RotationMatrix double scalar type.
@@ -712,8 +793,8 @@ using RotationMatrixd = RotationMatrix<double>;
 /// @param[in] angle_lb the lower bound of the rotation angle θ.
 /// @param[in] angle_ub the upper bound of the rotation angle θ.
 /// @return Rotation angle θ of the projected matrix, angle_lb <= θ <= angle_ub
-/// @throws exception std::runtime_error if M is not a 3 x 3 matrix or if
-///                   axis is the zero vector or if angle_lb > angle_ub.
+/// @throws std::runtime_error if M is not a 3 x 3 matrix or if
+///         axis is the zero vector or if angle_lb > angle_ub.
 /// @note This function is useful for reconstructing a rotation matrix for a
 /// revolute joint with joint limits.
 /// @note This can be formulated as an optimization problem
@@ -811,20 +892,6 @@ double ProjectMatToRotMatWithAxis(const Eigen::MatrixBase<Derived>& M,
   return theta;
 }
 
-// TODO(mitiguy) Delete this code after:
-// * All call sites removed, and
-// * code has subsequently been marked deprecated in favor of
-//   RotationMatrix(RollPitchYaw(rpy)). as per issue #8323.
-template <typename Derived>
-Matrix3<typename Derived::Scalar> rpy2rotmat(
-    const Eigen::MatrixBase<Derived>& rpy) {
-  EIGEN_STATIC_ASSERT_VECTOR_SPECIFIC_SIZE(Eigen::MatrixBase<Derived>, 3);
-  using Scalar = typename Derived::Scalar;
-  const RollPitchYaw<Scalar> roll_pitch_yaw(rpy(0), rpy(1), rpy(2));
-  const RotationMatrix<Scalar> R(roll_pitch_yaw);
-  return R.matrix();
-}
-
 // @internal Initially, this code was in rotation_matrix.cc.  After
 // RotationMatrix was instantiated on symbolic expression, there was a linker
 // error that arose, but only during release builds and when tests in
@@ -861,31 +928,17 @@ RotationMatrix<T>::ThrowIfNotValid(const Matrix3<S>& R) {
   }
 }
 
-/// (Deprecated), use @ref math::RotationMatrix::MakeXRotation().
-// TODO(mitiguy) Delete this code after October 6, 2018.
-template <typename T>
-DRAKE_DEPRECATED("This code is deprecated per issue #8323. "
-                     "Use math::RotationMatrix::MakeXRotation(theta).")
-Matrix3<T> XRotation(const T& theta) {
-  return drake::math::RotationMatrix<T>::MakeXRotation(theta).matrix();
-}
-
-/// (Deprecated), use @ref math::RotationMatrix::MakeYRotation().
-// TODO(mitiguy) Delete this code after October 6, 2018.
-template <typename T>
-DRAKE_DEPRECATED("This code is deprecated per issue #8323. "
-                     "Use math::RotationMatrix::MakeYRotation(theta).")
-Matrix3<T> YRotation(const T& theta) {
-  return drake::math::RotationMatrix<T>::MakeYRotation(theta).matrix();
-}
-
-/// (Deprecated), use @ref math::RotationMatrix::MakeZRotation().
-// TODO(mitiguy) Delete this code after October 6, 2018.
-template <typename T>
-DRAKE_DEPRECATED("This code is deprecated per issue #8323. "
-                     "Use math::RotationMatrix::MakeZRotation(theta).")
-Matrix3<T> ZRotation(const T& theta) {
-  return drake::math::RotationMatrix<T>::MakeZRotation(theta).matrix();
+// TODO(mitiguy) Delete this deprecated code after February 5, 2019.
+template <typename Derived>
+DRAKE_DEPRECATED("Use  RotationMatrix(RollPitchYaw(rpy)) as per issue #8323. "
+                 "Code will be deleted after February 5, 2019.")
+Matrix3<typename Derived::Scalar> rpy2rotmat(
+    const Eigen::MatrixBase<Derived>& rpy) {
+  EIGEN_STATIC_ASSERT_VECTOR_SPECIFIC_SIZE(Eigen::MatrixBase<Derived>, 3);
+  using Scalar = typename Derived::Scalar;
+  const RollPitchYaw<Scalar> roll_pitch_yaw(rpy(0), rpy(1), rpy(2));
+  const RotationMatrix<Scalar> R(roll_pitch_yaw);
+  return R.matrix();
 }
 
 }  // namespace math

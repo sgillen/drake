@@ -101,6 +101,7 @@ drake_cc_library(
         "model_instance.cc",
         "multibody_forces.cc",
         "multibody_tree.cc",
+        "multibody_tree_system.cc",
         "prismatic_mobilizer.cc",
         "quaternion_floating_mobilizer.cc",
         "revolute_mobilizer.cc",
@@ -129,6 +130,7 @@ drake_cc_library(
         "model_instance.h",
         "multibody_forces.h",
         "multibody_tree.h",
+        "multibody_tree_system.h",
         "prismatic_mobilizer.h",
         "quaternion_floating_mobilizer.h",
         "revolute_mobilizer.h",
@@ -148,6 +150,7 @@ drake_cc_library(
         "//common:autodiff",
         "//common:nice_type_name",
         "//math:geometric_transform",
+        "//systems/framework:leaf_system",
     ],
 )
 
@@ -160,6 +163,7 @@ drake_cc_library(
         "//common:drake_bool",
         "//common:essential",
         "//common:extract_double",
+        "//math:geometric_transform",
     ],
 )
 
@@ -173,6 +177,7 @@ drake_cc_library(
         "//common:default_scalars",
         "//common:drake_bool",
         "//common:essential",
+        "//math:geometric_transform",
         "//math:vector3_util",
         "//multibody/multibody_tree/math:spatial_algebra",
     ],
@@ -186,6 +191,7 @@ drake_cc_library(
         ":rotational_inertia",
         "//common:default_scalars",
         "//common:essential",
+        "//math:geometric_transform",
     ],
 )
 
@@ -326,6 +332,8 @@ drake_cc_googletest(
     deps = [
         ":rotational_inertia",
         "//common:autodiff",
+        "//common/test_utilities:eigen_matrix_compare",
+        "//math:geometric_transform",
         "//math:gradient",
     ],
 )
@@ -334,6 +342,7 @@ drake_cc_googletest(
     name = "spatial_inertia_test",
     deps = [
         ":spatial_inertia",
+        "//math:geometric_transform",
         "//math:gradient",
     ],
 )
@@ -342,6 +351,7 @@ drake_cc_googletest(
     name = "unit_inertia_test",
     deps = [
         ":unit_inertia",
+        "//math:geometric_transform",
         "//math:gradient",
     ],
 )

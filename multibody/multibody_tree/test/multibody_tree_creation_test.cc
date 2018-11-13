@@ -32,7 +32,6 @@ class JointTester {
 
 namespace {
 
-using Eigen::Isometry3d;
 using Eigen::Vector3d;
 using std::make_unique;
 using std::set;
@@ -268,7 +267,7 @@ class TreeTopologyTests : public ::testing::Test {
       const auto* joint = &model_->AddJoint<RevoluteJoint>(
           "FooJoint",
           inboard, {}, /* Model does not create frame F, and makes F = P.  */
-          outboard, Isometry3d::Identity(), /* Model does creates frame M. */
+          outboard, Eigen::Isometry3d::Identity(), /* Model creates frame M. */
           Vector3d::UnitZ());
       joints_.push_back(joint);
     } else {
@@ -631,7 +630,7 @@ GTEST_TEST(WeldedBodies, CreateListOfWeldedBodies) {
       [&model](const std::string& name,
                const Body<double>& parent, const Body<double>& child) {
         model.AddJoint<WeldJoint>(
-            name, parent, {}, child, {}, Isometry3d::Identity());
+            name, parent, {}, child, {}, Eigen::Isometry3d::Identity());
       };
 
   // Start building the test model.
@@ -710,6 +709,20 @@ GTEST_TEST(WeldedBodies, CreateListOfWeldedBodies) {
 
   // Verify the computed list has the expected entries.
   EXPECT_EQ(welded_bodies_set, expected_welded_bodies);
+
+  // All bodies in welded_bodies[0] are, by definition, anchored to the world.
+  // We verify this with IsBodyAnchored().
+  for (size_t welded_body_index = 0;
+       welded_body_index < welded_bodies.size(); ++welded_body_index) {
+    const std::set<BodyIndex>& welded_body = welded_bodies[welded_body_index];
+    // All bodies in welded_bodies[0] are, by definition, anchored to the world.
+    // We verify this with IsBodyAnchored().
+    for (BodyIndex body_index : welded_body) {
+        EXPECT_EQ(
+            topology.IsBodyAnchored(body_index),
+            welded_body_index == 0 /* 'true' for anchored bodies. */);
+    }
+  }
 }
 
 }  // namespace
