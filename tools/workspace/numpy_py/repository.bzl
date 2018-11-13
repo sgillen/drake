@@ -70,7 +70,8 @@ def _impl(repository_ctx):
     if os_result.is_macos:
         # Add no-op BUILD file to use Homebrew version of NumPy.
         repository_ctx.symlink(
-            Label("@drake//tools/workspace/numpy_py:package.noop.BUILD.bazel"),
+            Label("@drake//tools/workspace/numpy_py:" +
+                  "package.system.BUILD.bazel"),
             "BUILD.bazel",
         )
     elif os_result.is_ubuntu:
