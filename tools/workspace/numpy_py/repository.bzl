@@ -6,7 +6,10 @@ Provides NumPy from a wheel file.
 
 Example:
     WORKSPACE:
-        load("@drake//tools/workspace/numpy_py:repo.bzl", "numpy_py_repository")
+        load(
+            "@drake//tools/workspace/numpy_py:repo.bzl",
+            "numpy_py_repository",
+        )
         numpy_py_repository(
             name = "numpy_py",
             mirrors = mirrors,
