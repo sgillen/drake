@@ -162,7 +162,7 @@ class DifferentialIK(LeafSystem):
     def ForwardKinematics(self, q):
         x = self.robot.tree().GetMutablePositionsAndVelocities(
             self.robot_context)
-        x[:robot.num_positions()] = q
+        x[:self.robot.num_positions()] = q
         return self.robot.tree().EvalBodyPoseInWorld(
             self.robot_context, self.frame_E.body())
 
@@ -199,117 +199,122 @@ class DifferentialIK(LeafSystem):
         output.SetFromVector(context.get_discrete_state_vector().get_value())
 
 
-parser = argparse.ArgumentParser(description=__doc__)
-parser.add_argument(
-    "--target_realtime_rate", type=float, default=1.0,
-    help="Desired rate relative to real time.  See documentation for "
-         "Simulator::set_target_realtime_rate() for details.")
-parser.add_argument(
-    "--duration", type=float, default=np.inf,
-    help="Desired duration of the simulation in seconds.")
-parser.add_argument(
-    "--hardware", action='store_true',
-    help="Use the ManipulationStationHardwareInterface instead of an "
-         "in-process simulation.")
-parser.add_argument(
-    "--test", action='store_true',
-    help="Disable opening the gui window for testing.")
-MeshcatVisualizer.add_argparse_argument(parser)
-args = parser.parse_args()
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--target_realtime_rate", type=float, default=1.0,
+        help="Desired rate relative to real time.  See documentation for "
+             "Simulator::set_target_realtime_rate() for details.")
+    parser.add_argument(
+        "--duration", type=float, default=np.inf,
+        help="Desired duration of the simulation in seconds.")
+    parser.add_argument(
+        "--hardware", action='store_true',
+        help="Use the ManipulationStationHardwareInterface instead of an "
+             "in-process simulation.")
+    parser.add_argument(
+        "--test", action='store_true',
+        help="Disable opening the gui window for testing.")
+    MeshcatVisualizer.add_argparse_argument(parser)
+    args = parser.parse_args()
 
-builder = DiagramBuilder()
+    builder = DiagramBuilder()
 
-if args.hardware:
-    station = builder.AddSystem(ManipulationStationHardwareInterface())
-    station.Connect(wait_for_cameras=False)
-else:
-    station = builder.AddSystem(ManipulationStation())
-    station.AddCupboard()
-    object = AddModelFromSdfFile(FindResourceOrThrow(
-        "drake/examples/manipulation_station/models/061_foam_brick.sdf"),
-        "object", station.get_mutable_multibody_plant(),
-        station.get_mutable_scene_graph())
-    station.Finalize()
+    if args.hardware:
+        station = builder.AddSystem(ManipulationStationHardwareInterface())
+        station.Connect(wait_for_cameras=False)
+    else:
+        station = builder.AddSystem(ManipulationStation())
+        station.AddCupboard()
+        object = AddModelFromSdfFile(FindResourceOrThrow(
+            "drake/examples/manipulation_station/models/061_foam_brick.sdf"),
+            "object", station.get_mutable_multibody_plant(),
+            station.get_mutable_scene_graph())
+        station.Finalize()
 
-    ConnectDrakeVisualizer(builder, station.get_scene_graph(),
-                           station.GetOutputPort("pose_bundle"))
-    if args.meshcat:
-        meshcat = builder.AddSystem(MeshcatVisualizer(
-            station.get_scene_graph(), zmq_url=args.meshcat))
-        builder.Connect(station.GetOutputPort("pose_bundle"),
-                        meshcat.get_input_port(0))
+        ConnectDrakeVisualizer(builder, station.get_scene_graph(),
+                               station.GetOutputPort("pose_bundle"))
+        if args.meshcat:
+            meshcat = builder.AddSystem(MeshcatVisualizer(
+                station.get_scene_graph(), zmq_url=args.meshcat))
+            builder.Connect(station.GetOutputPort("pose_bundle"),
+                            meshcat.get_input_port(0))
 
-robot = station.get_controller_plant()
-params = DifferentialInverseKinematicsParameters(robot.num_positions(),
-                                                 robot.num_velocities())
+    robot = station.get_controller_plant()
+    params = DifferentialInverseKinematicsParameters(robot.num_positions(),
+                                                     robot.num_velocities())
 
-time_step = 0.005
-params.set_timestep(time_step)
-# True velocity limits for the IIWA14 (in rad, rounded down to the first
-# decimal)
-iiwa14_velocity_limits = np.array([1.4, 1.4, 1.7, 1.3, 2.2, 2.3, 2.3])
-# Stay within a small fraction of those limits for this teleop demo.
-params.set_joint_velocity_limits((-.15*iiwa14_velocity_limits,
-                                  .15*iiwa14_velocity_limits))
+    time_step = 0.005
+    params.set_timestep(time_step)
+    # True velocity limits for the IIWA14 (in rad, rounded down to the first
+    # decimal)
+    iiwa14_velocity_limits = np.array([1.4, 1.4, 1.7, 1.3, 2.2, 2.3, 2.3])
+    # Stay within a small fraction of those limits for this teleop demo.
+    params.set_joint_velocity_limits((-.15*iiwa14_velocity_limits,
+                                      .15*iiwa14_velocity_limits))
 
-differential_ik = builder.AddSystem(DifferentialIK(
-    robot, robot.GetFrameByName("iiwa_link_7"), params, time_step))
+    differential_ik = builder.AddSystem(DifferentialIK(
+        robot, robot.GetFrameByName("iiwa_link_7"), params, time_step))
 
-builder.Connect(differential_ik.GetOutputPort("joint_position_desired"),
-                station.GetInputPort("iiwa_position"))
+    builder.Connect(differential_ik.GetOutputPort("joint_position_desired"),
+                    station.GetInputPort("iiwa_position"))
 
-teleop = builder.AddSystem(EndEffectorTeleop())
-if args.test:
-    teleop.window.withdraw()  # Don't display the window when testing.
+    teleop = builder.AddSystem(EndEffectorTeleop())
+    if args.test:
+        teleop.window.withdraw()  # Don't display the window when testing.
 
-builder.Connect(teleop.get_output_port(0),
-                differential_ik.GetInputPort("X_WE_desired"))
+    builder.Connect(teleop.get_output_port(0),
+                    differential_ik.GetInputPort("X_WE_desired"))
 
-wsg_buttons = builder.AddSystem(SchunkWsgButtons(teleop.window))
-builder.Connect(wsg_buttons.GetOutputPort("position"), station.GetInputPort(
-    "wsg_position"))
-builder.Connect(wsg_buttons.GetOutputPort("force_limit"),
-                station.GetInputPort("wsg_force_limit"))
+    wsg_buttons = builder.AddSystem(SchunkWsgButtons(teleop.window))
+    builder.Connect(wsg_buttons.GetOutputPort("position"), station.GetInputPort(
+        "wsg_position"))
+    builder.Connect(wsg_buttons.GetOutputPort("force_limit"),
+                    station.GetInputPort("wsg_force_limit"))
 
-diagram = builder.Build()
-simulator = Simulator(diagram)
+    diagram = builder.Build()
+    simulator = Simulator(diagram)
 
-station_context = diagram.GetMutableSubsystemContext(
-    station, simulator.get_mutable_context())
+    station_context = diagram.GetMutableSubsystemContext(
+        station, simulator.get_mutable_context())
 
-station_context.FixInputPort(station.GetInputPort(
-    "iiwa_feedforward_torque").get_index(), np.zeros(7))
+    station_context.FixInputPort(station.GetInputPort(
+        "iiwa_feedforward_torque").get_index(), np.zeros(7))
 
-if not args.hardware:
-    # Set the initial positions of the IIWA to a comfortable configuration
-    # inside the workspace of the station.
-    q0 = [0, 0.6, 0, -1.75, 0, 1.0, 0]
-    station.SetIiwaPosition(q0, station_context)
-    station.SetIiwaVelocity(np.zeros(7), station_context)
+    if not args.hardware:
+        # Set the initial positions of the IIWA to a comfortable configuration
+        # inside the workspace of the station.
+        q0 = [0, 0.6, 0, -1.75, 0, 1.0, 0]
+        station.SetIiwaPosition(q0, station_context)
+        station.SetIiwaVelocity(np.zeros(7), station_context)
 
-    # Set the initial configuration of the gripper to open.
-    station.SetWsgPosition(0.1, station_context)
-    station.SetWsgVelocity(0, station_context)
+        # Set the initial configuration of the gripper to open.
+        station.SetWsgPosition(0.1, station_context)
+        station.SetWsgVelocity(0, station_context)
 
-    # Place the object in the middle of the workspace.
-    X_WObject = Isometry3.Identity()
-    X_WObject.set_translation([.6, 0, 0])
-    station.get_multibody_plant().tree().SetFreeBodyPoseOrThrow(
-        station.get_multibody_plant().GetBodyByName("base_link",
-                                                    object),
-        X_WObject, station.GetMutableSubsystemContext(
-            station.get_multibody_plant(),
-            station_context))
+        # Place the object in the middle of the workspace.
+        X_WObject = Isometry3.Identity()
+        X_WObject.set_translation([.6, 0, 0])
+        station.get_multibody_plant().tree().SetFreeBodyPoseOrThrow(
+            station.get_multibody_plant().GetBodyByName("base_link",
+                                                        object),
+            X_WObject, station.GetMutableSubsystemContext(
+                station.get_multibody_plant(),
+                station_context))
 
-q0 = station.GetOutputPort("iiwa_position_measured").Eval(
-    station_context).get_value()
-differential_ik.parameters.set_nominal_joint_position(q0)
-teleop.SetPose(differential_ik.ForwardKinematics(q0))
-differential_ik.SetPositions(diagram.GetMutableSubsystemContext(
-    differential_ik, simulator.get_mutable_context()), q0)
+    q0 = station.GetOutputPort("iiwa_position_measured").Eval(
+        station_context).get_value()
+    differential_ik.parameters.set_nominal_joint_position(q0)
+    teleop.SetPose(differential_ik.ForwardKinematics(q0))
+    differential_ik.SetPositions(diagram.GetMutableSubsystemContext(
+        differential_ik, simulator.get_mutable_context()), q0)
 
-# This is important to avoid duplicate publishes to the hardware interface:
-simulator.set_publish_every_time_step(False)
+    # This is important to avoid duplicate publishes to the hardware interface:
+    simulator.set_publish_every_time_step(False)
 
-simulator.set_target_realtime_rate(args.target_realtime_rate)
-simulator.StepTo(args.duration)
+    simulator.set_target_realtime_rate(args.target_realtime_rate)
+    simulator.StepTo(args.duration)
+
+
+if __name__ == "__main__":
+    main()
