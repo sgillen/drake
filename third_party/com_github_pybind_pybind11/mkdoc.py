@@ -671,6 +671,7 @@ def print_symbols(f, name, node, level=0):
     if not node.first_symbol:
         assert level == 0
         full_name = name
+        name_chain = [name]
     else:
         name_chain = node.first_symbol.name_chain
         assert name == name_chain[-1]
@@ -682,30 +683,32 @@ def print_symbols(f, name, node, level=0):
     name_var = sanitize_name(name_var)
     # We may get empty symbols if `libclang` produces warnings.
     assert len(name_var) > 0, node.first_symbol.sorting_key()
-    iprint('// Symbol: {}'.format(full_name))
-    modifier = ""
-    if level == 0:
-        modifier = "constexpr "
-    iprint('{}struct /* {} */ {{'.format(modifier, name_var))
+
+    if "MultibodyTree" in name_chain or "MultibodyPlant" in name_chain:
+        iprint('{}'.format(name))
+    # modifier = ""
+    # if level == 0:
+    #     modifier = "constexpr "
+    # iprint('{}struct /* {} */ {{'.format(modifier, name_var))
     # Print documentation items.
     symbol_iter = sorted(node.doc_symbols, key=Symbol.sorting_key)
-    for i, symbol in enumerate(symbol_iter):
-        assert name_chain == symbol.name_chain
-        doc_var = "doc"
-        if i > 0:
-            doc_var += "_{}".format(i + 1)
-        delim = "\n"
-        if "\n" not in symbol.comment and len(symbol.comment) < 40:
-            delim = " "
-        iprint('  // Source: {}:{}'.format(symbol.include, symbol.line))
-        iprint('  const char* {} ={}R"""({})""";'.format(
-            doc_var, delim, symbol.comment))
+    # for i, symbol in enumerate(symbol_iter):
+    #     assert name_chain == symbol.name_chain
+    #     doc_var = "doc"
+    #     if i > 0:
+    #         doc_var += "_{}".format(i + 1)
+    #     delim = "\n"
+    #     if "\n" not in symbol.comment and len(symbol.comment) < 40:
+    #         delim = " "
+    #     iprint('  // Source: {}:{}'.format(symbol.include, symbol.line))
+    #     iprint('  const char* {} ={}R"""({})""";'.format(
+    #         doc_var, delim, symbol.comment))
     # Recurse into child elements.
     keys = sorted(node.children_map.keys())
     for key in keys:
         child = node.children_map[key]
         print_symbols(f, key, child, level=level + 1)
-    iprint('}} {};'.format(name_var))
+    # iprint('}} {};'.format(name_var))
 
 
 class FileDict(object):
