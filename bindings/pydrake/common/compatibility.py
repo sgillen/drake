@@ -5,7 +5,7 @@ which may need changes for compatibility, or check versions.
 import numpy as np
 from numpy.lib import NumpyVersion
 
-from pydrake.util.deprecation import _warn_deprecated
+from pydrake.common.deprecation import _warn_deprecated
 
 
 def check_required_numpy_version(_actual=np.version.version):

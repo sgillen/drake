@@ -88,6 +88,8 @@ drake_cc_library(
 drake_py_library(
     name = "deprecation_py",
     srcs = ["deprecation.py"],
+    # `:module_py` consumes this, so use `_init_py` instead.
+    deps = [":_init_py"],
     imports = PACKAGE_INFO.py_imports,
 )
 
@@ -227,7 +229,9 @@ drake_py_library(
     name = "compatibility_py",
     srcs = ["compatibility.py"],
     deps = [
-        ":module_py",
+        # `:module_py` consumes this, so use `_init_py` instead.
+        ":_init_py",
+        ":deprecation_py",
     ],
 )
 

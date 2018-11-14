@@ -24,9 +24,4 @@ py_library(
     visibility = ["//visibility:public"],
 )
 
-install(
-    name = "install",
-    data = [":data"],
-    data_dest = "lib/python2.7/site-packages",
-    visibility = ["//visibility:public"],
-)
+@INSTALL_CLAUSE@

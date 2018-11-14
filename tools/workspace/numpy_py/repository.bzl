@@ -78,13 +78,13 @@ def _impl(repository_ctx):
         numpy_dir = execute_or_fail(
             repository_ctx,
             [py_info.python, "-c", script]).stdout.strip()
-        print("numpy: {}".format(numpy_dir))
         repository_ctx.symlink(numpy_dir, "numpy")
-        repository_ctx.symlink(
-            Label("@drake//tools/workspace/numpy_py:" +
-                  "package.system.BUILD.bazel"),
-            "BUILD.bazel",
-        )
+        install_clause = """
+# No-op install for system dependency.
+install(
+    name = "install",
+    visibility = ["//visibility:public"],
+)""".strip()
     elif os_result.is_ubuntu:
         platform = "ubuntu_" + os_result.ubuntu_release
         wheel = wheels.get(platform)
@@ -102,12 +102,21 @@ def _impl(repository_ctx):
             sha256 = wheel["sha256"],
             type = "zip",
         )
-        repository_ctx.symlink(
-            Label("@drake//tools/workspace/numpy_py:package.BUILD.bazel"),
-            "BUILD.bazel",
-        )
+        install_clause = """
+install(
+    name = "install",
+    data = [":data"],
+    data_dest = "@PYTHON_SITE_PACKAGES@",
+    visibility = ["//visibility:public"],
+)""".strip()
     else:
         fail("Unsupported platform")
+    repository_ctx.template(
+        "BUILD.bazel",
+        Label("@drake//tools/workspace/numpy_py:package.BUILD.bazel.in"),
+        substitutions = {"@INSTALL_CLAUSE@": install_clause},
+        executable = False,
+    )
 
 numpy_py_repository = repository_rule(
     _impl,
