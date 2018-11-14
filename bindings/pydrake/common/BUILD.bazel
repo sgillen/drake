@@ -88,9 +88,9 @@ drake_cc_library(
 drake_py_library(
     name = "deprecation_py",
     srcs = ["deprecation.py"],
+    imports = PACKAGE_INFO.py_imports,
     # `:module_py` consumes this, so use `_init_py` instead.
     deps = [":_init_py"],
-    imports = PACKAGE_INFO.py_imports,
 )
 
 # N.B. Since `module_py` incorporates `deprecation_py`, C++ Python libraries

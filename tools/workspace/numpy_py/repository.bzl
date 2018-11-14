@@ -74,10 +74,12 @@ def _impl(repository_ctx):
         py_info = repository_python_info(repository_ctx)
         script = (
             "from os.path import dirname; from numpy import __file__; " +
-            "print(dirname(__file__))")
+            "print(dirname(__file__))"
+        )
         numpy_dir = execute_or_fail(
             repository_ctx,
-            [py_info.python, "-c", script]).stdout.strip()
+            [py_info.python, "-c", script],
+        ).stdout.strip()
         repository_ctx.symlink(numpy_dir, "numpy")
         install_clause = """
 # No-op install for system dependency.
