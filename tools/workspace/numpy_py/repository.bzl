@@ -40,6 +40,8 @@ Warning:
 """
 
 load("@drake//tools/workspace:os.bzl", "determine_os")
+load("@drake//tools/workspace:execute.bzl", "execute_or_fail")
+load("@drake//tools/workspace/python:repository.bzl", "repository_python_info")
 
 # See: https://pypi.org/project/numpy/#files
 wheels = {
@@ -68,7 +70,16 @@ def _impl(repository_ctx):
         fail(os_result.error)
 
     if os_result.is_macos:
-        # Add no-op BUILD file to use Homebrew version of NumPy.
+        # Use Homebrew version of NumPy.
+        py_info = repository_python_info(repository_ctx)
+        script = (
+            "from os.path import dirname; from numpy import __file__; " +
+            "print(dirname(__file__))")
+        numpy_dir = execute_or_fail(
+            repository_ctx,
+            [py_info.python, "-c", script]).stdout.strip()
+        print("numpy: {}".format(numpy_dir))
+        repository_ctx.symlink(numpy_dir, "numpy")
         repository_ctx.symlink(
             Label("@drake//tools/workspace/numpy_py:" +
                   "package.system.BUILD.bazel"),
