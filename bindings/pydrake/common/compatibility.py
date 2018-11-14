@@ -14,6 +14,10 @@ def check_required_numpy_version(_actual=np.version.version):
     pydrake requires NumPy >= 0.15.0 namely for the following patches:
         https://github.com/numpy/numpy/pull/10898
         https://github.com/numpy/numpy/pull/11076
+
+    If Drake uses user-dtypes in lieu of `dtype=object`, then anything that
+    refers to `autodiff` or `symbolic` (e.g. all of `systems`,
+    `multibody`, etc.) could potentially have "random" segfaults.
     """
     actual = NumpyVersion(_actual)
     minimum = NumpyVersion('1.15.0')
