@@ -15,6 +15,7 @@ from pydrake.test.algebra_test_util import ScalarAlgebra, VectorizedAlgebra
 from pydrake.test.autodiffutils_test_util import (
     autodiff_scalar_pass_through,
     autodiff_vector_pass_through,
+    autodiff_vector_factory,
 )
 
 # Use convenience abbreviation.
@@ -65,6 +66,9 @@ class TestAutoDiffXd(unittest.TestCase):
         # Test multi-element pass-through.
         x = np.array([AD(1.), AD(2.), AD(3.)])
         self._check_array(autodiff_vector_pass_through(x), x)
+        y = autodiff_vector_factory()
+        print(y)
+        self._check_array(y, [AD(0.1), AD(0.2), AD(0.3)])
         # Ensure we can copy.
         self._check_scalar(copy.copy(a), a)
         self._check_scalar(copy.deepcopy(a), a)
