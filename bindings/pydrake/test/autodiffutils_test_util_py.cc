@@ -21,9 +21,7 @@ PYBIND11_MODULE(autodiffutils_test_util, m) {
         [](const VectorX<AutoDiffXd>& value) { return value; });
   m.def("autodiff_vector_factory",
         []() {
-          // const drake::math::RotationMatrix<Scalar> R(pose.linear());
-          const drake::math::RollPitchYaw<AutoDiffXd> rpy(0.1, 0.2, 0.3);
-          Eigen::Matrix<AutoDiffXd, 3, 1> y = rpy.vector();
+          Vector3<AutoDiffXd> y(0.1, 0.2, 0.3);
           return y;
         });
 }
