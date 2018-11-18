@@ -24,6 +24,24 @@ from pydrake.util.eigen_geometry import Isometry3
 
 
 class TestRigidBodyTree(unittest.TestCase):
+    def test_issue_9886(self):
+        tree = RigidBodyTree(FindResourceOrThrow(
+            "drake/examples/pendulum/Pendulum.urdf"))
+        num_q = num_v = 7
+        q = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7]
+        AD = AutoDiffXd
+        q_ad = np.array([AD(x) for x in q])
+        kin = tree.doKinematics(q)
+        kin_ad = tree.doKinematics(q_ad)
+        world = tree.findFrame("world")
+        frame = tree.findFrame("arm_com")
+        rel = tree.relativeRollPitchYaw(
+            kin, world.get_frame_index(), frame.get_frame_index())
+        rel_ad = tree.relativeRollPitchYaw(
+            kin_ad, world.get_frame_index(), frame.get_frame_index())
+        for a, b in zip(rel, rel_ad):
+            self.assertEqual(a, b.value())
+
     def test_kinematics_api(self):
         # TODO(eric.cousineau): Reduce these tests to only test API, and do
         # simple sanity checks on the numbers.
