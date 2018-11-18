@@ -433,8 +433,12 @@ PYBIND11_MODULE(rigid_body_tree, m) {
              [](const RigidBodyTree<double>& tree,
                 const KinematicsCache<T>& cache, int from_body_or_frame_ind,
                 int to_body_or_frame_ind) {
-               return tree.relativeRollPitchYaw(cache, from_body_or_frame_ind,
-                                                to_body_or_frame_ind);
+               auto out = tree.relativeRollPitchYaw(
+                  cache, from_body_or_frame_ind, to_body_or_frame_ind);
+               drake::log()->info(
+                  "relativeRollPitchYaw: {}", NiceTypeName::Get<T>());
+               drake::log()->info("  rpy: {}  {}  {}", out[0], out[1], out[2]);
+               return out;
              },
              doc.RigidBodyTree.relativeRollPitchYaw.doc)
         .def("transformPointsJacobian",
