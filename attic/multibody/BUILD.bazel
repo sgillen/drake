@@ -537,6 +537,7 @@ drake_cc_googletest(
     data = [
         "test/rigid_body_tree/two_dof_robot.urdf",
         "//multibody/benchmarks/acrobot:models",
+        "//examples/pendulum:models",
     ],
     deps = [
         ":rigid_body_tree",

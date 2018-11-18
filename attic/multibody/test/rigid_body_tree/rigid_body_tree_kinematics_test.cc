@@ -22,6 +22,28 @@ class RigidBodyTreeKinematicsTests : public ::testing::Test {
   std::unique_ptr<RigidBodyTree<double>> tree_;
 };
 
+GTEST_TEST(AAA, BBB) {
+  RigidBodyTreed tree;
+  const std::string filename = FindResourceOrThrow(
+      "drake/examples/pendulum/Pendulum.urdf");
+  parsers::urdf::AddModelInstanceFromUrdfFileWithRpyJointToWorld(
+      filename, &tree);
+  Eigen::VectorXd q(7);
+  q << 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7;
+  VectorX<AutoDiffXd> q_ad = q.cast<AutoDiffXd>();
+  auto kin = tree.doKinematics(q);
+  auto kin_ad = tree.doKinematics(q_ad);
+  auto& world = *tree.findFrame("world");
+  auto& frame = *tree.findFrame("arm_com");
+  auto rel = tree.relativeRollPitchYaw(
+      kin, world.get_frame_index(), frame.get_frame_index());
+  auto rel_ad = tree.relativeRollPitchYaw(
+      kin_ad, world.get_frame_index(), frame.get_frame_index());
+  for (int i = 0; i < rel.size(); ++i) {
+    EXPECT_EQ(rel[i], rel_ad[i].value());
+  }
+}
+
 // Tests that RigidBodyTree::doKinematics() will not throw an exception if
 // provided a valid KinematicsCache.
 TEST_F(RigidBodyTreeKinematicsTests, TestDoKinematicWithValidCache) {
