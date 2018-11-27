@@ -30,8 +30,7 @@ import sys
 from pydrake.lcm import DrakeLcm
 from pydrake.geometry import ConnectDrakeVisualizer, SceneGraph
 from pydrake.multibody.multibody_tree.multibody_plant import MultibodyPlant
-from pydrake.multibody.multibody_tree.parsing import (
-    AddModelFromSdfFile, AddModelFromUrdfFile)
+from pydrake.multibody.multibody_tree.parsing import Parser
 from pydrake.systems.analysis import Simulator
 from pydrake.systems.framework import DiagramBuilder
 from pydrake.systems.meshcat_visualizer import MeshcatVisualizer
@@ -68,14 +67,7 @@ def main():
                   file=sys.stderr)
         sys.exit(1)
     ext = os.path.splitext(filename)[1]
-    if ext == ".sdf":
-        AddModelFromSdfFile(filename, plant)
-    elif ext == ".urdf":
-        AddModelFromUrdfFile(filename, plant)
-    else:
-        print("Unknown extension " + ext, file=sys.stderr)
-        sys.exit(1)
-
+    Parser(plant).AddAllModelsFromFile(filename)
     plant.Finalize()
 
     # Publish to Drake Visualizer.
