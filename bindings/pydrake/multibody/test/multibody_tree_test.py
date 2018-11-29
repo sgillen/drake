@@ -274,29 +274,36 @@ class TestMultibodyTree(unittest.TestCase):
             context, frame_A=world_frame, frame_B=base_frame)
         self.assertIsInstance(X_WL, Isometry3)
 
-        p_AQi = tree.CalcPointsPositions(
+        self.check_old_spelling_exists(tree.CalcPointsPositions)
+        p_AQi = plant.CalcPointsPositions(
             context=context, frame_B=base_frame,
             p_BQi=np.array([[0, 1, 2], [10, 11, 12]]).T,
             frame_A=world_frame).T
         self.assertTupleEqual(p_AQi.shape, (2, 3))
 
-        Jv_WL = tree.CalcFrameGeometricJacobianExpressedInWorld(
+        self.check_old_spelling_exists(
+            tree.CalcFrameGeometricJacobianExpressedInWorld)
+        Jv_WL = plant.CalcFrameGeometricJacobianExpressedInWorld(
             context=context, frame_B=base_frame,
             p_BoFo_B=[0, 0, 0])
         self.assertTupleEqual(Jv_WL.shape, (6, plant.num_velocities()))
 
         # Compute body pose.
-        X_WBase = tree.EvalBodyPoseInWorld(context, base)
+        self.check_old_spelling_exists(tree.EvalBodyPoseInWorld)
+        X_WBase = plant.EvalBodyPoseInWorld(context, base)
         self.assertIsInstance(X_WBase, Isometry3)
 
         # All body poses.
-        X_WB_list = tree.CalcAllBodyPosesInWorld(context)
+        self.check_old_spelling_exists(tree.CalcAllBodyPosesInWorld)
+        X_WB_list = plant.CalcAllBodyPosesInWorld(context)
         self.assertEqual(len(X_WB_list), 4)
         for X_WB in X_WB_list:
             self.assertIsInstance(X_WB, Isometry3)
 
         # Compute body velocities.
-        v_WB_list = tree.CalcAllBodySpatialVelocitiesInWorld(context)
+        self.check_old_spelling_exists(
+            tree.CalcAllBodySpatialVelocitiesInWorld)
+        v_WB_list = plant.CalcAllBodySpatialVelocitiesInWorld(context)
         self.assertEqual(len(v_WB_list), 4)
         for v_WB in v_WB_list:
             self.assertIsInstance(v_WB, SpatialVelocity)
@@ -307,16 +314,19 @@ class TestMultibodyTree(unittest.TestCase):
 
         # Set pose for the base.
         X_WB_desired = Isometry3.Identity()
-        X_WB = tree.CalcRelativeTransform(context, world_frame, base_frame)
-        tree.SetFreeBodyPoseOrThrow(
-            body=base, X_WB=X_WB_desired, context=context)
+        X_WB = plant.CalcRelativeTransform(context, world_frame, base_frame)
+        self.check_old_spelling_exists(tree.SetFreeBodyPoseOrThrow)
+        plant.SetFreeBodyPose(
+            context=context, body=base, X_WB=X_WB_desired)
         self.assertTrue(np.allclose(X_WB.matrix(), X_WB_desired.matrix()))
 
         # Set a spatial velocity for the base.
         v_WB = SpatialVelocity(w=[1, 2, 3], v=[4, 5, 6])
-        tree.SetFreeBodySpatialVelocityOrThrow(
-            body=base, V_WB=v_WB, context=context)
-        v_base = tree.EvalBodySpatialVelocityInWorld(context, base)
+        self.check_old_spelling_exists(tree.SetFreeBodySpatialVelocityOrThrow)
+        plant.SetFreeBodySpatialVelocity(
+            context=context, body=base, V_WB=v_WB)
+        self.check_old_spelling_exists(tree.EvalBodySpatialVelocityInWorld)
+        v_base = plant.EvalBodySpatialVelocityInWorld(context, base)
         self.assertTrue(np.allclose(v_base.rotational(), v_WB.rotational()))
         self.assertTrue(np.allclose(v_base.translational(),
                                     v_WB.translational()))
@@ -547,7 +557,6 @@ class TestMultibodyTree(unittest.TestCase):
         # Create a context of the MBP and set the state of the context
         # to desired values.
         context = plant.CreateDefaultContext()
-        tree = plant.tree()
 
         nq = plant.num_positions()
         nv = plant.num_velocities()
@@ -568,20 +577,20 @@ class TestMultibodyTree(unittest.TestCase):
         x_plant_desired[nq:nq+7] = v_iiwa_desired
         x_plant_desired[nq+7:nq+nv] = v_gripper_desired
 
-        x_plant = tree.GetMutablePositionsAndVelocities(context)
+        x_plant = plant.GetMutablePositionsAndVelocities(context)
         x_plant[:] = x_plant_desired
 
         # Get state from context.
-        x = tree.GetPositionsAndVelocities(context)
+        x = plant.GetPositionsAndVelocities(context)
         q = x[0:nq]
         v = x[nq:nq+nv]
 
         # Get positions and velocities of specific model instances
         # from the postion/velocity vector of the plant.
-        q_iiwa = tree.GetPositionsFromArray(iiwa_model, q)
-        q_gripper = tree.GetPositionsFromArray(gripper_model, q)
-        v_iiwa = tree.GetVelocitiesFromArray(iiwa_model, v)
-        v_gripper = tree.GetVelocitiesFromArray(gripper_model, v)
+        q_iiwa = plant.GetPositionsFromArray(iiwa_model, q)
+        q_gripper = plant.GetPositionsFromArray(gripper_model, q)
+        v_iiwa = plant.GetVelocitiesFromArray(iiwa_model, v)
+        v_gripper = plant.GetVelocitiesFromArray(gripper_model, v)
 
         # Assert that the GetPositionsFromArray return
         # the desired values set earlier.
@@ -645,8 +654,10 @@ class TestMultibodyTree(unittest.TestCase):
         context = plant.CreateDefaultContext()
         tree = plant.tree()
 
-        H = tree.CalcMassMatrixViaInverseDynamics(context)
-        Cv = tree.CalcBiasTerm(context)
+        self.check_old_spelling_exists(tree.CalcMassMatrixViaInverseDynamics)
+        H = plant.CalcMassMatrixViaInverseDynamics(context)
+        self.check_old_spelling_exists(tree.CalcBiasTerm)
+        Cv = plant.CalcBiasTerm(context)
 
         self.assertTrue(H.shape == (2, 2))
         self.assertTrue(Cv.shape == (2, ))
