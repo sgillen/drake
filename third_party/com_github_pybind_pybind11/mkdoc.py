@@ -726,6 +726,7 @@ def print_symbols(f, name, node, level=0):
     if not node.first_symbol:
         assert level == 0
         full_name = name
+        name_chain = [name]
     else:
         name_chain = node.first_symbol.name_chain
         assert name == name_chain[-1]
@@ -737,15 +738,17 @@ def print_symbols(f, name, node, level=0):
     name_var = sanitize_name(name_var)
     # We may get empty symbols if `libclang` produces warnings.
     assert len(name_var) > 0, node.first_symbol.sorting_key()
-    iprint('// Symbol: {}'.format(full_name))
-    modifier = ""
-    if level == 0:
-        modifier = "constexpr "
-    iprint('{}struct /* {} */ {{'.format(modifier, name_var))
+
+    if "MultibodyTree" in name_chain or "MultibodyPlant" in name_chain:
+        iprint('{}'.format(name))
+    # modifier = ""
+    # if level == 0:
+    #     modifier = "constexpr "
+    # iprint('{}struct /* {} */ {{'.format(modifier, name_var))
     # Print documentation items.
     symbol_iter = sorted(node.doc_symbols, key=Symbol.sorting_key)
     doc_vars = choose_doc_var_names(symbol_iter)
-    for symbol, doc_var in zip(symbol_iter, doc_vars):
+    for symbol, doc_var in []: #zip(symbol_iter, doc_vars):
         assert name_chain == symbol.name_chain
         delim = "\n"
         if "\n" not in symbol.comment and len(symbol.comment) < 40:
@@ -758,7 +761,7 @@ def print_symbols(f, name, node, level=0):
     for key in keys:
         child = node.children_map[key]
         print_symbols(f, key, child, level=level + 1)
-    iprint('}} {};'.format(name_var))
+    # iprint('}} {};'.format(name_var))
 
 
 class FileDict(object):
