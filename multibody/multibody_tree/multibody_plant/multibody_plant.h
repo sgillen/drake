@@ -235,6 +235,14 @@ class MultibodyPlant : public MultibodyTreeSystem<T> {
     FinalizePlantOnly();
   }
 
+  /// Returns the number of Frame objects in the MultibodyTree.
+  /// Frames include body frames associated with each of the bodies,
+  /// including the _world_ body. This means the minimum number of frames is
+  /// one.
+  int num_frames() const {
+    return static_cast<int>(frames_.size());
+  }
+
   /// Returns the number of bodies in the model, including the "world" body,
   /// which is always part of the model.
   /// @see AddRigidBody().
@@ -248,10 +256,37 @@ class MultibodyPlant : public MultibodyTreeSystem<T> {
     return tree().num_joints();
   }
 
+  /// Returns the total number of Joint degrees of freedom actuated by the set
+  /// of JointActuator elements added to `this` model.
+  int num_actuated_dofs() const {
+    return tree().num_actuated_dofs();
+  }
+
+  /// Returns the total number of Joint degrees of freedom actuated by the set
+  /// of JointActuator elements added to a specific model instance.
+  int num_actuated_dofs(ModelInstanceIndex model_instance) const {
+    return tree().num_actuated_dofs(model_instance);
+  }
+
   /// Returns the number of joint actuators in the model.
   /// @see AddJointActuator().
   int num_actuators() const {
     return tree().num_actuators();
+  }
+
+  /// Returns the number of mobilizers. Since the world has no Mobilizer, the
+  /// number of mobilizers equals the number of bodies minus one, i.e.
+  /// num_mobilizers() returns num_bodies() - 1.
+  // TODO(amcastro-tri): Consider adding a WorldMobilizer (0-dofs) for the world
+  // body. This could be useful to query for reaction forces of the entire
+  // model.
+  int num_mobilizers() const {
+    return static_cast<int>(owned_mobilizers_.size());
+  }
+
+  /// Returns the number of ForceElement objects.
+  int num_force_elements() const {
+    return static_cast<int>(owned_force_elements_.size());
   }
 
   /// Returns the number of model instances in the model.
@@ -260,18 +295,15 @@ class MultibodyPlant : public MultibodyTreeSystem<T> {
     return tree().num_model_instances();
   }
 
-  /// Returns the size of the generalized position vector `q` for `this`
-  /// %MultibodyPlant.
+  /// Returns the size of the generalized position vector `q` for this model.
   int num_positions() const { return tree().num_positions(); }
 
-  /// Returns the size of the generalized position vector `q` for a specific
-  /// model instance.
+  /// Returns the size of the generalized position vector `q` for this model.
   int num_positions(ModelInstanceIndex model_instance) const {
     return tree().num_positions(model_instance);
   }
 
-  /// Returns the size of the generalized velocity vector `v` for `this`
-  /// %MultibodyPlant.
+  /// Returns the size of the generalized velocity vector `v` for this model.
   int num_velocities() const { return tree().num_velocities(); }
 
   /// Returns the size of the generalized velocity vector `v` for a specific
@@ -280,13 +312,10 @@ class MultibodyPlant : public MultibodyTreeSystem<T> {
     return tree().num_velocities(model_instance);
   }
 
-  /// Returns the size of the multibody system state vector `x = [q; v]` for
-  /// `this` %MultibodyPlant. This will equal the number of generalized
-  /// positions (see num_positions()) plus the number of generalized velocities
-  /// (see num_velocities()).
-  /// Notice however that the state of a %MultibodyPlant, stored in its Context,
-  /// can actually contain other variables such as integrated power and discrete
-  /// states.
+  // N.B. The state in the Context may at some point contain values such as
+  // integrated power and other discrete states, hence the specific name.
+  /// Returns the size of the multibody system state vector `x = [q; v]`. This
+  /// will be num_positions() plus num_velocities().
   int num_multibody_states() const { return tree().num_states(); }
 
   /// Returns the total number of actuated degrees of freedom.
@@ -810,47 +839,56 @@ class MultibodyPlant : public MultibodyTreeSystem<T> {
     return tree().HasBodyNamed(name, model_instance);
   }
 
-  /// @returns `true` if a joint named `name` was added to the %MultibodyPlant.
+  /// @returns `true` if a frame named `name` was added to the model.
+  /// @see AddFrame().
+  /// @throws std::logic_error if the frame name occurs in multiple model
+  /// instances.
+  bool HasFrameNamed(const std::string& name) const {
+    return tree().HasFrameNamed(name);
+  }
+
+  /// @returns `true` if a frame named `name` was added to @p model_instance.
+  /// @see AddFrame().
+  /// @throws std::exception if @p model_instance is not valid for this model.
+  bool HasFrameNamed(const std::string& name,
+                     ModelInstanceIndex model_instance) const {
+    return tree().HasFrameNamed(name, model_instance);
+  }
+
+  /// @returns `true` if a joint named `name` was added to this model.
   /// @see AddJoint().
-  ///
   /// @throws std::logic_error if the joint name occurs in multiple model
   /// instances.
   bool HasJointNamed(const std::string& name) const {
     return tree().HasJointNamed(name);
   }
 
-  /// @returns `true` if a joint named `name` was added to the %MultibodyPlant
-  /// in @p model_instance.
+  /// @returns `true` if a joint named `name` was added to @p model_instance.
   /// @see AddJoint().
-  ///
   /// @throws std::exception if @p model_instance is not valid for this model.
   bool HasJointNamed(
       const std::string& name, ModelInstanceIndex model_instance) const {
     return tree().HasJointNamed(name, model_instance);
   }
 
-  /// @returns `true` if an actuator named `name` was added to the
-  /// %MultibodyPlant.
+  /// @returns `true` if an actuator named `name` was added to this model.
   /// @see AddJointActuator().
-  ///
   /// @throws std::logic_error if the actuator name occurs in multiple model
   /// instances.
   bool HasJointActuatorNamed(const std::string& name) const {
     return tree().HasJointActuatorNamed(name);
   }
 
-  /// @returns `true` if an actuator named `name` was added to the
-  /// %MultibodyPlant in @p model_instance.
+  /// @returns `true` if an actuator named `name` was added to
+  /// @p model_instance.
   /// @see AddJointActuator().
-  ///
   /// @throws std::exception if @p model_instance is not valid for this model.
   bool HasJointActuatorNamed(
       const std::string& name, ModelInstanceIndex model_instance) const {
     return tree().HasJointActuatorNamed(name, model_instance);
   }
 
-  /// @returns `true` if a model instance named `name` was added to the
-  /// %MultibodyPlant.
+  /// @returns `true` if a model instance named `name` was added to this model.
   /// @see AddModelInstance().
   bool HasModelInstanceNamed(const std::string& name) const {
     return tree().HasModelInstanceNamed(name);
@@ -1410,6 +1448,52 @@ class MultibodyPlant : public MultibodyTreeSystem<T> {
   /// Returns a constant reference to the *world* frame.
   const BodyFrame<T>& world_frame() const {
     return tree().world_frame();
+  }
+
+  /// Returns a constant reference to the body with unique index `body_index`.
+  /// @throws std::exception if `body_index` does not correspond to a body in
+  /// this model.
+  const Body<T>& get_body(BodyIndex body_index) const {
+    return tree().get_body(body_index);
+  }
+
+  /// Returns a constant reference to the joint with unique index `joint_index`.
+  /// @throws std::runtime_error when `joint_index` does not correspond to a
+  /// joint in this model.
+  const Joint<T>& get_joint(JointIndex joint_index) const {
+    return tree().get_joint(joint_index);
+  }
+
+  /// Returns a constant reference to the joint actuator with unique index
+  /// `actuator_index`.
+  /// @throws std::exception if `actuator_index` does not correspond to a joint
+  /// actuator in this tree.
+  const JointActuator<T>& get_joint_actuator(
+      JointActuatorIndex actuator_index) const {
+    return tree().get_joint_actuator(actuator_index);
+  }
+
+  /// Returns a constant reference to the frame with unique index `frame_index`.
+  /// @throws std::exception if `frame_index` does not correspond to a frame in
+  /// this plant.
+  const Frame<T>& get_frame(FrameIndex frame_index) const {
+    return tree().get_frame();
+  }
+
+  /// Returns a constant reference to the mobilizer with unique index
+  /// `mobilizer_index`.
+  /// @throws std::runtime_error when `mobilizer_index` does not correspond to a
+  /// mobilizer in this model.
+  const Mobilizer<T>& get_mobilizer(MobilizerIndex mobilizer_index) const {
+    return tree().get_mobilizer(mobilizer_index);
+  }
+
+  /// Returns the name of a `model_instance`.
+  /// @throws std::logic_error when `model_instance` does not correspond to a
+  /// model in this model.
+  const std::string& GetModelInstanceName(
+      ModelInstanceIndex model_instance) const {
+    return tree().GetModelInstanceName(model_instance);
   }
 
   /// Returns a constant reference to the underlying MultibodyTree model for

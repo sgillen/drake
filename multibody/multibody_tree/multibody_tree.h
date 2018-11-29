@@ -802,10 +802,7 @@ class MultibodyTree {
   /// @}
   // Closes Doxygen section "Methods to add new MultibodyTree elements."
 
-  /// Returns the number of Frame objects in the MultibodyTree.
-  /// Frames include body frames associated with each of the bodies in
-  /// the %MultibodyTree including the _world_ body. Therefore the minimum
-  /// number of frames in a %MultibodyTree is one.
+  /// See MultibodyPlant method.
   int num_frames() const {
     return static_cast<int>(frames_.size());
   }
@@ -823,17 +820,12 @@ class MultibodyTree {
     return static_cast<int>(owned_actuators_.size());
   }
 
-  /// Returns the number of mobilizers in the %MultibodyTree. Since the world
-  /// has no Mobilizer, the number of mobilizers equals the number of bodies
-  /// minus one, i.e. num_mobilizers() returns num_bodies() - 1.
-  // TODO(amcastro-tri): Consider adding a WorldMobilizer (0-dofs) for the world
-  // body. This could be useful to query for reaction forces of the entire
-  // model.
+  /// See MultibodyPlant method.
   int num_mobilizers() const {
     return static_cast<int>(owned_mobilizers_.size());
   }
 
-  /// Returns the number of ForceElement objects in the MultibodyTree.
+  /// See MultibodyPlant method.
   int num_force_elements() const {
     return static_cast<int>(owned_force_elements_.size());
   }
@@ -877,14 +869,12 @@ class MultibodyTree {
         model_instances_.at(model_instance)->num_velocities();
   }
 
-  /// Returns the total number of Joint degrees of freedom actuated by the set
-  /// of JointActuator elements added to `this` model.
+  /// See MultibodyPlant method.
   int num_actuated_dofs() const {
     return topology_.num_actuated_dofs();
   }
 
-  /// Returns the total number of Joint degrees of freedom actuated by the set
-  /// of JointActuator elements added to a specific model instance.
+  /// See MultibodyPlant method.
   int num_actuated_dofs(ModelInstanceIndex model_instance) const {
     DRAKE_MBT_THROW_IF_NOT_FINALIZED();
     return model_instances_.at(model_instance)->num_actuated_dofs();
@@ -914,52 +904,38 @@ class MultibodyTree {
     return owned_bodies_[world_index()]->body_frame();
   }
 
-  /// Returns a constant reference to the body with unique index `body_index`.
-  /// @throws std::exception if `body_index` does not correspond to a body in
-  /// this multibody tree.
+  /// See MultibodyPlant method.
   const Body<T>& get_body(BodyIndex body_index) const {
     DRAKE_THROW_UNLESS(body_index < num_bodies());
     return *owned_bodies_[body_index];
   }
 
-  /// Returns a constant reference to the joint with unique index `joint_index`.
-  /// @throws std::runtime_error when `joint_index` does not correspond to a
-  /// joint in this multibody tree.
+  /// See MultibodyPlant method.
   const Joint<T>& get_joint(JointIndex joint_index) const {
     DRAKE_THROW_UNLESS(joint_index < num_joints());
     return *owned_joints_[joint_index];
   }
 
-  /// Returns a constant reference to the joint actuator with unique index
-  /// `actuator_index`.
-  /// @throws std::exception if `actuator_index` does not correspond to a joint
-  /// actuator in this multibody tree.
+  /// See MultibodyPlant method.
   const JointActuator<T>& get_joint_actuator(
       JointActuatorIndex actuator_index) const {
     DRAKE_THROW_UNLESS(actuator_index < num_actuators());
     return *owned_actuators_[actuator_index];
   }
 
-  /// Returns a constant reference to the frame with unique index `frame_index`.
-  /// @throws std::exception if `frame_index` does not correspond to a frame in
-  /// `this` multibody tree.
+  /// See MultibodyPlant method.
   const Frame<T>& get_frame(FrameIndex frame_index) const {
     DRAKE_THROW_UNLESS(frame_index < num_frames());
     return *frames_[frame_index];
   }
 
-  /// Returns a constant reference to the mobilizer with unique index
-  /// `mobilizer_index`.
-  /// @throws std::runtime_error when `mobilizer_index` does not correspond to a
-  /// mobilizer in this multibody tree.
+  /// See MultibodyPlant method.
   const Mobilizer<T>& get_mobilizer(MobilizerIndex mobilizer_index) const {
     DRAKE_THROW_UNLESS(mobilizer_index < num_mobilizers());
     return *owned_mobilizers_[mobilizer_index];
   }
 
-  /// Returns the name of a model_instance.
-  /// @throws std::logic_error when `model_instance` does not correspond to a
-  /// model in this multibody tree.
+  /// See MultibodyPlant method.
   const std::string& GetModelInstanceName(
       ModelInstanceIndex model_instance) const {
     const auto it = instance_index_to_name_.find(model_instance);
@@ -1015,11 +991,7 @@ class MultibodyTree {
     return false;
   }
 
-  /// @returns `true` if a frame named `name` was added to the model.
-  /// @see AddFrame().
-  ///
-  /// @throws std::logic_error if the frame name occurs in multiple model
-  /// instances.
+  /// See MultibodyPlant method.
   bool HasFrameNamed(const std::string& name) const {
     const int count = frame_name_to_index_.count(name);
     if (count > 1) {
@@ -1029,10 +1001,7 @@ class MultibodyTree {
     return count > 0;
   }
 
-  /// @returns `true` if a frame named `name` was added to @p model_instance.
-  /// @see AddFrame().
-  ///
-  /// @throws std::exception if @p model_instance is not valid for this model.
+  /// See MultibodyPlant method.
   bool HasFrameNamed(const std::string& name,
                      ModelInstanceIndex model_instance) const {
     DRAKE_THROW_UNLESS(model_instance < instance_name_to_index_.size());
@@ -1046,11 +1015,7 @@ class MultibodyTree {
     return false;
   }
 
-  /// @returns `true` if a joint named `name` was added to the model.
-  /// @see AddJoint().
-  ///
-  /// @throws std::logic_error if the joint name occurs in multiple model
-  /// instances.
+  /// See MultibodyPlant method.
   bool HasJointNamed(const std::string& name) const {
     const int count = joint_name_to_index_.count(name);
     if (count > 1) {
@@ -1060,10 +1025,7 @@ class MultibodyTree {
     return count > 0;
   }
 
-  /// @returns `true` if a joint named `name` was added to @p model_instance.
-  /// @see AddJoint().
-  ///
-  /// @throws std::exception if @p model_instance is not valid for this model.
+  /// See MultibodyPlant method.
   bool HasJointNamed(const std::string& name,
                      ModelInstanceIndex model_instance) const {
     DRAKE_THROW_UNLESS(model_instance < instance_name_to_index_.size());
@@ -1077,11 +1039,7 @@ class MultibodyTree {
     return false;
   }
 
-  /// @returns `true` if a joint actuator named `name` was added to the model.
-  /// @see AddJointActuator().
-  ///
-  /// @throws std::logic_error if the actuator name occurs in multiple model
-  /// instances.
+  /// See MultibodyPlant method.
   bool HasJointActuatorNamed(const std::string& name) const {
     const int count = actuator_name_to_index_.count(name);
     if (count > 1) {
@@ -1091,11 +1049,7 @@ class MultibodyTree {
     return count > 0;
   }
 
-  /// @returns `true` if a joint actuator named `name` was added to
-  /// @p model_instance.
-  /// @see AddJointActuator().
-  ///
-  /// @throws std::exception if @p model_instance is not valid for this model.
+  /// See MultibodyPlant method.
   bool HasJointActuatorNamed(const std::string& name,
                              ModelInstanceIndex model_instance) const {
     DRAKE_THROW_UNLESS(model_instance < instance_name_to_index_.size());
@@ -1109,47 +1063,19 @@ class MultibodyTree {
     return false;
   }
 
-  /// @returns `true` if a model instance named `name` was added to the model.
-  /// @see AddModelInstance().
+  /// See MultibodyMethod.
   bool HasModelInstanceNamed(const std::string& name) const {
     return instance_name_to_index_.find(name) != instance_name_to_index_.end();
   }
   /// @}
 
-  /// @name Retrieving multibody elements by name
-  /// These methods allow a user to retrieve a reference to a multibody element
-  /// by its name. A std::logic_error is thrown if there is no element with the
-  /// requested name.
-  ///
-  /// These queries can be performed at any time during the lifetime of a
-  /// %MultibodyTree model, i.e. there is no restriction on whether they must
-  /// be called before or after Finalize(). This implies that these queries can
-  /// be performed while new multibody elements are being added to the model.
-  ///
-  /// If the named element is present in more than one model instance and a
-  /// model instance is not explicitly specified, std::logic_error is thrown.
-  ///
-  /// @{
-
-  /// Returns a constant reference to a body that is identified by the
-  /// string `name` in `this` model.
-  /// @throws std::logic_error if there is no body with the requested name.
-  /// @throws std::logic_error if the body name occurs in multiple model
-  /// instances.
-  /// @see HasBodyNamed() to query if there exists a body in `this` model with a
-  /// given specified name.
+  /// See MultibodyPlant method.
   const Body<T>& GetBodyByName(const std::string& name) const {
     return get_body(
         GetElementIndex<BodyIndex>(name, "Body", body_name_to_index_));
   }
 
-  /// Returns a constant reference to the body that is uniquely identified
-  /// by the string `name` in @p model_instance.
-  /// @throws std::logic_error if there is no body with the requested name.
-  /// @throws std::runtime_error if @p model_instance is not valid for this
-  ///         model.
-  /// @see HasBodyNamed() to query if there exists a body in `this` model with a
-  /// given specified name.
+  /// See MultibodyPlant method.
   const Body<T>& GetBodyByName(
       const std::string& name, ModelInstanceIndex model_instance) const {
     DRAKE_THROW_UNLESS(model_instance < instance_name_to_index_.size());
@@ -1165,25 +1091,13 @@ class MultibodyTree {
         instance_index_to_name_.at(model_instance) + "'.");
   }
 
-  /// Returns a constant reference to a frame that is identified by the
-  /// string `name` in `this` model.
-  /// @throws std::logic_error if there is no frame with the requested name.
-  /// @throws std::logic_error if the frame name occurs in multiple model
-  /// instances.
-  /// @see HasFrameNamed() to query if there exists a body in `this` model with
-  /// a given specified name.
+  /// See MultibodyPlant method.
   const Frame<T>& GetFrameByName(const std::string& name) const {
     return get_frame(
         GetElementIndex<FrameIndex>(name, "Frame", frame_name_to_index_));
   }
 
-  /// Returns a constant reference to the frame that is uniquely identified
-  /// by the string `name` in @p model_instance.
-  /// @throws std::logic_error if there is no frame with the requested name.
-  /// @throws std::runtime_error if @p model_instance is not valid for this
-  ///         model.
-  /// @see HasFrameNamed() to query if there exists a frame in `this` model with
-  /// a given specified name.
+  /// See MultibodyPlant method.
   const Frame<T>& GetFrameByName(
       const std::string& name, ModelInstanceIndex model_instance) const {
     DRAKE_THROW_UNLESS(model_instance < instance_name_to_index_.size());
@@ -1237,25 +1151,13 @@ class MultibodyTree {
     return *body;
   }
 
-  /// Returns a constant reference to a joint that is identified
-  /// by the string `name` in `this` model.
-  /// @throws std::logic_error if there is no joint with the requested name.
-  /// @throws std::logic_error if the joint name occurs in multiple model
-  /// instances.
-  /// @see HasJointNamed() to query if there exists a joint in `this` model with
-  /// a given specified name.
+  /// See MultibodyPlant method.
   const Joint<T>& GetJointByName(const std::string& name) const {
     return get_joint(
         GetElementIndex<JointIndex>(name, "Joint", joint_name_to_index_));
   }
 
-  /// Returns a constant reference to the joint that is uniquely identified
-  /// by the string `name` in @p model_instance.
-  /// @throws std::logic_error if there is no joint with the requested name.
-  /// @throws std::runtime_error if @p model_instance is not valid for this
-  ///         model.
-  /// @see HasJointNamed() to query if there exists a joint in `this` model with
-  /// a given specified name.
+  /// See MultibodyPlant method.
   const Joint<T>& GetJointByName(
       const std::string& name, ModelInstanceIndex model_instance) const {
     DRAKE_THROW_UNLESS(model_instance < instance_name_to_index_.size());
@@ -1271,17 +1173,7 @@ class MultibodyTree {
         instance_index_to_name_.at(model_instance) + "'.");
   }
 
-  /// A templated version of GetJointByName() to return a constant reference of
-  /// the specified type `JointType` in place of the base Joint class. See
-  /// GetJointByName() for details.
-  /// @tparam JointType The specific type of the Joint to be retrieved. It must
-  /// be a subclass of Joint.
-  /// @throws std::logic_error if the named joint is not of type `JointType` or
-  /// if there is no Joint with that name.
-  /// @throws std::logic_error if the joint name occurs in multiple model
-  /// instances.
-  /// @see HasJointNamed() to query if there exists a joint in `this` model with
-  /// a given specified name.
+  /// See MultibodyPlant method.
   template <template<typename> class JointType>
   const JointType<T>& GetJointByName(const std::string& name) const {
     static_assert(std::is_base_of<Joint<T>, JointType<T>>::value,
@@ -1296,17 +1188,7 @@ class MultibodyTree {
     return *joint;
   }
 
-  /// A templated version of GetJointByName() to return a constant reference of
-  /// the specified type `JointType` in place of the base Joint class. See
-  /// GetJointByName() for details.
-  /// @tparam JointType The specific type of the Joint to be retrieved. It must
-  /// be a subclass of Joint.
-  /// @throws std::logic_error if the named joint is not of type `JointType` or
-  /// @throws std::runtime_error if @p model_instance is not valid for this
-  ///         model.
-  /// if there is no Joint with that name.
-  /// @see HasJointNamed() to query if there exists a joint in `this` model with
-  /// a given specified name.
+  /// See MultibodyPlant method.
   template <template<typename> class JointType>
   const JointType<T>& GetJointByName(
       const std::string& name, ModelInstanceIndex model_instance) const {
@@ -1325,13 +1207,7 @@ class MultibodyTree {
     return *joint;
   }
 
-  /// Returns a constant reference to an actuator that is identified
-  /// by the string `name` in `this` model.
-  /// @throws std::logic_error if there is no actuator with the requested name.
-  /// @throws std::logic_error if the actuator name occurs in multiple model
-  /// instances.
-  /// @see HasJointActuatorNamed() to query if there exists an actuator in
-  /// `this` model with a given specified name.
+  /// See MultibodyPlant method.
   const JointActuator<T>& GetJointActuatorByName(
       const std::string& name) const {
     return get_joint_actuator(
@@ -1339,13 +1215,7 @@ class MultibodyTree {
             name, "Joint actuator", actuator_name_to_index_));
   }
 
-  /// Returns a constant reference to the actuator that is uniquely identified
-  /// by the string `name` in @p model_instance.
-  /// @throws std::logic_error if there is no actuator with the requested name.
-  /// @throws std::runtime_error if @p model_instance is not valid for this
-  ///         model.
-  /// @see HasJointActuatorNamed() to query if there exists an actuator in
-  /// `this` model with a given specified name.
+  /// See MultibodyPlant method.
   const JointActuator<T>& GetJointActuatorByName(
       const std::string& name, ModelInstanceIndex model_instance) const {
     DRAKE_THROW_UNLESS(model_instance < instance_name_to_index_.size());
@@ -1361,11 +1231,7 @@ class MultibodyTree {
         instance_index_to_name_.at(model_instance) + "'.");
   }
 
-  /// Returns the index to the model instance that is uniquely identified
-  /// by the string `name` in `this` model.
-  /// @throws std::logic_error if there is no instance with the requested name.
-  /// @see HasModelInstanceNamed() to query if there exists an instance in
-  /// `this` model with a given specified name.
+  /// See MultibodyPlant method.
   ModelInstanceIndex GetModelInstanceByName(const std::string& name) const {
     const auto it = instance_name_to_index_.find(name);
     if (it == instance_name_to_index_.end()) {
