@@ -235,12 +235,12 @@ class MultibodyPlant : public MultibodyTreeSystem<T> {
     FinalizePlantOnly();
   }
 
-  /// Returns the number of Frame objects in the MultibodyTree.
+  /// Returns the number of Frame objects in this model.
   /// Frames include body frames associated with each of the bodies,
   /// including the _world_ body. This means the minimum number of frames is
   /// one.
   int num_frames() const {
-    return static_cast<int>(frames_.size());
+    return tree().frames();
   }
 
   /// Returns the number of bodies in the model, including the "world" body,
@@ -256,18 +256,6 @@ class MultibodyPlant : public MultibodyTreeSystem<T> {
     return tree().num_joints();
   }
 
-  /// Returns the total number of Joint degrees of freedom actuated by the set
-  /// of JointActuator elements added to `this` model.
-  int num_actuated_dofs() const {
-    return tree().num_actuated_dofs();
-  }
-
-  /// Returns the total number of Joint degrees of freedom actuated by the set
-  /// of JointActuator elements added to a specific model instance.
-  int num_actuated_dofs(ModelInstanceIndex model_instance) const {
-    return tree().num_actuated_dofs(model_instance);
-  }
-
   /// Returns the number of joint actuators in the model.
   /// @see AddJointActuator().
   int num_actuators() const {
@@ -281,12 +269,12 @@ class MultibodyPlant : public MultibodyTreeSystem<T> {
   // body. This could be useful to query for reaction forces of the entire
   // model.
   int num_mobilizers() const {
-    return static_cast<int>(owned_mobilizers_.size());
+    return tree().num_mobilizers();
   }
 
   /// Returns the number of ForceElement objects.
   int num_force_elements() const {
-    return static_cast<int>(owned_force_elements_.size());
+    return tree().num_force_elements();
   }
 
   /// Returns the number of model instances in the model.
@@ -1134,18 +1122,6 @@ class MultibodyPlant : public MultibodyTreeSystem<T> {
   /// @}
 
   /// @name Accessing the state
-
-  /// Evaluates the pose `X_WB` of a body B in the world frame W.
-  /// @param[in] context
-  ///   The context storing the state of the multibody system.
-  /// @param[in] body_B
-  ///   The body B for which the pose is requested.
-  /// @retval X_WB
-  ///   The pose of body frame B in the world frame W.
-  /// @throws std::logic_error if called pre-finalize.
-  const Isometry3<T>& EvalBodyPoseInWorld(
-      const systems::Context<T>& context,
-      const Body<T>& body_B) const;
 
   /// Sets `context` to store the pose `X_WB` of a given `body` B in the world
   /// frame W.

@@ -327,6 +327,8 @@ def _generate_pybind_documentation_header_impl(ctx):
     args.add("-root-name=" + ctx.attr.root_name)
     for p in ctx.attr.exclude_hdr_patterns:
         args.add("-exclude-hdr-patterns=" + p)
+    if ctx.attr.hack:
+        args.add("-hack")
 
     # Replace with ctx.fragments.cpp.cxxopts in Bazel 0.17+.
     args.add("-std=c++14")
@@ -349,7 +351,7 @@ def _generate_pybind_documentation_header_impl(ctx):
 # @param root_name Name of the root struct in generated file.
 # @param exclude_hdr_patterns Headers whose symbols should be ignored. Can be
 # glob patterns.
-generate_pybind_documentation_header = rule(
+_generate_pybind_documentation_header = rule(
     attrs = {
         "targets": attr.label_list(
             mandatory = True,
@@ -363,8 +365,14 @@ generate_pybind_documentation_header = rule(
         "out": attr.output(mandatory = True),
         "root_name": attr.string(default = "pydrake_doc"),
         "exclude_hdr_patterns": attr.string_list(),
+        "hack": attr.bool(default = False),
     },
     fragments = ["cpp"],
     implementation = _generate_pybind_documentation_header_impl,
     output_to_genfiles = True,
 )
+
+def generate_pybind_documentation_header(name, out, **kwargs):
+    _generate_pybind_documentation_header(name=name, out=out, **kwargs)
+    _generate_pybind_documentation_header(
+        name="hack_" + name, out="hack_" + out, hack=True, **kwargs)

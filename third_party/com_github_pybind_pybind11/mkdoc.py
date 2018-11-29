@@ -19,6 +19,8 @@ import textwrap
 from clang import cindex
 from clang.cindex import AccessSpecifier, CursorKind
 
+HACK = False
+
 CLASS_KINDS = [
     CursorKind.CLASS_DECL,
     CursorKind.STRUCT_DECL,
@@ -739,16 +741,20 @@ def print_symbols(f, name, node, level=0):
     # We may get empty symbols if `libclang` produces warnings.
     assert len(name_var) > 0, node.first_symbol.sorting_key()
 
-    if "MultibodyTree" in name_chain or "MultibodyPlant" in name_chain:
+    if HACK and "MultibodyTree" in name_chain or "MultibodyPlant" in name_chain:
         iprint('{}'.format(name))
-    # modifier = ""
-    # if level == 0:
-    #     modifier = "constexpr "
-    # iprint('{}struct /* {} */ {{'.format(modifier, name_var))
+    if not HACK:
+        modifier = ""
+        if level == 0:
+            modifier = "constexpr "
+        iprint('{}struct /* {} */ {{'.format(modifier, name_var))
     # Print documentation items.
     symbol_iter = sorted(node.doc_symbols, key=Symbol.sorting_key)
     doc_vars = choose_doc_var_names(symbol_iter)
-    for symbol, doc_var in []: #zip(symbol_iter, doc_vars):
+    things = zip(symbol_iter, doc_vars)
+    if HACK:
+        things = []
+    for symbol, doc_var in things:
         assert name_chain == symbol.name_chain
         delim = "\n"
         if "\n" not in symbol.comment and len(symbol.comment) < 40:
@@ -761,7 +767,8 @@ def print_symbols(f, name, node, level=0):
     for key in keys:
         child = node.children_map[key]
         print_symbols(f, key, child, level=level + 1)
-    # iprint('}} {};'.format(name_var))
+    if not HACK:
+        iprint('}} {};'.format(name_var))
 
 
 class FileDict(object):
@@ -808,6 +815,7 @@ def main():
             parameters.append('-isysroot')
             parameters.append(sysroot_dir)
 
+    global HACK
     quiet = False
     std = '-std=c++11'
     root_name = 'mkdoc_doc'
@@ -825,6 +833,8 @@ def main():
             root_name = item[len('-root-name='):]
         elif item.startswith('-exclude-hdr-patterns='):
             ignore_patterns.append(item[len('-exclude-hdr-patterns='):])
+        elif item == "-hack":
+            HACK = True
         elif item.startswith('-'):
             parameters.append(item)
         else:
