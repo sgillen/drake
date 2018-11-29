@@ -53,6 +53,9 @@ namespace multibody {
 /// Multibody dynamics elements include bodies, joints, force elements and
 /// constraints.
 ///
+/// @warning This class will be eventually deprecated; up until that point,
+/// most methods will be forwarded to MultibodyPlant.
+///
 /// @tparam T The scalar type. Must be a valid Eigen scalar.
 ///
 /// Instantiated templates for the following kinds of T's are provided:
@@ -1586,22 +1589,7 @@ class MultibodyTree {
       const systems::Context<T>& context,
       std::vector<SpatialVelocity<T>>* V_WB) const;
 
-  /// Computes the relative transform `X_AB(q)` from a frame B to a frame A, as
-  /// a function of the generalized positions q of the model.
-  /// That is, the position `p_AQ` of a point Q measured and expressed in
-  /// frame A can be computed from the position `p_BQ` of this point measured
-  /// and expressed in frame B using the transformation `p_AQ = X_AB⋅p_BQ`.
-  ///
-  /// @param[in] context
-  ///   The context containing the state of the %MultibodyTree model. It stores
-  ///   the generalized positions q of the model.
-  /// @param[in] frame_A
-  ///   The target frame A in the computed relative transform `X_AB`.
-  /// @param[in] frame_B
-  ///   The source frame B in the computed relative transform `X_AB`.
-  /// @retval X_AB
-  ///   The relative transform from frame B to frame A, such that
-  ///   `p_AQ = X_AB⋅p_BQ`.
+  /// See MultibodyPlant method.
   Isometry3<T> CalcRelativeTransform(
       const systems::Context<T>& context,
       const Frame<T>& frame_A, const Frame<T>& frame_B) const;

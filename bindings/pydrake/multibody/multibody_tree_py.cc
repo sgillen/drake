@@ -494,6 +494,25 @@ void init_multibody_plant(py::module m) {
             doc.MultibodyPlant.AddForceElement.doc);
     // Topology queries.
     cls  // BR
+        .def("CalcRelativeTransform", &Class::CalcRelativeTransform,
+            py::arg("context"), py::arg("frame_A"), py::arg("frame_B"),
+            doc.MultibodyPlant.CalcRelativeTransform.doc)
+        .def("num_frames", &Class::num_frames,
+            doc.MultibodyPlant.num_frames.doc)
+        .def("get_body", &Class::get_body, py::arg("body_index"),
+            py_reference_internal, doc.MultibodyPlant.get_body.doc)
+        .def("get_joint", &Class::get_joint, py::arg("joint_index"),
+            py_reference_internal, doc.MultibodyPlant.get_joint.doc)
+        .def("get_joint_actuator", &Class::get_joint_actuator,
+            py::arg("actuator_index"), py_reference_internal,
+            doc.MultibodyPlant.get_joint_actuator.doc)
+        .def("get_frame", &Class::get_frame, py::arg("frame_index"),
+            py_reference_internal, doc.MultibodyPlant.get_frame.doc)
+        .def("GetModelInstanceName",
+            overload_cast_explicit<const string&, ModelInstanceIndex>(
+                &Class::GetModelInstanceName),
+            py::arg("model_instance"), py_reference_internal,
+            doc.MultibodyPlant.GetModelInstanceName.doc)
         .def("HasBodyNamed",
             overload_cast_explicit<bool, const string&>(&Class::HasBodyNamed),
             py::arg("name"), doc.MultibodyPlant.HasBodyNamed.doc_1args)

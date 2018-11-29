@@ -1084,6 +1084,28 @@ class MultibodyPlant : public MultibodyTreeSystem<T> {
       const Frame<T>& frame_F, const Body<T>& body,
       const Isometry3<T>& X_FB) const;
 
+  /// Computes the relative transform `X_AB(q)` from a frame B to a frame A, as
+  /// a function of the generalized positions q of the model.
+  /// That is, the position `p_AQ` of a point Q measured and expressed in
+  /// frame A can be computed from the position `p_BQ` of this point measured
+  /// and expressed in frame B using the transformation `p_AQ = X_AB⋅p_BQ`.
+  ///
+  /// @param[in] context
+  ///   The context containing the state of the %MultibodyTree model. It stores
+  ///   the generalized positions q of the model.
+  /// @param[in] frame_A
+  ///   The target frame A in the computed relative transform `X_AB`.
+  /// @param[in] frame_B
+  ///   The source frame B in the computed relative transform `X_AB`.
+  /// @retval X_AB
+  ///   The relative transform from frame B to frame A, such that
+  ///   `p_AQ = X_AB⋅p_BQ`.
+  Isometry3<T> CalcRelativeTransform(
+      const systems::Context<T>& context,
+      const Frame<T>& frame_A, const Frame<T>& frame_B) const {
+    return tree.CalcRelativeTransform(context, frame_A, frame_B);
+  }
+
   // TODO(amcastro-tri): Add state accessors for free body spatial velocities.
 
   /// @}

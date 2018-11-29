@@ -165,13 +165,19 @@ class TestMultibodyTree(unittest.TestCase):
         self.assertIsInstance(
             plant.get_contact_results_output_port(), OutputPort)
         tree = plant.tree()
-        self.assertIsInstance(tree.num_frames(), int)
-        self.assertIsInstance(tree.get_body(body_index=BodyIndex(0)), Body)
-        self.assertIs(shoulder, tree.get_joint(joint_index=JointIndex(0)))
-        self.assertIsInstance(tree.get_joint_actuator(
+        self.check_old_spelling_exists(tree.num_frames)
+        self.assertIsInstance(plant.num_frames(), int)
+        self.check_old_spelling_exists(tree.get_body)
+        self.assertIsInstance(plant.get_body(body_index=BodyIndex(0)), Body)
+        self.check_old_spelling_exists(tree.get_joint)
+        self.assertIs(shoulder, plant.get_joint(joint_index=JointIndex(0)))
+        self.check_old_spelling_exists(tee.get_joint_actuator)
+        self.assertIsInstance(plant.get_joint_actuator(
             actuator_index=JointActuatorIndex(0)), JointActuator)
-        self.assertIsInstance(tree.get_frame(frame_index=FrameIndex(0)), Frame)
-        self.assertEqual("acrobot", tree.GetModelInstanceName(
+        self.check_old_spelling_exists(tree.get_frame)
+        self.assertIsInstance(plant.get_frame(frame_index=FrameIndex(0)), Frame)
+        self.chekc_old_spelling_exists(tree.GetModelInstanceName)
+        self.assertEqual("acrobot", plant.GetModelInstanceName(
             model_instance=model_instance))
 
     def _test_multibody_tree_element_mixin(self, element):
@@ -248,6 +254,10 @@ class TestMultibodyTree(unittest.TestCase):
             if result_type is list:
                 self.assertIsInstance(result[0], ModelInstanceIndex)
 
+    def check_old_spelling_exists(self, value):
+        # Just to make it obvious when this is being tested.
+        self.assertIsNot(value, None)
+
     def test_multibody_tree_kinematics(self):
         file_name = FindResourceOrThrow(
             "drake/examples/double_pendulum/models/double_pendulum.sdf")
@@ -259,8 +269,8 @@ class TestMultibodyTree(unittest.TestCase):
         world_frame = plant.world_frame()
         base = plant.GetBodyByName("base")
         base_frame = plant.GetFrameByName("base")
-
-        X_WL = tree.CalcRelativeTransform(
+        self.check_old_spelling_exists(tree.CalcRelativeTransform)
+        X_WL = plant.CalcRelativeTransform(
             context, frame_A=world_frame, frame_B=base_frame)
         self.assertIsInstance(X_WL, Isometry3)
 
