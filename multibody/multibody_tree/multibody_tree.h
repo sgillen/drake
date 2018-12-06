@@ -1618,106 +1618,13 @@ class MultibodyTree {
       const Frame<T>& frame_F,
       const Eigen::Ref<const MatrixX<T>>& p_FP_list) const;
 
-  /// Given a list of points with fixed position vectors `p_FP` in a frame
-  /// F, (that is, their time derivative `DtF(p_FP)` in frame F is zero),
-  /// this method computes the analytical Jacobian `Jq_WFp(q)`.
-  /// The analytical Jacobian `Jq_WFp(q)` is defined by: <pre>
-  ///   Jq_WFp(q) = d(p_WFp(q))/dq
-  /// </pre>
-  /// where `p_WFp(q)` is the position of point P, which moves with frame F, in
-  /// the world frame W.
-  ///
-  /// @param[in] context
-  ///   The context containing the state of the model. It stores the
-  ///   generalized positions q.
-  /// @param[in] frame_F
-  ///   The positions `p_FP` of each point in the input set are measured and
-  ///   expressed in this frame F and are constant (fixed) in this frame.
-  /// @param[in] p_FP_list
-  ///   A matrix with the fixed position of a set of points `P` measured and
-  ///   expressed in `frame_F`.
-  ///   Each column of this matrix contains the position vector `p_FP` for a
-  ///   point `P` measured and expressed in frame F. Therefore this input
-  ///   matrix lives in ℝ³ˣⁿᵖ with `np` the number of points in the set.
-  /// @param[out] p_WP_list
-  ///   The output positions of each point `P` now measured and expressed in
-  //    the world frame W. These positions are computed in the process of
-  ///   computing the geometric Jacobian `J_WP` and therefore external storage
-  ///   must be provided.
-  ///   The output `p_WP_list` **must** have the same size as the input set
-  ///   `p_FP_list` or otherwise this method throws a
-  ///   std::runtime_error exception. That is `p_WP_list` **must** be in
-  ///   `ℝ³ˣⁿᵖ`.
-  /// @param[out] Jq_WFp
-  ///   The analytical Jacobian `Jq_WFp(q)`, function of the generalized
-  ///   positions q only.
-  ///   We stack the positions of each point P in the world frame W into a
-  ///   column vector p_WFp = [p_WFp1; p_WFp2; ...] of size 3⋅np, with np
-  ///   the number of points in p_FP_list. Then the analytical Jacobian is
-  ///   defined as: <pre>
-  ///     Jq_WFp(q) = ∇(p_WFp(q))
-  ///   </pre>
-  ///   with `∇(⋅)` the gradient operator with respect to the generalized
-  ///   positions q. Therefore `Jq_WFp` is a matrix of size `3⋅np x nq`, with
-  ///   `nq` the number of generalized positions. On input, matrix `Jq_WFp`
-  ///   **must** have size `3⋅np x nq` or this method throws a
-  ///   std::runtime_error exception.
-  ///
-  /// @throws std::exception if the output `p_WP_list` is nullptr or does not
-  /// have the same size as the input array `p_FP_list`.
-  /// @throws std::exception if `Jq_WFp` is nullptr or if it does not have the
-  /// appropriate size, see documentation for `Jq_WFp` for details.
-  // TODO(amcastro-tri): provide the Jacobian-times-vector operation, since for
-  // most applications it is all we need and it is more efficient to compute.
+  /// See MultibodyPlant method.
   void CalcPointsAnalyticalJacobianExpressedInWorld(
       const systems::Context<T>& context,
       const Frame<T>& frame_F, const Eigen::Ref<const MatrixX<T>>& p_FP_list,
       EigenPtr<MatrixX<T>> p_WP_list, EigenPtr<MatrixX<T>> Jq_WFp) const;
 
-  /// Given a frame `Fp` defined by shifting a frame F from its origin `Fo` to
-  /// a new origin `P`, this method computes the geometric Jacobian `Jv_WFp`
-  /// for frame `Fp`. The new origin `P` is specified by the position vector
-  /// `p_FP` in frame F. The frame geometric Jacobian `Jv_WFp` is defined by:
-  /// <pre>
-  ///   V_WFp(q, v) = Jv_WFp(q)⋅v
-  /// </pre>
-  /// where `V_WFp(q, v)` is the spatial velocity of frame `Fp` measured and
-  /// expressed in the world frame W and q and v are the vectors of generalized
-  /// position and velocity, respectively.
-  /// The geometric Jacobian `Jv_WFp(q)` is a function of the generalized
-  /// coordinates q only.
-  ///
-  /// @param[in] context
-  ///   The context containing the state of the model. It stores the
-  ///   generalized positions q.
-  /// @param[in] frame_F
-  ///   The position `p_FP` of frame `Fp` is measured and expressed in this
-  ///   frame F.
-  /// @param[in] p_FP
-  ///   The (fixed) position of the origin `P` of frame `Fp` as measured and
-  ///   expressed in frame F.
-  /// @param[out] Jv_WFp
-  ///   The geometric Jacobian `Jv_WFp(q)`, function of the generalized
-  ///   positions q only. This Jacobian relates to the spatial velocity `V_WFp`
-  ///   of frame `Fp` by: <pre>
-  ///     V_WFp(q, v) = Jv_WFp(q)⋅v
-  ///   </pre>
-  ///   Therefore `Jv_WFp` is a matrix of size `6 x nv`, with `nv`
-  ///   the number of generalized velocities. On input, matrix `Jv_WFp` **must**
-  ///   have size `6 x nv` or this method throws an exception. The top rows of
-  ///   this matrix (which can be accessed with Jv_WFp.topRows<3>()) is the
-  ///   Jacobian `Hw_WFp` related to the angular velocity of `Fp` in W by
-  ///   `w_WFp = Hw_WFp⋅v`. The bottom rows of this matrix (which can be
-  ///   accessed with Jv_WFp.bottomRows<3>()) is the Jacobian `Hv_WFp` related
-  ///   to the translational velocity of the origin `P` of frame `Fp` in W by
-  ///   `v_WFpo = Hv_WFp⋅v`. This ordering is consistent with the internal
-  ///   storage of the SpatialVelocity class. Therefore the following operations
-  ///   results in a valid spatial velocity: <pre>
-  ///     SpatialVelocity<double> Jv_WFp_times_v(Jv_WFp * v);
-  ///   </pre>
-  ///
-  /// @throws std::exception if `J_WFp` is nullptr or if it is not of size
-  ///   `6 x nv`.
+  /// See MultibodyPlant method.
   void CalcFrameGeometricJacobianExpressedInWorld(
       const systems::Context<T>& context,
       const Frame<T>& frame_F, const Eigen::Ref<const Vector3<T>>& p_FP,

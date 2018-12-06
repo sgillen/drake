@@ -171,12 +171,12 @@ class TestMultibodyTree(unittest.TestCase):
         self.assertIsInstance(plant.get_body(body_index=BodyIndex(0)), Body)
         self.check_old_spelling_exists(tree.get_joint)
         self.assertIs(shoulder, plant.get_joint(joint_index=JointIndex(0)))
-        self.check_old_spelling_exists(tee.get_joint_actuator)
+        self.check_old_spelling_exists(tree.get_joint_actuator)
         self.assertIsInstance(plant.get_joint_actuator(
             actuator_index=JointActuatorIndex(0)), JointActuator)
         self.check_old_spelling_exists(tree.get_frame)
         self.assertIsInstance(plant.get_frame(frame_index=FrameIndex(0)), Frame)
-        self.chekc_old_spelling_exists(tree.GetModelInstanceName)
+        self.check_old_spelling_exists(tree.GetModelInstanceName)
         self.assertEqual("acrobot", plant.GetModelInstanceName(
             model_instance=model_instance))
 
@@ -582,18 +582,26 @@ class TestMultibodyTree(unittest.TestCase):
 
         # Get state from context.
         x = plant.GetPositionsAndVelocities(context)
-        q = x[0:nq]
-        v = x[nq:nq+nv]
+        x_plant_tmp = plant.GetMutablePositionsAndVelocities(context)
+        self.assertTrue(np.allclose(x_plant_desired, x_plant_tmp))
 
         # Get positions and velocities of specific model instances
         # from the postion/velocity vector of the plant.
-        q_iiwa = plant.GetPositionsFromArray(iiwa_model, q)
-        q_gripper = plant.GetPositionsFromArray(gripper_model, q)
-        v_iiwa = plant.GetVelocitiesFromArray(iiwa_model, v)
-        v_gripper = plant.GetVelocitiesFromArray(gripper_model, v)
+        tree = plant.tree()
+        self.check_old_spelling_exists(tree.GetPositionsFromArray)
+        print("Hello")
+        print(plant.GetPositions(context))
+        print(plant.GetPositions(context, iiwa_model))
+        q_iiwa = plant.GetPositions(context, iiwa_model)
+        q_gripper = plant.GetPositions(context, gripper_model)
+        self.check_old_spelling_exists(tree.GetVelocitiesFromArray)
+        v_iiwa = plant.GetVelocities(context, iiwa_model)
+        v_gripper = plant.GetVelocities(context, gripper_model)
 
         # Assert that the GetPositionsFromArray return
         # the desired values set earlier.
+        # print(q_iiwa_desired)
+        # print(q_iiwa)
         self.assertTrue(np.allclose(q_iiwa_desired, q_iiwa))
         self.assertTrue(np.allclose(v_iiwa_desired, v_iiwa))
         self.assertTrue(np.allclose(q_gripper_desired, q_gripper))
