@@ -175,7 +175,8 @@ class TestMultibodyTree(unittest.TestCase):
         self.assertIsInstance(plant.get_joint_actuator(
             actuator_index=JointActuatorIndex(0)), JointActuator)
         self.check_old_spelling_exists(tree.get_frame)
-        self.assertIsInstance(plant.get_frame(frame_index=FrameIndex(0)), Frame)
+        self.assertIsInstance(
+            plant.get_frame(frame_index=FrameIndex(0)), Frame)
         self.check_old_spelling_exists(tree.GetModelInstanceName)
         self.assertEqual("acrobot", plant.GetModelInstanceName(
             model_instance=model_instance))
@@ -589,9 +590,6 @@ class TestMultibodyTree(unittest.TestCase):
         # from the postion/velocity vector of the plant.
         tree = plant.tree()
         self.check_old_spelling_exists(tree.GetPositionsFromArray)
-        print("Hello")
-        print(plant.GetPositions(context))
-        print(plant.GetPositions(context, iiwa_model))
         q_iiwa = plant.GetPositions(context, iiwa_model)
         q_gripper = plant.GetPositions(context, gripper_model)
         self.check_old_spelling_exists(tree.GetVelocitiesFromArray)
@@ -600,8 +598,6 @@ class TestMultibodyTree(unittest.TestCase):
 
         # Assert that the GetPositionsFromArray return
         # the desired values set earlier.
-        # print(q_iiwa_desired)
-        # print(q_iiwa)
         self.assertTrue(np.allclose(q_iiwa_desired, q_iiwa))
         self.assertTrue(np.allclose(v_iiwa_desired, v_iiwa))
         self.assertTrue(np.allclose(q_gripper_desired, q_gripper))
