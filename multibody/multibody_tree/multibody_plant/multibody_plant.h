@@ -240,7 +240,7 @@ class MultibodyPlant : public MultibodyTreeSystem<T> {
   /// including the _world_ body. This means the minimum number of frames is
   /// one.
   int num_frames() const {
-    return tree().frames();
+    return tree().num_frames();
   }
 
   /// Returns the number of bodies in the model, including the "world" body,
@@ -372,7 +372,7 @@ class MultibodyPlant : public MultibodyTreeSystem<T> {
   void SetFreeBodyPose(
       systems::Context<T>* context, const Body<T>& body,
       const Isometry3<T>& X_WB) const {
-    return tree().SetFreeBodyPoseOrThrow(body, X_WB, *context);
+    tree().SetFreeBodyPoseOrThrow(body, X_WB, context);
   }
 
   /// Sets `state` to store the pose `X_WB` of a given `body` B in the world
@@ -398,7 +398,7 @@ class MultibodyPlant : public MultibodyTreeSystem<T> {
   void SetFreeBodySpatialVelocity(
       systems::Context<T>* context, const Body<T>& body,
       const SpatialVelocity<T>& V_WB) const {
-    tree().SetFreeBodySpatialVelocityOrThrow(body, V_WB, *context);
+    tree().SetFreeBodySpatialVelocityOrThrow(body, V_WB, context);
   }
 
   /// Sets `state` to store the spatial velocity `V_WB` of a given `body` B in
@@ -1171,7 +1171,7 @@ class MultibodyPlant : public MultibodyTreeSystem<T> {
   Isometry3<T> CalcRelativeTransform(
       const systems::Context<T>& context,
       const Frame<T>& frame_A, const Frame<T>& frame_B) const {
-    return tree.CalcRelativeTransform(context, frame_A, frame_B);
+    return tree().CalcRelativeTransform(context, frame_A, frame_B);
   }
 
   /// Given the positions `p_BQi` for a set of points `Qi` measured and
@@ -1224,7 +1224,7 @@ class MultibodyPlant : public MultibodyTreeSystem<T> {
   const Isometry3<T>& EvalBodyPoseInWorld(
       const systems::Context<T>& context,
       const Body<T>& body_B) const {
-    return tree().EvalPoseInWorld(context, body_B);
+    return tree().EvalBodyPoseInWorld(context, body_B);
   }
 
   /// Evaluate the spatial velocity `V_WB` of a body B in the world frame W.
@@ -1346,7 +1346,7 @@ class MultibodyPlant : public MultibodyTreeSystem<T> {
       const Frame<T>& frame_F, const Eigen::Ref<const MatrixX<T>>& p_WP_list,
       EigenPtr<MatrixX<T>> Jv_WFp) const {
     return tree().CalcPointsGeometricJacobianExpressedInWorld(
-        frame_F, p_WP_list, Jv_WFp);
+        context, frame_F, p_WP_list, Jv_WFp);
   }
 
   /// Computes the bias term `C(q, v)v` containing Coriolis and gyroscopic
@@ -1406,7 +1406,7 @@ class MultibodyPlant : public MultibodyTreeSystem<T> {
   /// mass matrix whenever possible.
   void CalcMassMatrixViaInverseDynamics(
       const systems::Context<T>& context, EigenPtr<MatrixX<T>> H) const {
-    tree().CalcMassMAtrixViaInverseDynamics(context, H);
+    tree().CalcMassMatrixViaInverseDynamics(context, H);
   }
 
   /// Given the state of `this` %MultibodyTree in `context` and a known vector
@@ -1847,7 +1847,7 @@ class MultibodyPlant : public MultibodyTreeSystem<T> {
   /// @throws std::exception if `frame_index` does not correspond to a frame in
   /// this plant.
   const Frame<T>& get_frame(FrameIndex frame_index) const {
-    return tree().get_frame();
+    return tree().get_frame(frame_index);
   }
 
   /// Returns a constant reference to the mobilizer with unique index
