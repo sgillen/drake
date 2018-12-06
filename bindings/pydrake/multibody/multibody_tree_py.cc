@@ -526,9 +526,12 @@ void init_multibody_plant(py::module m) {
                 const Isometry3<T>&>(&Class::SetFreeBodyPose),
             py::arg("context"), py::arg("body"), py::arg("X_WB"),
             doc.MultibodyPlant.SetFreeBodyPose.doc_3args)
+        // TODO(eric.cousineau): Ensure all of these return either references,
+        // or copies, consistently. At present, `GetX(context)` returns a
+        // reference, while `GetX(context, model_instance)` returns a copy.
         .def("GetPositions",
             [](const Class* self, const Context<T>& context) {
-              drake::log()->info("Get positions: {}", self->GetPositions(context));
+              // Reference. Hack in effective `keep_alive` for Eigen casting.
               return py::cast(
                   self->GetPositions(context), py_reference_internal,
                   py::cast(&context, py_reference));
@@ -538,15 +541,14 @@ void init_multibody_plant(py::module m) {
         .def("GetPositions",
             [](const Class* self, const Context<T>& context,
                ModelInstanceIndex model_instance) {
-              drake::log()->info("GetPositions, index: {}", self->GetPositions(context, model_instance));
-              return py::cast(
-                  self->GetPositions(context, model_instance),
-                  py_reference_internal, py::cast(&context, py_reference));
+              // Copy.
+              return self->GetPositions(context, model_instance);
             },
             py::arg("context"), py::arg("model_instance"),
             doc.MultibodyPlant.GetPositions.doc_2args)
         .def("GetVelocities",
             [](const Class* self, const Context<T>& context) {
+              // Reference. Hack in effective `keep_alive` for Eigen casting.
               return py::cast(
                   self->GetVelocities(context), py_reference_internal,
                   py::cast(&context, py_reference));
@@ -556,9 +558,8 @@ void init_multibody_plant(py::module m) {
         .def("GetVelocities",
             [](const Class* self, const Context<T>& context,
                ModelInstanceIndex model_instance) {
-              return py::cast(
-                  self->GetVelocities(context, model_instance),
-                  py_reference_internal, py::cast(&context, py_reference));
+              // Copy.
+              return self->GetVelocities(context, model_instance);
             },
             py::arg("context"), py::arg("model_instance"),
             doc.MultibodyPlant.GetVelocities.doc_2args)
