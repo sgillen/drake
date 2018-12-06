@@ -741,7 +741,7 @@ def print_symbols(f, name, node, level=0):
     # We may get empty symbols if `libclang` produces warnings.
     assert len(name_var) > 0, node.first_symbol.sorting_key()
 
-    if HACK and "MultibodyTree" in name_chain or "MultibodyPlant" in name_chain:
+    if HACK and ("MultibodyTree" in name_chain or "MultibodyPlant" in name_chain):
         iprint('{}'.format(name))
     if not HACK:
         modifier = ""
