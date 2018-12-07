@@ -43,6 +43,8 @@ install(
         ":dummy_py",
         ":libdummy.so",
     ],
+    # TODO(eric.cousineau): Ensure the install paths for these headers are not
+    # the same as what is used in the cc library.
     hdrs = [":libdummy_headers"],
     data = ["README.md"],
     data_dest = "share",
