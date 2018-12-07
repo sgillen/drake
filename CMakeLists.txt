@@ -276,6 +276,12 @@ endif()
 
 set(BAZEL_TARGETS //:install)
 
+option(DRAKE_TEST_WITH_DUMMY "Use dummy target to quickly test CMake behavior." OFF)
+mark_as_advanced(DRAKE_TEST_WITH_DUMMY)
+if(DRAKE_TEST_WITH_DUMMY)
+  set(BAZEL_TARGETS //tools/install/dummy:install)
+endif()
+
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
   set(CMAKE_INSTALL_PREFIX "${PROJECT_BINARY_DIR}/install" CACHE STRING
     "Install path prefix, prepended onto install directories" FORCE
@@ -289,9 +295,10 @@ if(CMAKE_BUILD_TYPE STREQUAL Debug OR CMAKE_BUILD_TYPE STREQUAL RelWithDebugInfo
   # If any proprietary solver is enabled, start blaring warnings.
   if(USING_PROPRIETARY_DEPS)
     message("WARNING: Symbols are not stripped and proprietary dependencies are enabled. Do NOT redistribute these binaries.")
-    list(INSERT BAZEL_TARGETS_ARGS 0 "--strip-warn-proprietary")
+  else()
+    list(INSERT BAZEL_TARGETS_ARGS 0 "--disable_no_strip_warning")
   endif()
-  list(INSERT BAZEL_TARGETS_ARGS 0 "--strip=false")
+  list(INSERT BAZEL_TARGETS_ARGS 0 "--no_strip")
 endif()
 
 include(ExternalProject)

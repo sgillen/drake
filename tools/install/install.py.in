@@ -373,7 +373,7 @@ def main(args):
         '--no_strip', dest='strip', action='store_false', default=True,
         help='do not strip symbols (for debugging)')
     parser.add_argument(
-        '--disable_nostrip_warning', action='store_true', default=False,
+        '--disable_no_strip_warning', action='store_true', default=False,
         help='warns about not stripping symbols (when using proprietary '
              'dependencies')
     args = parser.parse_args(args)
@@ -399,8 +399,8 @@ def main(args):
             .format(prefix), file=sys.stderr)
         sys.exit(1)
 
-    if args.strip and args.disable_nostrip_warning:
-        print("--disable_nostrip_warning can only be used with --no_strip",
+    if args.strip and args.disable_no_strip_warning:
+        print("--disable_no_strip_warning can only be used with --no_strip",
               file=sys.stderr)
         sys.exit(1)
 
@@ -413,10 +413,11 @@ def main(args):
     # Libraries paths may need to be updated in libraries and executables.
     fix_rpaths_and_strip()
 
-    if not args.strip and not args.disable_nostrip_warning:
-        print("WARNING: Symbols are not stripped and proprietary "
-              "dependencies are enabled. Do NOT redistribute these binaries.",
-              file=sys.stderr)
+    if not args.strip:
+        print("NOTE: Symbols are not stripped.", file=sys.stderr)
+        if not args.disable_no_strip_warning:
+            print("  WARNING: Proprietary dependencies are enabled. Do "
+                  "NOT redistribute these binaries!", file=sys.stderr)
 
 
 if __name__ == "__main__":

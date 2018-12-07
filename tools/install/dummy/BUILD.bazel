@@ -36,8 +36,9 @@ py_library(
     srcs = ["dummy.py"],
 )
 
+# N.B. This should NOT be incorporated into build components.
 install(
-    name = "dummy_install",
+    name = "install",
     testonly = 1,
     targets = [
         ":dummy_py",
