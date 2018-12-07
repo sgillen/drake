@@ -220,6 +220,9 @@ if(CMAKE_VERBOSE_MAKEFILE)
   list(APPEND BAZEL_ARGS --subcommands)
 endif()
 
+# This is enabled if any proprietary dependencies are enabled.
+set(USING_PROPRIETARY_DEPS 0)
+
 option(WITH_GUROBI "Build with support for Gurobi" OFF)
 
 if(WITH_GUROBI)
@@ -231,6 +234,7 @@ if(WITH_GUROBI)
     get_filename_component(GUROBI_PATH "${Gurobi_INCLUDE_DIRS}" DIRECTORY)
     list(APPEND BAZEL_ENV "GUROBI_PATH=${GUROBI_PATH}")
   endif()
+  set(USING_PROPRIETARY_DEPS 1)
 endif()
 
 option(WITH_MATLAB "Build with support for MATLAB" OFF)
@@ -246,6 +250,7 @@ option(WITH_MOSEK "Build with support for MOSEK" OFF)
 
 if(WITH_MOSEK)
   list(APPEND BAZEL_ARGS --config=mosek)
+  set(USING_PROPRIETARY_DEPS 1)
 endif()
 
 option(WITH_ROBOTLOCOMOTION_SNOPT "Build with support for SNOPT using the RobotLocomotion/snopt private GitHub repository" OFF)
@@ -257,6 +262,7 @@ if(WITH_ROBOTLOCOMOTION_SNOPT AND WITH_SNOPT)
 elseif(WITH_ROBOTLOCOMOTION_SNOPT)
   list(APPEND BAZEL_ARGS --config=snopt)
   list(APPEND BAZEL_ENV "SNOPT_PATH=git")
+  set(USING_PROPRIETARY_DEPS 1)
 elseif(WITH_SNOPT)
   list(APPEND BAZEL_ARGS --config=snopt)
   set(SNOPT_PATH SNOPT_PATH-NOTFOUND CACHE FILEPATH "Path to SNOPT source archive")
@@ -265,6 +271,7 @@ elseif(WITH_SNOPT)
   endif()
   mark_as_advanced(SNOPT_PATH)
   list(APPEND BAZEL_ENV "SNOPT_PATH=${SNOPT_PATH}")
+  set(USING_PROPRIETARY_DEPS 1)
 endif()
 
 set(BAZEL_TARGETS //:install)
@@ -277,10 +284,14 @@ endif()
 
 set(BAZEL_TARGETS_ARGS "${CMAKE_INSTALL_PREFIX}")
 
-option(NO_STRIP "Do not strip symbols (for debugging); do NOT enable this you are redistributing packages" OFF)
-if(NO_STRIP)
-  message("WARNING: Symbols are not stripped; if you have a proprietary solver enabled, do NOT redistribute these binaries.")
-  list(INSERT BAZEL_TARGETS_ARGS 0 "--no-strip")
+# If we are in debug mode, do not strip symbols.
+if(CMAKE_BUILD_TYPE STREQUAL Debug OR CMAKE_BUILD_TYPE STREQUAL RelWithDebugInfo)
+  # If any proprietary solver is enabled, start blaring warnings.
+  if(USING_PROPRIETARY_DEPS)
+    message("WARNING: Symbols are not stripped and proprietary dependencies are enabled. Do NOT redistribute these binaries.")
+    list(INSERT BAZEL_TARGETS_ARGS 0 "--strip-warn-proprietary")
+  endif()
+  list(INSERT BAZEL_TARGETS_ARGS 0 "--strip=false")
 endif()
 
 include(ExternalProject)

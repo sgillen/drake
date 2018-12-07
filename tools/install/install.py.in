@@ -17,7 +17,7 @@ from subprocess import check_output, check_call
 subdirs = set()
 # Stored from command-line.
 prefix = None
-no_strip = False
+strip = True
 # Mapping used to (a) check for unique shared library names and (b) provide a
 # mapping from library name to paths for RPath fixes (where (a) is essential).
 # Structure: Map[ basename (Str) => full_path ]
@@ -189,14 +189,14 @@ def fix_rpaths_and_strip():
             # From the manual for BSD `strip`: for dynamic shared libraries,
             # the maximum level of stripping is usually -x (to remove all
             # non-global symbols).
-            if not no_strip:
+            if strip:
                 check_call(['strip', '-x', dst_full])
             macos_fix_rpaths(basename, dst_full)
         else:
             # Strip before running `patchelf`. Trying to strip after patching
             # the files is likely going to create the following error:
             # 'Not enough room for program headers, try linking with -N'
-            if not no_strip:
+            if strip:
                 check_call(['strip', dst_full])
             linux_fix_rpaths(dst_full)
 
@@ -361,7 +361,7 @@ java {} {} "$@"
 def main(args):
     global prefix
     global list_only
-    global no_strip
+    global strip
 
     # Set up options.
     parser = argparse.ArgumentParser()
@@ -370,16 +370,19 @@ def main(args):
         '--list', action='store_true', default=False,
         help='print the list of installed files; do not install anything')
     parser.add_argument(
-        '--no-strip', action='store_true', default=False,
-        help='do not strip symbols (for debugging); do NOT enable if this '
-             'you are redistributing packages')
+        '--no_strip', dest='strip', action='store_false', default=True,
+        help='do not strip symbols (for debugging)')
+    parser.add_argument(
+        '--disable_nostrip_warning', action='store_true', default=False,
+        help='warns about not stripping symbols (when using proprietary '
+             'dependencies')
     args = parser.parse_args(args)
 
     # Get install prefix.
     prefix = args.prefix
     list_only = args.list
     # Check if we want to avoid stripping symbols.
-    no_strip = args.no_strip
+    strip = args.strip
 
     # Transform install prefix if DESTDIR is set.
     # https://www.gnu.org/prep/standards/html_node/DESTDIR.html
@@ -391,9 +394,14 @@ def main(args):
     # working directory of the user's shell, enforce that the install
     # location is an absolute path so that the user is not surprised.
     if not os.path.isabs(prefix):
-        sys.stderr.write(
+        print(
             "Install prefix must be an absolute path (got {})\n"
-            .format(prefix))
+            .format(prefix), file=sys.stderr)
+        sys.exit(1)
+
+    if args.strip and args.disable_nostrip_warning:
+        print("--disable_nostrip_warning can only be used with --no_strip",
+              file=sys.stderr)
         sys.exit(1)
 
     # Match the output of the CMake install step.
@@ -405,9 +413,9 @@ def main(args):
     # Libraries paths may need to be updated in libraries and executables.
     fix_rpaths_and_strip()
 
-    if no_strip:
-        print("WARNING: Symbols are not stripped; if you have a proprietary "
-              "solver enabled, do NOT redistribute these binaries.",
+    if not args.strip and not args.disable_nostrip_warning:
+        print("WARNING: Symbols are not stripped and proprietary "
+              "dependencies are enabled. Do NOT redistribute these binaries.",
               file=sys.stderr)
 
 
