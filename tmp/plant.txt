@@ -7,8 +7,9 @@ AddRigidBody
 CalcAllBodyPosesInWorld
 CalcAllBodySpatialVelocitiesInWorld
 CalcBiasTerm
-CalcInverseDynamics
+CalcFrameGeometricJacobianExpressedInWorld
 CalcMassMatrixViaInverseDynamics
+CalcPointsAnalyticalJacobianExpressedInWorld
 CalcPointsGeometricJacobianExpressedInWorld
 CalcPointsPositions
 CalcRelativeTransform
@@ -64,7 +65,6 @@ get_geometry_poses_output_port
 get_geometry_query_input_port
 get_joint
 get_joint_actuator
-get_mobilizer
 get_source_id
 is_finalized
 model
@@ -75,7 +75,6 @@ num_collision_geometries
 num_force_elements
 num_frames
 num_joints
-num_mobilizers
 num_model_instances
 num_multibody_states
 num_positions
