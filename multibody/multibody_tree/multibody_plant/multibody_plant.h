@@ -1294,6 +1294,7 @@ class MultibodyPlant : public MultibodyTreeSystem<T> {
   /// appropriate size, see documentation for `Jv_WFp` for details.
   // TODO(amcastro-tri): provide the Jacobian-times-vector operation, since for
   // most applications it is all we need and it is more efficient to compute.
+  // TODO(amcastro-tri): Rework this method as per issue #10155.
   void CalcPointsGeometricJacobianExpressedInWorld(
       const systems::Context<T>& context,
       const Frame<T>& frame_F, const Eigen::Ref<const MatrixX<T>>& p_FP_list,
@@ -1343,6 +1344,7 @@ class MultibodyPlant : public MultibodyTreeSystem<T> {
   /// appropriate size, see documentation for `Jv_WFp` for details.
   // TODO(amcastro-tri): provide the Jacobian-times-vector operation, since for
   // most applications it is all we need and it is more efficient to compute.
+  // TODO(amcastro-tri): Rework this method as per issue #10155.
   void CalcPointsGeometricJacobianExpressedInWorld(
       const systems::Context<T>& context,
       const Frame<T>& frame_F, const Eigen::Ref<const MatrixX<T>>& p_WP_list,
@@ -1402,6 +1404,7 @@ class MultibodyPlant : public MultibodyTreeSystem<T> {
   /// appropriate size, see documentation for `Jq_WFp` for details.
   // TODO(amcastro-tri): provide the Jacobian-times-vector operation, since for
   // most applications it is all we need and it is more efficient to compute.
+  // TODO(amcastro-tri): Rework this method as per issue #10155.
   void CalcPointsAnalyticalJacobianExpressedInWorld(
       const systems::Context<T>& context,
       const Frame<T>& frame_F, const Eigen::Ref<const MatrixX<T>>& p_FP_list,
@@ -1454,6 +1457,7 @@ class MultibodyPlant : public MultibodyTreeSystem<T> {
   ///
   /// @throws std::exception if `J_WFp` is nullptr or if it is not of size
   ///   `6 x nv`.
+  // TODO(amcastro-tri): Rework this method as per issue #10155.
   void CalcFrameGeometricJacobianExpressedInWorld(
       const systems::Context<T>& context,
       const Frame<T>& frame_F, const Eigen::Ref<const Vector3<T>>& p_FP,
