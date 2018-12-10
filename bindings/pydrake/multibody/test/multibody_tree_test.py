@@ -13,6 +13,7 @@ from pydrake.multibody.multibody_tree import (
     JointActuatorIndex,
     JointIndex,
     ModelInstanceIndex,
+    MultibodyForces,
     MultibodyTree,
     RevoluteJoint,
     UniformGravityFieldElement,
@@ -112,6 +113,11 @@ class TestMultibodyTreeMath(unittest.TestCase):
 class TestMultibodyTree(unittest.TestCase):
     def test_type_safe_indices(self):
         self.assertEqual(world_index(), BodyIndex(0))
+
+    def assert_sane(self, x, nonzero=True):
+        self.assertTrue(np.all(np.isfinite(x)))
+        if nonzero:
+            self.assertTrue(not np.all(x == 0), str(x))
 
     def test_multibody_plant_api_via_parsing(self):
         # TODO(eric.cousineau): Decouple this when construction can be done
@@ -659,7 +665,14 @@ class TestMultibodyTree(unittest.TestCase):
         Cv = plant.CalcBiasTerm(context)
 
         self.assertTrue(H.shape == (2, 2))
+        self.assert_sane(H)
         self.assertTrue(Cv.shape == (2, ))
+        self.assert_sane(Cv, nonzero=False)
+        vd_d = np.zeros(plant.num_velocities())
+        tau = tree.CalcInverseDynamics(
+            context, vd_d, MultibodyForces(tree))
+        self.assertEqual(tau.shape, (2,))
+        self.assert_sane(tau, nonzero=False)
 
     def test_contact(self):
         # PenetrationAsContactPair

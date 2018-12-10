@@ -262,17 +262,8 @@ class MultibodyPlant : public MultibodyTreeSystem<T> {
     return tree().num_actuators();
   }
 
-  /// Returns the number of mobilizers. Since the world has no Mobilizer, the
-  /// number of mobilizers equals the number of bodies minus one, i.e.
-  /// num_mobilizers() returns num_bodies() - 1.
-  // TODO(amcastro-tri): Consider adding a WorldMobilizer (0-dofs) for the world
-  // body. This could be useful to query for reaction forces of the entire
-  // model.
-  int num_mobilizers() const {
-    return tree().num_mobilizers();
-  }
-
   /// Returns the number of ForceElement objects.
+  /// @see AddForceElement().
   int num_force_elements() const {
     return tree().num_force_elements();
   }
@@ -491,8 +482,7 @@ class MultibodyPlant : public MultibodyTreeSystem<T> {
         num_positions());
   }
 
-  // TODO(eric.cousineau): This inconsistency between this and the above
-  // overloads should be resolved, as it's *very* confusing.
+  // TODO(eric.cousineau): Fix overload return-type inconsistency (#10177).
   /// Returns an vector containing the generalized positions (`q`) for the
   /// given model instance.
   /// @throws std::exception if the `context` does not
@@ -506,6 +496,7 @@ class MultibodyPlant : public MultibodyTreeSystem<T> {
         model_instance, GetPositions(context));
   }
 
+  // TODO(eric.cousineau): Fix overload return-type inconsistency (#10177).
   /// (Advanced) Returns a mutable vector reference containing the vector
   /// of generalized positions (**see warning**).
   /// @note This method returns a reference to existing data, exhibits constant
@@ -1965,14 +1956,6 @@ class MultibodyPlant : public MultibodyTreeSystem<T> {
   /// this plant.
   const Frame<T>& get_frame(FrameIndex frame_index) const {
     return tree().get_frame(frame_index);
-  }
-
-  /// Returns a constant reference to the mobilizer with unique index
-  /// `mobilizer_index`.
-  /// @throws std::runtime_error when `mobilizer_index` does not correspond to a
-  /// mobilizer in this model.
-  const Mobilizer<T>& get_mobilizer(MobilizerIndex mobilizer_index) const {
-    return tree().get_mobilizer(mobilizer_index);
   }
 
   /// Returns the name of a `model_instance`.
