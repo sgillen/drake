@@ -224,8 +224,8 @@ stripping, so you can debug with ``gdb`` or ``lldb``:
 
 .. warning::
 
-    If you have a proprietary solver enabled, do NOT redistribute these
-    binaries.
+    If you have SNOPT enabled (either ``-DWITH_SNOPT=ON`` or
+    ``-DWITH_ROBOTLOCOMOTION_SNOPT=On``), symbols will *still* be stripped.
 
 Differences with C++ API
 ========================

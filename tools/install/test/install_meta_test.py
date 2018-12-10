@@ -1,10 +1,9 @@
 """Tests the behavior of targets generated from `install.py.in`."""
 
 import os
-from os.path import isdir, isfile, join, relpath
-from shutil import rmtree
+from os.path import isdir, join, relpath
 import unittest
-from subprocess import STDOUT, call, check_call, check_output
+from subprocess import STDOUT, check_call, check_output
 import sys
 
 # TODO(eric.cousineau): Expand on these tests, especially for nuanced things
