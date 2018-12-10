@@ -220,7 +220,7 @@ stripping, so you can debug with ``gdb`` or ``lldb``:
 
 .. code-block:: shell
 
-    cmake -DCMAKE_BUILD_TYPE=Debug -DNO_STRIP=ON ../drake
+    cmake -DCMAKE_BUILD_TYPE=Debug ../drake
 
 .. warning::
 

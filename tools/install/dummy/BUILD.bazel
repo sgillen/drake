@@ -15,12 +15,14 @@ package(default_visibility = ["//tools/install:__subpackages__"])
 
 drake_cc_library(
     name = "dummy",
+    testonly = 1,
     srcs = ["dummy.cc"],
     hdrs = ["dummy.h"],
 )
 
 drake_cc_binary(
     name = "libdummy.so",
+    testonly = 1,
     linkshared = 1,
     linkstatic = 1,
     deps = [":dummy"],
@@ -28,15 +30,17 @@ drake_cc_binary(
 
 drake_transitive_installed_hdrs_filegroup(
     name = "libdummy_headers",
+    testonly = 1,
     deps = [":dummy"],
 )
 
 py_library(
     name = "dummy_py",
+    testonly = 1,
     srcs = ["dummy.py"],
 )
 
-# N.B. This should NOT be incorporated into build components.
+# N.B. This should NOT be incorporated into `build_components.bzl`.
 install(
     name = "install",
     testonly = 1,

@@ -39,7 +39,7 @@ drake_py_unittest(
 
 drake_py_unittest(
     name = "install_meta_test",
-    data = ["//tools/install/dummy:dummy_install"],
+    data = ["//tools/install/dummy:install"],
 )
 
 add_lint_tests()

@@ -7,9 +7,12 @@ import unittest
 from subprocess import STDOUT, call, check_call, check_output
 import sys
 
+# TODO(eric.cousineau): Expand on these tests, especially for nuanced things
+# like Python C extensions.
+
 
 class TestInstallMeta(unittest.TestCase):
-    BINARY = "tools/install/dummy/dummy_install"
+    BINARY = "tools/install/dummy/install"
 
     def get_install_dir(self, case):
         # Do not use `install_test_helper`, as its behavior is more constrained

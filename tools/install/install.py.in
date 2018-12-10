@@ -374,8 +374,8 @@ def main(args):
         help='do not strip symbols (for debugging)')
     parser.add_argument(
         '--disable_no_strip_warning', action='store_true', default=False,
-        help='warns about not stripping symbols (when using proprietary '
-             'dependencies')
+        help='disables warning about not stripping symbols (when not using '
+             'proprietary dependencies)')
     args = parser.parse_args(args)
 
     # Get install prefix.
