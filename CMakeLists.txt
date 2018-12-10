@@ -220,8 +220,9 @@ if(CMAKE_VERBOSE_MAKEFILE)
   list(APPEND BAZEL_ARGS --subcommands)
 endif()
 
-# This is enabled if any proprietary dependencies are enabled.
-set(USING_PROPRIETARY_DEPS 0)
+# This is enabled if any proprietary dependencies (that require static linking) are enabled.
+# If enabled, we will not permit not stripping symbols.
+set(USING_STATIC_PROPRIETRARY_DEPS 0)
 
 option(WITH_GUROBI "Build with support for Gurobi" OFF)
 
@@ -234,7 +235,6 @@ if(WITH_GUROBI)
     get_filename_component(GUROBI_PATH "${Gurobi_INCLUDE_DIRS}" DIRECTORY)
     list(APPEND BAZEL_ENV "GUROBI_PATH=${GUROBI_PATH}")
   endif()
-  set(USING_PROPRIETARY_DEPS 1)
 endif()
 
 option(WITH_MATLAB "Build with support for MATLAB" OFF)
@@ -250,7 +250,6 @@ option(WITH_MOSEK "Build with support for MOSEK" OFF)
 
 if(WITH_MOSEK)
   list(APPEND BAZEL_ARGS --config=mosek)
-  set(USING_PROPRIETARY_DEPS 1)
 endif()
 
 option(WITH_ROBOTLOCOMOTION_SNOPT "Build with support for SNOPT using the RobotLocomotion/snopt private GitHub repository" OFF)
@@ -262,7 +261,7 @@ if(WITH_ROBOTLOCOMOTION_SNOPT AND WITH_SNOPT)
 elseif(WITH_ROBOTLOCOMOTION_SNOPT)
   list(APPEND BAZEL_ARGS --config=snopt)
   list(APPEND BAZEL_ENV "SNOPT_PATH=git")
-  set(USING_PROPRIETARY_DEPS 1)
+  set(USING_STATIC_PROPRIETRARY_DEPS 1)
 elseif(WITH_SNOPT)
   list(APPEND BAZEL_ARGS --config=snopt)
   set(SNOPT_PATH SNOPT_PATH-NOTFOUND CACHE FILEPATH "Path to SNOPT source archive")
@@ -271,11 +270,13 @@ elseif(WITH_SNOPT)
   endif()
   mark_as_advanced(SNOPT_PATH)
   list(APPEND BAZEL_ENV "SNOPT_PATH=${SNOPT_PATH}")
-  set(USING_PROPRIETARY_DEPS 1)
+  set(USING_STATIC_PROPRIETRARY_DEPS 1)
 endif()
 
 set(BAZEL_TARGETS //:install)
 
+# Example usage to check warning for proprietary dependencies, using dummy target.
+#   $ cmake .. -DDRAKE_TEST_WITH_DUMMY=ON -DCMAKE_BUILD_TYPE=Debug -DWITH_GUROBI=ON
 option(DRAKE_TEST_WITH_DUMMY "Use dummy target to quickly test CMake behavior." OFF)
 mark_as_advanced(DRAKE_TEST_WITH_DUMMY)
 if(DRAKE_TEST_WITH_DUMMY)
@@ -292,13 +293,12 @@ set(BAZEL_TARGETS_ARGS "${CMAKE_INSTALL_PREFIX}")
 
 # If we are in debug mode, do not strip symbols.
 if(CMAKE_BUILD_TYPE STREQUAL Debug OR CMAKE_BUILD_TYPE STREQUAL RelWithDebugInfo)
-  # If any proprietary solver is enabled, start blaring warnings.
-  if(USING_PROPRIETARY_DEPS)
-    message("WARNING: Symbols are not stripped and proprietary dependencies are enabled. Do NOT redistribute these binaries.")
+  # If any static proprietary dependency is enabled, disable stripping and warn.
+  if(USING_STATIC_PROPRIETRARY_DEPS)
+    message("WARNING: Statically linked properietary dependencies are enabled; symbols will STILL be stripped, even in debug mode.")
   else()
-    list(INSERT BAZEL_TARGETS_ARGS 0 "--disable_no_strip_warning")
+    list(INSERT BAZEL_TARGETS_ARGS 0 "--no_strip")
   endif()
-  list(INSERT BAZEL_TARGETS_ARGS 0 "--no_strip")
 endif()
 
 include(ExternalProject)

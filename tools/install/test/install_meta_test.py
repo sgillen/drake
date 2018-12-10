@@ -1,7 +1,7 @@
 """Tests the behavior of targets generated from `install.py.in`."""
 
 import os
-from os.path import isdir, isfile, join
+from os.path import isdir, isfile, join, relpath
 from shutil import rmtree
 import unittest
 from subprocess import STDOUT, call, check_call, check_output
@@ -28,43 +28,40 @@ class TestInstallMeta(unittest.TestCase):
         major, minor = sys.version_info.major, sys.version_info.minor
         return join("lib", "python{}.{}".format(major, minor), "site-packages")
 
+    def listdir_recursive(self, d):
+        out = set()
+        for (dirpath, _, filenames) in os.walk(d):
+            dirrel = relpath(dirpath, d)
+            for filename in filenames:
+                out.add(join(dirrel, filename))
+        return out
+
     def test_nominal(self):
         """Test nominal behavior of install."""
         install_dir = self.get_install_dir("test_nominal")
         check_call([self.BINARY, install_dir])
         py_dir = self.get_python_site_packages_dir()
-        expected_manifest = [
+        expected_manifest = {
             "share/README.md",
+            "include/dummy.h",
             "lib/libdummy.so",
             join(py_dir, "dummy.py"),
-        ]
-        for expected_file in expected_manifest:
-            file_path = join(install_dir, expected_file)
-            self.assertTrue(isfile(file_path), expected_file)
+        }
+        actual_manifest = self.listdir_recursive(install_dir)
+        self.assertSetEqual(actual_manifest, expected_manifest)
 
     def test_strip_args(self):
-        """Test behavior of `--no_strip` and related arguments."""
+        """Test behavior of `--no_strip`."""
         install_dir = self.get_install_dir("test_strip_args")
-        # Negative test: Ensure `--disable_nostrip_warning` is not used in a
-        # blanket fashion.
-        returncode = call(
-            [self.BINARY, install_dir, "--disable_no_strip_warning"])
-        self.assertEqual(returncode, 1)
-        # Test for warnings with no stripping:
         strip_substr = "NOTE: Symbols are not stripped."
-        warning_substr = "WARNING: Proprietary dependencies are enabled."
-        # - Nominal.
-        text_with_warning = check_output([
-            self.BINARY, install_dir, "--no_strip"], stderr=STDOUT)
+        # - Without.
+        text_without = check_output([self.BINARY, install_dir], stderr=STDOUT)
         # N.B. `assertIn` error messages are not great for multiline, so just
         # print and use nominal asserts.
-        print(text_with_warning)
-        self.assertTrue(strip_substr in text_with_warning)
-        self.assertTrue(warning_substr in text_with_warning)
-        # - Warning disabled.
-        text_without_warning = check_output([
-            self.BINARY, install_dir, "--no_strip",
-            "--disable_no_strip_warning"], stderr=STDOUT)
-        print(text_without_warning)
-        self.assertTrue(strip_substr in text_without_warning)
-        self.assertTrue(warning_substr not in text_without_warning)
+        print(text_without)
+        self.assertTrue(strip_substr not in text_without)
+        # - With.
+        text_with = check_output([
+            self.BINARY, install_dir, "--no_strip"], stderr=STDOUT)
+        print(text_with)
+        self.assertTrue(strip_substr in text_with)
