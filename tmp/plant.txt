@@ -6,12 +6,18 @@ AddModelInstance
 AddRigidBody
 CalcAllBodyPosesInWorld
 CalcAllBodySpatialVelocitiesInWorld
+CalcBiasForFrameGeometricJacobianExpressedInWorld
 CalcBiasTerm
+CalcConservativePower
 CalcFrameGeometricJacobianExpressedInWorld
+CalcGravityGeneralizedForces
+CalcJacobianSpatialVelocity
 CalcMassMatrixViaInverseDynamics
 CalcPointsAnalyticalJacobianExpressedInWorld
 CalcPointsGeometricJacobianExpressedInWorld
 CalcPointsPositions
+CalcPotentialEnergy
+CalcRelativeFrameGeometricJacobian
 CalcRelativeTransform
 CollectRegisteredGeometries
 EvalBodyPoseInWorld
@@ -33,6 +39,7 @@ GetMutablePositionsAndVelocities
 GetMutableVelocities
 GetPositions
 GetPositionsAndVelocities
+GetRigidBodyByName
 GetVelocities
 GetVisualGeometriesForBody
 HasBodyNamed
@@ -40,6 +47,8 @@ HasFrameNamed
 HasJointActuatorNamed
 HasJointNamed
 HasModelInstanceNamed
+MapQDotToVelocity
+MapVelocityToQDot
 RegisterAsSourceForSceneGraph
 RegisterCollisionGeometry
 RegisterVisualGeometry

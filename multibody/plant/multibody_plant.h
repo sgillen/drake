@@ -1025,6 +1025,31 @@ class MultibodyPlant : public MultibodyTreeSystem<T> {
     return tree().GetFrameByName(name, model_instance);
   }
 
+  /// Returns a constant reference to a rigid body that is identified
+  /// by the string `name` in `this` model.
+  /// @throws std::logic_error if there is no body with the requested name.
+  /// @throws std::logic_error if the body name occurs in multiple model
+  /// instances.
+  /// @throws std::logic_error if the requested body is not a RigidBody.
+  /// @see HasBodyNamed() to query if there exists a body in `this` model with a
+  /// given specified name.
+  const RigidBody<T>& GetRigidBodyByName(const std::string& name) const {
+    return tree().GetRigidBodyByName(name);
+  }
+
+  /// Returns a constant reference to the rigid body that is uniquely identified
+  /// by the string `name` in @p model_instance.
+  /// @throws std::logic_error if there is no body with the requested name.
+  /// @throws std::logic_error if the requested body is not a RigidBody.
+  /// @throws std::runtime_error if @p model_instance is not valid for this
+  ///         model.
+  /// @see HasBodyNamed() to query if there exists a body in `this` model with a
+  /// given specified name.
+  const RigidBody<T>& GetRigidBodyByName(
+      const std::string& name, ModelInstanceIndex model_instance) const {
+    return tree().GetRigidBodyByName(name, model_instance);
+  }
+
   /// Returns a constant reference to a joint that is identified
   /// by the string `name` in `this` %MultibodyPlant.
   /// @throws std::logic_error if there is no joint with the requested name.
@@ -1683,6 +1708,61 @@ class MultibodyPlant : public MultibodyTreeSystem<T> {
   VectorX<T> CalcGravityGeneralizedForces(
       const systems::Context<T>& context) const {
     return tree().CalcGravityGeneralizedForces(context);
+  }
+
+  /// Transforms generalized velocities v to time derivatives `qdot` of the
+  /// generalized positions vector `q` (stored in `context`). `v` and `qdot`
+  /// are related linearly by `q̇ = N(q)⋅v`.
+  /// Using the configuration `q` stored in the given `context` this method
+  /// calculates `q̇ = N(q)⋅v`.
+  ///
+  /// @param[in] context
+  ///   The context containing the state of the %MultibodyTree model.
+  /// @param[in] v
+  ///   A vector of of generalized velocities for `this` %MultibodyTree model.
+  ///   This method aborts if v is not of size num_velocities().
+  /// @param[out] qdot
+  ///   A valid (non-null) pointer to a vector in `ℝⁿ` with n being the number
+  ///   of generalized positions in `this` %MultibodyTree model,
+  ///   given by `num_positions()`. This method aborts if `qdot` is nullptr
+  ///   or if it is not of size num_positions().
+  ///
+  /// @see MapQDotToVelocity()
+  /// @see Mobilizer::MapVelocityToQDot()
+  void MapVelocityToQDot(
+      const systems::Context<T>& context,
+      const Eigen::Ref<const VectorX<T>>& v,
+      EigenPtr<VectorX<T>> qdot) const {
+    return tree().MapVelocityToQDot(context, v, qdot);
+  }
+
+  /// Transforms the time derivative `qdot` of the generalized positions vector
+  /// `q` (stored in `context`) to generalized velocities `v`. `v` and `q̇`
+  /// are related linearly by `q̇ = N(q)⋅v`. Although `N(q)` is not
+  /// necessarily square, its left pseudo-inverse `N⁺(q)` can be used to
+  /// invert that relationship without residual error, provided that `qdot` is
+  /// in the range space of `N(q)` (that is, if it *could* have been produced as
+  /// `q̇ = N(q)⋅v` for some `v`).
+  /// Using the configuration `q` stored in the given `context` this method
+  /// calculates `v = N⁺(q)⋅q̇`.
+  ///
+  /// @param[in] context
+  ///   The context containing the state of the %MultibodyTree model.
+  /// @param[in] qdot
+  ///   A vector containing the time derivatives of the generalized positions.
+  ///   This method aborts if `qdot` is not of size num_positions().
+  /// @param[out] v
+  ///   A valid (non-null) pointer to a vector in `ℛⁿ` with n the number of
+  ///   generalized velocities. This method aborts if v is nullptr or if it
+  ///   is not of size num_velocities().
+  ///
+  /// @see MapVelocityToQDot()
+  /// @see Mobilizer::MapQDotToVelocity()
+  void MapQDotToVelocity(
+      const systems::Context<T>& context,
+      const Eigen::Ref<const VectorX<T>>& qdot,
+      EigenPtr<VectorX<T>> v) const {
+    tree().MapQDotToVelocity(context, qdot, v);
   }
 
   /// Performs the computation of the mass matrix `M(q)` of the model using

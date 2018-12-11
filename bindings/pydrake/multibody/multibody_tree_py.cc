@@ -588,6 +588,10 @@ void init_multibody_plant(py::module m) {
               return X_WB;
             },
             py::arg("context"), doc.MultibodyPlant.CalcAllBodyPosesInWorld.doc)
+        .def("CalcJacobianSpatialVelocity", &Class::CalcJacobianSpatialVelocity,
+            py::arg("context"), py::arg("with_respect_to"), py::arg("frame_B"),
+            py::arg("p_BP"), py::arg("frame_A"), py::arg("frame_E"),
+            doc.MultibodyPlant.CalcJacobianSpatialVelocity.doc)
         .def("CalcPotentialEnergy", &Class::CalcPotentialEnergy,
             py::arg("context"), doc.MultibodyPlant.CalcPotentialEnergy.doc)
         .def("CalcConservativePower", &Class::CalcConservativePower,
@@ -603,9 +607,7 @@ void init_multibody_plant(py::module m) {
             py::arg("context"))
         .def("CalcBiasTerm",
             [](const Class* self, const Context<T>& context) {
-              VectorX<T> Cv;
-              const int n = self->num_velocities();
-              Cv.resize(n);
+              VectorX<T> Cv(self->num_velocities());
               self->CalcBiasTerm(context, &Cv);
               return Cv;
             },
@@ -614,6 +616,15 @@ void init_multibody_plant(py::module m) {
             &Class::CalcGravityGeneralizedForces,
             py::arg("context"),
             doc.MultibodyPlant.CalcGravityGeneralizedForces.doc)
+        .def("MapVelocityToQDot",
+            [](const Class* self, const Context<T>& context,
+               const Eigen::Ref<const VectorX<T>>& v) {
+              VectorX<T> qdot(self->num_positions());
+              self->MapVelocityToQDot(context, v, &qdot);
+              return qdot;
+            }
+            py::arg("context"), py::arg("v"),
+            doc.MultibodyPlant.MapVelocityToQDot.doc)
         .def("CalcRelativeTransform", &Class::CalcRelativeTransform,
             py::arg("context"), py::arg("frame_A"), py::arg("frame_B"),
             doc.MultibodyPlant.CalcRelativeTransform.doc);
