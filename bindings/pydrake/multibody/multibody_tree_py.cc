@@ -559,14 +559,6 @@ void init_multibody_plant(py::module m) {
             },
             py::arg("body"), py::arg("V_WB"), py::arg("context"),
             doc.MultibodyPlant.SetFreeBodySpatialVelocity.doc_3args)
-        .def("CalcAllBodySpatialVelocitiesInWorld",
-            [](const Class* self, const Context<T>& context) {
-              std::vector<SpatialVelocity<T>> V_WB;
-              self->CalcAllBodySpatialVelocitiesInWorld(context, &V_WB);
-              return V_WB;
-            },
-            py::arg("context"),
-            doc.MultibodyPlant.CalcAllBodySpatialVelocitiesInWorld.doc)
         .def("EvalBodyPoseInWorld",
             [](const Class* self, const Context<T>& context,
                 const Body<T>& body_B) {
@@ -581,13 +573,6 @@ void init_multibody_plant(py::module m) {
             },
             py::arg("context"), py::arg("body"),
             doc.MultibodyPlant.EvalBodySpatialVelocityInWorld.doc)
-        .def("CalcAllBodyPosesInWorld",
-            [](const Class* self, const Context<T>& context) {
-              std::vector<Isometry3<T>> X_WB;
-              self->CalcAllBodyPosesInWorld(context, &X_WB);
-              return X_WB;
-            },
-            py::arg("context"), doc.MultibodyPlant.CalcAllBodyPosesInWorld.doc)
         .def("CalcJacobianSpatialVelocity", &Class::CalcJacobianSpatialVelocity,
             py::arg("context"), py::arg("with_respect_to"), py::arg("frame_B"),
             py::arg("p_BP"), py::arg("frame_A"), py::arg("frame_E"),

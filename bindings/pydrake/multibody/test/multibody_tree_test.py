@@ -596,7 +596,7 @@ class TestMultibodyTree(unittest.TestCase):
         v_iiwa = plant.GetVelocities(context, iiwa_model)
         v_gripper = plant.GetVelocities(context, gripper_model)
 
-        # Assert that the GetPositionsFromArray return
+        # Assert that the `GetPositions` and `GetVelocities` return
         # the desired values set earlier.
         self.assertTrue(np.allclose(q_iiwa_desired, q_iiwa))
         self.assertTrue(np.allclose(v_iiwa_desired, v_iiwa))

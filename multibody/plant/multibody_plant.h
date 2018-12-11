@@ -403,46 +403,6 @@ class MultibodyPlant : public MultibodyTreeSystem<T> {
     tree().SetFreeBodySpatialVelocityOrThrow(body, V_WB, context, state);
   }
 
-  /// Computes the world pose `X_WB(q)` of each body B in the model as a
-  /// function of the generalized positions q stored in `context`.
-  /// @param[in] context
-  ///   The context containing the state of the model. It stores the generalized
-  ///   positions q of the model.
-  /// @param[out] X_WB
-  ///   On output this vector will contain the pose of each body in the model
-  ///   ordered by BodyIndex. The index of a body in the model can be obtained
-  ///   with Body::index(). This method throws an exception if `X_WB` is
-  ///   `nullptr`. Vector `X_WB` is resized when needed to have size
-  ///   num_bodies().
-  ///
-  /// @throws std::exception if X_WB is nullptr.
-  void CalcAllBodyPosesInWorld(
-      const systems::Context<T>& context,
-      std::vector<Isometry3<T>>* X_WB) const {
-    tree().CalcAllBodyPosesInWorld(context, X_WB);
-  }
-
-  /// Computes the spatial velocity `V_WB(q, v)` of each body B in the model,
-  /// measured and expressed in the world frame W. The body spatial velocities
-  /// are a function of the generalized positions q and generalized velocities
-  /// v, both stored in `context`.
-  /// @param[in] context
-  ///   The context containing the state of the model. It stores the generalized
-  ///   positions q and velocities v of the model.
-  /// @param[out] V_WB
-  ///   On output this vector will contain the spatial velocity of each body in
-  ///   the model ordered by BodyIndex. The index of a body in the model can be
-  ///   obtained with Body::index(). This method throws an exception if
-  ///   `V_WB` is `nullptr`. Vector `V_WB` is resized when needed to have size
-  ///   num_bodies().
-  ///
-  /// @throws std::exception if V_WB is nullptr.
-  void CalcAllBodySpatialVelocitiesInWorld(
-      const systems::Context<T>& context,
-      std::vector<SpatialVelocity<T>>* V_WB) const {
-    return tree().CalcAllBodySpatialVelocitiesInWorld(context, V_WB);
-  }
-
   /// Sets all generalized positions and velocities from the given vector
   /// [q; v].
   /// @throws std::exception if the `context` is nullptr, if the context does
