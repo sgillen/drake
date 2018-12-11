@@ -1638,148 +1638,19 @@ class MultibodyTree {
       const Frame<T>& frame_F, const Eigen::Ref<const Vector3<T>>& p_FP,
       EigenPtr<MatrixX<T>> Jv_WFp) const;
 
-  /// Computes the geometric Jacobian for a point moving with a given frame.
-  /// Consider a point P instantaneously moving with a frame B with position
-  /// `p_BP` in that frame. Frame `Bp` is the frame defined by shifting frame B
-  /// with origin at `Bo` to a new origin at point P. The spatial
-  /// velocity `V_ABp_E` of frame `Bp` measured in a frame A and expressed in a
-  /// frame E relates to the generalized velocities of the system by the
-  /// geometric Jacobian `Jv_ABp_E(q)` by: <pre>
-  ///   V_ABp_E(q, v) = Jv_ABp_E(q)⋅v
-  /// </pre>
-  /// This method computes the geometric Jacobian `Jv_ABp_E(q)`.
-  ///
-  /// @param[in] context
-  ///   The context containing the state of the model. It stores the
-  ///   generalized positions q.
-  /// @param[in] frame_B
-  ///   The position `p_BP` of point P is measured and expressed in this frame.
-  /// @param[in] p_BP
-  ///   The (fixed) position of the origin `P` of frame `Bp` as measured and
-  ///   expressed in frame B.
-  /// @param[in] frame_A
-  ///   The second frame in which the spatial velocity `V_ABp` is measured and
-  ///   expressed.
-  /// @param[in] frame_E
-  ///   Frame in which the velocity V_ABp_E is expressed.
-  /// @param[out] Jv_ABp_E
-  ///   The geometric Jacobian `Jv_ABp_E(q)`, function of the generalized
-  ///   positions q only. This Jacobian relates to the spatial velocity
-  ///   `V_ABp_E` of frame `Bp` in A and expressed in E by: <pre>
-  ///     V_ABp_E(q, v) = Jv_ABp_E(q)⋅v
-  ///   </pre>
-  ///   Therefore `Jv_ABp_E` is a matrix of size `6 x nv`, with `nv`
-  ///   the number of generalized velocities. On input, matrix `Jv_ABp_E`
-  ///   **must** have size `6 x nv` or this method throws an exception.
-  ///   Given a `6 x nv` spatial Jacobian Jv, let Jvr be the `3 x nv`
-  ///   rotational part (top 3 rows) and Jvt be the translational part
-  ///   (bottom 3 rows). These can be obtained as follows: <pre>
-  ///     Jvr_ABp = Jv_ABp.topRows<3>();
-  ///     Jvt_ABp = Jv_ABp.bottomRows<3>();
-  ///   </pre>
-  ///   This ordering is consistent with the internal storage of the
-  ///   SpatialVelocity class. Therefore the following operations results in
-  ///   a valid spatial velocity: <pre>
-  ///     SpatialVelocity<double> V_ABp(Jv_ABp * v);
-  ///   </pre>
-  ///
-  /// @throws std::exception if `J_ABp` is nullptr or if it is not of size
-  ///   `6 x nv`.
-  // TODO(amcastro-tri): Rework this method as per issue #10155.
+  /// See MultibodyPlant method.
   void CalcRelativeFrameGeometricJacobian(
       const systems::Context<T>& context,
       const Frame<T>& frame_B, const Eigen::Ref<const Vector3<T>>& p_BP,
       const Frame<T>& frame_A, const Frame<T>& frame_E,
       EigenPtr<MatrixX<T>> Jv_ABp_E) const;
 
-  /// Given a frame `Fp` defined by shifting a frame F from its origin `Fo` to
-  /// a new origin `P`, this method computes the bias term `Ab_WFp` associated
-  /// with the spatial acceleration `A_WFp` a frame `Fp` instantaneously
-  /// moving with a frame F at a fixed position `p_FP`.
-  /// That is, the spatial acceleration of frame `Fp` can be computed as:
-  /// <pre>
-  ///   A_WFp = Jv_WFp(q)⋅v̇ + Ab_WFp(q, v)
-  /// </pre>
-  /// where `Ab_WFp(q, v) = J̇v_WFp(q, v)⋅v`.
-  ///
-  /// @see CalcFrameGeometricJacobianExpressedInWorld() to compute the
-  /// geometric Jacobian `Jv_WFp(q)`.
-  ///
-  /// @param[in] context
-  ///   The context containing the state of the model. It stores the
-  ///   generalized positions q and generalized velocities v.
-  /// @param[in] frame_F
-  ///   The position `p_FP` of frame `Fp` is measured and expressed in this
-  ///   frame F.
-  /// @param[in] p_FP
-  ///   The (fixed) position of the origin `P` of frame `Fp` as measured and
-  ///   expressed in frame F.
-  /// @returns Ab_WFp
-  ///   The bias term, function of the generalized positions q and the
-  ///   generalized velocities v as stored in `context`.
-  ///   The returned vector is of size 6, with the first three elements related
-  ///   to the bias in angular acceleration and the with the last three elements
-  ///   related to the bias in translational acceleration.
-  /// @note SpatialAcceleration(Ab_WFp) defines a valid SpatialAcceleration.
-  // TODO(amcastro-tri): Rework this method as per issue #10155.
+  /// See MultibodyPlant method.
   Vector6<T> CalcBiasForFrameGeometricJacobianExpressedInWorld(
       const systems::Context<T>& context,
       const Frame<T>& frame_F, const Eigen::Ref<const Vector3<T>>& p_FP) const;
 
-  /// Computes the Jacobian of spatial velocity for a frame instantaneously
-  /// moving with a specified frame in the model. Consider a point P
-  /// instantaneously moving with a frame B with position `p_BP` in that frame.
-  /// Frame `Bp` is the frame defined by shifting frame B with origin at `Bo` to
-  /// a new origin at point P. The spatial velocity `V_ABp_E` of frame `Bp`
-  /// measured in a frame A and expressed in a frame E can be expressed as:
-  /// <pre>
-  ///   V_ABp_E(q, w) = Jw_ABp_E(q)⋅w
-  /// </pre>
-  /// where w represents
-  ///   * the time derivative of the generalized position vector q̇, if
-  ///     `with_respect_to` is JacobianWrtVariable::kQDot.
-  ///   * the generalized velocity vector v, if `with_respect_to` is
-  ///     JacobianWrtVariable::kV.
-  ///
-  /// This method computes `Jw_ABp_E(q)`.
-  ///
-  /// @param[in] context
-  ///   The context containing the state of the model. It stores the
-  ///   generalized positions q.
-  /// @param[in] with_respect_to
-  ///   Enum indicating whether `Jw_ABp_E` converts generalized velocities or
-  ///   time-derivatives of generalized positions to spatial velocities.
-  /// @param[in] frame_B
-  ///   The position `p_BP` of point P is measured and expressed in this frame.
-  /// @param[in] p_BP
-  ///   The (fixed) position of the origin `P` of frame `Bp` as measured and
-  ///   expressed in frame B.
-  /// @param[in] frame_A
-  ///   The second frame in which the spatial velocity `V_ABp` is measured.
-  /// @param[in] frame_E
-  ///   Frame in which the velocity V_ABp_E, and therefore the Jacobian Jw_ABp_E
-  ///   is expressed.
-  /// @param[out] Jw_ABp_E
-  ///   The Jacobian `Jw_ABp_E(q)`, function of the generalized
-  ///   positions q only. This Jacobian relates to the spatial velocity
-  ///   `V_ABp_E` of frame `Bp` in `A` and expressed in `E` by: <pre>
-  ///     V_ABp_E(q, w) = Jw_ABp_E(q)⋅w </pre>
-  ///   Therefore `Jw_ABp_E` is a matrix of size `6 x nz`, where `nz` is the
-  ///   number of elements in w. On input, matrix `Jv_ABp_E` **must** have size
-  ///   `6 x nz` or this method throws an exception. Given a `6 x nz` Jacobian
-  ///   J, let Jr be the `3 x nz` rotational part (top 3 rows) and Jt be the
-  ///   translational part (bottom 3 rows). These can be obtained as follows:
-  ///   ```
-  ///     Jr_ABp_E = Jw_ABp_E.topRows<3>();
-  ///     Jt_ABp_E = Jw_ABp_E.bottomRows<3>();
-  ///   ```
-  ///   This ordering is consistent with the internal storage of the
-  ///   SpatialVelocity class. Therefore the following operations results in
-  ///   a valid spatial velocity: <pre>
-  ///     SpatialVelocity<double> V_ABp(Jw_ABp * w); </pre>
-  ///
-  /// @throws std::exception if `Jw_ABp_E` is nullptr or if it is not of size
-  ///   `6 x nz`.
+  /// See MultibodyPlant method.
   void CalcJacobianSpatialVelocity(
       const systems::Context<T>& context,
       JacobianWrtVariable with_respect_to,
@@ -2097,20 +1968,10 @@ class MultibodyTree {
       const VelocityKinematicsCache<T>& vc,
       MultibodyForces<T>* forces) const;
 
-  /// Computes and returns the total potential energy stored in `this` multibody
-  /// model for the configuration given by `context`.
-  /// @param[in] context
-  ///   The context containing the state of the %MultibodyTree model.
-  /// @returns The total potential energy stored in `this` multibody model.
+  /// See MultibodyPlant method.
   T CalcPotentialEnergy(const systems::Context<T>& context) const;
 
-  /// Computes and returns the power generated by conservative forces in the
-  /// multibody model. This quantity is defined to be positive when the
-  /// potential energy is decreasing. In other words, if `U(q)` is the potential
-  /// energy as defined by CalcPotentialEnergy(), then the conservative power,
-  /// `Pc`, is `Pc = -U̇(q)`.
-  ///
-  /// @see CalcPotentialEnergy()
+  /// See MultibodyPlant method.
   T CalcConservativePower(const systems::Context<T>& context) const;
 
   /// See MultibodyPlant method.
@@ -2121,28 +1982,7 @@ class MultibodyTree {
   void CalcBiasTerm(
       const systems::Context<T>& context, EigenPtr<VectorX<T>> Cv) const;
 
-  /// Computes the generalized forces `tau_g(q)` due to gravity as a function
-  /// of the generalized positions `q` stored in the input `context`.
-  /// The vector of generalized forces due to gravity `tau_g(q)` is defined such
-  /// that it appears on the right hand side of the equations of motion together
-  /// with any other generalized forces, like so:
-  /// <pre>
-  ///   Mv̇ + C(q, v)v = tau_g(q) + tau_app
-  /// </pre>
-  /// where `tau_app` includes any other generalized forces applied on the
-  /// system.
-  ///
-  /// @param[in] context
-  ///   The context storing the state of the multibody model.
-  /// @returns tau_g
-  ///   A vector containing the generalized forces due to gravity.
-  ///   The generalized forces are consistent with the vector of
-  ///   generalized velocities `v` for `this` MultibodyTree model so that
-  ///   the inner product `v⋅tau_g` corresponds to the power applied by the
-  ///   gravity forces on the mechanical system. That is, `v⋅tau_g > 0`
-  ///   corresponds to potential energy going into the system, as either
-  ///   mechanical kinetic energy, some other potential energy, or heat, and
-  ///   therefore to a decrease of the gravitational potential energy.
+  /// See MultibodyPlant method.
   VectorX<T> CalcGravityGeneralizedForces(
       const systems::Context<T>& context) const;
 

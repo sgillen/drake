@@ -588,6 +588,26 @@ void init_multibody_plant(py::module m) {
               return X_WB;
             },
             py::arg("context"), doc.MultibodyPlant.CalcAllBodyPosesInWorld.doc)
+        .def("CalcRelativeFrameGeometricJacobian",
+            [](const Class* self, const Frame<T>& frame_B,
+               const Eigen::Ref<const Vector3<T>>& p_BP,
+               const Frame<T>& frame_A, const Frame<T>& frame_E) {
+              MatrixX<T> Jv_ABp_E;
+              self->CalcRelativeFrameGeometricJacobian(
+                  context, frame_B, p_BP, frame_A, frame_E, &Jv_ABp_E);
+              return Jv_ABp_E;
+            }
+            py::arg("context"), py::arg("frame_B"), py::arg("p_BP"),
+            py::arg("frame_A"), py::arg("frame_E"),
+            doc.MultibodyPlant.CalcRelativeFrameGeometricJacobian.doc)
+        .def("CalcBiasForFrameGeometricJacobianExpressedInWorld",
+            &Class::CalcBiasForFrameGeometricJacobianExpressedInWorld,
+            py::arg("context"), py::arg("frame_F"), py::arg("p_FP"),
+            doc.MultibodyPlant.CalcBiasForFrameGeometricJacobianExpressedInWorld.doc)  // NOLINT
+        .def("CalcPotentialEnergy", &Class::CalcPotentialEnergy,
+            py::arg("context"), doc.MultibodyPlant.CalcPotentialEnergy.doc)
+        .def("CalcConservativePower", &Class::CalcConservativePower,
+            py::arg("context"), doc.MultibodyPlant.CalcConservativePower.doc)
         .def("CalcMassMatrixViaInverseDynamics",
             [](const Class* self, const Context<T>& context) {
               MatrixX<T> H;
@@ -606,6 +626,10 @@ void init_multibody_plant(py::module m) {
               return Cv;
             },
             py::arg("context"), doc.MultibodyPlant.CalcBiasTerm.doc)
+        .def("CalcGravityGeneralizedForces",
+            &Class::CalcGravityGeneralizedForces,
+            py::arg("context"),
+            doc.MultibodyPlant.CalcGravityGeneralizedForces.doc)
         .def("CalcRelativeTransform", &Class::CalcRelativeTransform,
             py::arg("context"), py::arg("frame_A"), py::arg("frame_B"),
             doc.MultibodyPlant.CalcRelativeTransform.doc);
