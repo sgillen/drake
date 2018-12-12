@@ -1097,6 +1097,77 @@ class MultibodyPlant : public MultibodyTreeSystem<T> {
   }
   /// @}
 
+  /// @name Model instance accessors
+  /// Many functions on %MultibodyTree expect vectors of tree state or
+  /// joint actuator inputs which encompass the entire tree.  Methods
+  /// in this section are convenience accessors for the portion of
+  /// those vectors which apply to a single model instance only.
+  /// @{
+
+  /// Given the actuation values `u_instance` for all actuators in
+  /// `model_instance`, this method sets the actuation vector u for the entire
+  /// MultibodyTree model to which this actuator belongs to. This method throws
+  /// an exception if the size of `u_instance` is not equal to the number of
+  /// degrees of freedom of all of the actuated joints in `model_instance`.
+  /// @param[in] u_instance Actuation values for the actuators. It must be of
+  ///   size equal to the number of degrees of freedom of all of the actuated
+  ///   joints in `model_instance`.
+  /// @param[out] u
+  ///   The vector containing the actuation values for the entire MultibodyTree.
+  void SetActuationInArray(
+      ModelInstanceIndex model_instance,
+      const Eigen::Ref<const VectorX<T>>& u_instance,
+      EigenPtr<VectorX<T>> u) const {
+    tree().SetActuationInArray(model_instance, u_instance, u);
+  }
+
+  /// Returns a vector of generalized positions for `model_instance` from a
+  /// vector `q_array` of generalized positions for the entire MultibodyTree
+  /// model.  This method throws an exception if `q` is not of size
+  /// MultibodyTree::num_positions().
+  VectorX<T> GetPositionsFromArray(
+      ModelInstanceIndex model_instance,
+      const Eigen::Ref<const VectorX<T>>& q) const {
+    return tree().GetPositionsFromArray(model_instance, q);
+  }
+
+  /// Sets the vector of generalized positions for `model_instance` in
+  /// `q` using `q_instance`, leaving all other elements in the array
+  /// untouched. This method throws an exception if `q` is not of size
+  /// MultibodyTree::num_positions() or `q_instance` is not of size
+  /// `MultibodyTree::num_positions(model_instance)`.
+  void SetPositionsInArray(
+      ModelInstanceIndex model_instance,
+      const Eigen::Ref<const VectorX<T>>& q_instance,
+      EigenPtr<VectorX<T>> q) const {
+    tree().SetPositionsInArray(model_intsance, q_instance, q);
+  }
+
+  /// Returns a vector of generalized velocities for `model_instance` from a
+  /// vector `v` of generalized velocities for the entire MultibodyTree
+  /// model.  This method throws an exception if the input array is not of size
+  /// MultibodyTree::num_velocities().
+  VectorX<T> GetVelocitiesFromArray(
+      ModelInstanceIndex model_instance,
+      const Eigen::Ref<const VectorX<T>>& v_array) const {
+    return tree().GetVelocitiesFromArray(model_instance, v_array);
+  }
+
+  /// Sets the vector of generalized velocities for `model_instance` in
+  /// `v` using `v_instance`, leaving all other elements in the array
+  /// untouched. This method throws an exception if `v` is not of size
+  /// MultibodyTree::num_velocities() or `v_instance` is not of size
+  /// `MultibodyTree::num_positions(model_instance)`.
+  void SetVelocitiesInArray(
+      ModelInstanceIndex model_instance,
+      const Eigen::Ref<const VectorX<T>>& model_v,
+      EigenPtr<VectorX<T>> v_array) const {
+    tree().SetVelocitiesInArray(model_instance, model_v, v_array);
+  }
+
+  /// @}
+  // End of "Model instance accessors" section.
+
   /// @name Accessing the state
 
   /// Sets `context` to store the pose `X_WB` of a given `body` B in the world
@@ -1275,6 +1346,48 @@ class MultibodyPlant : public MultibodyTreeSystem<T> {
       EigenPtr<MatrixX<T>> p_WP_list, EigenPtr<MatrixX<T>> Jv_WFp) const {
     return tree().CalcPointsGeometricJacobianExpressedInWorld(
         context, frame_F, p_FP_list, p_WP_list, Jv_WFp);
+  }
+
+  /// Computes the bias term `b_WFp` associated with the translational
+  /// acceleration `a_WFp` of a point `P` instantaneously moving with a frame F.
+  /// That is, the translational acceleration of point `P` can be computed as:
+  /// <pre>
+  ///   a_WFp = Jv_WFp(q)⋅v̇ + b_WFp(q, v)
+  /// </pre>
+  /// where `b_WFp = J̇v_WFp(q, v)⋅v`.
+  ///
+  /// This method computes `b_WFp` for each point `P` in `p_FP_list` defined by
+  /// its position `p_FP` in `frame_F`.
+  ///
+  /// @see CalcPointsGeometricJacobianExpressedInWorld() to compute the
+  /// geometric Jacobian `Jv_WFp(q)`.
+  ///
+  /// @param[in] context
+  ///   The context containing the state of the model. It stores the
+  ///   generalized positions q and generalized velocities v.
+  /// @param[in] frame_F
+  ///   Points `P` in the list instantaneously move with this frame.
+  /// @param[in] p_FP_list
+  ///   A matrix with the fixed position of a list of points `P` measured and
+  ///   expressed in `frame_F`.
+  ///   Each column of this matrix contains the position vector `p_FP` for a
+  ///   point `P` measured and expressed in frame F. Therefore this input
+  ///   matrix lives in ℝ³ˣⁿᵖ with `np` the number of points in the list.
+  /// @returns b_WFp
+  ///   The bias term, function of the generalized positions q and the
+  ///   generalized velocities v as stored in `context`.
+  ///   The returned vector has size `3⋅np`, with np the number of points in
+  ///   `p_FP_list`, and concatenates the bias terms for each point `P` in the
+  ///   list in the same order they are specified on input.
+  ///
+  /// @throws std::exception if `p_FP_list` does not have 3 rows.
+  // TODO(amcastro-tri): Rework this method as per issue #10155.
+  VectorX<T> CalcBiasForPointsGeometricJacobianExpressedInWorld(
+      const systems::Context<T>& context,
+      const Frame<T>& frame_F,
+      const Eigen::Ref<const MatrixX<T>>& p_FP_list) const {
+    return tree().CalcBiasForPointsGeometricJacobianExpressedInWorld(
+        context, frame_F, p_FP_list);
   }
 
   // TODO(eric.cousineau): Reduce duplicate text between overloads.
@@ -2357,6 +2470,15 @@ class MultibodyPlant : public MultibodyTreeSystem<T> {
     }
   }
   /// @}
+
+  /// Sets default values in the context. For mobilizers, this method sets them
+  /// to their _zero_ configuration according to
+  /// Mobilizer::set_zero_configuration().
+  void SetDefaultContext(systems::Context<T>* context) const {
+    DRAKE_MBP_THROW_IF_NOT_FINALIZED();
+    DRAKE_DEMAND(context != nullptr);
+    tree().SetDefaultContext(context);
+  }
 
   /// Sets the state in `context` so that generalized positions and velocities
   /// are zero.

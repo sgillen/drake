@@ -4,9 +4,8 @@ AddJoint
 AddJointActuator
 AddModelInstance
 AddRigidBody
-CalcAllBodyPosesInWorld
-CalcAllBodySpatialVelocitiesInWorld
 CalcBiasForFrameGeometricJacobianExpressedInWorld
+CalcBiasForPointsGeometricJacobianExpressedInWorld
 CalcBiasTerm
 CalcConservativePower
 CalcFrameGeometricJacobianExpressedInWorld
@@ -39,8 +38,10 @@ GetMutablePositionsAndVelocities
 GetMutableVelocities
 GetPositions
 GetPositionsAndVelocities
+GetPositionsFromArray
 GetRigidBodyByName
 GetVelocities
+GetVelocitiesFromArray
 GetVisualGeometriesForBody
 HasBodyNamed
 HasFrameNamed
@@ -52,6 +53,7 @@ MapVelocityToQDot
 RegisterAsSourceForSceneGraph
 RegisterCollisionGeometry
 RegisterVisualGeometry
+SetActuationInArray
 SetDefaultState
 SetFreeBodyPose
 SetFreeBodyPoseInAnchoredFrame
@@ -59,7 +61,9 @@ SetFreeBodyPoseInWorldFrame
 SetFreeBodySpatialVelocity
 SetPositions
 SetPositionsAndVelocities
+SetPositionsInArray
 SetVelocities
+SetVelocitiesInArray
 WeldFrames
 default_coulomb_friction
 geometry_source_is_registered

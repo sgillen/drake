@@ -1267,16 +1267,7 @@ class MultibodyTree {
       EigenPtr<VectorX<T>> u) const;
   #endif
 
-  /// Given the actuation values `u_instance` for all actuators in
-  /// `model_instance`, this method sets the actuation vector u for the entire
-  /// MultibodyTree model to which this actuator belongs to. This method throws
-  /// an exception if the size of `u_instance` is not equal to the number of
-  /// degrees of freedom of all of the actuated joints in `model_instance`.
-  /// @param[in] u_instance Actuation values for the actuators. It must be of
-  ///   size equal to the number of degrees of freedom of all of the actuated
-  ///   joints in `model_instance`.
-  /// @param[out] u
-  ///   The vector containing the actuation values for the entire MultibodyTree.
+  /// See MultibodyPlant method.
   void SetActuationInArray(
       ModelInstanceIndex model_instance,
       const Eigen::Ref<const VectorX<T>>& u_instance,
@@ -1293,10 +1284,7 @@ class MultibodyTree {
   }
   #endif
 
-  /// Returns a vector of generalized positions for `model_instance` from a
-  /// vector `q_array` of generalized positions for the entire MultibodyTree
-  /// model.  This method throws an exception if `q` is not of size
-  /// MultibodyTree::num_positions().
+  /// See MultibodyPlant method.
   VectorX<T> GetPositionsFromArray(
       ModelInstanceIndex model_instance,
       const Eigen::Ref<const VectorX<T>>& q) const;
@@ -1312,11 +1300,7 @@ class MultibodyTree {
   }
   #endif
 
-  /// Sets the vector of generalized positions for `model_instance` in
-  /// `q` using `q_instance`, leaving all other elements in the array
-  /// untouched. This method throws an exception if `q` is not of size
-  /// MultibodyTree::num_positions() or `q_instance` is not of size
-  /// `MultibodyTree::num_positions(model_instance)`.
+  /// See MultibodyPlant method.
   void SetPositionsInArray(
       ModelInstanceIndex model_instance,
       const Eigen::Ref<const VectorX<T>>& q_instance,
@@ -1333,10 +1317,7 @@ class MultibodyTree {
   }
   #endif
 
-  /// Returns a vector of generalized velocities for `model_instance` from a
-  /// vector `v` of generalized velocities for the entire MultibodyTree
-  /// model.  This method throws an exception if the input array is not of size
-  /// MultibodyTree::num_velocities().
+  /// See MultibodyPlant method.
   VectorX<T> GetVelocitiesFromArray(
       ModelInstanceIndex model_instance,
       const Eigen::Ref<const VectorX<T>>& v_array) const;
@@ -1398,14 +1379,10 @@ class MultibodyTree {
         tree_system_->CreateDefaultContext());
   }
 
-  /// Sets default values in the context. For mobilizers, this method sets them
-  /// to their _zero_ configuration according to
-  /// Mobilizer::set_zero_configuration().
+  /// See MultibodyPlant method.
   void SetDefaultContext(systems::Context<T>* context) const;
 
-  /// Sets default values in the `state`. For mobilizers, this method sets them
-  /// to their _zero_ configuration according to
-  /// Mobilizer::set_zero_configuration().
+  /// See MultibodyPlant method.
   void SetDefaultState(const systems::Context<T>& context,
                        systems::State<T>* state) const;
 
@@ -1573,40 +1550,7 @@ class MultibodyTree {
       const Frame<T>& frame_F, const Eigen::Ref<const MatrixX<T>>& p_WP_list,
       EigenPtr<MatrixX<T>> Jv_WFp) const;
 
-  /// Computes the bias term `b_WFp` associated with the translational
-  /// acceleration `a_WFp` of a point `P` instantaneously moving with a frame F.
-  /// That is, the translational acceleration of point `P` can be computed as:
-  /// <pre>
-  ///   a_WFp = Jv_WFp(q)⋅v̇ + b_WFp(q, v)
-  /// </pre>
-  /// where `b_WFp = J̇v_WFp(q, v)⋅v`.
-  ///
-  /// This method computes `b_WFp` for each point `P` in `p_FP_list` defined by
-  /// its position `p_FP` in `frame_F`.
-  ///
-  /// @see CalcPointsGeometricJacobianExpressedInWorld() to compute the
-  /// geometric Jacobian `Jv_WFp(q)`.
-  ///
-  /// @param[in] context
-  ///   The context containing the state of the model. It stores the
-  ///   generalized positions q and generalized velocities v.
-  /// @param[in] frame_F
-  ///   Points `P` in the list instantaneously move with this frame.
-  /// @param[in] p_FP_list
-  ///   A matrix with the fixed position of a list of points `P` measured and
-  ///   expressed in `frame_F`.
-  ///   Each column of this matrix contains the position vector `p_FP` for a
-  ///   point `P` measured and expressed in frame F. Therefore this input
-  ///   matrix lives in ℝ³ˣⁿᵖ with `np` the number of points in the list.
-  /// @returns b_WFp
-  ///   The bias term, function of the generalized positions q and the
-  ///   generalized velocities v as stored in `context`.
-  ///   The returned vector has size `3⋅np`, with np the number of points in
-  ///   `p_FP_list`, and concatenates the bias terms for each point `P` in the
-  ///   list in the same order they are specified on input.
-  ///
-  /// @throws std::exception if `p_FP_list` does not have 3 rows.
-  // TODO(amcastro-tri): Rework this method as per issue #10155.
+  /// See MultibodyPlant method.
   VectorX<T> CalcBiasForPointsGeometricJacobianExpressedInWorld(
       const systems::Context<T>& context,
       const Frame<T>& frame_F,

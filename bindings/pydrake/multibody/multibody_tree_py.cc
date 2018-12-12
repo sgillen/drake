@@ -519,6 +519,36 @@ void init_multibody_plant(py::module m) {
                 const Isometry3<T>&>(&Class::SetFreeBodyPose),
             py::arg("context"), py::arg("body"), py::arg("X_WB"),
             doc.MultibodyPlant.SetFreeBodyPose.doc_3args)
+        .def("SetActuationInArray",
+            [](const Class* self, multibody::ModelInstanceIndex model_instance,
+                const Eigen::Ref<const VectorX<T>> u_instance,
+                Eigen::Ref<VectorX<T>> u) -> void {
+              self->SetActuationInArray(model_instance, u_instance, &u);
+            },
+            py::arg("model_instance"), py::arg("u_instance"), py::arg("u"),
+            doc.MultibodyPlant.SetActuationInArray.doc)
+        .def("GetPositionsFromArray", &Class::GetPositionsFromArray,
+            py::arg("model_instance"), py::arg("q"),
+            doc.MultibodyPlant.GetPositionsFromArray.doc)
+        .def("SetPositionsInArray",
+            [](const Class* self, multibody::ModelInstanceIndex model_instance,
+                const Eigen::Ref<const VectorX<T>> q_instance,
+                Eigen::Ref<VectorX<T>> q) -> void {
+              self->SetPositionsInArray(model_instance, q_instance, &q);
+            },
+            py::arg("model_instance"), py::arg("q_instance"), py::arg("q"),
+            doc.MultibodyPlant.SetPositionsInArray.doc)
+        .def("GetVelocitiesFromArray", &Class::GetPositionsFromArray,
+            py::arg("model_instance"), py::arg("q"),
+            doc.MultibodyPlant.GetPositionsFromArray.doc)
+        .def("SetVelocitiesInArray",
+            [](const Class* self, multibody::ModelInstanceIndex model_instance,
+                const Eigen::Ref<const VectorX<T>> v_instance,
+                Eigen::Ref<VectorX<T>> v) -> void {
+              self->SetVelocitiesInArray(model_instance, v_instance, &v);
+            },
+            py::arg("model_instance"), py::arg("v_instance"), py::arg("v"),
+            doc.MultibodyPlant.SetVelocitiesInArray.doc)
         // TODO(eric.cousineau): Ensure all of these return either references,
         // or copies, consistently. At present, `GetX(context)` returns a
         // reference, while `GetX(context, model_instance)` returns a copy.
@@ -844,7 +874,17 @@ void init_multibody_plant(py::module m) {
             },
             py_reference, py::arg("context"), py::arg("model_instance"),
             py::arg("q_v"),
-            doc.MultibodyPlant.SetPositionsAndVelocities.doc_3args);
+            doc.MultibodyPlant.SetPositionsAndVelocities.doc_3args)
+        .def("SetDefaultContext",
+            [](const Class* self, Context<T>* context) {
+              self->SetDefaultContext(context);
+            }, py::arg("context"), doc.MultibodyPlant.SetDefaultContext)
+        .def("SetDefaultState",
+            [](const Class* self, const Context<T>& context, State<T>* state) {
+              self->SetDefaultState(context, state);
+            },
+            py::arg("context"), py::arg("state"),
+            doc.MultibodyPlant.SetDefaultState);
 
     // Add deprecated methods.
 #pragma GCC diagnostic push
