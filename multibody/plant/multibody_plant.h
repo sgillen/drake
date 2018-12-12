@@ -1782,6 +1782,9 @@ class MultibodyPlant : public MultibodyTreeSystem<T> {
     return tree().CalcGravityGeneralizedForces(context);
   }
 
+  // Preserve access to base overload from this class.
+  using systems::System<T>::MapVelocityToQDot;
+
   /// Transforms generalized velocities v to time derivatives `qdot` of the
   /// generalized positions vector `q` (stored in `context`). `v` and `qdot`
   /// are related linearly by `q̇ = N(q)⋅v`.
@@ -1807,6 +1810,9 @@ class MultibodyPlant : public MultibodyTreeSystem<T> {
       EigenPtr<VectorX<T>> qdot) const {
     return tree().MapVelocityToQDot(context, v, qdot);
   }
+
+  // Preserve access to base overload from this class.
+  using systems::System<T>::MapQDotToVelocity;
 
   /// Transforms the time derivative `qdot` of the generalized positions vector
   /// `q` (stored in `context`) to generalized velocities `v`. `v` and `q̇`
