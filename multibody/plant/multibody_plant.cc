@@ -223,9 +223,14 @@ struct JointLimitsPenaltyParametersEstimator {
 
 template <typename T>
 MultibodyPlant<T>::MultibodyPlant(double time_step)
+    : MultibodyPlant(nullptr, time_step) {}
+
+template <typename T>
+MultibodyPlant<T>::MultibodyPlant(
+    std::unique_ptr<MultibodyTree<T>> tree, double time_step)
     : MultibodyTreeSystem<T>(
           systems::SystemTypeTag<multibody::MultibodyPlant>{},
-          nullptr, time_step > 0),
+          std::move(tree), time_step > 0),
       time_step_(time_step) {
   DRAKE_THROW_UNLESS(time_step >= 0);
   visual_geometries_.emplace_back();  // Entries for the "world" body.
@@ -457,12 +462,12 @@ void MultibodyPlant<T>::CalcSpatialAccelerationsFromVdot(
   // TODO(eric.cousineau): Remove dynamic allocations. Making this in-place
   // still required dynamic allocation for recording permutation indices.
   // Can change implementation once MultibodyTree becomes fully internal.
-  std::vector<SpatialAcceleration<T>> A_WB_array_orig = *A_WB_array;
+  std::vector<SpatialAcceleration<T>> A_WB_array_node = *A_WB_array;
   const MultibodyTreeTopology& topology = tree().get_topology();
   for (BodyNodeIndex node_index(1);
        node_index < topology.get_num_body_nodes(); ++node_index) {
     const BodyIndex body_index = topology.get_body_node(node_index).body;
-    (*A_WB_array)[body_index] = A_WB_array_orig[node_index];
+    (*A_WB_array)[body_index] = A_WB_array_node[node_index];
   }
 }
 

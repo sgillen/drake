@@ -16,10 +16,22 @@
 #include "drake/multibody/multibody_tree/rigid_body.h"
 #include "drake/multibody/multibody_tree/test_utilities/spatial_kinematics.h"
 #include "drake/multibody/multibody_tree/uniform_gravity_field_element.h"
+#include "drake/multibody/plant/multibody_plant.h"
 #include "drake/systems/framework/context.h"
 
 namespace drake {
 namespace multibody {
+
+class MultibodyPlantTester {
+ public:
+  // Use private constructor to create an MBP from an MBT.
+  template <typename T>
+  static std::unique_ptr<MultibodyPlant<T>> CreateMultibodyPlantFromTree(
+      std::unique_ptr<MultibodyTree<T>> tree, double time_step = 0.) {
+    return std::make_unique<MultibodyPlant<T>>(std::move(tree), time_step);
+  }
+};
+
 namespace benchmarks {
 namespace kuka_iiwa_robot {
 
@@ -66,9 +78,11 @@ class DrakeKukaIIwaRobot {
   /// to this constructor, it means the gravity vector is directed opposite the
   /// world upward z-unit vector (which is correct -- gravity is downward).
   explicit DrakeKukaIIwaRobot(double gravity) {
-    system_ =
-        std::make_unique<MultibodyTreeSystem<T>>(MakeKukaIiwaModel<T>(
-            true /* finalized model */, gravity /* acceleration of gravity */));
+    plant_ =
+        MultibodyPlantTester::CreateMultibodyPlantFromTree(
+            MakeKukaIiwaModel<T>(
+                true /* finalized model */,
+                gravity /* acceleration of gravity */));
 
     linkN_ = &tree().world_body();
 
@@ -98,7 +112,7 @@ class DrakeKukaIIwaRobot {
         &tree().template GetJointByName<RevoluteJoint>("iiwa_joint_7");
 
     // After Finalize() method has been called, Context can be created.
-    context_ = system_->CreateDefaultContext();
+    context_ = plant_->CreateDefaultContext();
   }
 
   /// This method gets the number of rigid bodies in this robot.
@@ -218,7 +232,7 @@ class DrakeKukaIIwaRobot {
     return reaction_forces;
   }
 
-  const MultibodyTree<T>& tree() const { return system_->tree(); }
+  const MultibodyTree<T>& tree() const { return plant_->tree(); }
 
  private:
   // This method sets the Kuka joint angles and their 1st and 2nd derivatives.
@@ -247,7 +261,7 @@ class DrakeKukaIIwaRobot {
 
   // This model's MultibodyTree always has a built-in "world" body.
   // Newtonian reference frame (linkN) is the world body.
-  std::unique_ptr<MultibodyTreeSystem<T>> system_;
+  std::unique_ptr<MultibodyPlant<T>> plant_;
   const Body<T>* linkN_{nullptr};
 
   // Rigid bodies (robot links).
