@@ -1,0 +1,145 @@
+diff --git a/tree.txt b/plant.txt
+index 89ce07e..98bfc82 100644
+--- a/tree.txt
++++ b/plant.txt
+@@ -1,101 +1,101 @@
+-AddBody
+ AddForceElement
+ AddFrame
+ AddJoint
+ AddJointActuator
+-AddMobilizer
+ AddModelInstance
+ AddRigidBody
+-CalcAccelerationKinematicsCache
+-CalcAcrossNodeGeometricJacobianExpressedInWorld
+-CalcAllBodyPosesInWorld
+-CalcAllBodySpatialVelocitiesInWorld
+-CalcArticulatedBodyInertiaCache
+ CalcBiasForFrameGeometricJacobianExpressedInWorld
+ CalcBiasForPointsGeometricJacobianExpressedInWorld
+ CalcBiasTerm
+ CalcConservativePower
+-CalcForceElementsContribution
+ CalcFrameGeometricJacobianExpressedInWorld
+ CalcGravityGeneralizedForces
+-CalcInverseDynamics
+ CalcJacobianSpatialVelocity
+ CalcMassMatrixViaInverseDynamics
+ CalcPointsAnalyticalJacobianExpressedInWorld
+ CalcPointsGeometricJacobianExpressedInWorld
+ CalcPointsPositions
+-CalcPositionKinematicsCache
+ CalcPotentialEnergy
+ CalcRelativeFrameGeometricJacobian
+ CalcRelativeTransform
+-CalcSpatialAccelerationsFromVdot
+-CalcVelocityKinematicsCache
+-Clone
+-CloneToScalar
+-CreateDefaultContext
++CollectRegisteredGeometries
+ EvalBodyPoseInWorld
+ EvalBodySpatialVelocityInWorld
+-EvalPositionKinematics
+-EvalVelocityKinematics
+ Finalize
++GetBodiesWeldedTo
+ GetBodyByName
++GetBodyFrameIdIfExists
++GetBodyFrameIdOrThrow
++GetBodyFromFrameId
++GetCollisionGeometriesForBody
+ GetFrameByName
+ GetJointActuatorByName
+ GetJointByName
+ GetModelInstanceByName
+ GetModelInstanceName
++GetMutablePositions
+ GetMutablePositionsAndVelocities
++GetMutableVelocities
++GetPositions
+ GetPositionsAndVelocities
+ GetPositionsFromArray
+ GetRigidBodyByName
++GetVelocities
+ GetVelocitiesFromArray
++GetVisualGeometriesForBody
+ HasBodyNamed
+ HasFrameNamed
+ HasJointActuatorNamed
+ HasJointNamed
+ HasModelInstanceNamed
+-MakeActuatorSelectorMatrix
+-MakeStateSelectorMatrix
+-MakeStateSelectorMatrixFromJointNames
+ MapQDotToVelocity
+ MapVelocityToQDot
++RegisterAsSourceForSceneGraph
++RegisterCollisionGeometry
++RegisterVisualGeometry
+ SetActuationInArray
+ SetDefaultContext
+ SetDefaultState
+-SetFreeBodyPoseOrThrow
+-SetFreeBodySpatialVelocityOrThrow
++SetFreeBodyPose
++SetFreeBodyPoseInAnchoredFrame
++SetFreeBodyPoseInWorldFrame
++SetFreeBodySpatialVelocity
++SetPositions
+ SetPositionsAndVelocities
+ SetPositionsInArray
++SetVelocities
+ SetVelocitiesInArray
+-ToAutoDiffXd
++WeldFrames
++default_coulomb_friction
++geometry_source_is_registered
++get_actuation_input_port
+ get_body
++get_contact_penalty_method_time_scale
++get_contact_results_output_port
++get_continuous_state_output_port
+ get_frame
++get_generalized_contact_forces_output_port
++get_geometry_poses_output_port
++get_geometry_query_input_port
+ get_joint
+ get_joint_actuator
+-get_mobilizer
+-get_multibody_state_vector
+-get_mutable_multibody_state_vector
+-get_positions_from_array
+-get_topology
+-get_variant
+-get_velocities_from_array
++get_source_id
++is_finalized
++model
+ num_actuated_dofs
+ num_actuators
+ num_bodies
++num_collision_geometries
+ num_force_elements
+ num_frames
+ num_joints
+-num_mobilizers
+ num_model_instances
++num_multibody_states
+ num_positions
+-num_states
+ num_velocities
+-set_actuation_vector
+-set_multibody_state_vector
+-set_positions_in_array
+-set_tree_system
+-set_velocities_in_array
+-topology_is_valid
+-tree_height
++num_visual_geometries
++set_penetration_allowance
++set_stiction_tolerance
++time_step
+ world_body
+ world_frame
