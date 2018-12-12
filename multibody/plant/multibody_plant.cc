@@ -446,6 +446,39 @@ void MultibodyPlant<T>::SetFreeBodyPoseInAnchoredFrame(
 }
 
 template<typename T>
+void MultibodyPlant<T>::CalcSpatialAccelerationsFromVdot(
+    const systems::Context<T>& context,
+    const VectorX<T>& known_vdot,
+    std::vector<SpatialAcceleration<T>>* A_WB_array) const {
+  tree().CalcSpatialAccelerationsFromVdot(
+      context, tree().EvalPositionKinematics(context),
+      tree().EvalVelocityKinematics(context), known_vdot, A_WB_array);
+  // Permute BodyNodeIndex -> BodyIndex.
+  // TODO(eric.cousineau): Remove dynamic allocations. Making this in-place
+  // still required dynamic allocation for recording permutation indices.
+  // Can change implementation once MultibodyTree becomes fully internal.
+  std::vector<SpatialAcceleration<T>> A_WB_array_orig = *A_WB_array;
+  const MultibodyTreeTopology& topology = tree().get_topology();
+  for (BodyNodeIndex node_index(1);
+       node_index < topology.get_num_body_nodes(); ++node_index) {
+    const BodyIndex body_index = topology.get_body_node(node_index).body;
+    (*A_WB_array)[body_index] = A_WB_array_orig[node_index];
+  }
+}
+
+template<typename T>
+void MultibodyPlant<T>::CalcForceElementsContribution(
+      const systems::Context<T>& context,
+      MultibodyForces<T>* forces) const {
+  DRAKE_DEMAND(forces != nullptr);
+  DRAKE_DEMAND(forces->CheckHasRightSizeForModel(tree()));
+  tree().CalcForceElementsContribution(
+      context, EvalPositionKinematics(context),
+      EvalVelocityKinematics(context),
+      forces);
+}
+
+template<typename T>
 void MultibodyPlant<T>::Finalize(geometry::SceneGraph<T>* scene_graph) {
   // After finalizing the base class, tree is read-only.
   MultibodyTreeSystem<T>::Finalize();

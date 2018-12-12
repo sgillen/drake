@@ -1710,6 +1710,93 @@ class MultibodyPlant : public MultibodyTreeSystem<T> {
         context, with_respect_to, frame_B, p_BP, frame_A, frame_E, Jw_ABp_E);
   }
 
+  /// Given the state of `this` %MultibodyTree in `context` and a known vector
+  /// of generalized accelerations `known_vdot`, this method computes the
+  /// spatial acceleration `A_WB` for each body as measured and expressed in the
+  /// world frame W.
+  ///
+  /// @param[in] context
+  ///   The context containing the state of the %MultibodyTree model.
+  /// @param[in] known_vdot
+  ///   A vector with the generalized accelerations for the full %MultibodyTree
+  ///   model.
+  /// @param[out] A_WB_array
+  ///   A pointer to a valid, non nullptr, vector of spatial accelerations
+  ///   containing the spatial acceleration `A_WB` for each body. It must be of
+  ///   size equal to the number of bodies in the MultibodyTree. This method
+  ///   will abort if the the pointer is null or if `A_WB_array` is not of size
+  ///   `num_bodies()`. On output, entries will be ordered by BodyIndex.
+  void CalcSpatialAccelerationsFromVdot(
+      const systems::Context<T>& context,
+      const VectorX<T>& known_vdot,
+      std::vector<SpatialAcceleration<T>>* A_WB_array) const;
+
+  /// Given the state of `this` %MultibodyTree in `context` and a known vector
+  /// of generalized accelerations `vdot`, this method computes the
+  /// set of generalized forces `tau` that would need to be applied in order to
+  /// attain the specified generalized accelerations.
+  /// Mathematically, this method computes: <pre>
+  ///   tau = M(q)v̇ + C(q, v)v - tau_app - ∑ J_WBᵀ(q) Fapp_Bo_W
+  /// </pre>
+  /// where `M(q)` is the %MultibodyTree mass matrix, `C(q, v)v` is the bias
+  /// term containing Coriolis and gyroscopic effects and `tau_app` consists
+  /// of a vector applied generalized forces. The last term is a summation over
+  /// all bodies in the model where `Fapp_Bo_W` is an applied spatial force on
+  /// body B at `Bo` which gets projected into the space of generalized forces
+  /// with the geometric Jacobian `J_WB(q)` which maps generalized velocities
+  /// into body B spatial velocity as `V_WB = J_WB(q)v`.
+  /// This method does not compute explicit expressions for the mass matrix nor
+  /// for the bias term, which would be of at least `O(n²)` complexity, but it
+  /// implements an `O(n)` Newton-Euler recursive algorithm, where n is the
+  /// number of bodies in the model. The explicit formation of the
+  /// mass matrix `M(q)` would require the calculation of `O(n²)` entries while
+  /// explicitly forming the product `C(q, v) * v` could require up to `O(n³)`
+  /// operations (see [Featherstone 1987, §4]), depending on the implementation.
+  /// The recursive Newton-Euler algorithm is the most efficient currently known
+  /// general method for solving inverse dynamics [Featherstone 2008].
+  ///
+  /// @param[in] context
+  ///   The context containing the state of the model.
+  /// @param[in] known_vdot
+  ///   A vector with the known generalized accelerations `vdot` for the full
+  ///   model. Use the provided Joint APIs in order to access entries into this
+  ///   array.
+  /// @param[in] external_forces
+  ///   A set of forces to be applied to the system either as body spatial
+  ///   forces `Fapp_Bo_W` or generalized forces `tau_app`, see MultibodyForces
+  ///   for details.
+  ///
+  /// @returns the vector of generalized forces that would need to be applied to
+  /// the mechanical system in order to achieve the desired acceleration given
+  /// by `known_vdot`.
+  VectorX<T> CalcInverseDynamics(
+      const systems::Context<T>& context,
+      const VectorX<T>& known_vdot,
+      const MultibodyForces<T>& external_forces) const {
+    return tree().CalcInverseDynamics(context, known_vdot, external_forces);
+  }
+
+  /// Computes the combined force contribution of ForceElement objects in the
+  /// model. A ForceElement can apply forces as a spatial force per body or as
+  /// generalized forces, depending on the ForceElement model. Therefore this
+  /// method provides outputs for both spatial forces per body (with
+  /// `F_Bo_W_array`) and generalized forces (with `tau_array`).
+  /// ForceElement contributions are a function of the state and time only.
+  /// The output from this method can immediately be used as input to
+  /// CalcInverseDynamics() to include the effect of applied forces by force
+  /// elements.
+  ///
+  /// @param[in] context
+  ///   The context containing the state of this model.
+  /// @param[out] forces
+  ///   A pointer to a valid, non nullptr, multibody forces object. On output
+  ///   `forces` will store the forces exerted by all the ForceElement
+  ///   objects in the model. This method will abort if the `forces` pointer is
+  ///   null or if the forces object is not compatible with `this`
+  ///   %MultibodyTree, see MultibodyForces::CheckInvariants().
+  void CalcForceElementsContribution(
+      const systems::Context<T>& context, MultibodyForces<T>* forces) const;
+
   /// Computes and returns the total potential energy stored in `this` multibody
   /// model for the configuration given by `context`.
   /// @param[in] context
