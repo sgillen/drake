@@ -238,6 +238,15 @@ void init_module(py::module m) {
             doc.MultibodyForces.ctor.doc_1args);
   }
 
+  {
+    using Enum = JacobianWrtVariable;
+    constexpr auto& enum_doc = doc.JacobianWrtVariable;
+    py::enum_<Enum> enum_py(m, "JacobianWrtVariable", enum_doc.doc);
+    enum_py  // BR
+        .value("kQDot", Enum::kQDot, enum_doc.kQDot.doc)
+        .value("kV", Enum::kV, enum_doc.kV.doc);
+  }
+
   // Tree.
   {
     // N.B. Pending a concrete direction on #9366, a minimal subset of the
@@ -661,6 +670,15 @@ void init_multibody_plant(py::module m) {
             },
             py::arg("context"), py::arg("v"),
             doc.MultibodyPlant.MapVelocityToQDot.doc)
+        .def("MapQDotToVelocity",
+            [](const Class* self, const Context<T>& context,
+                const Eigen::Ref<const VectorX<T>>& qdot) {
+              VectorX<T> v(self->num_velocities());
+              self->MapQDotToVelocity(context, qdot, &v);
+              return v;
+            },
+            py::arg("context"), py::arg("qdot"),
+            doc.MultibodyPlant.MapQDotToVelocity.doc)
         .def("CalcRelativeTransform", &Class::CalcRelativeTransform,
             py::arg("context"), py::arg("frame_A"), py::arg("frame_B"),
             doc.MultibodyPlant.CalcRelativeTransform.doc);
