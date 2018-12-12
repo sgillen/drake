@@ -63,7 +63,7 @@ from pydrake.common.deprecation import (
 )
 from pydrake.util.eigen_geometry import Isometry3
 from pydrake.systems.framework import InputPort, OutputPort
-from pydrake.math import RollPitchYaw
+from pydrake.math import RigidTransform, RollPitchYaw
 
 
 def get_index_class(cls):
@@ -391,9 +391,9 @@ class TestMultibodyTree(unittest.TestCase):
         self.assertTrue(np.allclose(
             tree.GetPositionsAndVelocities(context), x0))
 
+        # Test existence of context resetting methods.
         plant.SetDefaultContext(context)
-        state = context.get_mutable_state()
-        plant.SetDefaultState(context, state)
+        plant.SetDefaultState(context, state=context.get_mutable_state())
 
     def test_model_instance_state_access(self):
         # Create a MultibodyPlant with a kuka arm and a schunk gripper.
@@ -658,14 +658,17 @@ class TestMultibodyTree(unittest.TestCase):
         # Try mapping velocity to qdot and back.
         nq = plant.num_positions()
         nv = plant.num_velocities()
-        q = np.linspace(start=1.0, stop=nq, num=nq)
-        q[:4] /= np.linalg.norm(q[:4])
-        v = np.linspace(start=-1.0, stop=-nv, num=nv)
-        plant.SetPositions(context, q)
-        qdot = np.zeros(nq)
-        qdot = plant.MapVelocityToQDot(context, v)
+        q_init = np.linspace(start=1.0, stop=nq, num=nq)
+        plant.SetPositions(context, q_init)
+        # Overwrite the (invalid) base coordinates, wherever in `q` they are.
+        plant.SetFreeBodyPose(
+            context, plant.GetBodyByName("iiwa_link_0"),
+            RigidTransform(RollPitchYaw([0.1, 0.2, 0.3]),
+                           p=[0.4, 0.5, 0.6]).GetAsIsometry3())
+        v_expected = np.linspace(start=-1.0, stop=-nv, num=nv)
+        qdot = plant.MapVelocityToQDot(context, v_expected)
         v_remap = plant.MapQDotToVelocity(context, qdot)
-        self.assertTrue(np.allclose(v, v_remap))
+        self.assertTrue(np.allclose(v_expected, v_remap))
 
     def test_multibody_add_joint(self):
         """
@@ -742,9 +745,9 @@ class TestMultibodyTree(unittest.TestCase):
         self.assertEqual(plant.CalcPotentialEnergy(context), 0)
         # - Existence check.
         plant.CalcConservativePower(context)
-        G = plant.CalcGravityGeneralizedForces(context)
-        self.assertEqual(G.shape, (nv,))
-        self.assert_sane(G, nonzero=False)
+        tau_g = plant.CalcGravityGeneralizedForces(context)
+        self.assertEqual(tau_g.shape, (nv,))
+        self.assert_sane(tau_g, nonzero=False)
 
     def test_contact(self):
         # PenetrationAsContactPair

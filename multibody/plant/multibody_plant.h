@@ -1165,9 +1165,9 @@ class MultibodyPlant : public MultibodyTreeSystem<T> {
   }
 
   /// @}
-  // End of "Model instance accessors" section.
 
   /// @name Accessing the state
+  /// @{
 
   /// Sets `context` to store the pose `X_WB` of a given `body` B in the world
   /// frame W.
