@@ -275,7 +275,8 @@ class MultibodyPlant : public MultibodyTreeSystem<T> {
   /// Returns the size of the generalized position vector `q` for this model.
   int num_positions() const { return tree().num_positions(); }
 
-  /// Returns the size of the generalized position vector `q` for this model.
+  /// Returns the size of the generalized position vector `q` for a specific
+  /// model instance.
   int num_positions(ModelInstanceIndex model_instance) const {
     return tree().num_positions(model_instance);
   }
@@ -440,7 +441,6 @@ class MultibodyPlant : public MultibodyTreeSystem<T> {
         num_positions());
   }
 
-  // TODO(eric.cousineau): Fix overload return-type inconsistency (#10177).
   /// Returns an vector containing the generalized positions (`q`) for the
   /// given model instance.
   /// @throws std::exception if the `context` does not
@@ -454,7 +454,6 @@ class MultibodyPlant : public MultibodyTreeSystem<T> {
         model_instance, GetPositions(context));
   }
 
-  // TODO(eric.cousineau): Fix overload return-type inconsistency (#10177).
   /// (Advanced) Returns a mutable vector reference containing the vector
   /// of generalized positions (**see warning**).
   /// @note This method returns a reference to existing data, exhibits constant
