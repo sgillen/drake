@@ -52,8 +52,7 @@ void BindMultibodyTreeElementMixin(PyClass* pcls) {
       .def("model_instance", &Class::model_instance);
 }
 
-int GetVariableSize(
-    const multibody::MultibodyPlant<T>& plant,
+int GetVariableSize(const multibody::MultibodyPlant<T>& plant,
     multibody::JacobianWrtVariable wrt) {
   switch (wrt) {
     case multibody::JacobianWrtVariable::kQDot:
@@ -619,14 +618,12 @@ void init_multibody_plant(py::module m) {
             doc.MultibodyPlant.EvalBodySpatialVelocityInWorld.doc)
         .def("CalcJacobianSpatialVelocity",
             [](const Class* self, const systems::Context<T>& context,
-               JacobianWrtVariable with_respect_to,
-               const Frame<T>& frame_B,
-               const Eigen::Ref<const Vector3<T>>& p_BP,
-               const Frame<T>& frame_A, const Frame<T>& frame_E) {
+                JacobianWrtVariable with_respect_to, const Frame<T>& frame_B,
+                const Eigen::Ref<const Vector3<T>>& p_BP,
+                const Frame<T>& frame_A, const Frame<T>& frame_E) {
               MatrixX<T> Jw_ABp_E(6, GetVariableSize(*self, with_respect_to));
-              self->CalcJacobianSpatialVelocity(
-                  context, with_respect_to, frame_B, p_BP, frame_A, frame_E,
-                  &Jw_ABp_E);
+              self->CalcJacobianSpatialVelocity(context, with_respect_to,
+                  frame_B, p_BP, frame_A, frame_E, &Jw_ABp_E);
               return Jw_ABp_E;
             },
             py::arg("context"), py::arg("with_respect_to"), py::arg("frame_B"),
@@ -653,12 +650,11 @@ void init_multibody_plant(py::module m) {
             },
             py::arg("context"), doc.MultibodyPlant.CalcBiasTerm.doc)
         .def("CalcGravityGeneralizedForces",
-            &Class::CalcGravityGeneralizedForces,
-            py::arg("context"),
+            &Class::CalcGravityGeneralizedForces, py::arg("context"),
             doc.MultibodyPlant.CalcGravityGeneralizedForces.doc)
         .def("MapVelocityToQDot",
             [](const Class* self, const Context<T>& context,
-               const Eigen::Ref<const VectorX<T>>& v) {
+                const Eigen::Ref<const VectorX<T>>& v) {
               VectorX<T> qdot(self->num_positions());
               self->MapVelocityToQDot(context, v, &qdot);
               return qdot;
@@ -903,7 +899,8 @@ void init_multibody_plant(py::module m) {
         .def("SetDefaultContext",
             [](const Class* self, Context<T>* context) {
               self->SetDefaultContext(context);
-            }, py::arg("context"), doc.MultibodyPlant.SetDefaultContext.doc)
+            },
+            py::arg("context"), doc.MultibodyPlant.SetDefaultContext.doc)
         .def("SetDefaultState",
             [](const Class* self, const Context<T>& context, State<T>* state) {
               self->SetDefaultState(context, state);
