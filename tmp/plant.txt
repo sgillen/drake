@@ -54,6 +54,7 @@ RegisterAsSourceForSceneGraph
 RegisterCollisionGeometry
 RegisterVisualGeometry
 SetActuationInArray
+SetDefaultContext
 SetDefaultState
 SetFreeBodyPose
 SetFreeBodyPoseInAnchoredFrame
