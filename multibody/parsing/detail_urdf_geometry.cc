@@ -1,4 +1,4 @@
-#include "drake/multibody/parsing/urdf_geometry.h"
+#include "drake/multibody/parsing/detail_urdf_geometry.h"
 
 #include <iomanip>
 #include <memory>
@@ -8,21 +8,20 @@
 
 #include "drake/common/drake_assert.h"
 #include "drake/common/text_logging.h"
-#include "drake/geometry/visual_material.h"
-#include "drake/multibody/parsing/parser_common.h"
-#include "drake/multibody/parsing/parser_path_utils.h"
-#include "drake/multibody/parsing/tinyxml_util.h"
+#include "drake/geometry/geometry_roles.h"
+#include "drake/geometry/geometry_visualization.h"
+#include "drake/multibody/parsing/detail_common.h"
+#include "drake/multibody/parsing/detail_path_utils.h"
+#include "drake/multibody/parsing/detail_tinyxml.h"
 
 namespace drake {
 namespace multibody {
-namespace parsing {
 namespace detail {
 
 using Eigen::Isometry3d;
 using Eigen::Vector3d;
 using Eigen::Vector4d;
 using tinyxml2::XMLElement;
-
 using multibody_plant::CoulombFriction;
 
 namespace {
@@ -96,7 +95,7 @@ void ParseMaterial(const XMLElement* node, MaterialMap* materials) {
   const XMLElement* color_node = node->FirstChildElement("color");
 
   if (color_node) {
-    if (!detail::ParseVectorAttribute(color_node, "rgba", &rgba)) {
+    if (!ParseVectorAttribute(color_node, "rgba", &rgba)) {
       throw std::runtime_error("Color tag is missing rgba attribute.");
     }
     AddMaterialToMaterialMap(name, rgba, true /* abort_if_name_clash */,
@@ -169,7 +168,7 @@ std::unique_ptr<geometry::Shape> ParseCylinder(const XMLElement* shape_node) {
 }
 
 std::unique_ptr<geometry::Shape> ParseMesh(
-    const XMLElement* shape_node, const multibody::PackageMap& package_map,
+    const XMLElement* shape_node, const PackageMap& package_map,
     const std::string& root_dir) {
   std::string filename;
   if (!ParseStringAttribute(shape_node, "filename", &filename)) {
@@ -203,7 +202,7 @@ std::unique_ptr<geometry::Shape> ParseMesh(
 }
 
 std::unique_ptr<geometry::Shape> ParseGeometry(
-    const XMLElement* node, const multibody::PackageMap& package_map,
+    const XMLElement* node, const PackageMap& package_map,
     const std::string& root_dir) {
   if (node->FirstChildElement("box")) {
     return ParseBox(node->FirstChildElement("box"));
@@ -245,7 +244,7 @@ std::string MakeGeometryName(const std::string& basename,
 // Parses a "visual" element in @p node.
 geometry::GeometryInstance ParseVisual(
     const std::string& parent_element_name,
-    const multibody::PackageMap& package_map,
+    const PackageMap& package_map,
     const std::string& root_dir, const XMLElement* node,
     MaterialMap* materials) {
   if (std::string(node->Name()) != "visual") {
@@ -283,7 +282,9 @@ geometry::GeometryInstance ParseVisual(
   // the XML here may not specify a "name" attribute. Because of this difference
   // in context, we need specialized logic here to determine the material
   // visualization of a link.
-  geometry::VisualMaterial visual_material;  // default grey
+
+  // The empty set relies on consumer defaults.
+  geometry::IllustrationProperties properties;
 
   const XMLElement* material_node = node->FirstChildElement("material");
   if (material_node) {
@@ -335,7 +336,7 @@ geometry::GeometryInstance ParseVisual(
     // node, use that color. It takes precedence over any material saved in
     // the material map.
     if (color_specified) {
-      visual_material = geometry::VisualMaterial(rgba);
+      properties = geometry::MakeDrakeVisualizerProperties(rgba);
     } else if (name_specified) {
       // No color specified. Checks if the material is already in the
       // materials map.
@@ -344,7 +345,8 @@ geometry::GeometryInstance ParseVisual(
       if (material_iter != materials->end()) {
         // The material is in the map. Sets the material of the visual
         // element based on the value in the map.
-        visual_material = geometry::VisualMaterial(material_iter->second);
+        properties =
+            geometry::MakeDrakeVisualizerProperties(material_iter->second);
       }
     }
   }
@@ -354,8 +356,10 @@ geometry::GeometryInstance ParseVisual(
     geometry_name = MakeGeometryName(parent_element_name + "_Visual", node);
   }
 
-  return geometry::GeometryInstance(T_element_to_link, std::move(shape),
-                                    geometry_name, visual_material);
+  auto instance = geometry::GeometryInstance(
+      T_element_to_link, std::move(shape), geometry_name);
+  instance.set_illustration_properties(properties);
+  return instance;
 }
 
 // Parses a "collision" element in @p node.
@@ -363,7 +367,7 @@ geometry::GeometryInstance ParseVisual(
 // @param[out] friction Coulomb friction for the associated geometry.
 geometry::GeometryInstance ParseCollision(
     const std::string& parent_element_name,
-    const multibody::PackageMap& package_map,
+    const PackageMap& package_map,
     const std::string& root_dir, const XMLElement* node,
     CoulombFriction<double>* friction) {
   if (std::string(node->Name()) != "collision") {
@@ -458,6 +462,5 @@ geometry::GeometryInstance ParseCollision(
 }
 
 }  // namespace detail
-}  // namespace parsing
 }  // namespace multibody
 }  // namespace drake

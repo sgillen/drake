@@ -1,8 +1,7 @@
-#include "drake/multibody/parsing/sdf_parser_common.h"
+#include "drake/multibody/parsing/detail_ignition.h"
 
 namespace drake {
 namespace multibody {
-namespace parsing {
 namespace detail {
 
 using Eigen::Isometry3d;
@@ -20,6 +19,5 @@ Isometry3d ToIsometry3(const ignition::math::Pose3d& pose) {
 }
 
 }  // namespace detail
-}  // namespace parsing
 }  // namespace multibody
 }  // namespace drake
