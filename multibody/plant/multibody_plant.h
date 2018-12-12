@@ -1140,7 +1140,7 @@ class MultibodyPlant : public MultibodyTreeSystem<T> {
       ModelInstanceIndex model_instance,
       const Eigen::Ref<const VectorX<T>>& q_instance,
       EigenPtr<VectorX<T>> q) const {
-    tree().SetPositionsInArray(model_intsance, q_instance, q);
+    tree().SetPositionsInArray(model_instance, q_instance, q);
   }
 
   /// Returns a vector of generalized velocities for `model_instance` from a

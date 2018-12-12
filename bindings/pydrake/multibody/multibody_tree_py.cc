@@ -31,6 +31,7 @@ using std::string;
 
 using geometry::SceneGraph;
 using systems::Context;
+using systems::State;
 
 // TODO(eric.cousineau): Expose available scalar types.
 using T = double;
@@ -49,6 +50,19 @@ void BindMultibodyTreeElementMixin(PyClass* pcls) {
       .def("get_parent_tree", &Class::get_parent_tree, py_reference_internal)
       .def("index", &Class::index)
       .def("model_instance", &Class::model_instance);
+}
+
+int GetVariableSize(
+    const multibody::MultibodyPlant<T>& plant,
+    multibody::JacobianWrtVariable wrt) {
+  switch (wrt) {
+    case multibody::JacobianWrtVariable::kQDot:
+      return plant.num_positions();
+    case multibody::JacobianWrtVariable::kV:
+      return plant.num_velocities();
+    default:
+      DRAKE_ABORT();
+  }
 }
 
 void init_module(py::module m) {
@@ -603,7 +617,18 @@ void init_multibody_plant(py::module m) {
             },
             py::arg("context"), py::arg("body"),
             doc.MultibodyPlant.EvalBodySpatialVelocityInWorld.doc)
-        .def("CalcJacobianSpatialVelocity", &Class::CalcJacobianSpatialVelocity,
+        .def("CalcJacobianSpatialVelocity",
+            [](const Class* self, const systems::Context<T>& context,
+               JacobianWrtVariable with_respect_to,
+               const Frame<T>& frame_B,
+               const Eigen::Ref<const Vector3<T>>& p_BP,
+               const Frame<T>& frame_A, const Frame<T>& frame_E) {
+              MatrixX<T> Jw_ABp_E(6, GetVariableSize(*self, with_respect_to));
+              self->CalcJacobianSpatialVelocity(
+                  context, with_respect_to, frame_B, p_BP, frame_A, frame_E,
+                  &Jw_ABp_E);
+              return Jw_ABp_E;
+            },
             py::arg("context"), py::arg("with_respect_to"), py::arg("frame_B"),
             py::arg("p_BP"), py::arg("frame_A"), py::arg("frame_E"),
             doc.MultibodyPlant.CalcJacobianSpatialVelocity.doc)
@@ -637,7 +662,7 @@ void init_multibody_plant(py::module m) {
               VectorX<T> qdot(self->num_positions());
               self->MapVelocityToQDot(context, v, &qdot);
               return qdot;
-            }
+            },
             py::arg("context"), py::arg("v"),
             doc.MultibodyPlant.MapVelocityToQDot.doc)
         .def("CalcRelativeTransform", &Class::CalcRelativeTransform,
@@ -878,13 +903,13 @@ void init_multibody_plant(py::module m) {
         .def("SetDefaultContext",
             [](const Class* self, Context<T>* context) {
               self->SetDefaultContext(context);
-            }, py::arg("context"), doc.MultibodyPlant.SetDefaultContext)
+            }, py::arg("context"), doc.MultibodyPlant.SetDefaultContext.doc)
         .def("SetDefaultState",
             [](const Class* self, const Context<T>& context, State<T>* state) {
               self->SetDefaultState(context, state);
             },
             py::arg("context"), py::arg("state"),
-            doc.MultibodyPlant.SetDefaultState);
+            doc.MultibodyPlant.SetDefaultState.doc);
 
     // Add deprecated methods.
 #pragma GCC diagnostic push

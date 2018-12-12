@@ -378,7 +378,7 @@ class TestMultibodyTree(unittest.TestCase):
         plant.SetPositionsAndVelocities(context, x0)
         self.assertTrue(np.allclose(
             tree.GetPositionsAndVelocities(context), x0))
- 
+
     def test_model_instance_state_access(self):
         # Create a MultibodyPlant with a kuka arm and a schunk gripper.
         # the arm is welded to the world, the gripper is welded to the
@@ -628,11 +628,11 @@ class TestMultibodyTree(unittest.TestCase):
             A=plant.world_frame(),
             B=plant.GetFrameByName("iiwa_link_0", iiwa_model))
         plant.Finalize()
- 
+
         # Create a context of the MBP and set the state of the context
         # to desired values.
         context = plant.CreateDefaultContext()
- 
+
         # Try mapping velocity to qdot and back.
         nq = plant.num_positions()
         nv = plant.num_velocities()
