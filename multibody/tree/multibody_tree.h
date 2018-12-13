@@ -1869,6 +1869,8 @@ class MultibodyTree {
   MatrixX<double> MakeStateSelectorMatrix(
       const std::vector<JointIndex>& user_to_joint_index_map) const;
 
+  // N.B. I (Eric Cousineau) do not think this sugar should live on in
+  // MultibodyPlant.
   /// Alternative signature to build a state selector matrix from a std::vector
   /// of joint names.
   /// See MakeStateSelectorMatrixFromJointNames(const std::vector<JointIndex>&)

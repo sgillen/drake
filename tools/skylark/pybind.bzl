@@ -373,6 +373,10 @@ _generate_pybind_documentation_header = rule(
 )
 
 def generate_pybind_documentation_header(name, out, **kwargs):
-    _generate_pybind_documentation_header(name=name, out=out, **kwargs)
+    _generate_pybind_documentation_header(name = name, out = out, **kwargs)
     _generate_pybind_documentation_header(
-        name="hack_" + name, out="hack_" + out, hack=True, **kwargs)
+        name = "hack_" + name,
+        out = "hack_" + out,
+        hack = True,
+        **kwargs
+    )
