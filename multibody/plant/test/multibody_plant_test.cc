@@ -2030,11 +2030,11 @@ GTEST_TEST(StateSelection, KukaWithSimpleGripper) {
 
   // State selector for the arm.
   const MatrixX<double> Sx_arm =
-      plant.tree().MakeStateSelectorMatrix(arm_selected_joints);
+      plant.MakeStateSelectorMatrix(arm_selected_joints);
 
   // Actuation selector for the arm.
   const MatrixX<double> Su_arm =
-      plant.tree().MakeActuatorSelectorMatrix(arm_selected_joints);
+      plant.MakeActuatorSelectorMatrix(arm_selected_joints);
 
   // Verify the sizes (all these joints are revolute with one q and one v).
   const int num_selected_states = 2 * arm_selected_joints.size();

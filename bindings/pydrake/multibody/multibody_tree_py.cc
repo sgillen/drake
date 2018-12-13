@@ -428,12 +428,14 @@ void BindSpatialVectorMixin(PyClass* pcls) {
   auto& cls = *pcls;
   cls  // BR
       .def("rotational",
-          [](const Class* self)
-              -> const Vector3<T>& { return self->rotational(); },
+          [](const Class* self) -> const Vector3<T>& {
+            return self->rotational();
+          },
           py_reference_internal, doc.SpatialVector.rotational.doc)
       .def("translational",
-          [](const Class* self)
-              -> const Vector3<T>& { return self->translational(); },
+          [](const Class* self) -> const Vector3<T>& {
+            return self->translational();
+          },
           py_reference_internal, doc.SpatialVector.translational.doc);
 }
 
@@ -450,10 +452,10 @@ void init_math(py::module m) {
     py::class_<Class> cls(m, "SpatialVelocity", cls_doc.doc);
     BindSpatialVectorMixin(&cls);
     cls  // BR
-      .def(py::init(), cls_doc.ctor.doc_3)
-      .def(py::init<const Eigen::Ref<const Vector3<T>>&,
-               const Eigen::Ref<const Vector3<T>>&>(),
-          py::arg("w"), py::arg("v"), cls_doc.ctor.doc_4);
+        .def(py::init(), cls_doc.ctor.doc_3)
+        .def(py::init<const Eigen::Ref<const Vector3<T>>&,
+                 const Eigen::Ref<const Vector3<T>>&>(),
+            py::arg("w"), py::arg("v"), cls_doc.ctor.doc_4);
   }
   {
     using Class = SpatialAcceleration<T>;
@@ -461,10 +463,10 @@ void init_math(py::module m) {
     py::class_<Class> cls(m, "SpatialAcceleration", cls_doc.doc);
     BindSpatialVectorMixin(&cls);
     cls  // BR
-      .def(py::init(), cls_doc.ctor.doc_3)
-      .def(py::init<const Eigen::Ref<const Vector3<T>>&,
-               const Eigen::Ref<const Vector3<T>>&>(),
-          py::arg("alpha"), py::arg("a"), cls_doc.ctor.doc_4);
+        .def(py::init(), cls_doc.ctor.doc_3)
+        .def(py::init<const Eigen::Ref<const Vector3<T>>&,
+                 const Eigen::Ref<const Vector3<T>>&>(),
+            py::arg("alpha"), py::arg("a"), cls_doc.ctor.doc_4);
   }
 }
 
@@ -663,7 +665,7 @@ void init_multibody_plant(py::module m) {
             doc.MultibodyPlant.CalcJacobianSpatialVelocity.doc)
         .def("CalcSpatialAccelerationsFromVdot",
             [](const Class* self, const Context<T>& context,
-               const VectorX<T>& known_vdot) {
+                const VectorX<T>& known_vdot) {
               std::vector<SpatialAcceleration<T>> A_WB_array(
                   self->num_bodies());
               self->CalcSpatialAccelerationsFromVdot(
@@ -677,8 +679,8 @@ void init_multibody_plant(py::module m) {
             py::arg("external_forces"),
             doc.MultibodyPlant.CalcInverseDynamics.doc)
         .def("CalcForceElementsContribution",
-            &Class::CalcForceElementsContribution,
-            py::arg("context"), py::arg("forces"),
+            &Class::CalcForceElementsContribution, py::arg("context"),
+            py::arg("forces"),
             doc.MultibodyPlant.CalcForceElementsContribution.doc)
         .def("CalcPotentialEnergy", &Class::CalcPotentialEnergy,
             py::arg("context"), doc.MultibodyPlant.CalcPotentialEnergy.doc)
@@ -1006,7 +1008,7 @@ void init_multibody_plant(py::module m) {
         .def("contact_info", &Class::contact_info, py::arg("i"));
     pysystems::AddValueInstantiation<Class>(m);
   }
-}
+}  // NOLINT(readability/fn_size)
 
 void init_parsing(py::module m) {
   // NOLINTNEXTLINE(build/namespaces): Emulate placement in namespace.
