@@ -2607,10 +2607,11 @@ class MultibodyPlant : public MultibodyTreeSystem<T> {
   friend class MultibodyPlantTester;
 
   // Constructor to bridge testing from MultibodyTree to MultibodyPlant.
-  // WARNING: This may *not* result in a plant with a valid test. Only use to
-  // briefly test forwarding methods.
+  // WARNING: This may *not* result in a plant with a valid test. Use sparingly
+  // to test forwarding methods when the overhead is high to reproduce the
+  // testing (e.g. benchmarks).
   explicit MultibodyPlant(
-      std::unique_ptr<MultibodyTree<T>> tree, double time_step = 0);
+      std::unique_ptr<MultibodyTree<T>> tree_in, double time_step = 0);
 
   // Helper method for throwing an exception within public methods that should
   // not be called post-finalize. The invoking method should pass its name so

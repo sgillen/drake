@@ -24,11 +24,16 @@ namespace multibody {
 
 class MultibodyPlantTester {
  public:
+  MultibodyPlantTester() = delete;
+
   // Use private constructor to create an MBP from an MBT.
   template <typename T>
   static std::unique_ptr<MultibodyPlant<T>> CreateMultibodyPlantFromTree(
       std::unique_ptr<MultibodyTree<T>> tree, double time_step = 0.) {
-    return std::make_unique<MultibodyPlant<T>>(std::move(tree), time_step);
+    // Do not use `make_unique` for the private constructor, as it would have
+    // to be a friend of MultibodyPlant.
+    return std::unique_ptr<MultibodyPlant<T>>(
+        new MultibodyPlant<T>(std::move(tree), time_step));
   }
 };
 
@@ -81,7 +86,7 @@ class DrakeKukaIIwaRobot {
     plant_ =
         MultibodyPlantTester::CreateMultibodyPlantFromTree(
             MakeKukaIiwaModel<T>(
-                true /* finalized model */,
+                false /* finalized model */,
                 gravity /* acceleration of gravity */));
 
     linkN_ = &tree().world_body();
@@ -152,8 +157,12 @@ class DrakeKukaIIwaRobot {
 
     // Retrieve end-effector spatial acceleration from acceleration cache.
     std::vector<SpatialAcceleration<T>> A_WB(tree().num_bodies());
-    tree().CalcSpatialAccelerationsFromVdot(*context_, pc, vc, qDDt, &A_WB);
-    const SpatialAcceleration<T>& A_NG_N = A_WB[linkG_->node_index()];
+    // TODO(eric.cousineau): For this model, the end effector's BodyIndex
+    // matches its BodyNodeIndex, thus we're not really checking the difference
+    // between MultibodyPlant and MultibodyTree's ordering.
+    DRAKE_DEMAND(int{linkG_->index()} == int{linkG_->node_index()});
+    plant().CalcSpatialAccelerationsFromVdot(*context_, qDDt, &A_WB);
+    const SpatialAcceleration<T>& A_NG_N = A_WB[linkG_->index()];
 
     // Create a class to return the results.
     return SpatialKinematicsPVA<T>(X_NG, V_NG_N, A_NG_N);
@@ -233,6 +242,7 @@ class DrakeKukaIIwaRobot {
   }
 
   const MultibodyTree<T>& tree() const { return plant_->tree(); }
+  const MultibodyPlant<T>& plant() const { return *plant_; }
 
  private:
   // This method sets the Kuka joint angles and their 1st and 2nd derivatives.

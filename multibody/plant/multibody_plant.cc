@@ -227,10 +227,10 @@ MultibodyPlant<T>::MultibodyPlant(double time_step)
 
 template <typename T>
 MultibodyPlant<T>::MultibodyPlant(
-    std::unique_ptr<MultibodyTree<T>> tree, double time_step)
+    std::unique_ptr<MultibodyTree<T>> tree_in, double time_step)
     : MultibodyTreeSystem<T>(
           systems::SystemTypeTag<multibody::MultibodyPlant>{},
-          std::move(tree), time_step > 0),
+          std::move(tree_in), time_step > 0),
       time_step_(time_step) {
   DRAKE_THROW_UNLESS(time_step >= 0);
   visual_geometries_.emplace_back();  // Entries for the "world" body.
