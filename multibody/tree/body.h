@@ -179,9 +179,9 @@ class Body : public MultibodyTreeElement<Body<T>, BodyIndex> {
     return body_frame_;
   }
 
-  /// Returns the index of the node in the underlying tree structure of
-  /// the parent MultibodyTree to which this body belongs.
-  BodyNodeIndex node_index() const {
+  /// (Advanced) Returns the index of the node in the underlying tree structure
+  /// of the parent MultibodyTree to which this body belongs.
+  internal::BodyNodeIndex node_index() const {
     return topology_.body_node;
   }
 
@@ -193,7 +193,8 @@ class Body : public MultibodyTreeElement<Body<T>, BodyIndex> {
   double get_default_mass() const { return default_mass_; }
 
   /// Returns the mass of this body stored in `context`.
-  virtual T get_mass(const MultibodyTreeContext<T> &context) const = 0;
+  virtual T get_mass(const internal::MultibodyTreeContext<T> &context)
+  const = 0;
 
   /// Computes the center of mass `p_BoBcm_B` (or `p_Bcm` for short) of this
   /// body measured from this body's frame origin `Bo` and expressed in the body
@@ -257,11 +258,11 @@ class Body : public MultibodyTreeElement<Body<T>, BodyIndex> {
 
   /// Clones this %Body (templated on T) to a body templated on `double`.
   virtual std::unique_ptr<Body<double>> DoCloneToScalar(
-      const MultibodyTree<double>& tree_clone) const = 0;
+      const internal::MultibodyTree<double>& tree_clone) const = 0;
 
   /// Clones this %Body (templated on T) to a body templated on AutoDiffXd.
   virtual std::unique_ptr<Body<AutoDiffXd>> DoCloneToScalar(
-      const MultibodyTree<AutoDiffXd>& tree_clone) const = 0;
+      const internal::MultibodyTree<AutoDiffXd>& tree_clone) const = 0;
 
   /// @}
 
@@ -273,7 +274,8 @@ class Body : public MultibodyTreeElement<Body<T>, BodyIndex> {
   // Implementation for MultibodyTreeElement::DoSetTopology().
   // At MultibodyTree::Finalize() time, each body retrieves its topology
   // from the parent MultibodyTree.
-  void DoSetTopology(const MultibodyTreeTopology& tree_topology) final {
+  void DoSetTopology(const internal::MultibodyTreeTopology& tree_topology)
+  final {
     topology_ = tree_topology.get_body(this->index());
     body_frame_.SetTopology(tree_topology);
   }

@@ -35,6 +35,7 @@
 
 namespace drake {
 namespace multibody {
+namespace internal {
 
 /// Data structure to store the topological information associated with a Body.
 struct BodyTopology {
@@ -1031,6 +1032,11 @@ class MultibodyTreeTopology {
   int num_states_{0};
   int num_actuated_dofs_{0};
 };
+
+}  // namespace internal
+
+// HACK
+// Add aliases.
 
 }  // namespace multibody
 }  // namespace drake

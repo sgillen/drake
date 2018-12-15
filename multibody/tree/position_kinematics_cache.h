@@ -9,6 +9,7 @@
 
 namespace drake {
 namespace multibody {
+namespace internal {
 
 /// This class is one of the cache entries in MultibodyTreeContext. It holds the
 /// kinematics results of computations that only depend on the generalized
@@ -138,5 +139,6 @@ class PositionKinematicsCache {
   X_PoolType X_MB_pool_;  // Indexed by BodyNodeIndex.
 };
 
+}  // namespace internal
 }  // namespace multibody
 }  // namespace drake

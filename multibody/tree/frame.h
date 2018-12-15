@@ -207,7 +207,8 @@ class Frame : public FrameBase<T> {
 
  private:
   // Implementation for MultibodyTreeElement::DoSetTopology().
-  void DoSetTopology(const MultibodyTreeTopology& tree_topology) final {
+  void DoSetTopology(const internal::MultibodyTreeTopology& tree_topology)
+  final {
     topology_ = tree_topology.get_frame(this->index());
     DRAKE_ASSERT(topology_.index == this->index());
   }
@@ -218,7 +219,7 @@ class Frame : public FrameBase<T> {
   const Body<T>& body_;
 
   // The internal bookkeeping topology struct used by MultibodyTree.
-  FrameTopology topology_;
+  internal::FrameTopology topology_;
 };
 
 }  // namespace multibody

@@ -148,13 +148,13 @@ class MultibodyTreeElement<ElementType<T>, ElementIndexType> {
   /// Gives MultibodyTree elements the opportunity to retrieve their topology
   /// when MultibodyTree::Finalize() is invoked.
   /// NVI to pure virtual method DoSetTopology().
-  void SetTopology(const MultibodyTreeTopology& tree) {
+  void SetTopology(const internal::MultibodyTreeTopology& tree) {
     DoSetTopology(tree);
   }
 
   /// Implementation of the NVI SetTopology(). For advanced use only for
   /// developers implementing new MultibodyTree components.
-  virtual void DoSetTopology(const MultibodyTreeTopology& tree) = 0;
+  virtual void DoSetTopology(const internal::MultibodyTreeTopology& tree) = 0;
 
  private:
   void set_parent_tree(

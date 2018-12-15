@@ -15,6 +15,7 @@
 
 namespace drake {
 namespace multibody {
+namespace internal {
 
 /** This is a bare Drake System providing just enough functionality to allow
 standalone exercise of a MultibodyTree. MultibodyTree requires a few System
@@ -196,6 +197,12 @@ class MultibodyTreeSystem : public systems::LeafSystem<T> {
   // Used to enforce "finalize once" restriction for protected-API users.
   bool already_finalized_{false};
 };
+
+}  // namespace internal
+
+// // HACK!!!
+// template <typename T>
+// using MultibodyTreeSystem = internal::MultibodyTreeSystem<T>;
 
 }  // namespace multibody
 }  // namespace drake
