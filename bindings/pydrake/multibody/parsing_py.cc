@@ -13,8 +13,9 @@ using std::string;
 namespace drake {
 namespace pydrake {
 
+void init_deprecated(py::module m);
+
 PYBIND11_MODULE(parsing, m) {
-  PYDRAKE_PREVENT_PYTHON3_MODULE_REIMPORT(m);
   m.doc() = "SDF and URDF parsing for MultibodyPlant and SceneGraph.";
 
   // NOLINTNEXTLINE(build/namespaces): Emulate placement in namespace.
@@ -52,6 +53,44 @@ PYBIND11_MODULE(parsing, m) {
         .def("AddModelFromFile", &Class::AddModelFromFile, py::arg("file_name"),
             py::arg("model_name") = "", cls_doc.AddModelFromFile.doc);
   }
+
+  init_deprecated(m.def_submodule("_deprecated"));
+}
+
+void init_deprecated(py::module m) {
+  // NOLINTNEXTLINE(build/namespaces): Emulate placement in namespace.
+  using namespace drake::multibody;
+  constexpr auto& doc = pydrake_doc.drake.multibody;
+
+  // Bind the deprecated free functions.
+  // TODO(jwnimmer-tri) Remove these stubs on or about 2019-03-01.
+  m.def("AddModelFromSdfFile",
+      [](const string& file_name, const string& model_name,
+          MultibodyPlant<double>* plant, SceneGraph<double>* scene_graph) {
+        WarnDeprecated(
+            "AddModelFromSdfFile is deprecated; please use the class "
+            "pydrake.multibody.parsing.Parser instead.");
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+        return parsing::AddModelFromSdfFile(
+            file_name, model_name, plant, scene_graph);
+#pragma GCC diagnostic pop
+      },
+      py::arg("file_name"), py::arg("model_name"), py::arg("plant"),
+      py::arg("scene_graph") = nullptr, doc.AddModelFromSdfFile.doc_4args);
+  m.def("AddModelFromSdfFile",
+      [](const string& file_name, MultibodyPlant<double>* plant,
+          SceneGraph<double>* scene_graph) {
+        WarnDeprecated(
+            "AddModelFromSdfFile is deprecated; please use the class "
+            "pydrake.multibody.parsing.Parser instead.");
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+        return parsing::AddModelFromSdfFile(file_name, plant, scene_graph);
+#pragma GCC diagnostic pop
+      },
+      py::arg("file_name"), py::arg("plant"), py::arg("scene_graph") = nullptr,
+      doc.AddModelFromSdfFile.doc_3args);
 }
 
 }  // namespace pydrake
