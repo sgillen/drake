@@ -16,6 +16,7 @@
 
 namespace drake {
 namespace multibody {
+namespace internal {
 
 /// Base class for specific Mobilizer implementations with the number of
 /// generalized positions and velocities resolved at compile time as template
@@ -209,5 +210,6 @@ class MobilizerImpl : public Mobilizer<T> {
   }
 };
 
+}  // namespace internal
 }  // namespace multibody
 }  // namespace drake

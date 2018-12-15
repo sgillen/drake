@@ -200,7 +200,7 @@ class Body : public MultibodyTreeElement<Body<T>, BodyIndex> {
   /// body measured from this body's frame origin `Bo` and expressed in the body
   /// frame B.
   virtual const Vector3<T> CalcCenterOfMassInBodyFrame(
-      const MultibodyTreeContext<T>& context) const = 0;
+      const internal::MultibodyTreeContext<T>& context) const = 0;
 
   /// Computes the SpatialInertia `I_BBo_B` of `this` body about its frame
   /// origin `Bo` (not necessarily its center of mass) and expressed in its body
@@ -211,7 +211,7 @@ class Body : public MultibodyTreeElement<Body<T>, BodyIndex> {
   /// describing its state of deformation. As a particular case, the spatial
   /// inertia of a RigidBody in its body frame is constant.
   virtual SpatialInertia<T> CalcSpatialInertiaInBodyFrame(
-      const MultibodyTreeContext<T>& context) const = 0;
+      const internal::MultibodyTreeContext<T>& context) const = 0;
 
   /// Returns the pose `X_WB` of this body B in the world frame W as a function
   /// of the state of the model stored in `context`.
@@ -300,7 +300,7 @@ class Body : public MultibodyTreeElement<Body<T>, BodyIndex> {
   double default_mass_{0.0};
 
   // The internal bookkeeping topology struct used by MultibodyTree.
-  BodyTopology topology_;
+  internal::BodyTopology topology_;
 };
 
 }  // namespace multibody

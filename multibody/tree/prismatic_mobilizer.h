@@ -14,6 +14,7 @@
 
 namespace drake {
 namespace multibody {
+namespace internal {
 
 /// This Mobilizer allows two frames to translate relative to one another
 /// along an axis whose direction is constant when measured in either this
@@ -199,5 +200,6 @@ class PrismaticMobilizer final : public MobilizerImpl<T, 1, 1> {
   Vector3<double> axis_F_;
 };
 
+}  // namespace internal
 }  // namespace multibody
 }  // namespace drake
