@@ -11,6 +11,7 @@ load(
 load(
     "@drake//tools/skylark:drake_cc.bzl",
     "drake_cc_library",
+    "drake_cc_googletest",
 )
 load(
     "@drake//tools/skylark:drake_py.bzl",
@@ -447,4 +448,16 @@ drake_py_binary(
 add_lint_tests(
     cpplint_data = ["//bindings/pydrake:.clang-format"],
     enable_clang_format_lint = True,
+)
+
+drake_py_binary(
+    name = "issue_10255_repro_py",
+    srcs = ["issue_10255_repro.py"],
+    deps = [":all_py"],
+)
+
+drake_cc_googletest(
+    name = "issue_10255_repro",
+    srcs = ["issue_10255_repro.cc"],
+    deps = ["//:drake_shared_library"],
 )
