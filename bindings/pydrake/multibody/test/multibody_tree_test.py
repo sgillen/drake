@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from pydrake.multibody.multibody_tree import (
+from pydrake.multibody.tree import (
     Body,
     BodyFrame,
     BodyIndex,
@@ -21,18 +21,14 @@ from pydrake.multibody.multibody_tree import (
     WeldJoint,
     world_index,
 )
-from pydrake.multibody.multibody_tree.math import (
+from pydrake.multibody.math import (
     SpatialAcceleration,
     SpatialVelocity,
 )
-from pydrake.multibody.multibody_tree.multibody_plant import (
+from pydrake.multibody.plant import (
     ContactResults,
     MultibodyPlant,
     PointPairContactInfo,
-)
-from pydrake.multibody.multibody_tree.parsing import (
-    AddModelFromSdfFile,
-    Parser as DeprecatedParser,
 )
 from pydrake.multibody.parsing import (
     Parser,
@@ -42,6 +38,11 @@ from pydrake.multibody.benchmarks.acrobot import (
     MakeAcrobotPlant,
 )
 
+from pydrake.multibody.multibody_tree.parsing import (
+    AddModelFromSdfFile,
+    Parser as DeprecatedParser,
+)
+
 from pydrake.geometry import (
     GeometryId,
     PenetrationAsPointPair,
@@ -49,6 +50,17 @@ from pydrake.geometry import (
     SceneGraph,
 )
 from pydrake.systems.framework import DiagramBuilder
+
+# Backwards compatibility.
+def backwards_compat():
+    import pydrake.multibody.all
+    import pydrake.multibody.multibody_tree as m
+    m.Body
+    m.math.SpatialAcceleration
+    m.multibody_plant.MultibodyPlant
+    m.parsing.Parser
+
+backwards_compat()
 
 
 import copy
