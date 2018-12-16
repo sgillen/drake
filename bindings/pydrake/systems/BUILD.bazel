@@ -477,5 +477,5 @@ cc_binary(
     deps = [
         "@vtk//:tmp_shared_deps",
     ],
-    # linkopts = ["-ltbb"],
+    linkopts = ["-ltbb"],
 )
