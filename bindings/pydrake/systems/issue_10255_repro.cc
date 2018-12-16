@@ -36,6 +36,7 @@ GTEST_TEST(Blarg, Blarg) {
   Simulator<T> simulator(system);
   simulator.StepTo(0.);
   EXPECT_EQ(system.num_updates(), 1);
+  EXPECT_EQ(simulator.get_num_discrete_updates(), 1);
 }
 
 }

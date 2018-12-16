@@ -675,7 +675,7 @@ void Simulator<T>::Initialize() {
   // current time as slightly toward negative infinity as we can allow.
   const T current_time = context_->get_time();
   const long double inf = std::numeric_limits<long double>::infinity();
-  context_->set_time(nexttoward(current_time, -inf));
+  context_->set_time(current_time - 1e-14);
 
   // Get the next timed event.
   next_timed_event_time_ =

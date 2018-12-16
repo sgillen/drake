@@ -459,5 +459,8 @@ drake_py_binary(
 drake_cc_googletest(
     name = "issue_10255_repro",
     srcs = ["issue_10255_repro.cc"],
-    deps = ["//:drake_shared_library"],
+    deps = [
+        "//systems/framework",
+        "//systems/analysis",
+    ],
 )
