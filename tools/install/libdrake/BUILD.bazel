@@ -128,16 +128,16 @@ cc_library(
         # TODO(jwnimmer-tri) This duplicates the list of VTK libraries needed
         # by //sensors.  We should find a way for ":drake_shared_library" to be
         # declared without having to repeat this list here.
-        "@vtk//:vtkCommonCore",
-        "@vtk//:vtkCommonDataModel",
-        "@vtk//:vtkCommonTransforms",
-        "@vtk//:vtkFiltersGeneral",
+        # "@vtk//:vtkCommonCore",
+        # "@vtk//:vtkCommonDataModel",
+        # "@vtk//:vtkCommonTransforms",
+        # "@vtk//:vtkFiltersGeneral",
         "@vtk//:vtkFiltersSources",
-        "@vtk//:vtkIOGeometry",
+        # "@vtk//:vtkIOGeometry",
         "@vtk//:vtkIOImage",
-        "@vtk//:vtkRenderingCore",
+        # "@vtk//:vtkRenderingCore",
         "@vtk//:vtkRenderingOSPRay",
-        "@vtk//:vtkRenderingOpenGL2",
+        # "@vtk//:vtkRenderingOpenGL2",
     ],
 )
 
