@@ -138,22 +138,27 @@ def _impl(repository_ctx):
             VTK_MAJOR_MINOR_VERSION,
         ), "include")
     elif os_result.is_ubuntu:
-        if os_result.ubuntu_release == "16.04":
-            archive = "vtk-8.1.1-embree-3.2.0-ospray-1.6.1-python-2.7.12-python-3.5.2-qt-5.5.1-xenial-x86_64-3.tar.gz"  # noqa
-            sha256 = "7662b1898b92f81d33bb860621892d20da2ea8887ed9cea10f7f708877ca6688"  # noqa
-        elif os_result.ubuntu_release == "18.04":
-            archive = "vtk-8.1.1-embree-3.2.0-ospray-1.6.1-python-2.7.15-python-3.6.5-qt-5.9.5-bionic-x86_64-3.tar.gz"  # noqa
-            sha256 = "aef51c26e5b1c600d57988ec37b87eb4568e415d536ef0d2c0e0b3d77c0ef220"  # noqa
-        else:
-            fail("Operating system is NOT supported", attr = os_result)
+        # if os_result.ubuntu_release == "16.04":
+        #     archive = "vtk-8.1.1-embree-3.2.0-ospray-1.6.1-python-2.7.12-python-3.5.2-qt-5.5.1-xenial-x86_64-3.tar.gz"  # noqa
+        #     sha256 = "7662b1898b92f81d33bb860621892d20da2ea8887ed9cea10f7f708877ca6688"  # noqa
+        # elif os_result.ubuntu_release == "18.04":
+        #     archive = "vtk-8.1.1-embree-3.2.0-ospray-1.6.1-python-2.7.15-python-3.6.5-qt-5.9.5-bionic-x86_64-3.tar.gz"  # noqa
+        #     sha256 = "aef51c26e5b1c600d57988ec37b87eb4568e415d536ef0d2c0e0b3d77c0ef220"  # noqa
+        # else:
+        #     fail("Operating system is NOT supported", attr = os_result)
+        # urls = [
+        #     x.format(archive = archive)
+        #     for x in repository_ctx.attr.mirrors.get("vtk")
+        # ]
+        # root_path = repository_ctx.path("")
 
-        urls = [
-            x.format(archive = archive)
-            for x in repository_ctx.attr.mirrors.get("vtk")
-        ]
-        root_path = repository_ctx.path("")
+        # repository_ctx.download_and_extract(urls, root_path, sha256 = sha256)
 
-        repository_ctx.download_and_extract(urls, root_path, sha256 = sha256)
+
+        # Uses: https://github.com/EricCousineau-TRI/vtk_ospray_build/commit/0d1e31475bf9ce9905a49bf05d8169e01dde16bc
+        d = "/home/eacousineau/proj/tri/proj/perception/vtk_ospray_build/build/install"
+        for sub in ["bin", "include", "lib", "scripts", "share"]:
+            repository_ctx.symlink(d + "/" + sub, sub)
 
     else:
         fail("Operating system is NOT supported", attr = os_result)
