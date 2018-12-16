@@ -3,6 +3,7 @@
 	libdl.so.2 => /lib/x86_64-linux-gnu/libdl.so.2 ([address])
 	libgcc_s.so.1 => /lib/x86_64-linux-gnu/libgcc_s.so.1 ([address])
 	libm.so.6 => /lib/x86_64-linux-gnu/libm.so.6 ([address])
+	libospray_common.so.0 => ${PWD}/bazel-bin/bindings/pydrake/systems/../../../_solib_k8/_U@vtk_S_S_Ctmp_Ushared_Udeps___Uexternal_Svtk_Slib/libospray_common.so.0 ([address])
 	libpthread.so.0 => /lib/x86_64-linux-gnu/libpthread.so.0 ([address])
 	libstdc++.so.6 => /usr/lib/x86_64-linux-gnu/libstdc++.so.6 ([address])
 	libtbb.so.2 => /usr/lib/x86_64-linux-gnu/libtbb.so.2 ([address])

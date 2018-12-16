@@ -475,7 +475,7 @@ cc_binary(
     srcs = ["issue_10255_min_repro.cc"],
     # deps = ["//tools/install/libdrake:tmp_shared_deps"],
     deps = [
-        # "@vtk//:tmp_shared_deps",
+        "@vtk//:tmp_shared_deps",
     ],
     linkopts = ["-ltbb"],
 )
