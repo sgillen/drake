@@ -632,6 +632,18 @@ cc_library(
 """
     else:
         file_content += """
+
+cc_library(
+    name = "tmp_shared_deps",
+    srcs = glob([
+        #"lib/libembree3.so*",
+        "lib/libospray_common.so*",
+        #"lib/libospray_module_ispc.so*",
+        #"lib/libospray.so*",
+    ]),
+    visibility = ["//visibility:public"],
+)
+
 cc_library(
     name = "ospray",
     srcs = glob([
