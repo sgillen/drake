@@ -33,11 +33,11 @@ PYBIND11_MODULE(rigid_body_tree, m) {
   namespace sdf = drake::parsers::sdf;
   using std::shared_ptr;
 
-  py::module::import("pydrake.multibody.collision");
-  py::module::import("pydrake.multibody.joints");
-  py::module::import("pydrake.multibody.parsers");
-  py::module::import("pydrake.multibody.rigid_body");
-  py::module::import("pydrake.multibody.shapes");
+  py::module::import("pydrake._attic.multibody.collision");
+  py::module::import("pydrake._attic.multibody.joints");
+  py::module::import("pydrake._attic.multibody.parsers");
+  py::module::import("pydrake._attic.multibody.rigid_body");
+  py::module::import("pydrake._attic.multibody.shapes");
   py::module::import("pydrake.util.eigen_geometry");
 
   constexpr auto& joints_doc = doc.drake.multibody.joints;
