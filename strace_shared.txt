@@ -11,12 +11,11 @@ stat("${PWD}/bazel-out/k8-dbg/bin/bindings/pydrake/systems/../../../_solib_k8/_U
 open("${PWD}/bazel-out/k8-dbg/bin/bindings/pydrake/systems/../../../_solib_k8/_U@vtk_S_S_Ctmp_Ushared_Udeps___Uexternal_Svtk_Slib/x86_64/libospray_common.so.0", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
 stat("${PWD}/bazel-out/k8-dbg/bin/bindings/pydrake/systems/../../../_solib_k8/_U@vtk_S_S_Ctmp_Ushared_Udeps___Uexternal_Svtk_Slib/x86_64", [address]) = -1 ENOENT (No such file or directory)
 open("${PWD}/bazel-out/k8-dbg/bin/bindings/pydrake/systems/../../../_solib_k8/_U@vtk_S_S_Ctmp_Ushared_Udeps___Uexternal_Svtk_Slib/libospray_common.so.0", O_RDONLY|O_CLOEXEC) = 3
-read(3, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\240\335\5\0\0\0\0\0@\0\0\0\0\0\0\0\20\347#\0\0\0\0\0\0\0\0\0@\0008\0\7\0@\0%\0\"\0\1\0\0\0\5\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\fc\t\0\0\0\0\0\fc\t\0\0\0\0\0\0\0 \0\0\0\0\0\1\0\0\0\6\0\0\0000q\t\0\0\0\0\0000q)\0\0\0\0\0000q)\0\0\0\0\0\200>\0\0\0\0\0\0\210A\0\0\0\0\0\0\0\0 \0\0\0\0\0\2\0\0\0\6\0\0\0\370{\t\0\0\0\0\0\370{)\0\0\0\0\0\370{)\0\0\0\0\0000\2\0\0\0\0\0\0000\2\0\0\0\0\0\0\10\0\0\0\0\0\0\0\4\0\0\0\4\0\0\0\310\1\0\0\0\0\0\0\310\1\0\0\0\0\0\0"..., 832) = 832
-fstat(3, {st_mode=S_IFREG|0644, st_size=2355280, ...}) = 0
-mmap(NULL, 2732728, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = [address]
+read(3, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\200%\1\0\0\0\0\0@\0\0\0\0\0\0\0\0302\4\0\0\0\0\0\0\0\0\0@\0008\0\7\0@\0&\0#\0\1\0\0\0\5\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\24'\3\0\0\0\0\0\24'\3\0\0\0\0\0\0\0 \0\0\0\0\0\1\0\0\0\6\0\0\0\3001\3\0\0\0\0\0\3001#\0\0\0\0\0\3001#\0\0\0\0\0\230\24\0\0\0\0\0\0\230\26\0\0\0\0\0\0\0\0 \0\0\0\0\0\2\0\0\0\6\0\0\0\260;\3\0\0\0\0\0\260;#\0\0\0\0\0\260;#\0\0\0\0\0000\2\0\0\0\0\0\0000\2\0\0\0\0\0\0\10\0\0\0\0\0\0\0\4\0\0\0\4\0\0\0\310\1\0\0\0\0\0\0\310\1\0\0\0\0\0\0"..., 832) = 832
+fstat(3, {st_mode=S_IFREG|0644, st_size=277400, ...}) = 0
+mmap(NULL, 2312280, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = [address]
 mprotect([address], 2097152, PROT_NONE) = 0
-mmap([address], 16384, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, [address]) = [address]
-mmap([address], 696, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = [address]
+mmap([address], 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, [address]) = [address]
 close(3)                                = 0
 open("${PWD}/bazel-out/k8-dbg/bin/bindings/pydrake/systems/../../../_solib_k8/_U@vtk_S_S_Ctmp_Ushared_Udeps___Uexternal_Svtk_Slib/libtbb.so.2", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
 open("/etc/ld.so.cache", O_RDONLY|O_CLOEXEC) = 3
@@ -114,7 +113,7 @@ mprotect([address], 4096, PROT_READ) = 0
 mprotect([address], 4096, PROT_READ) = 0
 mprotect([address], 4096, PROT_READ) = 0
 munmap([address], 354968)          = 0
-set_tid_address([address])         = 21784
+set_tid_address([address])         = 26210
 set_robust_list([address], 24)     = 0
 rt_sigaction(SIGRTMIN, {[address], [], SA_RESTORER|SA_SIGINFO, [address]}, NULL, 8) = 0
 rt_sigaction(SIGRT_1, {[address], [], SA_RESTORER|SA_RESTART|SA_SIGINFO, [address]}, NULL, 8) = 0
@@ -125,9 +124,10 @@ brk([address])                     = [address]
 futex([address], FUTEX_WAKE_PRIVATE, 2147483647) = 0
 futex([address], FUTEX_WAKE_PRIVATE, 2147483647) = 0
 fstat(1, {st_mode=S_IFIFO|0600, st_size=0, ...}) = 0
-write(1, "zero: 0\nslightly_less: -4.9406564584124654e-324\nis_less: true\n", 62zero: 0
+write(1, "zero: 0\nslightly_less: -4.9406564584124654e-324\nis_less: false\nBAD\n", 67zero: 0
 slightly_less: -4.9406564584124654e-324
-is_less: true
-) = 62
-exit_group(0)                           = ?
-+++ exited with 0 +++
+is_less: false
+BAD
+) = 67
+exit_group(1)                           = ?
++++ exited with 1 +++

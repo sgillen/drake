@@ -1,3 +1,4 @@
 zero: 0
 slightly_less: -4.9406564584124654e-324
-is_less: true
+is_less: false
+BAD

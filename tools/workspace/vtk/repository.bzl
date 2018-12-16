@@ -155,7 +155,7 @@ def _impl(repository_ctx):
         # repository_ctx.download_and_extract(urls, root_path, sha256 = sha256)
 
 
-        # Uses: https://github.com/EricCousineau-TRI/vtk_ospray_build/commit/0d1e31475bf9ce9905a49bf05d8169e01dde16bc
+        # Uses: https://github.com/EricCousineau-TRI/vtk_ospray_build/commit/8d0d3d3d98d535b4827f0cba075c88ce3866662c (Release)
         d = "/home/eacousineau/proj/tri/proj/perception/vtk_ospray_build/build/install"
         for sub in ["bin", "include", "lib", "scripts", "share"]:
             repository_ctx.symlink(d + "/" + sub, sub)
