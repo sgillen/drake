@@ -1,7 +1,7 @@
 #!/bin/bash
 set -eux -o pipefail
 
-bazel build \
+bazel build -c dbg \
     //bindings/pydrake/systems:issue_10255_min_repro_static \
     //bindings/pydrake/systems:issue_10255_min_repro_shared
 
