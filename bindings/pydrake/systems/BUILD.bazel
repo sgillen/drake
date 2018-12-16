@@ -468,7 +468,6 @@ drake_cc_googletest(
 cc_binary(
     name = "issue_10255_min_repro_static",
     srcs = ["issue_10255_min_repro.cc"],
-    deps = ["//systems/framework"],
 )
 
 cc_binary(
