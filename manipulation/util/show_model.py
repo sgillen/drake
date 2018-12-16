@@ -34,7 +34,7 @@ import sys
 
 from pydrake.lcm import DrakeLcm
 from pydrake.geometry import ConnectDrakeVisualizer, SceneGraph
-from pydrake.multibody.multibody_tree.multibody_plant import MultibodyPlant
+from pydrake.multibody.plant import MultibodyPlant
 from pydrake.multibody.parsing import Parser
 from pydrake.systems.analysis import Simulator
 from pydrake.systems.framework import DiagramBuilder

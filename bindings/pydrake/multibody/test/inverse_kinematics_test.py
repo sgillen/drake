@@ -2,7 +2,7 @@ from pydrake.multibody import inverse_kinematics as ik
 
 import math
 
-from pydrake.multibody.multibody_tree.multibody_plant import MultibodyPlant
+from pydrake.multibody.plant import MultibodyPlant
 from pydrake.multibody.parsing import Parser
 from pydrake.multibody.benchmarks.acrobot import (
     MakeAcrobotPlant,

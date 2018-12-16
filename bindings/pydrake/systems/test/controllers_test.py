@@ -6,8 +6,8 @@ import unittest
 
 from pydrake.common import FindResourceOrThrow
 from pydrake.examples.pendulum import PendulumPlant
-from pydrake.multibody.multibody_tree import MultibodyForces
-from pydrake.multibody.multibody_tree.multibody_plant import MultibodyPlant
+from pydrake.multibody.tree import MultibodyForces
+from pydrake.multibody.plant import MultibodyPlant
 from pydrake.multibody.parsing import Parser
 from pydrake.multibody.rigid_body_tree import (FloatingBaseType, RigidBodyTree)
 from pydrake.systems.analysis import Simulator

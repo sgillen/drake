@@ -4,6 +4,7 @@ load(
     "@drake//tools/skylark:drake_cc.bzl",
     "drake_cc_library",
 )
+load("@drake//tools/skylark:drake_py.bzl", "drake_py_library")
 load("//tools/workspace:generate_file.bzl", "generate_file")
 
 def _combine_relative_labels(arg_list, arg_map):
@@ -120,4 +121,42 @@ def drake_cc_library_aliases(
         native.alias(
             name = stub_relative_label[1:] + ".installed_headers",
             actual = actual_full_label + ".installed_headers",
+        )
+
+def _require_suffix(label, suffix):
+    if not label.endswith(suffix):
+        fail("'{}' must end with '{}'".format(label, suffix))
+
+def drake_py_library_aliases(
+        relative_labels = [],
+        relative_labels_map = {},
+        actual_subdir = "",
+        **kwargs):
+    actual_subdir or fail("Missing required actual_subdir")
+    subdir_prefix = "bindings/pydrake/"
+    if not actual_subdir.startswith(subdir_prefix):
+        fail("'{}' must start with '{}'".format(actual_subdir, subdir_prefix))
+    if actual_subdir.endswith("/"):
+        fail("'{}' must not end with '/'".format(actual_subdir))
+    actual_package = actual_subdir[len("bindings/"):].replace("/", ".")
+    mapping = _combine_relative_labels(relative_labels, relative_labels_map)
+    for stub_relative_label, actual_relative_label in mapping.items():
+        label_suffix = "_py"
+        _require_suffix(stub_relative_label, label_suffix)
+        _require_suffix(actual_relative_label, label_suffix)
+        stub_name = stub_relative_label[1:-len(label_suffix)]
+        stub_file = stub_name + ".py"
+        actual_module = actual_relative_label[1:-len(label_suffix)]
+        generate_file(
+            name = stub_file,
+            content = "\n".join([
+                '"""WARNING: Alias of legacy module, soon to be deprecated."""',
+                "from {}.{} import *".format(actual_package, actual_module),
+            ]) + "\n",
+        )
+        actual_full_label = "//" + actual_subdir + actual_relative_label
+        native.py_library(
+            name = stub_relative_label[1:],
+            deps = [actual_full_label],
+            srcs = [stub_file],
         )

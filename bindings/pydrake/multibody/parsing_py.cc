@@ -3,8 +3,11 @@
 
 #include "drake/bindings/pydrake/documentation_pybind.h"
 #include "drake/bindings/pydrake/pydrake_pybind.h"
+#include "drake/bindings/pydrake/util/deprecation_pybind.h"
 #include "drake/multibody/parsing/package_map.h"
 #include "drake/multibody/parsing/parser.h"
+#include "drake/multibody/parsing/sdf_parser.h"
+#include "drake/multibody/parsing/urdf_parser.h"
 
 using drake::geometry::SceneGraph;
 using drake::multibody::MultibodyPlant;
@@ -60,7 +63,7 @@ PYBIND11_MODULE(parsing, m) {
 void init_deprecated(py::module m) {
   // NOLINTNEXTLINE(build/namespaces): Emulate placement in namespace.
   using namespace drake::multibody;
-  constexpr auto& doc = pydrake_doc.drake.multibody;
+  constexpr auto& doc = pydrake_doc.drake.multibody.parsing;
 
   // Bind the deprecated free functions.
   // TODO(jwnimmer-tri) Remove these stubs on or about 2019-03-01.

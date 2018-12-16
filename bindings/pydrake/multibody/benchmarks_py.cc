@@ -21,7 +21,7 @@ void init_acrobot(py::module m) {
 
   py::module::import("pydrake.geometry");
   // `MultibodyTree` is used by `MakeAcrobotPlant`.
-  py::module::import("pydrake.multibody.multibody_tree");
+  py::module::import("pydrake.multibody.tree");
 
   py::class_<AcrobotParameters>(
       m, "AcrobotParameters", doc.AcrobotParameters.doc)

@@ -38,7 +38,7 @@ from pydrake.multibody.benchmarks.acrobot import (
     MakeAcrobotPlant,
 )
 
-from pydrake.multibody.multibody_tree.parsing import (
+from pydrake.multibody.tree.parsing import (
     AddModelFromSdfFile,
     Parser as DeprecatedParser,
 )
@@ -54,7 +54,7 @@ from pydrake.systems.framework import DiagramBuilder
 # Backwards compatibility.
 def backwards_compat():
     import pydrake.multibody.all
-    import pydrake.multibody.multibody_tree as m
+    import pydrake.multibody.tree as m
     m.Body
     m.math.SpatialAcceleration
     m.multibody_plant.MultibodyPlant
