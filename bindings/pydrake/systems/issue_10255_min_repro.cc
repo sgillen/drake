@@ -9,43 +9,18 @@
 #include <iostream>
 #include <limits>
 
-// Stolen from `leaf_system`.
-template <typename T>
-static T GetNextSampleTime(
-    const T& period, const T& offset,
-    const T& current_time_sec) {
-  assert(period > 0);
-  assert(offset >= 0);
-
-  // If the first sample time hasn't arrived yet, then that is the next
-  // sample time.
-  if (current_time_sec < offset) {
-    return offset;
-  }
-
-  // Compute the index in the sequence of samples for the next time to sample,
-  // which should be greater than the present time.
-  using std::ceil;
-  const T offset_time = current_time_sec - offset;
-  const T next_k = ceil(offset_time / period);
-  T next_t = offset + next_k * period;
-  if (next_t <= current_time_sec) {
-    next_t = offset + (next_k + 1) * period;
-  }
-  assert(next_t > current_time_sec);
-  return next_t;
-}
-
 int main() {
-  const double period_sec = 1.;
-  const double offset_sec = 0.;
-
+  std::cout.precision(std::numeric_limits<double>::max_digits10);
+  const double zero = 0.;
   const double inf = std::numeric_limits<double>::infinity();
-  const double time = nexttoward(0., -inf);
-  double next_time = GetNextSampleTime(period_sec, offset_sec, time);
-  std::cout << "time: " << time << "\nnext_time: " << next_time << "\n";
-  if (next_time != 0.) {
-    std::cout << "NOT EQUAL!\n";
+  const double slightly_less = std::nexttoward(0., -inf);
+  const bool is_less = slightly_less < zero;
+  std::cout
+      << "zero: " << zero << "\n"
+      << "slightly_less: " << slightly_less << "\n"
+      << "is_less: " << (is_less ? "true" : "false") << "\n";
+  if (!is_less) {
+    std::cout << "BAD\n";
     return 1;
   }
   return 0;
@@ -55,12 +30,14 @@ int main() {
 [ Output ]
 
 $ bazel run //bindings/pydrake/systems:issue_10255_min_repro_static 
-time: -4.94066e-324
-next_time: 0
+zero: 0
+slightly_less: -4.9406564584124654e-324
+is_less: true
 
 $ bazel run //bindings/pydrake/systems:issue_10255_min_repro_shared 
-time: -4.94066e-324
-next_time: 1
-NOT EQUAL!
+zero: 0
+slightly_less: -4.9406564584124654e-324
+is_less: false
+BAD
 
 */
