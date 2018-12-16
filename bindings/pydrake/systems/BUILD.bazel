@@ -473,5 +473,5 @@ cc_binary(
 cc_binary(
     name = "issue_10255_min_repro_shared",
     srcs = ["issue_10255_min_repro.cc"],
-    linkopts = ["-ffast-math"],
+    # linkopts = ["-ffast-math"],
 )

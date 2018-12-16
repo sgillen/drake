@@ -55,10 +55,9 @@ munmap([address], 354968)          = 0
 brk(NULL)                               = [address]
 brk([address])                     = [address]
 fstat(1, {st_mode=S_IFIFO|0600, st_size=0, ...}) = 0
-write(1, "zero: 0\nslightly_less: -4.9406564584124654e-324\nis_less: false\nBAD\n", 67zero: 0
+write(1, "zero: 0\nslightly_less: -4.9406564584124654e-324\nis_less: true\n", 62zero: 0
 slightly_less: -4.9406564584124654e-324
-is_less: false
-BAD
-) = 67
-exit_group(1)                           = ?
-+++ exited with 1 +++
+is_less: true
+) = 62
+exit_group(0)                           = ?
++++ exited with 0 +++
