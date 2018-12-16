@@ -10,6 +10,7 @@ load(
 )
 load(
     "@drake//tools/skylark:drake_cc.bzl",
+    "drake_cc_binary",
     "drake_cc_library",
     "drake_cc_googletest",
 )
@@ -460,7 +461,18 @@ drake_cc_googletest(
     name = "issue_10255_repro",
     srcs = ["issue_10255_repro.cc"],
     deps = [
-        "//systems/framework",
-        "//systems/analysis",
+        "//:drake_shared_library",
     ],
+)
+
+cc_binary(
+    name = "issue_10255_min_repro_static",
+    srcs = ["issue_10255_min_repro.cc"],
+    deps = ["//systems/framework"],
+)
+
+cc_binary(
+    name = "issue_10255_min_repro_shared",
+    srcs = ["issue_10255_min_repro.cc"],
+    deps = ["//:drake_shared_library"],
 )
