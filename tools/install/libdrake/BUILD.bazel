@@ -193,6 +193,34 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "tmp_shared_deps",
+    visibility = ["//visibility:public"],
+    # Deps directly from libdrake.
+    deps = [
+        ":gurobi_deps",
+        ":mosek_deps",
+        ":vtk_deps",
+        "//common:drake_marker_shared_library",
+        "@dreal",
+        "@ignition_math",
+        "@ignition_rndf",
+        "@lcm",
+        "@libprotobuf",
+        "@scs//:scsdir",
+        "@tinyxml2",
+    ] + [
+        "//lcmtypes:lcmtypes_cc",
+        "@eigen",
+        "@fmt",
+        "@lcmtypes_bot2_core//:lcmtypes_bot2_core",
+        "@lcmtypes_robotlocomotion//:lcmtypes_robotlocomotion",
+        "@optitrack_driver//lcmtypes:optitrack_lcmtypes",
+        "@spdlog",
+        "@stx",
+    ],
+)
+
 # Include headers that are stored in the attic by stripping off the "attic/"
 # component of the pathname.
 cc_library(

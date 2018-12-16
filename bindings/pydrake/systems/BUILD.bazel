@@ -473,5 +473,5 @@ cc_binary(
 cc_binary(
     name = "issue_10255_min_repro_shared",
     srcs = ["issue_10255_min_repro.cc"],
-    deps = ["//:drake_shared_library"],
+    deps = ["//tools/install/libdrake:tmp_shared_deps"],
 )
