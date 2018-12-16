@@ -1,9 +1,3 @@
-// HACK
-#ifdef NDEBUG
-  #undef NDEBUG
-#endif
-
-#include <cassert>
 #include <cmath>
 
 #include <iostream>
@@ -29,12 +23,11 @@ int main() {
 /*
 [ Output ]
 
-$ bazel run //bindings/pydrake/systems:issue_10255_min_repro_static 
++ ./bazel-bin/bindings/pydrake/systems/issue_10255_min_repro_static
 zero: 0
 slightly_less: -4.9406564584124654e-324
 is_less: true
-
-$ bazel run //bindings/pydrake/systems:issue_10255_min_repro_shared 
++ ./bazel-bin/bindings/pydrake/systems/issue_10255_min_repro_shared
 zero: 0
 slightly_less: -4.9406564584124654e-324
 is_less: false
