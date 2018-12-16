@@ -15,5 +15,5 @@ class DemoSystem(LeafSystem):
 
 system = DemoSystem()
 simulator = Simulator(system)
-simulator.StepTo(0)
+simulator.StepTo(0.)
 assert system.num_updates == 1, system.num_updates

@@ -31,9 +31,10 @@ class DemoSystem : public LeafSystem<T> {
 };
 
 GTEST_TEST(Blarg, Blarg) {
+  drake::log()->info("nextafter 0: {}", std::nextafter(0., 1.));
   DemoSystem system;
   Simulator<T> simulator(system);
-  simulator.StepTo(0);
+  simulator.StepTo(0.);
   EXPECT_EQ(system.num_updates(), 1);
 }
 
