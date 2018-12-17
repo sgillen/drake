@@ -1162,6 +1162,12 @@ drake_py_unittest(
     ],
 )
 
+cc_test(
+    name = "issue_10244_repro",
+    srcs = ["issue_10244_repro.cc"],
+    deps = ["@vtk//:ospray"],
+)
+
 # TODO(jwnimmer-tri) These tests are currently missing...
 # - drake_assert_test in fancy variants
 # - drake_assert_test_compile in fancy variants
