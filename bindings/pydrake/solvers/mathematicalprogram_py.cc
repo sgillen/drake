@@ -12,6 +12,7 @@
 #include "drake/bindings/pydrake/symbolic_types_pybind.h"
 #include "drake/bindings/pydrake/util/deprecation_pybind.h"
 #include "drake/bindings/pydrake/util/drake_optional_pybind.h"
+#include "drake/common/drake_optional.h"
 #include "drake/solvers/mathematical_program.h"
 #include "drake/solvers/solver_type_converter.h"
 
@@ -23,6 +24,59 @@ namespace drake {
 namespace pydrake {
 
 using solvers::Binding;
+using solvers::VectorXDecisionVariable;
+
+template <typename C>
+struct binding_type_caster : public py::detail::type_caster_base<Binding<C>> {
+  using Base = py::detail::type_caster_base<Binding<C>>;
+  using Type = Binding<C>;
+
+  // Metadata.
+  // Python to C++.
+  bool load(py::handle src, bool converter) {
+    if (Base::load(src, converter)) {
+      // Direct conversion is successful.
+      value_ = std::move(Base::operator Type&());
+    } else {
+      // Attempt `down-casting`. Any errors will raise `py::cast_error`.
+      value_ = Type(
+            src.attr("evaluator")().cast<std::shared_ptr<C>>(),
+            src.attr("variables")().cast<
+                drake::solvers::VectorXDecisionVariable>());
+    }
+    return true;
+  }
+
+  // // - Retrieve C++ object (after Python -> C++).
+  operator Type*() { return &(*value_); }
+  operator Type&() { return *value_; }
+  // // - - Trait metadata.
+  // using Base::cast_op_type;
+  // using Base:name;
+
+  // C++ to Python.
+  using Base::cast;
+ 
+ private:
+  optional<Type> value_;
+};
+
+}  // namespace pydrake
+}  // namespace drake
+
+namespace pybind11 {
+namespace detail {
+
+template <typename C>
+struct type_caster<drake::solvers::Binding<C>>
+    : public drake::pydrake::binding_type_caster<C> {};
+
+}  // namespace detail
+}  // namespace pybind11
+
+namespace drake {
+namespace pydrake {
+
 using solvers::BoundingBoxConstraint;
 using solvers::Constraint;
 using solvers::Cost;
@@ -43,7 +97,6 @@ using solvers::SolverId;
 using solvers::SolverType;
 using solvers::SolverTypeConverter;
 using solvers::VariableRefList;
-using solvers::VectorXDecisionVariable;
 using solvers::VectorXIndeterminate;
 using solvers::VisualizationCallback;
 using symbolic::Expression;
@@ -79,12 +132,6 @@ auto RegisterBinding(py::handle* scope, const string& name) {
   binding_cls  // BR
       .def("evaluator", &B::evaluator, cls_doc.evaluator.doc)
       .def("variables", &B::variables, cls_doc.variables.doc);
-  if (!std::is_same<C, EvaluatorBase>::value) {
-    // This is required for implicit argument conversion. See below for
-    // `EvaluatorBase`'s generic constructor for attempting downcasting.
-    // TODO(eric.cousineau): See if there is a more elegant mechanism for this.
-    py::implicitly_convertible<B, Binding<EvaluatorBase>>();
-  }
   // Add deprecated `constraint`.
   binding_cls.def("constraint", &B::evaluator, cls_doc.constraint.doc);
   DeprecateAttribute(binding_cls, "constraint",
@@ -605,14 +652,7 @@ PYBIND11_MODULE(mathematicalprogram, m) {
       .def(
           "num_vars", &EvaluatorBase::num_vars, doc.EvaluatorBase.num_vars.doc);
 
-  RegisterBinding<EvaluatorBase>(&m, "EvaluatorBase")
-      .def(py::init([](py::object binding) {
-        // Define a type-erased downcast to mirror the implicit
-        // "downcast-ability" of Binding<> types.
-        return std::make_unique<Binding<EvaluatorBase>>(
-            binding.attr("evaluator")().cast<std::shared_ptr<EvaluatorBase>>(),
-            binding.attr("variables")().cast<VectorXDecisionVariable>());
-      }));
+  RegisterBinding<EvaluatorBase>(&m, "EvaluatorBase");
 
   py::class_<Constraint, EvaluatorBase, std::shared_ptr<Constraint>>(
       m, "Constraint", doc.Constraint.doc)
