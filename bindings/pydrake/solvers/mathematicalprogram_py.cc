@@ -22,6 +22,7 @@ using std::vector;
 
 namespace drake {
 namespace pydrake {
+namespace {
 
 using solvers::Binding;
 using solvers::VectorXDecisionVariable;
@@ -33,22 +34,27 @@ struct binding_type_caster : public py::detail::type_caster_base<Binding<C>> {
 
   // Metadata.
   // Python to C++.
-  bool load(py::handle src, bool converter) {
-    if (Base::load(src, converter)) {
+  bool load(py::handle src, bool /* convert */) {
+    py::print("TRY CONVERT:", src);
+    if (Base::load(src, true)) {
+      py::print("DIRECT");
       // Direct conversion is successful.
       value_ = std::move(Base::operator Type&());
     } else {
+      py::print("INDIRECT");
       // Attempt `down-casting`. Any errors will raise `py::cast_error`.
       value_ = Type(
             src.attr("evaluator")().cast<std::shared_ptr<C>>(),
-            src.attr("variables")().cast<
-                drake::solvers::VectorXDecisionVariable>());
+            src.attr("variables")().cast<VectorXDecisionVariable>());
     }
     return true;
   }
 
   // // - Retrieve C++ object (after Python -> C++).
-  operator Type*() { return &(*value_); }
+  operator Type*() {
+    if (value_) return &(*value_);
+    else return nullptr;
+  }
   operator Type&() { return *value_; }
   // // - - Trait metadata.
   // using Base::cast_op_type;
@@ -61,6 +67,7 @@ struct binding_type_caster : public py::detail::type_caster_base<Binding<C>> {
   optional<Type> value_;
 };
 
+}
 }  // namespace pydrake
 }  // namespace drake
 
