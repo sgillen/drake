@@ -1039,37 +1039,37 @@ class MultibodyTreeTopology {
 /// WARNING: This will be removed on or around 2019/03/01.
 DRAKE_DEPRECATED(
     "This public alias is deprecated, and will be removed around 2019/03/01.")
-using internal::BodyTopology;
+typedef internal::BodyTopology BodyTopology;
 
 /// WARNING: This will be removed on or around 2019/03/01.
 DRAKE_DEPRECATED(
     "This public alias is deprecated, and will be removed around 2019/03/01.")
-using internal::FrameTopology;
+typedef internal::FrameTopology FrameTopology;
 
 /// WARNING: This will be removed on or around 2019/03/01.
 DRAKE_DEPRECATED(
     "This public alias is deprecated, and will be removed around 2019/03/01.")
-using internal::MobilizerTopology;
+typedef internal::MobilizerTopology MobilizerTopology;
 
 /// WARNING: This will be removed on or around 2019/03/01.
 DRAKE_DEPRECATED(
     "This public alias is deprecated, and will be removed around 2019/03/01.")
-using internal::ForceElementTopology;
+typedef internal::ForceElementTopology ForceElementTopology;
 
 /// WARNING: This will be removed on or around 2019/03/01.
 DRAKE_DEPRECATED(
     "This public alias is deprecated, and will be removed around 2019/03/01.")
-using internal::JointActuatorTopology;
+typedef internal::JointActuatorTopology JointActuatorTopology;
 
 /// WARNING: This will be removed on or around 2019/03/01.
 DRAKE_DEPRECATED(
     "This public alias is deprecated, and will be removed around 2019/03/01.")
-using internal::BodyNodeTopology;
+typedef internal::BodyNodeTopology BodyNodeTopology;
 
 /// WARNING: This will be removed on or around 2019/03/01.
 DRAKE_DEPRECATED(
     "This public alias is deprecated, and will be removed around 2019/03/01.")
-using internal::MultibodyTreeTopology;
+typedef internal::MultibodyTreeTopology MultibodyTreeTopology;
 
 }  // namespace multibody
 }  // namespace drake
