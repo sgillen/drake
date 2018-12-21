@@ -13,9 +13,9 @@ template<typename T> class MultibodyTree;
 
 /// Public alias to internal `MultibodyTree`.
 /// @warning This alias will soon be deprecated.
+template <typename T>
 DRAKE_DEPRECATED(
     "This will soon be internal. Please use `MultibodyPlant` instead.")
-template <typename T>
 using MultibodyTree = internal::MultibodyTree<T>;
 
 }  // namespace multibody
