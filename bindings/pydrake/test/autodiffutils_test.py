@@ -15,6 +15,7 @@ from pydrake.test.algebra_test_util import ScalarAlgebra, VectorizedAlgebra
 from pydrake.test.autodiffutils_test_util import (
     autodiff_scalar_pass_through,
     autodiff_vector_pass_through,
+    autodiff_vector3_pass_through,
     AutoDiffContainer,
     autodiff_increment,
 )
