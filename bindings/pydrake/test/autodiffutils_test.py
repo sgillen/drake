@@ -64,6 +64,11 @@ class TestAutoDiffXd(unittest.TestCase):
         self._check_scalar(
             autodiff_scalar_pass_through(1.),  # float
             AD(1., []))
+        # Test multi-element pass-through.
+        x = np.array([AD(1.), AD(2.), AD(3.)])
+        self._check_array(autodiff_vector_pass_through(x), x)
+        # Ensure fixed-size vectors are correctly converted (#9886).
+        self._check_array(autodiff_vector3_pass_through(x), x)
         # Ensure we can copy.
         self._check_scalar(copy.copy(a), a)
         self._check_scalar(copy.deepcopy(a), a)

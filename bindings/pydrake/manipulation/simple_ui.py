@@ -3,7 +3,10 @@ Provides a number of tcl/tk-based user interfaces helpful for manipulation (
 and potentially other robotics) applications.
 """
 
-import Tkinter as tk
+try:
+    import tkinter as tk
+except ImportError:
+    import Tkinter as tk
 import numpy as np
 
 from pydrake.multibody.multibody_tree.multibody_plant import MultibodyPlant
@@ -78,7 +81,7 @@ class JointSliders(VectorSystem):
         self._slider = []
         self._slider_position_start = []
         context = robot.CreateDefaultContext()
-        state = robot.tree().get_multibody_state_vector(context)
+        state = robot.tree().GetPositionsAndVelocities(context)
         self._default_position = state[:robot.num_positions()]
 
         k = 0

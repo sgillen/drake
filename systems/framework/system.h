@@ -20,6 +20,7 @@
 #include "drake/common/drake_throw.h"
 #include "drake/common/nice_type_name.h"
 #include "drake/common/pointer_cast.h"
+#include "drake/common/random.h"
 #include "drake/common/symbolic.h"
 #include "drake/common/text_logging.h"
 #include "drake/common/unused.h"
@@ -63,14 +64,6 @@ class SystemImpl {
   }
 };
 #endif  // DRAKE_DOXYGEN_CXX
-
-// TODO(russt): As discussed with sammy-tri, we could replace this with a
-// a templated class that exposes the required methods from the concept.
-/// Defines the implementation of the stdc++ concept UniformRandomBitGenerator
-/// to be used by the Systems classes.  This is provided as a work-around to
-/// enable the use of the generator in virtual methods (which cannot be
-/// templated on the generator type).
-typedef std::mt19937 RandomGenerator;
 
 /// Base class for all System functionality that is dependent on the templatized
 /// scalar type T for input, state, parameters, and outputs.
@@ -139,14 +132,6 @@ class System : public SystemBase {
     return output;
   }
 
-#ifndef DRAKE_DOXYGEN_CXX
-  // TODO(sherm1) Remove this after 10/1/2018 (three months).
-  DRAKE_DEPRECATED("Call AllocateOutput() with no Context argument.")
-  std::unique_ptr<SystemOutput<T>> AllocateOutput(const Context<T>&) const {
-    return AllocateOutput();
-  }
-#endif
-
   /// Returns a ContinuousState of the same size as the continuous_state
   /// allocated in CreateDefaultContext. The simulator will provide this state
   /// as the output argument to EvalTimeDerivatives.
@@ -201,9 +186,9 @@ class System : public SystemBase {
 
     // Set the default parameters, checking that the number of parameters does
     // not change.
-    const int num_params = context->num_numeric_parameters();
+    const int num_params = context->num_numeric_parameter_groups();
     SetDefaultParameters(*context, &context->get_mutable_parameters());
-    DRAKE_DEMAND(num_params == context->num_numeric_parameters());
+    DRAKE_DEMAND(num_params == context->num_numeric_parameter_groups());
   }
 
   /// Assigns random values to all elements of the state.
@@ -258,10 +243,10 @@ class System : public SystemBase {
 
     // Set the default parameters, checking that the number of parameters does
     // not change.
-    const int num_params = context->num_numeric_parameters();
+    const int num_params = context->num_numeric_parameter_groups();
     SetRandomParameters(*context, &context->get_mutable_parameters(),
                         generator);
-    DRAKE_DEMAND(num_params == context->num_numeric_parameters());
+    DRAKE_DEMAND(num_params == context->num_numeric_parameter_groups());
   }
 
   /// For each input port, allocates a fixed input of the concrete type
@@ -1679,7 +1664,7 @@ class System : public SystemBase {
   /// @throws std::logic_error for a duplicate port name.
   /// @returns the declared port.
   const InputPort<T>& DeclareInputPort(
-      std::string name, PortDataType type, int size,
+      variant<std::string, UseDefaultName> name, PortDataType type, int size,
       optional<RandomDistribution> random_type = nullopt) {
     const InputPortIndex port_index(get_num_input_ports());
 
@@ -1719,7 +1704,8 @@ class System : public SystemBase {
 
   // Remove this overload on or about 2018-12-01.
   DRAKE_DEPRECATED("Use one of the other overloads.")
-  const InputPort<T>& DeclareAbstractInputPort(std::string name) {
+  const InputPort<T>& DeclareAbstractInputPort(
+      variant<std::string, UseDefaultName> name) {
     return DeclareInputPort(std::move(name), kAbstractValued, 0 /* size */);
   }
 #endif
@@ -2120,7 +2106,7 @@ class System : public SystemBase {
         return [&expected_type, port_index, pathname](
             const AbstractValue& actual) {
           if (actual.static_type_info() != expected_type) {
-            ThrowInputPortHasWrongType(
+            SystemBase::ThrowInputPortHasWrongType(
                 "FixInputPortTypeCheck", pathname, port_index,
                 NiceTypeName::Get(expected_type),
                 NiceTypeName::Get(actual.type_info()));

@@ -16,7 +16,6 @@ drake_cc_library(
         "numpy_dtypes_user.h",
         "numpy_ufunc.h",
     ],
-    # tags = ["nolint"],
     deps = [
         "//bindings/pydrake/util:type_pack",
         "//bindings/pydrake/util:wrap_function",

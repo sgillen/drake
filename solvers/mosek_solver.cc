@@ -585,6 +585,11 @@ MSKrescodee SpecifyVariableType(const MathematicalProgram& prog,
         throw std::runtime_error(
             "Boolean variables should not be used with Mosek solver.");
       }
+      case MathematicalProgram::VarType::RANDOM_UNIFORM:
+      case MathematicalProgram::VarType::RANDOM_GAUSSIAN:
+      case MathematicalProgram::VarType::RANDOM_EXPONENTIAL:
+        throw std::runtime_error(
+            "Random variables should not be used with Mosek solver.");
     }
   }
   return rescode;
@@ -656,6 +661,7 @@ void MosekSolver::Solve(const MathematicalProgram& prog,
                         const optional<Eigen::VectorXd>& initial_guess,
                         const optional<SolverOptions>& solver_options,
                         MathematicalProgramResult* result) const {
+  *result = {};
   // TODO(hongkai.dai): support setting initial guess and solver options.
   if (initial_guess.has_value() || solver_options.has_value()) {
     throw std::runtime_error("Not implemented yet.");

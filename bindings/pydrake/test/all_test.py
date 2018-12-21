@@ -60,12 +60,25 @@ class TestAll(unittest.TestCase):
 
         # Subset of symbols.
         expected_symbols = (
+            # __init__
+            "getDrakePath",
+            # attic
+            # - solvers
+            "RigidBodyConstraint",
             # autodiffutils
             "AutoDiffXd",
             # automotive
             "SimpleCar",
             # common
+            # - __init__
             "AddResourceSearchPath",
+            # - compatibility
+            "maybe_patch_numpy_formatters",
+            # - containers
+            "EqualToDict",
+            # - eigen_geometry
+            "Isometry3",
+            "Quaternion",
             # forwarddiff
             "jacobian",
             "sin",
@@ -93,6 +106,8 @@ class TestAll(unittest.TestCase):
             # - multibody_tree
             "MultibodyPlant",
             "SpatialVelocity",
+            # - parsing
+            "Parser",
             # - parsers
             "PackageMap",
             # - rigid_body_plant

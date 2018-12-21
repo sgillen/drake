@@ -258,6 +258,7 @@ drake_cc_library(
     ],
     deps = [
         ":framework_common",
+        "//common:random",
     ],
 )
 
@@ -294,7 +295,6 @@ drake_cc_library(
     name = "system_output",
     srcs = ["system_output.cc"],
     hdrs = [
-        "output_port_value.h",  # Deprecated.
         "system_output.h",
     ],
     deps = [
@@ -392,6 +392,7 @@ drake_cc_library(
         "//common:default_scalars",
         "//common:essential",
         "//common:pointer_cast",
+        "//common:random",
         "//common:symbolic",
         "//common:type_safe_index",
         "//common:unused",
