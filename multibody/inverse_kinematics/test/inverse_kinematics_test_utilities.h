@@ -25,7 +25,7 @@ std::unique_ptr<MultibodyPlant<T>> ConstructTwoFreeBodiesPlant();
  * Constructs a MultibodyPlant consisting of an Iiwa robot.
  */
 std::unique_ptr<MultibodyPlant<double>> ConstructIiwaPlant(
-    const std::string& iiwa_sdf_name, double time_step);
+    const std::string& file_path, double time_step);
 
 /**
  * Compares if two eigen matrices of AutoDiff have the same values and

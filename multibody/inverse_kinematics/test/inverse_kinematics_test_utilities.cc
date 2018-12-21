@@ -69,11 +69,9 @@ std::unique_ptr<MultibodyPlant<T>> ConstructTwoFreeBodiesPlant() {
 }
 
 std::unique_ptr<MultibodyPlant<double>> ConstructIiwaPlant(
-    const std::string& iiwa_sdf_name, double time_step) {
-  const std::string file_path =
-      "drake/manipulation/models/iiwa_description/sdf/" + iiwa_sdf_name;
+    const std::string& file_path, double time_step) {
   auto plant = std::make_unique<MultibodyPlant<double>>(time_step);
-  Parser(plant.get()).AddModelFromFile(FindResourceOrThrow(file_path));
+  Parser(plant.get()).AddModelFromFile(file_path);
   plant->WeldFrames(plant->world_frame(),
                     plant->GetFrameByName("iiwa_link_0"));
   plant->Finalize();

@@ -965,9 +965,9 @@ void MultibodyPlant<T>::CalcAndAddContactForcesByPenaltyMethod(
     BodyIndex bodyA_index = geometry_id_to_body_index_.at(geometryA_id);
     BodyIndex bodyB_index = geometry_id_to_body_index_.at(geometryB_id);
 
-    BodyNodeIndex bodyA_node_index =
+    internal::BodyNodeIndex bodyA_node_index =
         tree().get_body(bodyA_index).node_index();
-    BodyNodeIndex bodyB_node_index =
+    internal::BodyNodeIndex bodyB_node_index =
         tree().get_body(bodyB_index).node_index();
 
     // Penetration depth, > 0 during pair.

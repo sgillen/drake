@@ -61,7 +61,11 @@ class TwoFreeBodiesTest : public ::testing::Test {
 GTEST_TEST(InverseKinematicsTest, ConstructorWithJointLimits) {
   // Constructs an inverse kinematics problem for IIWA robot, make sure that
   // the joint limits are imposed.
-  auto plant = ConstructIiwaPlant("iiwa14_no_collision.sdf", 0.01);
+  auto plant = ConstructIiwaPlant(
+      FindResourceOrThrow(
+          "drake/manipulation/models/iiwa_description/sdf/"
+          "iiwa14_no_collision.sdf"),
+      0.01);
 
   InverseKinematics ik(*plant);
   // Now check the joint limits.
