@@ -6,6 +6,7 @@
 #include "drake/common/autodiff.h"
 #include "drake/common/drake_assert.h"
 #include "drake/common/drake_copyable.h"
+#include "drake/common/drake_deprecated.h"
 #include "drake/multibody/math/spatial_acceleration.h"
 #include "drake/multibody/math/spatial_force.h"
 #include "drake/multibody/math/spatial_velocity.h"
@@ -645,7 +646,9 @@ class Mobilizer : public MultibodyTreeElement<Mobilizer<T>, MobilizerIndex> {
 
 }  // namespace internal
 
-/// WARNING: This alias will be deprecated on or around 2018/12/20.
+/// WARNING: This will be removed on or around 2019/03/01.
+DRAKE_DEPRECATED(
+    "This public alias is deprecated, and will be removed around 2019/03/01.")
 using internal::Mobilizer;
 
 }  // namespace multibody

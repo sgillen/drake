@@ -4,6 +4,7 @@
 
 #include "drake/common/drake_assert.h"
 #include "drake/common/drake_copyable.h"
+#include "drake/common/drake_deprecated.h"
 #include "drake/common/eigen_types.h"
 #include "drake/multibody/tree/frame.h"
 #include "drake/multibody/tree/mobilizer_impl.h"
@@ -292,7 +293,9 @@ class SpaceXYZMobilizer final : public MobilizerImpl<T, 3, 3> {
 
 }  // namespace internal
 
-/// WARNING: This alias will be deprecated on or around 2018/12/20.
+/// WARNING: This will be removed on or around 2019/03/01.
+DRAKE_DEPRECATED(
+    "This public alias is deprecated, and will be removed around 2019/03/01.")
 using internal::SpaceXYZMobilizer;
 
 }  // namespace multibody

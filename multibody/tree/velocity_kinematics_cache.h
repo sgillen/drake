@@ -5,6 +5,7 @@
 
 #include "drake/common/drake_assert.h"
 #include "drake/common/drake_copyable.h"
+#include "drake/common/drake_deprecated.h"
 #include "drake/common/eigen_types.h"
 #include "drake/multibody/math/spatial_velocity.h"
 #include "drake/multibody/tree/multibody_tree_indexes.h"
@@ -150,7 +151,9 @@ class VelocityKinematicsCache {
 
 }  // namespace internal
 
-/// WARNING: This alias will be deprecated on or around 2018/12/20.
+/// WARNING: This will be removed on or around 2019/03/01.
+DRAKE_DEPRECATED(
+    "This public alias is deprecated, and will be removed around 2019/03/01.")
 using internal::VelocityKinematicsCache;
 
 }  // namespace multibody

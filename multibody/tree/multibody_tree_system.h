@@ -5,6 +5,7 @@
 #include <utility>
 #include <vector>
 
+#include "drake/common/drake_deprecated.h"
 #include "drake/common/eigen_types.h"
 #include "drake/multibody/tree/multibody_tree_forward_decl.h"
 #include "drake/multibody/tree/position_kinematics_cache.h"
@@ -200,7 +201,9 @@ class MultibodyTreeSystem : public systems::LeafSystem<T> {
 
 }  // namespace internal
 
-/// WARNING: This alias will be deprecated on or around 2018/12/20.
+/// WARNING: This will be removed on or around 2019/03/01.
+DRAKE_DEPRECATED(
+    "This public alias is deprecated, and will be removed around 2019/03/01.")
 using internal::MultibodyTreeSystem;
 
 }  // namespace multibody

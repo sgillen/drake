@@ -3,6 +3,7 @@
 #include <vector>
 
 #include "drake/common/drake_copyable.h"
+#include "drake/common/drake_deprecated.h"
 #include "drake/multibody/tree/articulated_body_inertia.h"
 #include "drake/multibody/tree/multibody_tree_indexes.h"
 #include "drake/multibody/tree/multibody_tree_topology.h"
@@ -76,7 +77,9 @@ class ArticulatedBodyInertiaCache {
 
 }  // namespace internal
 
-/// WARNING: This alias will be deprecated on or around 2018/12/20.
+/// WARNING: This will be removed on or around 2019/03/01.
+DRAKE_DEPRECATED(
+    "This public alias is deprecated, and will be removed around 2019/03/01.")
 using internal::ArticulatedBodyInertiaCache;
 
 }  // namespace multibody

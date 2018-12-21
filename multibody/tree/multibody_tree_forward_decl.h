@@ -1,5 +1,7 @@
 #pragma once
 
+#include "drake/common/drake_deprecated.h"
+
 namespace drake {
 namespace multibody {
 namespace internal {
@@ -11,6 +13,8 @@ template<typename T> class MultibodyTree;
 
 /// Public alias to internal `MultibodyTree`.
 /// @warning This alias will soon be deprecated.
+DRAKE_DEPRECATED(
+    "This will soon be internal. Please use `MultibodyPlant` instead.")
 template <typename T>
 using MultibodyTree = internal::MultibodyTree<T>;
 
