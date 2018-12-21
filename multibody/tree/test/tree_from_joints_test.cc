@@ -320,8 +320,8 @@ class PendulumTests : public ::testing::Test {
     pendulum_.shoulder().set_angular_rate(context_.get(), theta1dot);
     pendulum_.elbow().set_angular_rate(context_.get(), theta2dot);
 
-    PositionKinematicsCache<double> pc(tree().get_topology());
-    VelocityKinematicsCache<double> vc(tree().get_topology());
+    internal::PositionKinematicsCache<double> pc(tree().get_topology());
+    internal::VelocityKinematicsCache<double> vc(tree().get_topology());
     tree().CalcPositionKinematicsCache(*context_, &pc);
     tree().CalcVelocityKinematicsCache(*context_, pc, &vc);
 
@@ -363,7 +363,9 @@ class PendulumTests : public ::testing::Test {
         tau_id2, rhs, kTolerance, MatrixCompareType::relative));
   }
 
-  const MultibodyTree<double>& tree() const { return pendulum_.tree(); }
+  const internal::MultibodyTree<double>& tree() const {
+    return pendulum_.tree();
+  }
 
  protected:
   // The MultibodyTree model under test.

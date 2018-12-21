@@ -227,8 +227,8 @@ MultibodyPlant<T>::MultibodyPlant(double time_step)
 
 template <typename T>
 MultibodyPlant<T>::MultibodyPlant(
-    std::unique_ptr<MultibodyTree<T>> tree_in, double time_step)
-    : MultibodyTreeSystem<T>(
+    std::unique_ptr<internal::MultibodyTree<T>> tree_in, double time_step)
+    : internal::MultibodyTreeSystem<T>(
           systems::SystemTypeTag<multibody::MultibodyPlant>{},
           std::move(tree_in), time_step > 0),
       time_step_(time_step) {
@@ -465,8 +465,8 @@ void MultibodyPlant<T>::CalcSpatialAccelerationsFromVdot(
   // still required dynamic allocation for recording permutation indices.
   // Can change implementation once MultibodyTree becomes fully internal.
   std::vector<SpatialAcceleration<T>> A_WB_array_node = *A_WB_array;
-  const MultibodyTreeTopology& topology = tree().get_topology();
-  for (BodyNodeIndex node_index(1);
+  const internal::MultibodyTreeTopology& topology = tree().get_topology();
+  for (internal::BodyNodeIndex node_index(1);
        node_index < topology.get_num_body_nodes(); ++node_index) {
     const BodyIndex body_index = topology.get_body_node(node_index).body;
     (*A_WB_array)[body_index] = A_WB_array_node[node_index];
@@ -948,8 +948,8 @@ void MultibodyPlant<T>::CalcContactResults(
 template<typename T>
 void MultibodyPlant<T>::CalcAndAddContactForcesByPenaltyMethod(
     const systems::Context<T>&,
-    const PositionKinematicsCache<T>& pc,
-    const VelocityKinematicsCache<T>& vc,
+    const internal::PositionKinematicsCache<T>& pc,
+    const internal::VelocityKinematicsCache<T>& vc,
     const std::vector<PenetrationAsPointPair<T>>& point_pairs,
     std::vector<SpatialForce<T>>* F_BBo_W_array) const {
   if (num_collision_geometries() == 0) return;
@@ -1166,8 +1166,10 @@ void MultibodyPlant<T>::DoCalcTimeDerivatives(
   // Generalized accelerations.
   VectorX<T> vdot = VectorX<T>::Zero(nv);
 
-  const PositionKinematicsCache<T>& pc = EvalPositionKinematics(context);
-  const VelocityKinematicsCache<T>& vc = EvalVelocityKinematics(context);
+  const internal::PositionKinematicsCache<T>& pc =
+      EvalPositionKinematics(context);
+  const internal::VelocityKinematicsCache<T>& vc =
+      EvalVelocityKinematics(context);
 
   // Compute forces applied through force elements. This effectively resets
   // the forces to zero and adds in contributions due to force elements.
@@ -1291,8 +1293,10 @@ void MultibodyPlant<T>::DoCalcDiscreteVariableUpdates(
   // Forces at the previous time step.
   MultibodyForces<T> forces0(tree());
 
-  const PositionKinematicsCache<T>& pc0 = EvalPositionKinematics(context0);
-  const VelocityKinematicsCache<T>& vc0 = EvalVelocityKinematics(context0);
+  const internal::PositionKinematicsCache<T>& pc0 =
+      EvalPositionKinematics(context0);
+  const internal::VelocityKinematicsCache<T>& vc0 =
+      EvalVelocityKinematics(context0);
 
   // Compute forces applied through force elements.
   tree().CalcForceElementsContribution(context0, pc0, vc0, &forces0);
@@ -1697,7 +1701,8 @@ void MultibodyPlant<T>::CalcFramePoseOutput(
   // frames do.
   DRAKE_ASSERT(
       poses->size() == static_cast<int>(body_index_to_frame_id_.size() - 1));
-  const PositionKinematicsCache<T>& pc = EvalPositionKinematics(context);
+  const internal::PositionKinematicsCache<T>& pc =
+      EvalPositionKinematics(context);
 
   // TODO(amcastro-tri): Make use of Body::EvalPoseInWorld(context) once caching
   // lands.
