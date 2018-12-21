@@ -206,7 +206,8 @@ class PrismaticMobilizer final : public MobilizerImpl<T, 1, 1> {
 /// WARNING: This will be removed on or around 2019/03/01.
 DRAKE_DEPRECATED(
     "This public alias is deprecated, and will be removed around 2019/03/01.")
-using internal::PrismaticMobilizer;
+template <typename T>
+using PrismaticMobilizer = internal::PrismaticMobilizer<T>;
 
 }  // namespace multibody
 }  // namespace drakes

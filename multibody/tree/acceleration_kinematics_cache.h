@@ -126,7 +126,8 @@ class AccelerationKinematicsCache {
 /// WARNING: This will be removed on or around 2019/03/01.
 DRAKE_DEPRECATED(
     "This public alias is deprecated, and will be removed around 2019/03/01.")
-using internal::AccelerationKinematicsCache;
+template <typename T>
+using AccelerationKinematicsCache = internal::AccelerationKinematicsCache;
 
 }  // namespace multibody
 }  // namespace drake

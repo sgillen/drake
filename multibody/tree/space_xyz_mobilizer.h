@@ -296,7 +296,8 @@ class SpaceXYZMobilizer final : public MobilizerImpl<T, 3, 3> {
 /// WARNING: This will be removed on or around 2019/03/01.
 DRAKE_DEPRECATED(
     "This public alias is deprecated, and will be removed around 2019/03/01.")
-using internal::SpaceXYZMobilizer;
+template <typename T>
+using SpaceXYZMobilizer = internal::SpaceXYZMobilizer<T>;
 
 }  // namespace multibody
 }  // namespace drake

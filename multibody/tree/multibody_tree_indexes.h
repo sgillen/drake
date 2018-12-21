@@ -28,12 +28,12 @@ using BodyIndex = TypeSafeIndex<class BodyTag>;
 /// WARNING: This will be removed on or around 2019/03/01.
 DRAKE_DEPRECATED(
     "This public alias is deprecated, and will be removed around 2019/03/01.")
-using internal::MobilizerIndex;
+typedef internal::MobilizerIndex MobilizerIndex;
 
 /// WARNING: This will be removed on or around 2019/03/01.
 DRAKE_DEPRECATED(
     "This public alias is deprecated, and will be removed around 2019/03/01.")
-using internal::BodyNodeIndex;
+typedef internal::BodyNodeIndex BodyNodeIndex;
 
 /// Type used to identify force elements by index within a multibody tree
 /// system.
