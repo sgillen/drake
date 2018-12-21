@@ -16,6 +16,7 @@ using systems::LeafSystem;
 using systems::State;
 
 namespace multibody {
+namespace internal {
 
 template <typename T>
 template <typename U>
@@ -165,8 +166,9 @@ template MultibodyTreeSystem<AutoDiffXd>::MultibodyTreeSystem(
 template MultibodyTreeSystem<double>::MultibodyTreeSystem(
     const MultibodyTreeSystem<AutoDiffXd>& other);
 
+}  // namespace internal
 }  // namespace multibody
 }  // namespace drake
 
 DRAKE_DEFINE_CLASS_TEMPLATE_INSTANTIATIONS_ON_DEFAULT_NONSYMBOLIC_SCALARS(
-    class drake::multibody::MultibodyTreeSystem)
+    class drake::multibody::internal::MultibodyTreeSystem)

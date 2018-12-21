@@ -128,7 +128,7 @@ template <typename T>
 using AccelerationKinematicsCache
 DRAKE_DEPRECATED(
     "This public alias is deprecated, and will be removed around 2019/03/01.")
-    = internal::AccelerationKinematicsCache;
+    = internal::AccelerationKinematicsCache<T>;
 
 }  // namespace multibody
 }  // namespace drake

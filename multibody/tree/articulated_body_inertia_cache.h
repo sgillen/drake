@@ -82,7 +82,7 @@ template <typename T>
 using ArticulatedBodyInertiaCache
 DRAKE_DEPRECATED(
     "This public alias is deprecated, and will be removed around 2019/03/01.")
-    = internal::ArticulatedBodyInertiaCache;
+    = internal::ArticulatedBodyInertiaCache<T>;
 
 }  // namespace multibody
 }  // namespace drake

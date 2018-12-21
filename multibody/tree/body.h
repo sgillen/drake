@@ -85,10 +85,10 @@ class BodyFrame final : public Frame<T> {
  protected:
   // Frame<T>::DoCloneToScalar() overrides.
   std::unique_ptr<Frame<double>> DoCloneToScalar(
-      const MultibodyTree<double>& tree_clone) const override;
+      const internal::MultibodyTree<double>& tree_clone) const override;
 
   std::unique_ptr<Frame<AutoDiffXd>> DoCloneToScalar(
-      const MultibodyTree<AutoDiffXd>& tree_clone) const override;
+      const internal::MultibodyTree<AutoDiffXd>& tree_clone) const override;
 
  private:
   // Body<T> and BodyFrame<T> are natural allies. A BodyFrame object is created
@@ -110,7 +110,7 @@ class BodyFrame final : public Frame<T> {
   // DoCloneToScalar().
   template <typename ToScalar>
   std::unique_ptr<Frame<ToScalar>> TemplatedDoCloneToScalar(
-      const MultibodyTree<ToScalar>& tree_clone) const;
+      const internal::MultibodyTree<ToScalar>& tree_clone) const;
 };
 
 /// @cond
@@ -276,7 +276,7 @@ class Body : public MultibodyTreeElement<Body<T>, BodyIndex> {
   /// @sa MultibodyTree::CloneToScalar()
   template <typename ToScalar>
   std::unique_ptr<Body<ToScalar>> CloneToScalar(
-  const MultibodyTree<ToScalar>& tree_clone) const {
+  const internal::MultibodyTree<ToScalar>& tree_clone) const {
     return DoCloneToScalar(tree_clone);
   }
 
@@ -298,11 +298,11 @@ class Body : public MultibodyTreeElement<Body<T>, BodyIndex> {
 
   /// Clones this %Body (templated on T) to a body templated on `double`.
   virtual std::unique_ptr<Body<double>> DoCloneToScalar(
-      const MultibodyTree<double>& tree_clone) const = 0;
+      const internal::MultibodyTree<double>& tree_clone) const = 0;
 
   /// Clones this %Body (templated on T) to a body templated on AutoDiffXd.
   virtual std::unique_ptr<Body<AutoDiffXd>> DoCloneToScalar(
-      const MultibodyTree<AutoDiffXd>& tree_clone) const = 0;
+      const internal::MultibodyTree<AutoDiffXd>& tree_clone) const = 0;
 
   /// @}
 
@@ -314,7 +314,8 @@ class Body : public MultibodyTreeElement<Body<T>, BodyIndex> {
   // Implementation for MultibodyTreeElement::DoSetTopology().
   // At MultibodyTree::Finalize() time, each body retrieves its topology
   // from the parent MultibodyTree.
-  void DoSetTopology(const MultibodyTreeTopology& tree_topology) final {
+  void DoSetTopology(
+      const internal::MultibodyTreeTopology& tree_topology) final {
     topology_ = tree_topology.get_body(this->index());
     body_frame_.SetTopology(tree_topology);
   }
@@ -339,7 +340,7 @@ class Body : public MultibodyTreeElement<Body<T>, BodyIndex> {
   double default_mass_{0.0};
 
   // The internal bookkeeping topology struct used by MultibodyTree.
-  BodyTopology topology_;
+  internal::BodyTopology topology_;
 };
 
 }  // namespace multibody

@@ -214,11 +214,11 @@ class MobilizerImpl : public Mobilizer<T> {
 }  // namespace internal
 
 /// WARNING: This will be removed on or around 2019/03/01.
-template <typename T>
+template <typename T, int A, int B>
 using MobilizerImpl
 DRAKE_DEPRECATED(
     "This public alias is deprecated, and will be removed around 2019/03/01.")
-    = internal::MobilizerImpl<T>;
+    = internal::MobilizerImpl<T, A, B>;
 
 }  // namespace multibody
 }  // namespace drake

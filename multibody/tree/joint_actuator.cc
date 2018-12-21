@@ -44,7 +44,7 @@ void JointActuator<T>::set_actuation_vector(
 
 template <typename T>
 void JointActuator<T>::DoSetTopology(
-    const MultibodyTreeTopology& mbt_topology) {
+    const internal::MultibodyTreeTopology& mbt_topology) {
   topology_ = mbt_topology.get_joint_actuator(this->index());
 }
 
@@ -58,7 +58,7 @@ JointActuator<T>::DoCloneToScalar(const MultibodyTree<double>&) const {
 template <typename T>
 std::unique_ptr<JointActuator<AutoDiffXd>>
 JointActuator<T>::DoCloneToScalar(
-    const MultibodyTree<AutoDiffXd>&) const {
+    const internal::MultibodyTree<AutoDiffXd>&) const {
   return std::unique_ptr<JointActuator<AutoDiffXd>>(
       new JointActuator<AutoDiffXd>(name_, joint_index_));
 }

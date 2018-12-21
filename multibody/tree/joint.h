@@ -323,11 +323,11 @@ class Joint : public MultibodyTreeElement<Joint<T>, JointIndex>  {
     // implementation to the appropriate scalar type.
     template <typename ToScalar>
     std::unique_ptr<typename Joint<ToScalar>::JointImplementation>
-    CloneToScalar(const MultibodyTree<ToScalar>& tree_clone) const {
+    CloneToScalar(const internal::MultibodyTree<ToScalar>& tree_clone) const {
       auto implementation_clone =
           std::make_unique<typename Joint<ToScalar>::JointImplementation>();
-      for (const Mobilizer<T>* mobilizer : mobilizers_) {
-        const Mobilizer<ToScalar>* mobilizer_clone =
+      for (const internal::Mobilizer<T>* mobilizer : mobilizers_) {
+        const internal::Mobilizer<ToScalar>* mobilizer_clone =
             &tree_clone.get_variant(*mobilizer);
         implementation_clone->mobilizers_.push_back(mobilizer_clone);
       }
@@ -338,7 +338,7 @@ class Joint : public MultibodyTreeElement<Joint<T>, JointIndex>  {
 
     /// References (raw pointers) to the mobilizers that make part of this
     /// implementation.
-    std::vector<const Mobilizer<T>*> mobilizers_;
+    std::vector<const internal::Mobilizer<T>*> mobilizers_;
     // TODO(amcastro-tri): add force elements, constraints, bodies, etc.
   };
 
@@ -407,17 +407,17 @@ class Joint : public MultibodyTreeElement<Joint<T>, JointIndex>  {
 
   // Implements MultibodyTreeElement::DoSetTopology(). Joints have no topology
   // though we could require them to have one in the future.
-  void DoSetTopology(const MultibodyTreeTopology&) {}
+  void DoSetTopology(const internal::MultibodyTreeTopology&) {}
 
   /// @name Methods to make a clone templated on different scalar types.
   /// @{
   /// Clones this %Joint (templated on T) to a joint templated on `double`.
   virtual std::unique_ptr<Joint<double>> DoCloneToScalar(
-      const MultibodyTree<double>& tree_clone) const = 0;
+      const internal::MultibodyTree<double>& tree_clone) const = 0;
 
   /// Clones this %Joint (templated on T) to a joint templated on AutoDiffXd.
   virtual std::unique_ptr<Joint<AutoDiffXd>> DoCloneToScalar(
-      const MultibodyTree<AutoDiffXd>& tree_clone) const = 0;
+      const internal::MultibodyTree<AutoDiffXd>& tree_clone) const = 0;
   /// @}
 
   /// This method must be implemented by derived classes in order to provide

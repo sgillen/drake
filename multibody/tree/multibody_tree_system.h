@@ -190,7 +190,7 @@ class MultibodyTreeSystem : public systems::LeafSystem<T> {
   // Use continuous state variables by default.
   bool is_discrete_{false};
 
-  std::unique_ptr<drake::multibody::MultibodyTree<T>> tree_;
+  std::unique_ptr<drake::multibody::internal::MultibodyTree<T>> tree_;
   systems::CacheIndex position_kinematics_cache_index_;
   systems::CacheIndex velocity_kinematics_cache_index_;
   systems::CacheIndex H_PB_W_cache_index_;
