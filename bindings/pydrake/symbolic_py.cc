@@ -12,8 +12,8 @@
 #include "drake/bindings/pydrake/documentation_pybind.h"
 #include "drake/bindings/pydrake/pydrake_pybind.h"
 #include "drake/bindings/pydrake/symbolic_types_pybind.h"
-#include "drake/bindings/pydrake/util/numpy_dtypes_pybind.h"
-#include "drake/bindings/pydrake/util/wrap_pybind.h"
+#include "drake/bindings/pydrake/common/numpy_dtypes_pybind.h"
+#include "drake/bindings/pydrake/common/wrap_pybind.h"
 
 namespace drake {
 namespace pydrake {
@@ -46,8 +46,8 @@ PYBIND11_MODULE(symbolic, m) {
   py::dtype_user<Expression> expr_cls(m, "Expression", doc.Expression.doc);
   py::dtype_user<Formula> formula_cls(m, "Formula", doc.Formula.doc);
 
-  var_cls
-      .def(py::init<const string&>(), doc.Variable.ctor.doc)
+  var_cls  // BR
+      .def(py::init<const string&>(), doc.Variable.ctor.doc_2args)
       .def("get_id", &Variable::get_id, doc.Variable.get_id.doc)
       .def("__str__", &Variable::to_string, doc.Variable.to_string.doc)
       .def("__repr__",
@@ -76,20 +76,18 @@ PYBIND11_MODULE(symbolic, m) {
       // `dot` for NumPy since it expects a closed operation.
       // TODO(eric.cousineau): See if `dot` can be defined at some point.
       // Pow.
+      .def_loop("__pow__", [](const Variable& self,
+                              double other) { return pow(self, other); })
       .def_loop("__pow__",
-           [](const Variable& self, double other) { return pow(self, other); })
+                [](const Variable& self, const Variable& other) {
+                  return pow(self, other);
+                })
       .def_loop("__pow__",
-           [](const Variable& self, const Variable& other) {
-             return pow(self, other);
-           })
-      .def_loop("__pow__",
-           [](const Variable& self, const Expression& other) {
-             return pow(self, other);
-           })
+                [](const Variable& self, const Expression& other) {
+                  return pow(self, other);
+                })
       // See comment about `np.square` in AutoDiff<> bindings.
-      .def_loop("square", [](const Variable& self) {
-        return self * self;
-      })
+      .def_loop("square", [](const Variable& self) { return self * self; })
       // We add `EqualTo` instead of `equal_to` to maintain consistency among
       // symbolic classes (Variable, Expression, Formula, Polynomial) on Python
       // side. This enables us to achieve polymorphism via ducktyping in Python.
@@ -128,7 +126,7 @@ PYBIND11_MODULE(symbolic, m) {
       .def_loop(py::self != Expression())
       .def_loop(py::self != py::self)
       .def_loop(py::self != double());
-  DefCopyAndDeepCopy(&var_cls);
+  DefCopyAndDeepCopy(&var_cls.cls());
 
   // TODO(m-chaturvedi) Add Pybind11 documentation for operator overloads, etc.
   py::class_<Variables>(m, "Variables", doc.Variables.doc)
@@ -191,10 +189,10 @@ PYBIND11_MODULE(symbolic, m) {
   });
 
   DefImplicitConversionsFromNumericTypes(&expr_cls);
-  expr_cls
-      .def(py::init<>(), doc.Expression.ctor.doc_3)
-      .def(py::init<double>(), doc.Expression.ctor.doc_4)
-      .def(py::init<const Variable&>(), doc.Expression.ctor.doc_5)
+  expr_cls  // BR
+      .def(py::init<>(), doc.Expression.ctor.doc_0args)
+      .def(py::init<double>(), doc.Expression.ctor.doc_1args_d)
+      .def(py::init<const Variable&>(), doc.Expression.ctor.doc_copy)
       // Casting
       .def_loop(py::dtype_method::implicit_conversion<Variable, Expression>())
       // Methods
@@ -306,9 +304,7 @@ PYBIND11_MODULE(symbolic, m) {
       .def_loop(py::self != Variable())
       .def_loop(py::self != double())
       // See comment about `np.square` in AutoDiff<> bindings.
-      .def_loop("square", [](const Expression& self) {
-        return self * self;
-      })
+      .def_loop("square", [](const Expression& self) { return self * self; })
       .def("Differentiate", &Expression::Differentiate,
            doc.Expression.Differentiate.doc)
       .def("Jacobian", &Expression::Jacobian);
@@ -327,17 +323,22 @@ PYBIND11_MODULE(symbolic, m) {
       // TODO(eric.cousineau): Figure out how to consolidate with the below
       // methods.
       // Pow.
-      .def_loop("__pow__", "pow", [](const Expression& self,
-                         const double other) { return pow(self, other); })
-      .def_loop("__pow__", "pow", [](const Expression& self,
-                         const Variable& other) { return pow(self, other); })
-      .def_loop("__pow__", "pow", [](const Expression& self,
-                         const Expression& other) { return pow(self, other); })
+      .def_loop("__pow__", "pow",
+                [](const Expression& self, const double other) {
+                  return pow(self, other);
+                })
+      .def_loop("__pow__", "pow",
+                [](const Expression& self, const Variable& other) {
+                  return pow(self, other);
+                })
+      .def_loop("__pow__", "pow",
+                [](const Expression& self, const Expression& other) {
+                  return pow(self, other);
+                })
       .def_loop("log", &symbolic::log)
       .def_loop("__abs__", "abs", &symbolic::abs)
       .def_loop("exp", &symbolic::exp)
       .def_loop("sqrt", &symbolic::sqrt)
-      // TODO(eric.cousineau): Move `__pow__` here.
       .def_loop("sin", &symbolic::sin)
       .def_loop("cos", &symbolic::cos)
       .def_loop("tan", &symbolic::tan)
@@ -354,32 +355,6 @@ PYBIND11_MODULE(symbolic, m) {
 
   MirrorDef<decltype(expr_cls), py::module>(&expr_cls, &math)
       .def("atan", &symbolic::atan);
-
-  // Import aliases.
-  // TODO(eric.cousineau): Deprecate, then remove these in lieu of `np.{func}`
-  py::exec(R"""(
-from pydrake.math import (
-    log,
-    abs,
-    exp,
-    pow,
-    sqrt,
-    sin,
-    cos,
-    tan,
-    asin,
-    acos,
-    atan,
-    atan2,
-    sinh,
-    cosh,
-    tanh,
-    min,
-    max,
-    ceil,
-    floor
-)
-)""");
 
   m.def("if_then_else", [](bool cond, double true_value, double false_value) {
     return cond ? true_value : false_value;
@@ -428,8 +403,10 @@ from pydrake.math import (
            [](const Formula& self) {
              return fmt::format("<Formula \"{}\">", self.to_string());
            })
-      .def_loop("__eq__", [](const Formula& self,
-                        const Formula& other) { return self.EqualTo(other); })
+      .def_loop("__eq__",
+                [](const Formula& self, const Formula& other) {
+                  return self.EqualTo(other);
+                })
       .def("__ne__", [](const Formula& self,
                          const Formula& other) { return !self.EqualTo(other); })
       .def("__hash__",

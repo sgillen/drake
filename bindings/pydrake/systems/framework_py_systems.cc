@@ -13,7 +13,7 @@
 #include "drake/bindings/pydrake/util/deprecation_pybind.h"
 #include "drake/bindings/pydrake/util/drake_optional_pybind.h"
 #include "drake/bindings/pydrake/util/eigen_pybind.h"
-#include "drake/bindings/pydrake/util/wrap_pybind.h"
+#include "drake/bindings/pydrake/common/wrap_pybind.h"
 #include "drake/systems/framework/diagram.h"
 #include "drake/systems/framework/leaf_system.h"
 #include "drake/systems/framework/system.h"
@@ -545,10 +545,11 @@ struct Impl {
                return new PyVectorSystem(inputs, outputs);
              }),
              doc.VectorSystem.ctor.doc_2args)
-        .def(py::init(
-            [](int inputs, int outputs, SystemScalarConverter converter) {
-              return new PyVectorSystem(std::move(converter), inputs, outputs);
-            }), py::arg("inputs"), py::arg("outputs"), py::arg("converter"));
+        .def(py::init([](int inputs, int outputs,
+                         SystemScalarConverter converter) {
+               return new PyVectorSystem(std::move(converter), inputs, outputs);
+             }),
+             py::arg("inputs"), py::arg("outputs"), py::arg("converter"));
     // TODO(eric.cousineau): Bind virtual methods once we provide a function
     // wrapper to convert `Map<Derived>*` arguments.
     // N.B. This could be mitigated by using `EigenPtr` in public interfaces in

@@ -4,8 +4,10 @@ from __future__ import print_function
 
 import copy
 import unittest
+import warnings
 import numpy as np
 
+from pydrake.common.deprecation import DrakeDeprecationWarning
 from pydrake.autodiffutils import AutoDiffXd
 from pydrake.symbolic import Expression
 from pydrake.systems.analysis import (
@@ -14,12 +16,12 @@ from pydrake.systems.analysis import (
 from pydrake.systems.framework import (
     AbstractValue,
     BasicVector, BasicVector_,
-    Context,
+    Context, Context_,
     DiagramBuilder, DiagramBuilder_,
     kUseDefaultName,
     LeafSystem, LeafSystem_,
     PortDataType,
-    PublishEvent,
+    PublishEvent, PublishEvent_,
     TriggerType,
     VectorSystem, VectorSystem_,
     )
@@ -180,6 +182,7 @@ class TestCustom(unittest.TestCase):
                 self.called_continuous = False
                 self.called_discrete = False
                 self.called_initialize = False
+                self.called_periodic = False
                 # Ensure we have desired overloads.
                 self._DeclarePeriodicPublish(1.0)
                 self._DeclarePeriodicPublish(1.0, 0)
@@ -187,17 +190,17 @@ class TestCustom(unittest.TestCase):
                 self._DeclarePeriodicDiscreteUpdate(
                     period_sec=1.0, offset_sec=0.)
                 self._DeclareInitializationEvent(
-                    event=PublishEvent(
+                    event=PublishEvent_[T](
                         trigger_type=TriggerType.kInitialization,
                         callback=self._on_initialize))
                 self._DeclarePerStepEvent(
-                    event=PublishEvent(
+                    event=PublishEvent_[T](
                         trigger_type=TriggerType.kPerStep,
                         callback=self._on_per_step))
                 self._DeclarePeriodicEvent(
                     period_sec=1.0,
                     offset_sec=0.0,
-                    event=PublishEvent(
+                    event=PublishEvent_[T](
                         trigger_type=TriggerType.kPeriodic,
                         callback=self._on_periodic))
                 self._DeclareContinuousState(2)
@@ -244,19 +247,19 @@ class TestCustom(unittest.TestCase):
                 self.called_discrete = True
 
             def _on_initialize(self, context, event):
-                test.assertIsInstance(context, Context)
-                test.assertIsInstance(event, PublishEvent)
+                test.assertIsInstance(context, Context_[T])
+                test.assertIsInstance(event, PublishEvent_[T])
                 test.assertFalse(self.called_initialize)
                 self.called_initialize = True
 
             def _on_per_step(self, context, event):
-                test.assertIsInstance(context, Context)
-                test.assertIsInstance(event, PublishEvent)
+                test.assertIsInstance(context, Context_[T])
+                test.assertIsInstance(event, PublishEvent_[T])
                 self.called_per_step = True
 
             def _on_periodic(self, context, event):
-                test.assertIsInstance(context, Context)
-                test.assertIsInstance(event, PublishEvent)
+                test.assertIsInstance(context, Context_[T])
+                test.assertIsInstance(event, PublishEvent_[T])
                 test.assertFalse(self.called_periodic)
                 self.called_periodic = True
 
@@ -273,7 +276,7 @@ class TestCustom(unittest.TestCase):
         self.assertTrue(system.called_continuous)
         self.assertTrue(system.called_discrete)
         self.assertTrue(system.called_initialize)
-        self.assertEqual(results["discrete_next_t"], 0.1)
+        self.assertEqual(results["discrete_next_t"], 1.0)
 
         self.assertFalse(system.HasAnyDirectFeedthrough())
         self.assertFalse(system.HasDirectFeedthrough(output_port=0))
@@ -292,7 +295,7 @@ class TestCustom(unittest.TestCase):
 
         # Test per-step and periodic call backs
         system = TrivialSystem()
-        simulator = Simulator(system)
+        simulator = Simulator_[T](system)
         # Stepping to 0.99 so that we get exactly one periodic event.
         simulator.StepTo(0.99)
         self.assertTrue(system.called_per_step)

@@ -11,7 +11,7 @@
 #include "drake/bindings/pydrake/util/drake_optional_pybind.h"
 #include "drake/bindings/pydrake/util/eigen_pybind.h"
 #include "drake/bindings/pydrake/util/type_safe_index_pybind.h"
-#include "drake/bindings/pydrake/util/wrap_pybind.h"
+#include "drake/bindings/pydrake/common/wrap_pybind.h"
 #include "drake/systems/framework/context.h"
 #include "drake/systems/framework/diagram_builder.h"
 #include "drake/systems/framework/event.h"
@@ -337,11 +337,12 @@ void DefineFrameworkPySemantics(py::module m) {
         .def("get_abstract_parameters", &Parameters<T>::get_abstract_parameters,
             py_reference_internal, doc.Parameters.get_abstract_parameters.doc)
         .def("set_abstract_parameters", &Parameters<T>::set_abstract_parameters,
-            // WARNING: This will DELETE the existing parameters. See C++
-            // `AddValueInstantiation` for more information.
-            // Keep alive, ownership: `value` keeps `self` alive.
-            py::keep_alive<2, 1>(), py::arg("abstract_params"),
-            doc.Parameters.set_abstract_parameters.doc)
+             // WARNING: This will DELETE the existing parameters. See C++
+             // `AddValueInstantiation` for more information.
+             // Keep alive, ownership: `value` keeps `self` alive.
+             py::keep_alive<2, 1>(), py::arg("abstract_params"),
+             doc.Parameters.set_abstract_parameters.doc)
+        .def("CopyFrom", &Parameters<T>::CopyFrom, doc.Parameters.CopyFrom.doc)
         .def("SetFrom", &Parameters<T>::SetFrom, doc.Parameters.SetFrom.doc);
 
     // State.

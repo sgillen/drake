@@ -236,14 +236,14 @@ void check_type() {
 }
 
 // Checks signature of a generic functor.
-template <typename RetExpected, typename... ArgsExpected>
+template <typename ReturnExpected, typename... ArgsExpected>
 struct check_signature {
   template <typename FuncActual>
   static void run(const FuncActual& func) {
     run_impl(detail::infer_function_info(func));
   }
 
-  template <typename RetActual, typename... ArgsActual, typename FuncActual>
+  template <typename ReturnActual, typename... ArgsActual, typename FuncActual>
   static void run_impl(
       const detail::function_inference::info<
           FuncActual, ReturnActual, ArgsActual...>& info) {

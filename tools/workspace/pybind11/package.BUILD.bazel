@@ -48,22 +48,6 @@ cc_library(
     ],
 )
 
-# N.B. Given how `pybind11` how it has its test code factored, we must build
-# all test modules into the same shared module.
-cc_library(
-    name = "pybind11_tests_base",
-    srcs = [
-        "tests/constructor_stats.h",
-        "tests/pybind11_tests.cpp",
-        "tests/pybind11_tests.h",
-    ],
-    deps = [
-        ":pybind11",
-    ],
-    includes = ["tests"],
-    testonly = 1,
-)
-
 cmake_config(
     package = "pybind11",
     script = "@drake//tools/workspace/pybind11:package-create-cps.py",
