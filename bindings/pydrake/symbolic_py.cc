@@ -13,7 +13,7 @@
 #include "drake/bindings/pydrake/pydrake_pybind.h"
 #include "drake/bindings/pydrake/symbolic_types_pybind.h"
 #include "drake/bindings/pydrake/common/numpy_dtypes_pybind.h"
-#include "drake/bindings/pydrake/util/wrap_pybind.h"
+#include "drake/bindings/pydrake/common/wrap_pybind.h"
 
 namespace drake {
 namespace pydrake {
@@ -47,7 +47,7 @@ PYBIND11_MODULE(symbolic, m) {
   py::dtype_user<Formula> formula_cls(m, "Formula", doc.Formula.doc);
 
   var_cls  // BR
-      .def(py::init<const string&>(), doc.Variable.ctor.doc)
+      .def(py::init<const string&>(), doc.Variable.ctor.doc_2args)
       .def("get_id", &Variable::get_id, doc.Variable.get_id.doc)
       .def("__str__", &Variable::to_string, doc.Variable.to_string.doc)
       .def("__repr__",
@@ -190,9 +190,9 @@ PYBIND11_MODULE(symbolic, m) {
 
   DefImplicitConversionsFromNumericTypes(&expr_cls);
   expr_cls  // BR
-      .def(py::init<>(), doc.Expression.ctor.doc_3)
-      .def(py::init<double>(), doc.Expression.ctor.doc_4)
-      .def(py::init<const Variable&>(), doc.Expression.ctor.doc_5)
+      .def(py::init<>(), doc.Expression.ctor.doc_0args)
+      .def(py::init<double>(), doc.Expression.ctor.doc_1args_d)
+      .def(py::init<const Variable&>(), doc.Expression.ctor.doc_copy)
       // Casting
       .def_loop(py::dtype_method::implicit_conversion<Variable, Expression>())
       // Methods

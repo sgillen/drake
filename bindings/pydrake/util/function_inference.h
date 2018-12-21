@@ -3,7 +3,7 @@
 #include <type_traits>
 #include <utility>
 
-#include "drake/bindings/pydrake/util/type_pack.h"
+#include "drake/bindings/pydrake/common/type_pack.h"
 
 // TODO(eric.cousineau): Figure out how to make this automatically hidden.
 #pragma GCC visibility push(hidden)

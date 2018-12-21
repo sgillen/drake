@@ -6,7 +6,7 @@
 #include "drake/bindings/pydrake/documentation_pybind.h"
 #include "drake/bindings/pydrake/pydrake_pybind.h"
 #include "drake/bindings/pydrake/symbolic_types_pybind.h"
-#include "drake/bindings/pydrake/util/wrap_pybind.h"
+#include "drake/bindings/pydrake/common/wrap_pybind.h"
 #include "drake/multibody/plant/multibody_plant.h"
 #include "drake/multibody/rigid_body_tree.h"
 #include "drake/systems/controllers/dynamic_programming.h"

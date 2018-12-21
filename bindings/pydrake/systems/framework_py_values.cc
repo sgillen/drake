@@ -11,7 +11,7 @@
 #include "drake/bindings/pydrake/pydrake_pybind.h"
 #include "drake/bindings/pydrake/systems/systems_pybind.h"
 #include "drake/bindings/pydrake/util/eigen_pybind.h"
-#include "drake/bindings/pydrake/util/wrap_pybind.h"
+#include "drake/bindings/pydrake/common/wrap_pybind.h"
 #include "drake/systems/framework/basic_vector.h"
 #include "drake/systems/framework/subvector.h"
 #include "drake/systems/framework/supervector.h"
@@ -64,7 +64,7 @@ void DefineFrameworkPyValues(py::module m) {
         .def(py::init([](greedy_arg<VectorX<T>> in) {
                return new BasicVector<T>(*in);
              }),
-             doc.BasicVector.ctor.doc_1args_Vec)
+             doc.BasicVector.ctor.doc_1args_vec)
         .def(py::init<int>(), py::arg("size"), doc.BasicVector.ctor.doc_1args_size)
         .def("get_value",
             [](const BasicVector<T>* self) -> Eigen::Ref<const VectorX<T>> {

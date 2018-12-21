@@ -4,7 +4,7 @@
 #include <type_traits>
 #include <utility>
 
-#include "drake/bindings/pydrake/util/function_inference.h"
+#include "drake/bindings/pydrake/common/function_inference.h"
 
 // TODO(eric.cousineau): Figure out how to make this automatically hidden.
 #pragma GCC visibility push(hidden)
