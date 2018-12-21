@@ -107,6 +107,7 @@ int main(int argc, char** argv) {
 
   // Define custom dtype.
   py::dtype_user<CustomDType>(m, "CustomDType")
+    .def("value", &CustomDType::value)
     .def("__str__", [](const CustomDType*) {
       return py::str("<CustomDType>");
     })

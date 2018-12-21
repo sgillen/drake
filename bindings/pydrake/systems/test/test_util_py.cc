@@ -22,13 +22,13 @@ using systems::System;
 namespace pydrake {
 namespace {
 
-using T = double;
+using D = double;
 
 // Informs listener when this class is deleted.
-class DeleteListenerSystem : public LeafSystem<T> {
+class DeleteListenerSystem : public LeafSystem<D> {
  public:
   explicit DeleteListenerSystem(std::function<void()> delete_callback)
-      : LeafSystem<T>(), delete_callback_(delete_callback) {}
+      : LeafSystem<D>(), delete_callback_(delete_callback) {}
 
   ~DeleteListenerSystem() override { delete_callback_(); }
 
@@ -36,10 +36,10 @@ class DeleteListenerSystem : public LeafSystem<T> {
   std::function<void()> delete_callback_;
 };
 
-class DeleteListenerVector : public BasicVector<T> {
+class DeleteListenerVector : public BasicVector<D> {
  public:
   explicit DeleteListenerVector(std::function<void()> delete_callback)
-      : BasicVector(VectorX<T>::Constant(1, 0.)),
+      : BasicVector(VectorX<D>::Constant(1, 0.)),
         delete_callback_(delete_callback) {}
 
   ~DeleteListenerVector() override { delete_callback_(); }
@@ -68,12 +68,12 @@ class MoveOnlyType {
 struct UnknownType {};
 
 // A simple 2-dimensional subclass of BasicVector for testing.
-template <typename T>
-class MyVector2 : public BasicVector<T> {
+template <typename D>
+class MyVector2 : public BasicVector<D> {
  public:
   DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(MyVector2)
 
-  explicit MyVector2(const Vector2<T>& data) : BasicVector<T>(data) {}
+  explicit MyVector2(const Vector2<D>& data) : BasicVector<D>(data) {}
 
  private:
   MyVector2* DoClone() const override {
@@ -84,9 +84,9 @@ class MyVector2 : public BasicVector<T> {
 // Stolen from `Simulator::Initialize`.
 // TODO(eric.cousineau): Somehow leverage `Simulator` bits, factoring that
 // functionality out.
-template <typename T>
-void DispatchInitializationEvents(const System<T>& system,
-                                  const Context<T>& context) {
+template <typename D>
+void DispatchInitializationEvents(const System<D>& system,
+                                  const Context<D>& context) {
   // Process all the initialization events.
   auto init_events = system.AllocateCompositeEventCollection();
   system.GetInitializationEvents(context, init_events.get());
@@ -108,9 +108,9 @@ PYBIND11_MODULE(test_util, m) {
   py::module::import("pydrake.systems.framework");
   py::module::import("pydrake.systems.primitives");
 
-  py::class_<DeleteListenerSystem, LeafSystem<T>>(m, "DeleteListenerSystem")
+  py::class_<DeleteListenerSystem, LeafSystem<D>>(m, "DeleteListenerSystem")
       .def(py::init<std::function<void()>>());
-  py::class_<DeleteListenerVector, BasicVector<T>>(m, "DeleteListenerVector")
+  py::class_<DeleteListenerVector, BasicVector<D>>(m, "DeleteListenerVector")
       .def(py::init<std::function<void()>>());
 
   py::class_<MoveOnlyType>(m, "MoveOnlyType")
@@ -121,7 +121,7 @@ PYBIND11_MODULE(test_util, m) {
   pysystems::AddValueInstantiation<MoveOnlyType>(m);
 
   // A 2-dimensional subclass of BasicVector.
-  py::class_<MyVector2<T>, BasicVector<T>>(m, "MyVector2")
+  py::class_<MyVector2<D>, BasicVector<D>>(m, "MyVector2")
       .def(py::init<const Eigen::Vector2d&>(), py::arg("data"));
 
   m.def("make_unknown_abstract_value",
