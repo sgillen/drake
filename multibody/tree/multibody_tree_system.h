@@ -203,9 +203,10 @@ class MultibodyTreeSystem : public systems::LeafSystem<T> {
 
 /// WARNING: This will be removed on or around 2019/03/01.
 template <typename T>
+using MultibodyTreeSystem
 DRAKE_DEPRECATED(
     "This public alias is deprecated, and will be removed around 2019/03/01.")
-using MultibodyTreeSystem = internal::MultibodyTreeSystem<T>;
+    = internal::MultibodyTreeSystem<T>;
 
 }  // namespace multibody
 }  // namespace drake

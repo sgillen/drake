@@ -153,9 +153,10 @@ class VelocityKinematicsCache {
 
 /// WARNING: This will be removed on or around 2019/03/01.
 template <typename T>
+using VelocityKinematicsCache
 DRAKE_DEPRECATED(
     "This public alias is deprecated, and will be removed around 2019/03/01.")
-using VelocityKinematicsCache = internal::VelocityKinematicsCache<T>;
+    = internal::VelocityKinematicsCache<T>;
 
 }  // namespace multibody
 }  // namespace drake

@@ -648,9 +648,10 @@ class Mobilizer : public MultibodyTreeElement<Mobilizer<T>, MobilizerIndex> {
 
 /// WARNING: This will be removed on or around 2019/03/01.
 template <typename T>
+using Mobilizer
 DRAKE_DEPRECATED(
     "This public alias is deprecated, and will be removed around 2019/03/01.")
-using Mobilizer = internal::Mobilizer<T>;
+    = internal::Mobilizer<T>;
 
 }  // namespace multibody
 }  // namespace drake

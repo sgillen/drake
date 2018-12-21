@@ -201,9 +201,10 @@ class MultibodyTreeContext: public systems::LeafContext<T> {
 
 /// WARNING: This will be removed on or around 2019/03/01.
 template <typename T>
+using MultibodyTreeContext
 DRAKE_DEPRECATED(
     "This public alias is deprecated, and will be removed around 2019/03/01.")
-using MultibodyTreeContext = internal::MultibodyTreeContext<T>;
+    = internal::MultibodyTreeContext<T>;
 
 }  // namespace multibody
 }  // namespace drake
