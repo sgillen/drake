@@ -2458,15 +2458,6 @@ class MultibodyPlant : public MultibodyTreeSystem<T> {
     return tree().GetModelInstanceName(model_instance);
   }
 
-  /// Returns a constant reference to the underlying MultibodyTree model for
-  /// `this` plant.
-  /// @throws std::exception if called pre-finalize. See Finalize().
-  DRAKE_DEPRECATED("Please use tree().")
-  const MultibodyTree<T>& model() const {
-    DRAKE_MBP_THROW_IF_NOT_FINALIZED();
-    return tree();
-  }
-
   /// Returns `true` if this %MultibodyPlant was finalized with a call to
   /// Finalize().
   /// @see Finalize().
@@ -2688,7 +2679,8 @@ class MultibodyPlant : public MultibodyTreeSystem<T> {
   // sparingly to test forwarding methods when the overhead is high to
   // reproduce the testing (e.g. benchmarks).
   explicit MultibodyPlant(
-      std::unique_ptr<MultibodyTree<T>> tree_in, double time_step = 0);
+      std::unique_ptr<internal::MultibodyTree<T>> tree_in,
+      double time_step = 0);
 
   // Helper method for throwing an exception within public methods that should
   // not be called post-finalize. The invoking method should pass its name so
@@ -2880,12 +2872,12 @@ class MultibodyPlant : public MultibodyTreeSystem<T> {
       const std::vector<geometry::PenetrationAsPointPair<T>>&
       point_pairs) const;
 
-  // Helper method to compute contact forces in the normal direction using a
-  // penalty method.
+  // (Advanced) Helper method to compute contact forces in the normal direction
+  // using a penalty method.
   void CalcAndAddContactForcesByPenaltyMethod(
       const systems::Context<T>& context,
-      const PositionKinematicsCache<T>& pc,
-      const VelocityKinematicsCache<T>& vc,
+      const internal::PositionKinematicsCache<T>& pc,
+      const internal::VelocityKinematicsCache<T>& vc,
       const std::vector<geometry::PenetrationAsPointPair<T>>& point_pairs,
       std::vector<SpatialForce<T>>* F_BBo_W_array) const;
 

@@ -268,7 +268,7 @@ class Joint : public MultibodyTreeElement<Joint<T>, JointIndex>  {
   // MultibodyTree::CloneToScalar().
   template <typename ToScalar>
   std::unique_ptr<Joint<ToScalar>> CloneToScalar(
-      const MultibodyTree<ToScalar>& tree_clone) const {
+      const internal::MultibodyTree<ToScalar>& tree_clone) const {
     std::unique_ptr<Joint<ToScalar>> joint_clone = DoCloneToScalar(tree_clone);
 
     std::unique_ptr<typename Joint<ToScalar>::JointImplementation>
@@ -287,7 +287,7 @@ class Joint : public MultibodyTreeElement<Joint<T>, JointIndex>  {
   /// %Joint creates a BluePrint of its implementation with MakeModelBlueprint()
   /// so that MultibodyTree can build an implementation for it.
   struct BluePrint {
-    std::vector<std::unique_ptr<Mobilizer<T>>> mobilizers_;
+    std::vector<std::unique_ptr<internal::Mobilizer<T>>> mobilizers_;
     // TODO(amcastro-tri): add force elements, constraints, bodies.
   };
 

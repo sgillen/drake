@@ -179,13 +179,13 @@ class RigidBody : public Body<T> {
     return get_pose_in_world(pc).linear();
   }
 
-  /// Extract the position vector from world origin to this body's origin,
-  /// expressed in world.
+  /// (Advanced) Extract the position vector from world origin to this body's
+  /// origin, expressed in world.
   /// @param[in] pc position kinematics cache.
   /// @retval p_WoBo_W position vector from Wo (world origin) to
   ///         Bo (this body's origin) expressed in W (world).
   const Vector3<T> get_origin_position_in_world(
-      const PositionKinematicsCache<T>& pc) const {
+      const internal::PositionKinematicsCache<T>& pc) const {
     return get_pose_in_world(pc).translation();
   }
   ///@}
@@ -216,7 +216,8 @@ class RigidBody : public Body<T> {
     return get_spatial_velocity_in_world(vc).rotational();
   }
 
-  /// Extract the velocity of this body's origin in world, expressed in world.
+  /// (Advanced) Extract the velocity of this body's origin in world, expressed
+  /// in world.
   /// @param[in] vc velocity kinematics cache.
   /// @retval v_WBo_W velocity of Bo (body origin) in world W, expressed in W.
   const Vector3<T>& get_origin_velocity_in_world(

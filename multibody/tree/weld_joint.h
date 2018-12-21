@@ -117,7 +117,7 @@ class WeldJoint final : public Joint<T> {
   // Helper method to make a clone templated on ToScalar.
   template <typename ToScalar>
   std::unique_ptr<Joint<ToScalar>> TemplatedDoCloneToScalar(
-      const MultibodyTree<ToScalar>& tree_clone) const;
+      const internal::MultibodyTree<ToScalar>& tree_clone) const;
 
   // The pose of frame C in P.
   const Isometry3<double> X_PC_;

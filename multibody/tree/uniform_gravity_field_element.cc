@@ -17,7 +17,7 @@ UniformGravityFieldElement<T>::UniformGravityFieldElement(Vector3<double> g_W)
 template <typename T>
 VectorX<T> UniformGravityFieldElement<T>::CalcGravityGeneralizedForces(
     const systems::Context<T>& context) const {
-  const MultibodyTree<T>& model = this->get_parent_tree();
+  const internal::MultibodyTree<T>& model = this->get_parent_tree();
   const auto& mbt_context =
       dynamic_cast<const internal::MultibodyTreeContext<T>&>(context);
 
@@ -79,7 +79,7 @@ void UniformGravityFieldElement<T>::DoCalcAndAddForceContribution(
   // Skip the "world" body.
   for (BodyIndex body_index(1); body_index < num_bodies; ++body_index) {
     const Body<T>& body = model.get_body(body_index);
-    BodyNodeIndex node_index = body.node_index();
+    internal::BodyNodeIndex node_index = body.node_index();
 
     // TODO(amcastro-tri): Replace this CalcXXX() calls by GetXXX() calls once
     // caching is in place.
@@ -101,7 +101,7 @@ T UniformGravityFieldElement<T>::CalcPotentialEnergy(
     const internal::PositionKinematicsCache<T>& pc) const {
   // Add the potential energy due to gravity for each body in the model.
   // Skip the world.
-  const MultibodyTree<T>& model = this->get_parent_tree();
+  const internal::MultibodyTree<T>& model = this->get_parent_tree();
   const int num_bodies = model.num_bodies();
   T TotalPotentialEnergy = 0.0;
   // Skip the "world" body.

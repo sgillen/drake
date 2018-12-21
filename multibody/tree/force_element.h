@@ -157,7 +157,7 @@ class ForceElement : public
   // MultibodyTree::CloneToScalar().
   template <typename ToScalar>
   std::unique_ptr<ForceElement<ToScalar>> CloneToScalar(
-  const MultibodyTree<ToScalar>& cloned_tree) const {
+  const internal::MultibodyTree<ToScalar>& cloned_tree) const {
     return DoCloneToScalar(cloned_tree);
   }
   /// @endcond

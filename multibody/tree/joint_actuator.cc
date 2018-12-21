@@ -50,7 +50,8 @@ void JointActuator<T>::DoSetTopology(
 
 template <typename T>
 std::unique_ptr<JointActuator<double>>
-JointActuator<T>::DoCloneToScalar(const MultibodyTree<double>&) const {
+JointActuator<T>::DoCloneToScalar(
+    const internal::MultibodyTree<double>&) const {
   return std::unique_ptr<JointActuator<double>>(
       new JointActuator<double>(name_, joint_index_));
 }

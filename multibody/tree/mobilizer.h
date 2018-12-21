@@ -21,11 +21,10 @@ namespace multibody {
 
 // Forward declarations.
 template<typename T> class Body;
-namespace internal {
-template<typename T> class BodyNode;
-}
 
 namespace internal {
+
+template<typename T> class BodyNode;
 
 /// %Mobilizer is a fundamental object within Drake's multibody engine used to
 /// specify the allowed motions between two Frame objects within a
