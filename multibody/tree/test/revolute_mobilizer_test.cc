@@ -12,6 +12,7 @@
 
 namespace drake {
 namespace multibody {
+namespace internal {
 namespace {
 
 using Eigen::AngleAxisd;
@@ -167,5 +168,6 @@ TEST_F(RevoluteMobilizerTest, KinematicMapping) {
 }
 
 }  // namespace
+}  // namespace internal
 }  // namespace multibody
 }  // namespace drake

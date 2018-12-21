@@ -20,6 +20,7 @@ namespace drake {
 using systems::Context;
 
 namespace multibody {
+namespace internal {
 namespace {
 
 constexpr double kTolerance = 10 * std::numeric_limits<double>::epsilon();
@@ -279,5 +280,6 @@ TEST_F(SpringDamperTester, Power) {
 }
 
 }  // namespace
+}  // namespace internal
 }  // namespace multibody
 }  // namespace drake

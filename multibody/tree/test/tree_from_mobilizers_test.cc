@@ -32,12 +32,13 @@ class JointTester {
   JointTester() = delete;
   // For these tests we do know that a RevoluteJoint is implemented with a
   // RevoluteMobilizer.
-  static const RevoluteMobilizer<double>* get_mobilizer(
+  static const internal::RevoluteMobilizer<double>* get_mobilizer(
       const RevoluteJoint<double>& joint) {
     return joint.get_mobilizer();
   }
 };
 
+namespace internal {
 namespace {
 
 const double kEpsilon = std::numeric_limits<double>::epsilon();
@@ -1377,5 +1378,6 @@ TEST_F(PendulumKinematicTests, PointsHaveTheWrongSize) {
 }
 
 }  // namespace
+}  // namespace internal
 }  // namespace multibody
 }  // namespace drake

@@ -15,6 +15,7 @@
 
 namespace drake {
 namespace multibody {
+namespace internal {
 namespace {
 
 using Eigen::Vector3d;
@@ -365,5 +366,6 @@ GTEST_TEST(ArticulatedBodyInertiaAlgorithm, ModifiedFeatherstoneExample) {
 }
 
 }  // namespace
+}  // namespace internal
 }  // namespace multibody
 }  // namespace drake
