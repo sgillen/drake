@@ -12,7 +12,7 @@
 #include "drake/bindings/pydrake/documentation_pybind.h"
 #include "drake/bindings/pydrake/pydrake_pybind.h"
 #include "drake/bindings/pydrake/symbolic_types_pybind.h"
-#include "drake/bindings/pydrake/util/numpy_dtypes_pybind.h"
+#include "drake/bindings/pydrake/common/numpy_dtypes_pybind.h"
 #include "drake/bindings/pydrake/util/wrap_pybind.h"
 
 namespace drake {

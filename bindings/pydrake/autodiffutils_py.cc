@@ -7,7 +7,7 @@
 
 #include "drake/bindings/pydrake/autodiff_types_pybind.h"
 #include "drake/bindings/pydrake/pydrake_pybind.h"
-#include "drake/bindings/pydrake/util/numpy_dtypes_pybind.h"
+#include "drake/bindings/pydrake/common/numpy_dtypes_pybind.h"
 #include "drake/bindings/pydrake/util/wrap_pybind.h"
 
 using Eigen::AutoDiffScalar;
