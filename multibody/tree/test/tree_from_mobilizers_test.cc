@@ -500,18 +500,20 @@ TEST_F(PendulumTests, CreateContext) {
   EXPECT_EQ(mbt_context->get_state_segment<1>(1).size(), 1);
   EXPECT_EQ(mbt_context->get_mutable_state_segment<1>(1).size(), 1);
 
+  const auto& tree = GetInternalTree(system);
+
   // Set the poses of each body in the position kinematics cache to have an
   // arbitrary value that we can use for unit testing. In practice the poses in
   // the position kinematics will be the result of a position kinematics update
   // and will live in the context as a cache entry.
-  PositionKinematicsCache<double> pc(system.tree().get_topology());
+  PositionKinematicsCache<double> pc(tree.get_topology());
   SetPendulumPoses(&pc);
 
   // Retrieve body poses from position kinematics cache.
   const RigidTransformd X_WW =
-      get_body_pose_in_world(system.tree(), pc, *world_body_);
+      get_body_pose_in_world(tree, pc, *world_body_);
   const RigidTransformd X_WLu =
-      get_body_pose_in_world(system.tree(), pc, *upper_link_);
+      get_body_pose_in_world(tree, pc, *upper_link_);
 
   // Asserts that the retrieved poses match with the ones specified by the unit
   // test method SetPendulumPoses().
