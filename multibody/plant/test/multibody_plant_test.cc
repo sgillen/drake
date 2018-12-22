@@ -400,7 +400,7 @@ class AcrobotPlantTests : public ::testing::Test {
         -parameters_.b1() * theta1dot, -parameters_.b2() * theta2dot);
 
     // Verify the computation of the contribution due to joint damping.
-    MultibodyForces<double> forces(plant_->tree());
+    MultibodyForces<double> forces(*plant_);
     shoulder_->AddInDamping(*context_, &forces);
     elbow_->AddInDamping(*context_, &forces);
     EXPECT_TRUE(CompareMatrices(forces.generalized_forces(), tau_damping,

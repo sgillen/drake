@@ -85,16 +85,16 @@ TEST_F(TwoFreeBodiesConstraintTest, AngleBetweenVectorsConstraint) {
       QuaternionToVectorWxyz(body2_quaternion), body2_position;
   {
     AngleBetweenVectorsConstraint good_constraint(
-        plant_, plant_->tree().get_frame(body1_index_), n_A,
-        plant_->tree().get_frame(body2_index_), n_B, angle - 0.01, angle + 0.01,
+        plant_, plant_->get_frame(body1_index_), n_A,
+        plant_->get_frame(body2_index_), n_B, angle - 0.01, angle + 0.01,
         plant_context_);
     EXPECT_TRUE(good_constraint.CheckSatisfied(q));
   }
 
   {
     AngleBetweenVectorsConstraint bad_constraint(
-        plant_, plant_->tree().get_frame(body1_index_), n_A,
-        plant_->tree().get_frame(body2_index_), n_B, angle - 0.02, angle - 0.01,
+        plant_, plant_->get_frame(body1_index_), n_A,
+        plant_->get_frame(body2_index_), n_B, angle - 0.02, angle - 0.01,
         plant_context_);
     EXPECT_FALSE(bad_constraint.CheckSatisfied(q));
   }
