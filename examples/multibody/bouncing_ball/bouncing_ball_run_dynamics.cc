@@ -107,7 +107,6 @@ int do_main() {
   // Set at height z0 with random orientation.
   std::mt19937 generator(41);
   std::uniform_real_distribution<double> uniform(-1.0, 1.0);
-  plant.SetDefaultContext(&plant_context);
   Matrix3d R_WB = math::UniformlyRandomRotationMatrix(&generator).matrix();
   Isometry3d X_WB = Isometry3d::Identity();
   X_WB.linear() = R_WB;

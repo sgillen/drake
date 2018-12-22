@@ -114,7 +114,6 @@ int do_main() {
       diagram->GetMutableSubsystemContext(plant, diagram_context.get());
 
   // Set at height z0.
-  plant.SetDefaultContext(&plant_context);
   Isometry3d X_WB = Isometry3d::Identity();
   X_WB.translation() = Vector3d(0.0, 0.0, FLAGS_z0);
   const auto& cylinder = plant.GetBodyByName("Cylinder");
