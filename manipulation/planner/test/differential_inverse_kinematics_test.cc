@@ -91,17 +91,8 @@ class DifferentialInverseKinematicsTest : public ::testing::Test {
     mbp_->Finalize();
 
     context_ = mbp_->CreateDefaultContext();
-
-    SetMBTState(q, v);
-  }
-
-  void SetMBTState(const VectorX<double>& q, const VectorX<double>& v) {
-    DRAKE_DEMAND(q.size() == mbp_->num_positions());
-    DRAKE_DEMAND(v.size() == mbp_->num_velocities());
-    auto context =
-        dynamic_cast<multibody::MultibodyTreeContext<double>*>(context_.get());
-    context->get_mutable_positions() = q;
-    context->get_mutable_velocities() = v;
+    mbp_->SetPositions(context, q);
+    mbp_->SetVelocities(context, v);
   }
 
   void CheckPositiveResult(const Vector6<double>& V_WE,
