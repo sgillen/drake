@@ -47,10 +47,13 @@ template <typename PyClass>
 void BindMultibodyTreeElementMixin(PyClass* pcls) {
   using Class = typename PyClass::type;
   auto& cls = *pcls;
-  cls  // BR
-      .def("get_parent_tree", &Class::get_parent_tree, py_reference_internal)
+  cls // BR
       .def("index", &Class::index)
       .def("model_instance", &Class::model_instance);
+  // Deprecated:
+  cls.def("get_parent_tree", &Class::get_parent_tree, py_reference_internal);
+  DeprecateAttribute(
+      cls, "get_parent_tree", "`get_parent_tree()` will soon be internal.");
 }
 
 int GetVariableSize(const multibody::MultibodyPlant<T>& plant,
