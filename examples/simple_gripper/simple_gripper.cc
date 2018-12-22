@@ -281,7 +281,7 @@ int do_main() {
   // supports it.
 
   // The mass of the gripper in simple_gripper.sdf.
-  // TODO(amcastro-tri): we should call MultibodyTree::CalcMass() here.
+  // TODO(amcastro-tri): we should call MultibodyPlant::CalcMass() here.
   const double mass = 1.0890;  // kg.
   const double omega = 2 * M_PI * FLAGS_frequency;  // rad/s.
   const double x0 = FLAGS_amplitude;  // meters.

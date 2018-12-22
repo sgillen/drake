@@ -242,11 +242,10 @@ DifferentialInverseKinematicsResult DoDifferentialInverseKinematics(
     const Vector6<double>& V_WE_desired,
     const multibody::Frame<double>& frame_E,
     const DifferentialInverseKinematicsParameters& parameters) {
-  const multibody::MultibodyTree<double>& robot = plant.tree();
   const Isometry3<double> X_WE =
-      robot.CalcRelativeTransform(context, robot.world_frame(), frame_E);
-  MatrixX<double> J_WE(6, robot.num_velocities());
-  robot.CalcFrameGeometricJacobianExpressedInWorld(
+      plant.CalcRelativeTransform(context, plant.world_frame(), frame_E);
+  MatrixX<double> J_WE(6, plant.num_velocities());
+  plant.CalcFrameGeometricJacobianExpressedInWorld(
       context, frame_E, Vector3<double>::Zero(), &J_WE);
 
   const auto& mbt_context =
@@ -274,7 +273,7 @@ DifferentialInverseKinematicsResult DoDifferentialInverseKinematics(
 }
 
 DifferentialInverseKinematicsResult DoDifferentialInverseKinematics(
-    const multibody::MultibodyTree<double>& robot,
+    const multibody::internal::MultibodyTree<double>& robot,
     const systems::Context<double>& context,
     const Vector6<double>& V_WE_desired,
     const multibody::Frame<double>& frame_E,
@@ -286,7 +285,8 @@ DifferentialInverseKinematicsResult DoDifferentialInverseKinematics(
       context, frame_E, Vector3<double>::Zero(), &J_WE);
 
   const auto& mbt_context =
-      dynamic_cast<const multibody::MultibodyTreeContext<double>&>(context);
+      dynamic_cast<const multibody::internal::MultibodyTreeContext<double>&>(
+          context);
   return detail::DoDifferentialInverseKinematics(mbt_context.get_positions(),
                                                  mbt_context.get_velocities(),
                                                  X_WE, J_WE, V_WE_desired,
@@ -294,7 +294,7 @@ DifferentialInverseKinematicsResult DoDifferentialInverseKinematics(
 }
 
 DifferentialInverseKinematicsResult DoDifferentialInverseKinematics(
-    const multibody::MultibodyTree<double>& robot,
+    const multibody::internal::MultibodyTree<double>& robot,
     const systems::Context<double>& context,
     const Isometry3<double>& X_WE_desired,
     const multibody::Frame<double>& frame_E,
