@@ -47,7 +47,7 @@ template <typename PyClass>
 void BindMultibodyTreeElementMixin(PyClass* pcls) {
   using Class = typename PyClass::type;
   auto& cls = *pcls;
-  cls // BR
+  cls  // BR
       .def("index", &Class::index)
       .def("model_instance", &Class::model_instance);
   // Deprecated:
@@ -248,16 +248,17 @@ void init_module(py::module m) {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
     cls.def(py::init([](const MultibodyTree<T>& tree) {
-          WarnDeprecated("Please use `MultibodyForces(plant)` constructor.");
-          return std::make_unique<MultibodyForces<T>>(tree);
-        }),
+      WarnDeprecated("Please use `MultibodyForces(plant)` constructor.");
+      return std::make_unique<MultibodyForces<T>>(tree);
+    }),
         py::arg("model"), doc.MultibodyForces.ctor.doc_1args_model);
 #pragma GCC diagnostic pop
-        // Custom constructor so that in Python we can take a MultibodyPlant
-        // instead of a MultibodyTreeSystem.
+    // Custom constructor so that in Python we can take a MultibodyPlant
+    // instead of a MultibodyTreeSystem.
     cls.def(py::init([](const MultibodyPlant<T>& plant) {
-          return std::make_unique<MultibodyForces<T>>(plant);
-        }), py::arg("plant"), doc.MultibodyForces.ctor.doc_1args_plant);
+      return std::make_unique<MultibodyForces<T>>(plant);
+    }),
+        py::arg("plant"), doc.MultibodyForces.ctor.doc_1args_plant);
   }
 
   {
@@ -860,12 +861,11 @@ void init_multibody_plant(py::module m) {
             doc.MultibodyPlant.world_frame.doc);
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-        cls.def("tree", &Class::tree, py_reference_internal,
-            pydrake_doc.drake.multibody.internal.MultibodyTreeSystem.tree.doc);
-        DeprecateAttribute(
-            cls, "tree",
-            "`tree()` will soon be internal. Please use `MultibodyPlant` "
-            "methods directly instead.");
+    cls.def("tree", &Class::tree, py_reference_internal,
+        pydrake_doc.drake.multibody.internal.MultibodyTreeSystem.tree.doc);
+    DeprecateAttribute(cls, "tree",
+        "`tree()` will soon be internal. Please use `MultibodyPlant` "
+        "methods directly instead.");
 #pragma GCC diagnostic pop
     cls  // BR
         .def("is_finalized", &Class::is_finalized,

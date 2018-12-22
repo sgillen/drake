@@ -214,7 +214,8 @@ class MultibodyPlant : public MultibodyTreeSystem<T> {
   MultibodyPlant(const MultibodyPlant<U>& other)
       : MultibodyTreeSystem<T>(
             systems::SystemTypeTag<multibody::MultibodyPlant>{},
-            other.internal_tree().template CloneToScalar<T>(), other.is_discrete()) {
+            other.internal_tree().template CloneToScalar<T>(),
+            other.is_discrete()) {
     DRAKE_THROW_UNLESS(other.is_finalized());
     time_step_ = other.time_step_;
     // Copy of all members related with geometry registration.
@@ -403,7 +404,8 @@ class MultibodyPlant : public MultibodyTreeSystem<T> {
   void SetFreeBodySpatialVelocity(
       const systems::Context<T>& context, systems::State<T>* state,
       const Body<T>& body, const SpatialVelocity<T>& V_WB) const {
-    internal_tree().SetFreeBodySpatialVelocityOrThrow(body, V_WB, context, state);
+    internal_tree().SetFreeBodySpatialVelocityOrThrow(
+        body, V_WB, context, state);
   }
 
   /// Sets all generalized positions and velocities from the given vector
@@ -470,8 +472,8 @@ class MultibodyPlant : public MultibodyTreeSystem<T> {
     // Note: the nestedExpression() is necessary to treat the VectorBlock<T>
     // returned from GetMutablePositionsAndVelocities() as a VectorX<T> so that
     // we can call head() on it.
-    return internal_tree().GetMutablePositionsAndVelocities(context).nestedExpression().
-        head(num_positions());
+    return internal_tree().GetMutablePositionsAndVelocities(context)
+        .nestedExpression().head(num_positions());
   }
 
   /// Sets all generalized positions from the given vector.
@@ -1062,7 +1064,8 @@ class MultibodyPlant : public MultibodyTreeSystem<T> {
   template <template<typename> class JointType>
   const JointType<T>& GetJointByName(
       const std::string& name, ModelInstanceIndex model_instance) const {
-    return internal_tree().template GetJointByName<JointType>(name, model_instance);
+    return internal_tree().template GetJointByName<JointType>(
+        name, model_instance);
   }
 
   /// Returns a constant reference to an actuator that is identified
@@ -1257,7 +1260,8 @@ class MultibodyPlant : public MultibodyTreeSystem<T> {
       const Eigen::Ref<const MatrixX<T>>& p_BQi,
       const Frame<T>& frame_A,
       EigenPtr<MatrixX<T>> p_AQi) const {
-    return internal_tree().CalcPointsPositions(context, frame_B, p_BQi, frame_A, p_AQi);
+    return internal_tree().CalcPointsPositions(
+        context, frame_B, p_BQi, frame_A, p_AQi);
   }
 
   /// Evaluate the pose `X_WB` of a body B in the world frame W.
@@ -1774,7 +1778,8 @@ class MultibodyPlant : public MultibodyTreeSystem<T> {
       const systems::Context<T>& context,
       const VectorX<T>& known_vdot,
       const MultibodyForces<T>& external_forces) const {
-    return internal_tree().CalcInverseDynamics(context, known_vdot, external_forces);
+    return internal_tree().CalcInverseDynamics(
+        context, known_vdot, external_forces);
   }
 
   /// Computes the combined force contribution of ForceElement objects in the
@@ -1975,7 +1980,8 @@ class MultibodyPlant : public MultibodyTreeSystem<T> {
   /// The full vector of actuation values u is ordered by JointActuatorIndex.
   MatrixX<double> MakeActuatorSelectorMatrix(
       const std::vector<JointActuatorIndex>& user_to_actuator_index_map) const {
-    return internal_tree().MakeActuatorSelectorMatrix(user_to_actuator_index_map);
+    return internal_tree().MakeActuatorSelectorMatrix(
+        user_to_actuator_index_map);
   }
 
   /// Alternative signature to build an actuation selector matrix `Su` such

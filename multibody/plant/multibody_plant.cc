@@ -465,7 +465,8 @@ void MultibodyPlant<T>::CalcSpatialAccelerationsFromVdot(
   // still required dynamic allocation for recording permutation indices.
   // Can change implementation once MultibodyTree becomes fully internal.
   std::vector<SpatialAcceleration<T>> A_WB_array_node = *A_WB_array;
-  const internal::MultibodyTreeTopology& topology = internal_tree().get_topology();
+  const internal::MultibodyTreeTopology& topology =
+      internal_tree().get_topology();
   for (internal::BodyNodeIndex node_index(1);
        node_index < topology.get_num_body_nodes(); ++node_index) {
     const BodyIndex body_index = topology.get_body_node(node_index).body;
