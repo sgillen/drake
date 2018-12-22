@@ -445,10 +445,12 @@ class KukaIiwaModelTests : public ::testing::Test {
         context_on_T, frameH_on_T, p_HPo, Jv_WHp);
   }
 
-  const MultibodyTree<double>& tree() const { return system_->tree(); }
+  const MultibodyTree<double>& tree() const {
+    return internal::GetInternalTree(*system_);
+  }
 
   const MultibodyTree<AutoDiffXd>& tree_autodiff() const {
-    return system_autodiff_->tree();
+    return internal::GetInternalTree(*system_autodiff_);
   }
 
  protected:
@@ -1183,7 +1185,9 @@ class WeldMobilizerTest : public ::testing::Test {
     X_WB2_.set_rotation(math::RotationMatrixd::MakeZRotation(-3 * M_PI_4));
   }
 
-  const MultibodyTree<double>& tree() const { return system_->tree(); }
+  const MultibodyTree<double>& tree() const {
+      return internal::GetInternalTree(*system_);
+  }
 
  protected:
   std::unique_ptr<MultibodyTreeSystem<double>> system_;

@@ -195,7 +195,7 @@ class DoublePendulumModel {
   }
 
   const internal::MultibodyTree<double>& tree() const {
-    return system_->tree();
+    return internal::GetInternalTree(*system_);
   }
 
   std::unique_ptr<Context<double>> CreateDefaultContext() const {

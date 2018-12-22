@@ -90,6 +90,8 @@ class AxiallySymmetricFreeBodyPlant final : public MultibodyPlant<T> {
   const RigidBody<T>& body() const { return *body_; }
 
  private:
+  using MultibodyPlant<T>::internal_tree;
+
   double mass_{0};
   double I_{0};
   double J_{0};

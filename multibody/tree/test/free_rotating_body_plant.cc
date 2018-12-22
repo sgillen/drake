@@ -15,9 +15,9 @@ template<typename T>
 FreeRotatingBodyPlant<T>::FreeRotatingBodyPlant(double I, double J) :
     internal::MultibodyTreeSystem<T>(), I_(I), J_(J) {
   BuildMultibodyTreeModel();
-  DRAKE_DEMAND(tree().num_positions() == 3);
-  DRAKE_DEMAND(tree().num_velocities() == 3);
-  DRAKE_DEMAND(tree().num_states() == 6);
+  DRAKE_DEMAND(internal_tree().num_positions() == 3);
+  DRAKE_DEMAND(internal_tree().num_velocities() == 3);
+  DRAKE_DEMAND(internal_tree().num_states() == 6);
 }
 
 template<typename T>
@@ -34,7 +34,8 @@ void FreeRotatingBodyPlant<T>::BuildMultibodyTreeModel() {
 
   body_ = &this->mutable_tree().template AddBody<RigidBody>(M_Bcm);
   mobilizer_ = &this->mutable_tree().template AddMobilizer<
-      internal::SpaceXYZMobilizer>(tree().world_frame(), body_->body_frame());
+      internal::SpaceXYZMobilizer>(
+          internal_tree().world_frame(), body_->body_frame());
 
   internal::MultibodyTreeSystem<T>::Finalize();
 }
@@ -53,25 +54,25 @@ void FreeRotatingBodyPlant<T>::DoCalcTimeDerivatives(
       dynamic_cast<const systems::BasicVector<T>&>(
           context.get_continuous_state_vector()).get_value();
 
-  const int nq = tree().num_positions();
-  const int nv = tree().num_velocities();
+  const int nq = internal_tree().num_positions();
+  const int nv = internal_tree().num_velocities();
 
   MatrixX<T> M(nv, nv);
-  tree().CalcMassMatrixViaInverseDynamics(context, &M);
+  internal_tree().CalcMassMatrixViaInverseDynamics(context, &M);
 
   // Check if M is symmetric.
   const T err_sym = (M - M.transpose()).norm();
   DRAKE_DEMAND(err_sym < 10 * std::numeric_limits<double>::epsilon());
 
   VectorX<T> C(nv);
-  tree().CalcBiasTerm(context, &C);
+  internal_tree().CalcBiasTerm(context, &C);
 
   auto v = x.bottomRows(nv);
 
   VectorX<T> qdot(nq);
-  tree().MapVelocityToQDot(context, v, &qdot);
+  internal_tree().MapVelocityToQDot(context, v, &qdot);
 
-  VectorX<T> xdot(tree().num_states());
+  VectorX<T> xdot(internal_tree().num_states());
 
   xdot << qdot, M.llt().solve(-C);
   derivatives->SetFromVector(xdot);
@@ -82,15 +83,15 @@ void FreeRotatingBodyPlant<T>::DoMapQDotToVelocity(
     const systems::Context<T>& context,
     const Eigen::Ref<const VectorX<T>>& qdot,
     systems::VectorBase<T>* generalized_velocity) const {
-  const int nq = tree().num_positions();
-  const int nv = tree().num_velocities();
+  const int nq = internal_tree().num_positions();
+  const int nv = internal_tree().num_velocities();
 
   DRAKE_ASSERT(qdot.size() == nq);
   DRAKE_DEMAND(generalized_velocity != nullptr);
   DRAKE_DEMAND(generalized_velocity->size() == nv);
 
   VectorX<T> v(nv);
-  tree().MapQDotToVelocity(context, qdot, &v);
+  internal_tree().MapQDotToVelocity(context, qdot, &v);
   generalized_velocity->SetFromVector(v);
 }
 
@@ -99,15 +100,15 @@ void FreeRotatingBodyPlant<T>::DoMapVelocityToQDot(
     const systems::Context<T>& context,
     const Eigen::Ref<const VectorX<T>>& generalized_velocity,
     systems::VectorBase<T>* positions_derivative) const {
-  const int nq = tree().num_positions();
-  const int nv = tree().num_velocities();
+  const int nq = internal_tree().num_positions();
+  const int nv = internal_tree().num_velocities();
 
   DRAKE_ASSERT(generalized_velocity.size() == nv);
   DRAKE_DEMAND(positions_derivative != nullptr);
   DRAKE_DEMAND(positions_derivative->size() == nq);
 
   VectorX<T> qdot(nq);
-  tree().MapVelocityToQDot(context, generalized_velocity, &qdot);
+  internal_tree().MapVelocityToQDot(context, generalized_velocity, &qdot);
   positions_derivative->SetFromVector(qdot);
 }
 

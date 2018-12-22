@@ -245,7 +245,7 @@ class DrakeKukaIIwaRobot {
   }
 
   const multibody::internal::MultibodyTree<T>& tree() const {
-    return plant_->tree();
+    return multibody::internal::GetInternalTree(*plant_);
   }
   const MultibodyPlant<T>& plant() const { return *plant_; }
 
