@@ -132,8 +132,8 @@ GTEST_TEST(MultibodyPlant, SimpleModelCreation) {
   EXPECT_EQ(plant->num_actuated_dofs(), 2);
 
   // World accessors.
-  EXPECT_EQ(&plant->world_body(), &plant->tree().world_body());
-  EXPECT_EQ(&plant->world_frame(), &plant->tree().world_frame());
+  EXPECT_EQ(&plant->world_body(), &plant->world_body());
+  EXPECT_EQ(&plant->world_frame(), &plant->world_frame());
 
   // State size.
   EXPECT_EQ(plant->num_positions(), 3);
@@ -363,7 +363,7 @@ class AcrobotPlantTests : public ::testing::Test {
 
     // Calculate the generalized forces due to gravity.
     const VectorX<double> tau_g =
-        plant_->tree().CalcGravityGeneralizedForces(*context_);
+        plant_->CalcGravityGeneralizedForces(*context_);
 
     // Calculate a benchmark value.
     const Vector2d tau_g_expected =
@@ -1526,6 +1526,7 @@ class MultibodyPlantContactJacobianTests : public ::testing::Test {
     int icontact = 0;
     for (const auto& pair : pairs_set) {
       PenetrationAsPointPair<T> pair_on_T;
+
       BodyIndex bodyA_index = MultibodyPlantTester::geometry_id_to_body_index(
           plant_on_T, pair.id_A);
       const Isometry3<T> X_WA = plant_on_T.EvalBodyPoseInWorld(
@@ -1573,32 +1574,35 @@ class MultibodyPlantContactJacobianTests : public ::testing::Test {
       const Context<T>& context_on_T,
       const std::vector<PenetrationAsPointPair<double>>& pairs_set,
       const std::vector<Matrix3<double>>& R_WC_set) const {
-    std::vector<SpatialVelocity<T>> V_WB_set;
-    plant_on_T.tree().CalcAllBodySpatialVelocitiesInWorld(
-        context_on_T, &V_WB_set);
-
-    std::vector<Isometry3<T>> X_WB_set;
-    plant_on_T.tree().CalcAllBodyPosesInWorld(
-        context_on_T, &X_WB_set);
-
     VectorX<T> vt(2 * pairs_set.size());
     int icontact = 0;
     for (const auto& pair : pairs_set) {
       PenetrationAsPointPair<T> pair_on_T;
+
       BodyIndex bodyA_index = MultibodyPlantTester::geometry_id_to_body_index(
           plant_on_T, pair.id_A);
+      const Isometry3<T> X_WA = plant_on_T.EvalBodyPoseInWorld(
+          context_on_T, plant_on_T.get_body(bodyA_index));
+      const SpatialVelocity<T> V_WA =
+          plant_on_T.EvalBodySpatialVelocityInWorld(
+              context_on_T, plant_on_T.get_body(bodyA_index));
+
       BodyIndex bodyB_index = MultibodyPlantTester::geometry_id_to_body_index(
           plant_on_T, pair.id_B);
+      const Isometry3<T> X_WB = plant_on_T.EvalBodyPoseInWorld(
+          context_on_T, plant_on_T.get_body(bodyB_index));
+      const SpatialVelocity<T> V_WB =
+          plant_on_T.EvalBodySpatialVelocityInWorld(
+              context_on_T, plant_on_T.get_body(bodyB_index));
+
       const Vector3<T> p_WCa = pair.p_WCa.cast<T>();
-      const Vector3<T> p_WAo = X_WB_set[bodyA_index].translation();
+      const Vector3<T> p_WAo = X_WA.translation();
       const Vector3<T> p_AoCa_W = p_WCa - p_WAo;
-      const SpatialVelocity<T> V_WA = V_WB_set[bodyA_index];
       const Vector3<T> v_WCa = V_WA.Shift(p_AoCa_W).translational();
 
       const Vector3<T> p_WCb = pair.p_WCb.cast<T>();
-      const Vector3<T> p_WBo = X_WB_set[bodyB_index].translation();
+      const Vector3<T> p_WBo = X_WB.translation();
       const Vector3<T> p_BoCb_W = p_WCb - p_WBo;
-      const SpatialVelocity<T> V_WB = V_WB_set[bodyB_index];
       const Vector3<T> v_WCb = V_WB.Shift(p_BoCb_W).translational();
 
       // The columns of R_WC (the orientation of contact frame C in the world),
@@ -1724,7 +1728,7 @@ GTEST_TEST(KukaModel, JointIndexes) {
   for (JointIndex joint_index(0);
        joint_index < plant.num_joints() - 1 /* Skip "weld" joint. */;
        ++joint_index) {
-    const Joint<double>& joint = plant.tree().get_joint(joint_index);
+    const Joint<double>& joint = plant.get_joint(joint_index);
     // Start index in the vector q of generalized positions.
     const int expected_q_start = joint_index;
     // Start index in the vector v of generalized velocities.
@@ -2038,7 +2042,7 @@ GTEST_TEST(StateSelection, KukaWithSimpleGripper) {
 
   // Verify the sizes (all these joints are revolute with one q and one v).
   const int num_selected_states = 2 * arm_selected_joints.size();
-  const int num_states = plant.tree().num_states();
+  const int num_states = plant.num_multibody_states();
   ASSERT_EQ(Sx_arm.rows(), num_selected_states);
   ASSERT_EQ(Sx_arm.cols(), num_states);
 
@@ -2060,10 +2064,16 @@ GTEST_TEST(StateSelection, KukaWithSimpleGripper) {
   Sx_arm_expected(5, num_floating_velocities + nq + 2) = 1;
   EXPECT_EQ(Sx_arm, Sx_arm_expected);
 
+  auto OldMakeStateSelectorMatrixFromJointNames = [&plant](auto names) {
+    // TODO(eric.cousineau): Move this to `multibody_tree_test`, or remove it
+    // once it becomes internal.
+    return plant.tree().MakeStateSelectorMatrixFromJointNames(names);
+  };
+
   // State selection using alternative API in which joints are specified by
   // name.
   const MatrixX<double> Sx_arm_by_name =
-      plant.tree().MakeStateSelectorMatrixFromJointNames(
+      OldMakeStateSelectorMatrixFromJointNames(
           arm_selected_joints_by_name);
   EXPECT_EQ(Sx_arm_by_name, Sx_arm_expected);
 
@@ -2072,7 +2082,7 @@ GTEST_TEST(StateSelection, KukaWithSimpleGripper) {
   const std::vector<std::string> repeated_joint_names =
       {"iiwa_joint_2", "iiwa_joint_3", "iiwa_joint_7", "iiwa_joint_3"};
   DRAKE_EXPECT_THROWS_MESSAGE(
-      plant.tree().MakeStateSelectorMatrixFromJointNames(repeated_joint_names),
+      OldMakeStateSelectorMatrixFromJointNames(repeated_joint_names),
       std::logic_error,
       "Joint named 'iiwa_joint_3' is repeated multiple times.");
 
@@ -2132,7 +2142,7 @@ GTEST_TEST(StateSelection, KukaWithSimpleGripper) {
 
   // Verify we can make selector matrices from empty lists of joints/actuators.
   const MatrixX<double> Sx_from_empty_names =
-      plant.tree().MakeStateSelectorMatrixFromJointNames(
+      OldMakeStateSelectorMatrixFromJointNames(
           std::vector<std::string>());
   EXPECT_EQ(Sx_from_empty_names.rows(), 0);
   EXPECT_EQ(Sx_from_empty_names.cols(), plant.num_multibody_states());
@@ -2173,9 +2183,9 @@ GTEST_TEST(StateSelection, KukaWithSimpleGripper) {
   EXPECT_TRUE(CompareMatrices(B, B_expected, 0.0, MatrixCompareType::absolute));
 
   // Test old spellings.
-  unused(plant.tree().MakeStateSelectorMatrix(std::vector<JointIndex>()));
-  unused(plant.tree().MakeActuatorSelectorMatrix(std::vector<JointIndex>()));
-  unused(plant.tree().MakeActuatorSelectorMatrix(
+  unused(plant.MakeStateSelectorMatrix(std::vector<JointIndex>()));
+  unused(plant.MakeActuatorSelectorMatrix(std::vector<JointIndex>()));
+  unused(plant.MakeActuatorSelectorMatrix(
       std::vector<JointActuatorIndex>()));
 }
 
