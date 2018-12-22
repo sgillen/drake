@@ -67,33 +67,19 @@ void InverseDynamics<T>::CalcOutputForce(const Context<T>& context,
     x.tail(v_dim_).setZero();
   }
 
-  // TODO(jwnimmer-tri) Remove this vestigial level of indentation.
-  {
-    const auto& tree = multibody_plant_->tree();
+  auto& plant = *multibody_plant_;
+  // Set the position and velocity in the context.
+  plant.GetMutablePositionsAndVelocities(multibody_plant_context_.get()) = x;
 
-    // Set the position and velocity in the context.
-    tree.GetMutablePositionsAndVelocities(multibody_plant_context_.get()) = x;
-
-    if (this->is_pure_gravity_compensation()) {
-      output->get_mutable_value() = -tree.CalcGravityGeneralizedForces(
-          *multibody_plant_context_);
-      return;
-    }
-
-    // Compute the caches.
-    PositionKinematicsCache<T> pcache(tree.get_topology());
-    VelocityKinematicsCache<T> vcache(tree.get_topology());
-    tree.CalcPositionKinematicsCache(*multibody_plant_context_, &pcache);
-    tree.CalcVelocityKinematicsCache(*multibody_plant_context_, pcache,
-                                     &vcache);
-
-    // Compute the contribution from force elements.
-    multibody::MultibodyForces<T> external_forces(tree);
-    tree.CalcForceElementsContribution(
-        *multibody_plant_context_, pcache, vcache, &external_forces);
-
+  if (this->is_pure_gravity_compensation()) {
+    output->get_mutable_value() =
+        -plant.CalcGravityGeneralizedForces(*multibody_plant_context_);
+  } else {
     // Compute inverse dynamics.
-    output->get_mutable_value() = tree.CalcInverseDynamics(
+    multibody::MultibodyForces<T> external_forces(plant);
+    plant.CalcForceElementsContribution(
+        *multibody_plant_context_, &external_forces);
+    output->get_mutable_value() = plant.CalcInverseDynamics(
         *multibody_plant_context_, desired_vd, external_forces);
   }
 }

@@ -251,6 +251,8 @@ void init_module(py::module m) {
         .value("kV", Enum::kV, enum_doc.kV.doc);
   }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
   // Tree.
   {
     // N.B. Pending a concrete direction on #9366, a minimal subset of the
@@ -420,6 +422,7 @@ void init_module(py::module m) {
     DeprecateAttribute(cls, "get_multibody_state_vector",
         cls.attr("message_get_multibody_state_vector"));
   }
+#pragma GCC diagnostic push
 }
 
 // Binds any child classes of the `SpatialVector` mixin.
