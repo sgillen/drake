@@ -22,8 +22,8 @@ InverseDynamics<T>::InverseDynamics(const MultibodyPlant<T>* plant,
                                     const InverseDynamicsMode mode)
     : multibody_plant_(plant),
       mode_(mode),
-      q_dim_(plant->tree().num_positions()),
-      v_dim_(plant->tree().num_velocities()) {
+      q_dim_(plant->num_positions()),
+      v_dim_(plant->num_velocities()) {
   DRAKE_DEMAND(multibody_plant_);
   DRAKE_DEMAND(plant->is_finalized());
 
