@@ -1003,13 +1003,13 @@ GTEST_TEST(MultibodyPlantTest, CollisionGeometryRegistration) {
   unique_ptr<Context<double>> context = plant.CreateDefaultContext();
 
   // Place sphere 1 on top of the ground, with offset x = -x_offset.
-  plant.tree().SetFreeBodyPoseOrThrow(
-      sphere1, Isometry3d(Translation3d(-x_offset, radius, 0.0)),
-      context.get());
+  plant.SetFreeBodyPose(
+      context.get(), sphere1,
+      Isometry3d(Translation3d(-x_offset, radius, 0.0)));
   // Place sphere 2 on top of the ground, with offset x = x_offset.
-  plant.tree().SetFreeBodyPoseOrThrow(
-      sphere2, Isometry3d(Translation3d(x_offset, radius, 0.0)),
-      context.get());
+  plant.SetFreeBodyPose(
+      context.get(), sphere2,
+      Isometry3d(Translation3d(x_offset, radius, 0.0)));
 
   unique_ptr<AbstractValue> poses_value =
       plant.get_geometry_poses_output_port().Allocate();
@@ -1216,13 +1216,13 @@ GTEST_TEST(MultibodyPlantTest, MapVelocityToQdotAndBack) {
        2.0 * Vector3d::UnitY() +
        3.0 * Vector3d::UnitZ()).normalized();
   const math::RigidTransformd X_WB(AngleAxisd(M_PI / 3.0, axis_W), p_WB);
-  plant.tree().SetFreeBodyPoseOrThrow(
-      body, X_WB.GetAsIsometry3(), context.get());
+  plant.SetFreeBodyPose(
+      context.get(), body, X_WB.GetAsIsometry3());
 
   // Set an arbitrary, non-zero, spatial velocity of B in W.
   const SpatialVelocity<double> V_WB(Vector3d(1.0, 2.0, 3.0),
                                      Vector3d(-1.0, 4.0, -0.5));
-  plant.tree().SetFreeBodySpatialVelocityOrThrow(body, V_WB, context.get());
+  plant.SetFreeBodySpatialVelocity(context.get(), body, V_WB);
 
   // Use of MultibodyPlant's mapping to convert generalized velocities to time
   // derivatives of generalized coordinates.
@@ -1290,7 +1290,7 @@ TEST_F(SplitPendulum, MassMatrix) {
 
   MatrixX<double> M(1, 1);
   pin_->set_angle(context_.get(), theta);
-  plant_.tree().CalcMassMatrixViaInverseDynamics(*context_, &M);
+  plant_.CalcMassMatrixViaInverseDynamics(*context_, &M);
 
   // We can only expect values within the precision specified in the sdf file.
   EXPECT_NEAR(M(0, 0), Io, 1.0e-6);
@@ -1442,10 +1442,10 @@ class MultibodyPlantContactJacobianTests : public ::testing::Test {
         RigidTransform<double>(RotationMatrix<double>::Identity(),
                Vector3<double>(0, small_box_size_ / 2.0 - penetration_, 0));
 
-    plant_.tree().SetFreeBodyPoseOrThrow(
-        large_box, X_WLb.GetAsIsometry3(), context);
-    plant_.tree().SetFreeBodyPoseOrThrow(
-        small_box, X_WSb.GetAsIsometry3(), context);
+    plant_.SetFreeBodyPose(
+        context, large_box, X_WLb.GetAsIsometry3());
+    plant_.SetFreeBodyPose(
+        context, small_box, X_WSb.GetAsIsometry3());
   }
 
   // Generate a valid set of penetrations for this particular setup that
@@ -1456,12 +1456,11 @@ class MultibodyPlantContactJacobianTests : public ::testing::Test {
     const Body<double>& large_box = plant_.GetBodyByName("LargeBox");
     const Body<double>& small_box = plant_.GetBodyByName("SmallBox");
 
-    std::vector<Isometry3<double>> X_WB_set;
-    plant_.tree().CalcAllBodyPosesInWorld(context, &X_WB_set);
-
     // Pose of the boxes in the world frame.
-    const Isometry3<double>& X_WLb = X_WB_set[large_box.index()];
-    const Isometry3<double>& X_WSb = X_WB_set[small_box.index()];
+    const Isometry3<double>& X_WLb =
+        plant_.EvalBodyPoseInWorld(context, large_box);
+    const Isometry3<double>& X_WSb =
+        plant_.EvalBodyPoseInWorld(context, small_box);
 
     // Normal pointing outwards from the top surface of the large box.
     const Vector3<double> nhat_large_box_W =
@@ -1523,32 +1522,35 @@ class MultibodyPlantContactJacobianTests : public ::testing::Test {
       const MultibodyPlant<T>& plant_on_T,
       const Context<T>& context_on_T,
       const std::vector<PenetrationAsPointPair<double>>& pairs_set) const {
-    std::vector<SpatialVelocity<T>> V_WB_set;
-    plant_on_T.tree().CalcAllBodySpatialVelocitiesInWorld(
-        context_on_T, &V_WB_set);
-
-    std::vector<Isometry3<T>> X_WB_set;
-    plant_on_T.tree().CalcAllBodyPosesInWorld(
-        context_on_T, &X_WB_set);
-
     VectorX<T> vn(pairs_set.size());
     int icontact = 0;
     for (const auto& pair : pairs_set) {
       PenetrationAsPointPair<T> pair_on_T;
       BodyIndex bodyA_index = MultibodyPlantTester::geometry_id_to_body_index(
           plant_on_T, pair.id_A);
+      const Isometry3<T> X_WA = plant_on_T.EvalBodyPoseInWorld(
+          context_on_T, plant_on_T.get_body(bodyA_index));
+      const SpatialVelocity<T> V_WA =
+          plant_on_T.EvalBodySpatialVelocityInWorld(
+              context_on_T, plant_on_T.get_body(bodyA_index));
+
       BodyIndex bodyB_index = MultibodyPlantTester::geometry_id_to_body_index(
           plant_on_T, pair.id_B);
+      const Isometry3<T> X_WB = plant_on_T.EvalBodyPoseInWorld(
+          context_on_T, plant_on_T.get_body(bodyB_index));
+      const SpatialVelocity<T> V_WB =
+          plant_on_T.EvalBodySpatialVelocityInWorld(
+              context_on_T, plant_on_T.get_body(bodyB_index));
+
       const Vector3<T> p_WCa = pair.p_WCa.cast<T>();
-      const Vector3<T> p_WAo = X_WB_set[bodyA_index].translation();
+
+      const Vector3<T> p_WAo = X_WA.translation();
       const Vector3<T> p_AoCa_W = p_WCa - p_WAo;
-      const SpatialVelocity<T> V_WA = V_WB_set[bodyA_index];
       const Vector3<T> v_WCa = V_WA.Shift(p_AoCa_W).translational();
 
       const Vector3<T> p_WCb = pair.p_WCb.cast<T>();
-      const Vector3<T> p_WBo = X_WB_set[bodyB_index].translation();
+      const Vector3<T> p_WBo = X_WB.translation();
       const Vector3<T> p_BoCb_W = p_WCb - p_WBo;
-      const SpatialVelocity<T> V_WB = V_WB_set[bodyB_index];
       const Vector3<T> v_WCb = V_WB.Shift(p_BoCb_W).translational();
 
       // From the relative velocity of B in A, compute the normal separation
