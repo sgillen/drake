@@ -71,9 +71,6 @@ from pydrake.systems.framework import InputPort, OutputPort
 from pydrake.math import RigidTransform, RollPitchYaw
 
 
-warnings.simplefilter('always', DrakeDeprecationWarning)
-
-
 def get_index_class(cls):
     # Maps a class to its corresponding index class, accommdating inheritance.
     class_to_index_class_map = {
