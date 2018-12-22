@@ -31,5 +31,17 @@ inline void WarnDeprecated(py::str message) {
   warn_deprecated(message);
 }
 
+/// Deprecates a method of a given class by wrapping the method (rather than
+/// via a descriptor).
+/// Prefer `DeprecateAttribute`, and only use this approach when wrapping
+/// constructors.
+inline void DeprecateMethod(
+    py::object cls, py::str method, py::str message) {
+  py::object deprecate_callable =
+      py::module::import("pydrake.common.deprecation")
+      .attr("_deprecate_method");
+  deprecate_callable(cls, method, message);
+}
+
 }  // namespace pydrake
 }  // namespace drake

@@ -20,6 +20,8 @@ from pydrake.multibody.multibody_tree import (
     UniformGravityFieldElement,
     WeldJoint,
     world_index,
+    MobilizerIndex,
+    BodyNodeIndex,
 )
 from pydrake.multibody.multibody_tree.math import (
     SpatialAcceleration,
@@ -850,3 +852,24 @@ class TestMultibodyTree(unittest.TestCase):
         tree.Body
         # Check for soon-to-be deprecated symbols (#9366).
         self.assertFalse(hasattr(tree, "MultibodyTree"))
+
+    def test_deprecated_tree_api(self):
+        plant = MultibodyPlant()
+        plant.Finalize()
+
+        with warnings.catch_warnings(record=True) as w:
+            num_expected_warnings = [0]
+
+            def expect_new_warning(msg_part):
+                num_expected_warnings[0] += 1
+                self.assertEqual(len(w), num_expected_warnings[0])
+                self.assertIn(msg_part, str(w[-1].message))
+
+            plant.tree()
+            expect_new_warning("`tree()`")
+            MobilizerIndex(0)
+            expect_new_warning("`MobilizerIndex`")
+            BodyNodeIndex(0)
+            expect_new_warning("`BodyNodeIndex`")
+            MultibodyForces(model=plant.tree())
+            expect_new_warning("`MultibodyForces(plant)`")
