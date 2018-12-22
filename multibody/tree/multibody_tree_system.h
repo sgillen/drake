@@ -78,7 +78,7 @@ class MultibodyTreeSystem : public systems::LeafSystem<T> {
   bool is_discrete() const { return is_discrete_; }
 
   /** Returns a const reference to the MultibodyTree owned by this class. */
-  const MultibodyTree<T>& tree() const {
+  const MultibodyTree<T>& internal_tree() const {
     DRAKE_ASSERT(tree_ != nullptr);
     return *tree_;
   }

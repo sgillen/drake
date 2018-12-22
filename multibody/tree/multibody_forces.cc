@@ -14,11 +14,8 @@ MultibodyForces<T>::MultibodyForces(const internal::MultibodyTree<T>& model) {
 }
 
 template <typename T>
-MultibodyForces<T>::MultibodyForces(const MultibodyPlantSurrogate<T>& plant) {
-  DRAKE_DEMAND(plant.tree().topology_is_valid());
-  F_B_W_.resize(plant.tree().num_bodies(), SpatialForce<T>::Zero());
-  tau_ = VectorX<T>::Zero(plant.tree().num_velocities());
-}
+MultibodyForces<T>::MultibodyForces(const MultibodyPlantSurrogate<T>& plant)
+    : MultibodyForces(plant.internal_tree()) {}
 
 template <typename T>
 MultibodyForces<T>& MultibodyForces<T>::SetZero() {
@@ -30,7 +27,7 @@ MultibodyForces<T>& MultibodyForces<T>::SetZero() {
 template <typename T>
 bool MultibodyForces<T>::CheckHasRightSizeForModel(
     const MultibodyPlantSurrogate<T>& plant) const {
-  return CheckHasRightSizeForModel(plant.tree());
+  return CheckHasRightSizeForModel(plant.internal_tree());
 }
 
 template <typename T>
