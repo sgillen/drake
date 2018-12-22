@@ -602,8 +602,6 @@ TEST_F(AcrobotPlantTests, VisualGeometryRegistration) {
   // Compute the poses for each geometry in the model.
   plant_->get_geometry_poses_output_port().Calc(*context, poses_value.get());
 
-  std::vector<Isometry3<double >> X_WB_all;
-  plant_->CalcAllBodyPosesInWorld(*context, &X_WB_all);
   const double kTolerance = 5 * std::numeric_limits<double>::epsilon();
   for (BodyIndex body_index(1);
        body_index < plant_->num_bodies(); ++body_index) {
@@ -615,7 +613,8 @@ TEST_F(AcrobotPlantTests, VisualGeometryRegistration) {
     EXPECT_EQ(frame_id, *optional_id);
     EXPECT_EQ(body_index, plant_->GetBodyFromFrameId(frame_id)->index());
     const Isometry3<double>& X_WB = poses.value(frame_id);
-    const Isometry3<double>& X_WB_expected = X_WB_all[body_index];
+    const Isometry3<double> X_WB_expected =
+        plant_->EvalBodyPoseInWorld(*context, plant_->get_body(body_index));
     EXPECT_TRUE(CompareMatrices(X_WB.matrix(), X_WB_expected.matrix(),
                                 kTolerance, MatrixCompareType::relative));
   }
@@ -1023,14 +1022,13 @@ GTEST_TEST(MultibodyPlantTest, CollisionGeometryRegistration) {
   // Compute the poses for each geometry in the model.
   plant.get_geometry_poses_output_port().Calc(*context, poses_value.get());
 
-  std::vector<Isometry3<double >> X_WB_all;
-  plant.CalcAllBodyPosesInWorld(*context, &X_WB_all);
   const double kTolerance = 5 * std::numeric_limits<double>::epsilon();
   for (BodyIndex body_index(1);
        body_index < plant.num_bodies(); ++body_index) {
     const FrameId frame_id = plant.GetBodyFrameIdOrThrow(body_index);
     const Isometry3<double>& X_WB = pose_data.value(frame_id);
-    const Isometry3<double>& X_WB_expected = X_WB_all[body_index];
+    const Isometry3<double> X_WB_expected =
+        plant.EvalBodyPoseInWorld(*context, plant.get_body(body_index));
     EXPECT_TRUE(CompareMatrices(X_WB.matrix(), X_WB_expected.matrix(),
                                 kTolerance, MatrixCompareType::relative));
   }
