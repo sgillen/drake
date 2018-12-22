@@ -248,12 +248,9 @@ DifferentialInverseKinematicsResult DoDifferentialInverseKinematics(
   plant.CalcFrameGeometricJacobianExpressedInWorld(
       context, frame_E, Vector3<double>::Zero(), &J_WE);
 
-  const auto& mbt_context =
-      dynamic_cast<const multibody::MultibodyTreeContext<double>&>(context);
-  return detail::DoDifferentialInverseKinematics(mbt_context.get_positions(),
-                                                 mbt_context.get_velocities(),
-                                                 X_WE, J_WE, V_WE_desired,
-                                                 parameters);
+  return detail::DoDifferentialInverseKinematics(
+      plant.GetPositions(context), plant.GetVelocities(context),
+      X_WE, J_WE, V_WE_desired, parameters);
 }
 
 DifferentialInverseKinematicsResult DoDifferentialInverseKinematics(
@@ -284,13 +281,10 @@ DifferentialInverseKinematicsResult DoDifferentialInverseKinematics(
   robot.CalcFrameGeometricJacobianExpressedInWorld(
       context, frame_E, Vector3<double>::Zero(), &J_WE);
 
-  const auto& mbt_context =
-      dynamic_cast<const multibody::internal::MultibodyTreeContext<double>&>(
-          context);
-  return detail::DoDifferentialInverseKinematics(mbt_context.get_positions(),
-                                                 mbt_context.get_velocities(),
-                                                 X_WE, J_WE, V_WE_desired,
-                                                 parameters);
+  VectorX<double> x = robot.GetPositionsAndVelocities(context);
+  return detail::DoDifferentialInverseKinematics(
+      x.head(robot.num_positions()), x.tail(robot.num_velocities()),
+      X_WE, J_WE, V_WE_desired, parameters);
 }
 
 DifferentialInverseKinematicsResult DoDifferentialInverseKinematics(
