@@ -91,8 +91,8 @@ class DifferentialInverseKinematicsTest : public ::testing::Test {
     mbp_->Finalize();
 
     context_ = mbp_->CreateDefaultContext();
-    mbp_->SetPositions(context, q);
-    mbp_->SetVelocities(context, v);
+    mbp_->SetPositions(context_.get(), q);
+    mbp_->SetVelocities(context_.get(), v);
   }
 
   void CheckPositiveResult(const Vector6<double>& V_WE,

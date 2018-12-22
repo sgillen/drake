@@ -75,6 +75,10 @@ class FreeRotatingBodyPlant final : public internal::MultibodyTreeSystem<T> {
   Vector3<double> get_default_initial_angular_velocity() const;
 
  private:
+  const internal::MultibodyTree<T>& tree() const {
+    return internal::GetInternalTree(*this);
+  }
+
   void DoCalcTimeDerivatives(
       const systems::Context<T> &context,
       systems::ContinuousState<T> *derivatives) const override;

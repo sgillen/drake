@@ -102,7 +102,9 @@ class SpringDamperTester : public ::testing::Test {
     return forces_->body_forces().at(bodyB_->node_index());
   }
 
-  const MultibodyTree<double>& tree() const { return system_->tree(); }
+  const MultibodyTree<double>& tree() const {
+    return GetInternalTree(*system_);
+  }
 
  protected:
   std::unique_ptr<MultibodyTreeSystem<double>> system_;

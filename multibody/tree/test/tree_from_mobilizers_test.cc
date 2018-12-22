@@ -740,7 +740,9 @@ class PendulumKinematicTests : public PendulumTests {
     return SpatialVelocity<double>(w_AB, v_AB);
   }
 
-  const MultibodyTree<double>& tree() const { return system_->tree(); }
+  const MultibodyTree<double>& tree() const {
+    return internal::GetInternalTree(*system_);
+  }
 
  protected:
   std::unique_ptr<MultibodyTreeSystem<double>> system_;
