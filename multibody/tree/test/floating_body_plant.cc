@@ -60,7 +60,7 @@ void AxiallySymmetricFreeBodyPlant<T>::SetDefaultState(
   const SpatialVelocity<T> V_WB(
       get_default_initial_angular_velocity().template cast<T>(),
       get_default_initial_translational_velocity().template cast<T>());
-  this->internal_tree().SetFreeBodySpatialVelocityOrThrow(body(), V_WB, context, state);
+  this->tree().SetFreeBodySpatialVelocityOrThrow(body(), V_WB, context, state);
 }
 
 template<typename T>
@@ -78,8 +78,8 @@ Vector3<T> AxiallySymmetricFreeBodyPlant<T>::get_translational_velocity(
 template<typename T>
 math::RigidTransform<T> AxiallySymmetricFreeBodyPlant<T>::CalcPoseInWorldFrame(
     const systems::Context<T>& context) const {
-  internal::PositionKinematicsCache<T> pc(this->internal_tree().get_topology());
-  this->internal_tree().CalcPositionKinematicsCache(context, &pc);
+  internal::PositionKinematicsCache<T> pc(this->tree().get_topology());
+  this->tree().CalcPositionKinematicsCache(context, &pc);
   return math::RigidTransform<T>(pc.get_X_WB(body_->node_index()));
 }
 
@@ -87,10 +87,10 @@ template<typename T>
 SpatialVelocity<T>
 AxiallySymmetricFreeBodyPlant<T>::CalcSpatialVelocityInWorldFrame(
     const systems::Context<T>& context) const {
-  internal::PositionKinematicsCache<T> pc(this->internal_tree().get_topology());
-  this->internal_tree().CalcPositionKinematicsCache(context, &pc);
-  internal::VelocityKinematicsCache<T> vc(this->internal_tree().get_topology());
-  this->internal_tree().CalcVelocityKinematicsCache(context, pc, &vc);
+  internal::PositionKinematicsCache<T> pc(this->tree().get_topology());
+  this->tree().CalcPositionKinematicsCache(context, &pc);
+  internal::VelocityKinematicsCache<T> vc(this->tree().get_topology());
+  this->tree().CalcVelocityKinematicsCache(context, pc, &vc);
   return vc.get_V_WB(body_->node_index());
 }
 

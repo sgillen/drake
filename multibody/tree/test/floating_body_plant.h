@@ -13,6 +13,7 @@ namespace drake {
 namespace multibody {
 namespace test {
 
+// TODO(eric.cousineau): Change this to not inherit from `MultibodyPlant`.
 /// This plant models the free motion of a torque free body in space.
 /// This body is axially symmetric with rotational inertia about its axis of
 /// revolution J and with a rotational inertia I about any axis perpendicular to
@@ -90,7 +91,9 @@ class AxiallySymmetricFreeBodyPlant final : public MultibodyPlant<T> {
   const RigidBody<T>& body() const { return *body_; }
 
  private:
-  using MultibodyPlant<T>::internal_tree;
+  const internal::MultibodyTree<T>& tree() const {
+    return internal::GetInternalTree(*this);
+  }
 
   double mass_{0};
   double I_{0};
