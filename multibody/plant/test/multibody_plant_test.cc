@@ -2064,7 +2064,8 @@ GTEST_TEST(StateSelection, KukaWithSimpleGripper) {
   auto OldMakeStateSelectorMatrixFromJointNames = [&plant](auto names) {
     // TODO(eric.cousineau): Move this to `multibody_tree_test`, or remove it
     // once it becomes internal.
-    return plant.tree().MakeStateSelectorMatrixFromJointNames(names);
+    const auto& tree = internal::GetInternalTree(plant);
+    return tree.MakeStateSelectorMatrixFromJointNames(names);
   };
 
   // State selection using alternative API in which joints are specified by

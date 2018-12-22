@@ -74,8 +74,6 @@ class FreeRotatingBodyPlant final : public internal::MultibodyTreeSystem<T> {
   /// SetDefaultState(). Currently a non-zero value.
   Vector3<double> get_default_initial_angular_velocity() const;
 
-  using internal::MultibodyTreeSystem<T>::tree;
-
  private:
   void DoCalcTimeDerivatives(
       const systems::Context<T> &context,

@@ -77,10 +77,9 @@ class MultibodyTreeSystem : public systems::LeafSystem<T> {
 
   bool is_discrete() const { return is_discrete_; }
 
-  /** Returns a const reference to the MultibodyTree owned by this class. */
-  const MultibodyTree<T>& internal_tree() const {
-    DRAKE_ASSERT(tree_ != nullptr);
-    return *tree_;
+  DRAKE_DEPRECATED("Please use MultibodyPlant methods directly.")
+  const internal::MultibodyTree<T>& tree() const {
+    return internal_tree();
   }
 
   /** Returns a reference to the up to date PositionKinematicsCache in the
@@ -152,6 +151,16 @@ class MultibodyTreeSystem : public systems::LeafSystem<T> {
       : MultibodyTreeSystem(converter, true,  // Null tree is OK here.
                             std::move(tree), is_discrete) {}
 
+  template <typename U>
+  friend const MultibodyTree<U>& GetInternalTree(
+      const MultibodyTreeSystem<U>&);
+
+  /** Returns a const reference to the MultibodyTree owned by this class. */
+  const MultibodyTree<T>& internal_tree() const {
+    DRAKE_ASSERT(tree_ != nullptr);
+    return *tree_;
+  }
+
   /** Returns a mutable reference to the MultibodyTree owned by this class.
   The tree must _not_ have been finalized.
   @throws std::logic_error if the tree has already been finalized. */
@@ -198,6 +207,12 @@ class MultibodyTreeSystem : public systems::LeafSystem<T> {
   // Used to enforce "finalize once" restriction for protected-API users.
   bool already_finalized_{false};
 };
+
+/// Access internal tree outside of MultibodyTreeSystem.
+template <typename T>
+const MultibodyTree<T>& GetInternalTree(const MultibodyTreeSystem<T>& system) {
+  return system.internal_tree();
+}
 
 }  // namespace internal
 

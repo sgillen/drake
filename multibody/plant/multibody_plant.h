@@ -235,11 +235,6 @@ class MultibodyPlant : public MultibodyTreeSystem<T> {
     FinalizePlantOnly();
   }
 
-  DRAKE_DEPRECATED("Please use MultibodyPlant methods directly.")
-  const internal::MultibodyTree<T>& tree() const {
-    return internal_tree();
-  }
-
   /// Returns the number of Frame objects in this model.
   /// Frames include body frames associated with each of the bodies,
   /// including the _world_ body. This means the minimum number of frames is
@@ -2667,11 +2662,19 @@ class MultibodyPlant : public MultibodyTreeSystem<T> {
   }
 
   using MultibodyTreeSystem<T>::is_discrete;
-  using MultibodyTreeSystem<T>::internal_tree;
   using MultibodyTreeSystem<T>::EvalPositionKinematics;
   using MultibodyTreeSystem<T>::EvalVelocityKinematics;
 
+  // N.B. Add forwarding call in lieu of `using` out of paranoia.
+  /// Deprecated.
+  DRAKE_DEPRECATED("Please use MultibodyPlant methods directly.")
+  const internal::MultibodyTree<T>& tree() const {
+    return internal_tree();
+  }
+
  private:
+  using MultibodyTreeSystem<T>::internal_tree;
+
   // Allow different specializations to access each other's private data for
   // scalar conversion.
   template <typename U> friend class MultibodyPlant;

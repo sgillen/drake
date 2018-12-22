@@ -45,7 +45,7 @@ class WeldJointTest : public ::testing::Test {
   }
 
   const internal::MultibodyTree<double>& tree() const {
-    return system_->tree();
+    return internal::GetInternalTree(*system_);
   }
 
  protected:

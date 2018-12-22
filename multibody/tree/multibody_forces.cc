@@ -15,7 +15,7 @@ MultibodyForces<T>::MultibodyForces(const internal::MultibodyTree<T>& model) {
 
 template <typename T>
 MultibodyForces<T>::MultibodyForces(const MultibodyPlantSurrogate<T>& plant)
-    : MultibodyForces(plant.internal_tree()) {}
+    : MultibodyForces(internal::GetInternalTree(plant)) {}
 
 template <typename T>
 MultibodyForces<T>& MultibodyForces<T>::SetZero() {
@@ -27,7 +27,7 @@ MultibodyForces<T>& MultibodyForces<T>::SetZero() {
 template <typename T>
 bool MultibodyForces<T>::CheckHasRightSizeForModel(
     const MultibodyPlantSurrogate<T>& plant) const {
-  return CheckHasRightSizeForModel(plant.internal_tree());
+  return CheckHasRightSizeForModel(internal::GetInternalTree(plant));
 }
 
 template <typename T>
