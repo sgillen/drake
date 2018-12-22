@@ -217,7 +217,7 @@ namespace drake {
 namespace systems {
 namespace scalar_conversion {
 template <>
-struct Traits<drake::multibody::MultibodyTreeSystem> :
+struct Traits<drake::multibody::internal::MultibodyTreeSystem> :
     public NonSymbolicTraits {};
 }  // namespace scalar_conversion
 }  // namespace systems

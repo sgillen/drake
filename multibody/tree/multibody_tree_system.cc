@@ -22,7 +22,7 @@ template <typename T>
 template <typename U>
 MultibodyTreeSystem<T>::MultibodyTreeSystem(const MultibodyTreeSystem<U>& other)
     : MultibodyTreeSystem(
-          systems::SystemTypeTag<multibody::MultibodyTreeSystem>{},
+          systems::SystemTypeTag<multibody::internal::MultibodyTreeSystem>{},
           false,  // Null tree isn't allowed (or possible).
           other.internal_tree().template CloneToScalar<T>(),
           other.is_discrete()) {}
