@@ -12,7 +12,6 @@ If you would like to disable all Drake-related warnings, you may use the
 `"ignore"` action for `warnings.simplefilter`.
 """
 
-import functools
 import sys
 import traceback
 from types import ModuleType
@@ -157,17 +156,6 @@ def deprecated(message):
         return _DeprecatedDescriptor(original, message)
 
     return wrapped
-
-
-def _deprecate_callable(cls, method, message):
-    old = getattr(cls, method)
-
-    @functools.wraps(old)
-    def new(*args, **kwargs):
-        _warn_deprecated(message)
-        return old(*args, **kwargs)
-
-    setattr(cls, method, new)
 
 
 def install_numpy_warning_filters(force=False):
