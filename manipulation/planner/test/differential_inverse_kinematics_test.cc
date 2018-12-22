@@ -86,7 +86,7 @@ class DifferentialInverseKinematicsTest : public ::testing::Test {
     // For the MBT version.
     mbp_ = BuildMultibodyPlant();
     frame_E_mbt_ = &mbp_->AddFrame(std::make_unique<FixedOffsetFrame<double>>(
-        mbp_->tree().GetBodyByName("iiwa_link_7").body_frame(),
+        mbp_->GetBodyByName("iiwa_link_7").body_frame(),
         frame_E_->get_transform_to_body()));
     mbp_->Finalize();
 
@@ -207,8 +207,9 @@ TEST_F(DifferentialInverseKinematicsTest, MultiBodyTreeTest) {
 // Test MBP and MBT version gives the same answer.
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+  const auto& tree = mbp_->tree();
   DifferentialInverseKinematicsResult mbt_result =
-      DoDifferentialInverseKinematics(mbp_->tree(), *context_, V_WE,
+      DoDifferentialInverseKinematics(tree, *context_, V_WE,
                                       *frame_E_mbt_, *params_);
   EXPECT_TRUE(CompareMatrices(mbp_result.joint_velocities.value(),
                               mbt_result.joint_velocities.value(), eps));
@@ -229,7 +230,7 @@ TEST_F(DifferentialInverseKinematicsTest, MultiBodyTreeTest) {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
   mbt_result = DoDifferentialInverseKinematics(
-      mbp_->tree(), *context_, X_WE_desired, *frame_E_mbt_, *params_);
+      tree, *context_, X_WE_desired, *frame_E_mbt_, *params_);
   EXPECT_TRUE(CompareMatrices(mbp_result.joint_velocities.value(),
                               mbt_result.joint_velocities.value(), eps));
 #pragma GCC diagnostic pop  // pop -Wdeprecated-declarations

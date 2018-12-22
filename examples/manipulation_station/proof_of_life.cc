@@ -107,7 +107,7 @@ int do_main(int argc, char* argv[]) {
   station->get_multibody_plant().SetFreeBodyPose(
       &station->GetMutableSubsystemContext(station->get_multibody_plant(),
                                            &station_context),
-      station->get_multibody_plant().GetBodyByName("base_link", object), pose)
+      station->get_multibody_plant().GetBodyByName("base_link", object), pose);
 
   simulator.set_target_realtime_rate(FLAGS_target_realtime_rate);
   simulator.StepTo(FLAGS_duration);
