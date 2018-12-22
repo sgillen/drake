@@ -343,7 +343,8 @@ class AcrobotPlantTests : public ::testing::Test {
         Vector1<double>(0.0));
 
     const auto& mbt_context =
-        dynamic_cast<MultibodyTreeContext<double>&>(*discrete_context_);
+        dynamic_cast<internal::MultibodyTreeContext<double>&>(
+            *discrete_context_);
     ASSERT_EQ(mbt_context.num_positions(), 2);
     ASSERT_EQ(mbt_context.num_velocities(), 2);
     ASSERT_EQ(mbt_context.get_positions().size(), 2);
@@ -601,9 +602,8 @@ TEST_F(AcrobotPlantTests, VisualGeometryRegistration) {
   // Compute the poses for each geometry in the model.
   plant_->get_geometry_poses_output_port().Calc(*context, poses_value.get());
 
-  const MultibodyTree<double>& tree = plant_->tree();
   std::vector<Isometry3<double >> X_WB_all;
-  tree.CalcAllBodyPosesInWorld(*context, &X_WB_all);
+  plant_->CalcAllBodyPosesInWorld(*context, &X_WB_all);
   const double kTolerance = 5 * std::numeric_limits<double>::epsilon();
   for (BodyIndex body_index(1);
        body_index < plant_->num_bodies(); ++body_index) {
@@ -1023,9 +1023,8 @@ GTEST_TEST(MultibodyPlantTest, CollisionGeometryRegistration) {
   // Compute the poses for each geometry in the model.
   plant.get_geometry_poses_output_port().Calc(*context, poses_value.get());
 
-  const MultibodyTree<double>& model = plant.tree();
   std::vector<Isometry3<double >> X_WB_all;
-  model.CalcAllBodyPosesInWorld(*context, &X_WB_all);
+  plant.CalcAllBodyPosesInWorld(*context, &X_WB_all);
   const double kTolerance = 5 * std::numeric_limits<double>::epsilon();
   for (BodyIndex body_index(1);
        body_index < plant.num_bodies(); ++body_index) {

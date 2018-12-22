@@ -24,6 +24,7 @@
 
 namespace drake {
 namespace multibody {
+namespace internal {
 namespace multibody_model {
 namespace {
 
@@ -1222,5 +1223,6 @@ TEST_F(WeldMobilizerTest, PositionKinematics) {
 
 }  // namespace
 }  // namespace multibody_model
+}  // namespace internal
 }  // namespace multibody
 }  // namespace drake
