@@ -197,7 +197,7 @@ namespace multibody {
 /// No other values for T are currently supported.
 /// @ingroup systems
 template <typename T>
-class MultibodyPlant : public MultibodyTreeSystem<T> {
+class MultibodyPlant final : public MultibodyTreeSystem<T> {
  public:
   DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(MultibodyPlant)
 
