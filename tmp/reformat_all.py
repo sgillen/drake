@@ -3,6 +3,8 @@
 import re
 from common_scripts.text_processor import TextProcessor
 
+# find . -name '*.h' -o -name '*.cc' | xargs -n 2000 python tmp/reformat_all.py -i
+
 # git diff HEAD~ --name-only
 manifest = """
 multibody/tree/internal/acceleration_kinematics_cache.cc
