@@ -10,11 +10,11 @@
 #include "drake/common/random.h"
 #include "drake/common/symbolic.h"
 #include "drake/multibody/tree/frame.h"
-#include "drake/multibody/tree/mobilizer.h"
-#include "drake/multibody/tree/multibody_tree_context.h"
-#include "drake/multibody/tree/multibody_tree_element.h"
+#include "drake/multibody/tree/internal/mobilizer.h"
+#include "drake/multibody/tree/internal/multibody_tree_context.h"
+#include "drake/multibody/tree/internal/multibody_tree_element.h"
 #include "drake/multibody/tree/multibody_tree_indexes.h"
-#include "drake/multibody/tree/multibody_tree_topology.h"
+#include "drake/multibody/tree/internal/multibody_tree_topology.h"
 #include "drake/systems/framework/context.h"
 
 namespace drake {

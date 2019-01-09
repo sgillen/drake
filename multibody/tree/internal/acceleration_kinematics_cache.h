@@ -10,7 +10,7 @@
 #include "drake/multibody/math/spatial_acceleration.h"
 #include "drake/multibody/math/spatial_velocity.h"
 #include "drake/multibody/tree/multibody_tree_indexes.h"
-#include "drake/multibody/tree/multibody_tree_topology.h"
+#include "drake/multibody/tree/internal/multibody_tree_topology.h"
 
 namespace drake {
 namespace multibody {

@@ -4,9 +4,9 @@
 
 #include "drake/common/drake_assert.h"
 #include "drake/common/eigen_types.h"
-#include "drake/multibody/tree/body_node.h"
-#include "drake/multibody/tree/mobilizer.h"
-#include "drake/multibody/tree/multibody_tree_topology.h"
+#include "drake/multibody/tree/internal/body_node.h"
+#include "drake/multibody/tree/internal/mobilizer.h"
+#include "drake/multibody/tree/internal/multibody_tree_topology.h"
 
 namespace drake {
 namespace multibody {

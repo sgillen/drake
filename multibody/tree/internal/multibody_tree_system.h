@@ -7,9 +7,9 @@
 
 #include "drake/common/drake_deprecated.h"
 #include "drake/common/eigen_types.h"
-#include "drake/multibody/tree/multibody_tree_forward_decl.h"
-#include "drake/multibody/tree/position_kinematics_cache.h"
-#include "drake/multibody/tree/velocity_kinematics_cache.h"
+#include "drake/multibody/tree/internal/multibody_tree_forward_decl.h"
+#include "drake/multibody/tree/internal/position_kinematics_cache.h"
+#include "drake/multibody/tree/internal/velocity_kinematics_cache.h"
 #include "drake/systems/framework/cache_entry.h"
 #include "drake/systems/framework/context.h"
 #include "drake/systems/framework/leaf_system.h"

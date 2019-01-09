@@ -1,4 +1,4 @@
-#include "drake/multibody/tree/body_node_impl.h"
+#include "drake/multibody/tree/internal/body_node_impl.h"
 
 #include "drake/common/autodiff.h"
 

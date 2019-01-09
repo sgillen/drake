@@ -1,4 +1,4 @@
-#include "drake/multibody/tree/multibody_tree_context.h"
+#include "drake/multibody/tree/internal/multibody_tree_context.h"
 
 #include "drake/common/default_scalars.h"
 

@@ -1,4 +1,4 @@
-#include "drake/multibody/tree/quaternion_floating_mobilizer.h"
+#include "drake/multibody/tree/internal/quaternion_floating_mobilizer.h"
 
 #include <memory>
 
@@ -7,7 +7,7 @@
 #include "drake/math/quaternion.h"
 #include "drake/math/random_rotation.h"
 #include "drake/math/rigid_transform.h"
-#include "drake/multibody/tree/multibody_tree.h"
+#include "drake/multibody/tree/internal/multibody_tree.h"
 
 namespace drake {
 namespace multibody {

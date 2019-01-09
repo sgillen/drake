@@ -6,7 +6,7 @@
 #include "drake/common/eigen_stl_types.h"
 #include "drake/common/eigen_types.h"
 #include "drake/multibody/tree/multibody_tree_indexes.h"
-#include "drake/multibody/tree/multibody_tree_topology.h"
+#include "drake/multibody/tree/internal/multibody_tree_topology.h"
 
 namespace drake {
 namespace multibody {

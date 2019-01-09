@@ -8,7 +8,7 @@
 #include "drake/common/drake_copyable.h"
 #include "drake/multibody/tree/joint.h"
 #include "drake/multibody/tree/multibody_forces.h"
-#include "drake/multibody/tree/prismatic_mobilizer.h"
+#include "drake/multibody/tree/internal/prismatic_mobilizer.h"
 
 namespace drake {
 namespace multibody {

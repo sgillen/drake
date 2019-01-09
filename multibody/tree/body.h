@@ -9,10 +9,10 @@
 #include "drake/common/unused.h"
 #include "drake/multibody/tree/frame.h"
 #include "drake/multibody/tree/multibody_forces.h"
-#include "drake/multibody/tree/multibody_tree_element.h"
-#include "drake/multibody/tree/multibody_tree_forward_decl.h"
+#include "drake/multibody/tree/internal/multibody_tree_element.h"
+#include "drake/multibody/tree/internal/multibody_tree_forward_decl.h"
 #include "drake/multibody/tree/multibody_tree_indexes.h"
-#include "drake/multibody/tree/multibody_tree_topology.h"
+#include "drake/multibody/tree/internal/multibody_tree_topology.h"
 #include "drake/multibody/tree/spatial_inertia.h"
 #include "drake/systems/framework/context.h"
 

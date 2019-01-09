@@ -1,4 +1,4 @@
-#include "drake/multibody/tree/multibody_tree.h"
+#include "drake/multibody/tree/internal/multibody_tree.h"
 
 #include <limits>
 #include <memory>
@@ -10,8 +10,8 @@
 #include "drake/common/drake_assert.h"
 #include "drake/common/drake_throw.h"
 #include "drake/common/eigen_types.h"
-#include "drake/multibody/tree/body_node_welded.h"
-#include "drake/multibody/tree/quaternion_floating_mobilizer.h"
+#include "drake/multibody/tree/internal/body_node_welded.h"
+#include "drake/multibody/tree/internal/quaternion_floating_mobilizer.h"
 #include "drake/multibody/tree/rigid_body.h"
 #include "drake/multibody/tree/spatial_inertia.h"
 
