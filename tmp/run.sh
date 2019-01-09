@@ -5,5 +5,10 @@ cd $(dirname $0)/..
 
 # find . -name '*.h' -o -name '*.cc' | xargs -n 2000 python tmp/reformat_all.py -i
 
+diffed() {
+    git diff --name-only $(git merge-base upstream/master HEAD) HEAD
+}
+
 master=~/proj/tri/repo/branches/drake/master/drake
-find . -name '*.h' -o -name '*.cc'  | xargs -P 20 -n 100 ${master}/bazel-bin/tools/lint/clang-format-includes
+diffed | xargs ${master}/bazel-bin/tools/lint/clang-format-includes
+${master}/bazel-bin/tools/lint/buildifier multibody/tree/BUILD.bazel
