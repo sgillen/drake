@@ -8,17 +8,17 @@
 #include "drake/common/eigen_types.h"
 #include "drake/math/rigid_transform.h"
 #include "drake/multibody/math/spatial_algebra.h"
+#include "drake/multibody/tree/body.h"
 #include "drake/multibody/tree/internal/acceleration_kinematics_cache.h"
 #include "drake/multibody/tree/internal/articulated_body_inertia_cache.h"
-#include "drake/multibody/tree/body.h"
 #include "drake/multibody/tree/internal/mobilizer.h"
 #include "drake/multibody/tree/internal/multibody_tree_element.h"
 #include "drake/multibody/tree/internal/multibody_tree_forward_decl.h"
-#include "drake/multibody/tree/multibody_tree_indexes.h"
 #include "drake/multibody/tree/internal/multibody_tree_topology.h"
 #include "drake/multibody/tree/internal/position_kinematics_cache.h"
-#include "drake/multibody/tree/spatial_inertia.h"
 #include "drake/multibody/tree/internal/velocity_kinematics_cache.h"
+#include "drake/multibody/tree/multibody_tree_indexes.h"
+#include "drake/multibody/tree/spatial_inertia.h"
 
 namespace drake {
 namespace multibody {

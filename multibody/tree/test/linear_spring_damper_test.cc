@@ -8,10 +8,10 @@
 #include "drake/multibody/tree/internal/multibody_tree.h"
 #include "drake/multibody/tree/internal/multibody_tree_system.h"
 #include "drake/multibody/tree/internal/position_kinematics_cache.h"
+#include "drake/multibody/tree/internal/velocity_kinematics_cache.h"
 #include "drake/multibody/tree/prismatic_joint.h"
 #include "drake/multibody/tree/rigid_body.h"
 #include "drake/multibody/tree/spatial_inertia.h"
-#include "drake/multibody/tree/internal/velocity_kinematics_cache.h"
 #include "drake/multibody/tree/weld_joint.h"
 #include "drake/systems/framework/context.h"
 
