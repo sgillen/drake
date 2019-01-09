@@ -3,6 +3,8 @@
 import re
 from common_scripts.text_processor import TextProcessor
 
+from os.path import join, abspath, dirname
+
 # find . -name '*.h' -o -name '*.cc' | xargs -n 2000 python tmp/reformat_all.py -i
 
 # git diff HEAD~ --name-only
@@ -43,6 +45,15 @@ multibody/tree/internal/weld_mobilizer.cc
 multibody/tree/internal/weld_mobilizer.h
 """.strip().split()
 
+template = """#pragma once
+
+#include "drake/{new}"
+
+#warning "This header is deprecated, and will be removed around 2019/03/01."
+"""
+
+workspace = join(dirname(abspath(__file__)), "..")
+
 class Custom(TextProcessor):
     def __init__(self):
         TextProcessor.__init__(self, skipArgs = True, description = "Apply python regex to file")
@@ -54,7 +65,15 @@ class Custom(TextProcessor):
             if not new.endswith(".h"):
                 continue
             old = new.replace("multibody/tree/internal/", "multibody/tree/")
-            text = text.replace(old, new)
         return text
 
-Custom().main()
+# Custom().main()
+
+
+for new in manifest:
+    if not new.endswith(".h"):
+        continue
+    old = new.replace("multibody/tree/internal/", "multibody/tree/")
+    with open(join(workspace, old), 'w') as f:
+        f.write(template.format(new=new))
+    print(old)
