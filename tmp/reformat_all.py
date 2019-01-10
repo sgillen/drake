@@ -3,7 +3,7 @@
 import re
 from common_scripts.text_processor import TextProcessor
 
-from os.path import join, abspath, dirname
+from os.path import join, abspath, dirname, isfile
 
 # find . -name '*.h' -o -name '*.cc' | xargs -n 2000 python tmp/reformat_all.py -i
 
@@ -69,11 +69,15 @@ class Custom(TextProcessor):
 
 # Custom().main()
 
+import os
 
 for new in manifest:
     if not new.endswith(".h"):
         continue
     old = new.replace("multibody/tree/internal/", "multibody/tree/")
-    with open(join(workspace, old), 'w') as f:
-        f.write(template.format(new=new))
+    p = join(workspace, old)
+    if isfile(p):
+        os.unlink(p)
+    # with open(join(workspace, old), 'w') as f:
+    #     f.write(template.format(new=new))
     print(old)
