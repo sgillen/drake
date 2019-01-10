@@ -4,7 +4,7 @@ load(
 )
 load("//tools/workspace:generate_file.bzl", "generate_file")
 
-TEMPLATE = """
+_TEMPLATE = """
 #pragma once
 
 #include "drake/multibody/tree/internal/{header}"
@@ -12,15 +12,17 @@ TEMPLATE = """
 #warning "This header is deprecated, and will be removed around 2019/03/01."
 """.lstrip()
 
-def drake_cc_forwarding_hdrs_internal(
+def drake_cc_forwarding_hdrs_tree_internal(
         name,
         hdrs = None,
         visibility = None):
+    """Specific version of `drake_cc_forwarding_hdrs` in that it does not
+    suggest what the original headers is, and mentions a deprecation date."""
     hdrs or fail("`hdrs` must be supplied")
     for header in hdrs:
         generate_file(
             name = header,
-            content = TEMPLATE.format(header = header),
+            content = _TEMPLATE.format(header = header),
             visibility = visibility,
         )
     drake_cc_library(
