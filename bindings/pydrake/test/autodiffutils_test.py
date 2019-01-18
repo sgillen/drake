@@ -202,6 +202,12 @@ class TestAutoDiffXd(unittest.TestCase):
         X = np.array([[a_scalar, b_scalar], [b_scalar, a_scalar]])
         self._check_scalar(np.trace(X), AD(2, [2., 0]))
 
+        V = np.array([a_scalar, b_scalar])
+        v_norm = np.linalg.norm(V)
+        v_norm_scalar = np.sqrt(5)
+        self._check_scalar(
+            v_norm, AD(v_norm_scalar, [1 / v_norm_scalar, 2 / v_norm_scalar]))
+
         # `inv` is a ufunc that we must implement, if possible. However, given
         # that this is currently `dtype=object`, it would be extremely unwise
         # to do so. See #8116 for alternative.
