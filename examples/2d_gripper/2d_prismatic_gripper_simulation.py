@@ -5,6 +5,7 @@ import argparse
 from pydrake.common import FindResourceOrThrow
 from pydrake.geometry import (ConnectDrakeVisualizer, SceneGraph)
 from pydrake.lcm import DrakeLcm
+from pydrake.systems.lcm import LcmPublisherSystem
 from pydrake.multibody.multibody_tree import UniformGravityFieldElement
 from pydrake.multibody.multibody_tree.multibody_plant import MultibodyPlant
 from pydrake.multibody.parsing import Parser
@@ -12,6 +13,9 @@ from pydrake.systems.framework import DiagramBuilder
 from pydrake.systems.analysis import Simulator
 from pydrake.math import RigidTransform, RollPitchYaw, RotationMatrix
 from pydrake.multibody.multibody_tree.multibody_plant import ContactResultsToLcmSystem
+
+from drake import lcmt_contact_results_for_viz
+
 import numpy as np
 
 def main():
@@ -84,6 +88,23 @@ def main():
         scene_graph.get_source_pose_port(gripper.get_source_id()))
 
     ConnectDrakeVisualizer(builder=builder, scene_graph=scene_graph)
+
+    # Publish contact results
+    lcm = DrakeLcm()
+    contact_results_to_lcm = builder.AddSystem(
+        ContactResultsToLcmSystem(gripper))
+
+    contact_results_publisher = builder.AddSystem(
+        LcmPublisherSystem.Make(channel="CONTACT_RESULTS",
+                                lcm_type=lcmt_contact_results_for_viz, lcm=lcm))
+
+    # contact_results_publisher.set_publish_period(1.0 / 30.0)
+    #
+    # # Connect contact results to lcm msg.
+    # builder.Connect(gripper.get_contact_results_output_port(),
+    #                 contact_results_to_lcm.get_input_port())
+    # builder.Connect(contact_results_to_lcm.get_lcm_message_output_port(),
+    #                 contact_results_publisher.get_input_port())
 
     diagram = builder.Build()
 
