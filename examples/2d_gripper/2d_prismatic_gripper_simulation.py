@@ -14,7 +14,7 @@ from pydrake.systems.analysis import Simulator
 from pydrake.math import RigidTransform, RollPitchYaw, RotationMatrix
 from pydrake.multibody.multibody_tree.multibody_plant import ContactResultsToLcmSystem
 
-from drake import lcmt_contact_results_for_viz
+from drake import lcmt_contact_results_for_viz, lcmt_zmp_data
 
 import numpy as np
 
@@ -96,15 +96,16 @@ def main():
 
     contact_results_publisher = builder.AddSystem(
         LcmPublisherSystem.Make(channel="CONTACT_RESULTS",
-                                lcm_type=lcmt_contact_results_for_viz, lcm=lcm))
+                                lcm_type=lcmt_zmp_data, lcm=lcm,
+                                is_cpp=True))
 
-    # contact_results_publisher.set_publish_period(1.0 / 30.0)
-    #
-    # # Connect contact results to lcm msg.
-    # builder.Connect(gripper.get_contact_results_output_port(),
-    #                 contact_results_to_lcm.get_input_port())
-    # builder.Connect(contact_results_to_lcm.get_lcm_message_output_port(),
-    #                 contact_results_publisher.get_input_port())
+    contact_results_publisher.set_publish_period(1.0 / 30.0)
+
+    # Connect contact results to lcm msg.
+    builder.Connect(gripper.get_contact_results_output_port(),
+                    contact_results_to_lcm.get_input_port(0))
+    builder.Connect(contact_results_to_lcm.get_lcm_message_output_port(),
+                    contact_results_publisher.get_input_port(0))
 
     diagram = builder.Build()
 
@@ -130,7 +131,12 @@ def main():
     simulator.set_target_realtime_rate(args.target_realtime_rate)
     simulator.Initialize()
     simulator.StepTo(args.simulation_time)
+    print("SUCCESS")
 
 
 if __name__ == "__main__":
-    main()
+    import trace
+    import sys
+    sys.stdout = sys.stderr
+    tracer = trace.Trace(trace=1, count=0, ignoredirs=["/usr", sys.prefix])
+    tracer.runfunc(main)

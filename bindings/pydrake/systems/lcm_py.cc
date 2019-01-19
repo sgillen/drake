@@ -3,8 +3,11 @@
 #include "pybind11/eval.h"
 #include "pybind11/pybind11.h"
 
+#include "robotlocomotion/quaternion_t.hpp"
+
 #include "drake/bindings/pydrake/documentation_pybind.h"
 #include "drake/bindings/pydrake/pydrake_pybind.h"
+#include "drake/bindings/pydrake/systems/lcm_pybind.h"
 #include "drake/bindings/pydrake/systems/systems_pybind.h"
 #include "drake/lcm/drake_lcm_interface.h"
 #include "drake/systems/lcm/connect_lcm_scope.h"
@@ -17,6 +20,7 @@ namespace pydrake {
 
 using systems::AbstractValue;
 using systems::lcm::SerializerInterface;
+using pysystems::pylcm::BindCppSerializer;
 
 namespace {
 
@@ -74,10 +78,30 @@ PYBIND11_MODULE(lcm, m) {
     py::class_<Class, PySerializerInterface>(m, "SerializerInterface")
         .def(py::init(
                  []() { return std::make_unique<PySerializerInterface>(); }),
-            doc.SerializerInterface.ctor.doc);
-    // TODO(eric.cousineau): Consider providing bindings of C++ types if we want
-    // to be able to connect to ports which use C++ LCM types.
+            doc.SerializerInterface.ctor.doc)
+        .def("CreateDefaultValue", &Class::CreateDefaultValue,
+            doc.SerializerInterface.CreateDefaultValue.doc)
+        .def("Deserialize", [](
+            const Class& self, py::bytes message_bytes, AbstractValue* value) {
+          DRAKE_DEMAND(value != nullptr);
+          drake::log()->warn("DESERIALIZE");
+          std::string str = message_bytes;
+          self.Deserialize(str.data(), str.size(), value);
+        })
+        .def("Serialize", [](
+            const Class& self, const AbstractValue& abstract_value) {
+          drake::log()->warn("SERIALIZE");
+          std::vector<uint8_t> message_bytes;
+          self.Serialize(abstract_value, &message_bytes);
+          return py::bytes(
+              reinterpret_cast<const char*>(message_bytes.data()),
+              message_bytes.size());
+        });
   }
+
+  // Permit defining C++ serializers. Use `robotlocomotion::quaternion_t` as
+  // an initial type to seed the template (and use for testing).
+  BindCppSerializer<robotlocomotion::quaternion_t>("robotlocomotion");
 
   {
     using Class = LcmPublisherSystem;

@@ -4,6 +4,7 @@
 
 #include "drake/bindings/pydrake/documentation_pybind.h"
 #include "drake/bindings/pydrake/pydrake_pybind.h"
+#include "drake/bindings/pydrake/systems/lcm_pybind.h"
 #include "drake/bindings/pydrake/systems/systems_pybind.h"
 #include "drake/bindings/pydrake/util/deprecation_pybind.h"
 #include "drake/bindings/pydrake/util/drake_optional_pybind.h"
@@ -34,6 +35,7 @@ using std::string;
 using geometry::SceneGraph;
 using systems::Context;
 using systems::State;
+using pysystems::pylcm::BindCppSerializer;
 
 // TODO(eric.cousineau): Expose available scalar types.
 using T = double;
@@ -1021,9 +1023,13 @@ void init_multibody_plant(py::module m) {
     using Class = ContactResultsToLcmSystem<T>;
     py::class_<Class, systems::LeafSystem<T>>(m, "ContactResultsToLcmSystem")
         .def(py::init<const MultibodyPlant<double>&>(), py::arg("plant"))
-        .def("get_contact_result_input_port", &Class::get_contact_result_input_port)
-        .def("get_lcm_message_output_port", &Class::get_lcm_message_output_port);
+        .def("get_contact_result_input_port",
+            &Class::get_contact_result_input_port, py_reference_internal)
+        .def("get_lcm_message_output_port", &Class::get_lcm_message_output_port,
+            py_reference_internal);
   }
+
+  BindCppSerializer<drake::lcmt_contact_results_for_viz>("drake");
 
   m.def("AddMultibodyPlantSceneGraph",
       [](systems::DiagramBuilder<T>* builder,
