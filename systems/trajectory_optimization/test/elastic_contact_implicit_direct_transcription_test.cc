@@ -60,7 +60,7 @@ class HackViz {
   int nv_{};
   DrakeLcm lcm_;
   DrakeVisualizer system_;
-  FreestandingInputPortValue* input_value_{};
+  FixedInputPortValue* input_value_{};
   unique_ptr<Context<T>> context_;
   bool is_inited_{false};
 };

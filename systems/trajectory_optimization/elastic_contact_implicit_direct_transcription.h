@@ -169,12 +169,17 @@ class CustomDirectTranscriptionConstraint : public solvers::Constraint {
   }
 
  protected:
+
   void DoEval(const Eigen::Ref<const Eigen::VectorXd>& x,
               Eigen::VectorXd* y) const override;
 
   void DoEval(const Eigen::Ref<const AutoDiffVecXd>& x,
               AutoDiffVecXd* y) const override;
 
+  void DoEval(const Eigen::Ref<const VectorX<symbolic::Variable>>&,
+                      VectorX<symbolic::Expression>*) const override {
+    throw std::runtime_error("not supported");
+  }
  private:
   const RigidBodyTree<double>* tree_;
   const int num_positions_;

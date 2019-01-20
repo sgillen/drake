@@ -136,8 +136,10 @@ class EvaluatorBase {
    * @pre x must be of size `num_vars` x 1.
    * @post y will be of size `num_outputs` x 1.
    */
-  virtual void DoEval(const Eigen::Ref<const VectorX<symbolic::Variable>>& x,
-                      VectorX<symbolic::Expression>* y) const = 0;
+  virtual void DoEval(const Eigen::Ref<const VectorX<symbolic::Variable>>&,
+                      VectorX<symbolic::Expression>*) const {
+    throw std::runtime_error("not supported");
+  }
 
   // Setter for the number of outputs.
   // This method is only meant to be called, if the sub-class structure permits

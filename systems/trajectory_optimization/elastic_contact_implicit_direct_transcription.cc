@@ -151,7 +151,7 @@ void CustomDirectTranscriptionConstraint::DoEval(
       (c - (tree_->B * u_r)) * h;
 
   y->resize(num_constraints());
-  y << y_pos, y_dyn;
+  *y << y_pos, y_dyn;
 }
 
 
@@ -247,17 +247,17 @@ ElasticContactImplicitDirectTranscription::ElasticContactImplicitDirectTranscrip
 
 void ElasticContactImplicitDirectTranscription::Compile() {
   for (int i = 0; i < N() - 1; ++i) {
-    AddConstraint(direct_transcription_constraints_[i].constraint(),
+    AddConstraint(direct_transcription_constraints_[i].evaluator(),
                   direct_transcription_constraints_[i].variables());
   }
 
   for (int i = 0; i < N(); i++) {
-    AddConstraint(timestep_integration_constraints_[i].constraint(),
+    AddConstraint(timestep_integration_constraints_[i].evaluator(),
                   timestep_integration_constraints_[i].variables());
   }
 
   for (int i = 0; i < N(); i++) {
-    AddConstraint(contact_implicit_constraints_[i].constraint(),
+    AddConstraint(contact_implicit_constraints_[i].evaluator(),
                   contact_implicit_constraints_[i].variables());
   }
   
@@ -273,7 +273,7 @@ void ElasticContactImplicitDirectTranscription::
   solvers::VectorXDecisionVariable vars =
       direct_transcription_constraints_[interval_index].variables();
   auto direct_transcription_constraint =
-      direct_transcription_constraints_[interval_index].constraint();
+      direct_transcription_constraints_[interval_index].evaluator();
   direct_transcription_constraint->AddGeneralizedConstraintForceEvaluator(
       std::move(evaluator), evaluator_lambda, &vars);
   // Now update the Binding in direct_transcription_constraints_

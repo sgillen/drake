@@ -22,7 +22,13 @@
 #include "drake/solvers/evaluator_base.h"
 #include "drake/solvers/function.h"
 
+/// HACK
+#include "drake/common/trajectories/piecewise_polynomial.h"
+
 namespace drake {
+using trajectories::PiecewisePolynomial;
+using PiecewisePolynomialTrajectory = PiecewisePolynomial<double>;
+
 namespace solvers {
 
 // TODO(eric.cousineau): Consider enabling the constraint class directly to

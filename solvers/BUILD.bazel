@@ -142,6 +142,7 @@ drake_cc_library(
         "//common:autodiff",
         "//common:essential",
         "//common:polynomial",
+        "//common/trajectories:piecewise_polynomial",
         "//common:symbolic",
         "//math:matrix_util",
     ],

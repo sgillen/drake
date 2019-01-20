@@ -76,14 +76,14 @@ void DirectTranscriptionConstraint::AddGeneralizedConstraintForceEvaluator(
 }
 
 void DirectTranscriptionConstraint::DoEval(
-    const Eigen::Ref<const Eigen::VectorXd>& x, Eigen::VectorXd& y) const {
+    const Eigen::Ref<const Eigen::VectorXd>& x, Eigen::VectorXd* y) const {
   AutoDiffVecXd y_t;
-  Eval(math::initializeAutoDiff(x), y_t);
-  y = math::autoDiffToValueMatrix(y_t);
+  Eval(math::initializeAutoDiff(x), &y_t);
+  *y = math::autoDiffToValueMatrix(y_t);
 }
 
 void DirectTranscriptionConstraint::DoEval(
-    const Eigen::Ref<const AutoDiffVecXd>& x, AutoDiffVecXd& y) const {
+    const Eigen::Ref<const AutoDiffVecXd>& x, AutoDiffVecXd* py) const {
   DRAKE_ASSERT(x.size() == num_vars());
 
   int x_count = 0;
@@ -105,6 +105,7 @@ void DirectTranscriptionConstraint::DoEval(
 
   auto kinsol = kinematics_helper1_->UpdateKinematics(q_r, v_r);
 
+  auto& y = *py;
   y.resize(num_constraints());
 
   // By using backward Euler integration, the constraint is
@@ -135,7 +136,7 @@ void DirectTranscriptionConstraint::DoEval(
     q_v_lambda << q_r, v_r,
         lambda_r.segment(lambda_count, evaluator->lambda_size());
     AutoDiffVecXd generalized_constraint_force(num_velocities_);
-    evaluator->Eval(q_v_lambda, generalized_constraint_force);
+    evaluator->Eval(q_v_lambda, &generalized_constraint_force);
     total_generalized_constraint_force += generalized_constraint_force;
     lambda_count += evaluator->lambda_size();
   }
@@ -185,6 +186,11 @@ class JointLimitsComplementarityConstraint : public solvers::Constraint {
     y->resize(2);
     (*y)(0) = (joint_upper_bound_ - x(0)) * x(1);
     (*y)(1) = (x(0) - joint_lower_bound_) * x(2);
+  }
+
+  void DoEval(const Eigen::Ref<const VectorX<symbolic::Variable>>&,
+                      VectorX<symbolic::Expression>*) const override {
+    throw std::runtime_error("not supported");
   }
 
  private:
@@ -299,7 +305,7 @@ RigidBodyTreeMultipleShooting::AddJointLimitImplicitConstraint(
 
 void RigidBodyTreeMultipleShooting::Compile() {
   for (int i = 0; i < N() - 1; ++i) {
-    AddConstraint(direct_transcription_constraints_[i].constraint(),
+    AddConstraint(direct_transcription_constraints_[i].evaluator(),
                   direct_transcription_constraints_[i].variables());
   }
 }
@@ -314,7 +320,7 @@ void RigidBodyTreeMultipleShooting::
   solvers::VectorXDecisionVariable vars =
       direct_transcription_constraints_[interval_index].variables();
   auto direct_transcription_constraint =
-      direct_transcription_constraints_[interval_index].constraint();
+      direct_transcription_constraints_[interval_index].evaluator();
   direct_transcription_constraint->AddGeneralizedConstraintForceEvaluator(
       std::move(evaluator), evaluator_lambda, &vars);
   // Now update the Binding in direct_transcription_constraints_
