@@ -16,6 +16,15 @@ Here's an example of running with the C++ test program:
 
     # In Terminal 2, run server (or your C++ program).
     ./bazel-bin/common/proto/call_python_server_test
+
+To use in Jupyter, build as above, then run Jupyter notebook as client:
+
+    rm -f /tmp/python_rpc && mkfifo /tmp/python_rpc
+    bazel run //common/proto:call_python_client_cli -- \
+        -c jupyter notebook ${PWD}/common/proto/call_python_client_notebook.ipynb  # noqa
+    # Cell > Run All
+
+    ./bazel-bin/common/proto/call_python_server_test
 """
 from __future__ import print_function
 import argparse
