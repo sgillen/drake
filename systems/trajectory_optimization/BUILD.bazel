@@ -91,4 +91,128 @@ drake_cc_googletest(
     ],
 )
 
+# === paper ===
+
+drake_cc_library(
+    name = "rigid_body_tree_multiple_shooting",
+    srcs = ["rigid_body_tree_multiple_shooting.cc"],
+    hdrs = [
+        "rigid_body_tree_multiple_shooting.h",
+        "rigid_body_tree_multiple_shooting_internal.h",
+    ],
+    deps = [
+        "//attic/systems/trajectory_optimization:generalized_constraint_force_evaluator",
+        ":multiple_shooting",
+        "//common:essential",
+        "//math:autodiff",
+        "//math:gradient",
+        "//attic/multibody:kinematics_cache_helper",
+        "//attic/multibody:rigid_body_tree",
+        "//solvers:constraint",
+        "//attic/systems/trajectory_optimization:joint_limit_constraint_force_evaluator", 
+        "//attic/systems/trajectory_optimization:position_constraint_force_evaluator", 
+    ],
+)
+
+drake_cc_library(
+    name = "contact_implicit_constraint",
+    srcs = ["contact_implicit_constraint.cc"],
+    hdrs = ["contact_implicit_constraint.h"],
+    deps = [
+        "//common:essential",
+        "//math:autodiff",
+        "//math:gradient",
+        "//attic/multibody:kinematics_cache_helper",
+        "//attic/multibody:rigid_body_tree",
+        "//solvers:constraint",
+        "//solvers:decision_variable",
+    ],
+)
+
+drake_cc_library(
+    name = "elastic_contact_implicit_direct_transcription",
+    srcs = ["elastic_contact_implicit_direct_transcription.cc"],
+    hdrs = ["elastic_contact_implicit_direct_transcription.h"],
+    deps = [
+        ":multiple_shooting",
+        "//math:autodiff",
+        "//math:gradient",
+        "//common:essential",
+        "//attic/multibody:rigid_body_tree",
+        "//solvers:constraint",
+        "//attic/multibody:kinematics_cache_helper", 
+        "//attic/systems/trajectory_optimization:generalized_constraint_force_evaluator", 
+        ":rigid_body_tree_multiple_shooting", 
+        ":contact_implicit_constraint",
+    ],
+)
+
+drake_cc_library(
+    name = "generalized_constraint_force_evaluator_test_util",
+    testonly = 1,
+    srcs = [
+        "test/generalized_constraint_force_evaluator_test_util.cc",
+    ],
+    hdrs = ["test/generalized_constraint_force_evaluator_test_util.h"],
+    data = [
+        "//examples/simple_four_bar:models",
+    ],
+    deps = [
+        "//attic/multibody/parsers",
+        "//common:find_resource",
+    ],
+)
+
+drake_cc_googletest(
+    name = "position_constraint_force_evaluator_test",
+    deps = [
+        ":generalized_constraint_force_evaluator_test_util",
+        "//attic/systems/trajectory_optimization:position_constraint_force_evaluator",
+        "//common/test_utilities:eigen_matrix_compare",
+        "//math:autodiff",
+    ],
+)
+
+drake_cc_googletest(
+    name = "joint_limit_constraint_force_evaluator_test",
+    deps = [
+        ":generalized_constraint_force_evaluator_test_util",
+        ":joint_limit_constraint_force_evaluator",
+        "//common/test_utilities:eigen_matrix_compare",
+        "//math:autodiff",
+    ],
+)
+
+drake_cc_googletest(
+    name = "elastic_contact_implicit_direct_transcription_test",
+    data = [
+        "//examples/contact_implicit_brick:models",
+    ],
+    deps = [
+        ":elastic_contact_implicit_direct_transcription",
+        ":rigid_body_tree_multiple_shooting",
+        "//common:find_resource",
+        "//common/test_utilities:eigen_matrix_compare",
+        "//lcm",
+        "//math:autodiff",
+        "//attic/multibody/parsers",
+        "//attic/multibody:rigid_body_tree_construction",
+        "//attic/multibody/rigid_body_plant:drake_visualizer",
+    ],
+)
+
+drake_cc_googletest(
+    name = "rigid_body_tree_multiple_shooting_test",
+    data = [
+        "//examples/simple_four_bar:models",
+    ],
+    deps = [
+        ":rigid_body_tree_multiple_shooting",
+        "//common:find_resource",
+        "//common/test_utilities:eigen_matrix_compare",
+        "//math:autodiff",
+        "//attic/multibody/parsers",
+    ],
+)
+
 add_lint_tests()

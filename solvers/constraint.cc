@@ -386,5 +386,17 @@ void ExpressionConstraint::DoEval(
   }
 }
 
+void NonlinearComplementarityConstraint::DoEval(
+    const Eigen::Ref<const Eigen::VectorXd>& x, Eigen::VectorXd* y) const {
+  Eigen::VectorXd x1 = x.head(nf1());
+  Eigen::VectorXd x2 = x.tail(nf2());
+  Eigen::VectorXd y1(nf1()), y2(nf2());
+
+  f1_->Eval(x1, &y1);
+  f2_->Eval(x2, &y2);
+
+  (*y)(0) = y1.dot(y2);
+} 
+
 }  // namespace solvers
 }  // namespace drake

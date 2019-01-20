@@ -136,8 +136,10 @@ class EvaluatorBase {
    * @pre x must be of size `num_vars` x 1.
    * @post y will be of size `num_outputs` x 1.
    */
-  virtual void DoEval(const Eigen::Ref<const VectorX<symbolic::Variable>>& x,
-                      VectorX<symbolic::Expression>* y) const = 0;
+  virtual void DoEval(const Eigen::Ref<const VectorX<symbolic::Variable>>&,
+                      VectorX<symbolic::Expression>*) const {
+    throw std::runtime_error("not supported");
+  }
 
   // Setter for the number of outputs.
   // This method is only meant to be called, if the sub-class structure permits
@@ -145,6 +147,15 @@ class EvaluatorBase {
   // solvers/Constraint.h, which can change the number of outputs, if the
   // matrix in the linear constraint is resized.
   void set_num_outputs(int num_outputs) { num_outputs_ = num_outputs; }
+
+  // Setter for the number of variables.
+  // This method is only meant to be called, if the sub-class structure permits
+  // to change the number of variables. One example is
+  // DirectTranscriptionConstraint in
+  // systems/trajectory_optimization/rigid_body_tree_multiple_shooting_internal.h,
+  // which can change the number of variables, by adding more
+  // evaluators to compute the generalized constraint forces.
+  void set_num_vars(int num_vars) { num_vars_ = num_vars; }
 
  private:
   int num_vars_{};

@@ -142,6 +142,7 @@ drake_cc_library(
         "//common:autodiff",
         "//common:essential",
         "//common:polynomial",
+        "//common/trajectories:piecewise_polynomial",
         "//common:symbolic",
         "//math:matrix_util",
     ],
@@ -1155,6 +1156,17 @@ drake_cc_googletest(
         "//common/test_utilities:eigen_matrix_compare",
         "//common/test_utilities:is_dynamic_castable",
         "//common/test_utilities:symbolic_test_util",
+    ],
+)
+
+drake_cc_googletest(
+    name = "nonlinear_complentarity_constraint_test",
+    srcs = [
+        "test/nonlinear_complentarity_constraint_test.cc",
+    ],
+    deps = [
+        ":mathematical_program",
+        "//drake/common/test_utilities:eigen_matrix_compare",
     ],
 )
 

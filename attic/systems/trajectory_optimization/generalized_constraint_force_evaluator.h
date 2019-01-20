@@ -121,6 +121,19 @@ class GeneralizedConstraintForceEvaluator : public solvers::EvaluatorBase {
   const RigidBodyTree<double>* const tree_;
   const int lambda_size_;
 };
+
+// class ContactConstraintForceEvaluator
+//     : public GeneralizedConstraintForceEvaluator {
+//  public:
+//   ContactConstraintForceEvaluator(const RigidBodyTree<double>& tree,
+//                                   int contact_knot_index);
+//  protected:
+//   virtual MatrixX<AutoDiffXd> EvalConstraintJacobian(
+//       const Eigen::Ref<const AutoDiffVecXd>& x)  const = 0;
+
+//  private:
+//   const int contact_knot_index_;
+// };
 }  // namespace trajectory_optimization
 }  // namespace systems
 }  // namespace drake
