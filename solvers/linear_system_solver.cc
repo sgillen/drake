@@ -12,12 +12,17 @@
 namespace drake {
 namespace solvers {
 
-bool LinearSystemSolver::available() const { return true; }
+bool LinearSystemSolver::is_available() { return true; }
 
-SolutionResult LinearSystemSolver::Solve(MathematicalProgram& prog) const {
+void LinearSystemSolver::Solve(const MathematicalProgram& prog,
+                               const optional<Eigen::VectorXd>& initial_guess,
+                               const optional<SolverOptions>& solver_options,
+                               MathematicalProgramResult* result) const {
+  // The initial guess doesn't help us, and we don't offer any tuning options.
+  unused(initial_guess, solver_options);
   size_t num_constraints = 0;
   for (auto const& binding : prog.linear_equality_constraints()) {
-    num_constraints += binding.constraint()->A().rows();
+    num_constraints += binding.evaluator()->A().rows();
   }
 
   DRAKE_ASSERT(prog.generic_constraints().empty());
@@ -33,7 +38,7 @@ SolutionResult LinearSystemSolver::Solve(MathematicalProgram& prog) const {
 
   size_t constraint_index = 0;
   for (auto const& binding : prog.linear_equality_constraints()) {
-    auto const& c = binding.constraint();
+    auto const& c = binding.evaluator();
     size_t n = c->A().rows();
     for (int i = 0; i < static_cast<int>(binding.GetNumElements()); ++i) {
       size_t variable_index =
@@ -49,25 +54,44 @@ SolutionResult LinearSystemSolver::Solve(MathematicalProgram& prog) const {
   // least-squares solution
   const Eigen::VectorXd least_square_sol =
       Aeq.jacobiSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(beq);
-  prog.SetDecisionVariableValues(least_square_sol);
 
-  prog.SetSolverId(id());
+  result->set_solver_id(id());
+  result->set_x_val(least_square_sol);
   if (beq.isApprox(Aeq * least_square_sol)) {
-    prog.SetOptimalCost(0.);
-    return SolutionResult::kSolutionFound;
+    result->set_optimal_cost(0.);
+    result->set_solution_result(SolutionResult::kSolutionFound);
   } else {
-    prog.SetOptimalCost(MathematicalProgram::kGlobalInfeasibleCost);
-    return SolutionResult::kInfeasibleConstraints;
+    result->set_optimal_cost(MathematicalProgram::kGlobalInfeasibleCost);
+    result->set_solution_result(SolutionResult::kInfeasibleConstraints);
   }
 }
 
-SolverId LinearSystemSolver::solver_id() const {
-  return id();
+SolutionResult LinearSystemSolver::Solve(MathematicalProgram& prog) const {
+  MathematicalProgramResult result;
+  Solve(prog, {}, {}, &result);
+  const SolverResult solver_result = result.ConvertToSolverResult();
+  prog.SetSolverResult(solver_result);
+  return result.get_solution_result();
 }
+
+SolverId LinearSystemSolver::solver_id() const { return id(); }
 
 SolverId LinearSystemSolver::id() {
   static const never_destroyed<SolverId> singleton{"Linear system"};
   return singleton.access();
+}
+
+bool LinearSystemSolver::AreProgramAttributesSatisfied(
+    const MathematicalProgram& prog) const {
+  return ProgramAttributesSatisfied(prog);
+}
+
+bool LinearSystemSolver::ProgramAttributesSatisfied(
+    const MathematicalProgram& prog) {
+  static const never_destroyed<ProgramAttributes> solver_capability(
+      std::initializer_list<ProgramAttribute>{
+          ProgramAttribute::kLinearEqualityConstraint});
+  return prog.required_capabilities() == solver_capability.access();
 }
 
 }  // namespace solvers

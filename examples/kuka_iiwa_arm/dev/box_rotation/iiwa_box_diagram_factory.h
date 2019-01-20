@@ -25,6 +25,7 @@ namespace box_rotation {
 ///
 /// This class is explicitly instantiated for the following scalar type(s). No
 /// other scalar types are supported.
+///
 /// - double
 template<typename T>
 class IiwaAndBoxPlantWithStateEstimator : public systems::Diagram<T> {
@@ -46,12 +47,12 @@ class IiwaAndBoxPlantWithStateEstimator : public systems::Diagram<T> {
     return plant_->get_rigid_body_tree();
   }
 
-  const systems::InputPortDescriptor<T>& get_input_port_iiwa_state_command()
+  const systems::InputPort<T>& get_input_port_iiwa_state_command()
   const {
     return this->get_input_port(input_port_iiwa_state_command_);
   }
 
-  const systems::InputPortDescriptor<T>&
+  const systems::InputPort<T>&
   get_input_port_iiwa_acceleration_command() const {
     return this->get_input_port(input_port_iiwa_acceleration_command_);
   }

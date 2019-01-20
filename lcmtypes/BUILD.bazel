@@ -5,6 +5,7 @@ package(default_visibility = ["//visibility:public"])
 load("@drake//tools/install:install.bzl", "install")
 load(
     "@drake//tools/skylark:drake_cc.bzl",
+    "drake_cc_library",
     "drake_transitive_installed_hdrs_filegroup",
 )
 load(
@@ -16,7 +17,7 @@ load(
     "drake_py_test",
 )
 load(
-    "//tools/skylark:drake_lcm.bzl",
+    "@drake//tools/skylark:drake_lcm.bzl",
     "drake_lcm_cc_library",
     "drake_lcm_java_library",
     "drake_lcm_py_library",
@@ -251,6 +252,15 @@ drake_lcm_cc_library(
 )
 
 drake_lcm_cc_library(
+    name = "allegro",
+    lcm_package = "drake",
+    lcm_srcs = [
+        "lcmt_allegro_command.lcm",
+        "lcmt_allegro_status.lcm",
+    ],
+)
+
+drake_lcm_cc_library(
     name = "iiwa",
     lcm_package = "drake",
     lcm_srcs = [
@@ -277,6 +287,14 @@ drake_lcm_cc_library(
     ],
 )
 
+drake_lcm_cc_library(
+    name = "viewer2_comms",
+    lcm_package = "drake",
+    lcm_srcs = [
+        "lcmt_viewer2_comms.lcm",
+    ],
+)
+
 # TODO(jwnimmer-tri) Many more C++ messages are missing ...
 
 drake_lcm_py_library(
@@ -299,7 +317,7 @@ drake_lcm_java_library(
 )
 
 # This should list every LCM type that is known to Drake.
-DRAKE_LCMTYPES = [
+LCMTYPES_CC = [
     ":acrobot",
     ":automotive",
     ":body_acceleration",
@@ -328,6 +346,7 @@ DRAKE_LCMTYPES = [
     ":schunk",
     ":support_data",
     ":viewer",
+    ":viewer2_comms",
     ":whole_body_data",
     ":zmp_data",
     ":zmp_com_observer_state",
@@ -347,9 +366,14 @@ drake_java_binary(
     ],
 )
 
+drake_cc_library(
+    name = "lcmtypes_cc",
+    deps = LCMTYPES_CC,
+)
+
 drake_transitive_installed_hdrs_filegroup(
-    name = "drake_lcmtypes_headers",
-    deps = DRAKE_LCMTYPES,
+    name = "lcmtypes_cc_headers",
+    deps = LCMTYPES_CC,
 )
 
 # The drake-lcmtypes-cpp library is distinct from (but required by) the drake
@@ -361,13 +385,14 @@ drake_transitive_installed_hdrs_filegroup(
 # its generated cmake config `lib/cmake/drake/drake-config.cmake.
 install(
     name = "install_cc_headers",
-    hdrs = [":drake_lcmtypes_headers"],
+    hdrs = [":lcmtypes_cc_headers"],
     hdr_dest = "include/drake_lcmtypes",
     visibility = ["//visibility:private"],
 )
 
 install(
     name = "install",
+    install_tests = [":test/drake-lcm-spy_install_test.py"],
     targets = [
         ":drake-lcm-spy-launcher",
         ":drake-lcm-spy",
@@ -388,24 +413,15 @@ install(
 )
 
 # === test/ ===
-
-# `//:install` is run in this test to verify that once installed
-# drake-lcm-spy still works. Cannot be run on its own, needs to be
-# run as part of all the drake tests to have access to //:install
-drake_py_test(
-    name = "drake-lcm-spy_install_test",
-    size = "large",
-    srcs = ["test/drake-lcm-spy_install_test.py"],
-    main = "test/drake-lcm-spy_install_test.py",
-    deps = ["//tools/install:install_test_helper"],
-)
-
 drake_py_test(
     name = "polynomial_matrix_test",
-    srcs = ["test/polynomial_matrix_test.py"],
     deps = [
         ":lcmtypes_py",
     ],
 )
 
-add_lint_tests()
+add_lint_tests(
+    python_lint_extra_srcs = [
+        ":test/drake-lcm-spy_install_test.py",
+    ],
+)

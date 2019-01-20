@@ -119,7 +119,10 @@ void QuadraticProgram0::CheckSolution(SolverType solver_type) const {
   if (solver_type == SolverType::kGurobi) {
     tol = 1E-8;
   } else if (solver_type == SolverType::kMosek) {
-    tol = 1E-9;
+    // TODO(hongkai.dai): the default parameter in Mosek 8 generates low
+    // accuracy solution. We should set the accuracy tolerance
+    // MSK_DPARAM_INTPNT_QO_REL_TOL_GAP to 1E-10 to improve the accuracy.
+    tol = 3E-5;
   }
   EXPECT_TRUE(CompareMatrices(prog()->GetSolution(x_), x_expected_, tol,
                               MatrixCompareType::absolute));
@@ -188,7 +191,7 @@ QuadraticProgram1::QuadraticProgram1(CostForm cost_form,
       prog()->AddLinearConstraint(x_(0) + 2 * x_(1) + 3 * x_(2) >= 4);
       prog()->AddLinearConstraint(-x_(0) - x_(1) <= -1);
       prog()->AddLinearConstraint(x_(1) + 2 * x_(2), -20, 100);
-      // TODO(hongkai.dai): Uncoment the next line, when we resolves the error
+      // TODO(hongkai.dai): Uncomment the next line, when we resolve the error
       // with infinity on the right handside of a formula.
       // prog()->AddLinearConstraint(x_(0) + x_(1) + 2 * x_(2) <=
       // numeric_limits<double>::infinity());
@@ -204,7 +207,7 @@ void QuadraticProgram1::CheckSolution(SolverType solver_type) const {
   if (solver_type == SolverType::kGurobi) {
     tol = 1E-8;
   } else if (solver_type == SolverType::kMosek) {
-    tol = 1E-9;
+    tol = 1E-7;
   }
   EXPECT_TRUE(CompareMatrices(prog()->GetSolution(x_), x_expected_, tol,
                               MatrixCompareType::absolute));
@@ -366,13 +369,13 @@ void TestQPonUnitBallExample(const MathematicalProgramSolverInterface& solver) {
   Eigen::Matrix2d Q = Eigen::Matrix2d::Identity();
   Eigen::Vector2d x_desired;
   x_desired << 1.0, 0.0;
-  auto objective = prog.AddQuadraticErrorCost(Q, x_desired, x).constraint();
+  auto objective = prog.AddQuadraticErrorCost(Q, x_desired, x).evaluator();
 
   Eigen::Matrix2d A;
   A << 1.0, 1.0, -1.0, 1.0;
   Eigen::Vector2d ub = Eigen::Vector2d::Constant(1.0);
   Eigen::Vector2d lb = Eigen::Vector2d::Constant(-1.0);
-  auto constraint = prog.AddLinearConstraint(A, lb, ub, x).constraint();
+  auto constraint = prog.AddLinearConstraint(A, lb, ub, x).evaluator();
   Eigen::Vector2d x_expected;
 
   const int N = 40;  // number of points to test around the circle

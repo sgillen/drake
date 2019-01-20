@@ -3,7 +3,7 @@
 /// @file
 /// Template method implementations for zero_order_hold.h.
 /// Most users should only include that file, not this one.
-/// For background, see http://drake.mit.edu/cxx_inl.html.
+/// For background, see https://drake.mit.edu/cxx_inl.html.
 
 /* clang-format off to disable clang-format-includes */
 #include "drake/systems/primitives/zero_order_hold.h"
@@ -40,7 +40,7 @@ ZeroOrderHold<T>::ZeroOrderHold(
     this->DeclareAbstractInputPort(*abstract_model_value_);
     // Use the std::function<> overloads to work with `AbstractValue` type
     // directly and maintain type erasure.
-    auto abstract_value_allocator = [this](const Context<T>&) {
+    auto abstract_value_allocator = [this]() {
       return abstract_model_value_->Clone();
     };
     namespace sp = std::placeholders;

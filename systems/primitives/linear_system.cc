@@ -99,10 +99,10 @@ std::unique_ptr<AffineSystem<double>> DoFirstOrderTaylorApproximation(
 
   double time_period = 0.0;
   if (has_only_discrete_states_contained_in_one_group) {
-    optional<Event<double>::PeriodicAttribute> periodic_attr =
+    optional<PeriodicEventData> periodic_data =
         system.GetUniquePeriodicDiscreteUpdateAttribute();
-    DRAKE_THROW_UNLESS(static_cast<bool>(periodic_attr));
-    time_period = periodic_attr->period_sec;
+    DRAKE_THROW_UNLESS(static_cast<bool>(periodic_data));
+    time_period = periodic_data->period_sec();
   }
 
   // Create an autodiff version of the system.
@@ -114,7 +114,7 @@ std::unique_ptr<AffineSystem<double>> DoFirstOrderTaylorApproximation(
       autodiff_system->CreateDefaultContext();
   autodiff_context->SetTimeStateAndParametersFrom(context);
 
-  const InputPortDescriptor<AutoDiffXd>* input_port = nullptr;
+  const InputPort<AutoDiffXd>* input_port = nullptr;
   // By default, use the first input / output ports (if they exist).
   if (input_port_index == kUseFirstInputIfItExists) {
     if (system.get_num_input_ports() > 0) {
@@ -239,8 +239,7 @@ std::unique_ptr<AffineSystem<double>> DoFirstOrderTaylorApproximation(
   Eigen::VectorXd y0 = Eigen::VectorXd::Zero(num_outputs);
 
   if (output_port) {
-    std::unique_ptr<AbstractValue> autodiff_y0 =
-        output_port->Allocate(*autodiff_context);
+    std::unique_ptr<AbstractValue> autodiff_y0 = output_port->Allocate();
     output_port->Calc(*autodiff_context, autodiff_y0.get());
 
     auto autodiff_y0_vec =

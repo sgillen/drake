@@ -3,9 +3,11 @@
 #include "drake/common/drake_assert.h"
 #include "drake/common/drake_copyable.h"
 #include "drake/common/eigen_types.h"
+#include "drake/math/rigid_transform.h"
 #include "drake/multibody/multibody_tree/frame.h"
 #include "drake/multibody/multibody_tree/mobilizer_impl.h"
 #include "drake/multibody/multibody_tree/multibody_tree.h"
+#include "drake/multibody/multibody_tree/multibody_tree_system.h"
 #include "drake/multibody/multibody_tree/space_xyz_mobilizer.h"
 #include "drake/multibody/multibody_tree/spatial_inertia.h"
 #include "drake/multibody/multibody_tree/unit_inertia.h"
@@ -58,18 +60,17 @@ class FeatherstoneMobilizer final : public MobilizerImpl<T, 2, 2> {
 
   Isometry3<T> CalcAcrossMobilizerTransform(
       const MultibodyTreeContext<T>& context) const override {
-    Isometry3<T> X_FM = Isometry3<T>::Identity();
-
     const Vector3<T> axis_rotation_F = rotation_axis();
     const T rotation = get_rotation(context);
-    X_FM.linear() = Eigen::AngleAxis<T>(
-        rotation, axis_rotation_F).toRotationMatrix();
+    const math::RotationMatrix<T> R_FM(
+        Eigen::AngleAxis<T>(rotation, axis_rotation_F));
 
     const Vector3<T> axis_translation_F = translation_axis();
     const T translation = get_translation(context);
-    X_FM.translation() = translation * axis_translation_F;
+    const Vector3<T> p_FM = translation * axis_translation_F;
 
-    return X_FM;
+    const math::RigidTransform<T> X_FM(R_FM, p_FM);
+    return X_FM.GetAsIsometry3();
   }
 
   SpatialVelocity<T> CalcAcrossMobilizerSpatialVelocity(
@@ -151,9 +152,9 @@ class FeatherstoneMobilizer final : public MobilizerImpl<T, 2, 2> {
   std::unique_ptr<Mobilizer<ToScalar>> TemplatedDoCloneToScalar(
       const MultibodyTree<ToScalar>& tree_clone) const {
     const Frame<ToScalar>& inboard_frame_clone =
-        tree_clone.get_variant(this->get_inboard_frame());
+        tree_clone.get_variant(this->inboard_frame());
     const Frame<ToScalar>& outboard_frame_clone =
-        tree_clone.get_variant(this->get_outboard_frame());
+        tree_clone.get_variant(this->outboard_frame());
     return std::make_unique<FeatherstoneMobilizer<ToScalar>>(
         inboard_frame_clone, outboard_frame_clone);
   }
@@ -191,33 +192,32 @@ GTEST_TEST(ArticulatedBodyInertiaAlgorithm, FeatherstoneExample) {
   const double mass_cylinder = 0.8;
   const SpatialInertia<double> M_Ccm(mass_cylinder, Vector3d::Zero(), G_Ccm);
 
-  // Create model.
-  MultibodyTree<double> model;
+  // Create an empty model.
+  auto tree = std::make_unique<MultibodyTree<double>>();
 
   // Add box body and SpaceXYZ mobilizer.
-  const RigidBody<double>& box_link = model.AddBody<RigidBody>(M_Bcm);
-  const Frame<double>& world_frame = model.get_world_frame();
-  const Frame<double>& box_frame = box_link.get_body_frame();
-  model.AddMobilizer<SpaceXYZMobilizer>(world_frame, box_frame);
+  const RigidBody<double>& box_link = tree->AddBody<RigidBody>(M_Bcm);
+  const Frame<double>& world_frame = tree->world_frame();
+  const Frame<double>& box_frame = box_link.body_frame();
+  tree->AddMobilizer<SpaceXYZMobilizer>(world_frame, box_frame);
 
   // Add cylinder body and Featherstone mobilizer.
-  const RigidBody<double>& cylinder_link = model.AddBody<RigidBody>(M_Ccm);
-  const Frame<double>& cylinder_frame = cylinder_link.get_body_frame();
-  model.AddMobilizer<FeatherstoneMobilizer>(box_frame, cylinder_frame);
+  const RigidBody<double>& cylinder_link =
+      tree->AddBody<RigidBody>(M_Ccm);
+  const Frame<double>& cylinder_frame = cylinder_link.body_frame();
+  tree->AddMobilizer<FeatherstoneMobilizer>(box_frame, cylinder_frame);
 
-  // Finalize model.
-  model.Finalize();
-
-  // Create context.
-  std::unique_ptr<Context<double>> context = model.CreateDefaultContext();
+  // Transfer tree to system and get a Context.
+  MultibodyTreeSystem<double> system(std::move(tree));
+  auto context = system.CreateDefaultContext();
 
   // Update cache.
-  PositionKinematicsCache<double> pc(model.get_topology());
-  model.CalcPositionKinematicsCache(*context, &pc);
+  PositionKinematicsCache<double> pc(system.tree().get_topology());
+  system.tree().CalcPositionKinematicsCache(*context, &pc);
 
   // Compute articulated body cache.
-  ArticulatedBodyInertiaCache<double> abc(model.get_topology());
-  model.CalcArticulatedBodyInertiaCache(*context, pc,  &abc);
+  ArticulatedBodyInertiaCache<double> abc(system.tree().get_topology());
+  system.tree().CalcArticulatedBodyInertiaCache(*context, pc,  &abc);
 
   // Get expected projected articulated body inertia of cylinder.
   Matrix6<double> M_cylinder_mat = M_Ccm.CopyToFullMatrix6();
@@ -231,7 +231,7 @@ GTEST_TEST(ArticulatedBodyInertiaAlgorithm, FeatherstoneExample) {
   const ArticulatedBodyInertia<double>& Pplus_BC_W_expected =
       ArticulatedBodyInertia<double>(Pplus_BC_W_expected_mat);
   const ArticulatedBodyInertia<double>& Pplus_BC_W_actual =
-      abc.get_Pplus_PB_W(cylinder_link.get_node_index());
+      abc.get_Pplus_PB_W(cylinder_link.node_index());
   EXPECT_TRUE(Pplus_BC_W_expected.CopyToFullMatrix6().isApprox(
       Pplus_BC_W_actual.CopyToFullMatrix6(), kEpsilon));
 
@@ -246,7 +246,7 @@ GTEST_TEST(ArticulatedBodyInertiaAlgorithm, FeatherstoneExample) {
   const ArticulatedBodyInertia<double>& P_WB_W_expected =
       ArticulatedBodyInertia<double>(Pplus_WB_W_expected_mat);
   const ArticulatedBodyInertia<double>& P_WB_W_actual =
-      abc.get_Pplus_PB_W(box_link.get_node_index());
+      abc.get_Pplus_PB_W(box_link.node_index());
   EXPECT_TRUE(P_WB_W_expected.CopyToFullMatrix6().isApprox(
       P_WB_W_actual.CopyToFullMatrix6(), kEpsilon));
 }
@@ -268,27 +268,25 @@ GTEST_TEST(ArticulatedBodyInertiaAlgorithm, ModifiedFeatherstoneExample) {
   const double mass_cylinder = 0.6;
   const SpatialInertia<double> M_Ccm(mass_cylinder, Vector3d::Zero(), G_Ccm);
 
-  // Create model.
-  MultibodyTree<double> model;
+  // Create an empty model.
+  auto tree = std::make_unique<MultibodyTree<double>>();
 
   // Add box body and SpaceXYZ mobilizer.
-  const RigidBody<double>& box_link = model.AddBody<RigidBody>(M_Bcm);
-  const Frame<double>& world_frame = model.get_world_frame();
-  const Frame<double>& box_frame = box_link.get_body_frame();
+  const RigidBody<double>& box_link = tree->AddBody<RigidBody>(M_Bcm);
+  const Frame<double>& world_frame = tree->world_frame();
+  const Frame<double>& box_frame = box_link.body_frame();
   const SpaceXYZMobilizer<double>& WB_mobilizer =
-      model.AddMobilizer<SpaceXYZMobilizer>(world_frame, box_frame);
+      tree->AddMobilizer<SpaceXYZMobilizer>(world_frame, box_frame);
 
   // Add cylinder body and Featherstone mobilizer.
-  const RigidBody<double>& cylinder_link = model.AddBody<RigidBody>(M_Ccm);
-  const Frame<double>& cylinder_frame = cylinder_link.get_body_frame();
+  const RigidBody<double>& cylinder_link = tree->AddBody<RigidBody>(M_Ccm);
+  const Frame<double>& cylinder_frame = cylinder_link.body_frame();
   const FeatherstoneMobilizer<double>& BC_mobilizer =
-    model.AddMobilizer<FeatherstoneMobilizer>(box_frame, cylinder_frame);
+      tree->AddMobilizer<FeatherstoneMobilizer>(box_frame, cylinder_frame);
 
-  // Finalize model.
-  model.Finalize();
-
-  // Create context.
-  std::unique_ptr<Context<double>> context = model.CreateDefaultContext();
+  // Transfer tree to system and get a Context.
+  MultibodyTreeSystem<double> system(std::move(tree));
+  auto context = system.CreateDefaultContext();
 
   // State of mobilizer connecting the world and box.
   Vector3d q_WB;
@@ -301,12 +299,12 @@ GTEST_TEST(ArticulatedBodyInertiaAlgorithm, ModifiedFeatherstoneExample) {
   BC_mobilizer.set_angles(context.get(), q_BC);
 
   // Update cache.
-  PositionKinematicsCache<double> pc(model.get_topology());
-  model.CalcPositionKinematicsCache(*context, &pc);
+  PositionKinematicsCache<double> pc(system.tree().get_topology());
+  system.tree().CalcPositionKinematicsCache(*context, &pc);
 
   // Compute articulated body cache.
-  ArticulatedBodyInertiaCache<double> abc(model.get_topology());
-  model.CalcArticulatedBodyInertiaCache(*context, pc,  &abc);
+  ArticulatedBodyInertiaCache<double> abc(system.tree().get_topology());
+  system.tree().CalcArticulatedBodyInertiaCache(*context, pc,  &abc);
 
   // Rotate the spatial inertia about the y-axis to match the rotation of
   // q_WB.
@@ -325,7 +323,7 @@ GTEST_TEST(ArticulatedBodyInertiaAlgorithm, ModifiedFeatherstoneExample) {
   const ArticulatedBodyInertia<double>& Pplus_BC_W_expected =
       ArticulatedBodyInertia<double>(Pplus_BC_W_expected_mat);
   const ArticulatedBodyInertia<double>& Pplus_BC_W_actual =
-      abc.get_Pplus_PB_W(cylinder_link.get_node_index());
+      abc.get_Pplus_PB_W(cylinder_link.node_index());
   EXPECT_TRUE(Pplus_BC_W_expected.CopyToFullMatrix6().isApprox(
       Pplus_BC_W_actual.CopyToFullMatrix6(), kEpsilon));
 
@@ -350,7 +348,7 @@ GTEST_TEST(ArticulatedBodyInertiaAlgorithm, ModifiedFeatherstoneExample) {
   const ArticulatedBodyInertia<double>& P_WB_W_expected =
       ArticulatedBodyInertia<double>(Pplus_WB_W_expected_mat);
   const ArticulatedBodyInertia<double>& P_WB_W_actual =
-      abc.get_Pplus_PB_W(box_link.get_node_index());
+      abc.get_Pplus_PB_W(box_link.node_index());
   EXPECT_TRUE(P_WB_W_expected.CopyToFullMatrix6().isApprox(
       P_WB_W_actual.CopyToFullMatrix6(), kEpsilon));
 }

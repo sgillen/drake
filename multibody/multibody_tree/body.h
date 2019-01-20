@@ -48,7 +48,7 @@ template<typename T> class Body;
 /// without the other. Therefore, a %BodyFrame instance is constructed in
 /// conjunction with its Body and cannot be
 /// constructed anywhere else. However, you can still access the frame
-/// associated with a body, see Body::get_body_frame().
+/// associated with a body, see Body::body_frame().
 /// This access is more than a convenience; you can use the %BodyFrame to
 /// define other frames on the body and to attach other multibody elements
 /// to it.
@@ -66,6 +66,15 @@ class BodyFrame final : public Frame<T> {
 
   Isometry3<T> CalcOffsetPoseInBody(
       const systems::Context<T>&,
+      const Isometry3<T>& X_FQ) const override {
+    return X_FQ;
+  }
+
+  Isometry3<T> GetFixedPoseInBodyFrame() const override {
+    return Isometry3<T>::Identity();
+  }
+
+  Isometry3<T> GetFixedOffsetPoseInBody(
       const Isometry3<T>& X_FQ) const override {
     return X_FQ;
   }
@@ -91,7 +100,7 @@ class BodyFrame final : public Frame<T> {
 
   // Only Body objects can create BodyFrame objects since Body is a friend of
   // BodyFrame.
-  explicit BodyFrame(const Body<T>& body) : Frame<T>(body) {}
+  explicit BodyFrame(const Body<T>& body) : Frame<T>(body.name(), body) {}
 
   // Helper method to make a clone templated on any other scalar type.
   // This method holds the common implementation for the different overrides to
@@ -147,14 +156,16 @@ class Body : public MultibodyTreeElement<Body<T>, BodyIndex> {
  public:
   DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(Body)
 
-  /// Creates a %Body with a BodyFrame associated with it.
-  Body() : body_frame_(*this) {}
-
-  /// Creates a %Body named `name` with a BodyFrame associated with it.
-  explicit Body(const std::string& name) : name_(name), body_frame_(*this) {}
+  /// Creates a %Body named `name` in model instance `model_instance`
+  /// with a given `default_mass` and a BodyFrame associated with it.
+  Body(const std::string& name, ModelInstanceIndex model_instance,
+       double default_mass)
+      : MultibodyTreeElement<Body<T>, BodyIndex>(model_instance),
+        name_(name),
+        body_frame_(*this), default_mass_(default_mass) {}
 
   /// Gets the `name` associated with `this` body.
-  const std::string& get_name() const { return name_; }
+  const std::string& name() const { return name_; }
 
   /// Returns the number of generalized positions q describing flexible
   /// deformations for this body. A rigid body will therefore return zero.
@@ -165,15 +176,22 @@ class Body : public MultibodyTreeElement<Body<T>, BodyIndex> {
   virtual int get_num_flexible_velocities() const = 0;
 
   /// Returns a const reference to the associated BodyFrame.
-  const BodyFrame<T>& get_body_frame() const {
+  const BodyFrame<T>& body_frame() const {
     return body_frame_;
   }
 
   /// Returns the index of the node in the underlying tree structure of
   /// the parent MultibodyTree to which this body belongs.
-  BodyNodeIndex get_node_index() const {
+  BodyNodeIndex node_index() const {
     return topology_.body_node;
   }
+
+  /// Returns the default mass (not Context dependent) for `this` body.
+  /// In general, the mass for a body can be a parameter of the model that can
+  /// be retrieved with the method get_mass(). When the mass of a body is a
+  /// parameter, the value returned by get_default_mass() is used to initialize
+  /// the mass parameter in the context.
+  double get_default_mass() const { return default_mass_; }
 
   /// Returns the mass of this body stored in `context`.
   virtual T get_mass(const MultibodyTreeContext<T> &context) const = 0;
@@ -242,7 +260,7 @@ class Body : public MultibodyTreeElement<Body<T>, BodyIndex> {
   // At MultibodyTree::Finalize() time, each body retrieves its topology
   // from the parent MultibodyTree.
   void DoSetTopology(const MultibodyTreeTopology& tree_topology) final {
-    topology_ = tree_topology.get_body(this->get_index());
+    topology_ = tree_topology.get_body(this->index());
     body_frame_.SetTopology(tree_topology);
   }
 
@@ -258,6 +276,12 @@ class Body : public MultibodyTreeElement<Body<T>, BodyIndex> {
 
   // Body frame associated with this body.
   BodyFrame<T> body_frame_;
+
+  // In general, the mass of a body can be a constant property of the body or a
+  // Parameter of the model. The default mass value is directly reported by
+  // get_default_mass() in the former case and used to initialize the mass
+  // Parameter in the Context in the latter case.
+  double default_mass_{0.0};
 
   // The internal bookkeeping topology struct used by MultibodyTree.
   BodyTopology topology_;

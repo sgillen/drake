@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "drake/common/drake_copyable.h"
+#include "drake/common/drake_deprecated.h"
 #include "drake/common/eigen_types.h"
 #include "drake/examples/kuka_iiwa_arm/iiwa_common.h"
 #include "drake/lcmt_iiwa_command.hpp"
@@ -39,12 +40,12 @@ class IiwaCommandReceiver : public systems::LeafSystem<double> {
   void set_initial_position(systems::Context<double>* context,
                             const Eigen::Ref<const VectorX<double>> x) const;
 
-  const systems::OutputPort<double>& get_commanded_state_input_port()
+  const systems::OutputPort<double>& get_commanded_state_output_port()
       const {
     return this->get_output_port(0);
   }
 
-  const systems::OutputPort<double>& get_commanded_torque_input_port()
+  const systems::OutputPort<double>& get_commanded_torque_output_port()
       const {
     return this->get_output_port(1);
   }
@@ -54,6 +55,7 @@ class IiwaCommandReceiver : public systems::LeafSystem<double> {
                          int length,
                          systems::BasicVector<double>* output) const;
 
+  // TODO(russt): This system should NOT have any state.
   void DoCalcDiscreteVariableUpdates(
       const systems::Context<double>& context,
       const std::vector<const systems::DiscreteUpdateEvent<double>*>&,
@@ -83,11 +85,11 @@ class IiwaCommandSender : public systems::LeafSystem<double> {
 
   explicit IiwaCommandSender(int num_joints = kIiwaArmNumJoints);
 
-  const systems::InputPortDescriptor<double>& get_position_input_port() const {
+  const systems::InputPort<double>& get_position_input_port() const {
     return this->get_input_port(position_input_port_);
   }
 
-  const systems::InputPortDescriptor<double>& get_torque_input_port() const {
+  const systems::InputPort<double>& get_torque_input_port() const {
     return this->get_input_port(torque_input_port_);
   }
 
@@ -100,46 +102,99 @@ class IiwaCommandSender : public systems::LeafSystem<double> {
   const int torque_input_port_{};
 };
 
-// TODO(sam.creasey) Add output for torques once we have a system
-// which needs them.
 
-/// Handles lcmt_iiwa_status messages from a LcmSubscriberSystem.  Has
-/// the following output ports:
+/// Handles lcmt_iiwa_status messages from a LcmSubscriberSystem.
 ///
-/// * Measured position and estimated velocity for each joint
-/// * Last commanded position for each joint
+/// @system{ IiwaStatusReceiver,
+///   @input_port{lcmt_iiwa_status},
+///   @output_port{position_commanded}
+///   @output_port{position_measured}
+///   @output_port{velocity_estimated}
+///   @output_port{torque_commanded}
+///   @output_port{torque_measured}
+///   @output_port{torque_external} }
 ///
-/// All ports will continue to output their initial state (typically
-/// zero) until a message is received.
+/// All ports will output all zeros until a message is received.
+///
+/// @see `lcmt_iiwa_status.lcm` for additional documentation.
 class IiwaStatusReceiver : public systems::LeafSystem<double> {
  public:
   DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(IiwaStatusReceiver)
 
   explicit IiwaStatusReceiver(int num_joints = kIiwaArmNumJoints);
 
-  const systems::OutputPort<double>& get_measured_position_output_port() const {
-    return this->get_output_port(measured_position_output_port_);
+  const systems::OutputPort<double>& get_position_commanded_output_port()
+  const {
+    return this->get_output_port(position_commanded_output_port_);
   }
 
+  const systems::OutputPort<double>& get_position_measured_output_port()
+  const {
+    return this->get_output_port(position_measured_output_port_);
+  }
+
+  const systems::OutputPort<double>& get_velocity_estimated_output_port()
+  const {
+    return this->get_output_port(velocity_estimated_output_port_);
+  }
+
+  const systems::OutputPort<double>& get_torque_commanded_output_port()
+  const {
+    return this->get_output_port(torque_commanded_output_port_);
+  }
+
+  const systems::OutputPort<double>& get_torque_measured_output_port()
+  const {
+    return this->get_output_port(torque_measured_output_port_);
+  }
+
+  const systems::OutputPort<double>& get_torque_external_output_port()
+  const {
+    return this->get_output_port(torque_external_output_port_);
+  }
+
+  const systems::OutputPort<double>& get_state_output_port() const {
+    return this->get_output_port(state_output_port_);
+  }
+
+  DRAKE_DEPRECATED(
+      "This output port is deprecated.  Use the state output port, or the "
+      "position_measured, velocity_estimated, and position_commanded ports "
+      "separately.")
+  const systems::OutputPort<double>& get_measured_position_output_port() const {
+    return this->get_output_port(deprecated_measured_position_output_port_);
+  }
+
+  DRAKE_DEPRECATED("This output port is deprecated.  Use position_commanded "
+                   "as an exact replacement.")
   const systems::OutputPort<double>& get_commanded_position_output_port()
       const {
-    return this->get_output_port(commanded_position_output_port_);
+    return this->get_output_port(position_commanded_output_port_);
   }
 
  private:
-  void OutputMeasuredPosition(const systems::Context<double>& context,
-                              systems::BasicVector<double>* output) const;
-  void OutputCommandedPosition(const systems::Context<double>& context,
-                               systems::BasicVector<double>* output) const;
+  template <std::vector<double> drake::lcmt_iiwa_status::* field>
+  void CopyLcmVectorOut(const systems::Context<double>& context,
+                        systems::BasicVector<double>* output) const;
 
-  void DoCalcDiscreteVariableUpdates(
+  void OutputState(const systems::Context<double>& context,
+                   systems::BasicVector<double>* output) const;
+
+  void OutputDeprecatedMeasuredPosition(
       const systems::Context<double>& context,
-      const std::vector<const systems::DiscreteUpdateEvent<double>*>&,
-      systems::DiscreteValues<double>* discrete_state) const override;
+      systems::BasicVector<double>* output) const;
 
   const int num_joints_;
-  const int measured_position_output_port_{};
-  const int commanded_position_output_port_{};
+
+  const int position_commanded_output_port_{};
+  const int position_measured_output_port_{};
+  const int velocity_estimated_output_port_{};
+  const int torque_commanded_output_port_{};
+  const int torque_measured_output_port_{};
+  const int torque_external_output_port_{};
+  const int state_output_port_{};
+
+  const int deprecated_measured_position_output_port_{};
 };
 
 /// Creates and outputs lcmt_iiwa_status messages.
@@ -166,21 +221,23 @@ class IiwaStatusReceiver : public systems::LeafSystem<double> {
 ///
 /// This system is presently only used in simulation. The robot hardware drivers
 /// publish directly to LCM and do not make use of this system.
+///
+/// @see `lcmt_iiwa_status.lcm` for additional documentation.
 class IiwaStatusSender : public systems::LeafSystem<double> {
  public:
   DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(IiwaStatusSender)
 
   explicit IiwaStatusSender(int num_joints = kIiwaArmNumJoints);
 
-  const systems::InputPortDescriptor<double>& get_command_input_port() const {
+  const systems::InputPort<double>& get_command_input_port() const {
     return this->get_input_port(0);
   }
 
-  const systems::InputPortDescriptor<double>& get_state_input_port() const {
+  const systems::InputPort<double>& get_state_input_port() const {
     return this->get_input_port(1);
   }
 
-  const systems::InputPortDescriptor<double>& get_commanded_torque_input_port()
+  const systems::InputPort<double>& get_commanded_torque_input_port()
       const {
     return this->get_input_port(2);
   }
@@ -189,7 +246,7 @@ class IiwaStatusSender : public systems::LeafSystem<double> {
    * Optional input port. If not connected, the joint_torque_measured field in
    * the output message will be identical to the joint_torque_commanded field.
    */
-  const systems::InputPortDescriptor<double>& get_measured_torque_input_port()
+  const systems::InputPort<double>& get_measured_torque_input_port()
       const {
     return this->get_input_port(3);
   }
@@ -198,7 +255,7 @@ class IiwaStatusSender : public systems::LeafSystem<double> {
    * Optional input port. If not connected, the joint_torque_external field in
    * the output message will be zeros.
    */
-  const systems::InputPortDescriptor<double>& get_external_torque_input_port()
+  const systems::InputPort<double>& get_external_torque_input_port()
       const {
     return this->get_input_port(4);
   }

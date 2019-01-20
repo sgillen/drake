@@ -17,6 +17,11 @@ load(
 )
 load("@drake//tools/lint:python_lint.bzl", "python_lint")
 
+licenses([
+    "notice",  # BSD-3-Clause
+    "restricted",  # LGPL-2.1 AND LGPL-2.1+
+])
+
 package(default_visibility = ["//visibility:public"])
 
 config_setting(
@@ -96,11 +101,14 @@ cc_binary(
     copts = LCM_COPTS,
     includes = LCM_PUBLIC_HEADER_INCLUDES,
     linkopts = select({
-        ":linux": ["-pthread"],  # For lcm_(mp)udpm.c.
+        ":linux": [
+            "-pthread",  # For lcm_(mp)udpm.c.
+            "-Wl,-soname,libdrake_lcm.so",
+        ],
         "@//conditions:default": [],
     }),
     linkshared = 1,
-    visibility = [],
+    visibility = ["@drake_visualizer//:__pkg__"],
     deps = ["@glib"],
 )
 
@@ -141,6 +149,7 @@ cc_binary(
         "lcmgen/emit_c.c",
         "lcmgen/emit_cpp.c",
         "lcmgen/emit_csharp.c",
+        "lcmgen/emit_go.c",
         "lcmgen/emit_java.c",
         "lcmgen/emit_lua.c",
         "lcmgen/emit_python.c",
@@ -211,8 +220,15 @@ generate_file(
     content = """
 import ctypes
 import os.path
+import six
 ctypes.cdll.LoadLibrary(os.path.realpath(__path__[0] + '/_lcm.so'))
-execfile(__path__[0] + \"/lcm-python/lcm/__init__.py\")
+_filename = __path__[0] + \"/lcm-python/lcm/__init__.py\"
+if six.PY2:
+    execfile(_filename)
+else:
+    with open(_filename) as f:
+        _code = compile(f.read(), _filename, 'exec')
+        exec(_code)
 """,
     visibility = ["//visibility:private"],
 )
@@ -288,12 +304,15 @@ install(
         ":_lcm.so",
         ":lcm-python-upstream",
     ],
-    library_dest = "lib/python2.7/site-packages/lcm",
+    library_dest = "@PYTHON_SITE_PACKAGES@/lcm",
     py_strip_prefix = ["lcm-python"],
 )
 
 install(
     name = "install",
+    install_tests = [
+        "@drake//tools/workspace/lcm:test/lcm-gen_install_test.py",
+    ],
     targets = [
         ":lcm-gen",
         ":lcm-java",
@@ -325,4 +344,4 @@ install(
     ],
 )
 
-python_lint()
+python_lint(extra_srcs = [":test/lcm-gen_install_test.py"])

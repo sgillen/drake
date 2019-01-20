@@ -22,7 +22,7 @@ class FirstOrderLowPassFilterTest : public ::testing::Test {
         kTimeConstant, kSignalSize);
     context_ = filter_->CreateDefaultContext();
     derivatives_ = filter_->AllocateTimeDerivatives();
-    output_ = filter_->get_output_port().Allocate(*context_);
+    output_ = filter_->get_output_port().Allocate();
 
     // Sets the state to zero initially.
     filter_->set_initial_output_value(
@@ -34,7 +34,7 @@ class FirstOrderLowPassFilterTest : public ::testing::Test {
     filter_ = std::make_unique<FirstOrderLowPassFilter<double>>(time_constants);
     context_ = filter_->CreateDefaultContext();
     derivatives_ = filter_->AllocateTimeDerivatives();
-    output_ = filter_->get_output_port().Allocate(*context_);
+    output_ = filter_->get_output_port().Allocate();
 
     // Sets the state to zero initially.
     ContinuousState<double>& xc = continuous_state();
@@ -57,9 +57,9 @@ class FirstOrderLowPassFilterTest : public ::testing::Test {
 TEST_F(FirstOrderLowPassFilterTest, Topology) {
   SetUpSingleTimeConstantFilter();
   ASSERT_EQ(1, filter_->get_num_input_ports());
-  const auto& input_descriptor = filter_->get_input_port();
-  EXPECT_EQ(kVectorValued, input_descriptor.get_data_type());
-  EXPECT_EQ(kSignalSize, input_descriptor.size());
+  const auto& input_input_port = filter_->get_input_port();
+  EXPECT_EQ(kVectorValued, input_input_port.get_data_type());
+  EXPECT_EQ(kSignalSize, input_input_port.size());
 
   ASSERT_EQ(1, filter_->get_num_output_ports());
   const auto& output_port = filter_->get_output_port();

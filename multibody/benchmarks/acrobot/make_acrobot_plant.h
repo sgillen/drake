@@ -5,7 +5,7 @@
 #include <string>
 
 #include "drake/common/drake_copyable.h"
-#include "drake/geometry/geometry_system.h"
+#include "drake/geometry/scene_graph.h"
 #include "drake/multibody/multibody_tree/joints/revolute_joint.h"
 #include "drake/multibody/multibody_tree/multibody_plant/multibody_plant.h"
 
@@ -18,6 +18,10 @@ namespace acrobot {
 /// an acrobot with the method MakeAcrobotPlant().
 /// Refer to this the documentation of this class's constructor for further
 /// details on the parameters stored by this class and their default values.
+///
+/// @note The default constructor initializes the parameters in accordance to
+/// the `acrobot.sdf` file in this same directory. Therefore this file and
+/// `acrobot.sdf` MUST be kept in sync.
 class AcrobotParameters {
  public:
   DRAKE_DEFAULT_COPY_AND_MOVE_AND_ASSIGN(AcrobotParameters)
@@ -88,6 +92,11 @@ class AcrobotParameters {
   double b1() const { return b1_; }
   double b2() const { return b2_; }
   double g() const { return g_; }
+  // Radii of the cylinders used for visualization.
+  // The second link is made slightly thicker so that the difference between the
+  // links can be seen when aligned.
+  double r1() const { return 0.035; }
+  double r2() const { return 0.07; }
 
   // getters for modeling elements' names
   const std::string& link1_name() const { return link1_name_; }
@@ -98,6 +107,7 @@ class AcrobotParameters {
   const std::string& elbow_joint_name() const {
     return elbow_joint_name_;
   }
+  const std::string& actuator_name() const { return actuator_name_; }
 
  private:
   // Helper method for NaN initialization.
@@ -119,6 +129,7 @@ class AcrobotParameters {
   std::string link2_name_{"Link2"};
   std::string shoulder_joint_name_{"ShoulderJoint"};
   std::string elbow_joint_name_{"ElbowJoint"};
+  std::string actuator_name_{"ElbowActuator"};
 };
 
 /// This method makes a MultibodyPlant model of the Acrobot - a canonical
@@ -130,15 +141,16 @@ class AcrobotParameters {
 ///   Default parameters of the model set at construction. These parameters
 ///   include masses, link lengths, rotational inertias, etc. Refer to the
 ///   documentation of AcrobotParameters for further details.
-/// @param[out] geometry_system
-///   If a GeometrySystem is provided with this argument, this factory method
+/// @param[in] finalize
+///   If `true`, MultibodyPlant::Finalize() gets called on the new plant.
+/// @param scene_graph
+///   If a SceneGraph is provided with this argument, this factory method
 ///   will register the new multibody plant to be a source for that geometry
 ///   system and it will also register geometry for visualization.
 ///   If this argument is omitted, no geometry will be registered.
 std::unique_ptr<drake::multibody::multibody_plant::MultibodyPlant<double>>
-MakeAcrobotPlant(
-    const AcrobotParameters& default_parameters,
-    geometry::GeometrySystem<double>* geometry_system = nullptr);
+MakeAcrobotPlant(const AcrobotParameters& default_parameters, bool finalize,
+                 geometry::SceneGraph<double>* scene_graph = nullptr);
 
 }  // namespace acrobot
 }  // namespace benchmarks

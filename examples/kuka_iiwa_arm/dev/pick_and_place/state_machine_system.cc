@@ -41,15 +41,11 @@ struct PickAndPlaceStateMachineSystem::InternalState {
   InternalState(const pick_and_place::PlannerConfiguration& configuration,
                 bool single_move)
       : world_state(
-            configuration.absolute_model_path(),
-            configuration.end_effector_name,
             configuration.num_tables,
             configuration.target_dimensions),
         state_machine(configuration, single_move),
         last_iiwa_plan(MakeDefaultIiwaPlan()),
         last_wsg_command(MakeDefaultWsgCommand()) {}
-
-  ~InternalState() {}
 
   pick_and_place::WorldState world_state;
   PickAndPlaceStateMachine state_machine;
@@ -60,13 +56,23 @@ struct PickAndPlaceStateMachineSystem::InternalState {
 PickAndPlaceStateMachineSystem::PickAndPlaceStateMachineSystem(
     const pick_and_place::PlannerConfiguration& configuration, bool single_move)
     : configuration_(configuration), single_move_(single_move) {
-  input_port_iiwa_state_ = this->DeclareAbstractInputPort().get_index();
-  input_port_iiwa_base_pose_ = this->DeclareAbstractInputPort().get_index();
-  input_port_box_state_ = this->DeclareAbstractInputPort().get_index();
-  input_port_wsg_status_ = this->DeclareAbstractInputPort().get_index();
+  input_port_iiwa_state_ = this->DeclareAbstractInputPort(
+      systems::kUseDefaultName,
+      systems::Value<lcmt_iiwa_status>{}).get_index();
+  input_port_iiwa_base_pose_ = this->DeclareAbstractInputPort(
+      systems::kUseDefaultName,
+      systems::Value<Isometry3<double>>{}).get_index();
+  input_port_box_state_ = this->DeclareAbstractInputPort(
+      systems::kUseDefaultName,
+      systems::Value<robot_state_t>{}).get_index();
+  input_port_wsg_status_ = this->DeclareAbstractInputPort(
+      systems::kUseDefaultName,
+      systems::Value<lcmt_schunk_wsg_status>{}).get_index();
   input_port_table_state_.resize(this->num_tables());
   for (int i = 0; i < this->num_tables(); ++i) {
-    input_port_table_state_[i] = this->DeclareAbstractInputPort().get_index();
+    input_port_table_state_[i] = this->DeclareAbstractInputPort(
+        systems::kUseDefaultName,
+        systems::Value<Isometry3<double>>{}).get_index();
   }
 
   output_port_iiwa_plan_ =

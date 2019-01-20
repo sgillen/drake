@@ -17,6 +17,7 @@ namespace multibody {
 /// kinematics results of computations that depend not only on the generalized
 /// positions of the system, but also on its generalized velocities.
 /// Velocity kinematics results include:
+///
 /// - Spatial velocity `V_WB` for each body B in the model as measured and
 ///   expressed in the world frame W.
 /// - Spatial velocity `V_PB` for each body B in the model as measured and
@@ -29,6 +30,7 @@ namespace multibody {
 ///           scalar.
 ///
 /// Instantiated templates for the following kinds of T's are provided:
+///
 /// - double
 /// - AutoDiffXd
 ///
@@ -45,7 +47,7 @@ class VelocityKinematicsCache {
   /// so that operations using this uninitialized cache entry fail fast, easing
   /// bug detection.
   explicit VelocityKinematicsCache(const MultibodyTreeTopology& topology) :
-      num_nodes_(topology.get_num_bodies()) {
+      num_nodes_(topology.num_bodies()) {
     Allocate();
     DRAKE_ASSERT_VOID(InitializeToNaN());
     // Sets defaults.

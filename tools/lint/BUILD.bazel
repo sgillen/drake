@@ -7,7 +7,7 @@ load(
     "@drake//tools/skylark:drake_py.bzl",
     "drake_py_binary",
     "drake_py_library",
-    "drake_py_test",
+    "drake_py_unittest",
 )
 
 # TODO(jwnimmer-tri) This probably deserves to live in drake/common, since it
@@ -45,6 +45,14 @@ drake_py_library(
 )
 
 drake_py_binary(
+    name = "clang_format_lint",
+    srcs = ["clang_format_lint.py"],
+    deps = [
+        ":clang_format",
+    ],
+)
+
+drake_py_binary(
     name = "drakelint",
     srcs = ["drakelint.py"],
     # The clang-format-includes binary is not used by drakelint, because
@@ -60,7 +68,7 @@ drake_py_binary(
     name = "bzlcodestyle",
     srcs = ["bzlcodestyle.py"],
     main = "bzlcodestyle.py",
-    deps = ["@pycodestyle//:pycodestyle"],
+    deps = ["@pycodestyle"],
 )
 
 drake_py_library(
@@ -76,40 +84,53 @@ drake_py_binary(
     deps = [":formatter"],
 )
 
+drake_py_binary(
+    name = "install_lint_reporter",
+    testonly = 1,
+    srcs = ["install_lint_reporter.py"],
+)
+
+drake_py_binary(
+    name = "library_lint_reporter",
+    testonly = 1,
+    srcs = ["library_lint_reporter.py"],
+)
+
 # === test ===
 
-drake_py_test(
+drake_py_unittest(
     name = "buildifier_test",
-    srcs = ["test/buildifier_test.py"],
     data = [":buildifier"],
 )
 
-drake_py_test(
+drake_py_unittest(
     name = "find_data_test",
-    srcs = ["test/find_data_test.py"],
     data = ["test/find_data_test.txt"],
     deps = [":find_data"],
 )
 
-drake_py_test(
+drake_py_unittest(
     name = "util_test",
-    srcs = ["test/util_test.py"],
     tags = [
-        # This test looks outside the sandbox.
+        # This test's pass/fail result depends on the presence of files in the
+        # source tree beyond what is declared in its `deps`; thus, we need to
+        # re-run the test anytime the source tree might have changed, for which
+        # "external" is the closest semantic match.
         "external",
-        "local",
+        # This test looks outside the sandbox.
+        "no-sandbox",
     ],
     deps = [":util"],
 )
 
-drake_py_test(
+drake_py_unittest(
     name = "formatter_test",
-    srcs = ["test/formatter_test.py"],
     deps = [":formatter"],
 )
 
 sh_test(
     name = "clang_format_includes_test",
+    size = "small",
     srcs = ["test/clang_format_includes_test.sh"],
     data = [
         ":clang-format-includes",

@@ -6,15 +6,25 @@
 
 namespace drake {
 namespace solvers {
-
-bool GurobiSolver::available() const {
-  return false;
+std::shared_ptr<GurobiSolver::License> GurobiSolver::AcquireLicense() {
+  return {};
 }
+
+bool GurobiSolver::is_available() { return false; }
 
 SolutionResult GurobiSolver::Solve(MathematicalProgram&) const {
   throw std::runtime_error(
       "The Gurobi bindings were not compiled.  You'll need to use a different "
           "solver.");
+}
+
+void GurobiSolver::Solve(const MathematicalProgram&,
+                         const optional<Eigen::VectorXd>&,
+                         const optional<SolverOptions>&,
+                         MathematicalProgramResult*) const {
+  throw std::runtime_error(
+      "The Gurobi bindings were not compiled.  You'll need to use a different "
+      "solver.");
 }
 
 }  // end namespace solvers

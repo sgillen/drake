@@ -14,13 +14,16 @@ namespace multibody {
 
 template <typename T>
 FixedOffsetFrame<T>::FixedOffsetFrame(
-    const Frame<T>& P, const Isometry3<double>& X_PF) :
-    Frame<T>(P.get_body()), parent_frame_(P), X_PF_(X_PF) {}
+    const std::string& name, const Frame<T>& P,
+    const Isometry3<double>& X_PF,
+    optional<ModelInstanceIndex> model_instance) :
+    Frame<T>(name, P.body(), model_instance.value_or(P.model_instance())),
+    parent_frame_(P), X_PF_(X_PF) {}
 
 template <typename T>
 FixedOffsetFrame<T>::FixedOffsetFrame(
-    const Body<T>& B, const Isometry3<double>& X_BF) :
-    Frame<T>(B), parent_frame_(B.get_body_frame()), X_PF_(X_BF) {}
+    const std::string& name, const Body<T>& B, const Isometry3<double>& X_BF) :
+    Frame<T>(name, B), parent_frame_(B.body_frame()), X_PF_(X_BF) {}
 
 template <typename T>
 template <typename ToScalar>
@@ -29,7 +32,7 @@ std::unique_ptr<Frame<ToScalar>> FixedOffsetFrame<T>::TemplatedDoCloneToScalar(
   const Frame<ToScalar>& parent_frame_clone =
       tree_clone.get_variant(parent_frame_);
   return std::make_unique<FixedOffsetFrame<ToScalar>>(
-      parent_frame_clone, X_PF_);
+      this->name(), parent_frame_clone, X_PF_);
 }
 
 template <typename T>

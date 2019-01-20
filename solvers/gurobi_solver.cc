@@ -2,21 +2,24 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdlib>
 #include <limits>
 #include <stdexcept>
 #include <vector>
 
 #include <Eigen/Core>
 #include <Eigen/SparseCore>
+#include <fmt/format.h>
 
 // TODO(jwnimmer-tri) Eventually resolve these warnings.
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 
 // NOLINTNEXTLINE(build/include) False positive due to weird include style.
-#include "gurobi_c++.h"
+#include "gurobi_c.h"
 
 #include "drake/common/drake_assert.h"
+#include "drake/common/scoped_singleton.h"
 #include "drake/common/text_logging.h"
 #include "drake/math/eigen_sparse_triplet.h"
 #include "drake/solvers/mathematical_program.h"
@@ -26,6 +29,14 @@
 namespace drake {
 namespace solvers {
 namespace {
+
+// TODO(jwnimmer-tri) Add a reusable scope_guard to //common.
+// Make a scope exit guard -- an object that when destroyed runs `func`.
+auto MakeGuard(std::function<void()> func) {
+  // The shared_ptr deleter func is always invoked, even for nullptrs.
+  // http://en.cppreference.com/w/cpp/memory/shared_ptr/%7Eshared_ptr
+  return std::shared_ptr<void>(nullptr, [=](void*) { func(); });
+}
 
 // Information to be passed through a Gurobi C callback to
 // grant it information about its problem (the host
@@ -38,7 +49,7 @@ namespace {
 // completed. It might be able to be further reduced if
 // GurobiSolver subclasses GRBCallback in the Gurobi C++ API.
 struct GurobiCallbackInformation {
-  MathematicalProgram* prog{};
+  const MathematicalProgram* prog{};
   std::vector<bool> is_new_variable;
   // Used in callbacks to store raw Gurobi variable values.
   std::vector<double> solver_sol_vector;
@@ -48,6 +59,7 @@ struct GurobiCallbackInformation {
   Eigen::VectorXd prog_sol_vector;
   GurobiSolver::MipNodeCallbackFunction mip_node_callback;
   GurobiSolver::MipSolCallbackFunction mip_sol_callback;
+  MathematicalProgramResult* result{};
 };
 
 // Utility that, given a raw Gurobi solution vector, a container
@@ -57,8 +69,7 @@ struct GurobiCallbackInformation {
 // Gurobi solution.
 void SetProgramSolutionVector(const std::vector<bool>& is_new_variable,
                               const std::vector<double>& solver_sol_vector,
-                              Eigen::VectorXd* prog_sol_vector,
-                              MathematicalProgram* prog) {
+                              Eigen::VectorXd* prog_sol_vector) {
   int k = 0;
   for (size_t i = 0; i < is_new_variable.size(); ++i) {
     if (!is_new_variable[i]) {
@@ -66,7 +77,6 @@ void SetProgramSolutionVector(const std::vector<bool>& is_new_variable,
       k++;
     }
   }
-  prog->SetDecisionVariableValues(*prog_sol_vector);
 }
 
 // Utility to extract Gurobi solve status information into
@@ -105,9 +115,10 @@ int gurobi_callback(GRBmodel* model, void* cbdata, int where, void* usrdata) {
                           GRBgeterrormsg(GRBgetenv(model)));
       return 0;
     }
-    SetProgramSolutionVector(
-        callback_info->is_new_variable, callback_info->solver_sol_vector,
-        &(callback_info->prog_sol_vector), callback_info->prog);
+    SetProgramSolutionVector(callback_info->is_new_variable,
+                             callback_info->solver_sol_vector,
+                             &(callback_info->prog_sol_vector));
+    callback_info->result->set_x_val(callback_info->prog_sol_vector);
 
     GurobiSolver::SolveStatusInfo solve_status =
         GetGurobiSolveStatus(cbdata, where);
@@ -133,9 +144,10 @@ int gurobi_callback(GRBmodel* model, void* cbdata, int where, void* usrdata) {
                             error, GRBgeterrormsg(GRBgetenv(model)));
         return 0;
       }
-      SetProgramSolutionVector(
-          callback_info->is_new_variable, callback_info->solver_sol_vector,
-          &(callback_info->prog_sol_vector), callback_info->prog);
+      SetProgramSolutionVector(callback_info->is_new_variable,
+                               callback_info->solver_sol_vector,
+                               &(callback_info->prog_sol_vector));
+      callback_info->result->set_x_val(callback_info->prog_sol_vector);
 
       GurobiSolver::SolveStatusInfo solve_status =
           GetGurobiSolveStatus(cbdata, where);
@@ -286,8 +298,8 @@ int AddSecondOrderConeConstraints(
                second_order_cone_new_variable_indices.size());
   int second_order_cone_count = 0;
   for (const auto& binding : second_order_cone_constraints) {
-    const auto& A = binding.constraint()->A();
-    const auto& b = binding.constraint()->b();
+    const auto& A = binding.evaluator()->A();
+    const auto& b = binding.evaluator()->b();
 
     int num_x = A.cols();
     int num_z = A.rows();
@@ -389,7 +401,7 @@ int AddCosts(GRBmodel* model, double* pconstant_cost,
   double& constant_cost = *pconstant_cost;
   constant_cost = 0;
   for (const auto& binding : prog.quadratic_costs()) {
-    const auto& constraint = binding.constraint();
+    const auto& constraint = binding.evaluator();
     const int constraint_variable_dimension = binding.GetNumElements();
     const Eigen::MatrixXd& Q = constraint->Q();
     const Eigen::VectorXd& b = constraint->b();
@@ -431,7 +443,7 @@ int AddCosts(GRBmodel* model, double* pconstant_cost,
 
   // Add linear cost in prog.linear_costs() to the aggregated cost.
   for (const auto& binding : prog.linear_costs()) {
-    const auto& constraint = binding.constraint();
+    const auto& constraint = binding.evaluator();
     const auto& a = constraint->a();
     constant_cost += constraint->b();
 
@@ -489,11 +501,11 @@ int AddCosts(GRBmodel* model, double* pconstant_cost,
 
 // Add both LinearConstraints and LinearEqualityConstraints to gurobi
 // TODO(#2274) Fix NOLINTNEXTLINE(runtime/references).
-int ProcessLinearConstraints(GRBmodel* model, MathematicalProgram& prog,
+int ProcessLinearConstraints(GRBmodel* model, const MathematicalProgram& prog,
                              double sparseness_threshold) {
   // TODO(naveenoid) : needs test coverage.
   for (const auto& binding : prog.linear_equality_constraints()) {
-    const auto& constraint = binding.constraint();
+    const auto& constraint = binding.evaluator();
 
     const int error = AddLinearConstraint(
         prog, model, constraint->A(), constraint->lower_bound(),
@@ -505,7 +517,7 @@ int ProcessLinearConstraints(GRBmodel* model, MathematicalProgram& prog,
   }
 
   for (const auto& binding : prog.linear_constraints()) {
-    const auto& constraint = binding.constraint();
+    const auto& constraint = binding.evaluator();
 
     const int error = AddLinearConstraint(
         prog, model, constraint->A(), constraint->lower_bound(),
@@ -567,7 +579,7 @@ void AddSecondOrderConeVariables(
   // accordingly.
   int lorentz_cone_count = 0;
   for (const auto& binding : second_order_cones) {
-    int num_new_lorentz_cone_var_i = binding.constraint()->A().rows();
+    int num_new_lorentz_cone_var_i = binding.evaluator()->A().rows();
     (*second_order_cone_variable_indices)[lorentz_cone_count].resize(
         num_new_lorentz_cone_var_i);
     for (int i = 0; i < num_new_lorentz_cone_var_i; ++i) {
@@ -596,21 +608,69 @@ void AddSecondOrderConeVariables(
 }
 }  // anonymous namespace
 
-bool GurobiSolver::available() const { return true; }
+bool GurobiSolver::is_available() { return true; }
 
-SolutionResult GurobiSolver::Solve(MathematicalProgram& prog) const {
-  // We only process quadratic costs and linear / bounding box
-  // constraints.
+/*
+ * Implements RAII for a Gurobi license / environment.
+ */
+class GurobiSolver::License {
+ public:
+  License() {
+    const char* grb_license_file = std::getenv("GRB_LICENSE_FILE");
+    if (grb_license_file == nullptr) {
+      throw std::runtime_error(
+          "Could not locate Gurobi license key file because GRB_LICENSE_FILE "
+          "environment variable was not set.");
+    }
+    const int num_tries = 3;
+    int grb_load_env_error = 1;
+    for (int i = 0; grb_load_env_error && i < num_tries; ++i) {
+      grb_load_env_error = GRBloadenv(&env_, nullptr);
+    }
+    if (grb_load_env_error) {
+      const char *grb_msg = GRBgeterrormsg(env_);
+      throw std::runtime_error("Could not create Gurobi environment because "
+          "Gurobi returned code " + std::to_string(grb_load_env_error) +
+          " with message \"" + grb_msg + "\".");
+    }
+    DRAKE_DEMAND(env_ != nullptr);
+  }
 
-  GRBenv* env = nullptr;
-  GRBloadenv(&env, nullptr);
+  ~License() {
+    GRBfreeenv(env_);
+    env_ = nullptr;
+  }
 
-  DRAKE_ASSERT(prog.generic_costs().empty());
-  DRAKE_ASSERT(prog.generic_constraints().empty());
+  GRBenv* GurobiEnv() {
+    return env_;
+  }
+
+ private:
+  GRBenv* env_ = nullptr;
+};
+
+std::shared_ptr<GurobiSolver::License> GurobiSolver::AcquireLicense() {
+  return GetScopedSingleton<GurobiSolver::License>();
+}
+
+void GurobiSolver::Solve(const MathematicalProgram& prog,
+                         const optional<Eigen::VectorXd>& initial_guess,
+                         const optional<SolverOptions>& solver_options,
+                         MathematicalProgramResult* result) const {
+  // reset result.
+  *result = {};
+  if (!license_) {
+    license_ = AcquireLicense();
+  }
+  GRBenv* env = license_->GurobiEnv();
+  if (!AreProgramAttributesSatisfied(prog)) {
+    throw std::invalid_argument(
+        "GurobiSolver's capability doesn't satisfy the requirement of this "
+        "optimization program.");
+  }
 
   const int num_prog_vars = prog.num_vars();
   int num_gurobi_vars = num_prog_vars;
-
   // Potentially Gurobi can add variables on top of the variables in
   // MathematicalProgram prog.
   // is_new_variable[i] is true if the i'th variable in Gurobi environment is
@@ -644,6 +704,7 @@ SolutionResult GurobiSolver::Solve(MathematicalProgram& prog) const {
       case MathematicalProgram::VarType::INTEGER:
         gurobi_var_type[i] = GRB_INTEGER;
         is_mip = true;
+        break;
       case MathematicalProgram::VarType::BOOLEAN:
         throw std::runtime_error(
             "Boolean variables should not be used with Gurobi solver.");
@@ -651,7 +712,7 @@ SolutionResult GurobiSolver::Solve(MathematicalProgram& prog) const {
   }
 
   for (const auto& binding : prog.bounding_box_constraints()) {
-    const auto& constraint = binding.constraint();
+    const auto& constraint = binding.evaluator();
     const Eigen::VectorXd& lower_bound = constraint->lower_bound();
     const Eigen::VectorXd& upper_bound = constraint->upper_bound();
 
@@ -683,28 +744,35 @@ SolutionResult GurobiSolver::Solve(MathematicalProgram& prog) const {
   GRBmodel* model = nullptr;
   GRBnewmodel(env, &model, "gurobi_model", num_gurobi_vars, nullptr, &xlow[0],
               &xupp[0], gurobi_var_type.data(), nullptr);
+  auto guard = MakeGuard([model]() {
+      GRBfreemodel(model);
+    });
 
   int error = 0;
   // TODO(naveenoid) : This needs access externally.
   double sparseness_threshold = 1e-14;
   double constant_cost = 0;
-  error = AddCosts(model, &constant_cost, prog, sparseness_threshold);
-  DRAKE_DEMAND(!error);
+  if (!error) {
+    error = AddCosts(model, &constant_cost, prog, sparseness_threshold);
+  }
 
-  error = ProcessLinearConstraints(model, prog, sparseness_threshold);
-  DRAKE_DEMAND(!error);
+  if (!error) {
+    error = ProcessLinearConstraints(model, prog, sparseness_threshold);
+  }
 
   // Add Lorentz cone constraints.
-  error = AddSecondOrderConeConstraints(
-      prog, prog.lorentz_cone_constraints(), sparseness_threshold,
-      lorentz_cone_new_variable_indices, model);
-  DRAKE_DEMAND(!error);
+  if (!error) {
+    error = AddSecondOrderConeConstraints(
+        prog, prog.lorentz_cone_constraints(), sparseness_threshold,
+        lorentz_cone_new_variable_indices, model);
+  }
 
   // Add rotated Lorentz cone constraints.
-  error = AddSecondOrderConeConstraints(
-      prog, prog.rotated_lorentz_cone_constraints(), sparseness_threshold,
-      rotated_lorentz_cone_new_variable_indices, model);
-  DRAKE_DEMAND(!error);
+  if (!error) {
+    error = AddSecondOrderConeConstraints(
+        prog, prog.rotated_lorentz_cone_constraints(), sparseness_threshold,
+        rotated_lorentz_cone_new_variable_indices, model);
+  }
 
   DRAKE_ASSERT(HasCorrectNumberOfVariables(model, is_new_variable.size()));
 
@@ -719,22 +787,44 @@ SolutionResult GurobiSolver::Solve(MathematicalProgram& prog) const {
 
   // Corresponds to no console or file logging (this is the default, which
   // can be overridden by parameters set in the MathematicalProgram).
-  GRBsetintparam(model_env, GRB_INT_PAR_OUTPUTFLAG, 0);
+  if (!error) {
+    error = GRBsetintparam(model_env, GRB_INT_PAR_OUTPUTFLAG, 0);
+  }
 
   for (const auto it : prog.GetSolverOptionsDouble(id())) {
-    error = GRBsetdblparam(model_env, it.first.c_str(), it.second);
-    DRAKE_DEMAND(!error);
+    if (!error) {
+      error = GRBsetdblparam(model_env, it.first.c_str(), it.second);
+    }
   }
-
   for (const auto it : prog.GetSolverOptionsInt(id())) {
-    error = GRBsetintparam(model_env, it.first.c_str(), it.second);
-    DRAKE_DEMAND(!error);
+    if (!error) {
+      error = GRBsetintparam(model_env, it.first.c_str(), it.second);
+    }
+  }
+  if (solver_options.has_value()) {
+    for (const auto it : solver_options->GetOptionsDouble(id())) {
+      if (!error) {
+        error = GRBsetdblparam(model_env, it.first.c_str(), it.second);
+      }
+    }
+    for (const auto it : solver_options->GetOptionsInt(id())) {
+      if (!error) {
+        error = GRBsetintparam(model_env, it.first.c_str(), it.second);
+      }
+    }
   }
 
-  for (int i = 0; i < static_cast<int>(prog.num_vars()); ++i) {
-    if (!std::isnan(prog.initial_guess()(i))) {
-      error = GRBsetdblattrelement(model, "Start", i, prog.initial_guess()(i));
-      DRAKE_DEMAND(!error);
+  if (initial_guess.has_value()) {
+    if (initial_guess.value().rows() != prog.num_vars()) {
+      throw std::invalid_argument(fmt::format(
+          "The initial guess has {} rows, but {} rows were expected.",
+          initial_guess.value().rows(), prog.num_vars()));
+    }
+    for (int i = 0; i < static_cast<int>(prog.num_vars()); ++i) {
+      if (!error) {
+        error =
+            GRBsetdblattrelement(model, "Start", i, initial_guess.value()(i));
+      }
     }
   }
 
@@ -754,43 +844,51 @@ SolutionResult GurobiSolver::Solve(MathematicalProgram& prog) const {
     callback_info.prog_sol_vector.resize(num_prog_vars);
     callback_info.mip_node_callback = mip_node_callback_;
     callback_info.mip_sol_callback = mip_sol_callback_;
-    GRBsetcallbackfunc(model, &gurobi_callback, &callback_info);
+    callback_info.result = result;
+    if (!error) {
+      error = GRBsetcallbackfunc(model, &gurobi_callback, &callback_info);
+    }
   }
 
-  error = GRBoptimize(model);
+  if (!error) {
+    error = GRBoptimize(model);
+  }
 
-  SolutionResult result = SolutionResult::kUnknownError;
+  SolutionResult solution_result = SolutionResult::kUnknownError;
 
-  // If any error exists so far, it's from calling GRBoptimize.
-  // TODO(naveenoid) : Properly handle Gurobi specific error.
-  // message.
+  GurobiSolverDetails& solver_details =
+      result->SetSolverDetailsType<GurobiSolverDetails>();
+
   if (error) {
-    result = SolutionResult::kInvalidInput;
+    solution_result = SolutionResult::kInvalidInput;
     drake::log()->info("Gurobi returns code {}, with message \"{}\".\n", error,
                        GRBgeterrormsg(env));
+    solver_details.error_code = error;
   } else {
     int optimstatus = 0;
     GRBgetintattr(model, GRB_INT_ATTR_STATUS, &optimstatus);
 
+    solver_details.optimization_status = optimstatus;
+
     if (optimstatus != GRB_OPTIMAL && optimstatus != GRB_SUBOPTIMAL) {
       switch (optimstatus) {
         case GRB_INF_OR_UNBD: {
-          result = SolutionResult::kInfeasible_Or_Unbounded;
+          solution_result = SolutionResult::kInfeasible_Or_Unbounded;
           break;
         }
         case GRB_UNBOUNDED: {
-          prog.SetOptimalCost(MathematicalProgram::kUnboundedCost);
-          result = SolutionResult::kUnbounded;
+          result->set_optimal_cost(MathematicalProgram::kUnboundedCost);
+          solution_result = SolutionResult::kUnbounded;
           break;
         }
         case GRB_INFEASIBLE: {
-          prog.SetOptimalCost(MathematicalProgram::kGlobalInfeasibleCost);
-          result = SolutionResult::kInfeasibleConstraints;
+          result->set_optimal_cost(MathematicalProgram::kGlobalInfeasibleCost);
+          solution_result = SolutionResult::kInfeasibleConstraints;
           break;
         }
       }
     } else {
-      result = SolutionResult::kSolutionFound;
+      solution_result = SolutionResult::kSolutionFound;
       int num_total_variables = is_new_variable.size();
       // Gurobi has solved not only for the decision variables in
       // MathematicalProgram prog, but also for any extra decision variables
@@ -808,14 +906,15 @@ SolutionResult GurobiSolver::Solve(MathematicalProgram& prog) const {
                          solver_sol_vector.data());
       Eigen::VectorXd prog_sol_vector(num_prog_vars);
       SetProgramSolutionVector(is_new_variable, solver_sol_vector,
-                               &prog_sol_vector, &prog);
+                               &prog_sol_vector);
+      result->set_x_val(prog_sol_vector);
 
       // Obtain optimal cost.
       double optimal_cost = std::numeric_limits<double>::quiet_NaN();
       GRBgetdblattr(model, GRB_DBL_ATTR_OBJVAL, &optimal_cost);
 
       // Provide Gurobi's computed cost in addition to the constant cost.
-      prog.SetOptimalCost(optimal_cost + constant_cost);
+      result->set_optimal_cost(optimal_cost + constant_cost);
 
       if (is_mip) {
         // If the problem is a mixed-integer optimization program, provide
@@ -825,19 +924,37 @@ SolutionResult GurobiSolver::Solve(MathematicalProgram& prog) const {
         if (error) {
           drake::log()->error("GRB error {} getting lower bound: {}\n", error,
                               GRBgeterrormsg(GRBgetenv(model)));
+          solver_details.error_code = error;
         } else {
-          prog.SetLowerBoundCost(lower_bound);
+          solver_details.objective_bound = lower_bound;
         }
       }
     }
   }
 
-  prog.SetSolverId(id());
+  error = GRBgetdblattr(model, GRB_DBL_ATTR_RUNTIME,
+                        &(solver_details.optimizer_time));
+  if (error && !solver_details.error_code) {
+    // Only overwrite the error code if no error happened before getting the
+    // runtime.
+    solver_details.error_code = error;
+  }
 
-  GRBfreemodel(model);
-  GRBfreeenv(env);
+  result->set_solution_result(solution_result);
+}
 
-  return result;
+SolutionResult GurobiSolver::Solve(MathematicalProgram& prog) const {
+  MathematicalProgramResult result;
+  Solve(prog, {}, {}, &result);
+  SolverResult solver_result = result.ConvertToSolverResult();
+  const double objective_bound = result.get_solver_details()
+                                     .GetValue<GurobiSolverDetails>()
+                                     .objective_bound;
+  if (!std::isnan(objective_bound)) {
+    solver_result.set_optimal_cost_lower_bound(objective_bound);
+  }
+  prog.SetSolverResult(solver_result);
+  return result.get_solution_result();
 }
 
 }  // namespace solvers

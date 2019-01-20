@@ -9,6 +9,7 @@
 #include <gtest/gtest.h>
 
 #include "drake/common/drake_copyable.h"
+#include "drake/systems/framework/test_utilities/my_vector.h"
 
 namespace drake {
 namespace systems {
@@ -151,9 +152,32 @@ TYPED_TEST(TypedValueTest, Make) {
 GTEST_TEST(ValueTest, NiceTypeName) {
   auto double_value = AbstractValue::Make<double>(3.);
   auto string_value = AbstractValue::Make<std::string>("hello");
+  auto base_value =
+      std::make_unique<Value<BasicVector<double>>>(MyVector2d::Make(1., 2.));
 
   EXPECT_EQ(double_value->GetNiceTypeName(), "double");
   EXPECT_EQ(string_value->GetNiceTypeName(), "std::string");
+
+  // Must return the name of the most-derived type.
+  EXPECT_EQ(base_value->GetNiceTypeName(),
+            "drake::systems::MyVector<2,double>");
+}
+
+GTEST_TEST(ValueTest, TypeInfo) {
+  auto double_value = AbstractValue::Make<double>(3.);
+  auto string_value = AbstractValue::Make<std::string>("hello");
+  auto base_value =
+      std::make_unique<Value<BasicVector<double>>>(MyVector2d::Make(1., 2.));
+
+  EXPECT_EQ(double_value->static_type_info(), typeid(double));
+  EXPECT_EQ(double_value->type_info(), typeid(double));
+
+  EXPECT_EQ(string_value->static_type_info(), typeid(std::string));
+  EXPECT_EQ(string_value->type_info(), typeid(std::string));
+
+  // The static type is BasicVector, but the runtime type is MyVector2d.
+  EXPECT_EQ(base_value->static_type_info(), typeid(BasicVector<double>));
+  EXPECT_EQ(base_value->type_info(), typeid(MyVector2d));
 }
 
 // Check that MaybeGetValue() returns nullptr for wrong-type requests,
@@ -220,11 +244,22 @@ class PrintInterface {
  public:
   virtual ~PrintInterface() {}
   virtual std::string print() const = 0;
+ protected:
+  // Allow our subclasses to make these public.
+  DRAKE_DEFAULT_COPY_AND_MOVE_AND_ASSIGN(PrintInterface)
+  PrintInterface() = default;
 };
 
 // A trivial class that implements a trivial interface.
+//
+// N.B. Don't use this precise example in your own code!  Normally we would
+// mark this class `final` in order to avoid the slicing problem during copy,
+// move, and assignment; however, the unit tests below are specifically
+// checking for weird corner cases, so we can't mark it as such here.
 class Point : public PrintInterface {
  public:
+  DRAKE_DEFAULT_COPY_AND_MOVE_AND_ASSIGN(Point)
+
   Point(int x, int y) : x_(x), y_(y) {}
   virtual ~Point() {}
 
@@ -280,8 +315,7 @@ class PrintableValue : public Value<T>, public PrintInterface {
   explicit PrintableValue(const T& v) : Value<T>(v) {}
 
   std::unique_ptr<AbstractValue> Clone() const override {
-    return std::unique_ptr<PrintableValue<T>>(
-        new PrintableValue<T>(this->get_value()));
+    return std::make_unique<PrintableValue<T>>(this->get_value());
   }
 
   std::string print() const override {

@@ -1,27 +1,17 @@
 #pragma once
 
-#include <ostream>
-#include <string>
+#include <Eigen/Core>
 
 #include "drake/common/drake_copyable.h"
+#include "drake/solvers/mathematical_program_result.h"
+#include "drake/solvers/solution_result.h"
 #include "drake/solvers/solver_id.h"
+#include "drake/solvers/solver_options.h"
+#include "drake/solvers/solver_result.h"
 
 namespace drake {
 namespace solvers {
 class MathematicalProgram;
-
-enum SolutionResult {
-  kSolutionFound = 0,           ///< Found the optimal solution.
-  kInvalidInput = -1,           ///< Invalid input.
-  kInfeasibleConstraints = -2,  ///< The primal is infeasible.
-  kUnbounded = -3,              ///< The primal is unbounded.
-  kUnknownError = -4,           ///< Unknown error.
-  kInfeasible_Or_Unbounded =
-      -5,                ///< The primal is either infeasible or unbounded.
-  kIterationLimit = -6,  ///< Reaches the iteration limits.
-  kDualInfeasible = -7,  ///< Dual problem is infeasible. In this case we cannot
-                         /// infer the status of the primal problem.
-};
 
 /// Interface used by implementations of individual solvers.
 class MathematicalProgramSolverInterface {
@@ -41,8 +31,21 @@ class MathematicalProgramSolverInterface {
   // TODO(#2274) Fix NOLINTNEXTLINE(runtime/references).
   virtual SolutionResult Solve(MathematicalProgram& prog) const = 0;
 
+  /// Solves an optimization program with optional initial guess and solver
+  /// options. Note that these initial guess and solver options are not written
+  /// to @p prog.
+  virtual void Solve(const MathematicalProgram& prog,
+                     const optional<Eigen::VectorXd>& initial_guess,
+                     const optional<SolverOptions>& solver_options,
+                     MathematicalProgramResult* result) const = 0;
+
   /// Returns the identifier of this solver.
   virtual SolverId solver_id() const = 0;
+
+  /// Returns true if the program attributes are satisfied by the solver's
+  /// capability.
+  virtual bool AreProgramAttributesSatisfied(
+      const MathematicalProgram& prog) const = 0;
 };
 
 }  // namespace solvers

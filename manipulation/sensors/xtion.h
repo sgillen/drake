@@ -14,11 +14,15 @@ namespace drake {
 namespace manipulation {
 namespace sensors {
 
+// TODO(eric.cousineau): Delegate most of this class's functionality to
+// definition files once sensor tags are supported. At present, this is
+// merely meant to be a convenience wrapper.
 /**
  * Attaches an Asus Xtion PRO Live camera to a given frame on a RigidBodyTree,
  * and provides the ability to add the camera as a system in a diagram builder.
  *
  * Frames:
+ *
  *  B - RgbdCamera sensor frame (X-forward, Y-left, Z-up).
  *  X - Xtion base frame
  *      Same orientation as RgbdCamera frame, but with different offset.
@@ -37,10 +41,9 @@ namespace sensors {
  *  builder.Connect(plant->get_output_port_state(),
  *                  camera->get_input_port_state());
  * @endcode
+ *
+ * @ingroup manipulation_systems
  */
-// TODO(eric.cousineau): Delegate most of this class's functionality to
-// definition files once sensor tags are supported. At present, this is
-// merely meant to be a convenience wrapper.
 class Xtion : public systems::Diagram<double> {
  public:
   DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(Xtion)
@@ -83,7 +86,7 @@ class Xtion : public systems::Diagram<double> {
                     bool add_lcm_publisher = false,
                     bool add_frame_visualizer = false);
 
-  const systems::InputPortDescriptor<double>& get_input_port_state() const {
+  const systems::InputPort<double>& get_input_port_state() const {
     return get_input_port(input_port_state_);
   }
   const systems::OutputPort<double>& get_output_port_color_image() const {

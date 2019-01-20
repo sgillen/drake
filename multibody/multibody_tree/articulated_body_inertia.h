@@ -89,6 +89,7 @@ namespace multibody {
 /// @tparam T The underlying scalar type. Must be a valid Eigen scalar.
 ///
 /// Instantiated templates for the following kinds of T's are provided:
+///
 /// - double
 /// - AutoDiffXd
 ///
@@ -126,7 +127,7 @@ class ArticulatedBodyInertia {
   ///                   articulated body inertia. Only the lower triangular
   ///                   region is used and the strictly upper part is ignored.
   ///
-  /// @throws an exception in Debug builds if IsPhysicallyValid() for `this`
+  /// @throws std::exception in Debug builds if IsPhysicallyValid() for `this`
   /// inertia is `false`.
   template <typename Derived>
   explicit ArticulatedBodyInertia(const Eigen::MatrixBase<Derived>& matrix) {
@@ -160,7 +161,7 @@ class ArticulatedBodyInertia {
   /// The checks performed are:
   ///   - The matrix is positive semi-definite.
   template <typename T1 = T>
-  typename std::enable_if<is_numeric<T1>::value, bool>::type
+  typename std::enable_if_t<scalar_predicate<T1>::is_bool, bool>
   IsPhysicallyValid() const {
     // Note that this tolerance may need to be loosened.
     const double kTolerance = -1e-14;
@@ -174,7 +175,7 @@ class ArticulatedBodyInertia {
 
   /// IsPhysicallyValid() for non-numeric scalar types is not supported.
   template <typename T1 = T>
-  typename std::enable_if<!is_numeric<T1>::value, bool>::type
+  typename std::enable_if_t<!scalar_predicate<T1>::is_bool, bool>
   IsPhysicallyValid() const {
     throw std::logic_error(
         "IsPhysicallyValid() is only supported for numeric types. It is not "

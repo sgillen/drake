@@ -7,7 +7,6 @@
 #include "drake/common/eigen_types.h"
 #include "drake/math/roll_pitch_yaw.h"
 #include "drake/math/rotation_matrix.h"
-#include "drake/multibody/multibody_tree/math/rotation_matrix.h"
 #include "drake/multibody/multibody_tree/multibody_tree.h"
 
 namespace drake {
@@ -40,10 +39,9 @@ const SpaceXYZMobilizer<T>& SpaceXYZMobilizer<T>::SetFromRotationMatrix(
   DRAKE_ASSERT(q.size() == kNq);
   // Project matrix to closest orthonormal matrix in case the user provides a
   // rotation matrix with round-off errors.
-  const RotationMatrix<T> Rproj_FM =
-      RotationMatrix<T>::ProjectToRotationMatrix(R_FM);
-
-  q = math::rotmat2rpy(Rproj_FM.matrix());
+  const math::RotationMatrix<T> Rproj_FM =
+      math::RotationMatrix<T>::ProjectToRotationMatrix(R_FM);
+  q = math::RollPitchYaw<T>(Rproj_FM).vector();
   return *this;
 }
 
@@ -63,9 +61,9 @@ const SpaceXYZMobilizer<T>& SpaceXYZMobilizer<T>::set_angular_velocity(
 
 template <typename T>
 const SpaceXYZMobilizer<T>& SpaceXYZMobilizer<T>::set_angular_velocity(
-    const systems::Context<T>&, const Vector3<T>& w_FM,
+    const systems::Context<T>& context, const Vector3<T>& w_FM,
     systems::State<T>* state) const {
-  auto v = this->get_mutable_velocities(state);
+  auto v = this->get_mutable_velocities(context, state);
   DRAKE_ASSERT(v.size() == kNv);
   v = w_FM;
   return *this;
@@ -80,12 +78,12 @@ void SpaceXYZMobilizer<T>::set_zero_state(const systems::Context<T>& context,
 template <typename T>
 Isometry3<T> SpaceXYZMobilizer<T>::CalcAcrossMobilizerTransform(
     const MultibodyTreeContext<T>& context) const {
-  const auto& angles = this->get_positions(context);
-  DRAKE_ASSERT(angles.size() == kNq);
+  const Eigen::Matrix<T, 3, 1>& rpy = this->get_positions(context);
+  DRAKE_ASSERT(rpy.size() == kNq);
   Isometry3<T> X_FM = Isometry3<T>::Identity();
-  // Notice math::rpy2rotmat(rpy) assumes entries rpy(0), rpy(1) and rpy(2)
-  // correspond to roll, pitch and yaw angles respectively.
-  X_FM.linear() = math::rpy2rotmat(angles);
+  const math::RollPitchYaw<T> roll_pitch_yaw(rpy(0), rpy(1), rpy(2));
+  const math::RotationMatrix<T> R(roll_pitch_yaw);
+  X_FM.linear() = R.matrix();
   return X_FM;
 }
 
@@ -272,9 +270,9 @@ std::unique_ptr<Mobilizer<ToScalar>>
 SpaceXYZMobilizer<T>::TemplatedDoCloneToScalar(
     const MultibodyTree<ToScalar>& tree_clone) const {
   const Frame<ToScalar>& inboard_frame_clone =
-      tree_clone.get_variant(this->get_inboard_frame());
+      tree_clone.get_variant(this->inboard_frame());
   const Frame<ToScalar>& outboard_frame_clone =
-      tree_clone.get_variant(this->get_outboard_frame());
+      tree_clone.get_variant(this->outboard_frame());
   return std::make_unique<SpaceXYZMobilizer<ToScalar>>(
       inboard_frame_clone, outboard_frame_clone);
 }

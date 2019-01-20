@@ -20,7 +20,7 @@ auto WrapIdentity(Func&& func) {
   return WrapFunction<wrap_arg_default>(std::forward<Func>(func));
 }
 
-// Functions with primitive values (int) as return, with 0-1 arugments and/or
+// Functions with primitive values (int) as return, with 0-1 arguments and/or
 // parameters.
 void Void() {}
 void IntToVoid(int) {}
@@ -39,7 +39,7 @@ GTEST_TEST(WrapFunction, FunctionPointer) {
 // Lambdas / basic functors.
 GTEST_TEST(WrapFunction, Lambda) {
   int value{0};
-  auto func_1_lambda = [](int value) {};
+  auto func_1_lambda = [](int) {};
   WrapIdentity(func_1_lambda)(value);
 
   std::function<void(int)> func_1_func = func_1_lambda;
@@ -353,6 +353,40 @@ GTEST_TEST(WrapFunction, ChangeCallbackNested) {
           void,
           // Nested callback, wrapped.
           std::function<CallbackWrapped(CallbackWrapped)>>;
+  check_expected::run(wrapped);
+}
+
+// Test `wrap_arg_function`.
+template <typename T, typename = void>
+struct wrap_change_callback : public wrap_arg_default<T> {};
+
+template <typename Signature>
+struct wrap_change_callback<const std::function<Signature>&>
+    : public wrap_arg_function<wrap_change, Signature> {};
+
+template <typename Signature>
+struct wrap_change_callback<std::function<Signature>>
+    : public wrap_change_callback<const std::function<Signature>&> {};
+
+// Test to check `wrap_change`, but only for functions.
+template <typename Func>
+auto WrapChangeCallbackOnly(Func&& func) {
+  return WrapFunction<wrap_change_callback, false>(std::forward<Func>(func));
+}
+
+Callback ChangeCallbackOnly(
+    double*, Callback, const Callback&) { return {}; }
+
+GTEST_TEST(WrapFunction, ChangeCallbackOnly) {
+  auto wrapped = WrapChangeCallbackOnly(ChangeCallbackOnly);
+  using check_expected =
+      check_signature<
+          // Return.
+          CallbackWrapped,
+          // Arguments.
+          double*,
+          CallbackWrapped,
+          CallbackWrapped>;
   check_expected::run(wrapped);
 }
 

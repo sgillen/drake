@@ -16,6 +16,7 @@ namespace systems {
 /// @tparam T The vector element type, which must be a valid Eigen scalar.
 ///
 /// Instantiated templates for the following kinds of T's are provided:
+///
 /// - double
 /// - AutoDiffXd
 ///
@@ -64,6 +65,7 @@ class SpringMassStateVector : public BasicVector<T> {
 /// Units are MKS (meters-kilograms-seconds).
 ///
 /// Instantiated templates for the following kinds of T's are provided:
+///
 /// - double
 /// - AutoDiffXd
 ///
@@ -93,7 +95,7 @@ class SpringMassSystem : public LeafSystem<T> {
   // Provide methods specific to this System.
 
   /// Returns the input port to the externally applied force.
-  const InputPortDescriptor<T>& get_force_port() const;
+  const InputPort<T>& get_force_port() const;
 
   /// Returns the port to output state.
   const OutputPort<T>& get_output_port() const;

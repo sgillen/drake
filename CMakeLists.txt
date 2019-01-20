@@ -14,8 +14,59 @@ if(CYGWIN OR NOT UNIX)
   message(FATAL_ERROR "Cygwin and non-Unix platforms are NOT supported")
 endif()
 
-# TODO(jamiesnape): Update to 0.10.1 after #8016 merges.
-find_package(Bazel 0.9.0 MODULE REQUIRED)
+set(UNIX_DISTRIBUTION_ID)
+set(UNIX_DISTRIBUTION_RELEASE)
+
+if(UNIX AND NOT APPLE)
+  find_program(LSB_RELEASE_EXECUTABLE NAMES lsb_release)
+
+  if(NOT LSB_RELEASE_EXECUTABLE)
+    message(FATAL_ERROR "Could NOT find the lsb_release executable")
+  endif()
+
+  execute_process(COMMAND "${LSB_RELEASE_EXECUTABLE}" --id --short
+    RESULT_VARIABLE LSB_RELEASE_ID_SHORT_RESULT_VARIABLE
+    OUTPUT_VARIABLE LSB_RELEASE_ID_SHORT_OUTPUT_VARIABLE
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+  )
+
+  if(LSB_RELEASE_ID_SHORT_RESULT_VARIABLE EQUAL 0)
+    set(UNIX_DISTRIBUTION_ID "${LSB_RELEASE_ID_SHORT_OUTPUT_VARIABLE}")
+  endif()
+
+  if(NOT UNIX_DISTRIBUTION_ID STREQUAL Ubuntu)
+     message(FATAL_ERROR
+       "Distribution ${UNIX_DISTRIBUTION_ID} is NOT supported"
+     )
+  endif()
+
+  string(TOLOWER "${UNIX_DISTRIBUTION_ID}" UNIX_DISTRIBUTION_ID)
+
+  execute_process(COMMAND "${LSB_RELEASE_EXECUTABLE}" --release --short
+    RESULT_VARIABLE LSB_RELEASE_RELEASE_SHORT_RESULT_VARIABLE
+    OUTPUT_VARIABLE LSB_RELEASE_RELEASE_SHORT_OUTPUT_VARIABLE
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+  )
+
+  if(LSB_RELEASE_RELEASE_SHORT_RESULT_VARIABLE EQUAL 0)
+    set(UNIX_DISTRIBUTION_RELEASE
+      "${LSB_RELEASE_RELEASE_SHORT_OUTPUT_VARIABLE}"
+    )
+  endif()
+
+  # The supported releases should match those listed in both doc/developers.rst
+  # and tools/workspace/os.bzl.
+  if(NOT UNIX_DISTRIBUTION_RELEASE MATCHES "^(16.04|18.04)$")
+     message(FATAL_ERROR
+       "Release ${UNIX_DISTRIBUTION_RELEASE} is NOT supported"
+     )
+  endif()
+endif()
+
+# The version passed to find_package(Bazel) should match the
+# minimum_bazel_version value in the call to versions.check() in WORKSPACE.
+set(MINIMUM_BAZEL_VERSION 0.18.0)
+find_package(Bazel ${MINIMUM_BAZEL_VERSION} MODULE REQUIRED)
 
 get_filename_component(C_COMPILER_REALPATH "${CMAKE_C_COMPILER}" REALPATH)
 get_filename_component(C_COMPILER_NAME "${C_COMPILER_REALPATH}" NAME)
@@ -29,6 +80,68 @@ if(C_COMPILER_NAME STREQUAL ccache OR CXX_COMPILER_NAME STREQUAL ccache)
   )
 endif()
 
+# The minimum compiler versions should match those listed in both
+# doc/developers.rst and tools/workspace/cc/repository.bzl.
+set(MINIMUM_APPLE_CLANG_VERSION 10)
+set(MINIMUM_CLANG_VERSION 6)
+set(MINIMUM_GNU_VERSION 5.4)
+
+if(CMAKE_C_COMPILER_ID STREQUAL AppleClang)
+  if(CMAKE_C_COMPILER_VERSION VERSION_LESS ${MINIMUM_APPLE_CLANG_VERSION})
+    message(FATAL_ERROR
+      "Compilation with clang ${CMAKE_C_COMPILER_VERSION} is NOT supported"
+    )
+  endif()
+elseif(CMAKE_C_COMPILER_ID STREQUAL Clang)
+  if(CMAKE_C_COMPILER_VERSION VERSION_LESS ${MINIMUM_CLANG_VERSION})
+    message(FATAL_ERROR
+      "Compilation with clang ${CMAKE_C_COMPILER_VERSION} is NOT supported"
+    )
+  endif()
+elseif(CMAKE_C_COMPILER_ID STREQUAL GNU)
+  if(CMAKE_C_COMPILER_VERSION VERSION_LESS ${MINIMUM_GNU_VERSION})
+    message(FATAL_ERROR
+      "Compilation with gcc ${CMAKE_C_COMPILER_VERSION} is NOT supported"
+    )
+  endif()
+else()
+  message(WARNING
+    "Compilation with ${CMAKE_C_COMPILER_ID} is NOT supported. Compilation of project drake_cxx_python may fail."
+  )
+endif()
+
+if(CMAKE_CXX_COMPILER_ID STREQUAL AppleClang)
+  if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS ${MINIMUM_APPLE_CLANG_VERSION})
+    message(FATAL_ERROR
+      "Compilation with clang++ ${CMAKE_CXX_COMPILER_VERSION} is NOT supported"
+    )
+  endif()
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL Clang)
+  if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS ${MINIMUM_CLANG_VERSION})
+    message(FATAL_ERROR
+      "Compilation with clang++ ${CMAKE_CXX_COMPILER_VERSION} is NOT supported"
+    )
+  endif()
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL GNU)
+  if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS ${MINIMUM_GNU_VERSION})
+    message(FATAL_ERROR
+      "Compilation with g++ ${CMAKE_CXX_COMPILER_VERSION} is NOT supported"
+    )
+  endif()
+else()
+  # Check flag added in tools/cc_toolchain/bazel.rc is supported.
+  include(CheckCXXCompilerFlag)
+  check_cxx_compiler_flag(-std=c++14 CXX_COMPILER_SUPPORTS_FLAG_STD_CXX14)
+  if(NOT CXX_COMPILER_SUPPORTS_FLAG_STD_CXX14)
+    message(FATAL_ERROR
+      "Compilation with ${CMAKE_CXX_COMPILER_ID} is NOT supported because it does not accept the -std=c++14 flag"
+    )
+  endif()
+  message(WARNING
+    "Compilation with ${CMAKE_CXX_COMPILER_ID} is NOT supported. Compilation of project drake_cxx_python may fail."
+  )
+endif()
+
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   set(CMAKE_BUILD_TYPE Release CACHE STRING
     "Choose the type of build, options are None Debug Release RelWithDebInfo MinSizeRel"
@@ -39,6 +152,13 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   )
 endif()
 
+if(APPLE)
+  # Ensure that the python2 executable or link is used in preference to the
+  # python and python2.7 executables or links.
+  find_program(PYTHON_EXECUTABLE NAMES python2)
+endif()
+
+# TODO(eric.cousineau) Ensure that we can switch between supported versions.
 find_package(PythonInterp 2.7 EXACT MODULE REQUIRED)
 
 if(CMAKE_BUILD_TYPE STREQUAL Debug)
@@ -50,18 +170,47 @@ endif()
 set(BAZEL_ENV)
 
 if(NOT APPLE)
-  foreach(LANG C CXX)
-    set(COMPILER ${CMAKE_${LANG}_COMPILER})
-    configure_file(tools/cc_toolchain/wrapper.sh.in ${LANG}_wrapper.sh @ONLY)
-  endforeach()
-
   list(APPEND BAZEL_ENV
-    "CC=${CMAKE_CURRENT_BINARY_DIR}/C_wrapper.sh"
-    "CXX=${CMAKE_CURRENT_BINARY_DIR}/CXX_wrapper.sh"
+    "CC=${CMAKE_C_COMPILER}"
+    "CXX=${CMAKE_CXX_COMPILER}"
   )
 endif()
 
-configure_file(tools/cc_toolchain/bazel.rc.in bazel.rc @ONLY)
+get_filename_component(PROJECT_BINARY_DIR_REALPATH
+  "${PROJECT_BINARY_DIR}" REALPATH
+)
+get_filename_component(PROJECT_SOURCE_DIR_REALPATH
+  "${PROJECT_SOURCE_DIR}" REALPATH
+)
+
+# Check whether the PROJECT_BINARY_DIR is a subdirectory of the
+# PROJECT_SOURCE_DIR.
+string(FIND "${PROJECT_BINARY_DIR_REALPATH}/" "${PROJECT_SOURCE_DIR_REALPATH}/"
+  STRING_FIND_RESULT_VARIABLE
+)
+
+if(STRING_FIND_RESULT_VARIABLE EQUAL 0)
+  # The --output_base cannot be within the WORKSPACE (a subdirectory of
+  # PROJECT_SOURCE_DIR), so fallback to the using the same parent directory
+  # that bazel uses by default for its --output_base.
+  if(APPLE)
+    set(BAZEL_OUTPUT_BASE "/var/tmp")
+  else()
+    set(BAZEL_OUTPUT_BASE "$ENV{HOME}/.cache/bazel")
+  endif()
+else()
+  set(BAZEL_OUTPUT_BASE "${PROJECT_BINARY_DIR}")
+endif()
+
+# Compute the MD5 of the PROJECT_BINARY_DIR rather than the WORKSPACE
+# (PROJECT_SOURCE_DIR) to avoid colliding with the directory that bazel uses by
+# default.
+string(MD5 PROJECT_BINARY_DIR_MD5 "${PROJECT_BINARY_DIR_REALPATH}")
+set(BAZEL_OUTPUT_BASE
+  "${BAZEL_OUTPUT_BASE}/_bazel_$ENV{USER}/${PROJECT_BINARY_DIR_MD5}"
+)
+
+configure_file(cmake/bazel.rc.in bazel.rc @ONLY)
 
 set(BAZEL_STARTUP_ARGS "--bazelrc=${CMAKE_CURRENT_BINARY_DIR}/bazel.rc")
 
@@ -74,7 +223,7 @@ endif()
 option(WITH_GUROBI "Build with support for Gurobi" OFF)
 
 if(WITH_GUROBI)
-  find_package(Gurobi 7.5.2 MODULE REQUIRED)
+  find_package(Gurobi 8.0.0 MODULE REQUIRED)
 
   list(APPEND BAZEL_ARGS --config=gurobi)
 
@@ -99,10 +248,23 @@ if(WITH_MOSEK)
   list(APPEND BAZEL_ARGS --config=mosek)
 endif()
 
-option(WITH_SNOPT "Build with support for SNOPT" OFF)
+option(WITH_ROBOTLOCOMOTION_SNOPT "Build with support for SNOPT using the RobotLocomotion/snopt private GitHub repository" OFF)
+option(WITH_SNOPT "Build with support for SNOPT using the SNOPT source archive at SNOPT_PATH" OFF)
 
-if(WITH_SNOPT)
+if(WITH_ROBOTLOCOMOTION_SNOPT AND WITH_SNOPT)
+  message(FATAL_ERROR
+    "WITH_SNOPT and WITH_ROBOTLOCOMOTION_SNOPT are mutually exclusive")
+elseif(WITH_ROBOTLOCOMOTION_SNOPT)
   list(APPEND BAZEL_ARGS --config=snopt)
+  list(APPEND BAZEL_ENV "SNOPT_PATH=git")
+elseif(WITH_SNOPT)
+  list(APPEND BAZEL_ARGS --config=snopt)
+  set(SNOPT_PATH SNOPT_PATH-NOTFOUND CACHE FILEPATH "Path to SNOPT source archive")
+  if(NOT EXISTS "${SNOPT_PATH}")
+    message(FATAL_ERROR "SNOPT source archive was NOT found at '${SNOPT_PATH}'")
+  endif()
+  mark_as_advanced(SNOPT_PATH)
+  list(APPEND BAZEL_ENV "SNOPT_PATH=${SNOPT_PATH}")
 endif()
 
 set(BAZEL_TARGETS //:install)
@@ -126,6 +288,29 @@ ExternalProject_Add(drake_cxx_python
   USES_TERMINAL_INSTALL 1
 )
 
+set(GIT_DIR "${PROJECT_SOURCE_DIR}/.git")
+set(GIT_REVISION HEAD)
+
+find_package(Git)
+
+if(GIT_FOUND AND EXISTS "${GIT_DIR}")
+  execute_process(COMMAND "${GIT_EXECUTABLE}" "--git-dir=${GIT_DIR}" rev-parse HEAD
+    RESULT_VARIABLE GIT_REV_PARSE_RESULT_VARIABLE
+    OUTPUT_VARIABLE GIT_REV_PARSE_OUTPUT_VARIABLE
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+  )
+
+  if(GIT_REV_PARSE_RESULT_VARIABLE EQUAL 0)
+    set(GIT_REVISION "${GIT_REV_PARSE_OUTPUT_VARIABLE}")
+  endif()
+endif()
+
+string(TIMESTAMP BUILD_TIMESTAMP "%Y%m%d%H%M%S")
+
+configure_file(tools/install/libdrake/VERSION.TXT.in VERSION.TXT @ONLY)
+
+install(FILES "${PROJECT_BINARY_DIR}/VERSION.TXT" DESTINATION share/doc/drake)
+
 list(APPEND CMAKE_PREFIX_PATH "${CMAKE_INSTALL_PREFIX}")
 
 if(WITH_MATLAB)
@@ -145,3 +330,47 @@ if(WITH_MATLAB)
     BUILD_ALWAYS 1
   )
 endif()
+
+set(CPACK_GENERATOR TGZ)
+set(CPACK_INSTALLED_DIRECTORIES "${CMAKE_INSTALL_PREFIX}" .)
+set(CPACK_PACKAGE_CONTACT RobotLocomotion)
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY
+  "Planning, control, and analysis toolbox for nonlinear dynamical systems"
+)
+set(CPACK_PACKAGE_VENDOR RobotLocomotion)
+set(CPACK_PACKAGE_VERSION_MAJOR 0)
+set(CPACK_PACKAGE_VERSION_MINOR 0)
+set(CPACK_PACKAGE_VERSION_PATCH 0)
+set(CPACK_PACKAGE_CHECKSUM SHA256)
+set(CPACK_SET_DESTDIR ON)
+set(CPACK_SOURCE_GENERATOR "")
+
+if(APPLE)
+  set(CPACK_SYSTEM_NAME mac)
+else()
+  string(TOLOWER "${CMAKE_SYSTEM_NAME}" CPACK_SYSTEM_NAME)
+
+  list(APPEND CPACK_GENERATOR DEB)
+
+  set(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
+  set(CPACK_DEBIAN_PACKAGE_CONTROL_STRICT_PERMISSION ON)
+  set(CPACK_DEBIAN_PACKAGE_HOMEPAGE https://drake.mit.edu/)
+  set(CPACK_DEBIAN_PACKAGE_RELEASE 1)
+  set(CPACK_DEBIAN_PACKAGE_SECTION contrib/devel)
+
+  file(STRINGS "setup/${UNIX_DISTRIBUTION_ID}/${UNIX_DISTRIBUTION_RELEASE}/binary_distribution/packages.txt"
+    CPACK_DEBIAN_PACKAGE_DEPENDS
+  )
+  string(REGEX REPLACE "([a-z0-9\\-]+)=([a-z0-9\\-\\.~]+)" "\\1 (= \\2)"
+    CPACK_DEBIAN_PACKAGE_DEPENDS "${CPACK_DEBIAN_PACKAGE_DEPENDS}"
+  )
+  string(REPLACE ";" ", " CPACK_DEBIAN_PACKAGE_DEPENDS
+    "${CPACK_DEBIAN_PACKAGE_DEPENDS}"
+  )
+endif()
+
+set(CPACK_PACKAGE_FILE_NAME
+  "${PROJECT_NAME}-${BUILD_TIMESTAMP}-${CPACK_SYSTEM_NAME}"
+)
+
+include(CPack)

@@ -3,7 +3,6 @@
 #include <cmath>
 #include <cstddef>
 #include <ios>
-#include <limits>
 #include <map>
 #include <memory>
 #include <stdexcept>
@@ -12,6 +11,8 @@
 #include <vector>
 
 #include <Eigen/Core>
+#include <fmt/format.h>
+#include <fmt/ostream.h>
 
 #include "drake/common/drake_assert.h"
 #include "drake/common/never_destroyed.h"
@@ -23,6 +24,7 @@
 namespace drake {
 namespace symbolic {
 
+using std::logic_error;
 using std::make_shared;
 using std::map;
 using std::numeric_limits;
@@ -41,16 +43,16 @@ bool operator<(ExpressionKind k1, ExpressionKind k2) {
 
 namespace {
 // This function is used in Expression(const double d) constructor. It turns out
-// a ternary expression "std::isnan(d) ? make_shared<ExpressionNaN>() :
-// make_shared<ExpressionConstant>()" does not work due to C++'s type-system.
-// It throws "Incompatible operand types when using ternary conditional
-// operator" error. Related S&O entry:
+// a ternary expression "std::isnan(d) ? make_shared<const ExpressionNaN>() :
+// make_shared<const ExpressionConstant>()" does not work due to C++'s
+// type-system. It throws "Incompatible operand types when using ternary
+// conditional operator" error. Related S&O entry:
 // http://stackoverflow.com/questions/29842095/incompatible-operand-types-when-using-ternary-conditional-operator.
-shared_ptr<ExpressionCell> make_cell(const double d) {
+shared_ptr<const ExpressionCell> make_cell(const double d) {
   if (std::isnan(d)) {
-    return make_shared<ExpressionNaN>();
+    return make_shared<const ExpressionNaN>();
   }
-  return make_shared<ExpressionConstant>(d);
+  return make_shared<const ExpressionConstant>(d);
 }
 
 // Negates an addition expression.
@@ -69,9 +71,10 @@ Expression NegateMultiplication(const Expression& e) {
 }  // namespace
 
 Expression::Expression(const Variable& var)
-    : ptr_{make_shared<ExpressionVar>(var)} {}
+    : ptr_{make_shared<const ExpressionVar>(var)} {}
 Expression::Expression(const double d) : ptr_{make_cell(d)} {}
-Expression::Expression(shared_ptr<ExpressionCell> ptr) : ptr_{std::move(ptr)} {}
+Expression::Expression(std::shared_ptr<const ExpressionCell> ptr)
+    : ptr_{std::move(ptr)} {}
 
 ExpressionKind Expression::get_kind() const {
   DRAKE_ASSERT(ptr_ != nullptr);
@@ -106,7 +109,7 @@ Expression Expression::E() {
 
 Expression Expression::NaN() {
   static const never_destroyed<Expression> nan{
-      Expression{make_shared<ExpressionNaN>()}};
+      Expression{make_shared<const ExpressionNaN>()}};
   return nan.access();
 }
 
@@ -194,6 +197,15 @@ Expression Expression::Substitute(const Substitution& s) const {
 Expression Expression::Differentiate(const Variable& x) const {
   DRAKE_ASSERT(ptr_ != nullptr);
   return ptr_->Differentiate(x);
+}
+
+RowVectorX<Expression> Expression::Jacobian(
+    const Eigen::Ref<const VectorX<Variable>>& vars) const {
+  RowVectorX<Expression> J(vars.size());
+  for (VectorX<Variable>::Index i = 0; i < vars.size(); ++i) {
+    J(i) = Differentiate(vars(i));
+  }
+  return J;
 }
 
 string Expression::to_string() const {
@@ -496,7 +508,7 @@ Expression& operator/=(Expression& lhs, const Expression& rhs) {
     lhs = Expression::One();
     return lhs;
   }
-  lhs.ptr_ = make_shared<ExpressionDiv>(lhs, rhs);
+  lhs.ptr_ = make_shared<const ExpressionDiv>(lhs, rhs);
   return lhs;
 }
 
@@ -532,7 +544,7 @@ Expression log(const Expression& e) {
     ExpressionLog::check_domain(v);
     return Expression{std::log(v)};
   }
-  return Expression{make_shared<ExpressionLog>(e)};
+  return Expression{make_shared<const ExpressionLog>(e)};
 }
 
 Expression abs(const Expression& e) {
@@ -540,7 +552,7 @@ Expression abs(const Expression& e) {
   if (is_constant(e)) {
     return Expression{std::fabs(get_constant_value(e))};
   }
-  return Expression{make_shared<ExpressionAbs>(e)};
+  return Expression{make_shared<const ExpressionAbs>(e)};
 }
 
 Expression exp(const Expression& e) {
@@ -548,7 +560,7 @@ Expression exp(const Expression& e) {
   if (is_constant(e)) {
     return Expression{std::exp(get_constant_value(e))};
   }
-  return Expression{make_shared<ExpressionExp>(e)};
+  return Expression{make_shared<const ExpressionExp>(e)};
 }
 
 Expression sqrt(const Expression& e) {
@@ -564,7 +576,7 @@ Expression sqrt(const Expression& e) {
       return abs(get_first_argument(e));
     }
   }
-  return Expression{make_shared<ExpressionSqrt>(e)};
+  return Expression{make_shared<const ExpressionSqrt>(e)};
 }
 
 Expression pow(const Expression& e1, const Expression& e2) {
@@ -592,9 +604,9 @@ Expression pow(const Expression& e1, const Expression& e2) {
     // pow(base, exponent) ^ e2 => pow(base, exponent * e2)
     const Expression& base{get_first_argument(e1)};
     const Expression& exponent{get_second_argument(e1)};
-    return Expression{make_shared<ExpressionPow>(base, exponent * e2)};
+    return Expression{make_shared<const ExpressionPow>(base, exponent * e2)};
   }
-  return Expression{make_shared<ExpressionPow>(e1, e2)};
+  return Expression{make_shared<const ExpressionPow>(e1, e2)};
 }
 
 Expression sin(const Expression& e) {
@@ -602,7 +614,7 @@ Expression sin(const Expression& e) {
   if (is_constant(e)) {
     return Expression{std::sin(get_constant_value(e))};
   }
-  return Expression{make_shared<ExpressionSin>(e)};
+  return Expression{make_shared<const ExpressionSin>(e)};
 }
 
 Expression cos(const Expression& e) {
@@ -611,7 +623,7 @@ Expression cos(const Expression& e) {
     return Expression{std::cos(get_constant_value(e))};
   }
 
-  return Expression{make_shared<ExpressionCos>(e)};
+  return Expression{make_shared<const ExpressionCos>(e)};
 }
 
 Expression tan(const Expression& e) {
@@ -619,7 +631,7 @@ Expression tan(const Expression& e) {
   if (is_constant(e)) {
     return Expression{std::tan(get_constant_value(e))};
   }
-  return Expression{make_shared<ExpressionTan>(e)};
+  return Expression{make_shared<const ExpressionTan>(e)};
 }
 
 Expression asin(const Expression& e) {
@@ -629,7 +641,7 @@ Expression asin(const Expression& e) {
     ExpressionAsin::check_domain(v);
     return Expression{std::asin(v)};
   }
-  return Expression{make_shared<ExpressionAsin>(e)};
+  return Expression{make_shared<const ExpressionAsin>(e)};
 }
 
 Expression acos(const Expression& e) {
@@ -639,7 +651,7 @@ Expression acos(const Expression& e) {
     ExpressionAcos::check_domain(v);
     return Expression{std::acos(v)};
   }
-  return Expression{make_shared<ExpressionAcos>(e)};
+  return Expression{make_shared<const ExpressionAcos>(e)};
 }
 
 Expression atan(const Expression& e) {
@@ -647,7 +659,7 @@ Expression atan(const Expression& e) {
   if (is_constant(e)) {
     return Expression{std::atan(get_constant_value(e))};
   }
-  return Expression{make_shared<ExpressionAtan>(e)};
+  return Expression{make_shared<const ExpressionAtan>(e)};
 }
 
 Expression atan2(const Expression& e1, const Expression& e2) {
@@ -656,7 +668,7 @@ Expression atan2(const Expression& e1, const Expression& e2) {
     return Expression{
         std::atan2(get_constant_value(e1), get_constant_value(e2))};
   }
-  return Expression{make_shared<ExpressionAtan2>(e1, e2)};
+  return Expression{make_shared<const ExpressionAtan2>(e1, e2)};
 }
 
 Expression sinh(const Expression& e) {
@@ -664,7 +676,7 @@ Expression sinh(const Expression& e) {
   if (is_constant(e)) {
     return Expression{std::sinh(get_constant_value(e))};
   }
-  return Expression{make_shared<ExpressionSinh>(e)};
+  return Expression{make_shared<const ExpressionSinh>(e)};
 }
 
 Expression cosh(const Expression& e) {
@@ -672,7 +684,7 @@ Expression cosh(const Expression& e) {
   if (is_constant(e)) {
     return Expression{std::cosh(get_constant_value(e))};
   }
-  return Expression{make_shared<ExpressionCosh>(e)};
+  return Expression{make_shared<const ExpressionCosh>(e)};
 }
 
 Expression tanh(const Expression& e) {
@@ -680,7 +692,7 @@ Expression tanh(const Expression& e) {
   if (is_constant(e)) {
     return Expression{std::tanh(get_constant_value(e))};
   }
-  return Expression{make_shared<ExpressionTanh>(e)};
+  return Expression{make_shared<const ExpressionTanh>(e)};
 }
 
 Expression min(const Expression& e1, const Expression& e2) {
@@ -692,7 +704,7 @@ Expression min(const Expression& e1, const Expression& e2) {
   if (is_constant(e1) && is_constant(e2)) {
     return Expression{std::min(get_constant_value(e1), get_constant_value(e2))};
   }
-  return Expression{make_shared<ExpressionMin>(e1, e2)};
+  return Expression{make_shared<const ExpressionMin>(e1, e2)};
 }
 
 Expression max(const Expression& e1, const Expression& e2) {
@@ -704,7 +716,7 @@ Expression max(const Expression& e1, const Expression& e2) {
   if (is_constant(e1) && is_constant(e2)) {
     return Expression{std::max(get_constant_value(e1), get_constant_value(e2))};
   }
-  return Expression{make_shared<ExpressionMax>(e1, e2)};
+  return Expression{make_shared<const ExpressionMax>(e1, e2)};
 }
 
 Expression ceil(const Expression& e) {
@@ -712,7 +724,7 @@ Expression ceil(const Expression& e) {
   if (is_constant(e)) {
     return Expression{std::ceil(get_constant_value(e))};
   }
-  return Expression{make_shared<ExpressionCeiling>(e)};
+  return Expression{make_shared<const ExpressionCeiling>(e)};
 }
 
 Expression floor(const Expression& e) {
@@ -720,7 +732,7 @@ Expression floor(const Expression& e) {
   if (is_constant(e)) {
     return Expression{std::floor(get_constant_value(e))};
   }
-  return Expression{make_shared<ExpressionFloor>(e)};
+  return Expression{make_shared<const ExpressionFloor>(e)};
 }
 
 Expression if_then_else(const Formula& f_cond, const Expression& e_then,
@@ -733,11 +745,13 @@ Expression if_then_else(const Formula& f_cond, const Expression& e_then,
   if (f_cond.EqualTo(Formula::False())) {
     return e_else;
   }
-  return Expression{make_shared<ExpressionIfThenElse>(f_cond, e_then, e_else)};
+  return Expression{
+      make_shared<const ExpressionIfThenElse>(f_cond, e_then, e_else)};
 }
 
-Expression uninterpreted_function(const string& name, const Variables& vars) {
-  return Expression{make_shared<ExpressionUninterpretedFunction>(name, vars)};
+Expression uninterpreted_function(string name, vector<Expression> arguments) {
+  return Expression{make_shared<const ExpressionUninterpretedFunction>(
+      std::move(name), std::move(arguments))};
 }
 
 bool is_constant(const Expression& e) { return is_constant(*e.ptr_); }
@@ -813,6 +827,11 @@ const string& get_uninterpreted_function_name(const Expression& e) {
   return to_uninterpreted_function(e)->get_name();
 }
 
+const vector<Expression>& get_uninterpreted_function_arguments(
+    const Expression& e) {
+  return to_uninterpreted_function(e)->get_arguments();
+}
+
 const Formula& get_conditional_formula(const Expression& e) {
   return to_if_then_else(e)->get_conditional_formula();
 }
@@ -827,6 +846,20 @@ const Expression& get_else_expression(const Expression& e) {
 
 Expression operator+(const Variable& var) { return Expression{var}; }
 Expression operator-(const Variable& var) { return -Expression{var}; }
+
+VectorX<Variable> GetVariableVector(
+    const Eigen::Ref<const VectorX<Expression>>& evec) {
+  VectorX<Variable> vec(evec.size());
+  for (int i = 0; i < evec.size(); i++) {
+    const Expression e_i{evec(i)};
+    if (is_variable(e_i)) {
+      vec(i) = get_variable(e_i);
+    } else {
+      throw logic_error(fmt::format("{} is not a variable.", e_i));
+    }
+  }
+  return vec;
+}
 
 MatrixX<Expression> Jacobian(const Eigen::Ref<const VectorX<Expression>>& f,
                              const vector<Variable>& vars) {
@@ -846,6 +879,147 @@ MatrixX<Expression> Jacobian(const Eigen::Ref<const VectorX<Expression>>& f,
                              const Eigen::Ref<const VectorX<Variable>>& vars) {
   return Jacobian(f, vector<Variable>(vars.data(), vars.data() + vars.size()));
 }
+
+namespace {
+// Helper functions for TaylorExpand.
+//
+// We use the multi-index notation. Please read
+// https://en.wikipedia.org/wiki/Multi-index_notation for more information.
+
+// α = (a₁, ..., aₙ) where αᵢ ∈ Z.
+using MultiIndex = vector<int>;
+
+// Generates multi-indices of order `order` whose size is `num_vars` and append
+// to `vec`. It generates the indices by increasing the elements of the given
+// `base`. It only changes the i-th dimension which is greater than or equal to
+// `start_dim` to avoid duplicates.
+void DoEnumerateMultiIndex(const int order, const int num_vars,
+                           const int start_dim, const MultiIndex& base,
+                           vector<MultiIndex>* const vec) {
+  DRAKE_ASSERT(order > 0);
+  DRAKE_ASSERT(start_dim >= 0);
+  DRAKE_ASSERT(base.size() == static_cast<size_t>(num_vars));
+  if (order == 0) {
+    return;
+  }
+  if (order == 1) {
+    for (int i = start_dim; i < num_vars; ++i) {
+      MultiIndex alpha = base;
+      ++alpha[i];
+      vec->push_back(std::move(alpha));
+    }
+    return;
+  } else {
+    for (int i = start_dim; i < num_vars; ++i) {
+      MultiIndex alpha = base;
+      ++alpha[i];
+      DoEnumerateMultiIndex(order - 1, num_vars, i, alpha, vec);
+    }
+  }
+}
+
+// Returns the set of multi-indices of order `order` whose size is `num-vars`.
+vector<MultiIndex> EnumerateMultiIndex(const int order, const int num_vars) {
+  DRAKE_ASSERT(order > 0);
+  DRAKE_ASSERT(num_vars >= 1);
+  vector<MultiIndex> vec;
+  MultiIndex base(num_vars, 0);  // base = (0, ..., 0)
+  DoEnumerateMultiIndex(order, num_vars, 0, base, &vec);
+  return vec;
+}
+
+// Computes the factorial of n.
+int Factorial(const int n) {
+  DRAKE_ASSERT(n >= 0);
+  int f = 1;
+  for (int i = 2; i <= n; ++i) {
+    f *= i;
+  }
+  return f;
+}
+
+// Given a multi index α = (α₁, ..., αₙ), returns α₁! * ... * αₙ!.
+int FactorialProduct(const MultiIndex& alpha) {
+  int ret = 1;
+  for (const int i : alpha) {
+    ret *= Factorial(i);
+  }
+  return ret;
+}
+
+// Computes ∂fᵅ(a) = ∂ᵅ¹...∂ᵅⁿf(a).
+Expression Derivative(Expression f, const MultiIndex& alpha,
+                      const Environment& a) {
+  int i = 0;
+  for (const pair<const Variable, double>& p : a) {
+    const Variable& v = p.first;
+    for (int j = 0; j < alpha[i]; ++j) {
+      f = f.Differentiate(v);
+    }
+    ++i;
+  }
+  return f.EvaluatePartial(a);
+}
+
+// Given terms = [e₁, ..., eₙ] and alpha = (α₁, ..., αₙ), returns
+// pow(e₁,α₁) * ... * pow(eₙ,αₙ)
+Expression Exp(const vector<Expression>& terms, const MultiIndex& alpha) {
+  DRAKE_ASSERT(terms.size() == alpha.size());
+  ExpressionMulFactory factory;
+  for (size_t i = 0; i < terms.size(); ++i) {
+    factory.AddExpression(pow(terms[i], alpha[i]));
+  }
+  return factory.GetExpression();
+}
+
+// Computes ∑_{|α| = order} ∂fᵅ(a) / α! * (x - a)ᵅ.
+void DoTaylorExpand(const Expression& f, const Environment& a,
+                    const vector<Expression>& terms, const int order,
+                    const int num_vars, ExpressionAddFactory* const factory) {
+  DRAKE_ASSERT(order > 0);
+  DRAKE_ASSERT(terms.size() == static_cast<size_t>(num_vars));
+  const vector<MultiIndex> multi_indices{EnumerateMultiIndex(order, num_vars)};
+  for (const MultiIndex& alpha : multi_indices) {
+    factory->AddExpression(Derivative(f, alpha, a) * Exp(terms, alpha) /
+                           FactorialProduct(alpha));
+  }
+}
+}  // namespace
+
+Expression TaylorExpand(const Expression& f, const Environment& a,
+                        const int order) {
+  // The implementation uses the formulation:
+  //      Taylor(f, a, order) = ∑_{|α| ≤ order} ∂fᵅ(a) / α! * (x - a)ᵅ.
+  DRAKE_DEMAND(order >= 1);
+  ExpressionAddFactory factory;
+  factory.AddExpression(f.EvaluatePartial(a));
+  const int num_vars = a.size();
+  if (num_vars == 0) {
+    return f;
+  }
+  vector<Expression> terms;  // (x - a)
+  for (const pair<const Variable, double>& p : a) {
+    const Variable& var = p.first;
+    const double v = p.second;
+    terms.push_back(var - v);
+  }
+  for (int i = 1; i <= order; ++i) {
+    DoTaylorExpand(f, a, terms, i, num_vars, &factory);
+  }
+  return factory.GetExpression();
+}
+
+Variables GetDistinctVariables(const Eigen::Ref<const MatrixX<Expression>>& v) {
+  Variables vars{};
+  // Note: Default storage order for Eigen is column-major.
+  for (int j = 0; j < v.cols(); j++) {
+    for (int i = 0; i < v.rows(); i++) {
+      vars.insert(v(i, j).GetVariables());
+    }
+  }
+  return vars;
+}
+
 }  // namespace symbolic
 
 double ExtractDoubleOrThrow(const symbolic::Expression& e) {

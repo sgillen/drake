@@ -8,6 +8,7 @@
 #include <algorithm>  // for cpplint only
 #include <cstddef>
 #include <functional>
+#include <limits>
 #include <map>
 #include <memory>
 #include <ostream>
@@ -276,6 +277,13 @@ class Expression {
    */
   Expression Differentiate(const Variable& x) const;
 
+  /** Let `f` be this Expression, computes a row vector of derivatives,
+   * `[∂f/∂vars(0), ... , ∂f/∂vars(n-1)]` with respect to the variables
+   * @p vars.
+   */
+  RowVectorX<Expression> Jacobian(
+      const Eigen::Ref<const VectorX<Variable>>& vars) const;
+
   /** Returns string representation of Expression. */
   std::string to_string() const;
 
@@ -292,8 +300,8 @@ class Expression {
 
   /** Implements the @ref hash_append concept. */
   template <class HashAlgorithm>
-  friend void hash_append(
-      HashAlgorithm& hasher, const Expression& item) noexcept {
+  friend void hash_append(HashAlgorithm& hasher,
+                          const Expression& item) noexcept {
     DelegatingHasher delegating_hasher(
         [&hasher](const void* data, const size_t length) {
           return hasher(data, length);
@@ -391,8 +399,8 @@ class Expression {
   friend Expression if_then_else(const Formula& f_cond,
                                  const Expression& e_then,
                                  const Expression& e_else);
-  friend Expression uninterpreted_function(const std::string& name,
-                                           const Variables& vars);
+  friend Expression uninterpreted_function(std::string name,
+                                           std::vector<Expression> arguments);
 
   friend std::ostream& operator<<(std::ostream& os, const Expression& e);
   friend void swap(Expression& a, Expression& b) { std::swap(a.ptr_, b.ptr_); }
@@ -428,45 +436,52 @@ class Expression {
   // and not exposed to the user of drake/common/symbolic_expression.h
   // header. These functions are declared in
   // drake/common/symbolic_expression_cell.h header.
-  friend std::shared_ptr<ExpressionConstant> to_constant(const Expression& e);
-  friend std::shared_ptr<ExpressionVar> to_variable(const Expression& e);
-  friend std::shared_ptr<UnaryExpressionCell> to_unary(const Expression& e);
-  friend std::shared_ptr<BinaryExpressionCell> to_binary(const Expression& e);
-  friend std::shared_ptr<ExpressionAdd> to_addition(const Expression& e);
-  friend std::shared_ptr<ExpressionMul> to_multiplication(const Expression& e);
-  friend std::shared_ptr<ExpressionDiv> to_division(const Expression& e);
-  friend std::shared_ptr<ExpressionLog> to_log(const Expression& e);
-  friend std::shared_ptr<ExpressionAbs> to_abs(const Expression& e);
-  friend std::shared_ptr<ExpressionExp> to_exp(const Expression& e);
-  friend std::shared_ptr<ExpressionSqrt> to_sqrt(const Expression& e);
-  friend std::shared_ptr<ExpressionPow> to_pow(const Expression& e);
-  friend std::shared_ptr<ExpressionSin> to_sin(const Expression& e);
-  friend std::shared_ptr<ExpressionCos> to_cos(const Expression& e);
-  friend std::shared_ptr<ExpressionTan> to_tan(const Expression& e);
-  friend std::shared_ptr<ExpressionAsin> to_asin(const Expression& e);
-  friend std::shared_ptr<ExpressionAcos> to_acos(const Expression& e);
-  friend std::shared_ptr<ExpressionAtan> to_atan(const Expression& e);
-  friend std::shared_ptr<ExpressionAtan2> to_atan2(const Expression& e);
-  friend std::shared_ptr<ExpressionSinh> to_sinh(const Expression& e);
-  friend std::shared_ptr<ExpressionCosh> to_cosh(const Expression& e);
-  friend std::shared_ptr<ExpressionTanh> to_tanh(const Expression& e);
-  friend std::shared_ptr<ExpressionMin> to_min(const Expression& e);
-  friend std::shared_ptr<ExpressionMax> to_max(const Expression& e);
-  friend std::shared_ptr<ExpressionCeiling> to_ceil(const Expression& e);
-  friend std::shared_ptr<ExpressionFloor> to_floor(const Expression& e);
-  friend std::shared_ptr<ExpressionIfThenElse> to_if_then_else(
+  friend std::shared_ptr<const ExpressionConstant> to_constant(
       const Expression& e);
-  friend std::shared_ptr<ExpressionUninterpretedFunction>
+  friend std::shared_ptr<const ExpressionVar> to_variable(const Expression& e);
+  friend std::shared_ptr<const UnaryExpressionCell> to_unary(
+      const Expression& e);
+  friend std::shared_ptr<const BinaryExpressionCell> to_binary(
+      const Expression& e);
+  friend std::shared_ptr<const ExpressionAdd> to_addition(const Expression& e);
+  friend std::shared_ptr<const ExpressionMul> to_multiplication(
+      const Expression& e);
+  friend std::shared_ptr<const ExpressionDiv> to_division(const Expression& e);
+  friend std::shared_ptr<const ExpressionLog> to_log(const Expression& e);
+  friend std::shared_ptr<const ExpressionAbs> to_abs(const Expression& e);
+  friend std::shared_ptr<const ExpressionExp> to_exp(const Expression& e);
+  friend std::shared_ptr<const ExpressionSqrt> to_sqrt(const Expression& e);
+  friend std::shared_ptr<const ExpressionPow> to_pow(const Expression& e);
+  friend std::shared_ptr<const ExpressionSin> to_sin(const Expression& e);
+  friend std::shared_ptr<const ExpressionCos> to_cos(const Expression& e);
+  friend std::shared_ptr<const ExpressionTan> to_tan(const Expression& e);
+  friend std::shared_ptr<const ExpressionAsin> to_asin(const Expression& e);
+  friend std::shared_ptr<const ExpressionAcos> to_acos(const Expression& e);
+  friend std::shared_ptr<const ExpressionAtan> to_atan(const Expression& e);
+  friend std::shared_ptr<const ExpressionAtan2> to_atan2(const Expression& e);
+  friend std::shared_ptr<const ExpressionSinh> to_sinh(const Expression& e);
+  friend std::shared_ptr<const ExpressionCosh> to_cosh(const Expression& e);
+  friend std::shared_ptr<const ExpressionTanh> to_tanh(const Expression& e);
+  friend std::shared_ptr<const ExpressionMin> to_min(const Expression& e);
+  friend std::shared_ptr<const ExpressionMax> to_max(const Expression& e);
+  friend std::shared_ptr<const ExpressionCeiling> to_ceil(const Expression& e);
+  friend std::shared_ptr<const ExpressionFloor> to_floor(const Expression& e);
+  friend std::shared_ptr<const ExpressionIfThenElse> to_if_then_else(
+      const Expression& e);
+  friend std::shared_ptr<const ExpressionUninterpretedFunction>
   to_uninterpreted_function(const Expression& e);
 
   friend class ExpressionAddFactory;
   friend class ExpressionMulFactory;
 
  private:
-  explicit Expression(std::shared_ptr<ExpressionCell> ptr);
+  explicit Expression(std::shared_ptr<const ExpressionCell> ptr);
   void HashAppend(DelegatingHasher* hasher) const;
 
-  std::shared_ptr<ExpressionCell> ptr_;
+  // Note: We use "const" ExpressionCell type here because an ExpressionCell
+  // object can be shared by multiple expressions, an expression should _not_ be
+  // able to change the cell that it points to.
+  std::shared_ptr<const ExpressionCell> ptr_;
 };
 
 Expression operator+(Expression lhs, const Expression& rhs);
@@ -506,14 +521,15 @@ Expression floor(const Expression& e);
 Expression if_then_else(const Formula& f_cond, const Expression& e_then,
                         const Expression& e_else);
 
-/** Constructs an uninterpreted-function expression with @p name and @p vars.
- * An uninterpreted function is an opaque function that has no other property
- * than its name and a set of its arguments. This is useful to applications
- * where it is good enough to provide abstract information of a function without
- * exposing full details. Declaring sparsity of a system is a typical example.
+/** Constructs an uninterpreted-function expression with @p name and @p
+ * arguments. An uninterpreted function is an opaque function that has no other
+ * property than its name and a list of its arguments. This is useful to
+ * applications where it is good enough to provide abstract information of a
+ * function without exposing full details. Declaring sparsity of a system is a
+ * typical example.
  */
-Expression uninterpreted_function(const std::string& name,
-                                  const Variables& vars);
+Expression uninterpreted_function(std::string name,
+                                  std::vector<Expression> arguments);
 void swap(Expression& a, Expression& b);
 
 std::ostream& operator<<(std::ostream& os, const Expression& e);
@@ -574,6 +590,10 @@ bool is_tanh(const Expression& e);
 bool is_min(const Expression& e);
 /** Checks if @p e is a max expression. */
 bool is_max(const Expression& e);
+/** Checks if @p e is a ceil expression. */
+bool is_ceil(const Expression& e);
+/** Checks if @p e is a floor expression. */
+bool is_floor(const Expression& e);
 /** Checks if @p e is an if-then-else expression. */
 bool is_if_then_else(const Expression& e);
 /** Checks if @p e is an uninterpreted-function expression. */
@@ -625,9 +645,15 @@ const std::map<Expression, Expression>&
 get_base_to_exponent_map_in_multiplication(const Expression& e);
 
 /** Returns the name of an uninterpreted-function expression @p e.
- *  \pre{@p e is an uninterpreted-function expression.}
+ *  \pre @p e is an uninterpreted-function expression.
  */
 const std::string& get_uninterpreted_function_name(const Expression& e);
+
+/** Returns the arguments of an uninterpreted-function expression @p e.
+ *  \pre @p e is an uninterpreted-function expression.
+ */
+const std::vector<Expression>& get_uninterpreted_function_arguments(
+    const Expression& e);
 
 /** Returns the conditional formula in the if-then-else expression @p e.
  * @pre @p e is an if-then-else expression.
@@ -739,6 +765,26 @@ auto operator*(
     const Eigen::Transform<Expression, Dim, RhsMode, RhsOptions>& t2) {
   return t1.template cast<Expression>() * t2;
 }
+
+/// Evaluates a symbolic matrix `m` using the `env` by evaluating each element.
+/// @returns a matrix of double whose size is the size of `m`.
+/// @throws std::runtime_error if NaN is detected during evaluation.
+template <typename Derived>
+auto Evaluate(const Eigen::MatrixBase<Derived>& m, const Environment& env) {
+  static_assert(std::is_same<typename Derived::Scalar, Expression>::value,
+                "Evaluate only accepts a symbolic matrix.");
+  // Without the trailing `.eval()`, it returns an Eigen Expression (of type
+  // CwiseUnaryOp) and `symbolic::Expression::Evaluate` is only called when a
+  // value is needed (i.e. lazy-evaluation). We add the trailing `.eval()` call
+  // to enforce eager-evaluation and provide a fully evaluated matrix (of
+  // double) to a caller.
+  //
+  // Please refer to https://eigen.tuxfamily.org/dox/TopicPitfalls.html for more
+  // information.
+  return m.unaryExpr([&env](const Expression& e) { return e.Evaluate(env); })
+      .eval();
+}
+
 }  // namespace symbolic
 
 /** Provides specialization of @c cond function defined in drake/common/cond.h
@@ -758,16 +804,21 @@ struct dummy_value<symbolic::Expression> {
   static symbolic::Expression get() { return symbolic::Expression::NaN(); }
 };
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 /** Specializes is_numeric to be false for symbolic::Expression type. */
 template <>
 struct is_numeric<symbolic::Expression> {
+  // TODO(jwnimmer-tri) Remove number_traits.h on or about 2018-12-01.
+  DRAKE_DEPRECATED("This trait will be removed")
   static constexpr bool value = false;
 };
+#pragma GCC diagnostic pop
 
 /// Returns the symbolic expression's value() as a double.
 ///
-/// @throws If it is not possible to evaluate the symbolic expression with an
-/// empty environment.
+/// @throws std::exception if it is not possible to evaluate the symbolic
+/// expression with an empty environment.
 double ExtractDoubleOrThrow(const symbolic::Expression& e);
 
 }  // namespace drake
@@ -775,11 +826,10 @@ double ExtractDoubleOrThrow(const symbolic::Expression& e);
 namespace std {
 /* Provides std::hash<drake::symbolic::Expression>. */
 template <>
-struct hash<drake::symbolic::Expression>
-    : public drake::DefaultHash {};
+struct hash<drake::symbolic::Expression> : public drake::DefaultHash {};
 #if defined(__GLIBCXX__)
 // https://gcc.gnu.org/onlinedocs/libstdc++/manual/unordered_associative.html
-template<>
+template <>
 struct __is_fast_hash<hash<drake::symbolic::Expression>> : std::false_type {};
 #endif
 
@@ -800,6 +850,11 @@ struct equal_to<drake::symbolic::Expression> {
     return lhs.EqualTo(rhs);
   }
 };
+
+/* Provides std::numeric_limits<drake::symbolic::Expression>. */
+template <>
+struct numeric_limits<drake::symbolic::Expression>
+    : public numeric_limits<double> {};
 
 }  // namespace std
 
@@ -870,6 +925,13 @@ struct ScalarBinaryOpTraits<double, drake::symbolic::Expression, BinaryOp> {
 
 namespace drake {
 namespace symbolic {
+
+/// Constructs a vector of variables from the vector of variable expressions.
+/// @throws std::logic_error if there is an expression in @p vec which is not a
+/// variable.
+VectorX<Variable> GetVariableVector(
+    const Eigen::Ref<const VectorX<Expression>>& evec);
+
 /// Computes the Jacobian matrix J of the vector function @p f with respect to
 /// @p vars. J(i,j) contains ∂f(i)/∂vars(j).
 ///
@@ -891,6 +953,21 @@ MatrixX<Expression> Jacobian(const Eigen::Ref<const VectorX<Expression>>& f,
 /// @pre {@p vars is non-empty}.
 MatrixX<Expression> Jacobian(const Eigen::Ref<const VectorX<Expression>>& f,
                              const Eigen::Ref<const VectorX<Variable>>& vars);
+
+/// Returns the Taylor series expansion of `f` around `a` of order `order`.
+///
+/// @param[in] f     Symbolic expression to approximate using Taylor series
+///                  expansion.
+/// @param[in] a     Symbolic environment which specifies the point of
+///                  approximation. If a partial environment is provided,
+///                  the unspecified variables are treated as symbolic
+///                  variables (e.g. decision variable).
+/// @param[in] order Positive integer which specifies the maximum order of the
+///                  resulting polynomial approximating `f` around `a`.
+Expression TaylorExpand(const Expression& f, const Environment& a, int order);
+
+/// Returns the distinct variables in the matrix of expressions.
+Variables GetDistinctVariables(const Eigen::Ref<const MatrixX<Expression>>& v);
 
 /// Checks if two Eigen::Matrix<Expression> @p m1 and @p m2 are structurally
 /// equal. That is, it returns true if and only if `m1(i, j)` is structurally

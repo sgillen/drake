@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdlib>
 #include <limits>
 #include <list>
 #include <stdexcept>
@@ -18,13 +19,21 @@ namespace drake {
 namespace solvers {
 namespace {
 
+// This function is used to print information for each iteration to the console,
+// it will show PRSTATUS, PFEAS, DFEAS, etc. For more information, check out
+// https://docs.mosek.com/8.1/capi/solver-io.html. This printstr is copied
+// directly from https://docs.mosek.com/8.1/capi/solver-io.html#stream-logging.
+void MSKAPI printstr(void* , const char str[]) {
+  printf("%s", str);
+}
+
 // Add LinearConstraints and LinearEqualityConstraints to the Mosek task.
 template <typename C>
 MSKrescodee AddLinearConstraintsFromBindings(
     MSKtask_t* task, const std::vector<Binding<C>>& constraint_list,
     bool is_equality_constraint, const MathematicalProgram& prog) {
   for (const auto& binding : constraint_list) {
-    auto constraint = binding.constraint();
+    auto constraint = binding.evaluator();
     const Eigen::MatrixXd& A = constraint->A();
     const Eigen::VectorXd& lb = constraint->lower_bound();
     const Eigen::VectorXd& ub = constraint->upper_bound();
@@ -110,7 +119,7 @@ MSKrescodee AddBoundingBoxConstraints(const MathematicalProgram& prog,
   std::vector<double> x_lb(num_vars, -std::numeric_limits<double>::infinity());
   std::vector<double> x_ub(num_vars, std::numeric_limits<double>::infinity());
   for (const auto& binding : prog.bounding_box_constraints()) {
-    const auto& constraint = binding.constraint();
+    const auto& constraint = binding.evaluator();
     const Eigen::VectorXd& lower_bound = constraint->lower_bound();
     const Eigen::VectorXd& upper_bound = constraint->upper_bound();
 
@@ -174,8 +183,8 @@ MSKrescodee AddSecondOrderConeConstraints(
           prog.FindDecisionVariableIndex(binding.variables()(i));
     }
 
-    const auto& A = binding.constraint()->A();
-    const auto& b = binding.constraint()->b();
+    const auto& A = binding.evaluator()->A();
+    const auto& b = binding.evaluator()->b();
     const int num_z = A.rows();
     MSKint32t num_total_vars = 0;
     rescode = MSK_getnumvar(*task, &num_total_vars);
@@ -340,7 +349,7 @@ MSKrescodee AddPositiveSemidefiniteConstraints(const MathematicalProgram& prog,
     // Add S_bar as new variables. Mosek needs to create so called "bar
     // variable"
     // for matrix in positive semidefinite cones.
-    int matrix_rows = binding.constraint()->matrix_rows();
+    int matrix_rows = binding.evaluator()->matrix_rows();
 
     AddBarVariable(matrix_rows, task);
 
@@ -392,7 +401,7 @@ MSKrescodee AddLinearMatrixInequalityConstraint(const MathematicalProgram& prog,
       return rescode;
     }
 
-    int rows = binding.constraint()->matrix_rows();
+    int rows = binding.evaluator()->matrix_rows();
 
     AddBarVariable(rows, task);
 
@@ -404,7 +413,7 @@ MSKrescodee AddLinearMatrixInequalityConstraint(const MathematicalProgram& prog,
         int linear_constraint_index =
             num_linear_constraint + new_linear_constraint_count;
 
-        const auto& F = binding.constraint()->F();
+        const auto& F = binding.evaluator()->F();
         auto F_it = F.begin();
         rescode = MSK_putconbound(*task, linear_constraint_index, MSK_BK_FX,
                                   -(*F_it)(i, j), -(*F_it)(i, j));
@@ -448,7 +457,7 @@ MSKrescodee AddCosts(const MathematicalProgram& prog, MSKtask_t* task) {
   std::vector<Eigen::Triplet<double>> linear_term_triplets;
   double constant_cost = 0.;
   for (const auto& binding : prog.quadratic_costs()) {
-    const auto& constraint = binding.constraint();
+    const auto& constraint = binding.evaluator();
     // The quadratic cost is of form 0.5*x'*Q*x + b*x.
     const auto& Q = constraint->Q();
     const auto& b = constraint->b();
@@ -484,8 +493,8 @@ MSKrescodee AddCosts(const MathematicalProgram& prog, MSKtask_t* task) {
     }
   }
   for (const auto& binding : prog.linear_costs()) {
-    const auto& c = binding.constraint()->a();
-    constant_cost += binding.constraint()->b();
+    const auto& c = binding.evaluator()->a();
+    constant_cost += binding.evaluator()->b();
     for (int i = 0; i < static_cast<int>(binding.GetNumElements()); ++i) {
       if (std::abs(c(i)) > Eigen::NumTraits<double>::epsilon()) {
         linear_term_triplets.push_back(Eigen::Triplet<double>(
@@ -588,19 +597,31 @@ MSKrescodee SpecifyVariableType(const MathematicalProgram& prog,
 class MosekSolver::License {
  public:
   License() {
+    const char* moseklm_license_file = std::getenv("MOSEKLM_LICENSE_FILE");
+    if (moseklm_license_file == nullptr) {
+      throw std::runtime_error(
+          "Could not locate MOSEK license file because MOSEKLM_LICENSE_FILE "
+          "environment variable was not set.");
+    }
+
     MSKrescodee rescode = MSK_makeenv(&mosek_env_, nullptr);
     if (rescode != MSK_RES_OK) {
       throw std::runtime_error("Could not create MOSEK environment.");
     }
     DRAKE_DEMAND(mosek_env_ != nullptr);
 
-    // Acquire the license for the base MOSEK system so that we can
-    // fail fast if the license file is missing or the server is
-    // unavailable. Any additional features should be checked out
-    // later by MSK_optimizetrm if needed (so there's still the
-    // possiblity of later failure at that stage if the desired
-    // feature is unavailable or another error occurs).
-    rescode = MSK_checkoutlicense(mosek_env_, MSK_FEATURE_PTS);
+    const int num_tries = 3;
+    rescode = MSK_RES_TRM_INTERNAL;
+    for (int i = 0; i < num_tries && rescode != MSK_RES_OK; ++i) {
+      // Acquire the license for the base MOSEK system so that we can
+      // fail fast if the license file is missing or the server is
+      // unavailable. Any additional features should be checked out
+      // later by MSK_optimizetrm if needed (so there's still the
+      // possibility of later failure at that stage if the desired
+      // feature is unavailable or another error occurs).
+      rescode = MSK_checkoutlicense(mosek_env_, MSK_FEATURE_PTS);
+    }
+
     if (rescode != MSK_RES_OK) {
       throw std::runtime_error("Could not acquire MOSEK license.");
     }
@@ -629,9 +650,16 @@ std::shared_ptr<MosekSolver::License> MosekSolver::AcquireLicense() {
   return GetScopedSingleton<MosekSolver::License>();
 }
 
-bool MosekSolver::available() const { return true; }
+bool MosekSolver::is_available() { return true; }
 
-SolutionResult MosekSolver::Solve(MathematicalProgram& prog) const {
+void MosekSolver::Solve(const MathematicalProgram& prog,
+                        const optional<Eigen::VectorXd>& initial_guess,
+                        const optional<SolverOptions>& solver_options,
+                        MathematicalProgramResult* result) const {
+  // TODO(hongkai.dai): support setting initial guess and solver options.
+  if (initial_guess.has_value() || solver_options.has_value()) {
+    throw std::runtime_error("Not implemented yet.");
+  }
   const int num_vars = prog.num_vars();
   MSKtask_t task = nullptr;
   MSKrescodee rescode;
@@ -696,8 +724,17 @@ SolutionResult MosekSolver::Solve(MathematicalProgram& prog) const {
   if (rescode == MSK_RES_OK) {
     rescode = AddLinearMatrixInequalityConstraint(prog, &task);
   }
+  if (rescode == MSK_RES_OK && stream_logging_) {
+    if (log_file_.empty()) {
+      rescode =
+          MSK_linkfunctotaskstream(task, MSK_STREAM_LOG, nullptr, printstr);
+    } else {
+      rescode =
+          MSK_linkfiletotaskstream(task, MSK_STREAM_LOG, log_file_.c_str(), 0);
+    }
+  }
 
-  SolutionResult result = SolutionResult::kUnknownError;
+  result->set_solution_result(SolutionResult::kUnknownError);
   // Run optimizer.
   if (rescode == MSK_RES_OK) {
     // TODO(hongkai.dai@tri.global): add trmcode to the returned struct.
@@ -721,10 +758,11 @@ SolutionResult MosekSolver::Solve(MathematicalProgram& prog) const {
     solution_type = MSK_SOL_ITR;
   }
 
-  // TODO(hongkai.dai@tri.global) : Add MOSEK paramaters.
+  result->set_solver_id(id());
+  // TODO(hongkai.dai@tri.global) : Add MOSEK parameters.
   // Mosek parameter are added by enum, not by string.
+  MSKsolstae solution_status{MSK_SOL_STA_UNKNOWN};
   if (rescode == MSK_RES_OK) {
-    MSKsolstae solution_status;
     if (rescode == MSK_RES_OK) {
       rescode = MSK_getsolsta(task, solution_type, &solution_status);
     }
@@ -734,7 +772,7 @@ SolutionResult MosekSolver::Solve(MathematicalProgram& prog) const {
         case MSK_SOL_STA_NEAR_OPTIMAL:
         case MSK_SOL_STA_INTEGER_OPTIMAL:
         case MSK_SOL_STA_NEAR_INTEGER_OPTIMAL: {
-          result = SolutionResult::kSolutionFound;
+          result->set_solution_result(SolutionResult::kSolutionFound);
           MSKint32t num_mosek_vars;
           rescode = MSK_getnumvar(task, &num_mosek_vars);
           DRAKE_ASSERT(rescode == MSK_RES_OK);
@@ -750,40 +788,56 @@ SolutionResult MosekSolver::Solve(MathematicalProgram& prog) const {
             }
           }
           if (rescode == MSK_RES_OK) {
-            prog.SetDecisionVariableValues(sol_vector);
+            result->set_x_val(sol_vector);
           }
           MSKrealt optimal_cost;
           rescode = MSK_getprimalobj(task, solution_type, &optimal_cost);
           DRAKE_ASSERT(rescode == MSK_RES_OK);
           if (rescode == MSK_RES_OK) {
-            prog.SetOptimalCost(optimal_cost);
+            result->set_optimal_cost(optimal_cost);
           }
           break;
         }
         case MSK_SOL_STA_DUAL_INFEAS_CER:
         case MSK_SOL_STA_NEAR_DUAL_INFEAS_CER:
-          result = SolutionResult::kDualInfeasible;
+          result->set_solution_result(SolutionResult::kDualInfeasible);
           break;
         case MSK_SOL_STA_PRIM_INFEAS_CER:
         case MSK_SOL_STA_NEAR_PRIM_INFEAS_CER: {
-          result = SolutionResult::kInfeasibleConstraints;
+          result->set_solution_result(SolutionResult::kInfeasibleConstraints);
           break;
         }
         default: {
-          result = SolutionResult::kUnknownError;
+          result->set_solution_result(SolutionResult::kUnknownError);
           break;
         }
       }
     }
   }
 
-  prog.SetSolverId(id());
-  if (rescode != MSK_RES_OK) {
-    result = SolutionResult::kUnknownError;
+  MosekSolverDetails& solver_details =
+      result->SetSolverDetailsType<MosekSolverDetails>();
+  solver_details.rescode = rescode;
+  solver_details.solution_status = solution_status;
+  if (rescode == MSK_RES_OK) {
+    rescode = MSK_getdouinf(task, MSK_DINF_OPTIMIZER_TIME,
+                            &(solver_details.optimizer_time));
   }
+  // rescode is not used after this. If in the future, the user wants to call
+  // more MSK functions after this line, then he/she needs to check if rescode
+  // is OK. But do not modify result->solution_result_ if rescode is not OK
+  // after this line.
+  unused(rescode);
 
   MSK_deletetask(&task);
-  return result;
+}
+
+SolutionResult MosekSolver::Solve(MathematicalProgram& prog) const {
+  MathematicalProgramResult result;
+  Solve(prog, {}, {}, &result);
+  const SolverResult solver_result = result.ConvertToSolverResult();
+  prog.SetSolverResult(solver_result);
+  return result.get_solution_result();
 }
 
 }  // namespace solvers

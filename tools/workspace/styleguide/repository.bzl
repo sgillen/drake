@@ -2,11 +2,14 @@
 
 load("@drake//tools/workspace:github.bzl", "github_archive")
 
-def styleguide_repository(name):
+def styleguide_repository(
+        name,
+        mirrors = None):
     github_archive(
         name = name,
         repository = "RobotLocomotion/styleguide",
-        commit = "f9fb031554d398431bc0efcb511102d41bbed089",
-        sha256 = "1e40f4595406e208de8bde66bc3425e6c0dce4ea96254cc2c7e4105316df9a31",  # noqa
+        commit = "43c23baba4d9f8734ae8419b45fc81fee99b3c4e",
+        sha256 = "ad9d12161d8a5bb974ed537da4031559107d11f033451666be432211fa007f4c",  # noqa
         build_file = "@drake//tools/workspace/styleguide:package.BUILD.bazel",
+        mirrors = mirrors,
     )

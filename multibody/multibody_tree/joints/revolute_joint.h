@@ -27,6 +27,7 @@ namespace multibody {
 /// @tparam T The scalar type. Must be a valid Eigen scalar.
 ///
 /// Instantiated templates for the following kinds of T's are provided:
+///
 /// - double
 /// - AutoDiffXd
 ///
@@ -45,9 +46,11 @@ class RevoluteJoint final : public Joint<T> {
   /// body B, rotate relatively to one another about a common axis. See this
   /// class's documentation for further details on the definition of these
   /// frames and rotation angle.
+  /// This constructor signature creates a joint with no joint limits, i.e. the
+  /// joint limits are the pair `(-∞, ∞)`.
   /// The first three arguments to this constructor are those of the Joint class
   /// constructor. See the Joint class's documentation for details.
-  /// The additional parameter `axis` is:
+  /// The additional parameters are:
   /// @param[in] axis
   ///   A vector in ℝ³ specifying the axis of revolution for this joint. Given
   ///   that frame M only rotates with respect to F and their origins are
@@ -57,22 +60,84 @@ class RevoluteJoint final : public Joint<T> {
   ///   equal to one.
   ///   This vector can have any length, only the direction is used. This method
   ///   aborts if `axis` is the zero vector.
+  /// @param[in] damping
+  ///   Viscous damping coefficient, in N⋅m⋅s, used to model losses within the
+  ///   joint. The damping torque (in N⋅m) is modeled as `τ = -damping⋅ω`, i.e.
+  ///   opposing motion, with ω the angular rate for `this` joint (see
+  ///   get_angular_rate()).
+  /// @throws std::exception if damping is negative.
   RevoluteJoint(const std::string& name,
                 const Frame<T>& frame_on_parent, const Frame<T>& frame_on_child,
-                const Vector3<double>& axis) :
-      Joint<T>(name, frame_on_parent, frame_on_child) {
+                const Vector3<double>& axis,
+                double damping = 0) :
+      RevoluteJoint<T>(name, frame_on_parent, frame_on_child, axis,
+                       -std::numeric_limits<double>::infinity(),
+                       std::numeric_limits<double>::infinity(), damping) {}
+
+  /// Constructor to create a revolute joint between two bodies so that
+  /// frame F attached to the parent body P and frame M attached to the child
+  /// body B, rotate relatively to one another about a common axis. See this
+  /// class's documentation for further details on the definition of these
+  /// frames and rotation angle.
+  /// The first three arguments to this constructor are those of the Joint class
+  /// constructor. See the Joint class's documentation for details.
+  /// The additional parameters are:
+  /// @param[in] axis
+  ///   A vector in ℝ³ specifying the axis of revolution for this joint. Given
+  ///   that frame M only rotates with respect to F and their origins are
+  ///   coincident at all times, the measures of `axis` in either frame F or M
+  ///   are exactly the same, that is, `axis_F = axis_M`. In other words,
+  ///   `axis_F` (or `axis_M`) is the eigenvector of `R_FM` with eigenvalue
+  ///   equal to one.
+  ///   This vector can have any length, only the direction is used. This method
+  ///   aborts if `axis` is the zero vector.
+  /// @param[in] lower_limit
+  ///   Lower limit, in radians, for the rotation coordinate
+  ///   (see get_angle()).
+  /// @param[in] upper_limit
+  ///   Upper limit, in radians, for the rotation coordinate
+  ///   (see get_angle()).
+  /// @param[in] damping
+  ///   Viscous damping coefficient, in N⋅m⋅s, used to model losses within the
+  ///   joint. The damping torque (in N⋅m) is modeled as `τ = -damping⋅ω`, i.e.
+  ///   opposing motion, with ω the angular rate for `this` joint (see
+  ///   get_angular_rate()).
+  /// @throws std::exception if damping is negative.
+  /// @throws std::exception if lower_limit > upper_limit.
+  RevoluteJoint(const std::string& name,
+                const Frame<T>& frame_on_parent, const Frame<T>& frame_on_child,
+                const Vector3<double>& axis,
+                double lower_limit, double upper_limit,
+                double damping = 0) :
+      Joint<T>(name, frame_on_parent, frame_on_child,
+               VectorX<double>::Constant(1, lower_limit),
+               VectorX<double>::Constant(1, upper_limit)) {
     const double kEpsilon = std::numeric_limits<double>::epsilon();
     DRAKE_DEMAND(!axis.isZero(kEpsilon));
+    DRAKE_THROW_UNLESS(damping >= 0);
+    DRAKE_THROW_UNLESS(lower_limit <= upper_limit);
     axis_ = axis.normalized();
+    damping_ = damping;
+    lower_limit_ = lower_limit;
+    upper_limit_ = upper_limit;
   }
 
   /// Returns the axis of revolution of `this` joint as a unit vector.
   /// Since the measures of this axis in either frame F or M are the same (see
   /// this class's documentation for frames's definitions) then,
   /// `axis = axis_F = axis_M`.
-  const Vector3<double>& get_revolute_axis() const {
+  const Vector3<double>& revolute_axis() const {
     return axis_;
   }
+
+  /// Returns `this` joint's damping constant in N⋅m⋅s.
+  double damping() const { return damping_; }
+
+  /// Returns the lower limit for `this` joint in radians.
+  double lower_limit() const { return lower_limit_; }
+
+  /// Returns the upper limit for `this` joint in radians.
+  double upper_limit() const { return upper_limit_; }
 
   /// @name Context-dependent value access
   ///
@@ -144,9 +209,19 @@ class RevoluteJoint final : public Joint<T> {
     this->AddInOneForce(context, 0, torque, forces);
   }
 
- private:
-  // Joint<T> override called through public NVI. Therefore arguments were
-  // already checked to be valid.
+ protected:
+  /// Joint<T> override called through public NVI, Joint::AddInForce().
+  /// Therefore arguments were already checked to be valid.
+  /// For a %RevoluteJoint, we must always have `joint_dof = 0` since there is
+  /// only a single degree of freedom (num_velocities() == 1). `joint_tau` is
+  /// the torque applied about the joint's axis, on the body declared as child
+  /// (according to the revolute joint's constructor) at the origin of the child
+  /// frame (which is coincident with the origin of the parent frame at all
+  /// times). The torque is defined to be positive according to
+  /// the right-hand-rule with the thumb aligned in the direction of `this`
+  /// joint's axis. That is, a positive torque causes a positive rotational
+  /// acceleration (of the child body frame) according to the right-hand-rule
+  /// around the joint's axis.
   void DoAddInOneForce(
       const systems::Context<T>&,
       int joint_dof,
@@ -161,19 +236,44 @@ class RevoluteJoint final : public Joint<T> {
     tau_mob(joint_dof) += joint_tau;
   }
 
-  int do_get_num_dofs() const override {
+  /// Joint<T> override called through public NVI, Joint::AddInDamping().
+  /// Therefore arguments were already checked to be valid.
+  /// This method adds into `forces` a dissipative torque according to the
+  /// viscous law `τ = -d⋅ω`, with d the damping coefficient (see damping()).
+  void DoAddInDamping(const systems::Context<T>& context,
+                      MultibodyForces<T>* forces) const override {
+    const T damping_torque = -this->damping() * get_angular_rate(context);
+    AddInTorque(context, damping_torque, forces);
+  }
+
+ private:
+  int do_get_velocity_start() const override {
+    return get_mobilizer()->velocity_start_in_v();
+  }
+
+  int do_get_num_velocities() const override {
     return 1;
+  }
+
+  int do_get_position_start() const override {
+    return get_mobilizer()->position_start_in_q();
+  }
+
+  int do_get_num_positions() const override {
+    return 1;
+  }
+
+  const T& DoGetOnePosition(const systems::Context<T>& context) const override {
+    return get_angle(context);
+  }
+
+  const T& DoGetOneVelocity(const systems::Context<T>& context) const override {
+    return get_angular_rate(context);
   }
 
   // Joint<T> overrides:
   std::unique_ptr<typename Joint<T>::BluePrint>
-  MakeImplementationBlueprint() const override {
-    auto blue_print = std::make_unique<typename Joint<T>::BluePrint>();
-    blue_print->mobilizers_.push_back(
-        std::make_unique<RevoluteMobilizer<T>>(
-            this->get_frame_on_parent(), this->get_frame_on_child(), axis_));
-    return std::move(blue_print);
-  }
+  MakeImplementationBlueprint() const override;
 
   std::unique_ptr<Joint<double>> DoCloneToScalar(
       const MultibodyTree<double>& tree_clone) const override;
@@ -194,7 +294,7 @@ class RevoluteJoint final : public Joint<T> {
   // However its public API should remain intact.
   const RevoluteMobilizer<T>* get_mobilizer() const {
     // This implementation should only have one mobilizer.
-    DRAKE_DEMAND(this->get_implementation().get_num_mobilizers() == 1);
+    DRAKE_DEMAND(this->get_implementation().num_mobilizers() == 1);
     const RevoluteMobilizer<T>* mobilizer =
         dynamic_cast<const RevoluteMobilizer<T>*>(
             this->get_implementation().mobilizers_[0]);
@@ -209,6 +309,14 @@ class RevoluteJoint final : public Joint<T> {
 
   // This is the joint's axis expressed in either M or F since axis_M = axis_F.
   Vector3<double> axis_;
+
+  // This joint's damping constant in N⋅m⋅s.
+  double damping_{0};
+
+  // The lower and upper joint limits in radians.
+  // lower_limit_ <= upper_limit_ always (enforced at construction).
+  double lower_limit_{-std::numeric_limits<double>::infinity()};
+  double upper_limit_{std::numeric_limits<double>::infinity()};
 };
 
 }  // namespace multibody

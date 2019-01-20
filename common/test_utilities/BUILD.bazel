@@ -1,32 +1,38 @@
 # -*- python -*-
 
 load(
-    "//tools:drake.bzl",
+    "@drake//tools/skylark:drake_cc.bzl",
     "drake_cc_googletest",
     "drake_cc_library",
+    "drake_cc_package_library",
+)
+load(
+    "@drake//tools/skylark:drake_py.bzl",
+    "drake_py_library",
 )
 load("//tools/lint:lint.bzl", "add_lint_tests")
 
 package(default_visibility = ["//visibility:public"])
 
+exports_files([
+    "drake_py_unittest_main.py",
+])
+
 # This should encompass every cc_library in this package, except for items that
 # should only ever be linked into main() programs.
-drake_cc_library(
+drake_cc_package_library(
     name = "test_utilities",
     testonly = 1,
-    srcs = [],
-    hdrs = [],
     deps = [
         ":eigen_geometry_compare",
         ":eigen_matrix_compare",
+        ":expect_throws_message",
         ":is_dynamic_castable",
         ":is_memcpy_movable",
         ":measure_execution",
         ":random_polynomial_matrix",
         ":symbolic_test_util",
     ],
-    # Intentionally excluded items:
-    # - drake_cc_googletest_main
 )
 
 drake_cc_library(
@@ -49,6 +55,12 @@ drake_cc_library(
         "//common:essential",
         "@gtest//:without_main",
     ],
+)
+
+drake_cc_library(
+    name = "expect_throws_message",
+    testonly = 1,
+    hdrs = ["expect_throws_message.h"],
 )
 
 drake_cc_library(
@@ -90,12 +102,15 @@ drake_cc_library(
     ],
 )
 
-# This is only intended to be used by the drake_cc_googletest() macro.
-# Do not add it to ":test_utilities".
 drake_cc_library(
     name = "drake_cc_googletest_main",
     testonly = 1,
     srcs = ["drake_cc_googletest_main.cc"],
+    tags = [
+        # This is only intended to be used by the drake_cc_googletest() macro.
+        # Don't add this library into the ":test_utilities" package library.
+        "exclude_from_package",
+    ],
     deps = [
         "//common:text_logging_gflags",
         "@gtest//:without_main",
@@ -122,6 +137,12 @@ drake_cc_googletest(
     deps = [
         ":is_memcpy_movable",
     ],
+)
+
+drake_py_library(
+    name = "disable_python_unittest",
+    srcs = ["disable_python_unittest/unittest/__init__.py"],
+    imports = ["disable_python_unittest"],
 )
 
 add_lint_tests()

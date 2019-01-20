@@ -21,11 +21,12 @@
 
 #include "drake/common/eigen_types.h"
 #include "drake/common/find_resource.h"
-#include "drake/common/trajectories/piecewise_polynomial_trajectory.h"
+#include "drake/common/trajectories/piecewise_polynomial.h"
 #include "drake/lcm/drake_lcm.h"
 #include "drake/lcmt_contact_results_for_viz.hpp"
-#include "drake/multibody/parsers/sdf_parser.h"
 #include "drake/manipulation/schunk_wsg/schunk_wsg_constants.h"
+#include "drake/manipulation/schunk_wsg/schunk_wsg_plain_controller.h"
+#include "drake/multibody/parsers/sdf_parser.h"
 #include "drake/multibody/parsers/urdf_parser.h"
 #include "drake/multibody/rigid_body_frame.h"
 #include "drake/multibody/rigid_body_plant/contact_results_to_lcm.h"
@@ -38,11 +39,14 @@
 #include "drake/systems/analysis/simulator.h"
 #include "drake/systems/controllers/pid_controlled_system.h"
 #include "drake/systems/framework/diagram_builder.h"
-#include "drake/systems/primitives/demultiplexer.h"
-#include "drake/systems/primitives/multiplexer.h"
 #include "drake/systems/lcm/lcm_publisher_system.h"
 #include "drake/systems/primitives/constant_vector_source.h"
+#include "drake/systems/primitives/demultiplexer.h"
+#include "drake/systems/primitives/multiplexer.h"
 #include "drake/systems/primitives/trajectory_source.h"
+
+using drake::manipulation::schunk_wsg::ControlMode;
+using drake::manipulation::schunk_wsg::SchunkWsgPlainController;
 
 namespace drake {
 namespace examples {
@@ -57,6 +61,7 @@ using drake::systems::lcm::LcmPublisherSystem;
 using drake::systems::KinematicsResults;
 using drake::systems::Context;
 using drake::systems::BasicVector;
+using drake::trajectories::PiecewisePolynomial;
 using Eigen::Vector3d;
 
 // Initial height of the box's origin.
@@ -189,7 +194,7 @@ TEST_P(SchunkWsgLiftTest, BoxLiftTest) {
           timestep);
   plant->set_name("plant");
 
-  ASSERT_GE(plant->get_num_actuators(), 2);
+  ASSERT_GE(plant->get_num_actuators(), 3);
   ASSERT_EQ(plant->get_num_model_instances(), 3);
 
   // Arbitrary contact parameters.
@@ -234,7 +239,7 @@ TEST_P(SchunkWsgLiftTest, BoxLiftTest) {
       plant->model_instance_state_output_port(lifter_instance_id);
 
   // Get the number of controllers.
-  const int num_PID_controllers = plant->get_num_actuators() - 1;
+  const int num_PID_controllers = input_port.size();
 
   // Constants chosen arbitrarily.
   const auto kp = VectorX<double>::Ones(num_PID_controllers) * 300.0;
@@ -292,10 +297,10 @@ TEST_P(SchunkWsgLiftTest, BoxLiftTest) {
 
   // Stop gradually.
   lift_knots.push_back(Eigen::Vector2d(kLiftHeight, 0.));
-  PiecewisePolynomialTrajectory lift_trajectory(
+  PiecewisePolynomial<double> lift_trajectory =
       PiecewisePolynomial<double>::Cubic(
           lift_breaks, lift_knots, Eigen::Vector2d(0., 0.),
-          Eigen::Vector2d(0., 0.)));
+          Eigen::Vector2d(0., 0.));
   auto lift_source =
       builder.AddSystem<systems::TrajectorySource>(lift_trajectory);
   lift_source->set_name("lift_source");
@@ -335,14 +340,26 @@ TEST_P(SchunkWsgLiftTest, BoxLiftTest) {
   grip_knots.push_back(Vector1d(0));
   grip_knots.push_back(Vector1d(0));
   grip_knots.push_back(Vector1d(40));
-  PiecewisePolynomialTrajectory grip_trajectory(
-      PiecewisePolynomial<double>::FirstOrderHold(grip_breaks, grip_knots));
+  PiecewisePolynomial<double> grip_trajectory =
+      PiecewisePolynomial<double>::FirstOrderHold(grip_breaks, grip_knots);
   auto grip_source =
       builder.AddSystem<systems::TrajectorySource>(grip_trajectory);
   grip_source->set_name("grip_source");
+  const auto wsg_controller =
+      builder.template AddSystem<SchunkWsgPlainController>(ControlMode::kForce);
+  builder.Connect(plant->model_instance_state_output_port(gripper_instance_id),
+                  wsg_controller->get_input_port_estimated_state());
   builder.Connect(grip_source->get_output_port(),
-                  plant->model_instance_actuator_command_input_port(
-                      gripper_instance_id));
+                  wsg_controller->get_input_port_feed_forward_force());
+  builder.Connect(
+      wsg_controller->get_output_port_control(),
+      plant->model_instance_actuator_command_input_port(gripper_instance_id));
+  Vector1<double> max_force{40};  // Max force, in Newtons.
+  const auto max_force_source =
+      builder.template AddSystem<systems::ConstantVectorSource<double>>(
+          max_force);
+  builder.Connect(max_force_source->get_output_port(),
+                  wsg_controller->get_input_port_max_force());
 
   // Creates and adds LCM publisher for visualization.  The test doesn't
   // require `drake_visualizer` but it is convenient to have when debugging.
@@ -407,7 +424,7 @@ TEST_P(SchunkWsgLiftTest, BoxLiftTest) {
 
   // Capture the "initial" positions of the box and the gripper finger as
   // discussed in the test notes below.
-  auto state_output = model->AllocateOutput(simulator.get_context());
+  auto state_output = model->AllocateOutput();
   model->CalcOutput(simulator.get_context(), state_output.get());
   auto& interim_kinematics_results =
       state_output->get_data(kinematrics_results_index)

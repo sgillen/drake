@@ -1,10 +1,29 @@
 from __future__ import absolute_import, division, print_function
 
+import sys
 import unittest
+import warnings
 
 
 class TestAll(unittest.TestCase):
     # N.B. Synchronize code snippests with `doc/python_bindings.rst`.
+    def test_import_warnings(self):
+        """Prints if we encounter any warnings (primarily from `pybind11`) when
+        importing `pydrake.all`."""
+        # Ensure that we haven't imported anything from `pydrake`.
+        self.assertTrue("pydrake" not in sys.modules)
+        # - While this may be redundant, let's do it for good measure.
+        self.assertTrue("pydrake.all" not in sys.modules)
+        # Enable *all* warnings, and ensure that we don't trigger them.
+        with warnings.catch_warnings(record=True) as w:
+            # TODO(eric.cousineau): Figure out a more conservative filter to
+            # avoid issues on different machines, but still catch meaningful
+            # warnings.
+            warnings.simplefilter("always", Warning)
+            import pydrake.all
+            if w:
+                sys.stderr.write("Encountered import warnings:\n{}\n".format(
+                    "\n".join(map(str, w)) + "\n"))
 
     def test_usage_no_all(self):
         from pydrake.common import FindResourceOrThrow
@@ -43,16 +62,37 @@ class TestAll(unittest.TestCase):
         expected_symbols = (
             # autodiffutils
             "AutoDiffXd",
+            # automotive
+            "SimpleCar",
             # common
             "AddResourceSearchPath",
             # forwarddiff
             "jacobian",
             "sin",
             "cos",
+            # geometry
+            "SceneGraph",
+            # lcm
+            "DrakeLcm",
             # symbolic
             "Variable",
             "Expression",
+            # maliput
+            # - api
+            "RoadGeometry",
+            # - dragway
+            "create_dragway",
+            # manipulation
+            # - planner
+            "DoDifferentialInverseKinematics",
             # multibody
+            # - benchmarks
+            "MakeAcrobotPlant",
+            # - inverse_kinematics
+            "InverseKinematics",
+            # - multibody_tree
+            "MultibodyPlant",
+            "SpatialVelocity",
             # - parsers
             "PackageMap",
             # - rigid_body_plant
@@ -63,6 +103,8 @@ class TestAll(unittest.TestCase):
             # TODO(eric.cousineau): Avoid collision with `collision.Element`.
             # Import modules, since these names are generic.
             "Element",
+            # perception
+            "PointCloud",
             # solvers
             # - gurobi
             "GurobiSolver",
@@ -80,10 +122,14 @@ class TestAll(unittest.TestCase):
             "LeafSystem",
             # - analysis
             "Simulator",
+            # - lcm
+            "PySerializer",
             # - primitives
             "Adder",
             # - rendering
             "PoseVector",
+            # - scalar_conversion
+            "TemplateSystem",
             # - sensors
             "Image",
             # util
@@ -95,7 +141,3 @@ class TestAll(unittest.TestCase):
         for expected_symbol in expected_symbols:
             self.assertTrue(
                 expected_symbol in pydrake.all.__dict__, expected_symbol)
-
-
-if __name__ == '__main__':
-    unittest.main()

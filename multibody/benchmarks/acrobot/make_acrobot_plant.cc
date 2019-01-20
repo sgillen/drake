@@ -1,5 +1,6 @@
 #include "drake/multibody/benchmarks/acrobot/make_acrobot_plant.h"
 
+#include "drake/math/rigid_transform.h"
 #include "drake/multibody/multibody_tree/joints/revolute_joint.h"
 #include "drake/multibody/multibody_tree/uniform_gravity_field_element.h"
 
@@ -8,14 +9,14 @@ namespace multibody {
 namespace benchmarks {
 namespace acrobot {
 
-using Eigen::Isometry3d;
 using Eigen::Translation3d;
 using Eigen::Vector3d;
 
 using geometry::Cylinder;
 using geometry::FrameId;
-using geometry::GeometrySystem;
+using geometry::SceneGraph;
 using geometry::Sphere;
+using drake::math::RigidTransformd;
 using drake::multibody::multibody_plant::MultibodyPlant;
 using drake::multibody::RevoluteJoint;
 using drake::multibody::RigidBody;
@@ -25,8 +26,8 @@ using drake::multibody::UniformGravityFieldElement;
 using drake::multibody::UnitInertia;
 
 std::unique_ptr<drake::multibody::multibody_plant::MultibodyPlant<double>>
-MakeAcrobotPlant(
-    const AcrobotParameters& params, geometry::GeometrySystem<double>*) {
+MakeAcrobotPlant(const AcrobotParameters& params, bool finalize,
+                 SceneGraph<double>* scene_graph) {
   auto plant = std::make_unique<MultibodyPlant<double>>();
 
   // COM's positions in each link (L1/L2) frame:
@@ -54,33 +55,55 @@ MakeAcrobotPlant(
   const RigidBody<double>& link2 = plant->AddRigidBody(
       params.link2_name(), M2_L2o);
 
-  // TODO(amcastro-tri): Register geometry if a valid GeometrySystem is
-  // provided.
+  if (scene_graph != nullptr) {
+    plant->RegisterAsSourceForSceneGraph(scene_graph);
+
+    // Pose of the geometry for link 1 in the link's frame.
+    const RigidTransformd X_L1G1(-params.l1() / 2.0 * Vector3d::UnitZ());
+    plant->RegisterVisualGeometry(link1, X_L1G1.GetAsIsometry3(),
+                                  Cylinder(params.r1(), params.l1()), "visual");
+
+    // Pose of the geometry for link 2 in the link's frame.
+    const RigidTransformd X_L2G2(-params.l2() / 2.0 * Vector3d::UnitZ());
+    plant->RegisterVisualGeometry(link2, X_L2G2.GetAsIsometry3(),
+                                  Cylinder(params.r2(), params.l2()), "visual");
+
+    // Register some (anchored) geometry to the world.
+    const RigidTransformd X_WG;  // Default is identity transform.
+    plant->RegisterVisualGeometry(
+        plant->world_body(), X_WG.GetAsIsometry3(),
+        Sphere(params.l1() / 8.0), /* Arbitrary radius to decorate the model. */
+        "visual");
+  }
 
   plant->AddJoint<RevoluteJoint>(
       params.shoulder_joint_name(),
       /* Shoulder inboard frame Si IS the the world frame W. */
-      plant->get_world_body(), {},
+      plant->world_body(), {},
       /* Shoulder outboard frame So IS frame L1. */
       link1, {},
       Vector3d::UnitY()); /* acrobot oscillates in the x-z plane. */
 
-  plant->AddJoint<RevoluteJoint>(
+  // Pose of the elbow inboard frame Ei in Link 1's frame.
+  const RigidTransformd X_link1_Ei(-params.l1() * Vector3d::UnitZ());
+  const RevoluteJoint<double>& elbow = plant->AddJoint<RevoluteJoint>(
       params.elbow_joint_name(),
       link1,
-      /* Pose of the elbow inboard frame Ei in Link 1's frame. */
-      Isometry3d(Translation3d(-params.l1() * Vector3d::UnitZ())),
+      X_link1_Ei.GetAsIsometry3(),
       link2,
       /* Elbow outboard frame Eo IS frame L2 for link 2. */
       {},
       Vector3d::UnitY()); /* acrobot oscillates in the x-z plane. */
+
+  // Add acrobot's actuator at the elbow joint.
+  plant->AddJointActuator(params.actuator_name(), elbow);
 
   // Gravity acting in the -z direction.
   plant->AddForceElement<UniformGravityFieldElement>(
       -params.g() * Vector3d::UnitZ());
 
   // We are done creating the plant.
-  plant->Finalize();
+  if (finalize) plant->Finalize();
 
   return plant;
 }

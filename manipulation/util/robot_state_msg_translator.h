@@ -4,11 +4,9 @@
 #include <unordered_map>
 #include <utility>
 
-#include "lcmtypes/bot_core/robot_state_t.hpp"
+#include "bot_core/robot_state_t.hpp"
 
 #include "drake/multibody/rigid_body_tree.h"
-#include "drake/util/drakeGeometryUtil.h"
-#include "drake/util/lcmUtil.h"
 
 namespace drake {
 namespace manipulation {
@@ -111,7 +109,7 @@ class RobotStateLcmMessageTranslator {
    * passed to the constructor.
    * @param[in] v Generalized velocity that corresponds to the rigid body tree
    * passed to the constructor.
-   * @param[in, out] msg Lcm message to be encoded.
+   * @param[in,out] msg Lcm message to be encoded.
    */
   void EncodeMessageKinematics(const Eigen::Ref<const VectorX<double>>& q,
                                const Eigen::Ref<const VectorX<double>>& v,

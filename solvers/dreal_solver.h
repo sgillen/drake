@@ -19,6 +19,12 @@ class DrealSolver : public MathematicalProgramSolverInterface {
   using Interval = dreal::Box::Interval;
   using IntervalBox = std::unordered_map<symbolic::Variable, Interval>;
 
+  /// Indicates whether to use dReal's --local-optimization option or not.
+  enum class LocalOptimization {
+    kUse,     ///< Use "--local-optimization" option.
+    kNotUse,  ///< Do not use "--local-optimization" option.
+  };
+
   DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(DrealSolver)
 
   DrealSolver() = default;
@@ -26,14 +32,27 @@ class DrealSolver : public MathematicalProgramSolverInterface {
 
   // This solver is implemented in various pieces depending on if
   // Dreal was available during compilation.
-  bool available() const override;
+  bool available() const override { return is_available(); };
+
+  static bool is_available();
 
   SolutionResult Solve(MathematicalProgram& prog) const override;
+
+  void Solve(const MathematicalProgram&, const optional<Eigen::VectorXd>&,
+             const optional<SolverOptions>&,
+             MathematicalProgramResult*) const override {
+    throw std::runtime_error("Not implemented yet.");
+  }
 
   SolverId solver_id() const override;
 
   /// @return same as MathematicalProgramSolverInterface::solver_id()
   static SolverId id();
+
+  bool AreProgramAttributesSatisfied(
+      const MathematicalProgram& prog) const override;
+
+  static bool ProgramAttributesSatisfied(const MathematicalProgram& prog);
 
   /// Checks the satisfiability of a given formula @p f with a given precision
   /// @p delta.
@@ -45,14 +64,18 @@ class DrealSolver : public MathematicalProgramSolverInterface {
                                                    double delta);
 
   /// Finds a solution to minimize @p objective function while satisfying a
-  /// given @p constraint using @p delta.
+  /// given @p constraint using @p delta. When @p local_optimization is
+  /// Localoptimization::kUse, enable "--local-optimization" dReal option which
+  /// uses NLopt's local-optimization algorithms to refine counterexamples in
+  /// the process of global optimization.
   ///
   /// @returns a model, a mapping from a variable to an interval, if a solution
   /// exists.
   /// @returns nullopt, if there is no solution.
   static optional<IntervalBox> Minimize(const symbolic::Expression& objective,
                                         const symbolic::Formula& constraint,
-                                        double delta);
+                                        double delta,
+                                        LocalOptimization local_optimization);
 };
 
 }  // namespace solvers

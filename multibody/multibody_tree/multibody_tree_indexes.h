@@ -5,6 +5,9 @@
 namespace drake {
 namespace multibody {
 
+// N.B. To simplify checking binding coverage, please ensure these symbols
+// are defined in `multibody_tree_py.cc` in the same order.
+
 /// Type used to identify frames by index in a multibody tree system.
 using FrameIndex = TypeSafeIndex<class FrameTag>;
 
@@ -24,11 +27,20 @@ using ForceElementIndex = TypeSafeIndex<class ForceElementTag>;
 /// Type used to identify joints by index within a multibody tree system.
 using JointIndex = TypeSafeIndex<class JointElementTag>;
 
-/// For every MultibodyTree the **world** body _always_ has this unique index
-/// and it is always zero.
+/// Type used to identify actuators by index within a multibody tree system.
+using JointActuatorIndex = TypeSafeIndex<class JointActuatorElementTag>;
+
+/// Type used to identify model instances by index within a multibody
+/// tree system.
+using ModelInstanceIndex = TypeSafeIndex<class ModelInstanceTag>;
+
 // Note:
 //   static global variables are strongly discouraged by the C++ style guide:
 // https://google.github.io/styleguide/cppguide.html#Static_and_Global_Variables
+// For this reason, we create and return an instance of BodyIndex
+// instead of using a static variable.
+/// For every MultibodyTree the **world** body _always_ has this unique index
+/// and it is always zero.
 inline BodyIndex world_index() { return BodyIndex(0); }
 
 }  // namespace multibody

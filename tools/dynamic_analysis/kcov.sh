@@ -1,4 +1,4 @@
-#!/bin/bash -vx
+#!/bin/bash
 
 
 me=$(python -c 'import os; print(os.path.realpath("'"$0"'"))')
@@ -10,14 +10,9 @@ if [ ! -f "${WORKSPACE}/WORKSPACE" ]; then
   exit 1
 fi
 
-# Just in case, don't collect data from cpplint tests.
-if echo "$@" | grep -q _cpplint ; then
-    "$@"
-    exit $?
-fi
-
 kcov \
     --include-path=$WORKSPACE \
+    --verify \
     --exclude-pattern=third_party \
     $WORKSPACE/bazel-kcov \
     --replace-src-path=/proc/self/cwd:$WORKSPACE \

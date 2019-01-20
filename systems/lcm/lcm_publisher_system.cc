@@ -5,14 +5,16 @@
 #include <vector>
 
 #include "drake/common/text_logging.h"
+#include "drake/lcm/drake_lcm.h"
 #include "drake/lcm/drake_lcm_interface.h"
-#include "drake/systems/framework/input_port_value.h"
+#include "drake/systems/framework/fixed_input_port_value.h"
 
 namespace drake {
 namespace systems {
 namespace lcm {
 
 using drake::lcm::DrakeLcmInterface;
+using drake::lcm::DrakeLcm;
 
 namespace {
 const int kPortIndex = 0;
@@ -29,35 +31,46 @@ const int kPortIndex = 0;
 LcmPublisherSystem::LcmPublisherSystem(
     const std::string& channel,
     const LcmAndVectorBaseTranslator* translator,
+    std::unique_ptr<const LcmAndVectorBaseTranslator> owned_translator,
     std::unique_ptr<SerializerInterface> serializer,
     DrakeLcmInterface* lcm)
     : channel_(channel),
-      translator_(translator),
+      translator_(owned_translator ? owned_translator.get() : translator),
+      owned_translator_(std::move(owned_translator)),
       serializer_(std::move(serializer)),
-      lcm_(lcm) {
+      owned_lcm_(lcm ? nullptr : new DrakeLcm()),
+      lcm_(lcm ? lcm : owned_lcm_.get()) {
   DRAKE_DEMAND((translator_ != nullptr) != (serializer_.get() != nullptr));
   DRAKE_DEMAND(lcm_);
 
   if (translator_ != nullptr) {
-    DeclareInputPort(kVectorValued, translator_->get_vector_size());
+    DeclareInputPort("lcm_message", kVectorValued,
+                     translator_->get_vector_size());
   } else {
-    DeclareAbstractInputPort();
+    DeclareAbstractInputPort("lcm_message", *serializer_->CreateDefaultValue());
   }
 
   set_name(make_name(channel_));
 }
 
 LcmPublisherSystem::LcmPublisherSystem(
-    const std::string& channel,
-    std::unique_ptr<SerializerInterface> serializer,
+    const std::string& channel, std::unique_ptr<SerializerInterface> serializer,
     drake::lcm::DrakeLcmInterface* lcm)
-    : LcmPublisherSystem(channel, nullptr, std::move(serializer), lcm) {}
+    : LcmPublisherSystem(channel, nullptr, nullptr, std::move(serializer),
+                         lcm) {}
 
 LcmPublisherSystem::LcmPublisherSystem(
     const std::string& channel,
     const LcmAndVectorBaseTranslator& translator,
     drake::lcm::DrakeLcmInterface* lcm)
-    : LcmPublisherSystem(channel, &translator, nullptr, lcm) {}
+    : LcmPublisherSystem(channel, &translator, nullptr, nullptr, lcm) {}
+
+LcmPublisherSystem::LcmPublisherSystem(
+    const std::string& channel,
+    std::unique_ptr<const LcmAndVectorBaseTranslator> translator,
+    drake::lcm::DrakeLcmInterface* lcm)
+    : LcmPublisherSystem(channel, nullptr, std::move(translator), nullptr,
+                         lcm) {}
 
 LcmPublisherSystem::LcmPublisherSystem(
     const std::string& channel,
@@ -69,6 +82,20 @@ LcmPublisherSystem::LcmPublisherSystem(
           lcm) {}
 
 LcmPublisherSystem::~LcmPublisherSystem() {}
+
+void LcmPublisherSystem::AddInitializationMessage(
+    InitializationPublisher initialization_publisher) {
+  DRAKE_DEMAND(!!initialization_publisher);
+
+  initialization_publisher_ = std::move(initialization_publisher);
+
+  DeclareInitializationEvent(systems::PublishEvent<double>(
+      systems::Event<double>::TriggerType::kInitialization,
+      [this](const systems::Context<double>& context,
+             const systems::PublishEvent<double>&) {
+        this->initialization_publisher_(context, this->lcm_);
+      }));
+}
 
 std::string LcmPublisherSystem::make_name(const std::string& channel) {
   return "LcmPublisherSystem(" + channel + ")";
@@ -82,8 +109,29 @@ void LcmPublisherSystem::set_publish_period(double period) {
   LeafSystem<double>::DeclarePeriodicPublish(period);
 }
 
-void LcmPublisherSystem::DoPublish(const Context<double>& context,
-               const std::vector<const systems::PublishEvent<double>*>&) const {
+void LcmPublisherSystem::DoPublish(
+    const Context<double>& context,
+    const std::vector<const systems::PublishEvent<double>*>& events) const {
+
+  DRAKE_DEMAND(!events.empty());  // Framework guarantees this.
+  const auto& event = events.front();
+
+  if (event->get_trigger_type() ==
+      systems::Event<double>::TriggerType::kInitialization) {
+    // We shouldn't get another event along with our own initialization event.
+    DRAKE_DEMAND(events.size() == 1);
+    SPDLOG_TRACE(drake::log(), "Invoking initialization publisher");
+    event->handle(context);
+    return;
+  }
+
+  // If the event isn't initialization, we assume it is a request to publish
+  // the input port contents as an LCM message. (This is likely to be a periodic
+  // event, but could be a forced event or any other type.) If multiple events
+  // occur simultaneously (for example, due to occasional synchronization of
+  // periods from different periodic events), we still only want to publish the
+  // input port values once, so we don't care if there are more events.
+
   SPDLOG_TRACE(drake::log(), "Publishing LCM {} message", channel_);
   DRAKE_ASSERT((translator_ != nullptr) != (serializer_.get() != nullptr));
 

@@ -9,17 +9,19 @@ import sys
 import unittest
 
 
-# Set on command-line to the location of resource_tool.
-_resource_tool_exe = None
-
-
 class TestResourceTool(unittest.TestCase):
+    def setUp(self):
+        self._resource_tool_exe, = sys.argv[1:]
+        self.assertTrue(
+            os.path.exists(self._resource_tool_exe),
+            "Could not find " + self._resource_tool_exe)
+
     def _check_call(self, args, expected_returncode=0):
         """Run resource_tool with the given args; return output.
         """
         try:
             output = subprocess.check_output(
-                [_resource_tool_exe] + args,
+                [self._resource_tool_exe] + args,
                 stderr=subprocess.STDOUT)
             returncode = 0
         except subprocess.CalledProcessError as e:
@@ -29,7 +31,7 @@ class TestResourceTool(unittest.TestCase):
             returncode, expected_returncode,
             "Expected returncode %r from %r but got %r with output %r" % (
                 expected_returncode, args, returncode, output))
-        return output
+        return output.decode('utf8')
 
     def test_help(self):
         output = self._check_call([
@@ -97,8 +99,3 @@ class TestResourceTool(unittest.TestCase):
         absolute_path = output.strip()
         self.assertTrue(absolute_path.endswith(example_abspath))
         self.assertTrue(os.path.exists(absolute_path))
-
-
-if __name__ == '__main__':
-    _resource_tool_exe = sys.argv.pop(1)
-    unittest.main()

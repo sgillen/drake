@@ -17,12 +17,24 @@ namespace sensors {
 
 /// Common configurations of rendering systems.
 struct RenderingConfig {
+  RenderingConfig(int width_in, int height_in, double fov_y_in,
+                  double z_near_in, double z_far_in, bool show_window_in)
+      : width(width_in),
+        height(height_in),
+        fov_y(fov_y_in),
+        z_near(z_near_in),
+        z_far(z_far_in),
+        show_window(show_window_in) {}
   // TODO(eric.cousineau): Define all default values be defined here to
   // minimize duplication.
   /// The width of the image to be rendered in pixels.
-  const int width;
+  const int width{kDefaultWidth};
+  /// Default value for `width`.
+  static constexpr int kDefaultWidth{640};
   /// The height of the image to be rendered in pixels.
-  const int height;
+  const int height{kDefaultHeight};
+  /// Default value for `height`.
+  static constexpr int kDefaultHeight{480};
   /// The renderer's camera vertical field of view in radians.
   const double fov_y;
   /// The minimum depth RgbdRenderer can output. Note that this is different
@@ -48,27 +60,30 @@ struct RenderingConfig {
 /// rendered images.
 ///
 /// Output image format:
-///   - RGB (ImageRgba8U) : the RGB image has four channels in the following
-///     order: red, green, blue and alpha. Each channel is represented by
-///     a uint8_t.
 ///
-///   - Depth (ImageDepth32F) : the depth image has a depth channel represented
-///     by a float. For a point in space `P`, the value stored in the depth
-///     channel holds *the Z-component of the position vector `p_RP`.*
-///     Note that this is different from the range data used by laser
-///     range finders (like that provided by DepthSensor) in which the depth
-///     value represents the distance from the sensor origin to the object's
-///     surface.
+/// - RGB (ImageRgba8U) : the RGB image has four channels in the following
+///   order: red, green, blue and alpha. Each channel is represented by
+///   a uint8_t.
 ///
-///   - Label (ImageLabel16I) : the label image has single channel represented
-///     by a int16_t. The value stored in the channel holds a model ID which
-///     corresponds to an object in the scene. For the pixels corresponding to
-///     no body, namely the sky and the flat terrain, we assign Label::kNoBody
-///     and Label::kFlatTerrain, respectively.
+/// - Depth (ImageDepth32F) : the depth image has a depth channel represented
+///   by a float. For a point in space `P`, the value stored in the depth
+///   channel holds *the Z-component of the position vector `p_RP`.*
+///   Note that this is different from the range data used by laser
+///   range finders (like that provided by DepthSensor) in which the depth
+///   value represents the distance from the sensor origin to the object's
+///   surface.
+///
+/// - Label (ImageLabel16I) : the label image has single channel represented
+///   by a int16_t. The value stored in the channel holds a model ID which
+///   corresponds to an object in the scene. For the pixels corresponding to
+///   no body, namely the sky and the flat terrain, we assign Label::kNoBody
+///   and Label::kFlatTerrain, respectively.
 class RgbdRenderer {
  public:
   DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(RgbdRenderer)
 
+  // TODO(thduynguyen, kunimatsu-tri): Handle multiple viewpoints, e.g. for
+  // stereo depth camera?
   /// A constructor for %RgbdRenderer.
   ///
   /// @param config Configurations of the renderer. See RenderingConfig.
@@ -76,8 +91,6 @@ class RgbdRenderer {
   /// @param X_WC The initial pose of the renderer's unique camera viewpoint `C`
   /// in the world coordinate system. The camera pose `C` can be updated by
   /// calling `UpdateViewpoint` later on. Default value: Identity.
-  /// TODO(thduynguyen, kunimatsu-tri): Handle multiple viewpoints, e.g. for
-  /// stereo depth camera?
   RgbdRenderer(const RenderingConfig& config,
                const Eigen::Isometry3d& X_WC = Eigen::Isometry3d::Identity());
 
@@ -150,7 +163,7 @@ class RgbdRenderer {
   const RenderingConfig& config() const;
 
   /// Returns the color palette of this renderer.
-  const ColorPalette& color_palette() const;
+  const ColorPalette<int>& color_palette() const;
 
  private:
   virtual void ImplAddFlatTerrain() = 0;
@@ -176,7 +189,7 @@ class RgbdRenderer {
   /// TODO(thduynguyen, SeanCurtis-TRI): This is a world's property (colors for
   /// each object/segment) hence should be moved to GeometrSystem. That would
   /// also answer the question whether this heavy object should be a singleton.
-  ColorPalette color_palette_;
+  ColorPalette<int> color_palette_;
 };
 
 }  // namespace sensors

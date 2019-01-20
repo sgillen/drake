@@ -18,6 +18,7 @@ namespace systems {
 /// A System may not maintain state in any place other than a %State object.
 ///
 /// A %State `x` contains three types of state variables:
+///
 /// - ContinuousState `xc`
 /// - DiscreteState   `xd`
 /// - AbstractState   `xa`
@@ -63,6 +64,16 @@ class State {
   DiscreteValues<T>& get_mutable_discrete_state() {
     DRAKE_ASSERT(discrete_state_ != nullptr);
     return *discrete_state_.get();
+  }
+
+  const BasicVector<T>& get_discrete_state(int index) const {
+    const DiscreteValues<T>& xd = get_discrete_state();
+    return xd.get_vector(index);
+  }
+
+  BasicVector<T>& get_mutable_discrete_state(int index) {
+    DiscreteValues<T>& xd = get_mutable_discrete_state();
+    return xd.get_mutable_vector(index);
   }
 
   void set_abstract_state(std::unique_ptr<AbstractValues> xa) {

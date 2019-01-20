@@ -5,6 +5,7 @@
 #warning Do not directly include this file. Include "drake/common/symbolic.h".
 #endif
 
+#include <functional>
 #include <ostream>
 #include <unordered_map>
 
@@ -34,6 +35,11 @@ class Polynomial {
   Polynomial() = default;
   DRAKE_DEFAULT_COPY_AND_MOVE_AND_ASSIGN(Polynomial)
 
+  /** Constructs a default value.  This overload is used by Eigen when
+   * EIGEN_INITIALIZE_MATRICES_BY_ZERO is enabled.
+   */
+  explicit Polynomial(std::nullptr_t) : Polynomial() {}
+
   /// Constructs a polynomial from a map, Monomial → Expression.
   explicit Polynomial(MapType init);
 
@@ -53,6 +59,9 @@ class Polynomial {
 
   /// Constructs a polynomial from an expression @p e by decomposing it with
   /// respect to @p indeterminates.
+  ///
+  /// @note It collects the intersection of the variables appeared in `e` and
+  /// the provided @p indeterminates.
   ///
   /// @throws std::runtime_error if @p e is not a polynomial in @p
   /// indeterminates.
@@ -119,6 +128,16 @@ class Polynomial {
   /// Adds @p coeff * @p m to this polynomial.
   Polynomial& AddProduct(const Expression& coeff, const Monomial& m);
 
+  /// Removes the terms whose absolute value of the coefficients are smaller
+  /// than or equal to @p coefficient_tol
+  /// For example, if the polynomial is 2x² + 3xy + 10⁻⁴x - 10⁻⁵,
+  /// then after calling RemoveTermsWithSmallCoefficients(1e-3), the returned
+  /// polynomial becomes 2x² + 3xy.
+  /// @param coefficient_tol A positive scalar.
+  /// @retval polynomial_cleaned A polynomial whose terms with small
+  /// coefficients are removed.
+  Polynomial RemoveTermsWithSmallCoefficients(double coefficient_tol) const;
+
   Polynomial& operator+=(const Polynomial& p);
   Polynomial& operator+=(const Monomial& m);
   Polynomial& operator+=(double c);
@@ -134,9 +153,28 @@ class Polynomial {
   /// Returns true if this polynomial and @p p are structurally equal.
   bool EqualTo(const Polynomial& p) const;
 
+  /// Returns true if this polynomial and @p p are equal, after expanding the
+  /// coefficients.
+  bool EqualToAfterExpansion(const Polynomial& p) const;
+
   /// Returns a symbolic formula representing the condition where this
   /// polynomial and @p p are the same.
-  Formula operator==(Polynomial p) const;
+  Formula operator==(const Polynomial& p) const;
+
+  /// Returns a symbolic formula representing the condition where this
+  /// polynomial and @p p are not the same.
+  Formula operator!=(const Polynomial& p) const;
+
+  /// Implements the @ref hash_append concept.
+  template <class HashAlgorithm>
+  friend void hash_append(HashAlgorithm& hasher,
+                          const Polynomial& item) noexcept {
+    using drake::hash_append;
+    for (const auto& p : item.monomial_to_coefficient_map_) {
+      hash_append(hasher, p.first);
+      hash_append(hasher, p.second);
+    }
+  }
 
  private:
   // Throws std::runtime_error if there is a variable appeared in both of
@@ -182,13 +220,14 @@ Polynomial pow(const Polynomial& p, int n);
 std::ostream& operator<<(std::ostream& os, const Polynomial& p);
 
 /// Provides the following seven operations:
-///  - Matrix<Polynomial> * Matrix<Monomial> => Matrix<Polynomial>
-///  - Matrix<Polynomial> * Matrix<double> => Matrix<Polynomial>
-///  - Matrix<Monomial> * Matrix<Polynomial> => Matrix<Polynomial>
-///  - Matrix<Monomial> * Matrix<Monomial> => Matrix<Polynomial>
-///  - Matrix<Monomial> * Matrix<double> => Matrix<Polynomial>
-///  - Matrix<double> * Matrix<Polynomial> => Matrix<Polynomial>
-///  - Matrix<double> * Matrix<Monomial> => Matrix<Polynomial>
+///
+/// - Matrix<Polynomial> * Matrix<Monomial> => Matrix<Polynomial>
+/// - Matrix<Polynomial> * Matrix<double> => Matrix<Polynomial>
+/// - Matrix<Monomial> * Matrix<Polynomial> => Matrix<Polynomial>
+/// - Matrix<Monomial> * Matrix<Monomial> => Matrix<Polynomial>
+/// - Matrix<Monomial> * Matrix<double> => Matrix<Polynomial>
+/// - Matrix<double> * Matrix<Polynomial> => Matrix<Polynomial>
+/// - Matrix<double> * Matrix<Monomial> => Matrix<Polynomial>
 ///
 /// @note that these operator overloadings are necessary even after providing
 /// Eigen::ScalarBinaryOpTraits. See
@@ -230,6 +269,20 @@ operator*(const MatrixL& lhs, const MatrixR& rhs) {
 #endif
 }  // namespace symbolic
 }  // namespace drake
+
+namespace std {
+/* Provides std::hash<drake::symbolic::Polynomial>. */
+template <>
+struct hash<drake::symbolic::Polynomial> : public drake::DefaultHash {};
+#if defined(__GLIBCXX__)
+// Inform GCC that this hash function is not so fast (i.e. for-loop inside).
+// This will enforce caching of hash results. See
+// https://gcc.gnu.org/onlinedocs/libstdc++/manual/unordered_associative.html
+// for details.
+template <>
+struct __is_fast_hash<hash<drake::symbolic::Polynomial>> : std::false_type {};
+#endif
+}  // namespace std
 
 #if !defined(DRAKE_DOXYGEN_CXX)
 namespace Eigen {

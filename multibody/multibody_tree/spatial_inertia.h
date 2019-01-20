@@ -6,6 +6,7 @@
 #include <limits>
 
 #include "drake/common/drake_assert.h"
+#include "drake/common/drake_bool.h"
 #include "drake/common/drake_copyable.h"
 #include "drake/common/eigen_types.h"
 #include "drake/math/cross_product.h"
@@ -73,14 +74,23 @@ namespace multibody {
 /// of this class to keep track of frames in which operations are performed. We
 /// suggest doing that using disciplined notation, as described above.
 ///
+/// @note Several methods in this class throw a std::exception for invalid
+/// rotational inertia operations in debug releases only.  This provides speed
+/// in a release build while facilitating debugging in debug builds.
+/// In addition, these validity tests are only performed for scalar types for
+/// which drake::scalar_predicate<T>::is_bool is `true`. For instance, validity
+/// checks are not performed when T is symbolic::Expression.
+///
 /// - [Jain 2010]  Jain, A., 2010. Robot and multibody dynamics: analysis and
 ///                algorithms. Springer Science & Business Media.
 ///
 /// @tparam T The underlying scalar type. Must be a valid Eigen scalar.
 ///
 /// Instantiated templates for the following kinds of T's are provided:
+///
 /// - double
 /// - AutoDiffXd
+/// - symbolic::Expression
 ///
 /// They are already available to link against in the containing library.
 template <typename T>
@@ -192,17 +202,16 @@ class SpatialInertia {
 
   /// Returns `true` if any of the elements in this spatial inertia is NaN
   /// and `false` otherwise.
-  bool IsNaN() const {
+  boolean<T> IsNaN() const {
     using std::isnan;
-    if (isnan(mass_)) return true;
-    if (G_SP_E_.IsNaN()) return true;
-    if (p_PScm_E_.array().isNaN().any()) return true;
-    return false;
+    return isnan(mass_) || G_SP_E_.IsNaN() ||
+        any_of(p_PScm_E_, [](auto x){ return isnan(x); });
   }
 
   /// Performs a number of checks to verify that this is a physically valid
   /// spatial inertia.
   /// The checks performed are:
+  ///
   /// - No NaN entries.
   /// - Non-negative mass.
   /// - Non-negative principal moments about the center of mass.
@@ -211,19 +220,17 @@ class SpatialInertia {
   ///   - `Ixx + Iyy >= Izz`
   ///   - `Ixx + Izz >= Iyy`
   ///   - `Iyy + Izz >= Ixx`
+  ///
   /// These are the tests performed by
   /// RotationalInertia::CouldBePhysicallyValid() which become a sufficient
   /// condition when performed on a rotational inertia about a body's center of
   /// mass.
   /// @see RotationalInertia::CouldBePhysicallyValid().
-  bool IsPhysicallyValid() const {
-    if (IsNaN()) return false;
-    if (mass_ < T(0)) return false;
+  boolean<T> IsPhysicallyValid() const {
     // The tests in RotationalInertia become a sufficient condition when
     // performed on a rotational inertia computed about a body's center of mass.
     const UnitInertia<T> G_SScm_E = G_SP_E_.ShiftToCenterOfMass(p_PScm_E_);
-    if (!G_SScm_E.CouldBePhysicallyValid()) return false;
-    return true;  // All tests passed.
+    return !IsNaN() && mass_ >= T(0) && G_SScm_E.CouldBePhysicallyValid();
   }
 
   /// Copy to a full 6x6 matrix representation.
@@ -342,8 +349,8 @@ class SpatialInertia {
   /// @param[in] p_PQ_E Vector from the original about point P to the new
   ///                   about point Q, expressed in the same frame E `this`
   ///                   spatial inertia is expressed in.
-  /// @retval `M_SQ_E` This same spatial inertia for body or composite body S
-  ///                  but computed about about a new point Q.
+  /// @retval M_SQ_E    This same spatial inertia for body or composite body S
+  ///                   but computed about about a new point Q.
   SpatialInertia Shift(const Vector3<T>& p_PQ_E) const {
     return SpatialInertia(*this).ShiftInPlace(p_PQ_E);
   }
@@ -363,7 +370,7 @@ class SpatialInertia {
   ///
   /// @note
   /// The term `F_Bo_E` computed by this operator appears in the equations of
-  /// motion for a rigid body which, when writen about the origin `Bo` of the
+  /// motion for a rigid body which, when written about the origin `Bo` of the
   /// body frame B (which does not necessarily need to coincide with the body's
   /// center of mass), read as: <pre>
   ///   Ftot_BBo = M_Bo_W * A_WB + b_Bo
@@ -388,12 +395,68 @@ class SpatialInertia {
         alpha_WB_E.cross(mp_BoBcm_E) + get_mass() * a_WBo_E);
   }
 
+  /// Multiplies `this` spatial inertia `M_BP_E` of a body B about a point P
+  /// by the spatial velocity `V_WBp`, in a frame W, of the body frame B shifted
+  /// to point P. Mathematically: <pre>
+  ///   L_WBp_E = M_BP_E * V_WBp_E
+  /// </pre>
+  /// or, in terms of its rotational and translational components (see this
+  /// class's documentation for the block form of a rotational inertia): <pre>
+  ///   h_WB  = I_Bp * w_WB + m * p_BoBcm x v_WP
+  ///   l_WBp = -m * p_BoBcm x w_WB + m * v_WP
+  /// </pre>
+  /// where `w_WB` and `v_WP` are the rotational and translational components of
+  /// the spatial velocity `V_WBp`, respectively and, `h_WB` and `l_WBp` are the
+  /// angular and linear components of the spatial momentum `L_WBp`,
+  /// respectively.
+  ///
+  /// @note
+  /// It is possible to show that `M_BP_E.Shift(p_PQ_E) * V_WBp_E.Shift(p_PQ_E)`
+  /// exactly equals `L_WBp_E.Shift(p_PQ_E)`.
+  SpatialMomentum<T> operator*(const SpatialVelocity<T>& V_WBp_E) const {
+    const Vector3<T>& w_WB_E = V_WBp_E.rotational();
+    const Vector3<T>& v_WP_E = V_WBp_E.translational();
+    const Vector3<T>& mp_BoBcm_E = CalcComMoment();  // = m * p_BoBcm
+    // Return (see class's documentation):
+    // ⌈ h_WB  ⌉   ⌈     I_Bp      | m * p_BoBcm× ⌉   ⌈ w_WB ⌉
+    // |       | = |               |              | * |      |
+    // ⌊ l_WBp ⌋   ⌊ -m * p_BoBcm× |   m * Id     ⌋   ⌊ v_WP ⌋
+    return SpatialMomentum<T>(
+        /* rotational */
+        CalcRotationalInertia() * w_WB_E + mp_BoBcm_E.cross(v_WP_E),
+        /* translational: notice the order of the cross product is the reversed
+         * of the documentation above and thus no minus sign is needed. */
+        w_WB_E.cross(mp_BoBcm_E) + get_mass() * v_WP_E);
+  }
+
  private:
   // Helper method for NaN initialization.
   static constexpr T nan() {
     return std::numeric_limits<
         typename Eigen::NumTraits<T>::Literal>::quiet_NaN();
   }
+
+  // Checks that the SpatialInertia is physically valid and throws an
+  // exception if not. This is mostly used in Debug builds to throw an
+  // appropriate exception.
+  // Since this method is used within assertions or demands, we do not try to
+  // attempt a smart way throw based on a given symbolic::Formula but instead we
+  // make these methods a no-op for non-numeric types.
+  template <typename T1 = T>
+  typename std::enable_if_t<scalar_predicate<T1>::is_bool> CheckInvariants()
+      const {
+    if (!IsPhysicallyValid()) {
+      throw std::runtime_error(
+          "The resulting spatial inertia is not physically valid. "
+              "See SpatialInertia::IsPhysicallyValid()");
+    }
+  }
+
+  // SFINAE for non-numeric types. See documentation in the implementation for
+  // numeric types.
+  template <typename T1 = T>
+  typename std::enable_if_t<!scalar_predicate<T1>::is_bool> CheckInvariants()
+      const {}
 
   // Mass of the body or composite body.
   T mass_{nan()};
@@ -403,17 +466,6 @@ class SpatialInertia {
   // Rotational inertia of body or composite body S computed about point P and
   // expressed in a frame E.
   UnitInertia<T> G_SP_E_{};  // Defaults to NaN initialized inertia.
-
-  // Checks that the SpatialInertia is physically valid and throws an
-  // exception if not. This is mostly used in Debug builds to throw an
-  // appropriate exception.
-  void CheckInvariants() const {
-    if (!IsPhysicallyValid()) {
-      throw std::runtime_error(
-          "The resulting spatial inertia is not physically valid. "
-              "See SpatialInertia::IsPhysicallyValid()");
-    }
-  }
 };
 
 /// Insertion operator to write SpatialInertia objects into a `std::ostream`.

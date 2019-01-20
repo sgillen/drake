@@ -19,6 +19,9 @@ using robotlocomotion::robot_plan_t;
 namespace drake {
 namespace manipulation {
 namespace planner {
+
+using trajectories::PiecewisePolynomial;
+
 namespace {
 
 // This corresponds to the actual plan.
@@ -36,7 +39,6 @@ constexpr double RobotPlanInterpolator::kDefaultPlanUpdateInterval;
 // of multiple polynomials below.
 struct RobotPlanInterpolator::PlanData {
   PlanData() {}
-  ~PlanData() {}
 
   double start_time{0};
   std::vector<char> encoded_msg;
@@ -48,7 +50,9 @@ struct RobotPlanInterpolator::PlanData {
 RobotPlanInterpolator::RobotPlanInterpolator(
     const std::string& model_path, const InterpolatorType interp_type,
     double update_interval)
-    : plan_input_port_(this->DeclareAbstractInputPort().get_index()),
+    : plan_input_port_(this->DeclareAbstractInputPort(
+          systems::kUseDefaultName,
+          systems::Value<robot_plan_t>()).get_index()),
       interp_type_(interp_type) {
   parsers::urdf::AddModelInstanceFromUrdfFileToWorld(
       model_path, multibody::joints::kFixed, &tree_);
@@ -130,7 +134,7 @@ void RobotPlanInterpolator::OutputAccel(
   output_acceleration_vec = plan.pp_double_deriv.value(current_plan_time);
 
   // Stop outputting accelerations at the end of the plan.
-  if (current_plan_time > plan.pp_double_deriv.getEndTime()) {
+  if (current_plan_time > plan.pp_double_deriv.end_time()) {
     output_acceleration_vec.fill(0);
   }
 }

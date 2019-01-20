@@ -1,6 +1,7 @@
 #pragma once
 
 #include <functional>
+#include <memory>
 #include <string>
 
 #include "drake/common/autodiff.h"
@@ -11,6 +12,25 @@
 namespace drake {
 namespace solvers {
 
+struct GurobiSolverDetails {
+  // The gurobi optimization time. Please refer to
+  // https://www.gurobi.com/documentation/8.0/refman/runtime.html
+  double optimizer_time{};
+
+  // The error message returned from Gurobi call. Please refer to
+  // https://www.gurobi.com/documentation/8.0/refman/error_codes.html
+  int error_code{};
+
+  // The status code when the optimize call has returned. Please refer to
+  // https://www.gurobi.com/documentation/8.0/refman/optimization_status_codes.html
+  int optimization_status{};
+
+  // The best known bound on the optimal objective. This is used in mixed
+  // integer optimization. Please refer to
+  // https://www.gurobi.com/documentation/8.0/refman/objbound.html
+  double objective_bound{NAN};
+};
+
 class GurobiSolver : public MathematicalProgramSolverInterface {
  public:
   DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(GurobiSolver)
@@ -20,7 +40,9 @@ class GurobiSolver : public MathematicalProgramSolverInterface {
 
   // This solver is implemented in various pieces depending on if
   // Gurobi was available during compilation.
-  bool available() const override;
+  bool available() const override { return is_available(); };
+
+  static bool is_available();
 
   /// Contains info returned to a user function that handles
   /// a Node or Solution callback.
@@ -105,12 +127,47 @@ class GurobiSolver : public MathematicalProgramSolverInterface {
 
   SolutionResult Solve(MathematicalProgram& prog) const override;
 
+  void Solve(const MathematicalProgram&, const optional<Eigen::VectorXd>&,
+             const optional<SolverOptions>&,
+             MathematicalProgramResult*) const override;
+
   SolverId solver_id() const override;
 
   /// @return same as MathematicalProgramSolverInterface::solver_id()
   static SolverId id();
 
+  bool AreProgramAttributesSatisfied(
+      const MathematicalProgram& prog) const override;
+
+  static bool ProgramAttributesSatisfied(const MathematicalProgram& prog);
+
+  /**
+   * This type contains a valid Gurobi license environment, and is only to be
+   * used from AcquireLicense().
+  */
+  class License;
+
+
+  /**
+   * This acquires a Gurobi license environment shared among all GurobiSolver
+   * instances; the environment will stay valid as long as at least one
+   * shared_ptr returned by this function is alive.
+   * Call this ONLY if you must use different MathematicalProgram
+   * instances at different instances in time, and repeatedly acquiring the
+   * license is costly (e.g., requires contacting a license server).
+   * @return A shared pointer to a license environment that will stay valid
+   * as long as any shared_ptr returned by this function is alive. If Gurobi
+   * not available in your build, this will return a null (empty) shared_ptr.
+   * @throws std::runtime_error if Gurobi is available but a license cannot be
+   * obtained.
+   */
+  static std::shared_ptr<License> AcquireLicense();
+
  private:
+  // Note that this is mutable to allow latching the allocation of env_
+  // during the first call of Solve() (which avoids grabbing a Gurobi license
+  // before we know that we actually want one).
+  mutable std::shared_ptr<License> license_;
   // Callbacks and generic user data to pass through,
   // or NULL if no callback has been supplied.
   MipNodeCallbackFunction mip_node_callback_;

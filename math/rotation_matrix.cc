@@ -1,4 +1,6 @@
-// For now, this is an empty .cc file that only serves to confirm
-// rotation_matrix.h is a stand-alone header.
-
 #include "drake/math/rotation_matrix.h"
+
+#include "drake/common/default_scalars.h"
+
+DRAKE_DEFINE_CLASS_TEMPLATE_INSTANTIATIONS_ON_DEFAULT_SCALARS(
+    class ::drake::math::RotationMatrix)

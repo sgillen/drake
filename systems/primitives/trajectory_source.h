@@ -19,6 +19,7 @@ namespace systems {
 /// @tparam T The vector element type, which must be a valid Eigen scalar.
 ///
 /// Instantiated templates for the following kinds of T's are provided:
+///
 /// - double
 ///
 /// They are already available to link against in the containing library.
@@ -34,7 +35,7 @@ class TrajectorySource : public SingleOutputVectorSource<T> {
   /// Must be greater than or equal to zero.
   /// @param zero_derivatives_beyond_limits All derivatives will be zero before
   /// the start time or after the end time of @p trajectory.
-  explicit TrajectorySource(const Trajectory& trajectory,
+  explicit TrajectorySource(const trajectories::Trajectory<T>& trajectory,
                             int output_derivative_order = 0,
                             bool zero_derivatives_beyond_limits = true);
 
@@ -51,9 +52,9 @@ class TrajectorySource : public SingleOutputVectorSource<T> {
       Eigen::VectorBlock<VectorX<T>>* output) const override;
 
  private:
-  const std::unique_ptr<Trajectory> trajectory_;
+  const std::unique_ptr<trajectories::Trajectory<T>> trajectory_;
   const bool clamp_derivatives_;
-  std::vector<std::unique_ptr<Trajectory>> derivatives_;
+  std::vector<std::unique_ptr<trajectories::Trajectory<T>>> derivatives_;
 };
 
 }  // namespace systems

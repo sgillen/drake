@@ -40,7 +40,9 @@ MobilPlanner<T>::MobilPlanner(const RoadGeometry& road, bool initial_with_s,
           this->DeclareVectorInputPort(FrameVelocity<T>()).get_index()},
       ego_acceleration_index_{
           this->DeclareVectorInputPort(BasicVector<T>(1)).get_index()},
-      traffic_index_{this->DeclareAbstractInputPort().get_index()},
+      traffic_index_{this->DeclareAbstractInputPort(
+          systems::kUseDefaultName, systems::Value<PoseBundle<T>>())
+              .get_index()},
       lane_index_{
           this->DeclareAbstractOutputPort(&MobilPlanner::CalcLaneDirection)
               .get_index()} {
@@ -51,7 +53,7 @@ MobilPlanner<T>::MobilPlanner(const RoadGeometry& road, bool initial_with_s,
   this->DeclareNumericParameter(IdmPlannerParameters<T>());
   this->DeclareNumericParameter(MobilPlannerParameters<T>());
   // TODO(jadecastro) It is possible to replace the following AbstractState with
-  // a caching sceme once #4364 lands, preventing the need to use abstract
+  // a caching scheme once #4364 lands, preventing the need to use abstract
   // states and periodic sampling time.
   if (road_position_strategy == RoadPositionStrategy::kCache) {
     this->DeclareAbstractState(systems::AbstractValue::Make<RoadPosition>(
@@ -61,24 +63,24 @@ MobilPlanner<T>::MobilPlanner(const RoadGeometry& road, bool initial_with_s,
 }
 
 template <typename T>
-const systems::InputPortDescriptor<T>& MobilPlanner<T>::ego_pose_input() const {
+const systems::InputPort<T>& MobilPlanner<T>::ego_pose_input() const {
   return systems::System<T>::get_input_port(ego_pose_index_);
 }
 
 template <typename T>
-const systems::InputPortDescriptor<T>& MobilPlanner<T>::ego_velocity_input()
+const systems::InputPort<T>& MobilPlanner<T>::ego_velocity_input()
     const {
   return systems::System<T>::get_input_port(ego_velocity_index_);
 }
 
 template <typename T>
-const systems::InputPortDescriptor<T>& MobilPlanner<T>::ego_acceleration_input()
+const systems::InputPort<T>& MobilPlanner<T>::ego_acceleration_input()
     const {
   return systems::System<T>::get_input_port(ego_acceleration_index_);
 }
 
 template <typename T>
-const systems::InputPortDescriptor<T>& MobilPlanner<T>::traffic_input() const {
+const systems::InputPort<T>& MobilPlanner<T>::traffic_input() const {
   return systems::System<T>::get_input_port(traffic_index_);
 }
 

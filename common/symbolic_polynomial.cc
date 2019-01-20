@@ -578,28 +578,89 @@ Polynomial& Polynomial::operator*=(const double c) {
   return *this;
 }
 
+namespace {
+bool PolynomialEqual(const Polynomial& p1, const Polynomial& p2,
+                     bool do_expansion) {
+  // We do not use unordered_map<Monomial, Expression>::operator== as it uses
+  // Expression::operator== (which returns a symbolic formula) instead of
+  // Expression::EqualTo(which returns a bool), when the coefficient is a
+  // symbolic expression.
+  const Polynomial::MapType& map1{p1.monomial_to_coefficient_map()};
+  const Polynomial::MapType& map2{p2.monomial_to_coefficient_map()};
+  if (map1.size() != map2.size()) {
+    return false;
+  }
+  for (const auto& pair1 : map1) {
+    const Monomial& m{pair1.first};
+    const Expression& e1{pair1.second};
+    const auto it = map2.find(m);
+    if (it == map2.end()) {
+      // m is not in map2, so map1 and map2 are not the same.
+      return false;
+    }
+    const Expression& e2{it->second};
+    if (do_expansion) {
+      if (!e1.Expand().EqualTo(e2.Expand())) {
+        return false;
+      }
+    } else {
+      if (!e1.EqualTo(e2)) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+}  // namespace
+
 bool Polynomial::EqualTo(const Polynomial& p) const {
-  return monomial_to_coefficient_map_ == p.monomial_to_coefficient_map();
+  return PolynomialEqual(*this, p, false);
 }
 
-Formula Polynomial::operator==(Polynomial p) const {
-  // 1) Update p' = p - (this polynomial).
-  // 2) Extract the condition where p' is zero.
+bool Polynomial::EqualToAfterExpansion(const Polynomial& p) const {
+  return PolynomialEqual(*this, p, true);
+}
+
+Formula Polynomial::operator==(const Polynomial& p) const {
+  // 1) Let diff = p - (this polynomial).
+  // 2) Extract the condition where diff is zero.
   //    That is, all coefficients should be zero.
-  p -= *this;
+  const Polynomial diff{p - *this};
   Formula ret{Formula::True()};
   for (const pair<Monomial, Expression>& item :
-       p.monomial_to_coefficient_map_) {
+       diff.monomial_to_coefficient_map_) {
     const Expression& coeff{item.second};
     ret = ret && (coeff == 0.0);
   }
   return ret;
 }
 
+Formula Polynomial::operator!=(const Polynomial& p) const {
+  return !(*this == p);
+}
+
 Polynomial& Polynomial::AddProduct(const Expression& coeff, const Monomial& m) {
   DoAddProduct(coeff, m, &monomial_to_coefficient_map_);
   CheckInvariant();
   return *this;
+}
+
+Polynomial Polynomial::RemoveTermsWithSmallCoefficients(
+    double coefficient_tol) const {
+  DRAKE_DEMAND(coefficient_tol > 0);
+  MapType cleaned_polynomial{};
+  cleaned_polynomial.reserve(monomial_to_coefficient_map_.size());
+  for (const auto& term : monomial_to_coefficient_map_) {
+    if (is_constant(term.second) &&
+        std::abs(get_constant_value(term.second)) <= coefficient_tol) {
+      // The coefficients are small.
+      continue;
+    } else {
+      cleaned_polynomial.emplace_hint(cleaned_polynomial.end(), term.first,
+                                      term.second);
+    }
+  }
+  return Polynomial(cleaned_polynomial);
 }
 
 void Polynomial::CheckInvariant() const {

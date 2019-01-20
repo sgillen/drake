@@ -1,9 +1,16 @@
 # -*- python -*-
 
-load("//tools:drake.bzl", "drake_cc_googletest", "drake_cc_library")
+load(
+    "@drake//tools/skylark:drake_cc.bzl",
+    "drake_cc_googletest",
+    "drake_cc_library",
+    "drake_cc_package_library",
+)
 load("//tools/lint:lint.bzl", "add_lint_tests")
 
-package(default_visibility = ["//visibility:public"])
+# Because there are no meaninfully distinct components in this package, the
+# only public target we will offer is our drake_cc_package_library.
+package(default_visibility = ["//visibility:private"])
 
 filegroup(
     name = "models",
@@ -16,8 +23,15 @@ filegroup(
     ]),
 )
 
-drake_cc_library(
+drake_cc_package_library(
     name = "free_body",
+    deps = [
+        ":everything",
+    ],
+)
+
+drake_cc_library(
+    name = "everything",
     srcs = [
         "free_body.cc",
     ],
@@ -25,8 +39,8 @@ drake_cc_library(
         "free_body.h",
     ],
     deps = [
-        "//drake/common",
-        "//drake/math:geometric_transform",
+        "//common",
+        "//math:geometric_transform",
     ],
 )
 
@@ -34,19 +48,19 @@ drake_cc_library(
 
 drake_cc_googletest(
     name = "rigid_body_plant_free_body_test",
-    size = "medium",
+    timeout = "moderate",
     data = [":models"],
     deps = [
         ":free_body",
-        "//drake/common:find_resource",
-        "//drake/common/test_utilities:eigen_matrix_compare",
-        "//drake/math:autodiff",
-        "//drake/multibody/parsers",
-        "//drake/multibody/rigid_body_plant",
-        "//drake/systems/analysis:runge_kutta3_integrator",
-        "//drake/systems/framework:diagram",
-        "//drake/systems/framework:diagram_builder",
-        "//drake/systems/primitives:constant_vector_source",
+        "//attic/multibody/parsers",
+        "//attic/multibody/rigid_body_plant",
+        "//common:find_resource",
+        "//common/test_utilities:eigen_matrix_compare",
+        "//math:autodiff",
+        "//systems/analysis:runge_kutta3_integrator",
+        "//systems/framework:diagram",
+        "//systems/framework:diagram_builder",
+        "//systems/primitives:constant_vector_source",
     ],
 )
 

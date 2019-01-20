@@ -1,23 +1,37 @@
 # -*- python -*-
 
 load("//tools/lint:lint.bzl", "add_lint_tests")
-load("//tools/skylark:drake_runfiles_binary.bzl", "drake_runfiles_binary")
+load(
+    "@drake//tools/skylark:drake_runfiles_binary.bzl",
+    "drake_runfiles_binary",
+)
 
 package(default_visibility = ["//visibility:public"])
 
+py_library(
+    name = "module_py",
+    srcs = ["__init__.py"],
+    visibility = [":__subpackages__"],
+    deps = ["//:module_py"],
+)
+
+# TODO(eric.cousineau): Consider using a `./run`-like script for this, rather
+# than `drake_runfiles_binary`. Then this can be renamed to `drake_visualizer`.
 py_binary(
-    name = "drake_visualizer.impl",
+    name = "drake_visualizer_py",
     srcs = ["//tools/workspace/drake_visualizer:drake_visualizer.py"],
     data = [
+        "//automotive/models:prod_models",
         "//examples:prod_models",
         "@drake_visualizer",
+        "@drake_visualizer//:lcm_python",
     ],
     main = "//tools/workspace/drake_visualizer:drake_visualizer.py",
-    visibility = ["//visibility:private"],
     # Python libraries to import.
     deps = [
         "//lcmtypes:lcmtypes_py",
         "//tools/workspace/drake_visualizer:stub_pydrake",
+        "//tools/workspace/drake_visualizer/plugin",
         "@drake_visualizer//:drake_visualizer_python_deps",
         "@optitrack_driver//lcmtypes:py_optitrack_lcmtypes",
     ],
@@ -25,7 +39,7 @@ py_binary(
 
 drake_runfiles_binary(
     name = "drake_visualizer",
-    target = ":drake_visualizer.impl",
+    target = ":drake_visualizer_py",
 )
 
 # === config_setting rules ===
@@ -46,7 +60,7 @@ config_setting(
 )
 
 # IPOPT is an open-source solver, and is included in the Drake build by
-# default. The IPOPT solver is irrelvant to some users of MathematicalProgram,
+# default. The IPOPT solver is irrelevant to some users of MathematicalProgram,
 # so we provide a hidden switch to shut it off for developers who don't
 # actually need it.  This is not a supported configuration. Use at your own
 # risk: --define=NO_IPOPT=ON
@@ -56,7 +70,7 @@ config_setting(
 )
 
 # NLOPT is an open-source solver, and is included in the Drake build by
-# default. The NLOPT solver is irrelvant to some users of MathematicalProgram,
+# default. The NLOPT solver is irrelevant to some users of MathematicalProgram,
 # so we provide a hidden switch to shut it off for developers who don't
 # actually need it.  This is not a supported configuration. Use at your own
 # risk: --define=NO_NLOPT=ON
@@ -66,7 +80,7 @@ config_setting(
 )
 
 # OSQP is an open-source solver, and is included in the Drake build by
-# default. The OSQP solver is irrelvant to some users of MathematicalProgram,
+# default. The OSQP solver is irrelevant to some users of MathematicalProgram,
 # so we provide a hidden switch to shut it off for developers who don't
 # actually need it.  This is not a supported configuration. Use at your own
 # risk: --define=NO_OSQP=ON

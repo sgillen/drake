@@ -21,12 +21,13 @@ void RunSolver(MathematicalProgram* prog,
                const MathematicalProgramSolverInterface& solver);
 
 /// Determine if two bindings are the same. Two bindings are the same if
+///
 /// 1. They contain the same constraint pointer.
 /// 2. Their bound variables are the same.
 template <typename Constraint>
 ::testing::AssertionResult IsBindingEqual(const Binding<Constraint>& binding1,
                                           const Binding<Constraint>& binding2) {
-  if (binding1.constraint() != binding2.constraint()) {
+  if (binding1.evaluator() != binding2.evaluator()) {
     return ::testing::AssertionFailure()
            << "Constraint pointers are not the same.";
   }

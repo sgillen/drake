@@ -4,17 +4,36 @@ import unittest
 import os.path
 
 from pydrake import getDrakePath
+from pydrake.common import FindResourceOrThrow
 from pydrake.multibody.parsers import PackageMap
 from pydrake.multibody.rigid_body_tree import (
+    AddModelInstanceFromUrdfFile,
     AddModelInstanceFromUrdfStringSearchingInRosPackages,
+    AddModelInstancesFromSdfFile,
     AddModelInstancesFromSdfString,
     AddModelInstancesFromSdfStringSearchingInRosPackages,
     FloatingBaseType,
+    RigidBodyActuator,
     RigidBodyTree,
 )
 
 
 class TestParsers(unittest.TestCase):
+    def test_enum_api(self):
+        # Existence check.
+        enums = [
+            FloatingBaseType.kFixed,
+            FloatingBaseType.kRollPitchYaw,
+            FloatingBaseType.kQuaternion,
+            # WARNING: This is experimental.
+            FloatingBaseType.kExperimentalMultibodyPlantStyle,
+        ]
+        for enum in enums:
+            # Expect a novel value.
+            self.assertEqual(enums.count(enum), 1)
+            # Expect documentation.
+            self.assertGreater(len(enum.__doc__), 0)
+
     def test_urdf(self):
         """Test that an instance of a URDF model can be loaded into a
         RigidBodyTree by passing a complete set of arguments to Drake's URDF
@@ -44,6 +63,19 @@ class TestParsers(unittest.TestCase):
                          msg='Incorrect number of bodies: {0} vs. {1}'.format(
                              robot.get_num_bodies(), expected_num_bodies))
 
+        # Check actuators.
+        actuator = robot.GetActuator("head_pan_motor")
+        self.assertIsInstance(actuator, RigidBodyActuator)
+        self.assertEqual(actuator.name, "head_pan_motor")
+        self.assertIs(actuator.body, robot.FindBody("head_pan_link"))
+        self.assertEqual(actuator.reduction, 6.0)
+        self.assertEqual(actuator.effort_limit_min, -2.645)
+        self.assertEqual(actuator.effort_limit_max, 2.645)
+        # Check full number of actuators.
+        self.assertEqual(len(robot.actuators), robot.get_num_actuators())
+        for actuator in robot.actuators:
+            self.assertIsInstance(actuator, RigidBodyActuator)
+
     def test_sdf(self):
         sdf_file = os.path.join(
             getDrakePath(), "examples/acrobot/Acrobot.sdf")
@@ -66,10 +98,54 @@ class TestParsers(unittest.TestCase):
             floating_base_type,
             weld_frame,
             robot_2)
+        robot_3 = RigidBodyTree()
+        AddModelInstancesFromSdfFile(
+            sdf_file,
+            floating_base_type,
+            weld_frame,
+            robot_3)
 
-        for robot in robot_1, robot_2:
+        for robot in robot_1, robot_2, robot_3:
             expected_num_bodies = 4
             self.assertEqual(robot.get_num_bodies(), expected_num_bodies)
+
+    def test_id_table(self):
+        robot = RigidBodyTree()
+        id_table = AddModelInstancesFromSdfFile(
+            FindResourceOrThrow("drake/examples/acrobot/Acrobot.sdf"),
+            FloatingBaseType.kRollPitchYaw, None, robot)
+        # Check IDs.
+        (name, id), = id_table.items()
+        self.assertEqual(name, "Acrobot")
+        self.assertEqual(id, 0)
+        # Ensure that we have our desired base body.
+        base_body_id, = robot.FindBaseBodies(id)
+        expected_body_id = robot.FindBody("base_link").get_body_index()
+        self.assertEqual(base_body_id, expected_body_id)
+
+    def test_do_compile(self):
+
+        def load_robot(filename, **kwargs):
+            robot = RigidBodyTree()
+            if filename.endswith(".sdf"):
+                AddModelInstancesFromSdfFile(
+                    FindResourceOrThrow(filename),
+                    FloatingBaseType.kRollPitchYaw, None, robot, **kwargs)
+            else:
+                assert filename.endswith(".urdf")
+                AddModelInstanceFromUrdfFile(
+                    FindResourceOrThrow(filename),
+                    FloatingBaseType.kRollPitchYaw, None, robot, **kwargs)
+            return robot
+
+        sdf = "drake/examples/acrobot/Acrobot.sdf"
+        urdf = (
+            "drake/examples/pr2/models/pr2_description/urdf/"
+            "pr2_simplified.urdf")
+        for filename in (sdf, urdf):
+            self.assertTrue(load_robot(filename).initialized())
+            self.assertFalse(
+                load_robot(filename, do_compile=False).initialized())
 
     def test_package_map(self):
         pm = PackageMap()
@@ -82,7 +158,7 @@ class TestParsers(unittest.TestCase):
 
         # Populate from folder.
         # TODO(eric.cousineau): This mismatch between casing is confusing, with
-        # `Atlas` being the package name, but `atlas` being the dirctory name.
+        # `Atlas` being the package name, but `atlas` being the directory name.
         pm = PackageMap()
         self.assertEqual(pm.size(), 0)
         pm.PopulateFromFolder(
@@ -109,7 +185,3 @@ class TestParsers(unittest.TestCase):
         self.assertTrue(pm.Contains("Atlas"))
         self.assertEqual(pm.GetPath("Atlas"), os.path.join(
             getDrakePath(), "examples", "atlas"))
-
-
-if __name__ == '__main__':
-    unittest.main()

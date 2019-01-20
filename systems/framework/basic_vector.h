@@ -29,23 +29,30 @@ class BasicVector : public VectorBase<T> {
   // assignment of a BasicVector could change its size.)
   DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(BasicVector)
 
+  /// Constructs an empty BasicVector.
+  BasicVector() = default;
+
   /// Initializes with the given @p size using the drake::dummy_value<T>, which
   /// is NaN when T = double.
   explicit BasicVector(int size)
       : values_(VectorX<T>::Constant(size, dummy_value<T>::get())) {}
 
   /// Constructs a BasicVector with the specified @p data.
-  explicit BasicVector(const VectorX<T>& data) : values_(data) {}
+  explicit BasicVector(VectorX<T> data) : values_(std::move(data)) {}
+
+  /// Constructs a BasicVector whose elements are the elements of @p data.
+  BasicVector(const std::initializer_list<T>& data)
+      : BasicVector<T>(data.size()) {
+    int i = 0;
+    for (const T& datum : data) {
+      this->SetAtIndex(i++, datum);
+    }
+  }
 
   /// Constructs a BasicVector whose elements are the elements of @p data.
   static std::unique_ptr<BasicVector<T>> Make(
       const std::initializer_list<T>& data) {
-    auto vec = std::make_unique<BasicVector<T>>(data.size());
-    int i = 0;
-    for (const T& datum : data) {
-      vec->SetAtIndex(i++, datum);
-    }
-    return vec;
+    return std::make_unique<BasicVector<T>>(data);
   }
 
   /// Constructs a BasicVector where each element is constructed using the
@@ -56,14 +63,14 @@ class BasicVector : public VectorBase<T> {
   static std::unique_ptr<BasicVector<T>> Make(Fargs&&... args) {
     auto data = std::make_unique<BasicVector<T>>(sizeof...(args));
     BasicVector<T>::MakeRecursive(data.get(), 0, args...);
-    return std::move(data);
+    return data;
   }
 
   int size() const override { return static_cast<int>(values_.rows()); }
 
   /// Sets the vector to the given value. After a.set_value(b.get_value()), a
   /// must be identical to b.
-  /// Throws std::out_of_range if the new value has different dimensions.
+  /// @throws std::out_of_range if the new value has different dimensions.
   void set_value(const Eigen::Ref<const VectorX<T>>& value) {
     if (value.rows() != values_.rows()) {
       throw std::out_of_range(
@@ -155,6 +162,12 @@ class BasicVector : public VectorBase<T> {
     data->SetAtIndex(index++, T(constructor_arg));
   }
 
+  /// Provides const access to the element storage.
+  const VectorX<T>& values() const { return values_; }
+
+  /// Provides mutable access to the element storage.
+  VectorX<T>& values() { return values_; }
+
  private:
   // Add in multiple scaled vectors to this vector. All vectors
   // must be the same size. This function overrides the default DoPlusEqScaled()
@@ -172,7 +185,7 @@ class BasicVector : public VectorBase<T> {
   VectorX<T> values_;
   // N.B. Do not add more member fields without considering the effect on
   // subclasses.  Derived class's Clone() methods currently assume that the
-  // BasicVector(const VectorX<T>&) constructor is all that is needed.
+  // BasicVector(VectorX<T>) constructor is all that is needed.
 };
 
 // Allows a BasicVector<T> to be streamed into a string. This is useful for

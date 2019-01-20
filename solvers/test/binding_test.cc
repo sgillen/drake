@@ -46,8 +46,8 @@ GTEST_TEST(TestBinding, TestCost) {
   const VectorDecisionVariable<3> x(x1, x2, x3);
   auto cost = std::make_shared<LinearCost>(Eigen::Vector3d(1, 2, 3), 1);
   Binding<LinearCost> binding(cost, x);
-  EXPECT_EQ(binding.constraint().get(), cost.get());
-  EXPECT_EQ(binding.constraint()->num_outputs(), 1);
+  EXPECT_EQ(binding.evaluator().get(), cost.get());
+  EXPECT_EQ(binding.evaluator()->num_outputs(), 1);
   EXPECT_EQ(binding.GetNumElements(), 3);
   for (int i = 0; i < 3; ++i) {
     EXPECT_PRED2(VarEqual, binding.variables()(i), x(i));
@@ -62,17 +62,24 @@ class DummyEvaluator : public EvaluatorBase {
 
  protected:
   void DoEval(const Eigen::Ref<const Eigen::VectorXd>& x,
-              Eigen::VectorXd& y) const override {
-    y.resize(2);
-    y(0) = x(1) * x(2);
-    y(1) = x(0) - x(1);
+              Eigen::VectorXd* y) const override {
+    y->resize(2);
+    (*y)(0) = x(1) * x(2);
+    (*y)(1) = x(0) - x(1);
   }
 
   void DoEval(const Eigen::Ref<const AutoDiffVecXd>& x,
-              AutoDiffVecXd& y) const override {
-    y.resize(2);
-    y(0) = x(1) * x(2);
-    y(1) = x(0) - x(1);
+              AutoDiffVecXd* y) const override {
+    y->resize(2);
+    (*y)(0) = x(1) * x(2);
+    (*y)(1) = x(0) - x(1);
+  }
+
+  void DoEval(const Eigen::Ref<const VectorX<symbolic::Variable>>& x,
+              VectorX<symbolic::Expression>* y) const override {
+    y->resize(2);
+    (*y)(0) = x(1) * x(2);
+    (*y)(1) = x(0) - x(1);
   }
 };
 
@@ -84,8 +91,8 @@ GTEST_TEST(TestBinding, TestEvaluator) {
   const VectorDecisionVariable<3> x(x1, x2, x3);
   const auto evaluator = std::make_shared<DummyEvaluator>();
   Binding<DummyEvaluator> binding(evaluator, x);
-  EXPECT_EQ(binding.constraint().get(), evaluator.get());
-  EXPECT_EQ(binding.constraint()->num_outputs(), 2);
+  EXPECT_EQ(binding.evaluator().get(), evaluator.get());
+  EXPECT_EQ(binding.evaluator()->num_outputs(), 2);
   EXPECT_EQ(binding.GetNumElements(), 3);
   for (int i = 0; i < 3; ++i) {
     EXPECT_PRED2(VarEqual, binding.variables()(i), x(i));

@@ -1,6 +1,6 @@
 #pragma once
 
-// GENERATED FILE DO NOT EDIT
+// GENERATED GOAL DO NOT EDIT
 // See drake/tools/lcm_vector_gen.py.
 
 #include <memory>
@@ -18,16 +18,18 @@ namespace test {
  * Translates between LCM message objects and VectorBase objects for the
  * Sample type.
  */
-class SampleTranslator : public systems::lcm::LcmAndVectorBaseTranslator {
+class SampleTranslator final
+    : public drake::systems::lcm::LcmAndVectorBaseTranslator {
  public:
   SampleTranslator()
       : LcmAndVectorBaseTranslator(SampleIndices::kNumCoordinates) {}
-  std::unique_ptr<systems::BasicVector<double>> AllocateOutputVector()
-      const override;
+  std::unique_ptr<drake::systems::BasicVector<double>> AllocateOutputVector()
+      const final;
   void Deserialize(const void* lcm_message_bytes, int lcm_message_length,
-                   systems::VectorBase<double>* vector_base) const override;
-  void Serialize(double time, const systems::VectorBase<double>& vector_base,
-                 std::vector<uint8_t>* lcm_message_bytes) const override;
+                   drake::systems::VectorBase<double>* vector_base) const final;
+  void Serialize(double time,
+                 const drake::systems::VectorBase<double>& vector_base,
+                 std::vector<uint8_t>* lcm_message_bytes) const final;
 };
 
 }  // namespace test

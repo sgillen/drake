@@ -10,13 +10,23 @@
 
 namespace drake {
 namespace multibody {
+
+// Friend tester class for accessing MultibodyTree protected/private internals.
+class MultibodyTreeTester {
+ public:
+  MultibodyTreeTester() = delete;
+  static const QuaternionFloatingMobilizer<double>& get_floating_mobilizer(
+      const MultibodyTree<double>& model, const Body<double>& body) {
+    return model.GetFreeBodyMobilizerOrThrow(body);
+  }
+};
+
 namespace multibody_tree {
 namespace test {
 namespace {
 
 using benchmarks::free_body::FreeBody;
 using Eigen::AngleAxisd;
-using Eigen::Isometry3d;
 using Eigen::Matrix3d;
 using Eigen::Quaterniond;
 using Eigen::Vector3d;
@@ -68,7 +78,8 @@ GTEST_TEST(QuaternionFloatingMobilizer, Simulation) {
       free_body_plant.get_default_initial_translational_velocity();
 
   const QuaternionFloatingMobilizer<double>& mobilizer =
-      free_body_plant.mobilizer();
+      MultibodyTreeTester::get_floating_mobilizer(
+          free_body_plant.tree(), free_body_plant.body());
 
   // Unit test QuaternionFloatingMobilizer context dependent setters/getters.
   mobilizer.set_angular_velocity(&context, 2.0 * w0_WB_expected);
@@ -85,11 +96,11 @@ GTEST_TEST(QuaternionFloatingMobilizer, Simulation) {
       (1.5 * Vector3d::UnitX() +
        2.0 * Vector3d::UnitY() +
        3.0 * Vector3d::UnitZ()).normalized();
-  const Matrix3d R_WB_test = AngleAxisd(M_PI / 3.0, axis).toRotationMatrix();
-  mobilizer.SetFromRotationMatrix(&context, R_WB_test);
+  const math::RotationMatrixd R_WB_test(AngleAxisd(M_PI / 3.0, axis));
+  mobilizer.SetFromRotationMatrix(&context, R_WB_test.matrix());
   // Verify we get the right quaternion.
   const Quaterniond q_WB_test = mobilizer.get_quaternion(context);
-  const Quaterniond q_WB_test_expected(R_WB_test);
+  const Quaterniond q_WB_test_expected(R_WB_test.matrix());
   EXPECT_TRUE(CompareMatrices(
       q_WB_test.coeffs(), q_WB_test_expected.coeffs(),
       5 * kEpsilon, MatrixCompareType::relative));
@@ -152,8 +163,9 @@ GTEST_TEST(QuaternionFloatingMobilizer, Simulation) {
   simulator.StepTo(kEndTime);
 
   // Get solution:
-  const Isometry3d X_WB = free_body_plant.CalcPoseInWorldFrame(context);
-  const Matrix3d R_WB = X_WB.linear();
+  const math::RigidTransformd X_WB =
+      free_body_plant.CalcPoseInWorldFrame(context);
+  const math::RotationMatrixd R_WB = X_WB.rotation();
   const Vector3d p_WBcm = X_WB.translation();
   const SpatialVelocity<double> V_WB =
       free_body_plant.CalcSpatialVelocityInWorldFrame(context);
@@ -167,15 +179,14 @@ GTEST_TEST(QuaternionFloatingMobilizer, Simulation) {
   std::tie(quat_WB_exact, quatDt_WB_exact, w_WB_B_exact, wDt_WB_B_exact) =
       benchmark_.CalculateExactRotationalSolutionNB(kEndTime);
 
-  Vector4d qv; qv << quat_WB_exact.w(), quat_WB_exact.vec();
-  const Matrix3d R_WB_exact = math::quat2rotmat(qv);
+  const math::RotationMatrixd R_WB_exact(quat_WB_exact);
   const Vector3d w_WB_exact = R_WB_exact * w_WB_B_exact;
   Vector3d p_WBcm_exact, v_WBcm_exact, a_WBcm_exact;
   std::tie(p_WBcm_exact, v_WBcm_exact, a_WBcm_exact) =
       benchmark_.CalculateExactTranslationalSolution(kEndTime);
 
   // Compare computed solution against benchmark:
-  EXPECT_TRUE(CompareMatrices(R_WB, R_WB_exact, kTolerance,
+  EXPECT_TRUE(CompareMatrices(R_WB.matrix(), R_WB_exact.matrix(), kTolerance,
                               MatrixCompareType::relative));
   EXPECT_TRUE(CompareMatrices(p_WBcm, p_WBcm_exact, kTolerance,
                               MatrixCompareType::relative));
@@ -187,8 +198,8 @@ GTEST_TEST(QuaternionFloatingMobilizer, Simulation) {
 
   // Verify MultibodyTree::MapVelocityToQDot() to compute the quaternion time
   // derivative.
-  const MultibodyTree<double>& model = free_body_plant.model();
-  VectorX<double> qdot_from_v(model.get_num_positions());
+  const MultibodyTree<double>& model = free_body_plant.tree();
+  VectorX<double> qdot_from_v(model.num_positions());
   // The generalized velocity computed last at time = kEndTime.
   const VectorX<double> v =
       context.get_continuous_state().get_generalized_velocity().CopyToVector();
@@ -203,7 +214,7 @@ GTEST_TEST(QuaternionFloatingMobilizer, Simulation) {
   const Quaterniond q_WB = mobilizer.get_quaternion(context);
   const Vector4d q_WB_vec4(q_WB.w(), q_WB.x(), q_WB.y(), q_WB.z());
 
-  // After numerical intergration, and with no projection, the quaternion
+  // After numerical integration, and with no projection, the quaternion
   // representing the body's orientation is no longer unit length, however close
   // to it by kNormalizationTolerance.
   const double kNormalizationTolerance = 5e-9;
@@ -227,7 +238,7 @@ GTEST_TEST(QuaternionFloatingMobilizer, Simulation) {
   // Since the quaternion orientation in this test is the result of a numerical
   // integration that introduces truncation errors, we can only expect this
   // result to be within kNormalizationTolerance accurate.
-  VectorX<double> v_back(model.get_num_velocities());
+  VectorX<double> v_back(model.num_velocities());
   model.MapQDotToVelocity(context, qdot_from_v, &v_back);
   EXPECT_TRUE(CompareMatrices(v_back, v, kNormalizationTolerance,
                               MatrixCompareType::relative));
@@ -253,9 +264,7 @@ GTEST_TEST(QuaternionFloatingMobilizer, MapVelocityToQDotAndBack) {
   // Instantiate the model for the free body in space.
   AxiallySymmetricFreeBodyPlant<double> free_body_plant(
       kMass, kInertia, kInertia, acceleration_of_gravity);
-  const QuaternionFloatingMobilizer<double>& mobilizer =
-      free_body_plant.mobilizer();
-  const MultibodyTree<double>& model = free_body_plant.model();
+  const MultibodyTree<double>& model = free_body_plant.tree();
 
   std::unique_ptr<Context<double>> context =
       free_body_plant.CreateDefaultContext();
@@ -272,17 +281,20 @@ GTEST_TEST(QuaternionFloatingMobilizer, MapVelocityToQDotAndBack) {
   // propagate to the time derivatives through the kinematic maps.
   EXPECT_TRUE(std::abs(q_WB.norm() - 1.0) < kEpsilon);
 
-  mobilizer.set_position(context.get(), p_WB);
-  mobilizer.set_quaternion(context.get(), q_WB);
+  const math::RigidTransformd X_WB(q_WB, p_WB);
+  EXPECT_NO_THROW(
+      model.SetFreeBodyPoseOrThrow(
+          free_body_plant.body(), X_WB.GetAsIsometry3(), context.get()));
 
   // Set velocities.
   const Vector3d w_WB(1.0, 2.0, 3.0);
   const Vector3d v_WB(-1.0, 4.0, -0.5);
-  mobilizer.set_angular_velocity(context.get(), w_WB);
-  mobilizer.set_translational_velocity(context.get(), v_WB);
+  EXPECT_NO_THROW(
+      model.SetFreeBodySpatialVelocityOrThrow(
+          free_body_plant.body(), {w_WB, v_WB}, context.get()));
 
   // Map generalized velocities to time derivatives of generalized positions.
-  VectorX<double> qdot_from_v(model.get_num_positions());
+  VectorX<double> qdot_from_v(model.num_positions());
   const VectorX<double> v =
       context->get_continuous_state().get_generalized_velocity().CopyToVector();
   model.MapVelocityToQDot(*context, v, &qdot_from_v);
@@ -300,7 +312,7 @@ GTEST_TEST(QuaternionFloatingMobilizer, MapVelocityToQDotAndBack) {
 
   // Verify MultibodyTree::MapQDotToVelocity() does indeed map back to the
   // original generalized velocities.
-  VectorX<double> v_back(model.get_num_velocities());
+  VectorX<double> v_back(model.num_velocities());
   model.MapQDotToVelocity(*context, qdot_from_v, &v_back);
   EXPECT_TRUE(CompareMatrices(v_back, v, 10 * kEpsilon,
                               MatrixCompareType::relative));

@@ -1,9 +1,13 @@
 #include "drake/solvers/gurobi_solver.h"
 
+#include <thread>
+
 #include <gtest/gtest.h>
 
 #include "drake/common/test_utilities/eigen_matrix_compare.h"
+#include "drake/common/test_utilities/expect_throws_message.h"
 #include "drake/solvers/mathematical_program.h"
+#include "drake/solvers/mixed_integer_optimization_util.h"
 #include "drake/solvers/test/linear_program_examples.h"
 #include "drake/solvers/test/quadratic_program_examples.h"
 #include "drake/solvers/test/second_order_cone_program_examples.h"
@@ -45,13 +49,31 @@ TEST_F(UnboundedLinearProgramTest0, TestGurobiUnbounded) {
   if (solver.available()) {
     // With dual reductions, Gurobi may not be able to differentiate between
     // infeasible and unbounded.
-    prog_->SetSolverOption(GurobiSolver::id(), "DualReductions", 1);
-    SolutionResult result = solver.Solve(*prog_);
-    EXPECT_EQ(result, SolutionResult::kInfeasible_Or_Unbounded);
-    prog_->SetSolverOption(GurobiSolver::id(), "DualReductions", 0);
-    result = solver.Solve(*prog_);
-    EXPECT_EQ(result, SolutionResult::kUnbounded);
-    EXPECT_EQ(prog_->GetOptimalCost(), MathematicalProgram::kUnboundedCost);
+    SolverOptions solver_options;
+    solver_options.SetOption(GurobiSolver::id(), "DualReductions", 1);
+    MathematicalProgramResult result;
+    solver.Solve(*prog_, {}, solver_options, &result);
+    EXPECT_EQ(result.get_solution_result(),
+              SolutionResult::kInfeasible_Or_Unbounded);
+    // This code is defined in
+    // https://www.gurobi.com/documentation/8.0/refman/optimization_status_codes.html
+    const int GRB_INF_OR_UNBD = 4;
+    EXPECT_EQ(result.get_solver_details()
+                  .GetValue<GurobiSolverDetails>()
+                  .optimization_status,
+              GRB_INF_OR_UNBD);
+
+    solver_options.SetOption(GurobiSolver::id(), "DualReductions", 0);
+    solver.Solve(*prog_, {}, solver_options, &result);
+    EXPECT_EQ(result.get_solution_result(), SolutionResult::kUnbounded);
+    // This code is defined in
+    // https://www.gurobi.com/documentation/8.0/refman/optimization_status_codes.html
+    const int GRB_UNBOUNDED = 5;
+    EXPECT_EQ(result.get_solver_details()
+                  .GetValue<GurobiSolverDetails>()
+                  .optimization_status,
+              GRB_UNBOUNDED);
+    EXPECT_EQ(result.get_optimal_cost(), MathematicalProgram::kUnboundedCost);
   }
 }
 
@@ -91,17 +113,25 @@ GTEST_TEST(GurobiTest, TestInitialGuess) {
     prog.SetSolverOption(GurobiSolver::id(), "Heuristics", 0.0);
 
     double x_expected0_to_test[] = {0.0, 1.0};
+    MathematicalProgramResult result;
     for (int i = 0; i < 2; i++) {
       Eigen::VectorXd x_expected(1);
       x_expected[0] = x_expected0_to_test[i];
       prog.SetInitialGuess(x, x_expected);
-      SolutionResult result = solver.Solve(prog);
-      EXPECT_EQ(result, SolutionResult::kSolutionFound);
-      const auto& x_value = prog.GetSolution(x);
+      solver.Solve(prog, x_expected, {}, &result);
+      EXPECT_EQ(result.get_solution_result(), SolutionResult::kSolutionFound);
+      const auto& x_value = prog.GetSolution(x, result);
       EXPECT_TRUE(CompareMatrices(x_value, x_expected, 1E-6,
                                   MatrixCompareType::absolute));
-      ExpectSolutionCostAccurate(prog, 1E-6);
+      EXPECT_NEAR(result.get_optimal_cost(), 0, 1E-6);
     }
+
+    // Set wrong initial guess with incorrect size.
+    Eigen::VectorXd initial_guess_wrong_size(2);
+    DRAKE_EXPECT_THROWS_MESSAGE(
+        solver.Solve(prog, initial_guess_wrong_size, {}, &result),
+        std::invalid_argument,
+        "The initial guess has 2 rows, but 1 rows were expected.");
   }
 }
 
@@ -233,6 +263,113 @@ TEST_P(TestFindSpringEquilibrium, TestSOCP) {
 INSTANTIATE_TEST_CASE_P(
     GurobiTest, TestFindSpringEquilibrium,
     ::testing::ValuesIn(GetFindSpringEquilibriumProblems()));
+
+GTEST_TEST(GurobiTest, MultipleThreadsSharingEnvironment) {
+  // Running multiple threads of GurobiSolver, they share the same GRBenv
+  // which is created when acquiring the Gurobi license in the main function.
+
+  auto solve_program = [](int i, int N) {
+    // We want to solve a complicated program in each thread, so that multiple
+    // programs will run concurrently. To this end, in each thread, we solve
+    // the following mixed-integer program
+    // min (x - i)² + (y - 1)²
+    // s.t Point (x, y) are on the line segments A₁A₂, A₂A₃, ..., Aₙ₋₁Aₙ,
+    // where A₂ⱼ= (2j, 1), A₂ⱼ₊₁ = (2j+1, 0)
+    // When i is an even number, the optimal solution is (i, 1), with optimal
+    // cost equals to 0. When i is an odd number, the optimal solution is either
+    // (i - 0.5, 0.5) or (i + 0.5, 0.5), with the optimal cost being 0.5
+    MathematicalProgram prog;
+    auto x = prog.NewContinuousVariables<1>()(0);
+    auto y = prog.NewContinuousVariables<1>()(0);
+    // To constrain the point (x, y) on the line segment, we introduce a SOS2
+    // constraint with auxiliary variable lambda.
+    auto lambda = prog.NewContinuousVariables(N + 1);
+    // TODO(hongkai.dai): there is a bug in AddSos2Constraint, that it didn't
+    // add lambda(N) >= 0. After I resolve that bug, the next line could be
+    // removed.
+    prog.AddBoundingBoxConstraint(0, 1, lambda);
+    auto z = prog.NewBinaryVariables(N);
+    AddSos2Constraint(&prog, lambda.cast<symbolic::Expression>(),
+                      z.cast<symbolic::Expression>());
+    Vector2<symbolic::Expression> line_segment(0, 0);
+    for (int j = 0; j <= N; ++j) {
+      line_segment(0) += j * lambda(j);
+      line_segment(1) += j % 2 == 0 ? symbolic::Expression(lambda(j))
+                                    : symbolic::Expression(0);
+    }
+    prog.AddLinearConstraint(line_segment(0) == x);
+    prog.AddLinearConstraint(line_segment(1) == y);
+    prog.AddQuadraticCost((x - i) * (x - i) + (y - 1) * (y - 1));
+    GurobiSolver gurobi_solver;
+    const SolutionResult result = gurobi_solver.Solve(prog);
+    EXPECT_EQ(result, SolutionResult::kSolutionFound);
+
+    const double tol = 1E-6;
+    if (i % 2 == 0) {
+      EXPECT_NEAR(prog.GetOptimalCost(), 0, tol);
+      EXPECT_NEAR(prog.GetSolution(x), i, tol);
+      EXPECT_NEAR(prog.GetSolution(y), 1, tol);
+    } else {
+      EXPECT_NEAR(prog.GetOptimalCost(), 0.5, tol);
+      EXPECT_NEAR(prog.GetSolution(y), 0.5, tol);
+      const double x_val = prog.GetSolution(x);
+      EXPECT_TRUE(std::abs(x_val - (i - 0.5)) < tol ||
+                  std::abs(x_val - (i + 0.5)) < tol);
+    }
+  };
+
+  std::vector<std::thread> test_threads;
+  const int num_threads = 20;
+  for (int i = 0; i < num_threads; ++i) {
+    test_threads.emplace_back(solve_program, i, num_threads);
+  }
+  for (int i = 0; i < num_threads; ++i) {
+    test_threads[i].join();
+  }
+}
+
+GTEST_TEST(GurobiTest, GurobiErrorCode) {
+  // This test verifies that we can return the error code reported by Gurobi.
+
+  MathematicalProgram prog;
+  auto x = prog.NewContinuousVariables<2>();
+  prog.AddLinearConstraint(x(0) + x(1) <= 1);
+
+  GurobiSolver solver;
+  if (solver.available()) {
+    MathematicalProgramResult result;
+    SolverOptions solver_options;
+    // Report error when we set an unknown attribute to Gurobi.
+    solver_options.SetOption(solver.solver_id(), "Foo", 1);
+    solver.Solve(prog, {}, solver_options, &result);
+    // The error code is listed in
+    // https://www.gurobi.com/documentation/8.0/refman/error_codes.html
+    const int UNKNOWN_PARAMETER{10007};
+    EXPECT_EQ(
+        result.get_solver_details().GetValue<GurobiSolverDetails>().error_code,
+        UNKNOWN_PARAMETER);
+
+    // Report error if the Q matrix in the QP cost is not positive semidefinite.
+    prog.AddQuadraticCost(x(0) * x(0) - x(1) * x(1));
+    solver.Solve(prog, {}, {}, &result);
+    // The error code is listed in
+    // https://www.gurobi.com/documentation/8.0/refman/error_codes.html
+    const int Q_NOT_PSD{10020};
+    EXPECT_EQ(
+        result.get_solver_details().GetValue<GurobiSolverDetails>().error_code,
+        Q_NOT_PSD);
+  }
+}
+
 }  // namespace test
 }  // namespace solvers
 }  // namespace drake
+
+int main(int argc, char** argv) {
+  // Ensure that we have the Gurobi license for the entire duration of this
+  // test, so that we do not have to release and re-acquire the license for
+  // every test.
+  auto gurobi_license = drake::solvers::GurobiSolver::AcquireLicense();
+  ::testing::InitGoogleTest(&argc, argv);
+  return RUN_ALL_TESTS();
+}

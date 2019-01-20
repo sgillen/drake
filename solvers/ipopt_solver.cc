@@ -109,7 +109,7 @@ size_t EvaluateConstraint(const MathematicalProgram& prog,
   }
 
   AutoDiffVecXd ty(c.num_constraints());
-  c.Eval(math::initializeAutoDiff(this_x), ty);
+  c.Eval(math::initializeAutoDiff(this_x), &ty);
 
   // Store the results.  Since IPOPT directly knows the bounds of the
   // constraint, we don't need to apply any bounding information here.
@@ -174,7 +174,7 @@ class IpoptSolver_NLP : public Ipopt::TNLP {
     n = problem_->num_vars();
 
     // The IPOPT interface defines eval_f() and eval_grad_f() as
-    // ouputting a single number for the result, and the size of the
+    // outputting a single number for the result, and the size of the
     // output gradient array at the same order as the x variables.
     // Initialize the cost cache with those dimensions.
     cost_cache_.reset(new ResultCache(n, 1, n));
@@ -183,23 +183,23 @@ class IpoptSolver_NLP : public Ipopt::TNLP {
     nnz_jac_g = 0;
     Index num_grad = 0;
     for (const auto& c : problem_->generic_constraints()) {
-      m += GetNumGradients(*(c.constraint()), c.variables().rows(), &num_grad);
+      m += GetNumGradients(*(c.evaluator()), c.variables().rows(), &num_grad);
       nnz_jac_g += num_grad;
     }
     for (const auto& c : problem_->lorentz_cone_constraints()) {
-      m += GetNumGradients(*(c.constraint()), c.variables().rows(), &num_grad);
+      m += GetNumGradients(*(c.evaluator()), c.variables().rows(), &num_grad);
       nnz_jac_g += num_grad;
     }
     for (const auto& c : problem_->rotated_lorentz_cone_constraints()) {
-      m += GetNumGradients(*(c.constraint()), c.variables().rows(), &num_grad);
+      m += GetNumGradients(*(c.evaluator()), c.variables().rows(), &num_grad);
       nnz_jac_g += num_grad;
     }
     for (const auto& c : problem_->linear_constraints()) {
-      m += GetNumGradients(*(c.constraint()), c.variables().rows(), &num_grad);
+      m += GetNumGradients(*(c.evaluator()), c.variables().rows(), &num_grad);
       nnz_jac_g += num_grad;
     }
     for (const auto& c : problem_->linear_equality_constraints()) {
-      m += GetNumGradients(*(c.constraint()), c.variables().rows(), &num_grad);
+      m += GetNumGradients(*(c.evaluator()), c.variables().rows(), &num_grad);
       nnz_jac_g += num_grad;
     }
 
@@ -221,7 +221,7 @@ class IpoptSolver_NLP : public Ipopt::TNLP {
     }
 
     for (auto const& binding : problem_->bounding_box_constraints()) {
-      const auto& c = binding.constraint();
+      const auto& c = binding.evaluator();
       const auto& lower_bound = c->lower_bound();
       const auto& upper_bound = c->upper_bound();
       for (int k = 0; k < static_cast<int>(binding.GetNumElements()); ++k) {
@@ -235,23 +235,23 @@ class IpoptSolver_NLP : public Ipopt::TNLP {
     size_t constraint_idx = 0;  // offset into g_l and g_u output arrays
     for (const auto& c : problem_->generic_constraints()) {
       constraint_idx += GetConstraintBounds(
-          *(c.constraint()), g_l + constraint_idx, g_u + constraint_idx);
+          *(c.evaluator()), g_l + constraint_idx, g_u + constraint_idx);
     }
     for (const auto& c : problem_->lorentz_cone_constraints()) {
       constraint_idx += GetConstraintBounds(
-          *(c.constraint()), g_l + constraint_idx, g_u + constraint_idx);
+          *(c.evaluator()), g_l + constraint_idx, g_u + constraint_idx);
     }
     for (const auto& c : problem_->rotated_lorentz_cone_constraints()) {
       constraint_idx += GetConstraintBounds(
-          *(c.constraint()), g_l + constraint_idx, g_u + constraint_idx);
+          *(c.evaluator()), g_l + constraint_idx, g_u + constraint_idx);
     }
     for (const auto& c : problem_->linear_constraints()) {
       constraint_idx += GetConstraintBounds(
-          *(c.constraint()), g_l + constraint_idx, g_u + constraint_idx);
+          *(c.evaluator()), g_l + constraint_idx, g_u + constraint_idx);
     }
     for (const auto& c : problem_->linear_equality_constraints()) {
       constraint_idx += GetConstraintBounds(
-          *(c.constraint()), g_l + constraint_idx, g_u + constraint_idx);
+          *(c.evaluator()), g_l + constraint_idx, g_u + constraint_idx);
     }
     return true;
   }
@@ -332,33 +332,33 @@ class IpoptSolver_NLP : public Ipopt::TNLP {
                                   // GetGradientMatrix.
       for (const auto& c : problem_->generic_constraints()) {
         grad_idx +=
-            GetGradientMatrix(*problem_, *(c.constraint()), c.variables(),
+            GetGradientMatrix(*problem_, *(c.evaluator()), c.variables(),
                               constraint_idx, iRow + grad_idx, jCol + grad_idx);
-        constraint_idx += c.constraint()->num_constraints();
+        constraint_idx += c.evaluator()->num_constraints();
       }
       for (const auto& c : problem_->lorentz_cone_constraints()) {
         grad_idx +=
-            GetGradientMatrix(*problem_, *(c.constraint()), c.variables(),
+            GetGradientMatrix(*problem_, *(c.evaluator()), c.variables(),
                               constraint_idx, iRow + grad_idx, jCol + grad_idx);
-        constraint_idx += c.constraint()->num_constraints();
+        constraint_idx += c.evaluator()->num_constraints();
       }
       for (const auto& c : problem_->rotated_lorentz_cone_constraints()) {
         grad_idx +=
-            GetGradientMatrix(*problem_, *(c.constraint()), c.variables(),
+            GetGradientMatrix(*problem_, *(c.evaluator()), c.variables(),
                               constraint_idx, iRow + grad_idx, jCol + grad_idx);
-        constraint_idx += c.constraint()->num_constraints();
+        constraint_idx += c.evaluator()->num_constraints();
       }
       for (const auto& c : problem_->linear_constraints()) {
         grad_idx +=
-            GetGradientMatrix(*problem_, *(c.constraint()), c.variables(),
+            GetGradientMatrix(*problem_, *(c.evaluator()), c.variables(),
                               constraint_idx, iRow + grad_idx, jCol + grad_idx);
-        constraint_idx += c.constraint()->num_constraints();
+        constraint_idx += c.evaluator()->num_constraints();
       }
       for (const auto& c : problem_->linear_equality_constraints()) {
         grad_idx +=
-            GetGradientMatrix(*problem_, *(c.constraint()), c.variables(),
+            GetGradientMatrix(*problem_, *(c.evaluator()), c.variables(),
                               constraint_idx, iRow + grad_idx, jCol + grad_idx);
-        constraint_idx += c.constraint()->num_constraints();
+        constraint_idx += c.evaluator()->num_constraints();
       }
       DRAKE_ASSERT(static_cast<Index>(grad_idx) == nele_jac);
       return true;
@@ -386,7 +386,7 @@ class IpoptSolver_NLP : public Ipopt::TNLP {
                                  IpoptCalculatedQuantities* ip_cq) {
     unused(z_L, z_U, m, g, lambda, ip_data, ip_cq);
 
-    problem_->SetSolverId(IpoptSolver::id());
+    SolverResult solver_result(IpoptSolver::id());
 
     switch (status) {
       case Ipopt::SUCCESS: {
@@ -420,8 +420,9 @@ class IpoptSolver_NLP : public Ipopt::TNLP {
     for (Index i = 0; i < n; i++) {
       solution(i) = x[i];
     }
-    problem_->SetDecisionVariableValues(solution);
-    problem_->SetOptimalCost(obj_value);
+    solver_result.set_decision_variable_values(solution.cast<double>());
+    solver_result.set_optimal_cost(obj_value);
+    problem_->SetSolverResult(solver_result);
   }
 
   SolutionResult result() const { return result_; }
@@ -429,6 +430,8 @@ class IpoptSolver_NLP : public Ipopt::TNLP {
  private:
   void EvaluateCosts(Index n, const Number* x) {
     const Eigen::VectorXd xvec = MakeEigenVector(n, x);
+
+    problem_->EvalVisualizationCallbacks(xvec);
 
     AutoDiffVecXd ty(1);
     Eigen::VectorXd this_x;
@@ -445,7 +448,7 @@ class IpoptSolver_NLP : public Ipopt::TNLP {
             xvec(problem_->FindDecisionVariableIndex(binding.variables()(i)));
       }
 
-      binding.constraint()->Eval(math::initializeAutoDiff(this_x), ty);
+      binding.evaluator()->Eval(math::initializeAutoDiff(this_x), &ty);
 
       cost_cache_->result[0] += ty(0).value();
 
@@ -465,29 +468,29 @@ class IpoptSolver_NLP : public Ipopt::TNLP {
     Number* grad = constraint_cache_->grad.data();
 
     for (const auto& c : problem_->generic_constraints()) {
-      grad += EvaluateConstraint(*problem_, xvec, (*c.constraint()),
+      grad += EvaluateConstraint(*problem_, xvec, (*c.evaluator()),
                                  c.variables(), result, grad);
-      result += c.constraint()->num_constraints();
+      result += c.evaluator()->num_constraints();
     }
     for (const auto& c : problem_->lorentz_cone_constraints()) {
-      grad += EvaluateConstraint(*problem_, xvec, (*c.constraint()),
+      grad += EvaluateConstraint(*problem_, xvec, (*c.evaluator()),
                                  c.variables(), result, grad);
-      result += c.constraint()->num_constraints();
+      result += c.evaluator()->num_constraints();
     }
     for (const auto& c : problem_->rotated_lorentz_cone_constraints()) {
-      grad += EvaluateConstraint(*problem_, xvec, (*c.constraint()),
+      grad += EvaluateConstraint(*problem_, xvec, (*c.evaluator()),
                                  c.variables(), result, grad);
-      result += c.constraint()->num_constraints();
+      result += c.evaluator()->num_constraints();
     }
     for (const auto& c : problem_->linear_constraints()) {
-      grad += EvaluateConstraint(*problem_, xvec, (*c.constraint()),
+      grad += EvaluateConstraint(*problem_, xvec, (*c.evaluator()),
                                  c.variables(), result, grad);
-      result += c.constraint()->num_constraints();
+      result += c.evaluator()->num_constraints();
     }
     for (const auto& c : problem_->linear_equality_constraints()) {
-      grad += EvaluateConstraint(*problem_, xvec, (*c.constraint()),
+      grad += EvaluateConstraint(*problem_, xvec, (*c.evaluator()),
                                  c.variables(), result, grad);
-      result += c.constraint()->num_constraints();
+      result += c.evaluator()->num_constraints();
     }
   }
 
@@ -499,7 +502,7 @@ class IpoptSolver_NLP : public Ipopt::TNLP {
 
 }  // namespace
 
-bool IpoptSolver::available() const { return true; }
+bool IpoptSolver::is_available() { return true; }
 
 SolutionResult IpoptSolver::Solve(MathematicalProgram& prog) const {
   DRAKE_ASSERT(prog.linear_complementarity_constraints().empty());
@@ -507,7 +510,7 @@ SolutionResult IpoptSolver::Solve(MathematicalProgram& prog) const {
   Ipopt::SmartPtr<Ipopt::IpoptApplication> app = IpoptApplicationFactory();
   app->RethrowNonIpoptException(true);
 
-  const double tol = 1e-10;  // Note: SNOPT is only 1e-6, but in #3712 we
+  const double tol = 1.05e-10;  // Note: SNOPT is only 1e-6, but in #3712 we
   // diagnosed that the CompareMatrices tolerance needed to be the sqrt of the
   // constr_viol_tol
   app->Options()->SetNumericValue("tol", tol);

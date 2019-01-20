@@ -61,7 +61,7 @@ class MixedIntegerBranchAndBoundNode {
    * the map from the old variables to the new variables.
    * @pre prog should contain binary variables.
    * @pre solver_id can be either Gurobi or Scs.
-   * @throw std::runtime_error if the preconditions are not met.
+   * @throws std::runtime_error if the preconditions are not met.
    */
   static std::pair<
       std::unique_ptr<MixedIntegerBranchAndBoundNode>,
@@ -76,7 +76,7 @@ class MixedIntegerBranchAndBoundNode {
    * @param binary_variable This binary variable is fixed to either 0 or 1 in
    * the child node.
    * @pre binary_variable is in remaining_binary_variables_;
-   * @throw std::runtime_error if the preconditions are not met.
+   * @throws std::runtime_error if the preconditions are not met.
    */
   void Branch(const symbolic::Variable& binary_variable);
 
@@ -148,10 +148,14 @@ class MixedIntegerBranchAndBoundNode {
   /**
    * Getter for optimal_solution_is_integral.
    * @pre The optimization problem is solved successfully.
-   * @throws a runtime error if the precondition is not satisfied.
+   * @throws std::runtime_error if the precondition is not satisfied.
    */
   bool optimal_solution_is_integral() const;
 
+  /** Getter for solver id. */
+  const SolverId& solver_id() const { return solver_id_; }
+
+ private:
   /**
    * If the solution to a binary variable is either less than integral_tol or
    * larger than 1 - integral_tol, then we regard the solution to be binary.
@@ -268,6 +272,9 @@ class MixedIntegerBranchAndBound {
       const MixedIntegerBranchAndBound&)>;
   using VariableSelectFun = std::function<const symbolic::Variable*(
       const MixedIntegerBranchAndBoundNode&)>;
+  /** The function signature for user defined node callback function. */
+  using NodeCallbackFun = std::function<void(
+      const MixedIntegerBranchAndBoundNode&, MixedIntegerBranchAndBound* bnb)>;
 
   /**
    * Construct a branch-and-bound tree from a mixed-integer optimization
@@ -299,7 +306,7 @@ class MixedIntegerBranchAndBound {
    * include the optimal cost.
    * @param nth_suboptimal_cost The n'th sub-optimal cost.
    * @pre `nth_suboptimal_cost` is between 0 and solutions().size() - 1.
-   * @throws a runtime error if the precondition is not satisfied.
+   * @throws std::runtime_error if the precondition is not satisfied.
    */
   double GetSubOptimalCost(int nth_suboptimal_cost) const;
 
@@ -312,7 +319,7 @@ class MixedIntegerBranchAndBound {
    * @param nth_best_solution. The index of the best integral solution.
    * @pre `mip_var` is a variable in the original MIP.
    * @pre `nth_best_solution` is between 0 and solutions().size().
-   * @throw runtime error if the preconditions are not satisfied.
+   * @throws std::runtime_error if the preconditions are not satisfied.
    */
   double GetSolution(const symbolic::Variable& mip_var,
                      int nth_best_solution = 0) const;
@@ -325,7 +332,7 @@ class MixedIntegerBranchAndBound {
    * @param nth_best_solution. The index of the best integral solution.
    * @pre `mip_vars` are variables in the original MIP.
    * @pre `nth_best_solution` is between 0 and solutions().size().
-   * @throw runtime error if the preconditions are not satisfied.
+   * @throws std::runtime_error if the preconditions are not satisfied.
    */
   template <typename Derived>
   typename std::enable_if<
@@ -353,7 +360,7 @@ class MixedIntegerBranchAndBound {
    * procedure.
    * @pre old_variable is a variable in the mixed-integer program, passed in the
    * constructor of this MixedIntegerBranchAndBound.
-   * @throw a runtime_error if the pre-condition fails.
+   * @throws std::runtime_error if the pre-condition fails.
    */
   const symbolic::Variable& GetNewVariable(
       const symbolic::Variable& old_variable) const;
@@ -421,7 +428,8 @@ class MixedIntegerBranchAndBound {
    * solvers/test/branch_and_bound_test.cc
    * in TestSetUserDefinedNodeSelectionFunction.
    * @note The user defined function should pick an un-fathomed leaf node for
-   * branching. @throw a runtime error if the node is not a leaf node, or it is
+   * branching.
+   * @throws std::_runtime error if the node is not a leaf node, or it is
    * fathomed.
    */
   void SetUserDefinedNodeSelectionFunction(NodeSelectFun fun) {
@@ -467,17 +475,39 @@ class MixedIntegerBranchAndBound {
     variable_selection_userfun_ = fun;
   }
 
+  /** Set the flag to true if the user wants to search an integral solution
+   * in each node, after the optimization problem in that node is solved.
+   * The program can search for an integral solution based on the solution to
+   * the optimization program in the node, by rounding the binary variables
+   * to the nearest integer value, and solve for the continuous variables.
+   * If a solution is obtained in this new program, then this solution is
+   * an integral solution to the mixed-integer program.
+   */
+  void SetSearchIntegralSolutionByRounding(bool flag) {
+    search_integral_solution_by_rounding_ = flag;
+  }
+
+  /**
+   * The user can set a defined callback function in each node. This function is
+   * called after the optimization is solved in each node.
+   */
+  void SetUserDefinedNodeCallbackFunction(NodeCallbackFun fun) {
+    node_callback_userfun_ = fun;
+  }
+
   /**
    * If a leaf node is fathomed, then there is no need to branch on this node
    * any more. A leaf node is fathomed is any of the following conditions are
    * satisfied:
+   *
    * 1. The optimization problem in the node is infeasible.
    * 2. The optimal cost of the node is larger than the best upper bound.
    * 3. The optimal solution to the node satisfies all the integral constraints.
    * 4. All binary variables are fixed to either 0 or 1 in this node.
+   *
    * @param leaf_node A leaf node to check if it is fathomed.
    * @pre The node should be a leaf node.
-   * @throws runtime error if the precondition is not satisfied.
+   * @throws std::runtime_error if the precondition is not satisfied.
    */
   bool IsLeafNodeFathomed(
       const MixedIntegerBranchAndBoundNode& leaf_node) const;
@@ -572,14 +602,27 @@ class MixedIntegerBranchAndBound {
    */
   bool HasConverged() const;
 
+  /** Call the callback function in each node. */
+  void NodeCallback(const MixedIntegerBranchAndBoundNode& node);
+
   /**
    * Search for an integral solution satisfying all the constraints in this
    * node, together with the integral constraints in the original mixed-integer
-   * program.
+   * program. It will construct a new optimization program, same as the one
+   * in this node, but the remaining binary variables are all rounded to
+   * the binary value that is closest to the solution of the optimization
+   * program in this node.
+   * @note this function is only called if the following conditions are
+   * satisfied:
+   * 1. The optimization problem in this node is feasible.
+   * 2. The optimal solution to the problem in this node is not integral.
+   * 3. The user called SetSearchIntegralSolutionByRounding(true);
+   *
    * @note This method will change the data field such as solutions_ and/or
    * best_upper_bound_, if an integral solution is found.
    */
-  void SearchIntegralSolution(const MixedIntegerBranchAndBoundNode& node);
+  void SearchIntegralSolutionByRounding(
+      const MixedIntegerBranchAndBoundNode& node);
 
   // The root node of the tree.
   std::unique_ptr<MixedIntegerBranchAndBoundNode> root_;
@@ -626,11 +669,16 @@ class MixedIntegerBranchAndBound {
   NodeSelectionMethod node_selection_method_ =
       NodeSelectionMethod::kMinLowerBound;
 
+  bool search_integral_solution_by_rounding_ = false;
+
   // The user defined function to pick a branching variable. Default is null.
   VariableSelectFun variable_selection_userfun_ = nullptr;
 
   // The user defined function to pick a branching node. Default is null.
   NodeSelectFun node_selection_userfun_ = nullptr;
+
+  // The user defined callback function in each node. Default is null.
+  NodeCallbackFun node_callback_userfun_ = nullptr;
 };
 }  // namespace solvers
 }  // namespace drake

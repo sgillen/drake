@@ -29,8 +29,6 @@ using drake::systems::RungeKutta3Integrator;
 using drake::systems::ImplicitEulerIntegrator;
 using LogisticSystem = drake::systems::analysis_test::LogisticSystem<double>;
 using StatelessSystem = drake::systems::analysis_test::StatelessSystem<double>;
-using LogisticWitness = drake::systems::analysis_test::LogisticWitness<double>;
-using ClockWitness = drake::systems::analysis_test::ClockWitness<double>;
 using Eigen::AutoDiffScalar;
 using Eigen::NumTraits;
 using std::complex;
@@ -40,6 +38,30 @@ namespace systems {
 namespace {
 
 // @TODO(edrumwri): Use test fixtures to streamline this file and promote reuse.
+
+// Stateless system with a DoCalcTimeDerivatives implementation. This class
+// will serve to confirm that the time derivative calculation is not called.
+class StatelessSystemPlusDerivs : public systems::LeafSystem<double> {
+  DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(StatelessSystemPlusDerivs)
+
+ public:
+  StatelessSystemPlusDerivs() {}
+
+  bool was_do_calc_time_derivatives_called() const {
+    return do_calc_time_derivatives_called_;
+  }
+
+ private:
+  void DoCalcTimeDerivatives(
+      const Context<double>& context,
+      ContinuousState<double>* derivatives) const override {
+    // Modifying system members in DoCalcTimeDerivatives() is an anti-pattern.
+    // It is done here only to simplify the testing code.
+    do_calc_time_derivatives_called_ = true;
+  }
+
+  mutable bool do_calc_time_derivatives_called_{false};
+};
 
 // Empty diagram
 class StatelessDiagram : public Diagram<double> {
@@ -87,6 +109,24 @@ class ExampleDiagram : public Diagram<double> {
  private:
   StatelessDiagram* stateless_diag_ = nullptr;
 };
+
+// Tests that DoCalcTimeDerivatives() is not called when the system has no
+// continuous state.
+GTEST_TEST(SimulatorTest, NoUnexpectedDoCalcTimeDerivativesCall) {
+  // Construct the simulation using the RK2 (fixed step) integrator with a small
+  // time step.
+  StatelessSystemPlusDerivs system;
+  const double final_time = 1.0;
+  const double dt = 1e-3;
+  Simulator<double> simulator(system);
+  Context<double>& context = simulator.get_mutable_context();
+  simulator.reset_integrator<RungeKutta2Integrator<double>>(system, dt,
+                                                            &context);
+  simulator.StepTo(final_time);
+
+  // Verify no derivative calculations.
+  EXPECT_FALSE(system.was_do_calc_time_derivatives_called());
+}
 
 // Tests that simulation only takes a single step when there is no continuous
 // state, regardless of the integrator maximum step size (and no discrete state
@@ -148,11 +188,25 @@ class CompositeSystem : public LogisticSystem {
   DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(CompositeSystem)
 
   CompositeSystem(double k, double alpha, double nu, double trigger_time) :
-      LogisticSystem(k, alpha, nu) {
+      LogisticSystem(k, alpha, nu), trigger_time_(trigger_time) {
     this->DeclareContinuousState(1);
-    logistic_witness_ = std::make_unique<LogisticWitness>(*this);
-    clock_witness_ = std::make_unique<ClockWitness>(trigger_time, *this,
-                          WitnessFunctionDirection::kCrossesZero);
+
+    logistic_witness_ = this->DeclareWitnessFunction("logistic witness",
+      WitnessFunctionDirection::kCrossesZero,
+      &CompositeSystem::GetStateValue,
+      PublishEvent<double>());
+    clock_witness_ = this->DeclareWitnessFunction("clock witness",
+      WitnessFunctionDirection::kCrossesZero,
+      &CompositeSystem::CalcClockWitness,
+      PublishEvent<double>());
+  }
+
+  const WitnessFunction<double>* get_logistic_witness() const {
+    return logistic_witness_.get();
+  }
+
+  const WitnessFunction<double>* get_clock_witness() const {
+    return clock_witness_.get();
   }
 
  protected:
@@ -164,8 +218,18 @@ class CompositeSystem : public LogisticSystem {
   }
 
  private:
-  std::unique_ptr<LogisticWitness> logistic_witness_;
-  std::unique_ptr<ClockWitness> clock_witness_;
+  double GetStateValue(const Context<double>& context) const {
+    return context.get_continuous_state()[0];
+  }
+
+  // The witness function is the time value itself plus the offset value.
+  double CalcClockWitness(const Context<double>& context) const {
+    return context.get_time() - trigger_time_;
+  }
+
+  const double trigger_time_;
+  std::unique_ptr<WitnessFunction<double>> logistic_witness_;
+  std::unique_ptr<WitnessFunction<double>> clock_witness_;
 };
 
 // An empty system using two clock witnesses.
@@ -173,10 +237,16 @@ class TwoWitnessStatelessSystem : public LeafSystem<double> {
  public:
   DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(TwoWitnessStatelessSystem)
 
-  explicit TwoWitnessStatelessSystem(double off1, double off2) {
-    const auto dir_type = WitnessFunctionDirection::kCrossesZero;
-    witness1_ = std::make_unique<ClockWitness>(off1, *this, dir_type);
-    witness2_ = std::make_unique<ClockWitness>(off2, *this, dir_type);
+  explicit TwoWitnessStatelessSystem(double off1, double off2)
+      : offset1_(off1), offset2_(off2) {
+    witness1_ = this->DeclareWitnessFunction("clock witness1",
+            WitnessFunctionDirection::kCrossesZero,
+            &TwoWitnessStatelessSystem::CalcClockWitness1,
+            PublishEvent<double>());
+    witness2_ = this->DeclareWitnessFunction("clock witness2",
+            WitnessFunctionDirection::kCrossesZero,
+            &TwoWitnessStatelessSystem::CalcClockWitness2,
+            PublishEvent<double>());
   }
 
   void set_publish_callback(
@@ -195,15 +265,23 @@ class TwoWitnessStatelessSystem : public LeafSystem<double> {
   void DoPublish(
       const Context<double>& context,
       const std::vector<const PublishEvent<double>*>& events) const override {
-    // Checks that triggered witnesses are cleared appropriately between
-    // zero isolations.
-    if (witness1_->get_trigger_time() != witness2_->get_trigger_time())
-      EXPECT_EQ(events.size(), 1);
     if (publish_callback_ != nullptr) publish_callback_(context);
   }
 
  private:
-  std::unique_ptr<ClockWitness> witness1_, witness2_;
+  // The witness function is the time value itself plus the offset value.
+  double CalcClockWitness1(const Context<double>& context) const {
+    return context.get_time() - offset1_;
+  }
+
+  // The witness function is the time value itself plus the offset value.
+  double CalcClockWitness2(const Context<double>& context) const {
+    return context.get_time() - offset2_;
+  }
+
+  std::unique_ptr<WitnessFunction<double>> witness1_, witness2_;
+  const double offset1_;
+  const double offset2_;
   std::function<void(const Context<double>&)> publish_callback_{nullptr};
 };
 
@@ -344,9 +422,9 @@ GTEST_TEST(SimulatorTest, FixedStepIncreasingIsolationAccuracy) {
     // Simulate to dt.
     simulator.StepTo(dt);
 
-    // Evaluate the witness function.
+    // CalcWitnessValue the witness function.
     context.set_time(publish_time);
-    double new_eval = witness.front()->Evaluate(context);
+    double new_eval = witness.front()->CalcWitnessValue(context);
 
     // Verify that the new evaluation is closer to zero than the old one.
     EXPECT_LT(new_eval, eval);
@@ -374,9 +452,9 @@ GTEST_TEST(SimulatorTest, MultipleWitnesses) {
     system.GetWitnessFunctions(context, &witnesses);
     DRAKE_DEMAND(witnesses.size() == 2);
 
-    // Evaluate them.
-    double clock_eval = witnesses.front()->Evaluate(context);
-    double logistic_eval = witnesses.back()->Evaluate(context);
+    // CalcWitnessValue them.
+    double clock_eval = witnesses.front()->CalcWitnessValue(context);
+    double logistic_eval = witnesses.back()->CalcWitnessValue(context);
 
     // Store the one that evaluates closest to zero.
     if (std::abs(clock_eval) < std::abs(logistic_eval)) {
@@ -413,9 +491,8 @@ GTEST_TEST(SimulatorTest, MultipleWitnesses) {
   ASSERT_EQ(triggers.size(), 2);
 
   // Check that the witnesses triggered in the order we expect.
-  EXPECT_TRUE(is_dynamic_castable<const LogisticWitness>(
-      triggers.front().second));
-  EXPECT_TRUE(is_dynamic_castable<const ClockWitness>(triggers.back().second));
+  EXPECT_EQ(system.get_logistic_witness(), triggers.front().second);
+  EXPECT_EQ(system.get_clock_witness(), triggers.back().second);
 
   // We expect that the clock witness will trigger second at a time of ~1s.
   EXPECT_NEAR(triggers.back().first, trigger_time, tol);
@@ -434,9 +511,9 @@ GTEST_TEST(SimulatorTest, MultipleWitnessesIdentical) {
     system.GetWitnessFunctions(context, &witnesses);
     DRAKE_DEMAND(witnesses.size() == 2);
 
-    // Evaluate them.
-    double w1 = witnesses.front()->Evaluate(context);
-    double w2 = witnesses.back()->Evaluate(context);
+    // CalcWitnessValue them.
+    double w1 = witnesses.front()->CalcWitnessValue(context);
+    double w2 = witnesses.back()->CalcWitnessValue(context);
 
     // Verify both are equivalent.
     EXPECT_EQ(w1, w2);
@@ -634,7 +711,7 @@ GTEST_TEST(SimulatorTest, WitnessTestCountChallenging) {
 // in the case of multiple witness functions. See issue #6184.
 
 GTEST_TEST(SimulatorTest, SecondConstructor) {
-  // Create the spring-mass sytem and context.
+  // Create the spring-mass system and context.
   analysis_test::MySpringMassSystem<double> spring_mass(1., 1., 0.);
   auto context = spring_mass.CreateDefaultContext();
 
@@ -765,9 +842,11 @@ GTEST_TEST(SimulatorTest, ResetIntegratorTest) {
   // Get the context.
   Context<double>& context = simulator.get_mutable_context();
 
-  // Create the integrator.
-  simulator.reset_integrator<ExplicitEulerIntegrator<double>>(spring_mass, dt,
-                                                              &context);
+  // Create the integrator with the simple spelling.
+  auto euler_integrator =
+      std::make_unique<ExplicitEulerIntegrator<double>>(
+          spring_mass, dt, &context);
+  simulator.reset_integrator(std::move(euler_integrator));
 
   // set the integrator and initialize the simulator
   simulator.Initialize();
@@ -1045,24 +1124,30 @@ GTEST_TEST(SimulatorTest, ControlledSpringMass) {
   EXPECT_NEAR(spring_mass.get_velocity(context), v_final, 1.0e-5);
 }
 
-// A mock System that requests discrete update at 1 kHz, and publishes at 400
-// Hz. Calls user-configured callbacks on DoPublish,
-// DoCalcDiscreteVariableUpdates, and EvalTimeDerivatives.
-class DiscreteSystem : public LeafSystem<double> {
+// A mock hybrid continuous-discrete System with time as its only continuous
+// variable, discrete updates at 1 kHz, and requests publishes at 400 Hz. Calls
+// user-configured callbacks on DoPublish, DoCalcDiscreteVariableUpdates, and
+// EvalTimeDerivatives. This hybrid system will be used to verify expected state
+// update ordering -- discrete, continuous (i.e., integration), then publish.
+class MixedContinuousDiscreteSystem : public LeafSystem<double> {
  public:
-  DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(DiscreteSystem)
+  DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(MixedContinuousDiscreteSystem)
 
-  DiscreteSystem() {
+  MixedContinuousDiscreteSystem() {
     // Deliberately choose a period that is identical to, and therefore courts
     // floating-point error with, the default max step size.
     const double offset = 0.0;
     this->DeclarePeriodicDiscreteUpdate(kUpdatePeriod, offset);
     this->DeclarePeriodicPublish(kPublishPeriod);
 
+    // We need some continuous state (which will be unused) so that the
+    // continuous state integration will not be bypassed.
+    this->DeclareContinuousState(1);
+
     set_name("TestSystem");
   }
 
-  ~DiscreteSystem() override {}
+  ~MixedContinuousDiscreteSystem() override {}
 
   void DoCalcDiscreteVariableUpdates(
       const Context<double>& context,
@@ -1117,11 +1202,11 @@ bool CheckSampleTime(const Context<double>& context, double period) {
   return std::abs(k - int_k) < kTolerance;
 }
 
-// Tests that the Simulator invokes the DiscreteSystem's update method every
-// 0.001 sec, and its publish method every 0.0025 sec, without missing any
-// updates.
+// Tests that the Simulator invokes the MixedContinuousDiscreteSystem's
+// update method every 0.001 sec, and its publish method every 0.0025 sec,
+// without missing any updates.
 GTEST_TEST(SimulatorTest, DiscreteUpdateAndPublish) {
-  DiscreteSystem system;
+  MixedContinuousDiscreteSystem system;
   int num_disc_updates = 0;
   system.set_update_callback([&](const Context<double>& context) {
     ASSERT_TRUE(CheckSampleTime(context, system.update_period()));
@@ -1144,41 +1229,52 @@ GTEST_TEST(SimulatorTest, DiscreteUpdateAndPublish) {
 // Tests that the order of events in a simulator time step is first update
 // discrete state, then publish, then integrate.
 GTEST_TEST(SimulatorTest, UpdateThenPublishThenIntegrate) {
-  DiscreteSystem system;
+  MixedContinuousDiscreteSystem system;
   Simulator<double> simulator(system);
-  enum EventType { kUpdate = 0, kPublish = 1, kIntegrate = 2 };
+  enum EventType { kPublish = 0, kUpdate = 1, kIntegrate = 2, kTypeCount = 3};
 
-  // Write down the order in which the DiscreteSystem is asked to compute
-  // discrete updates, do publishes, or compute derivatives at each time step.
+  // Record the order in which the MixedContinuousDiscreteSystem is asked to
+  // do publishes, compute discrete updates, or compute derivatives at each
+  // time step.
   std::map<int, std::vector<EventType>> events;
-  system.set_update_callback(
-      [&events, &simulator](const Context<double>& context) {
-        events[simulator.get_num_steps_taken()].push_back(kUpdate);
-      });
   system.set_publish_callback(
       [&events, &simulator](const Context<double>& context) {
         events[simulator.get_num_steps_taken()].push_back(kPublish);
+      });
+  system.set_update_callback(
+      [&events, &simulator](const Context<double>& context) {
+        events[simulator.get_num_steps_taken()].push_back(kUpdate);
       });
   system.set_derivatives_callback(
       [&events, &simulator](const Context<double>& context) {
         events[simulator.get_num_steps_taken()].push_back(kIntegrate);
       });
 
+  // Ensure that publish happens before any updates.
+  simulator.set_publish_at_initialization(true);
+
   // Run a simulation.
   simulator.set_publish_every_time_step(true);
   simulator.StepTo(0.5);
 
-  // Check that all the update events precede all the publish events, and all
-  // the publish events precede all the eval-derivatives events, for each
-  // time step in the simulation.
+  // Verify that at least one of each event type was triggered.
+  bool triggers[kTypeCount] = { false, false, false };
+
+  // Check that all of the publish events precede all of the update events
+  // (since "publish on init" was activated), which in turn precede all of the
+  // derivative evaluation events, for each time step in the simulation.
   for (const auto& log : events) {
     ASSERT_GE(log.second.size(), 0u);
     EventType state = log.second[0];
     for (const EventType& event : log.second) {
+      triggers[event] = true;
       ASSERT_TRUE(event >= state);
       state = event;
     }
   }
+  EXPECT_TRUE(triggers[kUpdate]);
+  EXPECT_TRUE(triggers[kPublish]);
+  EXPECT_TRUE(triggers[kIntegrate]);
 }
 
 // A basic sanity check that AutoDiff works.
@@ -1218,11 +1314,10 @@ GTEST_TEST(SimulatorTest, StretchedStep) {
   // Now step.
   simulator.StepTo(expected_t_final);
 
-  // Verify that the step size was stretched and that exactly two "steps" were
-  // taken (one to integrate the continuous variables forward and one strictly
-  // to publish).
+  // Verify that the step size was stretched and that exactly one "step" was
+  // taken to integrate the continuous variables forward.
   EXPECT_EQ(simulator.get_context().get_time(), expected_t_final);
-  EXPECT_EQ(simulator.get_num_steps_taken(), 2);
+  EXPECT_EQ(simulator.get_num_steps_taken(), 1);
 }
 
 // Verifies that an integrator will *not* stretch its integration step in the
@@ -1254,11 +1349,10 @@ GTEST_TEST(SimulatorTest, NoStretchedStep) {
   // Now step.
   simulator.StepTo(event_t_final);
 
-  // Verify that the step size was not stretched and that exactly three "steps"
-  // were taken (two to integrate the continuous variables forward and one
-  // strictly to publish).
+  // Verify that the step size was not stretched and that exactly two "steps"
+  // were taken to integrate the continuous variables forward.
   EXPECT_EQ(simulator.get_context().get_time(), event_t_final);
-  EXPECT_EQ(simulator.get_num_steps_taken(), 3);
+  EXPECT_EQ(simulator.get_num_steps_taken(), 2);
 }
 
 // Verifies that artificially limiting a step does not change the ideal next
@@ -1366,11 +1460,10 @@ GTEST_TEST(SimulatorTest, StretchedStepPerfectStorm) {
   integrator->set_throw_on_minimum_step_size_violation(false);
   simulator.StepTo(expected_t_final);
 
-  // Verify that the step size was stretched and that exactly two "steps" were
-  // taken (one to integrate the continuous variables forward and one strictly
-  // to publish).
+  // Verify that the step size was stretched and that exactly one "step" was
+  // taken to integrate the continuous variables forward.
   EXPECT_EQ(simulator.get_context().get_time(), expected_t_final);
-  EXPECT_EQ(simulator.get_num_steps_taken(), 2);
+  EXPECT_EQ(simulator.get_num_steps_taken(), 1);
 }
 
 // Tests per step publish, discrete and unrestricted update actions. Each
@@ -1483,15 +1576,18 @@ GTEST_TEST(SimulatorTest, PerStepAction) {
   int N = static_cast<int>(0.1 / dt);
   // Need to change this if the default integrator step size is not 1ms.
   EXPECT_EQ(N, 100);
+  ASSERT_EQ(sim.get_num_steps_taken(), N);
 
   auto& publish_times = sys.get_publish_times();
   auto& discrete_update_times = sys.get_discrete_update_times();
   auto& unrestricted_update_times = sys.get_unrestricted_update_times();
-  EXPECT_EQ(publish_times.size(), N);
-  EXPECT_EQ(sys.get_discrete_update_times().size(), N);
-  EXPECT_EQ(sys.get_unrestricted_update_times().size(), N);
+  ASSERT_EQ(publish_times.size(), N);
+  ASSERT_EQ(sys.get_discrete_update_times().size(), N);
+  ASSERT_EQ(sys.get_unrestricted_update_times().size(), N);
   for (size_t i = 0; i < publish_times.size(); ++i) {
-    EXPECT_NEAR(publish_times[i], i * dt, 1e-12);
+    // Publish happens at the end of a step; unrestricted and discrete
+    // updates happen at the beginning of a step.
+    EXPECT_NEAR(publish_times[i], (i + 1) * dt, 1e-12);
     EXPECT_NEAR(discrete_update_times[i], i * dt, 1e-12);
     EXPECT_NEAR(unrestricted_update_times[i], i * dt, 1e-12);
   }

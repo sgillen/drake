@@ -1,5 +1,3 @@
-#!/usr/bin/python
-
 """cpplint_wrapper_test.py -- Unit test for cpplint_wrapper.py.
 """
 
@@ -8,37 +6,37 @@ import subprocess
 import sys
 import unittest
 
-# Set on command-line to the location of cpplint_wrapper.
-_cpplint_wrapper_exe = None
-
-# Set on command-line to the location of a valid header file.
-_valid_header = None
+import six
 
 
 class TestStringMethods(unittest.TestCase):
 
-    def get_valid_header_filename(self):
-        """This header should always exist, and pass cpplint."""
-        self.assertTrue(os.path.exists(_valid_header))
-        return _valid_header
+    if six.PY2:
+        assertRegex = unittest.TestCase.assertRegexpMatches
+
+    def setUp(self):
+        self.cpplint_wrapper_exe, self.valid_header_filename = sys.argv[1:]
+        self.assertTrue(
+            os.path.exists(self.cpplint_wrapper_exe),
+            "Could not find " + self.cpplint_wrapper_exe)
+        self.assertTrue(
+            os.path.exists(self.valid_header_filename),
+            "Could not find " + self.valid_header_filename)
 
     def run_and_expect(self, args, expected_exitcode, expected_regexps=None):
         try:
-            self.assertTrue(_cpplint_wrapper_exe is not None)
-            self.assertTrue(
-                os.path.exists(_cpplint_wrapper_exe), _cpplint_wrapper_exe)
             output = subprocess.check_output(
-                [sys.executable, _cpplint_wrapper_exe] + args,
-                stderr=subprocess.STDOUT)
+                [sys.executable, self.cpplint_wrapper_exe] + args,
+                stderr=subprocess.STDOUT).decode('utf8')
             returncode = 0
         except subprocess.CalledProcessError as e:
-            output = e.output
+            output = e.output.decode('utf8')
             returncode = e.returncode
         self.assertEqual(returncode, expected_exitcode,
                          "output was:\n" + output)
         if expected_regexps is not None:
             for item in expected_regexps:
-                self.assertRegexpMatches(output, item)
+                self.assertRegex(output, item)
 
     def test_help(self):
         self.run_and_expect(
@@ -47,7 +45,7 @@ class TestStringMethods(unittest.TestCase):
             ["usage: cpplint_wrapper"])
 
     def test_summarize(self):
-        filename = self.get_valid_header_filename()
+        filename = self.valid_header_filename
         self.run_and_expect(
             [filename],
             0,
@@ -59,22 +57,18 @@ class TestStringMethods(unittest.TestCase):
             [r"Done processing .*/eigen_types.h",
              r"TOTAL 1 files passed"])
 
-    def test_true_positive(self):
-        # Test that the header is clean by default.
-        filename = (
-            "external/styleguide/cpplint/cpplint_test_header.h")
+    def test_pass_through_arguments(self):
+        filename = self.valid_header_filename
         self.run_and_expect(
             [filename],
             0,
-            [r"Checking \.+\r?\n",
-             r"TOTAL 1 files passed"])
-        # Test that pass-through arguments works.
+            [r"TOTAL 1 files passed"])
         self.run_and_expect(
             [filename, "--", "--linelength=40"],
             1,
             [r"Checking \.+\r?\n",
              r"TOTAL 1 files checked",
-             r"found [123] warnings",
+             r"found [1-9][0-9]* warnings",
              r"whitespace/line_length"])
 
     def test_ignored_extension(self):
@@ -82,11 +76,11 @@ class TestStringMethods(unittest.TestCase):
         self.run_and_expect(
             [some_py_filename],
             0,
-            [r"Ignoring .*[/\\]cpplint_wrapper_test.py",
+            [r"Ignoring \S*\.py; not a valid file name",
              r"TOTAL 0 files"])
 
     def test_num_processes(self):
-        filename = self.get_valid_header_filename()
+        filename = self.valid_header_filename
         self.run_and_expect(
             [filename] * 2,
             0,
@@ -100,15 +94,9 @@ class TestStringMethods(unittest.TestCase):
             1)
 
     def test_huge(self):
-        filename = self.get_valid_header_filename()
+        filename = self.valid_header_filename
         self.run_and_expect(
             ["--num-processes=2"] + [filename] * 25,
             0,
             [r"Checking \.+\r?\n",
              r"TOTAL 25 files passed"])
-
-
-if __name__ == '__main__':
-    _cpplint_wrapper_exe = sys.argv.pop(1)
-    _valid_header = sys.argv.pop(1)
-    unittest.main()

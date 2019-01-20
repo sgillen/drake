@@ -42,7 +42,7 @@
 // ModuleInitVtkRenderingOpenGL2.
 VTK_AUTOINIT_DECLARE(vtkRenderingOpenGL2)
 
-// TODO(kunimatsu-tri) Refactor RgbdRenderer with GeometrySystem when it's
+// TODO(kunimatsu-tri) Refactor RgbdRenderer with SceneGraph when it's
 // ready, so that other VTK dependent sensor simulators can share the world
 // without duplicating it.
 
@@ -85,7 +85,7 @@ struct ModuleInitVtkRenderingOpenGL2 {
 std::string RemoveFileExtension(const std::string& filepath) {
   const size_t last_dot = filepath.find_last_of(".");
   if (last_dot == std::string::npos) {
-    DRAKE_ABORT_MSG("File has no extention.");
+    DRAKE_ABORT_MSG("File has no extension.");
   }
   return filepath.substr(0, last_dot);
 }
@@ -124,11 +124,11 @@ class ShaderCallback : public vtkCommand {
 
   // NOLINTNEXTLINE(runtime/int): To match pre-existing APIs.
   void Execute(vtkObject*, unsigned long, void* callback_object) VTK_OVERRIDE {
-    vtkOpenGLHelper* cell_bo =
-        reinterpret_cast<vtkOpenGLHelper*>(callback_object);
-    cell_bo->Program->SetUniformf("z_near", z_near_);
-    cell_bo->Program->SetUniformf("z_far", z_far_);
-    cell_bo = nullptr;
+    vtkShaderProgram* program =
+        reinterpret_cast<vtkShaderProgram*>(callback_object);
+    program->SetUniformf("z_near", z_near_);
+    program->SetUniformf("z_far", z_far_);
+    program = nullptr;
   }
 
   void set_renderer(vtkRenderer* renderer) { renderer_ = renderer; }
@@ -226,8 +226,8 @@ void RgbdRendererVTK::Impl::ImplAddFlatTerrain() {
   vtkNew<vtkOpenGLPolyDataMapper> mapper;
   mapper->SetInputConnection(plane->GetOutputPort());
   terrain_actor_->SetMapper(mapper.GetPointer());
-  auto color =
-      ColorPalette::Normalize(parent_->color_palette().get_terrain_color());
+  auto color = ColorPalette<int>::Normalize(
+      parent_->color_palette().get_terrain_color());
 
   terrain_actor_->GetProperty()->SetColor(color.r, color.g, color.b);
   terrain_actor_->GetProperty()->LightingOff();
@@ -362,10 +362,20 @@ RgbdRendererVTK::Impl::Impl(RgbdRendererVTK* parent,
   }
 
   const auto sky_color =
-      ColorPalette::Normalize(parent_->color_palette().get_sky_color());
+      ColorPalette<int>::Normalize(parent_->color_palette().get_sky_color());
   const vtkSmartPointer<vtkTransform> vtk_X_WC = ConvertToVtkTransform(X_WC);
 
   pipelines_[ImageType::kLabel]->window->SetMultiSamples(0);
+  // Disable multi sampling that has a bug with on-screen rendering
+  // with NVidia drivers on Ubuntu 16.04: In certain very specific
+  // cases (camera position, scene, triangle drawing order, normal
+  // orientation), a plane surface has partial background pixels
+  // bleeding through it which changes the color of the center pixel.
+  // TODO(fbudin69500) If lack of anti-aliasing in production code is
+  // problematic, change this to only disable anti-aliasing in unit
+  // tests. Alternatively, find other way to resolve the driver bug.
+  pipelines_[ImageType::kColor]->window->SetMultiSamples(0);
+  pipelines_[ImageType::kDepth]->window->SetMultiSamples(0);
 
   for (auto& pipeline : pipelines_) {
     pipeline->renderer->SetBackground(sky_color.r, sky_color.g, sky_color.b);
@@ -378,7 +388,7 @@ RgbdRendererVTK::Impl::Impl(RgbdRendererVTK* parent,
                               parent_->config().height);
     pipeline->window->AddRenderer(pipeline->renderer.GetPointer());
     pipeline->filter->SetInput(pipeline->window.GetPointer());
-    pipeline->filter->SetMagnification(1);
+    pipeline->filter->SetScale(1);
     pipeline->filter->ReadFrontBufferOff();
     pipeline->filter->SetInputBufferTypeToRGBA();
     pipeline->filter->Update();
@@ -420,7 +430,7 @@ optional<RgbdRenderer::VisualIndex> RgbdRendererVTK::Impl::ImplRegisterVisual(
   const DrakeShapes::Geometry& geometry = visual.getGeometry();
   switch (visual.getShape()) {
     case DrakeShapes::BOX: {
-      auto box = dynamic_cast<const DrakeShapes::Box&>(geometry);
+      const auto& box = dynamic_cast<const DrakeShapes::Box&>(geometry);
       vtkNew<vtkCubeSource> vtk_cube;
       vtk_cube->SetXLength(box.size(0));
       vtk_cube->SetYLength(box.size(1));
@@ -432,7 +442,7 @@ optional<RgbdRenderer::VisualIndex> RgbdRendererVTK::Impl::ImplRegisterVisual(
       break;
     }
     case DrakeShapes::SPHERE: {
-      auto sphere = dynamic_cast<const DrakeShapes::Sphere&>(geometry);
+      const auto& sphere = dynamic_cast<const DrakeShapes::Sphere&>(geometry);
       vtkNew<vtkSphereSource> vtk_sphere;
       vtk_sphere->SetRadius(sphere.radius);
       vtk_sphere->SetThetaResolution(50);
@@ -444,7 +454,8 @@ optional<RgbdRenderer::VisualIndex> RgbdRendererVTK::Impl::ImplRegisterVisual(
       break;
     }
     case DrakeShapes::CYLINDER: {
-      auto cylinder = dynamic_cast<const DrakeShapes::Cylinder&>(geometry);
+      const auto& cylinder =
+          dynamic_cast<const DrakeShapes::Cylinder&>(geometry);
       vtkNew<vtkCylinderSource> vtk_cylinder;
       vtk_cylinder->SetHeight(cylinder.length);
       vtk_cylinder->SetRadius(cylinder.radius);

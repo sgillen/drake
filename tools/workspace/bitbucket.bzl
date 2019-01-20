@@ -1,5 +1,7 @@
 # -*- python -*-
 
+load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+
 def bitbucket_archive(
         name,
         repository = None,
@@ -7,6 +9,7 @@ def bitbucket_archive(
         sha256 = None,
         strip_prefix = None,
         build_file = None,
+        mirrors = None,
         **kwargs):
     """A macro to be called in the WORKSPACE that adds an external from
     bitbucket using a workspace rule.
@@ -27,6 +30,11 @@ def bitbucket_archive(
 
     The optional build_file= is the BUILD file label to use for building this
     external.  When omitted, the BUILD file(s) within the archive will be used.
+
+    The required mirrors= is a dict from string to list-of-string with key
+    "bitbucket", where the list-of-strings are URLs to use, formatted using
+    {repository} and {commit} string substitutions.  The mirrors.bzl file
+    in this directory provides a reasonable default value.
     """
     if repository == None:
         fail("Missing repository=")
@@ -38,32 +46,23 @@ def bitbucket_archive(
         sha256 = "0" * 64
     if strip_prefix == None:
         fail("Missing strip_prefix=")
+    if mirrors == None:
+        fail("Missing mirrors=; see mirrors.bzl")
 
-    # Packages are mirrored from Bitbucket to CloudFront backed by an S3
-    # bucket.
-    mirrors = [
-        "https://bitbucket.org/%s/get/%s.tar.gz",
-        "https://drake-mirror.csail.mit.edu/bitbucket/%s/%s.tar.gz",
-        "https://s3.amazonaws.com/drake-mirror/bitbucket/%s/%s.tar.gz",
+    urls = [
+        x.format(repository = repository, commit = commit)
+        for x in mirrors.get("bitbucket")
     ]
-    urls = [mirror % (repository, commit) for mirror in mirrors]
 
     repository_split = repository.split("/")
     if len(repository_split) != 2:
         fail("The repository= must be formatted as 'organization/project'")
 
-    if build_file == None:
-        native.http_archive(
-            name = name,
-            urls = urls,
-            sha256 = sha256,
-            strip_prefix = strip_prefix,
-            **kwargs)
-    else:
-        native.new_http_archive(
-            name = name,
-            urls = urls,
-            sha256 = sha256,
-            build_file = build_file,
-            strip_prefix = strip_prefix,
-            **kwargs)
+    http_archive(
+        name = name,
+        urls = urls,
+        sha256 = sha256,
+        build_file = build_file,
+        strip_prefix = strip_prefix,
+        **kwargs
+    )

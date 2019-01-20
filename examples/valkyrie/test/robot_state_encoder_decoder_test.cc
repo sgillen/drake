@@ -221,7 +221,7 @@ void TestEncodeThenDecode(FloatingBaseType floating_base_type) {
   auto diagram = builder.Build();
 
   auto context = diagram->CreateDefaultContext();
-  auto output = diagram->AllocateOutput(*context);
+  auto output = diagram->AllocateOutput();
   diagram->CalcOutput(*context, output.get());
 
   // TODO(tkoolen): magic numbers.
@@ -241,6 +241,7 @@ void TestEncodeThenDecode(FloatingBaseType floating_base_type) {
       v_non_floating_joint_start_index = 6;
       break;
     case FloatingBaseType::kQuaternion:
+    case FloatingBaseType::kExperimentalMultibodyPlantStyle:
       q_non_floating_joint_start_index = 7;
       v_non_floating_joint_start_index = 6;
       break;
@@ -334,9 +335,10 @@ void TestEncodeThenDecode(FloatingBaseType floating_base_type) {
           auto quat_expected = q_joint_expected.tail<kQuaternionSize>();
           auto quat_back = q_joint_back.tail<kQuaternionSize>();
           auto quat_diff = math::quatDiff(quat_expected, quat_back);
-          auto angle_axis = math::quat2axis(quat_diff);
-          // TODO(hongkai.dai): fix magic number once we use Eigen's AngleAxis:
-          auto angle = angle_axis[3];
+          const Eigen::Quaternion<decltype(quat_diff)::Scalar> q_eigen(
+              quat_diff(0), quat_diff(1), quat_diff(2), quat_diff(3));
+          Eigen::AngleAxis<decltype(quat_diff)::Scalar> angle_axis(q_eigen);
+          auto angle = angle_axis.angle();
           EXPECT_NEAR(angle, 0.0, tolerance);
         } else {
           EXPECT_TRUE(CompareMatrices(q_joint_expected, q_joint_back, tolerance,

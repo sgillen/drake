@@ -2,6 +2,7 @@
 
 #include "drake/common/proto/call_matlab.h"
 #include "drake/solvers/mathematical_program.h"
+#include "drake/solvers/mixed_integer_rotation_constraint.h"
 #include "drake/solvers/rotation_constraint.h"
 
 /// Provides a simple utility for developers to visualize (slices of) the
@@ -24,7 +25,7 @@ namespace {
 void AddTestConstraints(MathematicalProgram* prog,
                         const MatrixDecisionVariable<3, 3>& R) {
   // Add your favorite constraints here.
-  AddRotationMatrixMcCormickEnvelopeMilpConstraints(prog, R, 1);
+  AddRotationMatrixBoxSphereIntersectionMilpConstraints(R, 1, prog);
 }
 
 bool IsFeasible(
@@ -79,7 +80,7 @@ void PlotColumnVectorXYSlice(double z = 0.0, int fig_num = 1) {
   std::shared_ptr<LinearEqualityConstraint> feasibility_constraint =
       prog.AddLinearEqualityConstraint(Eigen::Matrix3d::Identity(),
                                        Eigen::Vector3d::Zero(), R.col(0))
-          .constraint();
+          .evaluator();
 
   const int num_samples_per_axis = 50;
   Eigen::Matrix2Xd feasible_points(2,
