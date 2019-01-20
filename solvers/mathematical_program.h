@@ -1022,6 +1022,13 @@ class MathematicalProgram {
    */
   Binding<Constraint> AddConstraint(const Binding<Constraint>& binding);
 
+  // Overload for non-registered types.
+  template <typename C>
+  auto AddConstraint(const Binding<C>& binding) {
+    AddConstraint(Binding<Constraint>(binding));
+    return binding;
+  }
+
   /**
    * Adds one row of constraint lb <= e <= ub where @p e is a symbolic
    * expression.
@@ -2031,6 +2038,33 @@ class MathematicalProgram {
   Binding<LinearMatrixInequalityConstraint> AddLinearMatrixInequalityConstraint(
       const std::vector<Eigen::Ref<const Eigen::MatrixXd>>& F,
       const Eigen::Ref<const VectorXDecisionVariable>& vars);
+
+
+  /**
+   * Adds a Nonlinear Complementarity Constraint to the program.
+   * @param f1 the first function to be evaluated
+   * @param f2 the second function to be evaluated
+   * @param vars the (COMPLETE) list of variables
+   * @param numx1 the number of variables associated with the first function (the rest are for the second function)
+   */
+  template <typename DerivedUB>
+  Binding<NonlinearComplementarityConstraint> AddNonlinearComplementarityConstraint(
+        std::shared_ptr<EvaluatorBase> f1, std::shared_ptr<EvaluatorBase> f2,
+        const VectorXDecisionVariable& x1, const VectorXDecisionVariable& x2,
+        const Eigen::MatrixBase<DerivedUB>& tol) {
+    auto i1 = VectorX<double>::Ones(f1->num_outputs()).eval();
+    auto i2 = VectorX<double>::Ones(f2->num_outputs()).eval();
+
+    // Adding auxilary constraints for bounding the complementarity constraint
+    AddConstraint(std::shared_ptr<EvaluatorConstraint<>>(new EvaluatorConstraint<>(
+      f1, (0 * i1).eval(), (tol * i1).eval())), x1);
+    AddConstraint(std::shared_ptr<EvaluatorConstraint<>>(new EvaluatorConstraint<>(
+      f2, (0 * i2).eval(), (tol * i2).eval())), x2);
+    std::shared_ptr<NonlinearComplementarityConstraint> c(
+        new NonlinearComplementarityConstraint(f1, f2, tol));
+
+    return AddConstraint(c, ConcatenateVariableRefList({x1, x2})); 
+  }
 
   /**
    * Adds the constraint that a symmetric matrix is diagonally dominant with
