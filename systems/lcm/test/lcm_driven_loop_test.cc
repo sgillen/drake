@@ -16,6 +16,9 @@ namespace {
 
 const int kStart = 3;
 const int kEnd = 10;
+// Use a slight perturbation of the default URL.
+// TODO(eric.cousineau): Make this URL be unique to each workspace / test run.
+const char kLcmUrl[] = "udpm://239.255.76.67:7668";
 
 // Converts millisecond timestamp field to second.
 class MilliSecTimeStampMessageToSeconds : public LcmMessageToTimeInterface {
@@ -53,7 +56,7 @@ class DummySys : public systems::LeafSystem<double> {
 // Dummy publish thread. Usleeps so that the dut thread has enough time to
 // process.
 void publish() {
-  ::lcm::LCM lcm;
+  ::lcm::LCM lcm(kLcmUrl);
   lcmt_drake_signal msg;
   msg.dim = 0;
   msg.val.resize(msg.dim);
@@ -78,7 +81,7 @@ void publish() {
 // a DummySys and a SignalLogger. The intended behavior is that every time
 // a new Lcm message arrives, its timestamp will be logged by the SignalLogger.
 GTEST_TEST(LcmDrivenLoopTest, TestLoop) {
-  drake::lcm::DrakeLcm lcm;
+  drake::lcm::DrakeLcm lcm(kLcmUrl);
   DiagramBuilder<double> builder;
 
   // Makes the test system.
@@ -87,8 +90,11 @@ GTEST_TEST(LcmDrivenLoopTest, TestLoop) {
   sub->set_name("subscriber");
   auto dummy = builder.AddSystem<DummySys>();
   dummy->set_name("dummy");
+
   auto logger = builder.AddSystem<SignalLogger<double>>(1);
   logger->set_name("logger");
+  logger->set_forced_publish_only();  // Log only when told to do so.
+
   builder.Connect(*sub, *dummy);
   builder.Connect(*dummy, *logger);
   auto sys = builder.Build();
@@ -96,9 +102,9 @@ GTEST_TEST(LcmDrivenLoopTest, TestLoop) {
   // Makes the lcm driven loop.
   lcm::LcmDrivenLoop dut(*sys, *sub, nullptr, &lcm,
       std::make_unique<MilliSecTimeStampMessageToSeconds>());
-  // This ensures that dut calls sys->Publish() every time it handles a
-  // message, which triggers the logger to save its input (message time stamp)
-  // to the log.
+  // This ensures that dut calls sys->Publish() (a.k.a. "forced publish")
+  // every time it handles a message, which triggers the logger to save its
+  // input (message time stamp) to the log.
   dut.set_publish_on_every_received_message(true);
 
   // Starts the publishing thread.

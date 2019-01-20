@@ -36,7 +36,7 @@ to be logged:
 We suggest using the Drake versions of these macros everywhere so that you don't
 have to decide when the argument-evaluation cost is going to be excessive.
 
-The format string syntax is fmtlib; see http://fmtlib.net/5.1.0/syntax.html.
+The format string syntax is fmtlib; see http://fmtlib.net/5.2.1/syntax.html.
 In particular, any class that overloads `operator<<` for `ostream` can be
 printed without any special handling.
 */
@@ -98,6 +98,10 @@ namespace logging {
 /// See the text_logging.h documentation for a short tutorial.
 using logger = spdlog::logger;
 
+/// When spdlog is enabled in this build, drake::logging::sink is an alias for
+/// spdlog::sinks::sink.  When spdlog is disabled, it is an empty class.
+using spdlog::sinks::sink;
+
 /// True only if spdlog is enabled in this build.
 constexpr bool kHaveSpdlog = true;
 
@@ -138,6 +142,14 @@ class logger {
   template <typename T> void critical(const T&) {}
 };
 
+// A stubbed-out version of `spdlog::sinks::sink`.
+class sink {
+ public:
+  DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(sink)
+
+  sink();
+};
+
 }  // namespace logging
 
 #define SPDLOG_TRACE(logger, ...)
@@ -155,4 +167,14 @@ class logger {
 /// See the text_logging.h documentation for a short tutorial.
 logging::logger* log();
 
+namespace logging {
+
+/// (Advanced) Retrieves the default sink for all Drake logs.  When spdlog is
+/// enabled, the return value can be cast to spdlog::sinks::dist_sink_mt and
+/// thus allows consumers of Drake to redirect Drake's text logs to locations
+/// other than the default of stderr.  When spdlog is disabled, the return
+/// value is an empty class.
+sink* get_dist_sink();
+
+}  // namespace logging
 }  // namespace drake

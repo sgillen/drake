@@ -25,7 +25,7 @@
 #include "drake/multibody/rigid_body_plant/rigid_body_plant.h"
 #include "drake/multibody/rigid_body_tree_construction.h"
 #include "drake/systems/analysis/simulator.h"
-#include "drake/systems/controllers/inverse_dynamics_controller.h"
+#include "drake/systems/controllers/rbt_inverse_dynamics_controller.h"
 #include "drake/systems/controllers/state_feedback_controller_interface.h"
 #include "drake/systems/framework/diagram.h"
 #include "drake/systems/framework/diagram_builder.h"
@@ -55,7 +55,7 @@ using systems::DiagramBuilder;
 using systems::FrameVisualizer;
 using systems::RigidBodyPlant;
 using systems::Simulator;
-using systems::controllers::InverseDynamicsController;
+using systems::controllers::rbt::InverseDynamicsController;
 using systems::controllers::StateFeedbackControllerInterface;
 
 int DoMain() {
@@ -110,8 +110,8 @@ int DoMain() {
   // Create the command subscriber and status publisher.
   systems::DiagramBuilder<double>* base_builder = builder.get_mutable_builder();
   auto command_sub = base_builder->AddSystem(
-      systems::lcm::LcmSubscriberSystem::Make<lcmt_iiwa_command>("IIWA_COMMAND",
-                                                                 &lcm));
+      MakeIiwaCommandLcmSubscriberSystem(
+          num_joints, "IIWA_COMMAND", &lcm));
   command_sub->set_name("command_subscriber");
   auto command_receiver =
       base_builder->AddSystem<IiwaCommandReceiver>(num_joints);
@@ -122,15 +122,14 @@ int DoMain() {
       base_builder->AddSystem<IiwaContactResultsToExternalTorque>(
           tree, iiwa_instances);
   auto status_pub = base_builder->AddSystem(
-      systems::lcm::LcmPublisherSystem::Make<lcmt_iiwa_status>("IIWA_STATUS",
-                                                               &lcm));
+      systems::lcm::LcmPublisherSystem::Make<lcmt_iiwa_status>(
+          "IIWA_STATUS", &lcm, kIiwaLcmStatusPeriod /* publish period */));
   status_pub->set_name("status_publisher");
-  status_pub->set_publish_period(kIiwaLcmStatusPeriod);
   auto status_sender = base_builder->AddSystem<IiwaStatusSender>(num_joints);
   status_sender->set_name("status_sender");
 
   base_builder->Connect(command_sub->get_output_port(),
-                        command_receiver->get_input_port(0));
+                        command_receiver->GetInputPort("command_message"));
   base_builder->Connect(command_receiver->get_commanded_state_output_port(),
                         controller->get_input_port_desired_state());
   base_builder->Connect(plant->get_output_port(0),

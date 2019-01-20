@@ -18,8 +18,8 @@
 #include "drake/multibody/joints/floating_base_types.h"
 #include "drake/multibody/parsers/model_instance_id_table.h"
 #include "drake/multibody/parsers/parser_common.h"
-#include "drake/multibody/parsers/parser_path_utils.h"
 #include "drake/multibody/parsers/xml_util.h"
+#include "drake/multibody/parsing/detail_path_utils.h"
 #include "drake/multibody/rigid_body_plant/compliant_material.h"
 #include "drake/multibody/rigid_body_tree.h"
 
@@ -50,6 +50,8 @@ using tinyxml2::XMLDocument;
 
 using math::RigidTransformd;
 using math::RollPitchYawd;
+using multibody::detail::GetFullPath;
+using multibody::detail::ResolveUri;
 using multibody::joints::FloatingBaseType;
 
 void ParseSdfInertial(
@@ -161,7 +163,7 @@ bool ParseSdfGeometry(XMLElement* node, const PackageMap& package_map,
 
     // This method will return an empty string if the file is not found or
     // resolved within a ROS package.
-    string resolved_filename = ResolveFilename(uri, package_map, root_dir);
+    string resolved_filename = ResolveUri(uri, package_map, root_dir);
 
     if (resolved_filename.empty()) {
       throw runtime_error(string(__FILE__) + ": " + __func__ +
@@ -425,6 +427,12 @@ void ParseSdfFrame(
   // Check for old (Drake-specific) or new (sdformat spec) style.
   if (node->FirstChildElement("link")) {
     // Old style.
+    drake::log()->warn(
+        "Frame '{}' is using the old Drake-specific format:\n"
+        "  <frame ...> <link>{{parent}}</link> <pose>...</pose> </frame>\n"
+        "Please use the newer format:\n"
+        "  <frame ...> <pose frame='{{parent}}'>...</pose> </frame>",
+        name);
     // TODO(eric.cousineau): Consider deprecating this.
     string body_name;
     if (!parseStringValue(node, "link", body_name)) {

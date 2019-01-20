@@ -27,10 +27,10 @@ Installing CLion
 
 The most recent versions that we have tested for compatibility are:
   - Ubuntu 16.04
-  - Bazel 0.16.1
-  - CLion 2018.1.6 with:
+  - Bazel 0.21.0
+  - CLion 2018.2.7 with:
 
-    - Bazel plug-in 2018.08.06.0.1.
+    - Bazel plug-in 2018.12.03.0.2.
 
 Many versions the above (Bazel / CLion / plug-in) are *not* compatible with
 each other.  We strongly suggest using only the versions shown above, when
@@ -390,3 +390,10 @@ command line::
 If you strongly prefer clicking on buttons, you might be able to configure the
 ``launchd`` environment using ``launchctl``, but this process is finicky. We
 have no reliable recipe for it yet.
+
+Formatting files
+----------------
+
+The instructions above related to ``clang-format-6.0`` are written for Ubuntu.
+On macOS, the program is named just ``clang-format``, without the ``-6.0``
+suffix.

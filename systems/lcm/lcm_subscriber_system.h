@@ -10,7 +10,6 @@
 #include "drake/common/drake_deprecated.h"
 #include "drake/common/drake_throw.h"
 #include "drake/lcm/drake_lcm_interface.h"
-#include "drake/lcm/drake_lcm_message_handler_interface.h"
 #include "drake/systems/framework/basic_vector.h"
 #include "drake/systems/framework/leaf_system.h"
 #include "drake/systems/lcm/lcm_and_vector_base_translator.h"
@@ -62,6 +61,28 @@ class LcmSubscriberSystem : public LeafSystem<double> {
       const std::string& channel, drake::lcm::DrakeLcmInterface* lcm) {
     return std::make_unique<LcmSubscriberSystem>(
         channel, std::make_unique<Serializer<LcmMessage>>(), lcm);
+  }
+
+  /**
+   * (Experimental.) Factory method like Make(channel, lcm), but the result
+   * only accepts fixed-size LCM messages.  The subscriber returned by this
+   * method may perform better than the subscriber returned by a plain Make.
+   * (To avoid issue #10149, this fixed-size subscriber will store the message
+   * as discrete-state bytes, instead of a deserialized abstract value.)  Once
+   * #10149 is resolved, this method might evaporate without a preceding
+   * deprecation period.
+   *
+   * @param exemplar A sample message value; all messages received by this
+   * System must be exactly this encoded size.
+   */
+  template <typename LcmMessage>
+  static std::unique_ptr<LcmSubscriberSystem> MakeFixedSize(
+      const LcmMessage& exemplar, const std::string& channel,
+      drake::lcm::DrakeLcmInterface* lcm) {
+    // We can't use make_unique when calling a private constructor.
+    return std::unique_ptr<LcmSubscriberSystem>(new LcmSubscriberSystem(
+        channel, nullptr, std::make_unique<Serializer<LcmMessage>>(), lcm,
+        exemplar.getEncodedSize()));
   }
 
   /**
@@ -199,7 +220,8 @@ class LcmSubscriberSystem : public LeafSystem<double> {
   LcmSubscriberSystem(const std::string& channel,
                       const LcmAndVectorBaseTranslator* translator,
                       std::unique_ptr<SerializerInterface> serializer,
-                      drake::lcm::DrakeLcmInterface* lcm);
+                      drake::lcm::DrakeLcmInterface* lcm,
+                      int fixed_encoded_size = -1);
 
   void ProcessMessageAndStoreToDiscreteState(
       DiscreteValues<double>* discrete_state) const;
@@ -222,6 +244,14 @@ class LcmSubscriberSystem : public LeafSystem<double> {
   void CalcSerializerOutputValue(const Context<double>& context,
                                  AbstractValue* output_value) const;
 
+  bool is_abstract_state() const {
+    return serializer_ && (fixed_encoded_size_ < 0);
+  }
+
+  bool is_discrete_state() const {
+    return !is_abstract_state();
+  }
+
   // The channel on which to receive LCM messages.
   const std::string channel_;
 
@@ -232,6 +262,7 @@ class LcmSubscriberSystem : public LeafSystem<double> {
   // Converts LCM message bytes to Value<LcmMessage> objects.
   // Will be non-null iff our output port is abstract-valued.
   const std::unique_ptr<SerializerInterface> serializer_;
+  const int fixed_encoded_size_;
 
   // The mutex that guards received_message_ and received_message_count_.
   mutable std::mutex received_message_mutex_;

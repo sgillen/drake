@@ -15,43 +15,41 @@ drake_cc_package_library(
     deps = [
         ":direct_collocation",
         ":direct_transcription",
-        ":generalized_constraint_force_evaluator",
-        ":joint_limit_constraint_force_evaluator",
         ":multiple_shooting",
-        ":position_constraint_force_evaluator",
     ],
 )
 
 drake_cc_library(
-    name = "generalized_constraint_force_evaluator",
-    srcs = ["generalized_constraint_force_evaluator.cc"],
-    hdrs = ["generalized_constraint_force_evaluator.h"],
+    name = "contact_implicit_constraint",
+    srcs = ["contact_implicit_constraint.cc"],
+    hdrs = ["contact_implicit_constraint.h"],
     deps = [
         "//common:essential",
         "//math:autodiff",
-        "//multibody:rigid_body_tree",
-        "//solvers:evaluator_base",
-    ],
-)
-
-drake_cc_library(
-    name = "position_constraint_force_evaluator",
-    srcs = ["position_constraint_force_evaluator.cc"],
-    hdrs = ["position_constraint_force_evaluator.h"],
-    deps = [
-        ":generalized_constraint_force_evaluator",
-        "//math:autodiff",
+        "//math:gradient",
         "//multibody:kinematics_cache_helper",
+        "//multibody:rigid_body_tree",
+        "//solvers:constraint",
+	   "//solvers:decision_variable",
     ],
+
 )
 
 drake_cc_library(
-    name = "joint_limit_constraint_force_evaluator",
-    srcs = ["joint_limit_constraint_force_evaluator.cc"],
-    hdrs = ["joint_limit_constraint_force_evaluator.h"],
+    name = "elastic_contact_implicit_direct_transcription",
+    srcs = ["elastic_contact_implicit_direct_transcription.cc"],
+    hdrs = ["elastic_contact_implicit_direct_transcription.h"],
     deps = [
-        ":generalized_constraint_force_evaluator",
-        "//math:autodiff",
+        ":multiple_shooting",
+        "//drake/math:autodiff",
+        "//drake/math:gradient",
+        "//drake/common:essential",
+        "//drake/multibody:rigid_body_tree",
+        "//drake/solvers:constraint",
+	"//multibody:kinematics_cache_helper", 
+	":generalized_constraint_force_evaluator", 
+	":rigid_body_tree_multiple_shooting", 
+	":contact_implicit_constraint",
     ],
 )
 

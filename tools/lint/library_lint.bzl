@@ -93,9 +93,11 @@ def library_lint(
     ])
 
     # Find libraries that are deps of the package_library but shouldn't be.
-    extra_deps_expression = "deps({}, 1) except ({})".format(
+    extra_deps_expression = "deps({}, 1) except ({}) except {}".format(
         package_name,
         correct_deps_expression,
+        # This is fine (it's a dependency of our copt select() statement).
+        "//tools:drake_werror",
     )
 
     # Find libraries that should be deps of the package_library but aren't.
@@ -113,6 +115,7 @@ def library_lint(
             expression = missing_deps_expression,
             scope = scope,
             testonly = 1,
+            tags = ["lint", "library_lint"],
             visibility = ["//visibility:private"],
         )
         native.genquery(
@@ -120,6 +123,7 @@ def library_lint(
             expression = extra_deps_expression,
             scope = scope,
             testonly = 1,
+            tags = ["lint", "library_lint"],
             visibility = ["//visibility:private"],
         )
         library_lint_reporter_data += [

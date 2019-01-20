@@ -19,6 +19,7 @@ package(
 drake_cc_package_library(
     name = "schunk_wsg",
     deps = [
+        ":schunk_wsg_command",
         ":schunk_wsg_constants",
         ":schunk_wsg_controller",
         ":schunk_wsg_lcm",
@@ -43,8 +44,10 @@ drake_cc_library(
     srcs = ["schunk_wsg_lcm.cc"],
     hdrs = ["schunk_wsg_lcm.h"],
     deps = [
+        ":schunk_wsg_command",
         "//lcmtypes:schunk",
         "//systems/framework:leaf_system",
+        "//systems/lcm:translator",
         "//systems/primitives:matrix_gain",
     ],
 )
@@ -53,6 +56,19 @@ drake_cc_vector_gen_library(
     name = "schunk_wsg_trajectory_generator_state_vector",
     srcs = ["schunk_wsg_trajectory_generator_state_vector.named_vector"],
     visibility = [":__subpackages__"],
+)
+
+drake_cc_library(
+    name = "schunk_wsg_command",
+    srcs = ["gen/schunk_wsg_command.cc"],
+    hdrs = ["gen/schunk_wsg_command.h"],
+    visibility = [":__subpackages__"],
+    deps = [
+        "//common:dummy_value",
+        "//common:essential",
+        "//common:symbolic",
+        "//systems/framework:vector",
+    ],
 )
 
 drake_cc_library(
@@ -89,6 +105,7 @@ drake_cc_library(
     deps = [
         "//math:saturate",
         "//systems/framework:leaf_system",
+        "//systems/primitives:discrete_derivative",
     ],
 )
 
@@ -116,10 +133,9 @@ drake_cc_googletest(
     ],
     deps = [
         ":schunk_wsg_constants",
-        "//attic/multibody/parsers",
         "//common:find_resource",
-        "//common/test_utilities:eigen_matrix_compare",
-        "//multibody:rigid_body_tree",
+        "//multibody/parsing",
+        "//multibody/plant",
     ],
 )
 
@@ -140,8 +156,8 @@ drake_cc_googletest(
     deps = [
         ":schunk_wsg_position_controller",
         "//common/test_utilities:eigen_matrix_compare",
-        "//multibody/multibody_tree/multibody_plant",
-        "//multibody/multibody_tree/parsing:multibody_plant_sdf_parser",
+        "//multibody/parsing",
+        "//multibody/plant",
         "//systems/analysis:simulator",
     ],
 )
