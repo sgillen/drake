@@ -174,17 +174,17 @@ class JointLimitsComplementarityConstraint : public solvers::Constraint {
 
  protected:
   void DoEval(const Eigen::Ref<const Eigen::VectorXd>& x,
-              Eigen::VectorXd& y) const override {
+              Eigen::VectorXd* y) const override {
     AutoDiffVecXd ty;
-    Eval(math::initializeAutoDiff(x), ty);
-    y = math::autoDiffToValueMatrix(ty);
+    Eval(math::initializeAutoDiff(x), &ty);
+    *y = math::autoDiffToValueMatrix(ty);
   }
 
   void DoEval(const Eigen::Ref<const AutoDiffVecXd>& x,
-              AutoDiffVecXd& y) const override {
-    y.resize(2);
-    y(0) = (joint_upper_bound_ - x(0)) * x(1);
-    y(1) = (x(0) - joint_lower_bound_) * x(2);
+              AutoDiffVecXd* y) const override {
+    y->resize(2);
+    (*y)(0) = (joint_upper_bound_ - x(0)) * x(1);
+    (*y)(1) = (x(0) - joint_lower_bound_) * x(2);
   }
 
  private:

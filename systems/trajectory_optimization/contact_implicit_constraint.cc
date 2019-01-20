@@ -118,16 +118,14 @@ ContactImplicitConstraint::ContactImplicitConstraint(
 }
 
 void ContactImplicitConstraint::DoEval(
-  const Eigen::Ref<const Eigen::VectorXd>& x, Eigen::VectorXd& y) const {
+  const Eigen::Ref<const Eigen::VectorXd>& x, Eigen::VectorXd* y) const {
   AutoDiffVecXd y_t;
-  Eval(math::initializeAutoDiff(x), y_t);
-  y = math::autoDiffToValueMatrix(y_t);
+  Eval(math::initializeAutoDiff(x), &y_t);
+  *y = math::autoDiffToValueMatrix(y_t);
 }
 
 void ContactImplicitConstraint::DoEval(
-  const Eigen::Ref<const AutoDiffVecXd>& x, AutoDiffVecXd& y) const {
-  y.resize(num_constraints());
-
+  const Eigen::Ref<const AutoDiffVecXd>& x, AutoDiffVecXd* y) const {
   int x_count = 0;
 
   auto x_segment = [x, &x_count](int num_element) {
@@ -171,7 +169,8 @@ void ContactImplicitConstraint::DoEval(
 
   VectorX<AutoDiffXd> y3 = phi.transpose()*lambda_phi;
 
-  y << y1, y2, y3;
+  y->resize(num_constraints());
+  *y << y1, y2, y3;
 }
 
 TimestepIntegrationConstraint::TimestepIntegrationConstraint(
@@ -197,14 +196,14 @@ TimestepIntegrationConstraint::TimestepIntegrationConstraint(
 
 void TimestepIntegrationConstraint::DoEval(
   const Eigen::Ref<const Eigen::VectorXd>& x,
-              Eigen::VectorXd& y) const {
+              Eigen::VectorXd* y) const {
   AutoDiffVecXd y_t;
-  DoEval(math::initializeAutoDiff(x), y_t);
-  y = math::autoDiffToValueMatrix(y_t);
+  DoEval(math::initializeAutoDiff(x), &y_t);
+  *y = math::autoDiffToValueMatrix(y_t);
 }
 
 void TimestepIntegrationConstraint::DoEval(
-  const Eigen::Ref<const AutoDiffVecXd>& x, AutoDiffVecXd& y) const {
+  const Eigen::Ref<const AutoDiffVecXd>& x, AutoDiffVecXd* y) const {
 
   int x_count = 0;
 
@@ -239,7 +238,7 @@ void TimestepIntegrationConstraint::DoEval(
   auto dphi_delta = Jphi*qd_plus + elasticity_*Jphi*qd_minus;
 
   // Jqdot_plus_l - Jqdot_minus_l = -(1+restitution)J*M^(-1)*J^T*lambda
-  y << qd_plus - qd_minus -
+  *y << qd_plus - qd_minus -
           M.inverse()*Jphi.transpose()*lambda_phi,
           dphi_delta.transpose()*lambda_phi;
   //auto dphi_delta = Jphi*qd_plus + elasticity_*Jphi*qd_minus;

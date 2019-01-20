@@ -79,16 +79,16 @@ void CustomDirectTranscriptionConstraint::AddGeneralizedConstraintForceEvaluator
 }
 
 void CustomDirectTranscriptionConstraint::DoEval(
-    const Eigen::Ref<const Eigen::VectorXd>& x, Eigen::VectorXd& y) const {
+    const Eigen::Ref<const Eigen::VectorXd>& x, Eigen::VectorXd* y) const {
   DRAKE_ASSERT(x.size() == num_vars());
 
   AutoDiffVecXd y_t;
-  Eval(math::initializeAutoDiff(x), y_t);
-  y = math::autoDiffToValueMatrix(y_t);
+  Eval(math::initializeAutoDiff(x), &y_t);
+  *y = math::autoDiffToValueMatrix(y_t);
 }
 
 void CustomDirectTranscriptionConstraint::DoEval(
-    const Eigen::Ref<const AutoDiffVecXd>& x, AutoDiffVecXd& y) const {
+    const Eigen::Ref<const AutoDiffVecXd>& x, AutoDiffVecXd* y) const {
   DRAKE_ASSERT(x.size() == num_vars());
 
   int x_count = 0;
@@ -111,7 +111,6 @@ void CustomDirectTranscriptionConstraint::DoEval(
   //const AutoDiffVecXd lambda_r = x_segment(num_lambda_);
 
   auto kinsol = kinematics_helper1_->UpdateKinematics(q_r, v_minus_r);
-  y.resize(num_constraints());
   AutoDiffVecXd y_pos, y_dyn;
   // y = [q; vminus; vplus]
 
@@ -151,6 +150,7 @@ void CustomDirectTranscriptionConstraint::DoEval(
   y_dyn = M * (v_minus_r - v_plus_l) +
       (c - (tree_->B * u_r)) * h;
 
+  y->resize(num_constraints());
   y << y_pos, y_dyn;
 }
 

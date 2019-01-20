@@ -45,10 +45,14 @@ class ContactImplicitConstraint
 
  protected:
   void DoEval(const Eigen::Ref<const Eigen::VectorXd>& x,
-              Eigen::VectorXd& y) const override;
+              Eigen::VectorXd* y) const override;
 
   void DoEval(const Eigen::Ref<const AutoDiffVecXd>& x,
-              AutoDiffVecXd& y) const override;
+              AutoDiffVecXd* y) const override;
+  void DoEval(const Eigen::Ref<const VectorX<symbolic::Variable>>&,
+              VectorX<symbolic::Expression>*) const override {
+    throw std::runtime_error("not implemented: Expression");
+  }
  private:
   const RigidBodyTree<double>* tree_;
   const RigidBodyTree<double>* empty_tree_;
@@ -95,10 +99,14 @@ class TimestepIntegrationConstraint
 
  protected:
   void DoEval(const Eigen::Ref<const Eigen::VectorXd>& x,
-              Eigen::VectorXd& y) const;
+              Eigen::VectorXd* y) const;
 
   void DoEval(const Eigen::Ref<const AutoDiffVecXd>& x,
-              AutoDiffVecXd& y) const;
+              AutoDiffVecXd* y) const;
+  void DoEval(const Eigen::Ref<const VectorX<symbolic::Variable>>&,
+              VectorX<symbolic::Expression>*) const override {
+    throw std::runtime_error("not implemented: Expression");
+  }
  private:
   const RigidBodyTree<double>* tree_;
   const RigidBodyTree<double>* empty_tree_;

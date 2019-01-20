@@ -913,11 +913,12 @@ class NonlinearComplementarityConstraint : public Constraint {
  public:
   DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(NonlinearComplementarityConstraint)
   template<typename DerivedUB>
-
   NonlinearComplementarityConstraint(
       std::shared_ptr<EvaluatorBase> f1, std::shared_ptr<EvaluatorBase> f2,
       const Eigen::MatrixBase<DerivedUB>& tol)
-      : Constraint(3*f1->num_outputs(), 2*f1->num_outputs(), Eigen::VectorXd::Constant(1, 0.0), tol), f1_(f1), f2_(f2) {
+      : Constraint(
+          3*f1->num_outputs(), 2*f1->num_outputs(),
+          Eigen::VectorXd::Constant(1, 0.0), tol), f1_(f1), f2_(f2) {
         DRAKE_DEMAND(nf1() == nf2());
       }
 
@@ -927,10 +928,17 @@ class NonlinearComplementarityConstraint : public Constraint {
   ~NonlinearComplementarityConstraint() override {}
  protected:
   void DoEval(const Eigen::Ref<const Eigen::VectorXd>& x,
-              Eigen::VectorXd& y) const override;
+              Eigen::VectorXd* y) const override;
 
-  void DoEval(const Eigen::Ref<const AutoDiffVecXd>& x,
-              AutoDiffVecXd& y) const override;
+  void DoEval(const Eigen::Ref<const AutoDiffVecXd>&,
+              AutoDiffVecXd*) const override {
+    throw std::runtime_error("not implemented: AutoDiffXd");
+  }
+
+  void DoEval(const Eigen::Ref<const VectorX<symbolic::Variable>>&,
+              VectorX<symbolic::Expression>*) const override {
+    throw std::runtime_error("not implemented: Expression");
+  }
 private:
   std::shared_ptr<EvaluatorBase> f1_;
   std::shared_ptr<EvaluatorBase> f2_;

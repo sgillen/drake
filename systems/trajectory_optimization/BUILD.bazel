@@ -20,74 +20,6 @@ drake_cc_package_library(
 )
 
 drake_cc_library(
-    name = "contact_implicit_constraint",
-    srcs = ["contact_implicit_constraint.cc"],
-    hdrs = ["contact_implicit_constraint.h"],
-    deps = [
-        "//common:essential",
-        "//math:autodiff",
-        "//math:gradient",
-        "//multibody:kinematics_cache_helper",
-        "//multibody:rigid_body_tree",
-        "//solvers:constraint",
-	   "//solvers:decision_variable",
-    ],
-
-)
-
-drake_cc_library(
-    name = "elastic_contact_implicit_direct_transcription",
-    srcs = ["elastic_contact_implicit_direct_transcription.cc"],
-    hdrs = ["elastic_contact_implicit_direct_transcription.h"],
-    deps = [
-        ":multiple_shooting",
-        "//drake/math:autodiff",
-        "//drake/math:gradient",
-        "//drake/common:essential",
-        "//drake/multibody:rigid_body_tree",
-        "//drake/solvers:constraint",
-	"//multibody:kinematics_cache_helper", 
-	":generalized_constraint_force_evaluator", 
-	":rigid_body_tree_multiple_shooting", 
-	":contact_implicit_constraint",
-    ],
-)
-
-drake_cc_library(
-    name = "contact_implicit_constraint",
-    srcs = ["contact_implicit_constraint.cc"],
-    hdrs = ["contact_implicit_constraint.h"],
-    deps = [
-        "//common:essential",
-        "//math:autodiff",
-        "//math:gradient",
-        "//multibody:kinematics_cache_helper",
-        "//multibody:rigid_body_tree",
-        "//solvers:constraint",
-	   "//solvers:decision_variable",
-    ],
-
-)
-
-drake_cc_library(
-    name = "elastic_contact_implicit_direct_transcription",
-    srcs = ["elastic_contact_implicit_direct_transcription.cc"],
-    hdrs = ["elastic_contact_implicit_direct_transcription.h"],
-    deps = [
-        ":multiple_shooting",
-        "//drake/math:autodiff",
-        "//drake/math:gradient",
-        "//drake/common:essential",
-        "//drake/multibody:rigid_body_tree",
-        "//drake/solvers:constraint",
-	"//multibody:kinematics_cache_helper", 
-	":generalized_constraint_force_evaluator", 
-	":rigid_body_tree_multiple_shooting", 
-	":contact_implicit_constraint",
-    ],
-)
-
-drake_cc_library(
     name = "multiple_shooting",
     srcs = ["multiple_shooting.cc"],
     hdrs = ["multiple_shooting.h"],
@@ -96,27 +28,6 @@ drake_cc_library(
         "//common/trajectories:piecewise_polynomial",
         "//solvers:mathematical_program",
         "//systems/framework",
-    ],
-)
-
-drake_cc_library(
-    name = "rigid_body_tree_multiple_shooting",
-    srcs = ["rigid_body_tree_multiple_shooting.cc"],
-    hdrs = [
-        "rigid_body_tree_multiple_shooting.h",
-        "rigid_body_tree_multiple_shooting_internal.h",
-    ],
-    deps = [
-        ":generalized_constraint_force_evaluator",
-        ":multiple_shooting",
-        "//common:essential",
-        "//math:autodiff",
-        "//math:gradient",
-        "//multibody:kinematics_cache_helper",
-        "//multibody:rigid_body_tree",
-        "//solvers:constraint",
-	":joint_limit_constraint_force_evaluator", 
-	":position_constraint_force_evaluator", 
     ],
 )
 
@@ -180,6 +91,62 @@ drake_cc_googletest(
     ],
 )
 
+# === paper ===
+
+drake_cc_library(
+    name = "rigid_body_tree_multiple_shooting",
+    srcs = ["rigid_body_tree_multiple_shooting.cc"],
+    hdrs = [
+        "rigid_body_tree_multiple_shooting.h",
+        "rigid_body_tree_multiple_shooting_internal.h",
+    ],
+    deps = [
+        "//attic/systems/trajectory_optimization:generalized_constraint_force_evaluator",
+        ":multiple_shooting",
+        "//common:essential",
+        "//math:autodiff",
+        "//math:gradient",
+        "//attic/multibody:kinematics_cache_helper",
+        "//attic/multibody:rigid_body_tree",
+        "//solvers:constraint",
+        "//attic/systems/trajectory_optimization:joint_limit_constraint_force_evaluator", 
+        "//attic/systems/trajectory_optimization:position_constraint_force_evaluator", 
+    ],
+)
+
+drake_cc_library(
+    name = "contact_implicit_constraint",
+    srcs = ["contact_implicit_constraint.cc"],
+    hdrs = ["contact_implicit_constraint.h"],
+    deps = [
+        "//common:essential",
+        "//math:autodiff",
+        "//math:gradient",
+        "//attic/multibody:kinematics_cache_helper",
+        "//attic/multibody:rigid_body_tree",
+        "//solvers:constraint",
+        "//solvers:decision_variable",
+    ],
+)
+
+drake_cc_library(
+    name = "elastic_contact_implicit_direct_transcription",
+    srcs = ["elastic_contact_implicit_direct_transcription.cc"],
+    hdrs = ["elastic_contact_implicit_direct_transcription.h"],
+    deps = [
+        ":multiple_shooting",
+        "//math:autodiff",
+        "//math:gradient",
+        "//common:essential",
+        "//attic/multibody:rigid_body_tree",
+        "//solvers:constraint",
+        "//attic/multibody:kinematics_cache_helper", 
+        "//attic/systems/trajectory_optimization:generalized_constraint_force_evaluator", 
+        ":rigid_body_tree_multiple_shooting", 
+        ":contact_implicit_constraint",
+    ],
+)
+
 drake_cc_library(
     name = "generalized_constraint_force_evaluator_test_util",
     testonly = 1,
@@ -200,7 +167,7 @@ drake_cc_googletest(
     name = "position_constraint_force_evaluator_test",
     deps = [
         ":generalized_constraint_force_evaluator_test_util",
-        ":position_constraint_force_evaluator",
+        "//attic/systems/trajectory_optimization:position_constraint_force_evaluator",
         "//common/test_utilities:eigen_matrix_compare",
         "//math:autodiff",
     ],
@@ -228,9 +195,9 @@ drake_cc_googletest(
         "//common/test_utilities:eigen_matrix_compare",
         "//lcm",
         "//math:autodiff",
-        "//multibody/parsers",
-        "//multibody:rigid_body_tree_construction",
-        "//multibody/rigid_body_plant:drake_visualizer",
+        "//attic/multibody/parsers",
+        "//attic/multibody:rigid_body_tree_construction",
+        "//attic/multibody/rigid_body_plant:drake_visualizer",
     ],
 )
 
@@ -244,7 +211,7 @@ drake_cc_googletest(
         "//common:find_resource",
         "//common/test_utilities:eigen_matrix_compare",
         "//math:autodiff",
-        "//multibody/parsers",
+        "//attic/multibody/parsers",
     ],
 )
 
