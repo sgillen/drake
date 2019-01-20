@@ -242,7 +242,7 @@ class CallPythonClient(object):
     """
     def __init__(self, filename=None, stop_on_error=True,
                  scope_globals=None, scope_locals=None,
-                 threaded=True, wait=False):
+                 threaded=False, wait=False):
         if filename is None:
             # TODO(jamiesnape): Implement and use a
             # drake.common.GetRpcPipeTempDirectory function.
@@ -554,13 +554,20 @@ def main(argv):
         "--stop_on_error", action='store_true',
         help="Stop client if there is an error when executing a call.")
     parser.add_argument("-f", "--file", type=str, default=None)
+    parser.add_argument("-c", "--command", type=str, nargs='+', default=None,
+        help="Execute command (e.g. `jupyter notebook`) instead of running "
+             "client.")
     args = parser.parse_args(argv)
 
-    client = CallPythonClient(
-        args.file, stop_on_error=args.stop_on_error,
-        threaded=not args.no_threading, wait=not args.no_wait)
-    good = client.run()
-    return good
+    if args.command is not None:
+        os.execvp(args.command[0], args.command)
+        return True
+    else:
+        client = CallPythonClient(
+            args.file, stop_on_error=args.stop_on_error,
+            threaded=not args.no_threading, wait=not args.no_wait)
+        good = client.run()
+        return good
 
 
 if __name__ == "__main__":

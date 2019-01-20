@@ -13,6 +13,8 @@
 #include "drake/systems/trajectory_optimization/position_constraint_force_evaluator.h"
 #include "drake/solvers/snopt_solver.h"
 
+#include "drake/common/proto/call_python.h"
+
 namespace drake {
 namespace systems {
 namespace trajectory_optimization {
@@ -21,6 +23,8 @@ namespace {
 
 using std::unique_ptr;
 using ::drake::lcm::DrakeLcm;
+
+using namespace drake::common;
 
 using T = double;
 
@@ -91,7 +95,7 @@ ConstructContactImplicitBrickTree(
 
 GTEST_TEST(ElasticContactImplicitDirectTranscription,
     TestContactImplicitBrickNoContact) {
-  const bool is_2d = true;
+  const bool is_2d = false;
   const bool is_point_mass = false;
   auto tree =
       ConstructContactImplicitBrickTree(is_2d, is_point_mass, false);
@@ -190,7 +194,7 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription,
 
   EXPECT_EQ(result, solvers::SolutionResult::kSolutionFound);
 
-  const double tol{1E-5};
+  const double tol{1E-4};
   // First check if dt is within the bounds.
   const Eigen::VectorXd t_sol = traj_opt.GetSampleTimes();
   const Eigen::VectorXd dt_sol =
@@ -260,16 +264,24 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription,
   //                             Eigen::VectorXd::Zero(tree->get_num_velocities()),
   //                             tol, MatrixCompareType::absolute));
 
+  CallPythonInit("/tmp/python_rpc");
+  CallPython("setvar", "is_2d", is_2d);
+  CallPython("setvar", "is_point_mass", is_point_mass);
+  CallPython("setvar", "q_sol", q_sol);
+  CallPython("setvar", "v_sol", v_sol);
+  CallPython("setvar", "t_sol", t_sol);
+  CallPython("setvar", "lambda_sol", lambda_sol);
+  drake::log()->info("DONE");
 
-  HackViz viz(*tree);
-  const double dt_anim = 0.5;
-  for (int i = 0; i < N; ++i) {
-    viz.Update(dt_anim * i, q_sol.col(i));
-  }
+  // HackViz viz(*tree);
+  // const double dt_anim = 0.5;
+  // for (int i = 0; i < N; ++i) {
+  //   viz.Update(dt_anim * i, q_sol.col(i));
+  // }
 
-  while (true) {
-    viz.ReplayCachedSimulation();
-  }
+  // while (true) {
+  //   viz.ReplayCachedSimulation();
+  // }
 
 }
 
@@ -460,16 +472,22 @@ GTEST_TEST(ElasticContactImplicitDirectTranscription,
   std::cerr<<"V I"<<std::endl;
   std::cerr<<v_i<<std::endl;
 
-  HackViz viz(*tree);
-  const double dt_anim = 0.5;
-  for (int i = 0; i < N; ++i) {
-    viz.Update(dt_anim * i, q_sol.col(i));
-    // viz.Update(dt_anim * i, q_i.col(i));
-  }
+  CallPython("print", "Hello world");
+  CallPython("setvar", "q_sol", q_sol);
+  CallPython("setvar", "v_sol", v_sol);
+  CallPython("setvar", "t_sol", t_sol);
+  CallPython("setvar", "lambda_sol", lambda_sol);
 
-  while (true) {
-    viz.ReplayCachedSimulation();
-  }
+  // HackViz viz(*tree);
+  // const double dt_anim = 0.5;
+  // for (int i = 0; i < N; ++i) {
+  //   viz.Update(dt_anim * i, q_sol.col(i));
+  //   // viz.Update(dt_anim * i, q_i.col(i));
+  // }
+
+  // while (true) {
+  //   viz.ReplayCachedSimulation();
+  // }
 
   // // Check if the constraints on the initial state and final state are
   // // satisfied.
