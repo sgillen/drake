@@ -165,18 +165,19 @@ class TestSystemsLcm(unittest.TestCase):
         kLcmUrl = "udpm://239.255.76.67:7668"
 
         lcm = DrakeLcm(kLcmUrl)
-        builder = DiagramBuilder()
-        sub = builder.AddSystem(mut.LcmSubscriberSystem.Make("TEST_LOOP",
-                                                             header_t, lcm))
-        dummy = builder.AddSystem(DummySys())
-        logger = LogOutput(dummy.get_output_port(0), builder)
-        # logger.set_forced_publish_only()
-        builder.Connect(sub.get_output_port(0), dummy.get_input_port(0))
-        diagram = builder.Build()
+        lcm.StartReceiveThread()
+        # builder = DiagramBuilder()
+        sub = mut.LcmSubscriberSystem.Make("TEST_LOOP", header_t, lcm)
 
-        utime = mut.PyUtimeMessageToSeconds(header_t)
-        dut = mut.LcmDrivenLoop(diagram, sub, None, lcm, utime)
-        dut.set_publish_on_every_received_message(True)
+        # dummy = builder.AddSystem(DummySys())
+        # logger = LogOutput(dummy.get_output_port(0), builder)
+        # # logger.set_forced_publish_only()
+        # builder.Connect(sub.get_output_port(0), dummy.get_input_port(0))
+        # diagram = builder.Build()
+
+        # utime = mut.PyUtimeMessageToSeconds(header_t)
+        # dut = mut.LcmDrivenLoop(diagram, sub, None, lcm, utime)
+        # dut.set_publish_on_every_received_message(True)
 
         import sys, trace
         sys.stdout = sys.stderr
@@ -201,7 +202,10 @@ class TestSystemsLcm(unittest.TestCase):
         thread = Thread(target=publish)  #partial(tracer.runfunc, publish))
         thread.start()
 
-        first_msg = dut.WaitForMessage()
+        value = AbstractValue.Make(header_t())
+        first_msg = sub.WaitForMessage(0, value)
+        print(value.get_value().utime)
+        # first_msg = dut.WaitForMessage()
         # utime_recovered = dut.get_message_to_time_converter()
         # msg_time = utime_recovered.GetTimeInSeconds(first_msg)
 

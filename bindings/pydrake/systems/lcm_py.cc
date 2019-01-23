@@ -175,7 +175,10 @@ PYBIND11_MODULE(lcm, m) {
             py::keep_alive<1, 3>(),
             cls_doc.ctor.doc_3args_channel_serializer_lcm)
         .def("CopyLatestMessageInto", &Class::CopyLatestMessageInto,
-            py::arg("state"), cls_doc.CopyLatestMessageInto.doc);
+            py::arg("state"), cls_doc.CopyLatestMessageInto.doc)
+        .def("WaitForMessage", &Class::WaitForMessage
+            , py::call_guard<py::gil_scoped_release>()
+            );
   }
 
   {
