@@ -15,6 +15,8 @@ class TestLcm(unittest.TestCase):
         # Test virtual function names.
         dut.Publish
 
+        dut2 = DrakeLcm("udpm://239.255.76.67:7668")
+
     def test_mock_lcm(self):
         dut = DrakeMockLcm()
         self.assertIsInstance(dut, DrakeLcmInterface)

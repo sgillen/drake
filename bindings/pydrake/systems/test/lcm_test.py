@@ -2,15 +2,19 @@ import pydrake.systems.lcm as mut
 
 import collections
 import unittest
+import time
+from threading import Thread
 
 import numpy as np
 from six import text_type as unicode
 
-from robotlocomotion import quaternion_t
+from robotlocomotion import header_t, quaternion_t
+from lcm import LCM
 
-from pydrake.lcm import DrakeMockLcm
-from pydrake.systems.framework import AbstractValue, DiagramBuilder
-from pydrake.systems.primitives import ConstantVectorSource
+from pydrake.lcm import DrakeLcm, DrakeMockLcm
+from pydrake.systems.framework import (AbstractValue, BasicVector,
+                                       DiagramBuilder, LeafSystem)
+from pydrake.systems.primitives import ConstantVectorSource, LogOutput
 
 
 # TODO(eric.cousieau): Move this to more generic code when another piece of
@@ -27,6 +31,19 @@ def lcm_to_json(message):
             result[field] = helper(value)
         return result
     return helper(message)
+
+
+class DummySys(LeafSystem):
+    def __init__(self):
+        LeafSystem.__init__(self)
+        self._DeclareAbstractInputPort("header_t",
+                                       AbstractValue.Make(header_t))
+        self._DeclareVectorOutputPort(BasicVector(1), self.CalcTimestamp)
+
+    def CalcTimestamp(self, context, output):
+        x = self.EvalAbstractInput(context, 0).get_value()
+        y = output.get_mutable_value()
+        y[:] = x.utime / 1e6
 
 
 class TestSystemsLcm(unittest.TestCase):
@@ -46,6 +63,17 @@ class TestSystemsLcm(unittest.TestCase):
         serializer = mut._Serializer_[quaternion_t]()
         raw = serializer.Serialize(value)
         return quaternion_t.decode(raw)
+
+    def _publish(self, start, end, url):
+        lcm = LCM(url)
+        msg = header_t()
+        kSleepSec = 0.1
+        time.sleep(kSleepSec)
+
+        for i in range(start, end+1):
+            msg.utime = 1e6 * i
+            lcm.publish("TEST_LOOP", msg.encode())
+            time.sleep(kSleepSec)
 
     def assert_lcm_equal(self, actual, expected):
         self.assertIsInstance(actual, type(expected))
@@ -82,6 +110,16 @@ class TestSystemsLcm(unittest.TestCase):
         dut.CalcOutput(context, output)
         actual = output.get_data(0)
         return actual
+
+    def test_utime_to_seconds(self):
+        serial = mut.PySerializer(header_t)
+        dut = mut.PyUtimeMessageToSeconds(header_t)
+        model = header_t()
+        model.utime, model.seq, model.frame_name = (1e6, 2, "header")
+        value = serial.CreateDefaultValue()
+        serial.Deserialize(model.encode(), value)
+        time = dut.GetTimeInSeconds(value)
+        self.assertEqual(time, 1)
 
     def test_subscriber(self):
         lcm = DrakeMockLcm()
@@ -131,6 +169,34 @@ class TestSystemsLcm(unittest.TestCase):
         raw = lcm.get_last_published_message("TEST_CHANNEL")
         actual_message = quaternion_t.decode(raw)
         self.assert_lcm_equal(actual_message, model_message)
+
+    def test_lcm_driven_loop(self):
+        kStart = 3
+        kEnd = 10
+        kLcmUrl = "udpm://239.255.76.67:7668"
+
+        lcm = DrakeLcm(kLcmUrl)
+        builder = DiagramBuilder()
+        sub = builder.AddSystem(mut.LcmSubscriberSystem.Make("TEST_LOOP",
+                                                             header_t, lcm))
+        dummy = builder.AddSystem(DummySys())
+        logger = LogOutput(dummy.get_output_port(0), builder)
+        # logger.set_forced_publish_only()
+        builder.Connect(sub.get_output_port(0), dummy.get_input_port(0))
+        diagram = builder.Build()
+
+        utime = mut.PyUtimeMessageToSeconds(header_t)
+        dut = mut.LcmDrivenLoop(diagram, sub, None, lcm, utime)
+        dut.set_publish_on_every_received_message(True)
+
+        thread = Thread(target=self._publish, args=(kStart, kEnd, kLcmUrl))
+        thread.start()
+
+        # first_msg = dut.WaitForMessage()
+        # utime_recovered = dut.get_message_to_time_converter()
+        # msg_time = utime_recovered.GetTimeInSeconds(first_msg)
+
+        thread.join()
 
     def test_connect_lcm_scope(self):
         builder = DiagramBuilder()

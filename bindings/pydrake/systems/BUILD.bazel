@@ -241,6 +241,8 @@ drake_py_unittest(
     deps = [
         ":lcm_py",
         ":primitives_py",
+        "@lcm//:lcm-python",
+        "@lcmtypes_robotlocomotion//:lcmtypes_robotlocomotion_py",
     ],
 )
 

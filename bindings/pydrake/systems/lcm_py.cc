@@ -8,8 +8,10 @@
 #include "drake/bindings/pydrake/pydrake_pybind.h"
 #include "drake/bindings/pydrake/systems/lcm_py_bind_cpp_serializers.h"
 #include "drake/bindings/pydrake/systems/systems_pybind.h"
+#include "drake/lcm/drake_lcm.h"
 #include "drake/lcm/drake_lcm_interface.h"
 #include "drake/systems/lcm/connect_lcm_scope.h"
+#include "drake/systems/lcm/lcm_driven_loop.h"
 #include "drake/systems/lcm/lcm_publisher_system.h"
 #include "drake/systems/lcm/lcm_subscriber_system.h"
 #include "drake/systems/lcm/serializer.h"
@@ -17,9 +19,11 @@
 namespace drake {
 namespace pydrake {
 
+using lcm::DrakeLcm;
 using lcm::DrakeLcmInterface;
 using pysystems::pylcm::BindCppSerializers;
 using systems::AbstractValue;
+using systems::lcm::LcmMessageToTimeInterface;
 using systems::lcm::SerializerInterface;
 
 namespace {
@@ -62,6 +66,19 @@ class PySerializerInterface : public py::wrapper<SerializerInterface> {
     std::string str = wrapped();
     message_bytes->resize(str.size());
     std::copy(str.data(), str.data() + str.size(), message_bytes->data());
+  }
+};
+
+class PyLcmMessageToTimeInterface
+    : public py::wrapper<LcmMessageToTimeInterface> {
+ public:
+  using Base = py::wrapper<LcmMessageToTimeInterface>;
+
+  PyLcmMessageToTimeInterface() : Base() {}
+
+  double GetTimeInSeconds(const AbstractValue& abstract_value) const override {
+    PYBIND11_OVERLOAD_PURE(
+        double, LcmMessageToTimeInterface, GetTimeInSeconds, &abstract_value);
   }
 };
 
@@ -113,6 +130,16 @@ PYBIND11_MODULE(lcm, m) {
   }
 
   {
+    using Class = LcmMessageToTimeInterface;
+    py::class_<Class, PyLcmMessageToTimeInterface>(
+        m, "LcmMessageToTimeInterface")
+        .def(py::init([]() {
+          return std::make_unique<PyLcmMessageToTimeInterface>();
+        }),
+            doc.LcmMessageToTimeInterface.doc);
+  }
+
+  {
     using Class = LcmPublisherSystem;
     constexpr auto& cls_doc = doc.LcmPublisherSystem;
     py::class_<Class, LeafSystem<double>> cls(m, "LcmPublisherSystem");
@@ -146,6 +173,32 @@ PYBIND11_MODULE(lcm, m) {
             cls_doc.ctor.doc_3args_channel_serializer_lcm)
         .def("CopyLatestMessageInto", &Class::CopyLatestMessageInto,
             py::arg("state"), cls_doc.CopyLatestMessageInto.doc);
+  }
+
+  {
+    using Class = LcmDrivenLoop;
+    py::class_<Class>(m, "LcmDrivenLoop")
+        .def(py::init<const System<double>&, const LcmSubscriberSystem&,
+                 std::unique_ptr<Context<double>>, DrakeLcm*,
+                 std::unique_ptr<LcmMessageToTimeInterface>>(),
+            py::arg("system"), py::arg("driving_subscriber"),
+            py::arg("context"), py::arg("lcm"), py::arg("time_converter"),
+            // Keep alive: `self` keeps `DrakeLcm` alive.
+            py::keep_alive<1, 4>(), doc.LcmDrivenLoop.ctor.doc)
+        .def("WaitForMessage", &Class::WaitForMessage,
+            doc.LcmDrivenLoop.WaitForMessage.doc)
+        .def("RunToSecondsAssumingInitialized",
+            &Class::RunToSecondsAssumingInitialized,
+            py::arg("stop_time") = std::numeric_limits<double>::infinity(),
+            doc.LcmDrivenLoop.RunToSecondsAssumingInitialized.doc)
+        .def("set_publish_on_every_received_message",
+            &Class::set_publish_on_every_received_message,
+            doc.LcmDrivenLoop.set_publish_on_every_received_message.doc)
+        .def("get_mutable_context", &Class::get_mutable_context,
+            doc.LcmDrivenLoop.get_mutable_context.doc)
+        .def("get_message_to_time_converter",
+            &Class::get_message_to_time_converter,
+            doc.LcmDrivenLoop.get_message_to_time_converter.doc);
   }
 
   m.def("ConnectLcmScope", &ConnectLcmScope, py::arg("src"), py::arg("channel"),
