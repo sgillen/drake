@@ -64,17 +64,6 @@ class TestSystemsLcm(unittest.TestCase):
         raw = serializer.Serialize(value)
         return quaternion_t.decode(raw)
 
-    def _publish(self, start, end, url):
-        lcm = LCM(url)
-        msg = header_t()
-        kSleepSec = 0.1
-        time.sleep(kSleepSec)
-
-        for i in range(start, end+1):
-            msg.utime = 1e6 * i
-            lcm.publish("TEST_LOOP", msg.encode())
-            time.sleep(kSleepSec)
-
     def assert_lcm_equal(self, actual, expected):
         self.assertIsInstance(actual, type(expected))
         self.assertDictEqual(lcm_to_json(actual), lcm_to_json(expected))
@@ -189,10 +178,30 @@ class TestSystemsLcm(unittest.TestCase):
         dut = mut.LcmDrivenLoop(diagram, sub, None, lcm, utime)
         dut.set_publish_on_every_received_message(True)
 
-        thread = Thread(target=self._publish, args=(kStart, kEnd, kLcmUrl))
+        import sys, trace
+        sys.stdout = sys.stderr
+        from functools import partial
+        tracer = trace.Trace(trace=1, count=0, ignoredirs=["/usr", sys.prefix])
+
+        def publish():
+            print("Hello")
+            lcm = LCM(kLcmUrl)
+            msg = header_t()
+            kSleepSec = 0.1
+            time.sleep(kSleepSec)
+
+            # for i in range(kStart, kEnd+1):
+            if True:
+                i = 1
+                msg.utime = 1e6 * i
+                data = msg.encode()
+                lcm.publish("TEST_LOOP", data)
+                # time.sleep(kSleepSec)
+
+        thread = Thread(target=publish)  #partial(tracer.runfunc, publish))
         thread.start()
 
-        # first_msg = dut.WaitForMessage()
+        first_msg = dut.WaitForMessage()
         # utime_recovered = dut.get_message_to_time_converter()
         # msg_time = utime_recovered.GetTimeInSeconds(first_msg)
 

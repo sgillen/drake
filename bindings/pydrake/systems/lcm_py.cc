@@ -51,6 +51,7 @@ class PySerializerInterface : public py::wrapper<SerializerInterface> {
       AbstractValue* abstract_value) const override {
     py::bytes buffer(
         reinterpret_cast<const char*>(message_bytes), message_length);
+    py::gil_scoped_acquire acquire;
     PYBIND11_OVERLOAD_PURE(
         void, SerializerInterface, Deserialize, buffer, abstract_value);
   }
@@ -60,6 +61,7 @@ class PySerializerInterface : public py::wrapper<SerializerInterface> {
     auto wrapped = [&]() -> py::bytes {
       // N.B. We must pass `abstract_value` as a pointer to prevent `pybind11`
       // from copying it.
+      py::gil_scoped_acquire acquire;
       PYBIND11_OVERLOAD_PURE(
           py::bytes, SerializerInterface, Serialize, &abstract_value);
     };
@@ -77,6 +79,7 @@ class PyLcmMessageToTimeInterface
   PyLcmMessageToTimeInterface() : Base() {}
 
   double GetTimeInSeconds(const AbstractValue& abstract_value) const override {
+    py::gil_scoped_acquire acquire;
     PYBIND11_OVERLOAD_PURE(
         double, LcmMessageToTimeInterface, GetTimeInSeconds, &abstract_value);
   }
@@ -186,6 +189,7 @@ PYBIND11_MODULE(lcm, m) {
             // Keep alive: `self` keeps `DrakeLcm` alive.
             py::keep_alive<1, 4>(), doc.LcmDrivenLoop.ctor.doc)
         .def("WaitForMessage", &Class::WaitForMessage,
+            py::call_guard<py::gil_scoped_release>(),
             doc.LcmDrivenLoop.WaitForMessage.doc)
         .def("RunToSecondsAssumingInitialized",
             &Class::RunToSecondsAssumingInitialized,
