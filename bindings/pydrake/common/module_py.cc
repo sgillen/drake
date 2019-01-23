@@ -35,6 +35,8 @@ PYBIND11_MODULE(_module_py, m) {
   m.def(
       "hack_callback",
       [](std::function<void()> func) {
+        py::gil_scoped_release lock;
+        (void)lock;
         drake::log()->info("C++ STUFF");
         func();
         drake::log()->info("DONE");
