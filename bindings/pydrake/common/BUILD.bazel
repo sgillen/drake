@@ -16,6 +16,7 @@ load(
 )
 load(
     "@drake//tools/skylark:drake_py.bzl",
+    "drake_py_binary",
     "drake_py_library",
     "drake_py_test",
     "drake_py_unittest",
@@ -275,6 +276,14 @@ install(
 
 drake_py_unittest(
     name = "module_test",
+    data = ["//examples/atlas:models"],
+    deps = [":module_py"],
+)
+
+drake_py_binary(
+    name = "bad_thread_repro",
+    srcs = ["test/bad_thread_repro.py"],
+    main = "bad_thread_repro.py",
     data = ["//examples/atlas:models"],
     deps = [":module_py"],
 )

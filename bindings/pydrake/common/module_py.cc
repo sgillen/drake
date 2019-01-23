@@ -1,4 +1,5 @@
 #include "pybind11/eigen.h"
+#include "pybind11/functional.h"
 #include "pybind11/pybind11.h"
 #include "pybind11/stl.h"
 
@@ -29,6 +30,15 @@ PYBIND11_MODULE(_module_py, m) {
 
   constexpr auto& doc = pydrake_doc.drake;
   m.attr("_HAVE_SPDLOG") = logging::kHaveSpdlog;
+
+
+  m.def(
+      "hack_callback",
+      [](std::function<void()> func) {
+        drake::log()->info("C++ STUFF");
+        func();
+        drake::log()->info("DONE");
+      });
 
   py::enum_<drake::RandomDistribution>(
       m, "RandomDistribution", doc.RandomDistribution.doc)
