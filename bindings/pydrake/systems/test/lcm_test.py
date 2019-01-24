@@ -160,12 +160,9 @@ class TestSystemsLcm(unittest.TestCase):
         self.assert_lcm_equal(actual_message, model_message)
 
     def test_lcm_driven_loop(self):
-        kStart = 3
-        kEnd = 10
-        kLcmUrl = "udpm://239.255.76.67:7668"
-
-        lcm = DrakeLcm(kLcmUrl)
-        # lcm.StartReceiveThread()
+        lcm_url = "udpm://239.255.76.67:7668"
+        lcm = DrakeLcm(lcm_url)
+        # `StartReceiveThread()` is called by the `LcmDrivenLoop` constructor.
         builder = DiagramBuilder()
         sub = mut.LcmSubscriberSystem.Make("TEST_LOOP", header_t, lcm)
         builder.AddSystem(sub)
@@ -187,28 +184,19 @@ class TestSystemsLcm(unittest.TestCase):
 
         i_list = [1, 2, 3]
 
-        def publish():
-            lcm = LCM(kLcmUrl)
+        def publish(i):
             msg = header_t()
-            kSleepSec = 0.1
-            for i in i_list:
-                time.sleep(kSleepSec)
-                msg.utime = int(1e6 * i)
-                print(msg.utime)
-                lcm.publish("TEST_LOOP", msg.encode())
-
-        thread = Thread(target=publish) #partial(tracer.runfunc, publish))
-        thread.start()
+            msg.utime = int(1e6 * i)
+            lcm.Publish("TEST_LOOP", msg.encode())
 
         # value = AbstractValue.Make(header_t())
         # first_msg = sub.WaitForMessage(0, value)
         # print(value.get_value().utime)
         for i in i_list:
+            publish(i)
             value = dut.WaitForMessage()
             msg_time = dut.get_message_to_time_converter().GetTimeInSeconds(value)
             print(msg_time)
-
-        thread.join()
 
     def test_connect_lcm_scope(self):
         builder = DiagramBuilder()
