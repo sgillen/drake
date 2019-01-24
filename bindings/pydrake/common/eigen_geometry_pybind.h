@@ -53,23 +53,23 @@ struct type_caster_wrapped {
   }
   template <typename T>
   using cast_op_type = py::detail::movable_cast_op_type<T>;
-  static constexpr auto name = WrappedTypeCaster::props::descriptor;
+  static constexpr auto name = WrappedTypeCaster::name;
 
   // C++ to Python.
   template <typename TType>
   static py::handle cast(
       TType&& src, py::return_value_policy policy, py::handle parent) {
-    if (policy == py::return_value_policy::reference ||
-        policy == py::return_value_policy::reference_internal) {
-      // N.B. We must declare a local `static constexpr` here to prevent
-      // linking errors. This does not appear achievable with
-      // `constexpr char[]`, so we use `py::detail::descr`.
-      // See `pybind11/pybind11.h`, `cpp_function::initialize(...)` for an
-      // example.
-      static constexpr auto original_name = Wrapper::original_name;
-      throw py::cast_error(
-          std::string("Can only pass ") + original_name.text + " by value.");
-    }
+    // if (policy == py::return_value_policy::reference ||
+    //     policy == py::return_value_policy::reference_internal) {
+    //   // N.B. We must declare a local `static constexpr` here to prevent
+    //   // linking errors. This does not appear achievable with
+    //   // `constexpr char[]`, so we use `py::detail::descr`.
+    //   // See `pybind11/pybind11.h`, `cpp_function::initialize(...)` for an
+    //   // example.
+    //   static constexpr auto original_name = Wrapper::original_name;
+    //   throw py::cast_error(
+    //       std::string("Can only pass ") + original_name.text + " by value.");
+    // }
     return WrappedTypeCaster::cast(
         Wrapper::wrap(std::forward<TType>(src)), policy, parent);
   }

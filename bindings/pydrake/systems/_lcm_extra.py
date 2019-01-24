@@ -17,6 +17,7 @@ class PySerializer(SerializerInterface):
 
     def Deserialize(self, buffer, abstract_value):
         message = self._lcm_type.decode(buffer)
+        print("DES")
         abstract_value.set_value(message)
 
     def Serialize(self, abstract_value):
@@ -37,6 +38,8 @@ class PyUtimeMessageToSeconds(LcmMessageToTimeInterface):
     def GetTimeInSeconds(self, abstract_value):
         assert isinstance(abstract_value, AbstractValue)
         message = abstract_value.get_value()
+        print(message)
+        print(message.utime)
         assert isinstance(message, self._lcm_type)
         return message.utime / 1.0e6
 

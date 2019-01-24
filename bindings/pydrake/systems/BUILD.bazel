@@ -64,6 +64,7 @@ drake_pybind_library(
         "//bindings/pydrake/util:deprecation_pybind",
         "//bindings/pydrake/util:drake_optional_pybind",
         "//bindings/pydrake/util:eigen_pybind",
+        "//bindings/pydrake/common:eigen_geometry_pybind",
         "//bindings/pydrake/util:type_safe_index_pybind",
         "//bindings/pydrake/util:wrap_pybind",
     ],

@@ -192,7 +192,7 @@ PYBIND11_MODULE(lcm, m) {
             // Keep alive: `self` keeps `DrakeLcm` alive.
             py::keep_alive<1, 4>(), doc.LcmDrivenLoop.ctor.doc)
         .def("WaitForMessage", &Class::WaitForMessage,
-            py::call_guard<py::gil_scoped_release>(),
+            py::call_guard<py::gil_scoped_release>(), py_reference_internal,
             doc.LcmDrivenLoop.WaitForMessage.doc)
         .def("RunToSecondsAssumingInitialized",
             &Class::RunToSecondsAssumingInitialized,

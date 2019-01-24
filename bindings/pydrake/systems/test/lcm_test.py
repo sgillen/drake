@@ -185,30 +185,28 @@ class TestSystemsLcm(unittest.TestCase):
         from functools import partial
         tracer = trace.Trace(trace=1, count=0, ignoredirs=["/usr", sys.prefix])
 
+        i_list = [1, 2, 3]
+
         def publish():
-            print("Hello")
             lcm = LCM(kLcmUrl)
             msg = header_t()
             kSleepSec = 0.1
-            time.sleep(kSleepSec)
+            for i in i_list:
+                time.sleep(kSleepSec)
+                msg.utime = int(1e6 * i)
+                print(msg.utime)
+                lcm.publish("TEST_LOOP", msg.encode())
 
-            # for i in range(kStart, kEnd+1):
-            if True:
-                i = 1
-                msg.utime = 1e6 * i
-                data = msg.encode()
-                lcm.publish("TEST_LOOP", data)
-                # time.sleep(kSleepSec)
-
-        thread = Thread(target=partial(tracer.runfunc, publish))
+        thread = Thread(target=publish) #partial(tracer.runfunc, publish))
         thread.start()
 
         # value = AbstractValue.Make(header_t())
         # first_msg = sub.WaitForMessage(0, value)
         # print(value.get_value().utime)
-        first_msg = dut.WaitForMessage()
-        # utime_recovered = dut.get_message_to_time_converter()
-        # msg_time = utime_recovered.GetTimeInSeconds(first_msg)
+        for i in i_list:
+            value = dut.WaitForMessage()
+            msg_time = dut.get_message_to_time_converter().GetTimeInSeconds(value)
+            print(msg_time)
 
         thread.join()
 

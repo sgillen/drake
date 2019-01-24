@@ -15,7 +15,58 @@
 #include "drake/systems/framework/subvector.h"
 #include "drake/systems/framework/supervector.h"
 
+#include "drake/bindings/pydrake/common/eigen_geometry_pybind.h"
+
 using std::string;
+
+namespace drake {
+namespace pydrake {
+
+class PyObjectGil {
+ public:
+  PyObjectGil() {}
+  PyObjectGil(py::object in) : value_(in) {}
+
+  PyObjectGil& operator=(const PyObjectGil& other) {
+    *this = other.value_;
+    return *this;
+  }
+  PyObjectGil& operator=(py::object obj) {
+    py::gil_scoped_acquire acquire;
+    value_ = obj;
+    return *this;
+  }
+
+  py::object value() const { return value_; }
+
+ private:
+  py::object value_;
+};
+
+struct py_object_gil_wrapper {
+  using Type = PyObjectGil;
+  using WrappedType = py::object;
+  static constexpr auto original_name = py::detail::_("stuff");
+  static Type unwrap(const WrappedType& arg_wrapped) {
+    return Type(arg_wrapped);
+  }
+  static WrappedType wrap(const Type& arg) { return arg.value(); }
+};
+
+using py_object_gil_caster = detail::type_caster_wrapped<py_object_gil_wrapper>;
+
+}  // namespace pydrake
+}  // namespace drake
+
+namespace pybind11 {
+namespace detail {
+
+template <>
+struct type_caster<drake::pydrake::PyObjectGil>
+    : public drake::pydrake::py_object_gil_caster {};
+
+} }
+
 
 namespace drake {
 namespace pydrake {
@@ -135,9 +186,9 @@ void DefineFrameworkPyValues(py::module m) {
   // N.B. If any code explicitly uses `Value<py::object>` for whatever reason,
   // then this should turn into a specialization of `Value<>`, rather than an
   // extension.
-  class PyObjectValue : public drake::Value<py::object> {
+  class PyObjectValue : public drake::Value<PyObjectGil> {
    public:
-    using Base = Value<py::object>;
+    using Base = Value<PyObjectGil>;
     using Base::Base;
     // Override `Value<py::object>::Clone()` to perform a deep copy on the
     // object.
