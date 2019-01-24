@@ -35,7 +35,7 @@ LcmDrivenLoop::LcmDrivenLoop(
 }
 
 const AbstractValue& LcmDrivenLoop::WaitForMessage() {
-  
+
   drake::log()->set_level(spdlog::level::trace);
 
   drake::log()->warn("WaitForMessage");
@@ -52,9 +52,14 @@ const AbstractValue& LcmDrivenLoop::WaitForMessage() {
         *sub_context_, sub_events_->get_discrete_update_events(),
         &sub_swap_state_->get_mutable_discrete_state());
   } else if (sub_events_->HasUnrestrictedUpdateEvents()) {
+    drake::log()->warn("- arg 1");
+    auto&& arg1 = *sub_context_;
+    drake::log()->warn("- arg 2");
+    auto&& arg2 = sub_events_->get_unrestricted_update_events();
+    drake::log()->warn("- arg 3");
+    auto&& arg3 = sub_swap_state_.get();
     drake::log()->warn("Call Updates");
-    driving_sub_.CalcUnrestrictedUpdate(*sub_context_,
-        sub_events_->get_unrestricted_update_events(), sub_swap_state_.get());
+    driving_sub_.CalcUnrestrictedUpdate(arg1, arg2, arg3);
   } else {
     DRAKE_DEMAND(false);
   }
