@@ -200,13 +200,13 @@ class TestSystemsLcm(unittest.TestCase):
                 lcm.publish("TEST_LOOP", data)
                 # time.sleep(kSleepSec)
 
-        thread = Thread(target=publish)  #partial(tracer.runfunc, publish))
+        thread = Thread(target=partial(tracer.runfunc, publish))
         thread.start()
 
-        value = AbstractValue.Make(header_t())
-        first_msg = sub.WaitForMessage(0, value)
-        print(value.get_value().utime)
-        # first_msg = dut.WaitForMessage()
+        # value = AbstractValue.Make(header_t())
+        # first_msg = sub.WaitForMessage(0, value)
+        # print(value.get_value().utime)
+        first_msg = dut.WaitForMessage()
         # utime_recovered = dut.get_message_to_time_converter()
         # msg_time = utime_recovered.GetTimeInSeconds(first_msg)
 

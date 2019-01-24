@@ -204,6 +204,7 @@ class LcmSubscriberSystem : public LeafSystem<double> {
       const Context<double>&,
       const std::vector<const systems::UnrestrictedUpdateEvent<double>*>&,
       State<double>* state) const override {
+    drake::log()->warn("DoCalcUnrestrictedUpdate");
     ProcessMessageAndStoreToAbstractState(&state->get_mutable_abstract_state());
   }
 

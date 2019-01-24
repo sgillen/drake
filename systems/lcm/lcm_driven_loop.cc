@@ -35,17 +35,24 @@ LcmDrivenLoop::LcmDrivenLoop(
 }
 
 const AbstractValue& LcmDrivenLoop::WaitForMessage() {
+  
+  drake::log()->set_level(spdlog::level::trace);
+
+  drake::log()->warn("WaitForMessage");
   driving_sub_.WaitForMessage(driving_sub_.GetMessageCount(*sub_context_));
 
+  drake::log()->warn("CalcNextUpdateTime");
   driving_sub_.CalcNextUpdateTime(*sub_context_, sub_events_.get());
 
   // If driving_sub_.WaitForMessage() returned, a message should be received
   // and an event should be queued by driving_sub_.CalcNextUpdateTime().
+  drake::log()->warn("Updates");
   if (sub_events_->HasDiscreteUpdateEvents()) {
     driving_sub_.CalcDiscreteVariableUpdates(
         *sub_context_, sub_events_->get_discrete_update_events(),
         &sub_swap_state_->get_mutable_discrete_state());
   } else if (sub_events_->HasUnrestrictedUpdateEvents()) {
+    drake::log()->warn("Call Updates");
     driving_sub_.CalcUnrestrictedUpdate(*sub_context_,
         sub_events_->get_unrestricted_update_events(), sub_swap_state_.get());
   } else {
@@ -53,6 +60,7 @@ const AbstractValue& LcmDrivenLoop::WaitForMessage() {
   }
   sub_context_->get_mutable_state().CopyFrom(*sub_swap_state_);
 
+  drake::log()->warn("CalcOutput");
   driving_sub_.CalcOutput(*sub_context_, sub_output_.get());
   return *(sub_output_->get_data(0));
 }

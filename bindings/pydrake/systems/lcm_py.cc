@@ -213,6 +213,8 @@ PYBIND11_MODULE(lcm, m) {
       // TODO(eric.cousineau): Figure out why this is necessary (#9398).
       py_reference, doc.ConnectLcmScope.doc);
 
+  drake::log()->set_level(spdlog::level::trace);
+
   // Bind C++ serializers.
   BindCppSerializers();
 

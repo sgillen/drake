@@ -57,10 +57,13 @@ LcmSubscriberSystem::LcmSubscriberSystem(
     // to deal with the unusual methods we have available.
     DeclareAbstractOutputPort(
         [this]() {
+          drake::log()->warn("Allocate");
           return this->AllocateSerializerOutputValue();
         },
         [this](const Context<double>& context, AbstractValue* out) {
-          this->CalcSerializerOutputValue(context, out);
+          drake::log()->warn("Calc");
+          drake::unused(context, out);
+          // this->CalcSerializerOutputValue(context, out);
         });
   }
 
@@ -141,6 +144,7 @@ void LcmSubscriberSystem::ProcessMessageAndStoreToDiscreteState(
 
 void LcmSubscriberSystem::ProcessMessageAndStoreToAbstractState(
     AbstractValues* abstract_state) const {
+  drake::log()->warn("ProcessMessageAndStoreToAbstractState");
   DRAKE_ASSERT(is_abstract_state());
   DRAKE_ASSERT(serializer_ != nullptr);
 
@@ -239,6 +243,7 @@ LcmSubscriberSystem::AllocateSerializerOutputValue() const {
 void LcmSubscriberSystem::CalcSerializerOutputValue(
     const Context<double>& context, AbstractValue* output_value) const {
   DRAKE_DEMAND(serializer_ != nullptr);
+  drake::log()->warn("CalcSerializerOutputValue");
   if (is_abstract_state()) {
     output_value->SetFrom(
         context.get_abstract_state().get_value(kStateIndexMessage));
