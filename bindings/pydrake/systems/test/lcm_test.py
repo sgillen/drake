@@ -160,43 +160,45 @@ class TestSystemsLcm(unittest.TestCase):
         self.assert_lcm_equal(actual_message, model_message)
 
     def test_lcm_driven_loop(self):
-        lcm_url = "udpm://239.255.76.67:7668"
-        lcm = DrakeLcm(lcm_url)
+        lcm = DrakeLcm("memq://")
+        lcm.StartReceiveThread()
         # `StartReceiveThread()` is called by the `LcmDrivenLoop` constructor.
         builder = DiagramBuilder()
         sub = mut.LcmSubscriberSystem.Make("TEST_LOOP", header_t, lcm)
-        builder.AddSystem(sub)
+        # builder.AddSystem(sub)
 
-        dummy = builder.AddSystem(DummySys())
-        logger = LogOutput(dummy.get_output_port(0), builder)
-        # logger.set_forced_publish_only()
-        builder.Connect(sub.get_output_port(0), dummy.get_input_port(0))
-        diagram = builder.Build()
+        # dummy = builder.AddSystem(DummySys())
+        # logger = LogOutput(dummy.get_output_port(0), builder)
+        # # logger.set_forced_publish_only()
+        # builder.Connect(sub.get_output_port(0), dummy.get_input_port(0))
+        # diagram = builder.Build()
 
-        utime = mut.PyUtimeMessageToSeconds(header_t)
-        dut = mut.LcmDrivenLoop(diagram, sub, None, lcm, utime)
-        # dut.set_publish_on_every_received_message(True)
+        # utime = mut.PyUtimeMessageToSeconds(header_t)
+        # dut = mut.LcmDrivenLoop(diagram, sub, None, lcm, utime)
+        # # dut.set_publish_on_every_received_message(True)
 
         import sys, trace
         sys.stdout = sys.stderr
         from functools import partial
         tracer = trace.Trace(trace=1, count=0, ignoredirs=["/usr", sys.prefix])
 
-        i_list = [1, 2, 3]
-
         def publish(i):
             msg = header_t()
-            msg.utime = int(1e6 * i)
+            msg.utime = i
             lcm.Publish("TEST_LOOP", msg.encode())
 
-        # value = AbstractValue.Make(header_t())
         # first_msg = sub.WaitForMessage(0, value)
         # print(value.get_value().utime)
-        for i in i_list:
+        for i in [1, 2, 3]:
             publish(i)
-            value = dut.WaitForMessage()
-            msg_time = dut.get_message_to_time_converter().GetTimeInSeconds(value)
+            value = AbstractValue.Make(header_t())
+            sub.WaitForMessage(i - 1, value)
+            msg_time = value.get_value().utime
+            # value = sub.WaitForMessage()
+            # msg_time = dut.get_message_to_time_converter().GetTimeInSeconds(value)
             print(msg_time)
+            self.assertEqual(msg_time, i)
+            # exit(1)
 
     def test_connect_lcm_scope(self):
         builder = DiagramBuilder()
