@@ -1,19 +1,21 @@
 from pydrake.multibody import inverse_kinematics as ik
 
 import math
+import unittest
 
-from pydrake.multibody.multibody_tree.multibody_plant import MultibodyPlant
+import numpy as np
+
+from pydrake.common import FindResourceOrThrow
+from pydrake.common.eigen_geometry import Quaternion, AngleAxis, Isometry3
+import pydrake.math
+from pydrake.multibody.multibody_tree.multibody_plant import (
+    MultibodyPlant, AddMultibodyPlantSceneGraph)
 from pydrake.multibody.parsing import Parser
 from pydrake.multibody.benchmarks.acrobot import (
     MakeAcrobotPlant,
 )
-import unittest
+from pydrake.systems.framework import DiagramBuilder
 import pydrake.solvers.mathematicalprogram as mp
-import pydrake.math
-import numpy as np
-
-from pydrake.common import FindResourceOrThrow
-from pydrake.util.eigen_geometry import Quaternion, AngleAxis
 
 
 class TestInverseKinematics(unittest.TestCase):
@@ -23,9 +25,15 @@ class TestInverseKinematics(unittest.TestCase):
     def setUp(self):
         file_name = FindResourceOrThrow(
             "drake/bindings/pydrake/multibody/test/two_bodies.sdf")
-        self.plant = MultibodyPlant(time_step=0.01)
+        builder = DiagramBuilder()
+        self.plant, _ = AddMultibodyPlantSceneGraph(
+            builder, MultibodyPlant(time_step=0.01))
         model_instance = Parser(self.plant).AddModelFromFile(file_name)
         self.plant.Finalize()
+        self.diagram = builder.Build()
+        self.diagram_context = self.diagram.CreateDefaultContext()
+        self.context = self.diagram.GetMutableSubsystemContext(
+            self.plant, self.diagram_context)
         self.body1_frame = self.plant.GetBodyByName("body1").body_frame()
         self.body2_frame = self.plant.GetBodyByName("body2").body_frame()
         self.ik_two_bodies = ik.InverseKinematics(self.plant)
@@ -163,3 +171,22 @@ class TestInverseKinematics(unittest.TestCase):
                           (np.linalg.norm(na_W) * np.linalg.norm(nb_W)))
 
         self.assertLess(math.fabs(angle - angle_lower), 1E-6)
+
+    def test_AddMinimumDistanceConstraint(self):
+        ik = self.ik_two_bodies
+        ik.AddMinimumDistanceConstraint(minimal_distance=0.1)
+        prog = self.prog
+        plant = self.plant
+        body1 = plant.GetBodyByName("body1")
+        body2 = plant.GetBodyByName("body2")
+        q = ik.q()
+        context = plant.CreateDefaultContext()
+        R_I = np.eye(3)
+        plant.SetFreeBodyPose(
+            context, body1, Isometry3(R_I, [0, 0, 0.01]))
+        plant.SetFreeBodyPose(
+            context, body2, Isometry3(R_I, [0, 0, -0.01]))
+        prog.SetInitialGuess(q, plant.GetPositions(context))   
+        result = prog.Solve()
+        self.assertEqual(result, mp.SolutionResult.kSolutionFound)
+        print(prog.GetSolution(q))
