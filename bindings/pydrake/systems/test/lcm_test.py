@@ -33,19 +33,6 @@ def lcm_to_json(message):
     return helper(message)
 
 
-class DummySys(LeafSystem):
-    def __init__(self):
-        LeafSystem.__init__(self)
-        self._DeclareAbstractInputPort("header_t",
-                                       AbstractValue.Make(header_t))
-        self._DeclareVectorOutputPort(BasicVector(1), self.CalcTimestamp)
-
-    def CalcTimestamp(self, context, output):
-        x = self.EvalAbstractInput(context, 0).get_value()
-        y = output.get_mutable_value()
-        y[:] = x.utime / 1e6
-
-
 class TestSystemsLcm(unittest.TestCase):
     def _model_message(self):
         message = quaternion_t()
@@ -100,16 +87,6 @@ class TestSystemsLcm(unittest.TestCase):
         actual = output.get_data(0)
         return actual
 
-    def test_utime_to_seconds(self):
-        serial = mut.PySerializer(header_t)
-        dut = mut.PyUtimeMessageToSeconds(header_t)
-        model = header_t()
-        model.utime, model.seq, model.frame_name = (1e6, 2, "header")
-        value = serial.CreateDefaultValue()
-        serial.Deserialize(model.encode(), value)
-        time = dut.GetTimeInSeconds(value)
-        self.assertEqual(time, 1)
-
     def test_subscriber(self):
         lcm = DrakeMockLcm()
         dut = mut.LcmSubscriberSystem.Make(
@@ -159,23 +136,52 @@ class TestSystemsLcm(unittest.TestCase):
         actual_message = quaternion_t.decode(raw)
         self.assert_lcm_equal(actual_message, model_message)
 
-    def test_lcm_driven_loop(self):
+    def test_utime_to_seconds(self):
+        msg = header_t()
+        msg.utime = int(1e6)
+        dut = mut.PyUtimeMessageToSeconds(header_t)
+        t_sec = dut.GetTimeInSeconds(AbstractValue.Make(msg))
+        self.assertEqual(t_sec, 1)
+
+    def test_subscriber_wait_for_message(self):
         lcm = DrakeLcm("memq://")
         lcm.StartReceiveThread()
-        # `StartReceiveThread()` is called by the `LcmDrivenLoop` constructor.
-        builder = DiagramBuilder()
         sub = mut.LcmSubscriberSystem.Make("TEST_LOOP", header_t, lcm)
-        # builder.AddSystem(sub)
+        value = AbstractValue.Make(header_t())
+        for i in range(3):
+            msg_pub = header_t()
+            msg_pub.utime = i
+            lcm.Publish("TEST_LOOP", msg_pub.encode())
+            sub.WaitForMessage(i, value)
+            self.assertEqual(value.get_value().utime, i)
 
-        # dummy = builder.AddSystem(DummySys())
-        # logger = LogOutput(dummy.get_output_port(0), builder)
-        # # logger.set_forced_publish_only()
-        # builder.Connect(sub.get_output_port(0), dummy.get_input_port(0))
-        # diagram = builder.Build()
+    def test_lcm_driven_loop(self):
+        lcm = DrakeLcm("memq://")
+        sub = mut.LcmSubscriberSystem.Make("TEST_LOOP", header_t, lcm)
+        utime = mut.PyUtimeMessageToSeconds(header_t)
 
-        # utime = mut.PyUtimeMessageToSeconds(header_t)
-        # dut = mut.LcmDrivenLoop(diagram, sub, None, lcm, utime)
-        # # dut.set_publish_on_every_received_message(True)
+        class DummySys(LeafSystem):
+            def __init__(self):
+                LeafSystem.__init__(self)
+                self._DeclareAbstractInputPort(
+                    "header_t", AbstractValue.Make(header_t))
+                self._DeclareVectorOutputPort(
+                    BasicVector(1), self._calc_output)
+
+            def _calc_output(self, context, output):
+                x = self.EvalAbstractInput(context, 0).get_value()
+                y = output.get_mutable_value()
+                y[:] = x.utime
+
+        builder = DiagramBuilder()
+        builder.AddSystem(sub)
+        dummy = builder.AddSystem(DummySys())
+        logger = LogOutput(dummy.get_output_port(0), builder)
+        # logger.set_forced_publish_only()
+        builder.Connect(sub.get_output_port(0), dummy.get_input_port(0))
+        diagram = builder.Build()
+        dut = mut.LcmDrivenLoop(diagram, sub, None, lcm, utime)
+        # dut.set_publish_on_every_received_message(True)
 
         import sys, trace
         sys.stdout = sys.stderr
@@ -187,14 +193,12 @@ class TestSystemsLcm(unittest.TestCase):
             msg.utime = i
             lcm.Publish("TEST_LOOP", msg.encode())
 
-        # first_msg = sub.WaitForMessage(0, value)
-        # print(value.get_value().utime)
-        for i in [1, 2, 3]:
-            publish(i)
-            value = AbstractValue.Make(header_t())
-            sub.WaitForMessage(i - 1, value)
-            msg_time = value.get_value().utime
-            # value = sub.WaitForMessage()
+        i_list = list(range(3))
+        for i in i_list:
+            msg_pub = header_t()
+            msg_pub.utime = i
+            lcm.Publish("TEST_LOOP", msg_pub.encode())
+            msg_time = dut.WaitForMessage().get_value().utime
             # msg_time = dut.get_message_to_time_converter().GetTimeInSeconds(value)
             print(msg_time)
             self.assertEqual(msg_time, i)

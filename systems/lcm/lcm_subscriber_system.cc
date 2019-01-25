@@ -285,6 +285,8 @@ int LcmSubscriberSystem::WaitForMessage(
 
   // This while loop is necessary to guard for spurious wakeup:
   // https://en.wikipedia.org/wiki/Spurious_wakeup
+  // TODO(eric.cousineau): This loop causes a slow down of ~0.1s per call in
+  // Python. See if it's possible to resolve this.
   while (old_message_count >= received_message_count_) {
     // When wait returns, lock is atomically acquired. So it's thread safe to
     // read received_message_count_.
@@ -295,8 +297,6 @@ int LcmSubscriberSystem::WaitForMessage(
       serializer_->Deserialize(
           received_message_.data(), received_message_.size(), message);
   }
-  lock.unlock();
-
   return new_message_count;
 }
 

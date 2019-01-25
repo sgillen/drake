@@ -17,7 +17,6 @@ class PySerializer(SerializerInterface):
 
     def Deserialize(self, buffer, abstract_value):
         message = self._lcm_type.decode(buffer)
-        print("DES")
         abstract_value.set_value(message)
 
     def Serialize(self, abstract_value):
