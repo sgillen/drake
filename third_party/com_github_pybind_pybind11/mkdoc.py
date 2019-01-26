@@ -935,7 +935,9 @@ def main():
     ignore_patterns = []
     output_filename = None
 
-    for item in sys.argv[1:]:
+    i = 1
+    while i < len(sys.argv):
+        item = sys.argv[i]
         if item == '-quiet':
             quiet = True
         elif item.startswith('-output='):
@@ -946,10 +948,16 @@ def main():
             root_name = item[len('-root-name='):]
         elif item.startswith('-exclude-hdr-patterns='):
             ignore_patterns.append(item[len('-exclude-hdr-patterns='):])
+        elif item == '-tmpdir':
+            i += 1
+            print(sys.argv[i])
+            print("YAR")
+            exit(10)
         elif item.startswith('-'):
             parameters.append(item)
         else:
             filenames.append(item)
+        i += 1
 
     parameters.append(std)
 
@@ -1009,6 +1017,9 @@ def main():
     # files, and parse. Add a unique prefix so we do not leak accidentally leak
     # in paths in `/tmp`.
     dir_prefix = mkdtemp(prefix="drake_mkdoc_")
+    print(dir_prefix)
+    print(sys.argv)
+    exit(10)
     glue_include_file = NamedTemporaryFile(
         'w', prefix="glue_include_file_", dir=dir_prefix)
     with glue_include_file:

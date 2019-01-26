@@ -332,13 +332,15 @@ def _generate_pybind_documentation_header_impl(ctx):
     args.add("-std=c++14")
     args.add("-w")
     args.add_all(package_headers)
+    args.add("-tmpdir=$(GENDIR)")  # DOES NOT EXPAND
 
     ctx.actions.run_shell(
         outputs = [ctx.outputs.out],
         inputs = transitive_headers,
         tools = [mkdoc],
         arguments = [args],
-        command = "{} $@".format(mkdoc.path),
+        # ALSO DOES NOT EXPAND
+        command = "{} -tmpdir $(GENDIR) $@".format(mkdoc.path),
     )
 
 # Generates a header that defines variables containing a representation of the
