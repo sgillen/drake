@@ -2,10 +2,10 @@
 #include "pybind11/operators.h"
 #include "pybind11/pybind11.h"
 
+#include "drake/bindings/pydrake/common/cpp_param_pybind.h"
 #include "drake/bindings/pydrake/documentation_pybind.h"
 #include "drake/bindings/pydrake/pydrake_pybind.h"
 #include "drake/bindings/pydrake/systems/systems_pybind.h"
-#include "drake/bindings/pydrake/util/cpp_param_pybind.h"
 #include "drake/perception/depth_image_to_point_cloud.h"
 #include "drake/perception/point_cloud.h"
 
@@ -36,8 +36,7 @@ void init_pc_flags(py::module m) {
     using Class = Fields;
     constexpr auto& cls_doc = doc.Fields;
     py::class_<Class>(m, "Fields", cls_doc.doc)
-        .def(py::init<BaseFieldT>(), py::arg("base_fields"),
-            cls_doc.ctor.doc_1args_base_fields)
+        .def(py::init<BaseFieldT>(), py::arg("base_fields"), cls_doc.ctor.doc)
         .def("base_fields", &Class::base_fields, cls_doc.base_fields.doc)
         .def("has_base_fields", &Class::has_base_fields,
             cls_doc.has_base_fields.doc)
@@ -126,7 +125,7 @@ void init_perception(py::module m) {
         .def(py::init<const CameraInfo&, PixelType, float>(),
             py::arg("camera_info"),
             py::arg("pixel_type") = PixelType::kDepth32F,
-            py::arg("scale") = 1.0, cls_doc.ctor.doc_3args)
+            py::arg("scale") = 1.0, cls_doc.ctor.doc)
         .def("depth_image_input_port", &Class::depth_image_input_port,
             py_reference_internal, cls_doc.depth_image_input_port.doc)
         .def("point_cloud_output_port", &Class::point_cloud_output_port,

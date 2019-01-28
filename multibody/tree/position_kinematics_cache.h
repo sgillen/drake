@@ -1,7 +1,9 @@
 #pragma once
 
+#include "drake/common/default_scalars.h"
 #include "drake/common/drake_assert.h"
 #include "drake/common/drake_copyable.h"
+#include "drake/common/drake_deprecated.h"
 #include "drake/common/eigen_stl_types.h"
 #include "drake/common/eigen_types.h"
 #include "drake/multibody/tree/multibody_tree_indexes.h"
@@ -35,7 +37,7 @@ namespace internal {
 template <typename T>
 class PositionKinematicsCache {
  public:
-  DRAKE_DEFAULT_COPY_AND_MOVE_AND_ASSIGN(PositionKinematicsCache)
+  DRAKE_DECLARE_COPY_AND_MOVE_AND_ASSIGN(PositionKinematicsCache)
 
   /// Constructs a position kinematics cache entry for the given
   /// MultibodyTreeTopology.
@@ -139,10 +141,19 @@ class PositionKinematicsCache {
   X_PoolType X_MB_pool_;  // Indexed by BodyNodeIndex.
 };
 
+DRAKE_DEFINE_DEFAULT_COPY_AND_MOVE_AND_ASSIGN_T(PositionKinematicsCache)
+
 }  // namespace internal
 
-/// WARNING: This alias will be deprecated on or around 2018/12/20.
-using internal::PositionKinematicsCache;
+/// WARNING: This will be removed on or around 2019/03/01.
+template <typename T>
+using PositionKinematicsCache
+DRAKE_DEPRECATED(
+    "This public alias is deprecated, and will be removed around 2019/03/01.")
+    = internal::PositionKinematicsCache<T>;
 
 }  // namespace multibody
 }  // namespace drake
+
+DRAKE_DECLARE_CLASS_TEMPLATE_INSTANTIATIONS_ON_DEFAULT_NONSYMBOLIC_SCALARS(
+    class ::drake::multibody::internal::PositionKinematicsCache)

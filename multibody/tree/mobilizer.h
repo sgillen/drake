@@ -6,6 +6,8 @@
 #include "drake/common/autodiff.h"
 #include "drake/common/drake_assert.h"
 #include "drake/common/drake_copyable.h"
+#include "drake/common/drake_deprecated.h"
+#include "drake/common/random.h"
 #include "drake/multibody/math/spatial_acceleration.h"
 #include "drake/multibody/math/spatial_force.h"
 #include "drake/multibody/math/spatial_velocity.h"
@@ -20,11 +22,10 @@ namespace multibody {
 
 // Forward declarations.
 template<typename T> class Body;
-namespace internal {
-template<typename T> class BodyNode;
-}
 
 namespace internal {
+
+template<typename T> class BodyNode;
 
 /// %Mobilizer is a fundamental object within Drake's multibody engine used to
 /// specify the allowed motions between two Frame objects within a
@@ -334,6 +335,10 @@ class Mobilizer : public MultibodyTreeElement<Mobilizer<T>, MobilizerIndex> {
   /// represent a mathematicaly valid one. Consider for instance a quaternion
   /// mobilizer, for which its _zero_ position corresponds to the quaternion
   /// [1, 0, 0, 0].
+  ///
+  /// Note that the zero state may fall outside of the limits for any joints
+  /// associated with this mobilizer.
+  /// @see set_default_state().
   virtual void set_zero_state(const systems::Context<T>& context,
                               systems::State<T>* state) const = 0;
 
@@ -342,6 +347,29 @@ class Mobilizer : public MultibodyTreeElement<Mobilizer<T>, MobilizerIndex> {
   void set_zero_configuration(systems::Context<T>* context) const {
     set_zero_state(*context, &context->get_mutable_state());
   }
+
+  /// Sets the `state` to the _default_ state (position and velocity) for
+  /// `this` mobilizer.  For example, the zero state for our standard IIWA
+  /// model has the arm pointing directly up; this is the correct definition of
+  /// the zero state (it is where our joint angles measure zero).  But we also
+  /// support a default state (perhaps a more comfortable initial configuration
+  /// of the IIWA), which need not be the zero state, that describes a state of
+  /// the Mobilizer to be used in e.g. MultibodyPlant::SetDefaultContext().
+  virtual void set_default_state(const systems::Context<T>& context,
+                                 systems::State<T>* state) const = 0;
+
+  /// Sets the `state` to a (potentially) random position and velocity, by
+  /// evaluating any random distributions that were declared (via e.g.
+  /// MobilizerImpl::set_random_position_distribution() and/or
+  /// MobilizerImpl::set_random_velocity_distribution(), or calling
+  /// set_zero_state() if none have been declared. Note that the intended
+  /// caller of this method is `MultibodyTree::SetRandomState()` which treats
+  /// the independent samples returned from this sample as an initial guess,
+  /// but may change the value in order to "project" it onto a constraint
+  /// manifold.
+  virtual void set_random_state(const systems::Context<T>& context,
+                                systems::State<T>* state,
+                                RandomGenerator* generator) const = 0;
 
   /// Computes the across-mobilizer transform `X_FM(q)` between the inboard
   /// frame F and the outboard frame M as a function of the vector of
@@ -645,8 +673,12 @@ class Mobilizer : public MultibodyTreeElement<Mobilizer<T>, MobilizerIndex> {
 
 }  // namespace internal
 
-/// WARNING: This alias will be deprecated on or around 2018/12/20.
-using internal::Mobilizer;
+/// WARNING: This will be removed on or around 2019/03/01.
+template <typename T>
+using Mobilizer
+DRAKE_DEPRECATED(
+    "This public alias is deprecated, and will be removed around 2019/03/01.")
+    = internal::Mobilizer<T>;
 
 }  // namespace multibody
 }  // namespace drake

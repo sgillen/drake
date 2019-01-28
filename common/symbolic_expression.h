@@ -236,19 +236,24 @@ class Expression {
   Polynomiald ToPolynomial() const;
 
   /** Evaluates using a given environment (by default, an empty environment) and
-   * a random number generator.
+   * a random number generator. If there is a random variable in this expression
+   * which is unassigned in @p env, this method uses @p random_generator to
+   * sample a value and use the value to substitute all occurrences of the
+   * variable in this expression.
    *
    * @throws std::runtime_error if there exists a non-random variable in this
    *                            expression whose assignment is not provided by
    *                            @p env.
-   * @throws std::runtime_error if a random variable is detected while @p
-   *                            random_generator is `nullptr`.
+   * @throws std::runtime_error if an unassigned random variable is detected
+   *                            while @p random_generator is `nullptr`.
    * @throws std::runtime_error if NaN is detected during evaluation.
    */
   double Evaluate(const Environment& env = Environment{},
                   RandomGenerator* random_generator = nullptr) const;
 
-  /** Evaluates using an empty environment and a random number generator.
+  /** Evaluates using an empty environment and a random number generator. It
+   * uses @p random_generator to sample values for the random variables in this
+   * expression.
    *
    * See the above overload for the exceptions that it might throw.
    */
@@ -782,23 +787,38 @@ auto operator*(
   return t1.template cast<Expression>() * t2;
 }
 
-/// Evaluates a symbolic matrix `m` using the `env` by evaluating each element.
-/// @returns a matrix of double whose size is the size of `m`.
+/// Evaluates a symbolic matrix @p m using @p env and @p random_generator.
+///
+/// If there is a random variable in @p m which is unassigned in @p env, this
+/// function uses @p random_generator to sample a value and use the value to
+/// substitute all occurrences of the random variable in @p m.
+///
+/// @returns a matrix of double whose size is the size of @p m.
 /// @throws std::runtime_error if NaN is detected during evaluation.
+/// @throws std::runtime_error if @p m includes unassigned random variables but
+///                               @p random_generator is `nullptr`.
 template <typename Derived>
-auto Evaluate(const Eigen::MatrixBase<Derived>& m, const Environment& env) {
+Eigen::Matrix<double, Derived::RowsAtCompileTime, Derived::ColsAtCompileTime, 0,
+              Derived::MaxRowsAtCompileTime, Derived::MaxColsAtCompileTime>
+Evaluate(const Eigen::MatrixBase<Derived>& m,
+         const Environment& env = Environment{},
+         RandomGenerator* random_generator = nullptr) {
   static_assert(std::is_same<typename Derived::Scalar, Expression>::value,
                 "Evaluate only accepts a symbolic matrix.");
-  // Without the trailing `.eval()`, it returns an Eigen Expression (of type
-  // CwiseUnaryOp) and `symbolic::Expression::Evaluate` is only called when a
-  // value is needed (i.e. lazy-evaluation). We add the trailing `.eval()` call
-  // to enforce eager-evaluation and provide a fully evaluated matrix (of
-  // double) to a caller.
-  //
-  // Please refer to https://eigen.tuxfamily.org/dox/TopicPitfalls.html for more
-  // information.
-  return m.unaryExpr([&env](const Expression& e) { return e.Evaluate(env); })
-      .eval();
+  // Note that the return type is written out explicitly to help gcc 5 (on
+  // ubuntu).  Previously the implementation used `auto`, and placed  an `
+  // .eval()` at the end to prevent lazy evaluation.
+  if (random_generator == nullptr) {
+    return m.unaryExpr([&env](const Expression& e) { return e.Evaluate(env); });
+  } else {
+    // Construct an environment by extending `env` by sampling values for the
+    // random variables in `m` which are unassigned in `env`.
+    const Environment env_with_random_variables{PopulateRandomVariables(
+        env, GetDistinctVariables(m), random_generator)};
+    return m.unaryExpr([&env_with_random_variables](const Expression& e) {
+      return e.Evaluate(env_with_random_variables);
+    });
+  }
 }
 
 }  // namespace symbolic
@@ -1299,39 +1319,6 @@ CheckStructuralEquality(const DerivedA& m1, const DerivedB& m2) {
   // structural equality between two expressions.
   return m1.binaryExpr(m2, std::equal_to<Expression>{}).all();
 }
-
-/// For a given symbolic expression @p e, generates two C functions, @p
-/// function_name and `function_name_in`. The generated `function_name` takes an
-/// array of doubles for parameters and returns an evaluation
-/// result. `function_name_in` returns the length of @p parameters.
-///
-/// @param[in] function_name Name of the generated C function.
-/// @param[in] parameters    Vector of variables provide the ordering of
-///                          symbolic variables.
-/// @param[in] e             Symbolic expression to codegen.
-///
-/// For example, `Codegen("f", {x, y}, 1 + sin(x) + cos(y))` generates the
-/// following string.
-///
-/// <pre>
-/// double f(const double* p) {
-///     return (1 + sin(p[0]) + cos(p[1]));
-/// }
-/// int f_in() {
-///     return 2;  // size of `{x, y}`.
-/// }
-/// </pre>
-///
-/// Note that in this example `x` and `y` are mapped to `p[0]` and `p[1]`
-/// respectively because we passed `{x, y}` to `Codegen`.
-///
-/// Note that generated code does not include any headers while it may use math
-/// functions defined in `<math.h>` such as sin, cos, exp, and log. A user of
-/// generated code is responsible to include `<math.h>` if needed to compile
-/// generated code.
-std::string CodeGen(const std::string& function_name,
-                    const std::vector<Variable>& parameters,
-                    const Expression& e);
 
 }  // namespace symbolic
 

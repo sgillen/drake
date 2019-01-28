@@ -3,6 +3,7 @@
 load("//tools/workspace:generate_file.bzl", "generate_file")
 load("@drake//tools/workspace:github.bzl", "github_archive")
 
+# Using the `drake` branch of this repository.
 _REPOSITORY = "RobotLocomotion/pybind11"
 
 _COMMIT = "906b5f2743eb71c758d1c239cef27fda01239039"
@@ -18,7 +19,7 @@ def pybind11_repository(
         commit = _COMMIT,
         sha256 = _SHA256,
         build_file = "@drake//tools/workspace/pybind11:package.BUILD.bazel",
-        # local_repository_override = "/home/eacousineau/proj/tri/repo/repro/externals/pybind11",  # noqa
+        # local_repository_override = "/home/eacousineau/proj/tri/repo/externals/pybind11",  # noqa
         mirrors = mirrors,
     )
 

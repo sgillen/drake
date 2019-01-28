@@ -35,6 +35,10 @@ from pydrake.systems.test.test_util import (
     call_vector_system_overrides,
     )
 
+from pydrake.common.deprecation import (
+    DrakeDeprecationWarning,
+    )
+
 
 def noop(*args, **kwargs):
     # When a callback is required for an interface, but not useful for testing.

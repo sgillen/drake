@@ -53,13 +53,6 @@ const PrismaticMobilizer<T>& PrismaticMobilizer<T>::set_translation_rate(
 }
 
 template <typename T>
-void PrismaticMobilizer<T>::set_zero_state(const systems::Context<T>& context,
-                                          systems::State<T>* state) const {
-  // The default Mobilizer state of zero positions and velocities is used.
-  this->set_default_zero_state(context, state);
-}
-
-template <typename T>
 Isometry3<T> PrismaticMobilizer<T>::CalcAcrossMobilizerTransform(
     const MultibodyTreeContext<T>& context) const {
   return Isometry3<T>(
@@ -155,10 +148,9 @@ std::unique_ptr<Mobilizer<AutoDiffXd>> PrismaticMobilizer<T>::DoCloneToScalar(
   return TemplatedDoCloneToScalar(tree_clone);
 }
 
-// Explicitly instantiates on the most common scalar types.
-template class PrismaticMobilizer<double>;
-template class PrismaticMobilizer<AutoDiffXd>;
-
 }  // namespace internal
 }  // namespace multibody
 }  // namespace drake
+
+DRAKE_DEFINE_CLASS_TEMPLATE_INSTANTIATIONS_ON_DEFAULT_NONSYMBOLIC_SCALARS(
+    class ::drake::multibody::internal::PrismaticMobilizer)

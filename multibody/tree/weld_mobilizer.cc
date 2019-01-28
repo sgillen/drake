@@ -2,16 +2,11 @@
 
 #include <memory>
 
-#include "drake/common/default_scalars.h"
 #include "drake/multibody/tree/multibody_tree.h"
 
 namespace drake {
 namespace multibody {
 namespace internal {
-
-template <typename T>
-void WeldMobilizer<T>::set_zero_state(const systems::Context<T>&,
-                                      systems::State<T>*) const {}
 
 template <typename T>
 Isometry3<T> WeldMobilizer<T>::CalcAcrossMobilizerTransform(
@@ -99,5 +94,5 @@ std::unique_ptr<Mobilizer<AutoDiffXd>> WeldMobilizer<T>::DoCloneToScalar(
 }  // namespace multibody
 }  // namespace drake
 
-DRAKE_DEFINE_CLASS_TEMPLATE_INSTANTIATIONS_ON_DEFAULT_SCALARS(
+DRAKE_DEFINE_CLASS_TEMPLATE_INSTANTIATIONS_ON_DEFAULT_NONSYMBOLIC_SCALARS(
     class ::drake::multibody::internal::WeldMobilizer)

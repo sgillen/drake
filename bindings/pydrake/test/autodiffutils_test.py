@@ -206,16 +206,23 @@ class TestAutoDiffXd(unittest.TestCase):
         C = np.dot(A, B)
         self._check_array(C, [[AD(4, [4., 2])]])
 
+        # `matmul` not supported for `dtype=object` (#11332). `np.dot` should
+        # be used instead.
+        with self.assertRaises(TypeError):
+            C2 = np.matmul(A, B)
+
         # Type mixing
         Bf = np.array([[2., 2]]).T
         C2 = np.dot(A, Bf)  # Leverages implicit casting.
-        self._check_array(C, [[AD(4, [4., 2])]])
+        self._check_array(C2, [[AD(4, [4., 0])]])
 
         # Other methods.
         X = np.array([[a_scalar, b_scalar], [b_scalar, a_scalar]])
         self._check_scalar(np.trace(X), AD(2, [2., 0]))
 
-        # `inv` is a ufunc that we must implement, if that is possible.
+        # `inv` is a ufunc that we must implement, if possible. However, given
+        # that this is currently `dtype=object`, it would be extremely unwise
+        # to do so. See #8116 for alternative.
         with self.assertRaises(TypeError):
             Y = np.linalg.inv(X)
 
