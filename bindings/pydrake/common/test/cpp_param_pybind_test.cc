@@ -19,7 +19,7 @@ using std::string;
 namespace drake {
 namespace pydrake {
 
-class CustomDType {
+struct CustomDType {
   int value{};
 };
 
@@ -107,7 +107,9 @@ int main(int argc, char** argv) {
 
   // Define custom dtype.
   py::dtype_user<CustomDType>(m, "CustomDType")
-    .def("value", &CustomDType::value)
+    .def("value", [](const CustomDType* self) {
+      return self->value;
+    })
     .def("__str__", [](const CustomDType*) {
       return py::str("<CustomDType>");
     })
