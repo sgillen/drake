@@ -41,6 +41,7 @@ PYBIND11_MODULE(symbolic, m) {
       "Symbolic variable, variables, monomial, expression, polynomial, and "
       "formula";
 
+  const auto& var_doc = doc.Variable;
   // Predeclare all custom dtypes.
   py::dtype_user<Variable> var_cls(m, "Variable", doc.Variable.doc);
   py::dtype_user<Expression> expr_cls(m, "Expression", doc.Expression.doc);
@@ -60,8 +61,9 @@ PYBIND11_MODULE(symbolic, m) {
           var_doc.Type.RANDOM_EXPONENTIAL.doc);
 
   var_cls
-      .def(py::init<const string&, Variable::Type>(), py::arg("name"),
-          py::arg("type") = Variable::Type::CONTINUOUS, var_doc.ctor.doc_2args)
+      .def(py::init<const string&, Variable::Type>(),
+          py::arg("name"), py::arg("type") = Variable::Type::CONTINUOUS,
+          var_doc.ctor.doc_2args)
       .def("get_id", &Variable::get_id, var_doc.get_id.doc)
       .def("get_type", &Variable::get_type, var_doc.get_type.doc)
       .def("__str__", &Variable::to_string, var_doc.to_string.doc)
@@ -208,7 +210,7 @@ PYBIND11_MODULE(symbolic, m) {
   expr_cls  // BR
       .def(py::init<>(), doc.Expression.ctor.doc_0args)
       .def(py::init<double>(), doc.Expression.ctor.doc_1args_d)
-      .def(py::init<const Variable&>(), doc.Expression.ctor.doc_copy)
+      .def(py::init<const Variable&>(), doc.Expression.ctor.doc_1args_var)
       // Casting
       .def_loop(py::dtype_method::implicit_conversion<Variable, Expression>())
       // Methods
