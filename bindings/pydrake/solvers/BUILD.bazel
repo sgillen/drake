@@ -99,6 +99,7 @@ PY_LIBRARIES_ATTIC_ALIASES = [
 drake_py_library_aliases(
     actual_subdir = "bindings/pydrake/attic/solvers",
     relative_labels = PY_LIBRARIES_ATTIC_ALIASES,
+    add_deprecation_warning = 1,
 )
 
 PY_LIBRARIES_WITH_INSTALL = [

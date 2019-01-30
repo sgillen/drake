@@ -44,6 +44,8 @@ void init_module(py::module m) {
   using namespace drake::multibody;
   constexpr auto& doc = pydrake_doc.drake.multibody;
 
+  WarnDeprecated("OLD");
+
   ForwardSymbols(py::module::import("pydrake.multibody.tree"), m);
 
 #pragma GCC diagnostic push
