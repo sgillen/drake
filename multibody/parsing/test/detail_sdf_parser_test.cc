@@ -310,36 +310,43 @@ GTEST_TEST(SdfParser, TestOptionalSceneGraph) {
   }
 }
 
-GTEST_TEST(SdfParser, TestUnsupportedFrames) {
-  auto expect_bad_frame = [](const std::string inner) {
-    const std::string filename = temp_directory() + "/bad.sdf";
-    {
-      std::ofstream file(filename);
-      file << "<sdf version='1.6'>\n  <model name='bad'>\n    ";
-      file << inner;
-      file << "\n  </model>\n</sdf>\n";
-      file.close();
-    }
-    MultibodyPlant<double> plant;
-    SceneGraph<double> scene_graph;
-    PackageMap package_map;
-    plant.RegisterAsSourceForSceneGraph(&scene_graph);
-    DRAKE_EXPECT_THROWS_MESSAGE(
-        AddModelsFromSdfFile(filename, package_map, &plant),
-        std::runtime_error,
-        R"(<pose frame='\{non-empty\}'/> is presently not supported )"
-        R"(outside of the <frame/> tag.)");
-  };
+void ExpectUnsupportedFrame(const std::string& inner) {
+  const std::string filename = temp_directory() + "/bad.sdf";
+  std::ofstream file(filename);
+  file << "<sdf version='1.6'>\n  <model name='bad'>\n    ";
+  file << inner;
+  file << "\n  </model>\n</sdf>\n";
+  file.close();
 
-  expect_bad_frame("<pose frame='hello'/>");
-  expect_bad_frame("<link name='a'><pose frame='hello'/></link>");
-  expect_bad_frame(
-      "<link name='a'><visual name='b'><pose frame='hello'/></visual></link>");
-  expect_bad_frame(
-      "<link name='a'><collision name='b'><pose frame='hello'/>"
-      "</collision></link>");
-  expect_bad_frame(
-      "<joint name='a' type='fixed'><pose frame='hello'/><parent>world</parent><child>world</child></joint>");
+  MultibodyPlant<double> plant;
+  SceneGraph<double> scene_graph;
+  PackageMap package_map;
+  plant.RegisterAsSourceForSceneGraph(&scene_graph);
+  drake::log()->debug("inner: {}", inner);
+  DRAKE_EXPECT_THROWS_MESSAGE(
+      AddModelsFromSdfFile(filename, package_map, &plant),
+      std::runtime_error,
+      R"(<pose frame='\{non-empty\}'/> is presently not supported )"
+      R"(outside of the <frame/> tag.)");
+}
+
+GTEST_TEST(SdfParser, TestUnsupportedFrames) {
+  ExpectUnsupportedFrame("<pose frame='hello'/>");
+  ExpectUnsupportedFrame("<link name='a'><pose frame='hello'/></link>");
+  ExpectUnsupportedFrame(
+      "<link name='a'>"
+      "  <visual name='b'><pose frame='hello'/></visual>"
+      "</link>");
+  ExpectUnsupportedFrame(
+      "<link name='a'>"
+      "  <collision name='b'><pose frame='hello'/></collision>"
+      "</link>");
+  ExpectUnsupportedFrame(
+      "<link name='child'/>"
+      "<joint name='a' type='fixed'>"
+      "  <pose frame='hello'/>"
+      "  <parent>world</parent> <child>child</child>"
+      "</joint>");
 }
 
 }  // namespace
