@@ -254,16 +254,8 @@ void AddJointFromSpecification(
 
   // Get the pose of frame J in the frame of the child link C, as specified in
   // <joint> <pose> ... </pose></joint>.
-  // TODO(amcastro-tri): Verify sdformat supports frame specifications
+  // TODO(eric.cousineau): Verify sdformat supports frame specifications
   // correctly.
-  // There are many ways by which a joint frame pose can be specified in SDF:
-  //  - <joint> <pose> </pose></joint>.
-  //  - <joint> <pose> <frame/> </pose></joint>.
-  //  - <joint> <frame> <pose> <frame/> </pose> </frame> </joint>.
-  // And combinations of the above?
-  // There is no way to verify at this level which one is supported or not.
-  // Here we trust that no mather how a user specified the file, joint.Pose()
-  // will ALWAYS return X_CJ.
   ThrowIfPoseFrameSpecified(joint_spec.Element());
   const Isometry3d X_CJ = ToIsometry3(joint_spec.Pose());
 
@@ -433,8 +425,8 @@ void AddLinksFromSpecification(
         const sdf::Collision& sdf_collision =
             *link.CollisionByIndex(collision_index);
         const sdf::Geometry& sdf_geometry = *sdf_collision.Geom();
+        ThrowIfPoseFrameSpecified(sdf_collision.Element());
         if (sdf_geometry.Type() != sdf::GeometryType::EMPTY) {
-          ThrowIfPoseFrameSpecified(sdf_collision.Element());
           const Isometry3d X_LG =
               MakeGeometryPoseFromSdfCollision(sdf_collision);
           std::unique_ptr<geometry::Shape> shape =
