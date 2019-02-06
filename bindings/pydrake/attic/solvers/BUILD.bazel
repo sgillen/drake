@@ -26,7 +26,7 @@ drake_py_library(
     srcs = ["__init__.py"],
     imports = PACKAGE_INFO.py_imports,
     deps = [
-        "//bindings/pydrake:module_py",
+        "//bindings/pydrake/attic:module_py",
     ],
 )
 
