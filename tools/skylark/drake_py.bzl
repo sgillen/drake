@@ -185,6 +185,7 @@ def drake_py_test(
         deps = None,
         isolate = True,
         allow_import_unittest = False,
+        tags = [],
         **kwargs):
     """A wrapper to insert Drake-specific customizations.
 
@@ -221,6 +222,7 @@ def drake_py_test(
         size = size,
         srcs = srcs,
         deps = deps,
+        tags = tags + ["py"],
         **kwargs
     )
 
