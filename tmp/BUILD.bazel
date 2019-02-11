@@ -1,0 +1,22 @@
+load(
+    "@drake//tools/skylark:drake_cc.bzl",
+    "drake_cc_googletest",
+)
+load(
+    "@drake//tools/skylark:drake_cc.bzl",
+    "drake_py_unittest",
+)
+
+drake_cc_googletest(
+    name = "repro_cc",
+    deps = [
+        "//:drake_shared_library",
+    ],
+)
+
+drake_py_unittest(
+    name = "repro_py",
+    deps = [
+        "//bindings/pydrake",
+    ],
+)
