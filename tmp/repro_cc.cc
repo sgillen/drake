@@ -4,7 +4,6 @@
 
 #include "drake/common/find_resource.h"
 #include "drake/common/text_logging.h"
-#include "drake/common/text_logging_gflags.h"
 #include "drake/common/trajectories/piecewise_polynomial.h"
 #include "drake/lcm/drake_lcm.h"
 #include "drake/lcmt_viewer_draw.hpp"
@@ -74,7 +73,6 @@ int DoMain() {
   simulator.set_target_realtime_rate(100);
   simulator.set_publish_every_time_step(true);  
 
-  // startPos();
   drake::VectorX<double> startPos =
       Eigen::MatrixXd::Zero(hamr->get_num_states(), 1);
 
@@ -89,8 +87,6 @@ int DoMain() {
 }  // namespace
 }  // namespace hamr
 
-int main(int argc, char* argv[]) {
-  gflags::ParseCommandLineFlags(&argc, &argv, true);
-  drake::logging::HandleSpdlogGflags();
+int main(int, char*) {
   return hamr::DoMain();
 }
