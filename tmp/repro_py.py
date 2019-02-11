@@ -18,7 +18,7 @@ import numpy as np
 builder = DiagramBuilder()
 
 tree = RigidBodyTree()
-world_frame = RigidBodyFrame("world_frame", tree.world(), [0, 0, 0], [0, 0, 0])
+world_frame = tree.findFrame("world")
 AddModelInstanceFromUrdfFile("tmp/hamr_scaled.urdf",
                              FloatingBaseType.kFixed, world_frame, tree)
 
@@ -42,8 +42,9 @@ diagram = builder.Build()
 
 # simulate
 simulator = Simulator(diagram)
-simulator.set_target_realtime_rate(100)
+simulator.set_target_realtime_rate(0.1)
 simulator.set_publish_every_time_step(True)
+print(hamr.get_num_states())
 hamr.set_state_vector(simulator.get_mutable_context(),
                       np.zeros(hamr.get_num_states()))
-simulator.StepTo(50)
+simulator.StepTo(1.)
