@@ -39,7 +39,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="meshes/Chassis_new.obj" scale="1000" />
+        <!-- <mesh filename="meshes/Chassis_new.obj" scale="1000" /> -->
       </geometry>
       <material name="Grey"/>               
     </visual>
@@ -59,7 +59,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="meshes/FLS1_new.obj" scale="1000" />
+        <!-- <mesh filename="meshes/FLS1_new.obj" scale="1000" /> -->
       </geometry>
       <material name="Purple"/>        
     </visual>
@@ -74,7 +74,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="meshes/FLS2_new.obj" scale="1000" />
+        <!-- <mesh filename="meshes/FLS2_new.obj" scale="1000" /> -->
       </geometry>
       <material name="Purple"/>        
     </visual>
@@ -89,7 +89,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="meshes/FLS3_new.obj" scale="1000" />
+        <!-- <mesh filename="meshes/FLS3_new.obj" scale="1000" /> -->
       </geometry>
       <material name="Orange"/>       
     </visual>
@@ -104,7 +104,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="meshes/FLS4_new.obj" scale="1000" />
+        <!-- <mesh filename="meshes/FLS4_new.obj" scale="1000" /> -->
       </geometry>
       <material name="Orange"/>        
     </visual>
@@ -123,7 +123,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="meshes/FLL1_new.obj" scale="1000" />
+        <!-- <mesh filename="meshes/FLL1_new.obj" scale="1000" /> -->
       </geometry>
       <material name="Blue"/>        
     </visual>
@@ -138,7 +138,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="meshes/FLL2_new.obj" scale="1000" />
+        <!-- <mesh filename="meshes/FLL2_new.obj" scale="1000" /> -->
       </geometry>
       <material name="Blue"/>        
     </visual>/
@@ -153,7 +153,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="meshes/FLL3_new.obj" scale="1000" />
+        <!-- <mesh filename="meshes/FLL3_new.obj" scale="1000" /> -->
       </geometry>
       <material name="Orange"/>        
     </visual>
@@ -168,7 +168,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="meshes/FLL4_new.obj" scale="1000"/>
+        <!-- <mesh filename="meshes/FLL4_new.obj" scale="1000"/> -->
       </geometry>
       <material name="Orange"/>        
     </visual>
@@ -193,7 +193,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="meshes/RLS1_new.obj" scale="1000" />
+        <!-- <mesh filename="meshes/RLS1_new.obj" scale="1000" /> -->
       </geometry>
       <material name="Purple"/>   
     </visual>
@@ -208,7 +208,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="meshes/RLS2_new.obj" scale="1000" />
+        <!-- <mesh filename="meshes/RLS2_new.obj" scale="1000" /> -->
       </geometry>
       <material name="Purple"/>
     </visual>
@@ -223,7 +223,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="meshes/RLS3_new.obj" scale="1000" />
+        <!-- <mesh filename="meshes/RLS3_new.obj" scale="1000" /> -->
       </geometry>
       <material name="Orange"/>        
     </visual>
@@ -238,7 +238,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="meshes/RLS4_new.obj" scale="1000" />
+        <!-- <mesh filename="meshes/RLS4_new.obj" scale="1000" /> -->
       </geometry>
       <material name="Orange"/>      
     </visual>
@@ -257,7 +257,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="meshes/RLL1_new.obj" scale="1000" />
+        <!-- <mesh filename="meshes/RLL1_new.obj" scale="1000" /> -->
       </geometry>
       <material name="Blue"/>                 
     </visual>
@@ -272,7 +272,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="meshes/RLL2_new.obj" scale="1000" />
+        <!-- <mesh filename="meshes/RLL2_new.obj" scale="1000" /> -->
       </geometry>
       <material name="Blue"/>                  
     </visual>
@@ -287,7 +287,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="meshes/RLL3_new.obj" scale="1000" />
+        <!-- <mesh filename="meshes/RLL3_new.obj" scale="1000" /> -->
       </geometry>
       <material name="Orange"/>                       
     </visual>
@@ -302,7 +302,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="meshes/RLL4_new.obj" scale="1000"/>
+        <!-- <mesh filename="meshes/RLL4_new.obj" scale="1000"/> -->
       </geometry>
       <material name="Orange"/>              
     </visual>
@@ -327,7 +327,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="meshes/FRS1_new.obj" scale="1000" />
+        <!-- <mesh filename="meshes/FRS1_new.obj" scale="1000" /> -->
       </geometry>
       <material name="Purple"/>        
     </visual>
@@ -342,7 +342,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="meshes/FRS2_new.obj" scale="1000" />
+        <!-- <mesh filename="meshes/FRS2_new.obj" scale="1000" /> -->
       </geometry>
       <material name="Purple"/>        
     </visual>
@@ -357,7 +357,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="meshes/FRS3_new.obj" scale="1000" />
+        <!-- <mesh filename="meshes/FRS3_new.obj" scale="1000" /> -->
       </geometry>
       <material name="Orange"/>        
     </visual>
@@ -372,7 +372,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="meshes/FRS4_new.obj" scale="1000" />
+        <!-- <mesh filename="meshes/FRS4_new.obj" scale="1000" /> -->
       </geometry>
       <material name="Orange"/>      
     </visual>
@@ -391,7 +391,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="meshes/FRL1_new.obj" scale="1000" />
+        <!-- <mesh filename="meshes/FRL1_new.obj" scale="1000" /> -->
       </geometry>
       <material name="Blue"/>        
     </visual>
@@ -406,7 +406,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="meshes/FRL2_new.obj" scale="1000" />
+        <!-- <mesh filename="meshes/FRL2_new.obj" scale="1000" /> -->
       </geometry>
       <material name="Blue"/>        
     </visual>/
@@ -421,7 +421,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="meshes/FRL3_new.obj" scale="1000" />
+        <!-- <mesh filename="meshes/FRL3_new.obj" scale="1000" /> -->
       </geometry>
       <material name="Orange"/>        
     </visual>
@@ -436,7 +436,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="meshes/FRL4_new.obj" scale="1000"/>
+        <!-- <mesh filename="meshes/FRL4_new.obj" scale="1000"/> -->
       </geometry>
       <material name="Orange"/>        
     </visual>
@@ -461,7 +461,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="meshes/RRS1_new.obj" scale="1000" />
+        <!-- <mesh filename="meshes/RRS1_new.obj" scale="1000" /> -->
       </geometry>
       <material name="Purple"/>        
     </visual>
@@ -476,7 +476,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="meshes/RRS2_new.obj" scale="1000" />
+        <!-- <mesh filename="meshes/RRS2_new.obj" scale="1000" /> -->
       </geometry>
       <material name="Purple"/>        
     </visual>
@@ -491,7 +491,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="meshes/RRS3_new.obj" scale="1000" />
+        <!-- <mesh filename="meshes/RRS3_new.obj" scale="1000" /> -->
       </geometry>
       <material name="Orange"/>        
     </visual>
@@ -506,7 +506,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="meshes/RRS4_new.obj" scale="1000" />
+        <!-- <mesh filename="meshes/RRS4_new.obj" scale="1000" /> -->
       </geometry>
       <material name="Orange"/>        
     </visual>
@@ -525,7 +525,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="meshes/RRL1_new.obj" scale="1000" />
+        <!-- <mesh filename="meshes/RRL1_new.obj" scale="1000" /> -->
       </geometry>
       <material name="Blue"/>        
     </visual>
@@ -540,7 +540,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="meshes/RRL2_new.obj" scale="1000" />
+        <!-- <mesh filename="meshes/RRL2_new.obj" scale="1000" /> -->
       </geometry>
       <material name="Blue"/>        
     </visual>
@@ -555,7 +555,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="meshes/RRL3_new.obj" scale="1000" />
+        <!-- <mesh filename="meshes/RRL3_new.obj" scale="1000" /> -->
       </geometry>
       <material name="Orange"/>
     </visual>
@@ -570,7 +570,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="meshes/RRL4_new.obj" scale="1000"/>
+        <!-- <mesh filename="meshes/RRL4_new.obj" scale="1000"/> -->
       </geometry>
       <material name="Orange"/>        
     </visual>

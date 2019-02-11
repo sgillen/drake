@@ -1,4 +1,3 @@
-#include <gflags/gflags.h>
 #include <fstream>
 #include <iostream>
 #include <memory>
@@ -45,7 +44,7 @@ int DoMain() {
 
   auto tree = std::make_unique<RigidBodyTree<double>>();
   drake::parsers::urdf::AddModelInstanceFromUrdfFile(
-      "hamrfull/models/urdf/hamr_scaled.urdf", drake::multibody::joints::kFixed,
+      "tmp/hamr_scaled.urdf", drake::multibody::joints::kFixed,
       nullptr /* weld to frame */, tree.get());  
 
   auto hamr = builder.AddSystem<RigidBodyPlant<double>>(std::move(tree), 0.01);
@@ -85,113 +84,6 @@ int DoMain() {
   simulator.StepTo(50);
 
   return 0;
-
-  // // robot properties
-  // HamrURDFType urdf_type = kStandardHamr;
-  // FloatingBaseType base_type = FloatingBaseType::kFixed;
-  // double ustatic = 0.6;
-
-  // // build hamr
-  // Hamr* hamr = builder.AddSystem<Hamr>(urdf_type, base_type, dt, ustatic);
-
-  // // actuator properties
-  // int nact = 8;
-  // std::vector<HamrActuatorType> act_type = {kOnePly, kOnePly, kOnePly,
-  // kOnePly,
-  //                                           kOnePly, kOnePly, kOnePly,
-  //                                           kOnePly};
-  // VectorX<double> orien(nact);
-  // orien << -1.0, -1.0, 1.0, 1.0, -1.0, -1.0, 1.0, 1.0;
-  // VectorX<double> Vmax = Eigen::MatrixXd::Constant(nact, 1, 225);
-  // VectorX<double> Vmin = Eigen::MatrixXd::Zero(nact, 1);
-
-  // // Add hamr wth actuators diagram
-  // auto hamr_w_act = builder.AddSystem<HamrWithActuators>(
-  //     urdf_type, base_type, dt, ustatic, act_type, orien, Vmax, Vmin);
-  // const Hamr& hamr = hamr_w_act->get_hamr();
-
-  // Creates and adds LCM publisher for visualization
-  // DrakeVisualizer* visualizer =
-  //     builder.AddSystem<DrakeVisualizer>(hamr->get_rigid_body_tree(), &lcm);
-  // visualizer->set_publish_period(dt);
-
-  // set up signal loggers
-  // auto state_logger =
-  // builder.AddSystem<drake::systems::SignalLogger<double>>(
-  //     hamr->get_num_states());
-  // state_logger->set_publish_period(dt);
-
-  // std::cout << "1" << std::endl;
-
-  // // build input
-  // // int Nt = ceil(T / 1.0) + 1;
-  // // const double freq = 0.002;
-  // // RowVectorX<double> tknot = Eigen::VectorXd::LinSpaced(Nt, 0,
-  // // T).transpose(); VectorX<double> amp = Eigen::MatrixXd::Constant(nact, 1,
-  // // 0); VectorX<double> offset = Eigen::MatrixXd::Constant(nact, 1, 0);
-  // // Eigen::Matrix<double, 8, Eigen::Dynamic> fknot =
-  // //     hamr_w_act->HamrSinusoidalInput(freq, tknot, amp, offset, kTrot);
-  // // PiecewisePolynomial<double> ftraj =
-  // //     PiecewisePolynomial<double>::FirstOrderHold(tknot, fknot);
-  // // auto input =
-  // //     builder.AddSystem<drake::systems::TrajectorySource<double>>(ftraj,
-  // 0);
-  // // std::cout << hamr->get_input_port(0).size() << std::endl;
-  // VectorX<double> constant_vector =
-  //     Eigen::MatrixXd::Zero(hamr->get_input_port(0).size(), 1);
-  // auto input =
-  // builder.AddSystem<drake::systems::ConstantVectorSource<double>>(
-  //     constant_vector);
-
-  // std::cout << "2" << std::endl;
-
-  // // connections
-  // // builder.Connect(hamr->get_output_port(0),
-  // state_logger->get_input_port()); builder.Connect(input->get_output_port(),
-  // hamr->get_input_port(0));
-  // // builder.Connect(input->get_output_port(),
-  // //                 hamr_w_act->get_input_port_voltage());
-  // // builder.Connect(hamr_w_act->get_output_port_state(),
-  // //                 state_logger->get_input_port());
-  // // builder.Connect(hamr->get_output_port(0),
-  // //                 visualizer->get_input_port(0));
-
-  // auto sys = builder.Build();
-  // Simulator<double> simulator(*sys);
-
-  // // set initial state
-  // hamr->set_state_vector(&simulator.get_mutable_context(),
-  //                        hamr->HamrInitialState());
-  // // auto hamr_context =
-  // //     &sys->GetMutableSubsystemContext(*hamr,
-  // //     &simulator.get_mutable_context());
-  // // // hamr_context->get_mutable_continuous_state_vector().SetFromVector(
-  // // //     hamr->HamrInitialState());
-  // // hamr_context->get_mutable_discrete_state_vector().SetFromVector(
-  // //     hamr->HamrInitialState());
-
-  // std::cout << "3" << std::endl;
-  // // std::cout << hamr_context->get_discrete_state_vector() << std::endl;
-
-  // lcm.StartReceiveThread();
-  // simulator.set_publish_every_time_step(true);
-  // simulator.set_target_realtime_rate(1000);
-
-  // std::cout << "4" << std::endl;
-  // simulator.Initialize();
-  // std::cout << "5" << std::endl;
-  // simulator.StepTo(T);
-
-  // // print to file
-  // // std::ofstream state_log;
-  // // state_log.open("/home/nddoshi/dev/RL-sandbox/hamr/dat_file.csv",
-  // // std::ios::out);
-  // // if(state_log.is_open())
-  // // {
-  // //   state_log<<state_logger->data();
-  // //   state_log.close();
-  // // }
-  // // else std::cout << "unable to open file" << std::endl;
 }
 
 }  // namespace

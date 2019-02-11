@@ -1,21 +1,30 @@
 load(
     "@drake//tools/skylark:drake_cc.bzl",
-    "drake_cc_googletest",
+    "drake_cc_binary",
 )
 load(
-    "@drake//tools/skylark:drake_cc.bzl",
-    "drake_py_unittest",
+    "@drake//tools/skylark:drake_py.bzl",
+    "drake_py_binary",
 )
 
-drake_cc_googletest(
+filegroup(
+    name = "models",
+    srcs = ["hamr_scaled.urdf"],
+)
+
+drake_cc_binary(
     name = "repro_cc",
+    srcs = ["repro_cc.cc"],
+    data = [":models"],
     deps = [
         "//:drake_shared_library",
     ],
 )
 
-drake_py_unittest(
+drake_py_binary(
     name = "repro_py",
+    srcs = ["repro_py.py"],
+    data = [":models"],
     deps = [
         "//bindings/pydrake",
     ],
