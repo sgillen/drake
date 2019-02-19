@@ -19,6 +19,8 @@ using Eigen::Matrix3d;
 
 const double kEpsilon = std::numeric_limits<double>::epsilon();
 
+using Vector3dUnaligned = Eigen::Matrix<double, 3, 1, Eigen::DontAlign>;
+
 // This tests the RollPitchYaw constructors and IsNearlyEqualTo().
 GTEST_TEST(RollPitchYaw, testConstructorsAndIsNearlyEqualTo) {
   const RollPitchYaw<double> a(0.1, 0.2, -0.3);
@@ -32,11 +34,13 @@ GTEST_TEST(RollPitchYaw, testConstructorsAndIsNearlyEqualTo) {
   // Test additional constructors.
   const RotationMatrix<double> R = a.ToRotationMatrix();
   const RollPitchYaw<double> d(R);
-  const RollPitchYaw<double> e(R.matrix());
-  const RollPitchYaw<double> f(R.ToQuaternion());
   EXPECT_TRUE(a.IsNearlyEqualTo(d, kEpsilon));
+  const RollPitchYaw<double> e(R.matrix());
   EXPECT_TRUE(a.IsNearlyEqualTo(e, kEpsilon));
+  const RollPitchYaw<double> f(R.ToQuaternion());
   EXPECT_TRUE(a.IsNearlyEqualTo(f, kEpsilon));
+  const RollPitchYaw<double> g(Vector3dUnaligned(0.1, 0.2, -0.3));
+  EXPECT_TRUE(a.IsNearlyEqualTo(g, kEpsilon));
 }
 
 // Test typedef (using) RollPitchYawd.

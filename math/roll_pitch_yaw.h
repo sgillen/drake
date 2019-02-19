@@ -69,6 +69,14 @@ class RollPitchYaw {
   /// @throws std::logic_error in debug builds if !IsValid(rpy).
   explicit RollPitchYaw(const Vector3<T>& rpy) { set(rpy); }
 
+  /// Overload for unaligned Vector3. This is only necessary to disambiguate
+  /// overloads for Vector3 and Matrix3 when passing in an unaligned vector.
+  /// See the Vector3 overload for more information.
+  explicit RollPitchYaw(
+      const Eigen::Matrix<double, 3, 1, Eigen::DontAlign>& rpy_unaligned) {
+    set(rpy_unaligned);
+  }
+
   /// Constructs a %RollPitchYaw from roll, pitch, yaw angles (radian units).
   /// @param[in] roll x-directed angle in SpaceXYZ rotation sequence.
   /// @param[in] pitch y-directed angle in SpaceXYZ rotation sequence.
