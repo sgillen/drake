@@ -28,6 +28,15 @@ GTEST_TEST(RollPitchYaw, testConstructorsAndIsNearlyEqualTo) {
   EXPECT_TRUE(a.IsNearlyEqualTo(c, kEpsilon));
   EXPECT_FALSE(a.IsNearlyEqualTo(b, 0.1 - 10*kEpsilon));
   EXPECT_TRUE(a.IsNearlyEqualTo(b, 0.1 + 10*kEpsilon));
+
+  // Test additional constructors.
+  const RotationMatrix<double> R = a.ToRotationMatrix();
+  const RollPitchYaw<double> d(R);
+  const RollPitchYaw<double> e(R.matrix());
+  const RollPitchYaw<double> f(R.ToQuaternion());
+  EXPECT_TRUE(a.IsNearlyEqualTo(d, kEpsilon));
+  EXPECT_TRUE(a.IsNearlyEqualTo(e, kEpsilon));
+  EXPECT_TRUE(a.IsNearlyEqualTo(f, kEpsilon));
 }
 
 // Test typedef (using) RollPitchYawd.

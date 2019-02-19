@@ -89,6 +89,12 @@ class RollPitchYaw {
     SetFromRotationMatrix(R);
   }
 
+  /// Constructs from a raw rotation matrix using an intermediate
+  /// %RotationMatrix. See the %RotationMatrix constructor for more information.
+  /// @param[in] matrix a valid rotation matrix.
+  explicit RollPitchYaw(const Matrix3<T>& matrix)
+      : RollPitchYaw(RotationMatrix<T>(matrix)) {}
+
   /// Uses a %Quaternion to construct a %RollPitchYaw with
   /// roll-pitch-yaw angles `[r, p, y]` in the range
   /// `-π <= r <= π`, `-π/2 <= p <= π/2, `-π <= y <= π`.
