@@ -478,6 +478,8 @@ licenses([
             ":vtkCommonExecutionModel",
             ":vtkDICOMParser",
             ":vtkmetaio",
+            ":vtkdoubleconversion",
+            ":vtklzma",
             "@libpng",
             "@zlib",
             "@libtiff",
@@ -708,6 +710,18 @@ cc_library(
         ],
         visibility = ["//visibility:private"],
         header_only = True,
+    )
+
+    file_content += _vtk_cc_library(
+        repository_ctx.os.name,
+        "vtkdoubleconversion",
+        deps = ["@zlib"],
+    )
+
+    file_content += _vtk_cc_library(
+        repository_ctx.os.name,
+        "vtklzma",
+        deps = ["@zlib"],
     )
 
     file_content += _vtk_cc_library(
