@@ -154,7 +154,7 @@ drake_py_library_aliases(
 )
 
 PY_LIBRARIES_WITH_INSTALL = [
-    ":benchmarks_py",
+    # ":benchmarks_py",
     ":inverse_kinematics_py",
     ":math_py",
     ":multibody_tree_py",
@@ -163,7 +163,7 @@ PY_LIBRARIES_WITH_INSTALL = [
     ":tree_py",
 ]
 
-PY_LIBRARIES = PY_LIBRARIES_ATTIC_ALIASES + [
+PY_LIBRARIES = [#PY_LIBRARIES_ATTIC_ALIASES + [
     ":module_py",
 ]
 
