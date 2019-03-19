@@ -1,0 +1,8 @@
+load("@drake//tools/skylark:drake_py.bzl", "drake_py_binary")
+
+drake_py_binary(
+    name = "example",
+    srcs = ["example.py"],
+    data = ["//multibody/benchmarks/acrobot:models"],
+    deps = ["//bindings/pydrake"],
+)
