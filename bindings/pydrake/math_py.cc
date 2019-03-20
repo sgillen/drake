@@ -25,7 +25,7 @@ PYBIND11_MODULE(math, m) {
   m.doc() = "Bindings for //math.";
   constexpr auto& doc = pydrake_doc.drake.math;
 
-  py::module::import("pydrake.common.eigen_geometry");
+  auto eigen_geometry_py = py::module::import("pydrake.common.eigen_geometry");
 
   // TODO(eric.cousineau): At present, we only bind doubles.
   // In the future, we will bind more scalar types, and enable scalar
@@ -141,6 +141,26 @@ PYBIND11_MODULE(math, m) {
           py::arg("p_BoQ_B"), "See ``multiply``.");
   // .def("IsNearlyEqualTo", ...)
   // .def("IsExactlyEqualTo", ...)
+
+  py::implicitly_convertible<Isometry3<T>, RigidTransform<T>>();
+  // Install ctor to Isometry3 to permit `implicitly_convertible` to work.
+  // TODO(eric): Update pybind to make `implictly_convertible` take an explicit
+  // function to emulate `operator T()`.
+  py::class_<Isometry3<T>>(eigen_geometry_py.attr("Isometry3"))
+      .def(py::init([](const RigidTransform<T>& X) {
+        return X.GetAsIsometry3();
+      }));
+  py::implicitly_convertible<RigidTransform<T>, Isometry3<T>>();
+
+  {
+    auto mtest = m.def_submodule("_test");
+    mtest.def("TakeIsometry3", [](const Isometry3<T>&) {
+      return "yay";
+    });
+    mtest.def("TakeRigidTransform", [](const RigidTransform<T>&) {
+      return "yay";
+    });
+  }
 
   py::class_<RollPitchYaw<T>>(m, "RollPitchYaw", doc.RollPitchYaw.doc)
       .def(py::init<const RollPitchYaw<T>&>(), py::arg("other"))
