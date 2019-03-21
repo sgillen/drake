@@ -42,8 +42,9 @@ class EvaluatorBase {
    */
   void Eval(const Eigen::Ref<const Eigen::VectorXd>& x,
             Eigen::VectorXd* y) const {
-    DRAKE_ASSERT(x.rows() == num_vars_ || num_vars_ == Eigen::Dynamic);
+    DRAKE_DEMAND(x.rows() == num_vars_ || num_vars_ == Eigen::Dynamic);
     DoEval(x, y);
+    DRAKE_DEMAND(y->rows() == num_outputs_);
   }
 
   // TODO(eric.cousineau): Move this to DifferentiableConstraint derived class
@@ -55,8 +56,9 @@ class EvaluatorBase {
    * @param[out] y A `num_outputs` x 1 output vector.
    */
   void Eval(const Eigen::Ref<const AutoDiffVecXd>& x, AutoDiffVecXd* y) const {
-    DRAKE_ASSERT(x.rows() == num_vars_ || num_vars_ == Eigen::Dynamic);
+    DRAKE_DEMAND(x.rows() == num_vars_ || num_vars_ == Eigen::Dynamic);
     DoEval(x, y);
+    DRAKE_DEMAND(y->rows() == num_outputs_);
   }
 
   /**
@@ -66,8 +68,9 @@ class EvaluatorBase {
    */
   void Eval(const Eigen::Ref<const VectorX<symbolic::Variable>>& x,
             VectorX<symbolic::Expression>* y) const {
-    DRAKE_ASSERT(x.rows() == num_vars_ || num_vars_ == Eigen::Dynamic);
+    DRAKE_DEMAND(x.rows() == num_vars_ || num_vars_ == Eigen::Dynamic);
     DoEval(x, y);
+    DRAKE_DEMAND(y->rows() == num_outputs_);
   }
 
   /**
