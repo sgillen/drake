@@ -1,6 +1,7 @@
 from __future__ import print_function
 
 import math
+import multiprocessing as mp
 import subprocess
 import sys
 import unittest
@@ -177,15 +178,11 @@ class TestMathOverloads(unittest.TestCase):
         debug_print("Binary:")
         check_eval(binary, 2)
 
-    def _check_overloads(self, order):
-        for overload_cls in order:
-            self._check_overload(overload_cls())
-
     def test_overloads(self):
         # Each of these orders implies the relevant module is imported in this
         # test, in the order specified. This is done to guarantee that the
         # cross-module overloading does not affect functionality.
-        orders = [
+        order_list = [
             (FloatOverloads,),
             (SymbolicOverloads,),
             (AutoDiffOverloads,),
@@ -194,15 +191,25 @@ class TestMathOverloads(unittest.TestCase):
         ]
         # At present, the `pybind11` modules appear not to be destroyed, even
         # when we try to completely dergister them and garbage collect.
-        # To keep this test self-contained, we will just reinvoke this test
-        # with the desired order so we can control which modules get imported.
-        if len(sys.argv) == 1:
-            # We have arrived here from a direct call. Call the specified
-            # ordering.
-            for i in range(len(orders)):
-                args = [sys.executable, sys.argv[0], str(i)]
-                subprocess.check_call(args)
-        else:
-            self.assertEqual(len(sys.argv), 2)
-            i = int(sys.argv[1])
-            self._check_overloads(orders[i])
+        # To keep this test self-contained, we use process boundaries to ensure
+        # the modules are fresh each time.
+        should_be_fresh = [
+            "pydrake.math",
+            "pydrake.autodiffutils",
+            "pydrake.symoblic"
+        ]
+
+        def run(order):
+            print(order)
+            # Explicitly ensure we're fresh.
+            for m in should_be_fresh:
+                self.assertNotIn(m, sys.modules, m)
+            # Check overloads.
+            for cls in order:
+                self._check_overload(overload=cls())
+
+        for order in order_list:
+            proc = mp.Process(target=run, args=(order,))
+            proc.start()
+            proc.join()
+            self.assertEqual(proc.exitcode, 0)
