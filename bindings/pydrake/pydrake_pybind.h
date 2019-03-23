@@ -7,7 +7,7 @@
 // for) these binding capabilities.
 
 namespace drake {
-namespace pydrake {
+namespace pydrake __attribute__((visibility("hidden"))) {
 
 /** @defgroup python_bindings Python Bindings
 @ingroup technical_notes
