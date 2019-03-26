@@ -127,9 +127,9 @@ drake_pybind_library(
     py_deps = [":mathematicalprogram_py"],
 )
 
-PY_LIBRARIES_ATTIC_ALIASES = [
-    ":ik_py",
-]
+PY_LIBRARIES_ATTIC_ALIASES = []
+#     ":ik_py",
+# ]
 
 drake_py_library_aliases(
     actual_subdir = "bindings/pydrake/attic/solvers",

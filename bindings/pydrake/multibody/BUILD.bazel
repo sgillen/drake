@@ -136,15 +136,15 @@ drake_pybind_library(
     ],
 )
 
-PY_LIBRARIES_ATTIC_ALIASES = [
-    ":collision_py",
-    ":joints_py",
-    ":parsers_py",
-    ":rigid_body_plant_py",
-    ":rigid_body_py",
-    ":rigid_body_tree_py",
-    ":shapes_py",
-]
+PY_LIBRARIES_ATTIC_ALIASES = []
+#     ":collision_py",
+#     ":joints_py",
+#     ":parsers_py",
+#     ":rigid_body_plant_py",
+#     ":rigid_body_py",
+#     ":rigid_body_tree_py",
+#     ":shapes_py",
+# ]
 
 drake_py_library_aliases(
     actual_subdir = "bindings/pydrake/attic/multibody",

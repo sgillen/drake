@@ -99,6 +99,8 @@ PYBIND11_MODULE(_module_py, m) {
       "Set Drake's assertion failure mechanism to be exceptions");
   m.def("trigger_an_assertion_failure", &trigger_an_assertion_failure,
       "Trigger a Drake C++ assertion failure");
+
+  drake::log()->set_level(spdlog::level::trace);
 }
 
 }  // namespace pydrake
