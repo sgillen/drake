@@ -18,7 +18,8 @@ from pydrake.common.eigen_geometry import Quaternion, AngleAxis, Isometry3
 from pydrake.forwarddiff import gradient, jacobian
 from pydrake.geometry import (
     Box,
-    Sphere
+    Sphere,
+    SceneGraph,
 )
 from pydrake.multibody.inverse_kinematics import InverseKinematics
 from pydrake.multibody.plant import (
@@ -85,8 +86,20 @@ def demonstrateGoodInvocation():
 
 def build_mbp():
     builder = DiagramBuilder()
+
+    # Fails without `keep_alive_impl`
+    scene_graph = None
     mbp, _ = AddMultibodyPlantSceneGraph(
         builder, MultibodyPlant(time_step=0.01))
+
+    # # Fails without `keep_alive_impl`
+    # scene_graph = SceneGraph()
+    # mbp, _ = AddMultibodyPlantSceneGraph(
+    #     builder, MultibodyPlant(time_step=0.01), scene_graph)
+
+    # # Succeeds normally
+    # mbp, scene_graph = AddMultibodyPlantSceneGraph(
+    #     builder, MultibodyPlant(time_step=0.01))
 
     world_body = mbp.world_body()
     ground_shape = Box(10., 10., 10.)
@@ -126,7 +139,7 @@ def build_mbp():
     q0 = mbp.GetPositions(mbp_context).copy()
 
     print("MBP 1: ", mbp)
-    return q0, mbp, mbp_context
+    return q0, mbp, mbp_context, scene_graph
 
 
 def use_mbp(q0, mbp, mbp_context):
@@ -139,7 +152,7 @@ def use_mbp(q0, mbp, mbp_context):
 
 
 def demonstrateBadInvocation():
-    q0, mbp, mbp_context = build_mbp()
+    q0, mbp, mbp_context, extra = build_mbp()
     print("MBP 2: ", mbp)
     use_mbp(q0, mbp, mbp_context)
 

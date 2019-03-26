@@ -684,12 +684,12 @@ PYBIND11_MODULE(plant, m) {
             builder, std::move(plant), std::move(scene_graph));
         // Must do manual keep alive to dig into tuple.
         py::object builder_py = py::cast(builder, py_reference);
+        py::object plant_py = py::cast(pair.plant, py_reference);
+        py::object scene_graph_py = py::cast(pair.scene_graph, py_reference);
         // Keep alive, ownership: `plant` keeps `builder` alive.
-        py::object plant_py =
-            py::cast(pair.plant, py_reference_internal, builder_py);
+        py::detail::keep_alive_impl(plant_py, builder_py);
         // Keep alive, ownership: `scene_graph` keeps `builder` alive.
-        py::object scene_graph_py =
-            py::cast(pair.scene_graph, py_reference_internal, builder_py);
+        py::detail::keep_alive_impl(scene_graph_py, builder_py);
         return py::make_tuple(plant_py, scene_graph_py);
       },
       py::arg("builder"), py::arg("plant") = nullptr,
