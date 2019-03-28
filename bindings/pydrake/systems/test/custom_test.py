@@ -48,9 +48,9 @@ class CustomAdder(LeafSystem):
     def __init__(self, num_inputs, size):
         LeafSystem.__init__(self)
         for i in range(num_inputs):
-            self._DeclareVectorInputPort(
+            self.DeclareVectorInputPort(
                 "input{}".format(i), BasicVector(size))
-        self._DeclareVectorOutputPort("sum", BasicVector(size), self._calc_sum)
+        self.DeclareVectorOutputPort("sum", BasicVector(size), self._calc_sum)
 
     def _calc_sum(self, context, sum_data):
         # @note This will NOT work if the scalar type is AutoDiff or symbolic,
@@ -76,25 +76,25 @@ class CustomVectorSystem(VectorSystem):
         VectorSystem.__init__(self, 1, 3)
         self._is_discrete = is_discrete
         if self._is_discrete:
-            self._DeclareDiscreteState(2)
+            self.DeclareDiscreteState(2)
         else:
-            self._DeclareContinuousState(2)
+            self.DeclareContinuousState(2)
         # Record calls for testing.
         self.has_called = []
 
-    def _DoCalcVectorOutput(self, context, u, x, y):
+    def DoCalcVectorOutput(self, context, u, x, y):
         y[:] = np.hstack([u, x])
         self.has_called.append("output")
 
-    def _DoCalcVectorTimeDerivatives(self, context, u, x, x_dot):
+    def DoCalcVectorTimeDerivatives(self, context, u, x, x_dot):
         x_dot[:] = x + u
         self.has_called.append("continuous")
 
-    def _DoCalcVectorDiscreteVariableUpdates(self, context, u, x, x_n):
+    def DoCalcVectorDiscreteVariableUpdates(self, context, u, x, x_n):
         x_n[:] = x + 2*u
         self.has_called.append("discrete")
 
-    def _DoHasDirectFeedthrough(self, input_port, output_port):
+    def DoHasDirectFeedthrough(self, input_port, output_port):
         self.has_called.append("feedthrough")
         return True
 
@@ -303,9 +303,52 @@ class TestCustom(unittest.TestCase):
 
     def test_deprecated_protected_aliases(self):
         """Tests a subset of protected aliases."""
+
+        class OldSystem(LeafSystem):
+            def __init__(self):
+                LeafSystem.__init__(self)
+                self.called_publish = False
+                # Check a non-overridable method
+                with catch_drake_warnings(expected_count=1):
+                    self._DeclareVectorInputPort("x", BasicVector(1))
+
+            def _DoPublish(self, context, events):
+                self.called_publish = True
+
+        # Ensure old overrides are still used
+        system = OldSystem()
+        context = system.CreateDefaultContext()
         with catch_drake_warnings(expected_count=1):
-            print(help(LeafSystem._DoPublish))
-        exit(1)
+            system.Publish(context)
+        self.assertTrue(system.called_publish)
+
+        # Ensure documentation doesn't duplicate stuff.
+        # N.B. Since we deprecated this via wrapping, it will not trigger a
+        # warning on access.
+        self.assertIn("deprecated", LeafSystem._DoPublish.__doc__)
+        # This will warn both on (a) calling the method and (b) on the
+        # invocation of the override.
+        with catch_drake_warnings(expected_count=2):
+            LeafSystem._DoPublish(system, context, [])
+
+        class AccidentallyBothSystem(LeafSystem):
+            def __init__(self):
+                LeafSystem.__init__(self)
+                self.called_old_publish = False
+                self.called_new_publish = False
+
+            def DoPublish(self, context, events):
+                self.called_new_publish = True
+
+            def _DoPublish(self, context, events):
+                self.called_old_publish = True
+
+        system = AccidentallyBothSystem()
+        context = system.CreateDefaultContext()
+        # This will trigger no deprecations, as the newer publish is called.
+        system.Publish(context)
+        self.assertTrue(system.called_new_publish)
+        self.assertFalse(system.called_old_publish)
 
     def test_vector_system_overrides(self):
         dt = 0.5
@@ -350,11 +393,11 @@ class TestCustom(unittest.TestCase):
         class TrivialSystem(LeafSystem):
             def __init__(self):
                 LeafSystem.__init__(self)
-                self._DeclareContinuousState(1)
-                self._DeclareDiscreteState(2)
-                self._DeclareAbstractState(model_value.Clone())
-                self._DeclareAbstractParameter(model_value.Clone())
-                self._DeclareNumericParameter(model_vector.Clone())
+                self.DeclareContinuousState(1)
+                self.DeclareDiscreteState(2)
+                self.DeclareAbstractState(model_value.Clone())
+                self.DeclareAbstractParameter(model_value.Clone())
+                self.DeclareNumericParameter(model_vector.Clone())
 
         system = TrivialSystem()
         context = system.CreateDefaultContext()
@@ -436,20 +479,20 @@ class TestCustom(unittest.TestCase):
                     num_z = 3
                     num_state = num_q + num_v + num_z
                     if index == 0:
-                        self._DeclareContinuousState(
+                        self.DeclareContinuousState(
                             num_state_variables=num_state)
                     elif index == 1:
-                        self._DeclareContinuousState(
+                        self.DeclareContinuousState(
                             num_q=num_q, num_v=num_v, num_z=num_z)
                     elif index == 2:
-                        self._DeclareContinuousState(
+                        self.DeclareContinuousState(
                             BasicVector_[T](num_state))
                     elif index == 3:
-                        self._DeclareContinuousState(
+                        self.DeclareContinuousState(
                             BasicVector_[T](num_state),
                             num_q=num_q, num_v=num_v, num_z=num_z)
 
-                def _DoCalcTimeDerivatives(self, context, derivatives):
+                def DoCalcTimeDerivatives(self, context, derivatives):
                     derivatives.get_mutable_vector().SetZero()
 
             for index in range(4):
@@ -469,12 +512,12 @@ class TestCustom(unittest.TestCase):
                     LeafSystem_[T].__init__(self)
                     num_states = 3
                     if index == 0:
-                        self._DeclareDiscreteState(
+                        self.DeclareDiscreteState(
                             num_state_variables=num_states)
                     elif index == 1:
-                        self._DeclareDiscreteState([1, 2, 3])
+                        self.DeclareDiscreteState([1, 2, 3])
                     elif index == 2:
-                        self._DeclareDiscreteState(
+                        self.DeclareDiscreteState(
                             BasicVector_[T](num_states))
 
             for index in range(3):
@@ -494,14 +537,14 @@ class TestCustom(unittest.TestCase):
             class CustomAbstractSystem(LeafSystem_[T]):
                 def __init__(self):
                     LeafSystem_[T].__init__(self)
-                    self.input_port = self._DeclareAbstractInputPort(
+                    self.input_port = self.DeclareAbstractInputPort(
                         "in", AbstractValue.Make(default_value))
-                    self.output_port = self._DeclareAbstractOutputPort(
+                    self.output_port = self.DeclareAbstractOutputPort(
                         "out",
                         lambda: AbstractValue.Make(default_value),
-                        self._DoCalcAbstractOutput)
+                        self.DoCalcAbstractOutput)
 
-                def _DoCalcAbstractOutput(self, context, y_data):
+                def DoCalcAbstractOutput(self, context, y_data):
                     input_value = self.EvalAbstractInput(
                         context, 0).get_value()
                     # The allocator function will populate the output with
@@ -536,8 +579,8 @@ class TestCustom(unittest.TestCase):
             def __init__(self):
                 LeafSystem_[float].__init__(self)
                 with catch_drake_warnings(expected_count=1):
-                    self._DeclareAbstractInputPort("in")
-                self._DeclareVectorOutputPort("out", BasicVector(1), self._Out)
+                    self.DeclareAbstractInputPort("in")
+                self.DeclareVectorOutputPort("out", BasicVector(1), self._Out)
 
             def _Out(self, context, y_data):
                 py_obj = self.EvalAbstractInput(context, 0).get_value()[0]
