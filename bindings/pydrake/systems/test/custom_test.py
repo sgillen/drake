@@ -302,7 +302,7 @@ class TestCustom(unittest.TestCase):
         self.assertTrue(system.called_periodic)
 
     def test_deprecated_protected_aliases(self):
-        """Tests a subset of protected aliases."""
+        """Tests a subset of protected aliases, pursuant to #9651."""
 
         class OldSystem(LeafSystem):
             def __init__(self):
