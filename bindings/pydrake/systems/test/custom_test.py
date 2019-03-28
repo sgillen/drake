@@ -310,7 +310,6 @@ class TestCustom(unittest.TestCase):
                 self.called_publish = False
                 # Check a non-overridable method
                 with catch_drake_warnings(expected_count=1):
-                    print(self._DeclareVectorInputPort)
                     self._DeclareVectorInputPort("x", BasicVector(1))
 
             def _DoPublish(self, context, events):

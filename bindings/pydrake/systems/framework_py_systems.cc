@@ -30,38 +30,52 @@ namespace pydrake {
 
 namespace {
 
-py::str DeprecatedProtectedAliasMessage(py::str name, py::str verb) {
-  return py::str(
+// TODO(eric.cousineau): Remove all deprecation alias cruft once deprecated
+// methods are removed.
+
+// Generates deprecation message pursuant to #9651.
+std::string DeprecatedProtectedAliasMessage(
+    std::string name, std::string verb) {
+  return fmt::format(
       "'_{0}' is deprecated and will be removed on or around 2019-06-15. "
-      "Please {1} '{0}' instead.").format(name, verb);
+      "Please {1} '{0}' instead.",
+      name, verb);
 }
 
+// Deprecates alias pursuant to #9651.
 template <typename PyClass>
 void AddDeprecatedProtectedAliases(
     PyClass* cls, std::vector<std::string> names) {
   // Use function-wrapping approach so that we can override documentation.
+  // Ensure that the deprecated overload is a `py::cpp_function` so that
+  // `py::get_overload<>` proprely ignores things (as it's logic is relatively
+  // complex).
   for (const std::string& name : names) {
-    py::str alias = "_" + name;
-    py::str message = DeprecatedProtectedAliasMessage(name, "call");
-    py::handle original = cls->attr(name.c_str());
-    cls->def(alias.cast<std::string>().c_str(),
-        [original](py::object self, py::args args, py::kwargs kwargs) {
+    const std::string alias = "_" + name;
+    const std::string deprecation =
+        DeprecatedProtectedAliasMessage(name, "call");
+    py::handle cls_handle = *cls;
+    cls->def(alias.c_str(),
+        [cls_handle, name](py::object self, py::args args, py::kwargs kwargs) {
+          // N.B. Trying to capture a `py::handle` for `original` does not work
+          // and causes segfaults.
+          py::object original = cls_handle.attr(name.c_str());
           return original(self, *args, **kwargs);
-        }, message.cast<std::string>().c_str());
-    DeprecateAttribute(*cls, alias, message);
+        },
+        deprecation.c_str());
+    DeprecateAttribute(*cls, alias, deprecation);
   }
 }
 
-// First attempts to resolve to `{NAME}` overload. If that does not return (via
-// the `PYBIND11_OVERLOAD_INT` macro), then it tries the `_{NAME}` overload.
-// See #9651 for rationale.
-#define PYDRAKE_TRY_PROTECTED_OVERLOAD(RETURN, CLASS, NAME, ...) \
-    PYBIND11_OVERLOAD_INT(RETURN, CLASS, NAME, __VA_ARGS__); \
-    if (auto overload = py::get_overload<CLASS>(this, "_" NAME)) { \
-      py::print(overload); \
-      WarnDeprecated(DeprecatedProtectedAliasMessage(NAME, "override")); \
-      PYBIND11_OVERLOAD_INT(RETURN, CLASS, "_" NAME, __VA_ARGS__); \
-    }
+// Deprecates overloads pursuant to #9651. This first attempts to resolve to
+// `{NAME}` overload. If that does not return (via the `PYBIND11_OVERLOAD_INT`
+// macro), then it tries the `_{NAME}` overload.
+#define PYDRAKE_TRY_PROTECTED_OVERLOAD(RETURN, CLASS, NAME, ...)       \
+  PYBIND11_OVERLOAD_INT(RETURN, CLASS, NAME, __VA_ARGS__);             \
+  if (py::get_overload<CLASS>(this, "_" NAME)) {                       \
+    WarnDeprecated(DeprecatedProtectedAliasMessage(NAME, "override")); \
+    PYBIND11_OVERLOAD_INT(RETURN, CLASS, "_" NAME, __VA_ARGS__);       \
+  }
 
 using symbolic::Expression;
 using systems::Context;
@@ -420,9 +434,9 @@ struct Impl {
     using CalcCallback = typename LeafOutputPort<T>::CalcCallback;
     using CalcVectorCallback = typename LeafOutputPort<T>::CalcVectorCallback;
 
-    auto leaf_system_cls = DefineTemplateClassWithDefault<
-        LeafSystem<T>, PyLeafSystem, System<T>>(
-        m, "LeafSystem", GetPyParam<T>(), doc.LeafSystem.doc);
+    auto leaf_system_cls =
+        DefineTemplateClassWithDefault<LeafSystem<T>, PyLeafSystem, System<T>>(
+            m, "LeafSystem", GetPyParam<T>(), doc.LeafSystem.doc);
     leaf_system_cls  // BR
         .def(py::init<>(), doc.LeafSystem.ctor.doc_0args)
         // TODO(eric.cousineau): It'd be nice if we did not need the user to
@@ -577,25 +591,16 @@ struct Impl {
         .def("DeclareAbstractState", &LeafSystemPublic::DeclareAbstractState,
             // Keep alive, ownership: `AbstractValue` keeps `self` alive.
             py::keep_alive<2, 1>(), doc.LeafSystem.DeclareAbstractState.doc);
-    AddDeprecatedProtectedAliases(&leaf_system_cls, {
-        "DeclareAbstractInputPort",
-        "DeclareAbstractParameter",
-        "DeclareNumericParameter",
-        "DeclareAbstractOutputPort",
-        "DeclareVectorInputPort",
-        "DeclareVectorOutputPort",
-        "DeclareInitializationEvent",
-        "DeclarePeriodicPublish",
-        "DeclarePeriodicDiscreteUpdate",
-        "DeclarePeriodicEvent",
-        "DeclarePerStepEvent",
-        "DoPublish",
-        "DoHasDirectFeedthrough",
-        "DeclareContinuousState",
-        "DeclareDiscreteState",
-        "DoCalcTimeDerivatives",
-        "DoCalcDiscreteVariableUpdates",
-        "DeclareAbstractState"});
+    AddDeprecatedProtectedAliases(&leaf_system_cls,
+        {"DeclareAbstractInputPort", "DeclareAbstractParameter",
+            "DeclareNumericParameter", "DeclareAbstractOutputPort",
+            "DeclareVectorInputPort", "DeclareVectorOutputPort",
+            "DeclareInitializationEvent", "DeclarePeriodicPublish",
+            "DeclarePeriodicDiscreteUpdate", "DeclarePeriodicEvent",
+            "DeclarePerStepEvent", "DoPublish", "DoHasDirectFeedthrough",
+            "DeclareContinuousState", "DeclareDiscreteState",
+            "DoCalcTimeDerivatives", "DoCalcDiscreteVariableUpdates",
+            "DeclareAbstractState"});
 
     DefineTemplateClassWithDefault<Diagram<T>, PyDiagram, System<T>>(
         m, "Diagram", GetPyParam<T>(), doc.Diagram.doc)
