@@ -30,18 +30,22 @@ namespace pydrake {
 
 namespace {
 
-py::str DeprecatedProtectedAliasMessage(py::str name) {
+py::str DeprecatedProtectedAliasMessage(py::str name, py::str verb) {
   return py::str(
       "'_{0}' is deprecated and will be removed on or around 2019-06-15. "
-      "Please override '{0}' instead.").format(name);
+      "Please {1} '{0}' instead.").format(name, verb);
 }
 
 void AddDeprecatedProtectedAliases(
     py::object cls, std::vector<std::string> names) {
+  // Use function-wrapping approach so that we can override documentation.
+  py::object deprecated_callable =
+    py::module::import("pydrake.common.deprecation").attr(
+        "_deprecated_callable");
   for (const std::string& name : names) {
-    py::str old_name = "_" + name;
-    cls.attr(old_name) = cls.attr(name.c_str());
-    DeprecateAttribute(cls, old_name, DeprecatedProtectedAliasMessage(name));
+    py::str alias = "_" + name;
+    py::str message = DeprecatedProtectedAliasMessage(name, "call");
+    cls.attr(alias) = deprecated_callable(cls.attr(name.c_str()), message);
   }
 }
 
@@ -51,7 +55,7 @@ void AddDeprecatedProtectedAliases(
 #define PYDRAKE_TRY_PROTECTED_OVERLOAD(RETURN, CLASS, NAME, ...) \
     PYBIND11_OVERLOAD_INT(RETURN, CLASS, NAME, __VA_ARGS__); \
     if (py::get_overload<CLASS>(this, "_" NAME)) { \
-      WarnDeprecated(DeprecatedProtectedAliasMessage(NAME)); \
+      WarnDeprecated(DeprecatedProtectedAliasMessage(NAME, "override")); \
       PYBIND11_OVERLOAD_INT(RETURN, CLASS, "_" NAME, __VA_ARGS__); \
     }
 

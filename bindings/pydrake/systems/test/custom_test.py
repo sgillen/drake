@@ -181,38 +181,38 @@ class TestCustom(unittest.TestCase):
                 self.called_per_step = False
                 self.called_periodic = False
                 # Ensure we have desired overloads.
-                self._DeclarePeriodicPublish(1.0)
-                self._DeclarePeriodicPublish(1.0, 0)
-                self._DeclarePeriodicPublish(period_sec=1.0, offset_sec=0.)
-                self._DeclarePeriodicDiscreteUpdate(
+                self.DeclarePeriodicPublish(1.0)
+                self.DeclarePeriodicPublish(1.0, 0)
+                self.DeclarePeriodicPublish(period_sec=1.0, offset_sec=0.)
+                self.DeclarePeriodicDiscreteUpdate(
                     period_sec=1.0, offset_sec=0.)
-                self._DeclareInitializationEvent(
+                self.DeclareInitializationEvent(
                     event=PublishEvent(
                         trigger_type=TriggerType.kInitialization,
                         callback=self._on_initialize))
-                self._DeclarePerStepEvent(
+                self.DeclarePerStepEvent(
                     event=PublishEvent(
                         trigger_type=TriggerType.kPerStep,
                         callback=self._on_per_step))
-                self._DeclarePeriodicEvent(
+                self.DeclarePeriodicEvent(
                     period_sec=1.0,
                     offset_sec=0.0,
                     event=PublishEvent(
                         trigger_type=TriggerType.kPeriodic,
                         callback=self._on_periodic))
-                self._DeclareContinuousState(2)
-                self._DeclareDiscreteState(1)
+                self.DeclareContinuousState(2)
+                self.DeclareDiscreteState(1)
                 # Ensure that we have inputs / outputs to call direct
                 # feedthrough.
-                self._DeclareInputPort(PortDataType.kVectorValued, 1)
-                self._DeclareVectorInputPort(
+                self.DeclareInputPort(PortDataType.kVectorValued, 1)
+                self.DeclareVectorInputPort(
                     name="test_input", model_vector=BasicVector(1),
                     random_type=None)
-                self._DeclareVectorOutputPort(BasicVector(1), noop)
+                self.DeclareVectorOutputPort(BasicVector(1), noop)
 
-            def _DoPublish(self, context, events):
+            def DoPublish(self, context, events):
                 # Call base method to ensure we do not get recursion.
-                LeafSystem._DoPublish(self, context, events)
+                LeafSystem.DoPublish(self, context, events)
                 # N.B. We do not test for a singular call to `DoPublish`
                 # (checking `assertFalse(self.called_publish)` first) because
                 # the above `_DeclareInitializationEvent` will call both its
@@ -221,28 +221,28 @@ class TestCustom(unittest.TestCase):
                 # even when we explicitly say not to publish at initialize.
                 self.called_publish = True
 
-            def _DoHasDirectFeedthrough(self, input_port, output_port):
+            def DoHasDirectFeedthrough(self, input_port, output_port):
                 # Test inputs.
                 test.assertIn(input_port, [0, 1])
                 test.assertEqual(output_port, 0)
                 # Call base method to ensure we do not get recursion.
-                base_return = LeafSystem._DoHasDirectFeedthrough(
+                base_return = LeafSystem.DoHasDirectFeedthrough(
                     self, input_port, output_port)
                 test.assertTrue(base_return is None)
                 # Return custom methods.
                 self.called_feedthrough = True
                 return False
 
-            def _DoCalcTimeDerivatives(self, context, derivatives):
+            def DoCalcTimeDerivatives(self, context, derivatives):
                 # Note:  Don't call base method here; it would abort because
                 # derivatives.size() != 0.
                 test.assertEqual(derivatives.get_vector().size(), 2)
                 self.called_continuous = True
 
-            def _DoCalcDiscreteVariableUpdates(
+            def DoCalcDiscreteVariableUpdates(
                     self, context, events, discrete_state):
                 # Call base method to ensure we do not get recursion.
-                LeafSystem._DoCalcDiscreteVariableUpdates(
+                LeafSystem.DoCalcDiscreteVariableUpdates(
                     self, context, events, discrete_state)
                 self.called_discrete = True
 
@@ -300,6 +300,12 @@ class TestCustom(unittest.TestCase):
         simulator.StepTo(0.99)
         self.assertTrue(system.called_per_step)
         self.assertTrue(system.called_periodic)
+
+    def test_deprecated_protected_aliases(self):
+        """Tests a subset of protected aliases."""
+        with catch_drake_warnings(expected_count=1):
+            print(help(LeafSystem._DoPublish))
+        exit(1)
 
     def test_vector_system_overrides(self):
         dt = 0.5
