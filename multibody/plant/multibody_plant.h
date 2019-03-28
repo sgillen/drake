@@ -2939,17 +2939,6 @@ class MultibodyPlant : public internal::MultibodyTreeSystem<T> {
   // These APIs using Isometry3 will be deprecated soon with the resolution of
   // #9865. Right now we offer them for backwards compatibility.
 
-  void SetFreeBodyPose(systems::Context<T>* context, const Body<T>& body,
-                       const Isometry3<T>& X_WB) const {
-    SetFreeBodyPose(context, body, math::RigidTransform<T>(X_WB));
-  }
-
-  void SetFreeBodyPose(const systems::Context<T>& context,
-                       systems::State<T>* state, const Body<T>& body,
-                       const Isometry3<T>& X_WB) const {
-    SetFreeBodyPose(context, state, body, math::RigidTransform<T>(X_WB));
-  }
-
   // Allows having a non-empty X_PF isometry and a nullopt X_BM.
   template <template <typename> class JointType, typename... Args>
   const JointType<T>& AddJoint(const std::string& name, const Body<T>& parent,
