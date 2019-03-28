@@ -36,16 +36,19 @@ py::str DeprecatedProtectedAliasMessage(py::str name, py::str verb) {
       "Please {1} '{0}' instead.").format(name, verb);
 }
 
+template <typename PyClass>
 void AddDeprecatedProtectedAliases(
-    py::object cls, std::vector<std::string> names) {
+    PyClass* cls, std::vector<std::string> names) {
   // Use function-wrapping approach so that we can override documentation.
-  py::object deprecated_callable =
-    py::module::import("pydrake.common.deprecation").attr(
-        "_deprecated_callable");
   for (const std::string& name : names) {
     py::str alias = "_" + name;
     py::str message = DeprecatedProtectedAliasMessage(name, "call");
-    cls.attr(alias) = deprecated_callable(cls.attr(name.c_str()), message);
+    py::handle original = cls->attr(name.c_str());
+    cls->def(alias.cast<std::string>().c_str(),
+        [original](py::object self, py::args args, py::kwargs kwargs) {
+          return original(self, *args, **kwargs);
+        }, message.cast<std::string>().c_str());
+    DeprecateAttribute(*cls, alias, message);
   }
 }
 
@@ -54,7 +57,8 @@ void AddDeprecatedProtectedAliases(
 // See #9651 for rationale.
 #define PYDRAKE_TRY_PROTECTED_OVERLOAD(RETURN, CLASS, NAME, ...) \
     PYBIND11_OVERLOAD_INT(RETURN, CLASS, NAME, __VA_ARGS__); \
-    if (py::get_overload<CLASS>(this, "_" NAME)) { \
+    if (auto overload = py::get_overload<CLASS>(this, "_" NAME)) { \
+      py::print(overload); \
       WarnDeprecated(DeprecatedProtectedAliasMessage(NAME, "override")); \
       PYBIND11_OVERLOAD_INT(RETURN, CLASS, "_" NAME, __VA_ARGS__); \
     }
@@ -410,7 +414,7 @@ struct Impl {
             doc.System.ToSymbolic.doc_0args)
         .def("ToSymbolicMaybe", &System<T>::ToSymbolicMaybe,
             doc.System.ToSymbolicMaybe.doc);
-    AddDeprecatedProtectedAliases(system_cls, {"DeclareInputPort"});
+    AddDeprecatedProtectedAliases(&system_cls, {"DeclareInputPort"});
 
     using AllocCallback = typename LeafOutputPort<T>::AllocCallback;
     using CalcCallback = typename LeafOutputPort<T>::CalcCallback;
@@ -573,7 +577,7 @@ struct Impl {
         .def("DeclareAbstractState", &LeafSystemPublic::DeclareAbstractState,
             // Keep alive, ownership: `AbstractValue` keeps `self` alive.
             py::keep_alive<2, 1>(), doc.LeafSystem.DeclareAbstractState.doc);
-    AddDeprecatedProtectedAliases(leaf_system_cls, {
+    AddDeprecatedProtectedAliases(&leaf_system_cls, {
         "DeclareAbstractInputPort",
         "DeclareAbstractParameter",
         "DeclareNumericParameter",

@@ -310,6 +310,7 @@ class TestCustom(unittest.TestCase):
                 self.called_publish = False
                 # Check a non-overridable method
                 with catch_drake_warnings(expected_count=1):
+                    print(self._DeclareVectorInputPort)
                     self._DeclareVectorInputPort("x", BasicVector(1))
 
             def _DoPublish(self, context, events):
@@ -323,9 +324,8 @@ class TestCustom(unittest.TestCase):
         self.assertTrue(system.called_publish)
 
         # Ensure documentation doesn't duplicate stuff.
-        # N.B. Since we deprecated this via wrapping, it will not trigger a
-        # warning on access.
-        self.assertIn("deprecated", LeafSystem._DoPublish.__doc__)
+        with catch_drake_warnings(expected_count=1):
+            self.assertIn("deprecated", LeafSystem._DoPublish.__doc__)
         # This will warn both on (a) calling the method and (b) on the
         # invocation of the override.
         with catch_drake_warnings(expected_count=2):
