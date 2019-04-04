@@ -74,10 +74,13 @@ void AddDeprecatedProtectedAliases(
 // N.B. No control flow will ever make `__VA_ARGS__` be evaluated more than
 // once.
 #define PYDRAKE_TRY_PROTECTED_OVERLOAD(RETURN, CLASS, NAME, ...)       \
-  PYBIND11_OVERLOAD_INT(RETURN, CLASS, NAME, __VA_ARGS__);             \
-  if (py::get_overload<CLASS>(this, "_" NAME)) {                       \
-    WarnDeprecated(DeprecatedProtectedAliasMessage(NAME, "override")); \
-    PYBIND11_OVERLOAD_INT(RETURN, CLASS, "_" NAME, __VA_ARGS__);       \
+  { \
+    py::gil_scoped_acquire gil; \
+    PYBIND11_OVERLOAD_INT(RETURN, CLASS, NAME, __VA_ARGS__);             \
+    if (py::get_overload<CLASS>(this, "_" NAME)) {                       \
+      WarnDeprecated(DeprecatedProtectedAliasMessage(NAME, "override")); \
+      PYBIND11_OVERLOAD_INT(RETURN, CLASS, "_" NAME, __VA_ARGS__);       \
+    } \
   }
 
 using symbolic::Expression;
