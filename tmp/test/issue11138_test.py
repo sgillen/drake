@@ -57,3 +57,7 @@ class TestBaddies(unittest.TestCase):
         sys = builder.AddSystem(VanDerPolParticles(num_particles))
         AddRandomInputs(.1, builder)
         diagram = builder.Build()
+
+
+if __name__ == "__main__":
+    unittest.main()
