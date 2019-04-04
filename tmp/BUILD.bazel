@@ -1,0 +1,9 @@
+load(
+    "@drake//tools/skylark:drake_py.bzl",
+    "drake_py_unittest",
+)
+
+drake_py_unittest(
+    name = "issue11138_test",
+    deps = ["//bindings/pydrake"],
+)
