@@ -4,6 +4,7 @@ https://github.com/RussTedrake/underactuated/blob/5fedce4/src/van_der_pol/partic
 """
 
 import unittest
+import warnings
 
 import numpy as np
 
@@ -15,6 +16,7 @@ from pydrake.all import (
     PortDataType,
     RandomDistribution,
 )
+from pydrake.common.deprecation import DrakeDeprecationWarning
 
 
 class VanDerPolParticles(LeafSystem):
@@ -60,4 +62,5 @@ class TestBaddies(unittest.TestCase):
 
 
 if __name__ == "__main__":
+    warnings.simplefilter("error", DrakeDeprecationWarning)
     unittest.main()
