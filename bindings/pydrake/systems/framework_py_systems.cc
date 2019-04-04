@@ -57,14 +57,15 @@ void AddDeprecatedProtectedAliases(
         DeprecatedProtectedAliasMessage(name, "call");
     py::handle cls_handle = *cls;
     cls->def(alias.c_str(),
-        [cls_handle, name](py::object self, py::args args, py::kwargs kwargs) {
+        [cls_handle, name, deprecation](
+            py::object self, py::args args, py::kwargs kwargs) {
           // N.B. Trying to capture a `py::handle` for `original` does not work
           // and causes segfaults.
           py::object original = cls_handle.attr(name.c_str());
+          WarnDeprecated(deprecation);
           return original(self, *args, **kwargs);
         },
         deprecation.c_str());
-    DeprecateAttribute(*cls, alias, deprecation);
   }
 }
 
@@ -74,13 +75,10 @@ void AddDeprecatedProtectedAliases(
 // N.B. No control flow will ever make `__VA_ARGS__` be evaluated more than
 // once.
 #define PYDRAKE_TRY_PROTECTED_OVERLOAD(RETURN, CLASS, NAME, ...)       \
-  { \
-    py::gil_scoped_acquire gil; \
-    PYBIND11_OVERLOAD_INT(RETURN, CLASS, NAME, __VA_ARGS__);             \
-    if (py::get_overload<CLASS>(this, "_" NAME)) {                       \
-      WarnDeprecated(DeprecatedProtectedAliasMessage(NAME, "override")); \
-      PYBIND11_OVERLOAD_INT(RETURN, CLASS, "_" NAME, __VA_ARGS__);       \
-    } \
+  PYBIND11_OVERLOAD_INT(RETURN, CLASS, NAME, __VA_ARGS__);             \
+  if (py::get_overload<CLASS>(this, "_" NAME)) {                       \
+    WarnDeprecated(DeprecatedProtectedAliasMessage(NAME, "override")); \
+    PYBIND11_OVERLOAD_INT(RETURN, CLASS, "_" NAME, __VA_ARGS__);       \
   }
 
 using symbolic::Expression;

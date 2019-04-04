@@ -62,5 +62,5 @@ class TestBaddies(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    warnings.simplefilter("error", DrakeDeprecationWarning)
+    # warnings.simplefilter("error", DrakeDeprecationWarning)
     unittest.main()
