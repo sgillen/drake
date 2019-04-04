@@ -508,6 +508,15 @@ class TestSymbolicExpression(SymbolicTestCase):
         self.assertEqual(str(1 == e_y), "(y == 1)")
         self.assertEqual(str(1 != e_y), "(y != 1)")
 
+    def test_relation_operators_workaround(self):
+        import operator
+
+        lt_array = np.frompyfunc(operator.lt, 2, 1)
+        v = np.array([e_x, e_y])
+        print(lt_array(v, [1, 2]))  # no broadcast
+        print(lt_array(v, 1))  # broadcast (vector, scalar)
+        print(lt_array(e_x, [1, 2]))  # broadcast (scalar, vector)
+
     def test_relational_operators_nonzero(self):
         # For issues #8135 and #8491.
         # Ensure that we throw on `__nonzero__`.
