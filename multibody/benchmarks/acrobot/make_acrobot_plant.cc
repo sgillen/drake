@@ -84,7 +84,7 @@ MakeAcrobotPlant(const AcrobotParameters& params, bool finalize,
       X_link1_Ei,
       link2,
       /* Elbow outboard frame Eo IS frame L2 for link 2. */
-      {},
+      optional<RigidTransformd>{},  // `nullopt` is ambiguous
       Vector3d::UnitY()); /* acrobot oscillates in the x-z plane. */
 
   // Add acrobot's actuator at the elbow joint.

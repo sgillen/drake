@@ -295,6 +295,8 @@ void ParseJoint(ModelInstanceIndex model_instance,
   double damping = 0;
   double velocity = 0;
 
+  const optional<RigidTransformd> nullopt;  // `drake::nullopt` is ambiguous
+
   if (type.compare("revolute") == 0 || type.compare("continuous") == 0) {
     ParseJointLimits(node, &lower, &upper, &velocity);
     ParseJointDynamics(name, node, &damping);
