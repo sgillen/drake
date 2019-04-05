@@ -28,6 +28,7 @@ namespace pydrake {
 using T = double;
 
 using std::string;
+
 using math::RigidTransform;
 
 // Binds `MultibodyTreeElement` methods.
@@ -103,18 +104,15 @@ PYBIND11_MODULE(tree, m) {
                  const RigidTransform<T>&, optional<ModelInstanceIndex>>(),
             py::arg("name"), py::arg("P"), py::arg("X_PF"),
             py::arg("model_instance") = nullopt, cls_doc.ctor.doc_4args)
-        .def(py::init(
-            [doc_iso3_deprecation](
-                const std::string& name, const Frame<T>& P,
-                const Isometry3<T>& X_PF,
-                optional<ModelInstanceIndex> model_instance) {
-              WarnDeprecated(doc_iso3_deprecation);
-              return std::make_unique<Class>(
-                  name, P, RigidTransform<T>(X_PF), model_instance);
-            }),
+        .def(py::init([doc_iso3_deprecation](const std::string& name,
+                          const Frame<T>& P, const Isometry3<T>& X_PF,
+                          optional<ModelInstanceIndex> model_instance) {
+          WarnDeprecated(doc_iso3_deprecation);
+          return std::make_unique<Class>(
+              name, P, RigidTransform<T>(X_PF), model_instance);
+        }),
             py::arg("name"), py::arg("P"), py::arg("X_PF"),
-            py::arg("model_instance") = nullopt,
-            doc_iso3_deprecation);
+            py::arg("model_instance") = nullopt, doc_iso3_deprecation);
   }
 
   // Bodies.
@@ -215,9 +213,19 @@ PYBIND11_MODULE(tree, m) {
     py::class_<Class, Joint<T>> cls(m, "WeldJoint", doc.WeldJoint.doc);
     cls  // BR
         .def(py::init<const string&, const Frame<T>&, const Frame<T>&,
-                 const Isometry3<double>&>(),
+                 const RigidTransform<T>&>(),
             py::arg("name"), py::arg("parent_frame_P"),
-            py::arg("child_frame_C"), py::arg("X_PC"), doc.WeldJoint.ctor.doc);
+            py::arg("child_frame_C"), py::arg("X_PC"), doc.WeldJoint.ctor.doc)
+        .def(py::init(
+                 [doc_iso3_deprecation](const std::string& name,
+                     const Frame<T>& parent_frame_P,
+                     const Frame<T>& child_frame_C, const Isometry3<T>& X_PC) {
+                   WarnDeprecated(doc_iso3_deprecation);
+                   return std::make_unique<Class>(name, parent_frame_P,
+                       child_frame_C, RigidTransform<T>(X_PC));
+                 }),
+            py::arg("name"), py::arg("parent_frame_P"),
+            py::arg("child_frame_C"), py::arg("X_PC"), doc_iso3_deprecation);
   }
 
   // Actuators.
