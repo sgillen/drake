@@ -28,6 +28,7 @@ namespace pydrake {
 using T = double;
 
 using std::string;
+using math::RigidTransform;
 
 // Binds `MultibodyTreeElement` methods.
 // N.B. We do this rather than inheritance because this template is more of a
@@ -71,6 +72,11 @@ PYBIND11_MODULE(tree, m) {
       m, "ModelInstanceIndex", doc.ModelInstanceIndex.doc);
   m.def("world_index", &world_index, doc.world_index.doc);
 
+  constexpr char doc_iso3_deprecation[] =
+      "This API using Isometry3 is / will be deprecated soon with the "
+      "resolution of #9865. We only offer it for backwards compatibility. DO "
+      "NOT USE!.";
+
   // Frames.
   {
     using Class = Frame<T>;
@@ -93,10 +99,22 @@ PYBIND11_MODULE(tree, m) {
     using Class = FixedOffsetFrame<T>;
     constexpr auto& cls_doc = doc.FixedOffsetFrame;
     py::class_<Class, Frame<T>>(m, "FixedOffsetFrame", cls_doc.doc)
-        .def(py::init<const std::string&, const Frame<double>&,
-                 const Isometry3<double>&, optional<ModelInstanceIndex>>(),
+        .def(py::init<const std::string&, const Frame<T>&,
+                 const RigidTransform<T>&, optional<ModelInstanceIndex>>(),
             py::arg("name"), py::arg("P"), py::arg("X_PF"),
-            py::arg("model_instance") = nullopt, cls_doc.ctor.doc_4args);
+            py::arg("model_instance") = nullopt, cls_doc.ctor.doc_4args)
+        .def(py::init(
+            [doc_iso3_deprecation](
+                const std::string& name, const Frame<T>& P,
+                const Isometry3<T>& X_PF,
+                optional<ModelInstanceIndex> model_instance) {
+              WarnDeprecated(doc_iso3_deprecation);
+              return std::make_unique<Class>(
+                  name, P, RigidTransform<T>(X_PF), model_instance);
+            }),
+            py::arg("name"), py::arg("P"), py::arg("X_PF"),
+            py::arg("model_instance") = nullopt,
+            doc_iso3_deprecation);
   }
 
   // Bodies.

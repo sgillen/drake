@@ -720,7 +720,7 @@ class TestPlant(unittest.TestCase):
     def test_multibody_add_frame(self):
         plant = MultibodyPlant()
         frame = plant.AddFrame(frame=FixedOffsetFrame(
-            name="frame", P=plant.world_frame(), X_PF=Isometry3.Identity(),
+            name="frame", P=plant.world_frame(), X_PF=RigidTransform.Identity(),
             model_instance=None))
         self.assertIsInstance(frame, Frame)
         np.testing.assert_equal(
