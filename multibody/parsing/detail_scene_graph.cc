@@ -169,7 +169,7 @@ std::unique_ptr<GeometryInstance> MakeGeometryInstanceFromSdfVisual(
 
   // Retrieve the pose of the visual frame G in the parent link L in which
   // geometry gets defined.
-  const Isometry3d X_LG = ToIsometry3(sdf_visual.Pose());
+  const Isometry3d X_LG = ToRigidTransform(sdf_visual.Pose());
 
   // GeometryInstance defines its shapes in a "canonical frame" C. For instance:
   // - A half-space's normal is directed along the Cz axis,
@@ -265,7 +265,7 @@ Isometry3d MakeGeometryPoseFromSdfCollision(
     const sdf::Collision& sdf_collision) {
   // Retrieve the pose of the collision frame G in the parent link L in which
   // geometry gets defined.
-  const Isometry3d X_LG = ToIsometry3(sdf_collision.Pose());
+  const Isometry3d X_LG = ToRigidTransform(sdf_collision.Pose());
 
   // GeometryInstance defines its shapes in a "canonical frame" C. The canonical
   // frame C is the frame in which the geometry is defined and it generally
