@@ -2961,41 +2961,41 @@ class MultibodyPlant : public internal::MultibodyTreeSystem<T> {
     SetFreeBodyPose(context, state, body, math::RigidTransform<T>(X_WB));
   }
 
-  // Allows having a non-empty X_PF isometry and a nullopt X_BM.
-  template <template <typename> class JointType, typename... Args>
-  const JointType<T>& AddJoint(const std::string& name, const Body<T>& parent,
-                               const Isometry3<double>& X_PF,
-                               const Body<T>& child,
-                               const optional<Isometry3<double>>& X_BM,
-                               Args&&... args) {
-    DRAKE_MBP_THROW_IF_FINALIZED();
+  // // Allows having a non-empty X_PF isometry and a nullopt X_BM.
+  // template <template <typename> class JointType, typename... Args>
+  // const JointType<T>& AddJoint(const std::string& name, const Body<T>& parent,
+  //                              const Isometry3<double>& X_PF,
+  //                              const Body<T>& child,
+  //                              const optional<Isometry3<double>>& X_BM,
+  //                              Args&&... args) {
+  //   DRAKE_MBP_THROW_IF_FINALIZED();
 
-    const math::RigidTransform<double> X_PF_rt(X_PF);
-    const optional<math::RigidTransform<double>> X_BM_rt =
-        X_BM ? optional<math::RigidTransform<T>>(math::RigidTransform<T>(*X_BM))
-             : nullopt;
+  //   const math::RigidTransform<double> X_PF_rt(X_PF);
+  //   const optional<math::RigidTransform<double>> X_BM_rt =
+  //       X_BM ? optional<math::RigidTransform<T>>(math::RigidTransform<T>(*X_BM))
+  //            : nullopt;
 
-    return this->mutable_tree().template AddJoint<JointType>(
-        name, parent, X_PF_rt, child, X_BM_rt, std::forward<Args>(args)...);
-  }
+  //   return this->mutable_tree().template AddJoint<JointType>(
+  //       name, parent, X_PF_rt, child, X_BM_rt, std::forward<Args>(args)...);
+  // }
 
-  // Allows having a nullopt X_PF and a non-empty X_BM isometry.
-  template <template <typename> class JointType, typename... Args>
-  const JointType<T>& AddJoint(const std::string& name, const Body<T>& parent,
-                               const optional<Isometry3<double>>& X_PF,
-                               const Body<T>& child,
-                               const Isometry3<double>& X_BM,
-                               Args&&... args) {
-    DRAKE_MBP_THROW_IF_FINALIZED();
+  // // Allows having a nullopt X_PF and a non-empty X_BM isometry.
+  // template <template <typename> class JointType, typename... Args>
+  // const JointType<T>& AddJoint(const std::string& name, const Body<T>& parent,
+  //                              const optional<Isometry3<double>>& X_PF,
+  //                              const Body<T>& child,
+  //                              const Isometry3<double>& X_BM,
+  //                              Args&&... args) {
+  //   DRAKE_MBP_THROW_IF_FINALIZED();
 
-    optional<math::RigidTransform<double>> X_PF_rt =
-        X_PF ? optional<math::RigidTransform<T>>(math::RigidTransform<T>(*X_PF))
-             : nullopt;
-    const math::RigidTransform<double> X_BM_rt(X_BM);
+  //   optional<math::RigidTransform<double>> X_PF_rt =
+  //       X_PF ? optional<math::RigidTransform<T>>(math::RigidTransform<T>(*X_PF))
+  //            : nullopt;
+  //   const math::RigidTransform<double> X_BM_rt(X_BM);
 
-    return this->mutable_tree().template AddJoint<JointType>(
-        name, parent, X_PF_rt, child, X_BM_rt, std::forward<Args>(args)...);
-  }
+  //   return this->mutable_tree().template AddJoint<JointType>(
+  //       name, parent, X_PF_rt, child, X_BM_rt, std::forward<Args>(args)...);
+  // }
 
   const WeldJoint<T>& WeldFrames(
       const Frame<T>& A, const Frame<T>& B,
