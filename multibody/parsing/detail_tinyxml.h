@@ -5,6 +5,8 @@
 #include <Eigen/Dense>
 #include <tinyxml2.h>
 
+#include "drake/math/rigid_transform.h"
+
 namespace drake {
 namespace multibody {
 namespace detail {
@@ -48,12 +50,12 @@ bool ParseVectorAttribute(const tinyxml2::XMLElement* node,
                           Eigen::Vector4d* val);
 
 /// Parses "xyz" and "rpy" attributes from @p node and returns an
-/// Isometry3d created from them.  If either the "xyz" or "rpy"
+/// RigidTransformd created from them.  If either the "xyz" or "rpy"
 /// attributes are omitted they will be initialized with zero values.
 ///
 /// @throws std::invalid_argument if the "xyz" or "rpy" attributes are
 /// malformed.
-Eigen::Isometry3d OriginAttributesToTransform(
+math::RigidTransformd OriginAttributesToTransform(
     const tinyxml2::XMLElement* node);
 
 /// Parses a three vector value from parameter @p node, which is an
