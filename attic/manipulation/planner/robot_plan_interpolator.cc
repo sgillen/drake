@@ -52,7 +52,7 @@ RobotPlanInterpolator::RobotPlanInterpolator(
     double update_interval)
     : plan_input_port_(this->DeclareAbstractInputPort(
           systems::kUseDefaultName,
-          systems::Value<robot_plan_t>()).get_index()),
+          Value<robot_plan_t>()).get_index()),
       interp_type_(interp_type) {
   parsers::urdf::AddModelInstanceFromUrdfFileToWorld(
       model_path, multibody::joints::kFixed, &tree_);
@@ -83,15 +83,15 @@ RobotPlanInterpolator::~RobotPlanInterpolator() {}
 
 std::unique_ptr<systems::AbstractValues>
 RobotPlanInterpolator::AllocateAbstractState() const {
-  std::vector<std::unique_ptr<systems::AbstractValue>> abstract_vals(2);
+  std::vector<std::unique_ptr<AbstractValue>> abstract_vals(2);
   const PlanData default_plan;
   // Actual plan.
   abstract_vals[kAbsStateIdxPlan] =
-      systems::AbstractValue::Make<PlanData>(default_plan);
+      AbstractValue::Make<PlanData>(default_plan);
   // Flag indicating whether RobotPlanInterpolator::Initialize() has
   // been called.
   abstract_vals[kAbsStateIdxInitFlag] =
-      systems::AbstractValue::Make<bool>(false);
+      AbstractValue::Make<bool>(false);
   return std::make_unique<systems::AbstractValues>(std::move(abstract_vals));
 }
 
@@ -171,8 +171,7 @@ void RobotPlanInterpolator::DoCalcUnrestrictedUpdate(
   PlanData& plan =
       state->get_mutable_abstract_state<PlanData>(kAbsStateIdxPlan);
   const robot_plan_t& plan_input =
-      this->EvalAbstractInput(context, plan_input_port_)
-          ->GetValue<robot_plan_t>();
+      get_plan_input_port().Eval<robot_plan_t>(context);
 
   // I (sam.creasey) wish I could think of a more effective way to
   // determine that a new message has arrived, but unfortunately

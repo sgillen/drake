@@ -11,7 +11,7 @@
 #include "drake/bindings/pydrake/pydrake_pybind.h"
 #include "drake/bindings/pydrake/symbolic_types_pybind.h"
 #include "drake/common/drake_throw.h"
-#include "drake/systems/framework/value.h"
+#include "drake/common/value.h"
 
 namespace drake {
 namespace pydrake {
@@ -36,10 +36,14 @@ void DefClone(PyClass* ppy_class) {
 /// @tparam T Inner parameter of `Value<T>`.
 /// @tparam Class Class to be bound. By default, `Value<T>` is used.
 /// @returns Reference to the registered Python type.
-template <typename T, typename Class = systems::Value<T>>
-py::object AddValueInstantiation(py::module scope) {
-  py::class_<Class, systems::AbstractValue> py_class(
+template <typename T, typename Class = drake::Value<T>>
+py::class_<Class, drake::AbstractValue> AddValueInstantiation(
+    py::module scope) {
+  py::class_<Class, drake::AbstractValue> py_class(
       scope, TemporaryClassName<Class>().c_str());
+  // Register instantiation.
+  py::module py_framework = py::module::import("pydrake.systems.framework");
+  AddTemplateClass(py_framework, "Value", py_class, GetPyParam<T>());
   // Only use copy (clone) construction.
   // Ownership with `unique_ptr<T>` has some annoying caveats, and some are
   // simplified by always copying.
@@ -82,9 +86,6 @@ be destroyed when it is replaced, since it is stored using `unique_ptr<>`.
 )""";
   }
   py_class.def("set_value", &Class::set_value, set_value_docstring.c_str());
-  // Register instantiation.
-  py::module py_framework = py::module::import("pydrake.systems.framework");
-  AddTemplateClass(py_framework, "Value", py_class, GetPyParam<T>());
   return py_class;
 }
 

@@ -71,35 +71,35 @@ PYBIND11_MODULE(autodiffutils, m) {
       // .def_loop(double() != py::self)
       .def_loop(py::self < py::self)
       .def_loop(py::self < double())
-      .def_loop(double() < py::self)
       .def_loop(py::self <= py::self)
       .def_loop(py::self <= double())
-      .def_loop(double() <= py::self)
       .def_loop(py::self > py::self)
       .def_loop(py::self > double())
-      .def_loop(double() > py::self)
       .def_loop(py::self >= py::self)
       .def_loop(py::self >= double())
-      .def_loop(double() >= py::self)
-      // Dot-product
-      .def_loop(py::dtype_method::dot())
-      // N.B. Certain versions of NumPy require `square` be specifically
-      // defined.
-      .def_loop("square", [](const AutoDiffXd& self) { return self * self; })
-      .def_loop("isfinite",
-                [](const AutoDiffXd& self) { return isfinite(self.value()); });
+      // Additional math
+      .def("__pow__",
+          [](const AutoDiffXd& base, double exponent) {
+            return pow(base, exponent);
+          },
+          py::is_operator())
+      .def("__abs__", [](const AutoDiffXd& x) { return abs(x); });
+  DefCopyAndDeepCopy(&autodiff);
+
+  py::implicitly_convertible<double, AutoDiffXd>();
+  py::implicitly_convertible<int, AutoDiffXd>();
 
   // Add overloads for `math` functions.
   auto math = py::module::import("pydrake.math");
-  UfuncMirrorDef<decltype(autodiff)>(&autodiff, math)
-      .def_loop("__pow__", "pow",
-                [](const AutoDiffXd& base, int exponent) {
-                  return pow(base, exponent);
-                })
+  MirrorDef<py::module, decltype(autodiff)>(&math, &autodiff)
       .def_loop("__abs__", "abs", [](const AutoDiffXd& x) { return abs(x); })
       .def_loop("log", [](const AutoDiffXd& x) { return log(x); })
       .def_loop("exp", [](const AutoDiffXd& x) { return exp(x); })
       .def_loop("sqrt", [](const AutoDiffXd& x) { return sqrt(x); })
+      .def_loop("__pow__", "pow",
+                [](const AutoDiffXd& base, double exponent) {
+                  return pow(base, exponent);
+                })
       .def_loop("sin", [](const AutoDiffXd& x) { return sin(x); })
       .def_loop("cos", [](const AutoDiffXd& x) { return cos(x); })
       .def_loop("tan", [](const AutoDiffXd& x) { return tan(x); })
@@ -118,7 +118,11 @@ PYBIND11_MODULE(autodiffutils, m) {
           "fmax", "max",
           [](const AutoDiffXd& x, const AutoDiffXd& y) { return max(x, y); })
       .def_loop("ceil", [](const AutoDiffXd& x) { return ceil(x); })
-      .def_loop("floor", [](const AutoDiffXd& x) { return floor(x); });
+      .def_loop("floor", [](const AutoDiffXd& x) { return floor(x); })
+      // Matrix
+      .def("inv", [](const MatrixX<AutoDiffXd>& X) -> MatrixX<AutoDiffXd> {
+        return X.inverse();
+      });
 }
 
 }  // namespace pydrake
