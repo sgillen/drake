@@ -47,5 +47,6 @@ class TestCompatibility(unittest.TestCase):
 
         thread = Thread(target=partial(invoke_callback, callback))
         thread.start()
+        # TODO(eric): This is hanging now???
         thread.join()
         self.assertTrue(called[0])

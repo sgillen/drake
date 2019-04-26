@@ -412,6 +412,7 @@ class dtype_user : public object {
       "Cannot define NumPy dtypes for polymorphics classes.");
 
   using PyClass = class_<Class_>;
+  using type = typename PyClass::type;
   using Class = Class_;
   using DTypePyObject = detail::dtype_user_instance<Class>;
 
