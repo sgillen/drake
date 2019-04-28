@@ -27,7 +27,8 @@ PYBIND11_MODULE(wrap_test_util, m) {
   py::class_<MyContainer> my_container(m, "MyContainer");
   my_container  // BR
       .def(py::init<>());
-  DefReadWriteKeepAlive(&my_container, "member", &MyContainer::member);
+  DefReadWriteKeepAlive(
+      &my_container, "member", &MyContainer::member, py_reference);
 }
 
 }  // namespace pydrake

@@ -483,6 +483,8 @@ struct Impl {
             [](const System<T>& self, const Context<T>& context) {
               std::vector<const WitnessFunction<T>*> witnesses;
               self.GetWitnessFunctions(context, &witnesses);
+              // TODO(eric): How to make casting with `py_reference` and
+              // vectors more... sustainable?
               return witnesses;
             },
             py::arg("context"),

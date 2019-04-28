@@ -99,6 +99,7 @@ PYBIND11_MODULE(analysis, m) {
                 std::unique_ptr<IntegratorBase<T>> integrator) {
               return self->reset_integrator(std::move(integrator));
             },
+            py_reference_internal,
             // Keep alive, ownership: `Integrator` keeps `self` alive.
             py::keep_alive<2, 1>(),
             doc.Simulator.reset_integrator.doc_1args_stduniqueptr)

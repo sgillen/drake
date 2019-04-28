@@ -18,6 +18,7 @@ def pybind11_repository(
         repository = _REPOSITORY,
         commit = _COMMIT,
         sha256 = _SHA256,
+        local_repository_override = "/home/eacousineau/proj/tri/repo/externals/pybind11",
         build_file = "@drake//tools/workspace/pybind11:package.BUILD.bazel",
         mirrors = mirrors,
     )

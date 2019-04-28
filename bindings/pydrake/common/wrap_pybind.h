@@ -90,11 +90,14 @@ auto WrapCallbacks(Func&& func) {
 /// @tparam Class the C++ class.
 /// @tparam T type for the member we wish to apply keep alive semantics.
 template <typename PyClass, typename Class, typename T>
-void DefReadWriteKeepAlive(PyClass* cls, const char* name, T Class::*member) {
+void DefReadWriteKeepAlive(
+    PyClass* cls, const char* name, T Class::*member,
+    py::return_value_policy getter_policy =
+        py::return_value_policy::automatic) {
   auto getter = [member](const Class* obj) { return obj->*member; };
   auto setter = [member](Class* obj, const T& value) { obj->*member = value; };
   cls->def_property(name,  // BR
-      py::cpp_function(getter),
+      py::cpp_function(getter, getter_policy),
       py::cpp_function(setter,
           // Keep alive, reference: `self` keeps `value` alive.
           py::keep_alive<1, 2>()));
