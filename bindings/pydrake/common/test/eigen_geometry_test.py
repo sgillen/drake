@@ -31,10 +31,14 @@ def allclose(a, b, **kwargs):
 
 
 class TestEigenGeometry(unittest.TestCase):
+    def check_types(self, check_func):
+        print(check_func)
+        check_func(float)
+        check_func(AutoDiffXd)
+        check_func(Expression)
+
     def test_quaternion(self):
-        self.check_quaternion(float)
-        self.check_quaternion(AutoDiffXd)
-        self.check_quaternion(Expression)
+        self.check_types(self.check_quaternion)
 
     def check_quaternion(self, T):
         # Simple API.
@@ -112,25 +116,30 @@ class TestEigenGeometry(unittest.TestCase):
         # Test `type_caster`s.
         if T == float:
             value = test_util.create_quaternion()
-            self.assertTrue(isinstance(value, Quaternion))
+            self.assertTrue(isinstance(value, mut.Quaternion))
             test_util.check_quaternion(value)
 
     def test_isometry3(self):
+        self.check_types(self.check_isometry3)
+
+    def check_isometry3(self, T):
+        Isometry3 = mut.Isometry3_[T]
         # - Default constructor
-        transform = mut.Isometry3()
+        transform = Isometry3()
         X = np.eye(4, 4)
-        self.assertTrue(np.allclose(transform.matrix(), X))
-        self.assertTrue(np.allclose(copy.copy(transform).matrix(), X))
-        self.assertEqual(str(transform), str(X))
+        self.assertTrue(allclose(transform.matrix(), X))
+        self.assertTrue(allclose(copy.copy(transform).matrix(), X))
+        if T == float:
+            self.assertEqual(str(transform), str(X))
         # - Constructor with (X)
-        transform = mut.Isometry3(matrix=X)
-        self.assertTrue(np.allclose(transform.matrix(), X))
+        transform = Isometry3(matrix=X)
+        self.assertTrue(allclose(transform.matrix(), X))
         # - Copy constructor.
-        cp = mut.Isometry3(other=transform)
-        self.assertTrue(np.allclose(transform.matrix(), cp.matrix()))
+        cp = Isometry3(other=transform)
+        self.assertTrue(allclose(transform.matrix(), cp.matrix()))
         # - Identity
-        transform = mut.Isometry3.Identity()
-        self.assertTrue(np.allclose(transform.matrix(), X))
+        transform = Isometry3.Identity()
+        self.assertTrue(allclose(transform.matrix(), X))
         # - Constructor with (R, p)
         R = np.array([
             [0., 1, 0],
@@ -138,41 +147,43 @@ class TestEigenGeometry(unittest.TestCase):
             [0, 0, 1]])
         p = np.array([1., 2, 3])
         X = np.vstack((np.hstack((R, p.reshape((-1, 1)))), [0, 0, 0, 1]))
-        transform = mut.Isometry3(rotation=R, translation=p)
-        self.assertTrue(np.allclose(transform.matrix(), X))
-        self.assertTrue(np.allclose(transform.translation(), p))
+        transform = Isometry3(rotation=R, translation=p)
+        self.assertTrue(allclose(transform.matrix(), X))
+        self.assertTrue(allclose(transform.translation(), p))
         transform.set_translation(-p)
-        self.assertTrue(np.allclose(transform.translation(), -p))
-        self.assertTrue(np.allclose(transform.rotation(), R))
+        self.assertTrue(allclose(transform.translation(), -p))
+        self.assertTrue(allclose(transform.rotation(), R))
         transform.set_rotation(R.T)
-        self.assertTrue(np.allclose(transform.rotation(), R.T))
+        self.assertTrue(allclose(transform.rotation(), R.T))
         # - Check transactions for bad values.
-        transform = mut.Isometry3(rotation=R, translation=p)
-        R_bad = np.copy(R)
-        R_bad[0, 0] = 10.
-        with self.assertRaises(RuntimeError):
-            transform.set_rotation(R_bad)
-        self.assertTrue(np.allclose(R, transform.rotation()))
-        X_bad = np.copy(X)
-        X_bad[:3, :3] = R_bad
-        with self.assertRaises(RuntimeError):
-            transform.set_matrix(X_bad)
-        self.assertTrue(np.allclose(X, transform.matrix()))
+        if T != Expression:
+            transform = Isometry3(rotation=R, translation=p)
+            R_bad = np.copy(R)
+            R_bad[0, 0] = 10.
+            with self.assertRaises(RuntimeError):
+                transform.set_rotation(R_bad)
+            self.assertTrue(allclose(R, transform.rotation()))
+            X_bad = np.copy(X)
+            X_bad[:3, :3] = R_bad
+            with self.assertRaises(RuntimeError):
+                transform.set_matrix(X_bad)
+            self.assertTrue(allclose(X, transform.matrix()))
         # Test `type_caster`s.
-        value = test_util.create_isometry()
-        self.assertTrue(isinstance(value, mut.Isometry3))
-        test_util.check_isometry(value)
+        if T == float:
+            value = test_util.create_isometry()
+            self.assertTrue(isinstance(value, mut.Isometry3))
+            test_util.check_isometry(value)
         # Operations.
-        transform = mut.Isometry3(rotation=R, translation=p)
+        transform = Isometry3(rotation=R, translation=p)
         transform_I = transform.inverse().multiply(transform)
-        self.assertTrue(np.allclose(transform_I.matrix(), np.eye(4)))
-        self.assertTrue((
-            transform.multiply(position=[10, 20, 30]) == [21, -8, 33]).all())
+        self.assertTrue(allclose(transform_I.matrix(), np.eye(4)))
+        self.assertTrue(allclose(
+            transform.multiply(position=[10, 20, 30]), [21, -8, 33]))
         if six.PY3:
-            self.assertTrue(np.allclose(
+            self.assertTrue(allclose(
                 eval("transform.inverse() @ transform").matrix(), np.eye(4)))
-            self.assertTrue((
-                eval("transform @ [10, 20, 30]") == [21, -8, 33]).all())
+            self.assertTrue(allclose(
+                eval("transform @ [10, 20, 30]"), [21, -8, 33]))
 
     def test_translation(self):
         # Test `type_caster`s.
