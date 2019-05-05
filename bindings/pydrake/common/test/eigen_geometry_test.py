@@ -6,6 +6,8 @@ import unittest
 import numpy as np
 import six
 
+from pydrake.autodiffutils import AutoDiffXd
+from pydrake.symbolic import Expression
 import pydrake.common.test.eigen_geometry_test_util as test_util
 
 
@@ -13,81 +15,105 @@ def normalize(x):
     return x / np.linalg.norm(x)
 
 
+@np.vectorize
+def to_value(x):
+    if isinstance(x, float) or isinstance(x, int):
+        return x
+    elif isinstance(x, AutoDiffXd):
+        return x.value()
+    elif isinstance(x, Expression):
+        return x.Evaluate()
+    assert False
+
+
+def allclose(a, b, **kwargs):
+    return np.allclose(to_value(a), to_value(b), **kwargs)
+
+
 class TestEigenGeometry(unittest.TestCase):
     def test_quaternion(self):
+        self.check_quaternion(float)
+        self.check_quaternion(AutoDiffXd)
+        self.check_quaternion(Expression)
+
+    def check_quaternion(self, T):
         # Simple API.
-        q_identity = mut.Quaternion()
-        self.assertTrue(np.allclose(q_identity.wxyz(), [1, 0, 0, 0]))
-        self.assertTrue(np.allclose(
+        Quaternion = mut.Quaternion_[T]
+        cast = np.vectorize(T)
+        q_identity = Quaternion()
+        self.assertTrue(allclose(q_identity.wxyz(), [1, 0, 0, 0]))
+        self.assertTrue(allclose(
             copy.copy(q_identity).wxyz(), [1, 0, 0, 0]))
-        self.assertTrue(np.allclose(
-            q_identity.wxyz(), mut.Quaternion.Identity().wxyz()))
-        self.assertEqual(
-            str(q_identity), "Quaternion_[float](w=1.0, x=0.0, y=0.0, z=0.0)")
+        self.assertTrue(allclose(
+            q_identity.wxyz(), Quaternion.Identity().wxyz()))
+        if T == float:
+            self.assertEqual(
+                str(q_identity), "Quaternion_[float](w=1.0, x=0.0, y=0.0, z=0.0)")
         # Test ordering.
         q_wxyz = normalize([0.1, 0.3, 0.7, 0.9])
-        q = mut.Quaternion(w=q_wxyz[0], x=q_wxyz[1], y=q_wxyz[2], z=q_wxyz[3])
+        q = Quaternion(w=q_wxyz[0], x=q_wxyz[1], y=q_wxyz[2], z=q_wxyz[3])
         # - Accessors.
-        self.assertEqual(q.w(), q_wxyz[0])
-        self.assertEqual(q.x(), q_wxyz[1])
-        self.assertEqual(q.y(), q_wxyz[2])
-        self.assertEqual(q.z(), q_wxyz[3])
-        self.assertTrue(np.allclose(q.xyz(), q_wxyz[1:]))
-        self.assertTrue(np.allclose(q.wxyz(), q_wxyz))
+        self.assertEqual(to_value(q.w()), q_wxyz[0])
+        self.assertEqual(to_value(q.x()), q_wxyz[1])
+        self.assertEqual(to_value(q.y()), q_wxyz[2])
+        self.assertEqual(to_value(q.z()), q_wxyz[3])
+        self.assertTrue(allclose(q.xyz(), q_wxyz[1:]))
+        self.assertTrue(allclose(q.wxyz(), q_wxyz))
         # - Mutators.
         q_wxyz_new = q_wxyz[::-1]
-        self.assertFalse(np.allclose(q_wxyz, q_wxyz_new))
+        self.assertFalse(allclose(q_wxyz, q_wxyz_new))
         q.set_wxyz(wxyz=q_wxyz_new)
-        self.assertTrue(np.allclose(q.wxyz(), q_wxyz_new))
+        self.assertTrue(allclose(q.wxyz(), q_wxyz_new))
         q.set_wxyz(
             w=q_wxyz_new[0], x=q_wxyz_new[1], y=q_wxyz_new[2], z=q_wxyz_new[3])
-        self.assertTrue(np.allclose(q.wxyz(), q_wxyz_new))
+        self.assertTrue(allclose(q.wxyz(), q_wxyz_new))
         # Alternative constructors.
-        q_other = mut.Quaternion(wxyz=q_wxyz)
-        self.assertTrue(np.allclose(q_other.wxyz(), q_wxyz))
+        q_other = Quaternion(wxyz=q_wxyz)
+        self.assertTrue(allclose(q_other.wxyz(), q_wxyz))
         R = np.array([
             [0, 0, 1],
             [1, 0, 0],
             [0, 1, 0]])
         q_wxyz_expected = np.array([0.5, 0.5, 0.5, 0.5])
-        q_other = mut.Quaternion(q_wxyz_expected)
-        self.assertTrue(np.allclose(q_other.rotation(), R))
+        q_other = Quaternion(q_wxyz_expected)
+        self.assertTrue(allclose(q_other.rotation(), R))
         R_I = np.eye(3, 3)
         q_other.set_rotation(R_I)
-        self.assertTrue(np.allclose(q_other.wxyz(), q_identity.wxyz()))
+        self.assertTrue(allclose(q_other.wxyz(), q_identity.wxyz()))
         # - Copy constructor.
-        cp = mut.Quaternion(other=q)
-        self.assertTrue(np.allclose(q.wxyz(), cp.wxyz()))
+        cp = Quaternion(other=q)
+        self.assertTrue(allclose(q.wxyz(), cp.wxyz()))
         # Bad values.
-        q = mut.Quaternion.Identity()
-        # - wxyz
-        q_wxyz_bad = [1., 2, 3, 4]
-        with self.assertRaises(RuntimeError):
-            q.set_wxyz(q_wxyz_bad)
-        self.assertTrue(np.allclose(q.wxyz(), [1, 0, 0, 0]))
-        # - Rotation.
-        R_bad = np.copy(R)
-        R_bad[0, 0] = 10
-        with self.assertRaises(RuntimeError):
-            q_other.set_rotation(R_bad)
-        self.assertTrue(np.allclose(q_other.rotation(), R_I))
+        if T != Expression:
+            q = Quaternion.Identity()
+            # - wxyz
+            q_wxyz_bad = [1., 2, 3, 4]
+            with self.assertRaises(RuntimeError):
+                q.set_wxyz(q_wxyz_bad)
+            self.assertTrue(allclose(q.wxyz(), [1, 0, 0, 0]))
+            # - Rotation.
+            R_bad = np.copy(R)
+            R_bad[0, 0] = 10
+            with self.assertRaises(RuntimeError):
+                q_other.set_rotation(R_bad)
+            self.assertTrue(allclose(q_other.rotation(), R_I))
 
         # Operations.
-        q = mut.Quaternion(wxyz=[0.5, 0.5, 0.5, 0.5])
-        self.assertTrue(
-            (q.multiply(position=[1, 2, 3]) == [3, 1, 2]).all())
+        q = Quaternion(wxyz=[0.5, 0.5, 0.5, 0.5])
+        self.assertTrue(allclose(q.multiply(position=[1, 2, 3]), [3, 1, 2]))
         q_I = q.inverse().multiply(q)
-        self.assertTrue(np.allclose(q_I.wxyz(), [1, 0, 0, 0]))
+        self.assertTrue(allclose(q_I.wxyz(), [1, 0, 0, 0]))
         if six.PY3:
-            self.assertTrue(np.allclose(
+            self.assertTrue(allclose(
                 eval("q.inverse() @ q").wxyz(), [1, 0, 0, 0]))
         q_conj = q.conjugate()
-        self.assertTrue(np.allclose(q_conj.wxyz(), [0.5, -0.5, -0.5, -0.5]))
+        self.assertTrue(allclose(q_conj.wxyz(), [0.5, -0.5, -0.5, -0.5]))
 
         # Test `type_caster`s.
-        value = test_util.create_quaternion()
-        self.assertTrue(isinstance(value, mut.Quaternion))
-        test_util.check_quaternion(value)
+        if T == float:
+            value = test_util.create_quaternion()
+            self.assertTrue(isinstance(value, Quaternion))
+            test_util.check_quaternion(value)
 
     def test_isometry3(self):
         # - Default constructor

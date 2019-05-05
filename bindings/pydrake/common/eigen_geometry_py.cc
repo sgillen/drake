@@ -222,7 +222,7 @@ void DoDefinitions(py::module m, T) {
         .def("x", [](const Class* self) { return self->x(); })
         .def("y", [](const Class* self) { return self->y(); })
         .def("z", [](const Class* self) { return self->z(); })
-        .def("xyz", [](const Class* self) { return self->vec(); })
+        .def("xyz", [](const Class* self) { return Vector3<T>(self->vec()); })
         .def("wxyz",
             [](Class* self) {
               Vector4<T> wxyz;
