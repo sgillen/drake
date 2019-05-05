@@ -336,6 +336,7 @@ drake_py_unittest(
         ":algebra_test_util_py",
         ":autodiffutils_py",
         ":autodiffutils_test_util_py",
+        ":math_py",
     ],
 )
 
@@ -441,6 +442,7 @@ drake_py_unittest(
     name = "symbolic_test",
     deps = [
         ":algebra_test_util_py",
+        ":math_py",
         ":symbolic_py",
         "//bindings/pydrake/common:containers_py",
     ],
