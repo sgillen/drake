@@ -312,6 +312,10 @@ PYBIND11_MODULE(math, m) {
         "TakeRigidTransform", [](const RigidTransform<T>&) { return true; });
   }
 
+  // See TODO in corresponding header file - these should be removed soon!
+  internal::BindAutoDiffOverloads(&m);
+  internal::BindSymbolicOverloads(&m);
+
   ExecuteExtraPythonCode(m);
 }
 
