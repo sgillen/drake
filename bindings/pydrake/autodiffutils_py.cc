@@ -80,7 +80,7 @@ PYBIND11_MODULE(autodiffutils, m) {
   py::implicitly_convertible<double, AutoDiffXd>();
   py::implicitly_convertible<int, AutoDiffXd>();
 
-  internal::BindAutoDiffOverloads(&autodiff);
+  pydrake::internal::BindAutoDiffOverloads(&autodiff);
 
   // Mirror for numpy.
   autodiff.attr("arcsin") = autodiff.attr("asin");

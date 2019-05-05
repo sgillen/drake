@@ -347,7 +347,7 @@ PYBIND11_MODULE(symbolic, m) {
       .def("floor", &symbolic::floor, doc.floor.doc);
   DefCopyAndDeepCopy(&expr_cls);
 
-  internal::BindSymbolicOverloads(&m);
+  pydrake::internal::BindSymbolicOverloads(&m);
 
   m.def("if_then_else", &symbolic::if_then_else);
 
