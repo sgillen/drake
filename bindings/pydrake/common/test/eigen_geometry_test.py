@@ -51,7 +51,8 @@ class TestEigenGeometry(unittest.TestCase):
             q_identity.wxyz(), Quaternion.Identity().wxyz()))
         if T == float:
             self.assertEqual(
-                str(q_identity), "Quaternion_[float](w=1.0, x=0.0, y=0.0, z=0.0)")
+                str(q_identity),
+                "Quaternion_[float](w=1.0, x=0.0, y=0.0, z=0.0)")
         # Test ordering.
         q_wxyz = normalize([0.1, 0.3, 0.7, 0.9])
         q = Quaternion(w=q_wxyz[0], x=q_wxyz[1], y=q_wxyz[2], z=q_wxyz[3])

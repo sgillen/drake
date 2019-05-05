@@ -275,8 +275,8 @@ void DoDefinitions(py::module m, T) {
   // Angle-axis.
   {
     using Class = Eigen::AngleAxis<T>;
-    auto cls = DefineTemplateClassWithDefault<Class>(m, "AngleAxis", param,
-        "Bindings for Eigen::AngleAxis<>.");
+    auto cls = DefineTemplateClassWithDefault<Class>(
+        m, "AngleAxis", param, "Bindings for Eigen::AngleAxis<>.");
     py::object py_class_obj = cls;
     cls  // BR
         .def(py::init([]() { return Class::Identity(); }))
