@@ -116,7 +116,6 @@ drake_pybind_library(
     cc_srcs = ["autodiffutils_py.cc"],
     package_info = PACKAGE_INFO,
     py_deps = [
-        ":math_py",
         ":module_py",
         "//bindings/pydrake/common:deprecation_py",
     ],
@@ -181,6 +180,8 @@ drake_pybind_library(
     package_info = PACKAGE_INFO,
     py_deps = [
         ":module_py",
+        "//bindings/pydrake:autodiffutils_py",
+        "//bindings/pydrake:symbolic_py",
         "//bindings/pydrake/common:eigen_geometry_py",
     ],
     py_srcs = ["_math_extra.py"],
@@ -218,7 +219,6 @@ drake_pybind_library(
     cc_srcs = ["symbolic_py.cc"],
     package_info = PACKAGE_INFO,
     py_deps = [
-        ":math_py",
         ":module_py",
         "//bindings/pydrake/common:compatibility_py",
         "//bindings/pydrake/common:deprecation_py",
