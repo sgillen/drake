@@ -16,7 +16,7 @@ def normalize(x):
 
 
 @np.vectorize
-def to_value(x):
+def to_float(x):
     if isinstance(x, float) or isinstance(x, int):
         return x
     elif isinstance(x, AutoDiffXd):
@@ -27,12 +27,11 @@ def to_value(x):
 
 
 def allclose(a, b, **kwargs):
-    return np.allclose(to_value(a), to_value(b), **kwargs)
+    return np.allclose(to_float(a), to_float(b), **kwargs)
 
 
 class TestEigenGeometry(unittest.TestCase):
     def check_types(self, check_func):
-        print(check_func)
         check_func(float)
         check_func(AutoDiffXd)
         check_func(Expression)
@@ -57,10 +56,10 @@ class TestEigenGeometry(unittest.TestCase):
         q_wxyz = normalize([0.1, 0.3, 0.7, 0.9])
         q = Quaternion(w=q_wxyz[0], x=q_wxyz[1], y=q_wxyz[2], z=q_wxyz[3])
         # - Accessors.
-        self.assertEqual(to_value(q.w()), q_wxyz[0])
-        self.assertEqual(to_value(q.x()), q_wxyz[1])
-        self.assertEqual(to_value(q.y()), q_wxyz[2])
-        self.assertEqual(to_value(q.z()), q_wxyz[3])
+        self.assertEqual(to_float(q.w()), q_wxyz[0])
+        self.assertEqual(to_float(q.x()), q_wxyz[1])
+        self.assertEqual(to_float(q.y()), q_wxyz[2])
+        self.assertEqual(to_float(q.z()), q_wxyz[3])
         self.assertTrue(allclose(q.xyz(), q_wxyz[1:]))
         self.assertTrue(allclose(q.wxyz(), q_wxyz))
         # - Mutators.
@@ -192,59 +191,65 @@ class TestEigenGeometry(unittest.TestCase):
         test_util.check_translation(value)
 
     def test_angle_axis(self):
-        value_identity = mut.AngleAxis.Identity()
-        self.assertEqual(value_identity.angle(), 0)
-        self.assertTrue((value_identity.axis() == [1, 0, 0]).all())
+        self.check_types(self.check_angle_axis)
+
+    def check_angle_axis(self, T):
+        AngleAxis = mut.AngleAxis_[T]
+        value_identity = AngleAxis.Identity()
+        self.assertEqual(to_float(value_identity.angle()), 0)
+        self.assertTrue(allclose(value_identity.axis(), [1, 0, 0]))
 
         # Construct with rotation matrix.
         R = np.array([
             [0., 1, 0],
             [-1, 0, 0],
             [0, 0, 1]])
-        value = mut.AngleAxis(rotation=R)
-        self.assertTrue(np.allclose(value.rotation(), R, atol=1e-15, rtol=0))
-        self.assertTrue(np.allclose(
+        value = AngleAxis(rotation=R)
+        self.assertTrue(allclose(value.rotation(), R, atol=1e-15, rtol=0))
+        self.assertTrue(allclose(
             copy.copy(value).rotation(), R, atol=1e-15, rtol=0))
-        self.assertTrue(np.allclose(
+        self.assertTrue(allclose(
             value.inverse().rotation(), R.T, atol=1e-15, rtol=0))
-        self.assertTrue(np.allclose(
+        self.assertTrue(allclose(
             value.multiply(value.inverse()).rotation(), np.eye(3),
             atol=1e-15, rtol=0))
         if six.PY3:
-            self.assertTrue(np.allclose(
+            self.assertTrue(allclose(
                 eval("value @ value.inverse()").rotation(), np.eye(3),
                 atol=1e-15, rtol=0))
         value.set_rotation(np.eye(3))
-        self.assertTrue((value.rotation() == np.eye(3)).all())
+        self.assertTrue(allclose(value.rotation(), np.eye(3)))
 
         # Construct with quaternion.
-        q = mut.Quaternion(R)
-        value = mut.AngleAxis(quaternion=q)
-        self.assertTrue(np.allclose(
+        Quaternion = mut.Quaternion_[T]
+        q = Quaternion(R)
+        value = AngleAxis(quaternion=q)
+        self.assertTrue(allclose(
             value.quaternion().wxyz(), q.wxyz(), atol=1e-15, rtol=0))
-        value.set_quaternion(mut.Quaternion.Identity())
-        self.assertTrue((value.quaternion().wxyz() == [1, 0, 0, 0]).all())
+        value.set_quaternion(Quaternion.Identity())
+        self.assertTrue(allclose(value.quaternion().wxyz(), [1, 0, 0, 0]))
 
         # Test setters.
-        value = mut.AngleAxis(value_identity)
+        value = AngleAxis(value_identity)
         value.set_angle(np.pi / 4)
         v = normalize(np.array([0.1, 0.2, 0.3]))
-        with self.assertRaises(RuntimeError):
-            value.set_axis([0.1, 0.2, 0.3])
+        if T != Expression:
+            with self.assertRaises(RuntimeError):
+                value.set_axis([0.1, 0.2, 0.3])
         value.set_axis(v)
-        self.assertEqual(value.angle(), np.pi / 4)
-        self.assertTrue((value.axis() == v).all())
+        self.assertEqual(to_float(value.angle()), np.pi / 4)
+        self.assertTrue(allclose(value.axis(), v))
 
         # Test symmetry based on accessors.
         # N.B. `Eigen::AngleAxis` does not disambiguate by restricting internal
         # angles and axes to a half-plane.
         angle = np.pi / 6
         axis = normalize([0.1, 0.2, 0.3])
-        value = mut.AngleAxis(angle=angle, axis=axis)
-        value_sym = mut.AngleAxis(angle=-angle, axis=-axis)
-        self.assertTrue(np.allclose(
+        value = AngleAxis(angle=angle, axis=axis)
+        value_sym = AngleAxis(angle=-angle, axis=-axis)
+        self.assertTrue(allclose(
             value.rotation(), value_sym.rotation(), atol=1e-15, rtol=0))
-        self.assertTrue(np.allclose(
+        self.assertTrue(allclose(
             value.angle(), -value_sym.angle(), atol=1e-15, rtol=0))
-        self.assertTrue(np.allclose(
+        self.assertTrue(allclose(
             value.axis(), -value_sym.axis(), atol=1e-15, rtol=0))
