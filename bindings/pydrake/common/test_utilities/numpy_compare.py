@@ -9,6 +9,7 @@ Prefer comparisons in the following order:
 """
 
 from collections import namedtuple
+from itertools import product
 
 import numpy as np
 
@@ -61,11 +62,22 @@ except ImportError:
     pass
 
 try:
-    from pydrake.symbolic import Expression, Formula
+    import pydrake.symbolic as _sym
 
-    _to_float[Expression] = Expression.Evaluate
-    _register_comparator(Expression, str, _str_eq, _str_ne)
-    _register_comparator(Formula, str, _str_eq, _str_ne)
+    def _struct_eq(a, b):
+        assert a.EqualTo(b), (a, b)
+
+    def _struct_ne(a, b):
+        assert not a.EqualTo(b), (a, b)
+
+    _to_float[_sym.Expression] = _sym.Expression.Evaluate
+    _register_comparator(_sym.Formula, str, _str_eq, _str_ne)
+    _sym_lhs = [_sym.Variable, _sym.Expression, _sym.Polynomial, _sym.Monomial]
+    _sym_rhs = _sym_lhs + [float]
+    for _lhs in _sym_lhs:
+        _register_comparator(_lhs, str, _str_eq, _str_ne)
+    for _lhs, _rhs in product(_sym_lhs, _sym_rhs):
+        _register_comparator(_lhs, _rhs, _struct_eq, _struct_ne)
 except ImportError:
     pass
 
