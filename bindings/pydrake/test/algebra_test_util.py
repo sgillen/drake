@@ -15,10 +15,8 @@ class BaseAlgebra(object):
     # Checks on custom types that have numeric relations to `float`.
     # Note that linear algebra itself is not "pluggable" for these operations,
     # so care should be taken when defining it.
-    def __init__(self, check_value_impl, scalar_to_float):
+    def __init__(self):
         # Derived classes should define extra math functions.
-        npc.assert_equal = check_value_impl
-        self._scalar_to_float = scalar_to_float
         pass
 
     def to_algebra(self, scalar):
@@ -28,8 +26,8 @@ class BaseAlgebra(object):
 
 class ScalarAlgebra(BaseAlgebra):
     # Scalar algebra.
-    def __init__(self, check_value_impl, scalar_to_float):
-        BaseAlgebra.__init__(self, check_value_impl, scalar_to_float)
+    def __init__(self):
+        BaseAlgebra.__init__(self)
         # Math functions:
         self.log = drake_math.log
         self.abs = drake_math.abs
@@ -63,8 +61,8 @@ class ScalarAlgebra(BaseAlgebra):
 
 class VectorizedAlgebra(BaseAlgebra):
     # Vectorized (array) algebra.
-    def __init__(self, check_value_impl, scalar_to_float):
-        BaseAlgebra.__init__(self, check_value_impl, scalar_to_float)
+    def __init__(self):
+        BaseAlgebra.__init__(self)
         # Math functions:
         self.log = np.log
         self.abs = np.abs

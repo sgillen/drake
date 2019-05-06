@@ -415,17 +415,12 @@ class TestSymbolicExpression(unittest.TestCase):
         return xv, e_xv
 
     def test_scalar_algebra(self):
-        xv, e_xv = self._check_algebra(
-            ScalarAlgebra(
-                npc.assert_equal, scalar_to_float=lambda x: x.Evaluate()))
+        xv, e_xv = self._check_algebra(ScalarAlgebra())
         self.assertIsInstance(xv, sym.Variable)
         self.assertIsInstance(e_xv, sym.Expression)
 
     def test_array_algebra(self):
-        xv, e_xv = self._check_algebra(
-            VectorizedAlgebra(
-                npc.assert_equal,
-                scalar_to_float=lambda x: x.Evaluate()))
+        xv, e_xv = self._check_algebra(VectorizedAlgebra())
         self.assertEqual(xv.shape, (2,))
         self.assertIsInstance(xv[0], sym.Variable)
         self.assertEqual(e_xv.shape, (2,))

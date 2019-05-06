@@ -41,7 +41,7 @@ class TestAutoDiffXd(unittest.TestCase):
     def test_scalar_api(self):
         a = AD(1, [1., 0])
         self.assertEqual(a.value(), 1.)
-        self.assertTrue((a.derivatives() == [1., 0]).all())
+        npc.assert_equal(a.derivatives(), [1., 0])
         self.assertEqual(str(a), "AD{1.0, nderiv=2}")
         self.assertEqual(repr(a), "<AutoDiffXd 1.0 nderiv=2>")
         npc.assert_equal(a, a)
@@ -166,16 +166,11 @@ class TestAutoDiffXd(unittest.TestCase):
         return a
 
     def test_scalar_algebra(self):
-        a = self._check_algebra(
-            ScalarAlgebra(
-                npc.assert_equal, scalar_to_float=lambda x: x.value()))
+        a = self._check_algebra(ScalarAlgebra())
         self.assertEqual(type(a), AD)
 
     def test_array_algebra(self):
-        a = self._check_algebra(
-            VectorizedAlgebra(
-                npc.assert_equal,
-                scalar_to_float=lambda x: x.value()))
+        a = self._check_algebra(VectorizedAlgebra())
         self.assertEqual(type(a), np.ndarray)
         self.assertEqual(a.shape, (2,))
 
@@ -207,9 +202,8 @@ class TestAutoDiffXd(unittest.TestCase):
         with self.assertRaises(TypeError):
             Y = np.linalg.inv(X)
 
-        to_value = np.vectorize(AutoDiffXd.value)
         # Use workaround for inverse. For now, just check values.
-        X_float = to_value(X)
+        X_float = npc.to_float(X)
         Xinv_float = np.linalg.inv(X_float)
         Xinv = drake_math.inv(X)
-        np.testing.assert_equal(to_value(Xinv), Xinv_float)
+        np.testing.assert_equal(npc.to_float(Xinv), Xinv_float)
