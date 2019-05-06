@@ -23,15 +23,13 @@ import pydrake.common.test_utilities.numpy_compare as npc
 AD = AutoDiffXd
 
 
-def check_logical(func, a, b, expected_scalar):
-    # Checks logical operations, morphing `expected_scalar` to match
-    # `actual`s algebra, and checking that `a` and `b` (of type `T`)
-    # have compatible logical operators when the left or right operatnds
-    # are `float`s. Specifically, tests:
+def check_logical(func, a, b, expected):
+    # Checks logical operations, with broadcasting, checking that `a` and `b`
+    # (of type `T`) have compatible logical operators when the left or right
+    # operands are `float`s. Specifically, tests:
     # - f(T, T)
     # - f(T, float)
     # - f(float, T)
-    expected = self.to_algebra(expected_scalar)
     npc.assert_equal(func(a, b), expected)
     af = npc.to_float(a)
     bf = npc.to_float(b)

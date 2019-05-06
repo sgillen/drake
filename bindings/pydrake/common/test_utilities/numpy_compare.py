@@ -47,7 +47,7 @@ try:
     from pydrake.autodiffutils import AutoDiffXd
 
     def _ad_eq(a, b):
-        assert a.value() == b.value, (a.value(), b.value())
+        assert a.value() == b.value(), (a.value(), b.value())
         np.testing.assert_equal(a.derivatives(), b.derivatives())
 
     def _ad_ne(a, b):
@@ -95,7 +95,8 @@ def to_float(x):
     """Converts scalar or array to floats."""
     x = np.asarray(x)
     if x.dtype == object:
-        cls = type(x.item())
+        x = x.item()
+        cls = type(x)
         return _to_float[cls](x)
     else:
         return np.float64(x)
