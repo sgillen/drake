@@ -26,7 +26,8 @@ _comparators = {}
 _to_float = {}
 
 
-class _UnwantedEquality(AssertionError): pass
+class _UnwantedEquality(AssertionError):
+    pass
 
 
 def _register_comparator(cls_a, cls_b, assert_eq, assert_ne=None):
@@ -57,8 +58,8 @@ def _register_autodiff():
         np.testing.assert_equal(a.derivatives(), b.derivatives())
 
     def _ad_ne(a, b):
-        if (a.value() == b.value()
-            and (a.derivatives() == b.derivatives()).all()):
+        if (a.value() == b.value() and
+                (a.derivatives() == b.derivatives()).all()):
             raise _UnwantedEquality(str(a.value(), b.derivatives()))
 
     _to_float[AutoDiffXd] = AutoDiffXd.value
