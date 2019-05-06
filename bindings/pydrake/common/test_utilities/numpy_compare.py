@@ -23,11 +23,12 @@ _to_float = {}
 
 
 def _register_comparator(cls_a, cls_b, eq, ne=None):
+    # N.B. This contract is fragile, and should not made public until it's
+    # refined (e.g. ensuring str printing is informative, and returning boolean
+    # values).
     key = (cls_a, cls_b)
     assert key not in _comparators, key
     eq = np.vectorize(eq)
-    if ne is not None:
-        ne = np.vectorize(ne)
     _comparators[key] = _AssertComparator(eq, ne)
 
 
@@ -71,11 +72,9 @@ except ImportError:
 
 def _get_comparator_from_arrays(a, b):
     # Ensure all types are homogeneous.
-    a_types = {type(x.item()) for x in a.flat}
-    b_types = {type(x.item()) for x in b.flat}
-    assert len(a_types) == 1, a_types
-    assert a_types == b_types, (a_types, b_types)
-    key = (a_types[0], b_types[0])
+    a_type, = {type(np.asarray(x).item()) for x in a.flat}
+    b_type, = {type(np.asarray(x).item()) for x in b.flat}
+    key = (a_type, b_type)
     return _comparators[key]
 
 
@@ -101,7 +100,6 @@ def assert_equal(a, b):
         _get_comparator_from_arrays(a, b).eq(a, b)
 
 
-@np.vectorize
 def _assert_not_equal_raw(a, b):
     assert a != b, (a, b)
 
@@ -111,6 +109,18 @@ def assert_not_equal(a, b):
     a, b = map(np.asarray, (a, b))
     assert not (a.size == 0 and b.size == 0)
     if a.dtype != object and b.dtype != object:
-        _assert_not_equal_raw(a, b)
+        assert_ne = _assert_not_equal_raw
     else:
-        _get_comparator_from_arrays(a, b).ne(a, b)
+        assert_ne = _get_comparator_from_arrays(a, b).ne
+    # For this to fail, all items must have failed.
+    br = np.broadcast(a, b)
+    errs = []
+    for ai, bi in br:
+        e = None
+        try:
+            assert_ne(ai, bi)
+        except AssertionError as e:
+            # N.B. Fragile, assuming that this assertion error is actual for
+            # inequaliy. For now, do not expose publicly.
+            errs.append(str(e))
+    assert len(errs) < br.size, errs
