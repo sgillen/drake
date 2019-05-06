@@ -32,52 +32,52 @@ e_y = sym.Expression(y)
 class TestSymbolicVariable(unittest.TestCase):
     def test_addition(self):
         npc.assert_equal(x + y, "(x + y)")
-        npc.assert_equal((x + 1), "(1 + x)")
-        npc.assert_equal((1 + x), "(1 + x)")
+        npc.assert_equal(x + 1, "(1 + x)")
+        npc.assert_equal(1 + x, "(1 + x)")
 
     def test_subtraction(self):
-        npc.assert_equal((x - y), "(x - y)")
-        npc.assert_equal((x - 1), "(-1 + x)")
-        npc.assert_equal((1 - x), "(1 - x)")
+        npc.assert_equal(x - y, "(x - y)")
+        npc.assert_equal(x - 1, "(-1 + x)")
+        npc.assert_equal(1 - x, "(1 - x)")
 
     def test_multiplication(self):
-        npc.assert_equal((x * y), "(x * y)")
-        npc.assert_equal((x * 1), "x")
-        npc.assert_equal((1 * x), "x")
+        npc.assert_equal(x * y, "(x * y)")
+        npc.assert_equal(x * 1, "x")
+        npc.assert_equal(1 * x, "x")
 
     def test_division(self):
-        npc.assert_equal((x / y), "(x / y)")
-        npc.assert_equal((x / 1), "x")
-        npc.assert_equal((1 / x), "(1 / x)")
+        npc.assert_equal(x / y, "(x / y)")
+        npc.assert_equal(x / 1, "x")
+        npc.assert_equal(1 / x, "(1 / x)")
 
     def test_unary_operators(self):
-        npc.assert_equal((+x), "x")
-        npc.assert_equal((-x), "(-1 * x)")
+        npc.assert_equal(+x, "x")
+        npc.assert_equal(-x, "(-1 * x)")
 
     def test_relational_operators(self):
         # Variable rop float
-        npc.assert_equal((x >= 1), "(x >= 1)")
-        npc.assert_equal((x > 1), "(x > 1)")
-        npc.assert_equal((x <= 1), "(x <= 1)")
-        npc.assert_equal((x < 1), "(x < 1)")
-        npc.assert_equal((x == 1), "(x == 1)")
-        npc.assert_equal((x != 1), "(x != 1)")
+        npc.assert_equal(x >= 1, "(x >= 1)")
+        npc.assert_equal(x > 1, "(x > 1)")
+        npc.assert_equal(x <= 1, "(x <= 1)")
+        npc.assert_equal(x < 1, "(x < 1)")
+        npc.assert_equal(x == 1, "(x == 1)")
+        npc.assert_equal(x != 1, "(x != 1)")
 
         # float rop Variable
-        npc.assert_equal((1 < y), "(y > 1)")
-        npc.assert_equal((1 <= y), "(y >= 1)")
-        npc.assert_equal((1 > y), "(y < 1)")
-        npc.assert_equal((1 >= y), "(y <= 1)")
-        npc.assert_equal((1 == y), "(y == 1)")
-        npc.assert_equal((1 != y), "(y != 1)")
+        npc.assert_equal(1 < y, "(y > 1)")
+        npc.assert_equal(1 <= y, "(y >= 1)")
+        npc.assert_equal(1 > y, "(y < 1)")
+        npc.assert_equal(1 >= y, "(y <= 1)")
+        npc.assert_equal(1 == y, "(y == 1)")
+        npc.assert_equal(1 != y, "(y != 1)")
 
         # Variable rop Variable
-        npc.assert_equal((x < y), "(x < y)")
-        npc.assert_equal((x <= y), "(x <= y)")
-        npc.assert_equal((x > y), "(x > y)")
-        npc.assert_equal((x >= y), "(x >= y)")
-        npc.assert_equal((x == y), "(x == y)")
-        npc.assert_equal((x != y), "(x != y)")
+        npc.assert_equal(x < y, "(x < y)")
+        npc.assert_equal(x <= y, "(x <= y)")
+        npc.assert_equal(x > y, "(x > y)")
+        npc.assert_equal(x >= y, "(x >= y)")
+        npc.assert_equal(x == y, "(x == y)")
+        npc.assert_equal(x != y, "(x != y)")
 
     def test_get_type(self):
         i = sym.Variable('i', sym.Variable.Type.INTEGER)
@@ -89,66 +89,66 @@ class TestSymbolicVariable(unittest.TestCase):
         self.assertEqual(repr(x), "Variable('x', Continuous)")
 
     def test_simplify(self):
-        npc.assert_equal((0 * (x + y)), "0")
-        npc.assert_equal((x + y - x - y), "0")
-        npc.assert_equal((x / x - 1), "0")
-        npc.assert_equal((x / x), "1")
+        npc.assert_equal(0 * (x + y), "0")
+        npc.assert_equal(x + y - x - y, "0")
+        npc.assert_equal(x / x - 1, "0")
+        npc.assert_equal(x / x, "1")
 
     def test_expand(self):
         ex = 2 * (x + y)
-        npc.assert_equal((ex), "(2 * (x + y))")
-        npc.assert_equal((ex.Expand()), "(2 * x + 2 * y)")
+        npc.assert_equal(ex, "(2 * (x + y))")
+        npc.assert_equal(ex.Expand(), "(2 * x + 2 * y)")
 
     def test_pow(self):
-        npc.assert_equal((x**2), "pow(x, 2)")
-        npc.assert_equal((x**y), "pow(x, y)")
-        npc.assert_equal(((x + 1)**(y - 1)), "pow((1 + x), (-1 + y))")
+        npc.assert_equal(x**2, "pow(x, 2)")
+        npc.assert_equal(x**y, "pow(x, y)")
+        npc.assert_equal((x + 1)**(y - 1), "pow((1 + x), (-1 + y))")
 
     def test_neg(self):
-        npc.assert_equal((-(x + 1)), "(-1 - x)")
+        npc.assert_equal(-(x + 1), "(-1 - x)")
 
     def test_equalto(self):
         self.assertTrue(x.EqualTo(x))
         self.assertFalse(x.EqualTo(y))
 
     def test_logical(self):
-        npc.assert_equal((sym.logical_not(x == 0)),
+        npc.assert_equal(sym.logical_not(x == 0),
                          "!((x == 0))")
 
         # Test single-operand logical statements
-        npc.assert_equal((sym.logical_and(x >= 1)), "(x >= 1)")
-        npc.assert_equal((sym.logical_or(x >= 1)), "(x >= 1)")
+        npc.assert_equal(sym.logical_and(x >= 1), "(x >= 1)")
+        npc.assert_equal(sym.logical_or(x >= 1), "(x >= 1)")
         # Test binary operand logical statements
-        npc.assert_equal((sym.logical_and(x >= 1, x <= 2)),
+        npc.assert_equal(sym.logical_and(x >= 1, x <= 2),
                          "((x >= 1) and (x <= 2))")
-        npc.assert_equal((sym.logical_or(x <= 1, x >= 2)),
+        npc.assert_equal(sym.logical_or(x <= 1, x >= 2),
                          "((x >= 2) or (x <= 1))")
         # Test multiple operand logical statements
-        npc.assert_equal((sym.logical_and(x >= 1, x <= 2, y == 2)),
+        npc.assert_equal(sym.logical_and(x >= 1, x <= 2, y == 2),
                          "((y == 2) and (x >= 1) and (x <= 2))")
-        npc.assert_equal((sym.logical_or(x >= 1, x <= 2, y == 2)),
+        npc.assert_equal(sym.logical_or(x >= 1, x <= 2, y == 2),
                          "((y == 2) or (x >= 1) or (x <= 2))")
 
     def test_functions_with_variable(self):
-        npc.assert_equal((sym.abs(x)), "abs(x)")
-        npc.assert_equal((sym.exp(x)), "exp(x)")
-        npc.assert_equal((sym.sqrt(x)), "sqrt(x)")
-        npc.assert_equal((sym.pow(x, y)), "pow(x, y)")
-        npc.assert_equal((sym.sin(x)), "sin(x)")
-        npc.assert_equal((sym.cos(x)), "cos(x)")
-        npc.assert_equal((sym.tan(x)), "tan(x)")
-        npc.assert_equal((sym.asin(x)), "asin(x)")
-        npc.assert_equal((sym.acos(x)), "acos(x)")
-        npc.assert_equal((sym.atan(x)), "atan(x)")
-        npc.assert_equal((sym.atan2(x, y)), "atan2(x, y)")
-        npc.assert_equal((sym.sinh(x)), "sinh(x)")
-        npc.assert_equal((sym.cosh(x)), "cosh(x)")
-        npc.assert_equal((sym.tanh(x)), "tanh(x)")
-        npc.assert_equal((sym.min(x, y)), "min(x, y)")
-        npc.assert_equal((sym.max(x, y)), "max(x, y)")
-        npc.assert_equal((sym.ceil(x)), "ceil(x)")
-        npc.assert_equal((sym.floor(x)), "floor(x)")
-        npc.assert_equal((sym.if_then_else(x > y, x, y)),
+        npc.assert_equal(sym.abs(x), "abs(x)")
+        npc.assert_equal(sym.exp(x), "exp(x)")
+        npc.assert_equal(sym.sqrt(x), "sqrt(x)")
+        npc.assert_equal(sym.pow(x, y), "pow(x, y)")
+        npc.assert_equal(sym.sin(x), "sin(x)")
+        npc.assert_equal(sym.cos(x), "cos(x)")
+        npc.assert_equal(sym.tan(x), "tan(x)")
+        npc.assert_equal(sym.asin(x), "asin(x)")
+        npc.assert_equal(sym.acos(x), "acos(x)")
+        npc.assert_equal(sym.atan(x), "atan(x)")
+        npc.assert_equal(sym.atan2(x, y), "atan2(x, y)")
+        npc.assert_equal(sym.sinh(x), "sinh(x)")
+        npc.assert_equal(sym.cosh(x), "cosh(x)")
+        npc.assert_equal(sym.tanh(x), "tanh(x)")
+        npc.assert_equal(sym.min(x, y), "min(x, y)")
+        npc.assert_equal(sym.max(x, y), "max(x, y)")
+        npc.assert_equal(sym.ceil(x), "ceil(x)")
+        npc.assert_equal(sym.floor(x), "floor(x)")
+        npc.assert_equal(sym.if_then_else(x > y, x, y),
                          "(if (x > y) then x else y)")
 
     def test_array_str(self):
@@ -321,11 +321,11 @@ class TestSymbolicExpression(unittest.TestCase):
         npc.assert_equal(e, "(1 + x + y + z)")
 
         # Subtraction.
-        npc.assert_equal((e_xv - e_yv), "(x - y)")
-        npc.assert_equal((e_xv - yv), "(x - y)")
-        npc.assert_equal((e_xv - 1), "(-1 + x)")
-        npc.assert_equal((xv - e_yv), "(x - y)")
-        npc.assert_equal((1 - e_xv), "(1 - x)")
+        npc.assert_equal(e_xv - e_yv, "(x - y)")
+        npc.assert_equal(e_xv - yv, "(x - y)")
+        npc.assert_equal(e_xv - 1, "(-1 + x)")
+        npc.assert_equal(xv - e_yv, "(x - y)")
+        npc.assert_equal(1 - e_xv, "(1 - x)")
 
         # - In place.
         e = copy.copy(xv)
@@ -337,11 +337,11 @@ class TestSymbolicExpression(unittest.TestCase):
         npc.assert_equal(e, (x - y - z - 1))
 
         # Multiplication.
-        npc.assert_equal((e_xv * e_yv), "(x * y)")
-        npc.assert_equal((e_xv * yv), "(x * y)")
-        npc.assert_equal((e_xv * 1), "x")
-        npc.assert_equal((xv * e_yv), "(x * y)")
-        npc.assert_equal((1 * e_xv), "x")
+        npc.assert_equal(e_xv * e_yv, "(x * y)")
+        npc.assert_equal(e_xv * yv, "(x * y)")
+        npc.assert_equal(e_xv * 1, "x")
+        npc.assert_equal(xv * e_yv, "(x * y)")
+        npc.assert_equal(1 * e_xv, "x")
 
         # - In place.
         e = copy.copy(xv)
@@ -353,11 +353,11 @@ class TestSymbolicExpression(unittest.TestCase):
         npc.assert_equal(e, "(x * y * z)")
 
         # Division
-        npc.assert_equal((e_xv / e_yv), (x / y))
-        npc.assert_equal((e_xv / yv), (x / y))
-        npc.assert_equal((e_xv / 1), "x")
-        npc.assert_equal((xv / e_yv), (x / y))
-        npc.assert_equal((1 / e_xv), (1 / x))
+        npc.assert_equal(e_xv / e_yv, (x / y))
+        npc.assert_equal(e_xv / yv, (x / y))
+        npc.assert_equal(e_xv / 1, "x")
+        npc.assert_equal(xv / e_yv, (x / y))
+        npc.assert_equal(1 / e_xv, (1 / x))
 
         # - In place.
         e = copy.copy(xv)
@@ -369,8 +369,8 @@ class TestSymbolicExpression(unittest.TestCase):
         npc.assert_equal(e, ((x / y) / z))
 
         # Unary
-        npc.assert_equal((+e_xv), "x")
-        npc.assert_equal((-e_xv), "(-1 * x)")
+        npc.assert_equal(+e_xv, "x")
+        npc.assert_equal(-e_xv, "(-1 * x)")
 
         # Comparison. For `VectorizedAlgebra`, uses `np.vectorize` workaround
         # for #8315.
@@ -385,32 +385,32 @@ class TestSymbolicExpression(unittest.TestCase):
         npc.assert_equal(algebra.gt(e_xv, e_yv), "(x > y)")
 
         # Math functions.
-        npc.assert_equal((algebra.abs(e_xv)), "abs(x)")
-        npc.assert_equal((algebra.exp(e_xv)), "exp(x)")
-        npc.assert_equal((algebra.sqrt(e_xv)), "sqrt(x)")
-        npc.assert_equal((algebra.pow(e_xv, e_yv)), "pow(x, y)")
-        npc.assert_equal((algebra.sin(e_xv)), "sin(x)")
-        npc.assert_equal((algebra.cos(e_xv)), "cos(x)")
-        npc.assert_equal((algebra.tan(e_xv)), "tan(x)")
-        npc.assert_equal((algebra.arcsin(e_xv)), "asin(x)")
-        npc.assert_equal((algebra.arccos(e_xv)), "acos(x)")
-        npc.assert_equal((algebra.arctan2(e_xv, e_yv)), "atan2(x, y)")
-        npc.assert_equal((algebra.sinh(e_xv)), "sinh(x)")
-        npc.assert_equal((algebra.cosh(e_xv)), "cosh(x)")
-        npc.assert_equal((algebra.tanh(e_xv)), "tanh(x)")
-        npc.assert_equal((algebra.ceil(e_xv)), "ceil(x)")
-        npc.assert_equal((algebra.floor(e_xv)), "floor(x)")
+        npc.assert_equal(algebra.abs(e_xv), "abs(x)")
+        npc.assert_equal(algebra.exp(e_xv), "exp(x)")
+        npc.assert_equal(algebra.sqrt(e_xv), "sqrt(x)")
+        npc.assert_equal(algebra.pow(e_xv, e_yv), "pow(x, y)")
+        npc.assert_equal(algebra.sin(e_xv), "sin(x)")
+        npc.assert_equal(algebra.cos(e_xv), "cos(x)")
+        npc.assert_equal(algebra.tan(e_xv), "tan(x)")
+        npc.assert_equal(algebra.arcsin(e_xv), "asin(x)")
+        npc.assert_equal(algebra.arccos(e_xv), "acos(x)")
+        npc.assert_equal(algebra.arctan2(e_xv, e_yv), "atan2(x, y)")
+        npc.assert_equal(algebra.sinh(e_xv), "sinh(x)")
+        npc.assert_equal(algebra.cosh(e_xv), "cosh(x)")
+        npc.assert_equal(algebra.tanh(e_xv), "tanh(x)")
+        npc.assert_equal(algebra.ceil(e_xv), "ceil(x)")
+        npc.assert_equal(algebra.floor(e_xv), "floor(x)")
 
         if isinstance(algebra, ScalarAlgebra):
             # TODO(eric.cousineau): Uncomment these lines if we can teach numpy
             # that reduction is not just selection.
-            npc.assert_equal((algebra.min(e_xv, e_yv)), "min(x, y)")
-            npc.assert_equal((algebra.max(e_xv, e_yv)), "max(x, y)")
+            npc.assert_equal(algebra.min(e_xv, e_yv), "min(x, y)")
+            npc.assert_equal(algebra.max(e_xv, e_yv), "max(x, y)")
             # TODO(eric.cousineau): Add broadcasting functions for these
             # operations.
-            npc.assert_equal((sym.atan(e_xv)), "atan(x)")
-            npc.assert_equal((sym.if_then_else(e_xv > e_yv, e_xv, e_yv)),
-                                "(if (x > y) then x else y)")
+            npc.assert_equal(sym.atan(e_xv), "atan(x)")
+            npc.assert_equal(sym.if_then_else(e_xv > e_yv, e_xv, e_yv),
+                             "(if (x > y) then x else y)")
 
         return xv, e_xv
 
@@ -439,44 +439,44 @@ class TestSymbolicExpression(unittest.TestCase):
         # TODO(eric.cousineau): Use `VectorizedAlgebra` overloads once #8315 is
         # resolved.
         # Expression rop Expression
-        npc.assert_equal((e_x < e_y), "(x < y)")
-        npc.assert_equal((e_x <= e_y), "(x <= y)")
-        npc.assert_equal((e_x > e_y), "(x > y)")
-        npc.assert_equal((e_x >= e_y), "(x >= y)")
-        npc.assert_equal((e_x == e_y), "(x == y)")
-        npc.assert_equal((e_x != e_y), "(x != y)")
+        npc.assert_equal(e_x < e_y, "(x < y)")
+        npc.assert_equal(e_x <= e_y, "(x <= y)")
+        npc.assert_equal(e_x > e_y, "(x > y)")
+        npc.assert_equal(e_x >= e_y, "(x >= y)")
+        npc.assert_equal(e_x == e_y, "(x == y)")
+        npc.assert_equal(e_x != e_y, "(x != y)")
 
         # Expression rop Variable
-        npc.assert_equal((e_x < y), "(x < y)")
-        npc.assert_equal((e_x <= y), "(x <= y)")
-        npc.assert_equal((e_x > y), "(x > y)")
-        npc.assert_equal((e_x >= y), "(x >= y)")
-        npc.assert_equal((e_x == y), "(x == y)")
-        npc.assert_equal((e_x != y), "(x != y)")
+        npc.assert_equal(e_x < y, "(x < y)")
+        npc.assert_equal(e_x <= y, "(x <= y)")
+        npc.assert_equal(e_x > y, "(x > y)")
+        npc.assert_equal(e_x >= y, "(x >= y)")
+        npc.assert_equal(e_x == y, "(x == y)")
+        npc.assert_equal(e_x != y, "(x != y)")
 
         # Variable rop Expression
-        npc.assert_equal((x < e_y), "(x < y)")
-        npc.assert_equal((x <= e_y), "(x <= y)")
-        npc.assert_equal((x > e_y), "(x > y)")
-        npc.assert_equal((x >= e_y), "(x >= y)")
-        npc.assert_equal((x == e_y), "(x == y)")
-        npc.assert_equal((x != e_y), "(x != y)")
+        npc.assert_equal(x < e_y, "(x < y)")
+        npc.assert_equal(x <= e_y, "(x <= y)")
+        npc.assert_equal(x > e_y, "(x > y)")
+        npc.assert_equal(x >= e_y, "(x >= y)")
+        npc.assert_equal(x == e_y, "(x == y)")
+        npc.assert_equal(x != e_y, "(x != y)")
 
         # Expression rop float
-        npc.assert_equal((e_x < 1), "(x < 1)")
-        npc.assert_equal((e_x <= 1), "(x <= 1)")
-        npc.assert_equal((e_x > 1), "(x > 1)")
-        npc.assert_equal((e_x >= 1), "(x >= 1)")
-        npc.assert_equal((e_x == 1), "(x == 1)")
-        npc.assert_equal((e_x != 1), "(x != 1)")
+        npc.assert_equal(e_x < 1, "(x < 1)")
+        npc.assert_equal(e_x <= 1, "(x <= 1)")
+        npc.assert_equal(e_x > 1, "(x > 1)")
+        npc.assert_equal(e_x >= 1, "(x >= 1)")
+        npc.assert_equal(e_x == 1, "(x == 1)")
+        npc.assert_equal(e_x != 1, "(x != 1)")
 
         # float rop Expression
-        npc.assert_equal((1 < e_y), "(y > 1)")
-        npc.assert_equal((1 <= e_y), "(y >= 1)")
-        npc.assert_equal((1 > e_y), "(y < 1)")
-        npc.assert_equal((1 >= e_y), "(y <= 1)")
-        npc.assert_equal((1 == e_y), "(y == 1)")
-        npc.assert_equal((1 != e_y), "(y != 1)")
+        npc.assert_equal(1 < e_y, "(y > 1)")
+        npc.assert_equal(1 <= e_y, "(y >= 1)")
+        npc.assert_equal(1 > e_y, "(y < 1)")
+        npc.assert_equal(1 >= e_y, "(y <= 1)")
+        npc.assert_equal(1 == e_y, "(y == 1)")
+        npc.assert_equal(1 != e_y, "(y != 1)")
 
     def test_relational_operators_nonzero(self):
         # For issues #8135 and #8491. See `pydrake.math` for operator overloads
@@ -740,9 +740,9 @@ class TestSymbolicMonomial(unittest.TestCase):
 
     def test_str(self):
         m1 = sym.Monomial(x, 2)
-        npc.assert_equal((m1), "x^2")
+        npc.assert_equal(m1, "x^2")
         m2 = m1 * sym.Monomial(y)
-        npc.assert_equal((m2), "x^2 * y")
+        npc.assert_equal(m2, "x^2 * y")
 
     def test_repr(self):
         m = sym.Monomial(x, 2)
@@ -798,7 +798,7 @@ class TestSymbolicMonomial(unittest.TestCase):
     def test_to_expression(self):
         m = sym.Monomial(x, 3) * sym.Monomial(y)  # m = x³y
         e = m.ToExpression()
-        npc.assert_equal((e), "(pow(x, 3) * y)")
+        npc.assert_equal(e, "(pow(x, 3) * y)")
 
     def test_get_variables(self):
         m = sym.Monomial(x, 3) * sym.Monomial(y)  # m = x³y
