@@ -984,10 +984,8 @@ class TestSymbolicPolynomial(unittest.TestCase):
     def test_matrix_substitute_with_variable_and_expression(self):
         m = np.array([[x + y, x * y]])
         substituted = sym.Substitute(m, x, 3.0)
-        npc.assert_equal(substituted[0, 0],
-                                  m[0, 0].Substitute(x, 3.0))
-        npc.assert_equal(substituted[0, 1],
-                                  m[0, 1].Substitute(x, 3.0))
+        npc.assert_equal(substituted[0, 0], m[0, 0].Substitute(x, 3.0))
+        npc.assert_equal(substituted[0, 1], m[0, 1].Substitute(x, 3.0))
 
     def test_matrix_evaluate_without_env(self):
         m = np.array([[3, 4]])

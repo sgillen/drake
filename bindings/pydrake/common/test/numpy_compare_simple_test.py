@@ -4,7 +4,7 @@ import numpy as np
 
 import pydrake.common.test_utilities.numpy_compare as npc
 
-# Hack into private API to register custom comparisons.
+
 class Custom(object):
     def __init__(self, value):
         assert isinstance(value, str)
@@ -21,6 +21,7 @@ class Custom(object):
             raise npc._UnwantedEquality(str((self, other)))
 
 
+# Hack into private API to register custom comparisons.
 npc._to_float[Custom] = lambda x: float(str(x))
 npc._register_comparator(Custom, Custom, Custom.assert_eq, Custom.assert_ne)
 npc._register_comparator(Custom, str, npc._str_eq, npc._str_ne)

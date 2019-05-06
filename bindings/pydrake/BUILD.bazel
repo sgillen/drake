@@ -309,10 +309,10 @@ drake_py_library(
         "test/__init__.py",
         "test/algebra_test_util.py",
     ],
+    visibility = ["//visibility:private"],
     deps = [
         "//bindings/pydrake/common/test_utilities:numpy_compare_py",
     ],
-    visibility = ["//visibility:private"],
 )
 
 # Test ODR (One Definition Rule).
