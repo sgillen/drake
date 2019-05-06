@@ -51,10 +51,9 @@ try:
         np.testing.assert_equal(a.derivatives(), b.derivatives())
 
     def _ad_ne(a, b):
-        if a.value() != b.value():
-            assert_not_equal(a.derivatives(), b.derivatives())
-        else:
-            assert False, (a.value(), b.value())
+        if (a.value() == b.value()
+            and (a.derivatives() == b.derivatives()).all()):
+            assert False, (a.value(), b.derivatives())
 
     _to_float[AutoDiffXd] = AutoDiffXd.value
     _register_comparator(AutoDiffXd, AutoDiffXd, _ad_eq, _ad_ne)
