@@ -16,7 +16,6 @@ import numpy as np
 # TODO(eric.cousineau): Make custom assert-vectorize which will output
 # coordinates and stuff.
 
-
 # Scalar
 _AssertComparator = namedtuple('_AssertComparator', ['eq', 'ne'])
 _comparators = {}
@@ -43,7 +42,7 @@ def _str_ne(a, b):
     assert a != b, (a, b)
 
 
-try:
+def _register_autodiff():
     from pydrake.autodiffutils import AutoDiffXd
 
     def _ad_eq(a, b):
@@ -57,26 +56,35 @@ try:
 
     _to_float[AutoDiffXd] = AutoDiffXd.value
     _register_comparator(AutoDiffXd, AutoDiffXd, _ad_eq, _ad_ne)
+
+
+def _register_sym():
+    from pydrake.symbolic import (
+        Variable, Expression, Formula, Polynomial, Monomial)
+
+    def struct_eq(a, b):
+        assert a.EqualTo(b), (a, b)
+
+    def struct_ne(a, b):
+        assert not a.EqualTo(b), (a, b)
+
+    _to_float[Expression] = Expression.Evaluate
+    _register_comparator(Formula, str, _str_eq, _str_ne)
+    lhs_types = [Variable, Expression, Polynomial, Monomial]
+    rhs_types = lhs_types + [float]
+    for lhs_type in lhs_types:
+        _register_comparator(lhs_type, str, _str_eq, _str_ne)
+    for lhs_type, rhs_type in product(lhs_types, rhs_types):
+        _register_comparator(lhs_type, rhs_type, struct_eq, struct_ne)
+
+
+try:
+    _register_autodiff()
 except ImportError:
     pass
 
 try:
-    import pydrake.symbolic as _sym
-
-    def _struct_eq(a, b):
-        assert a.EqualTo(b), (a, b)
-
-    def _struct_ne(a, b):
-        assert not a.EqualTo(b), (a, b)
-
-    _to_float[_sym.Expression] = _sym.Expression.Evaluate
-    _register_comparator(_sym.Formula, str, _str_eq, _str_ne)
-    _sym_lhs = [_sym.Variable, _sym.Expression, _sym.Polynomial, _sym.Monomial]
-    _sym_rhs = _sym_lhs + [float]
-    for _lhs in _sym_lhs:
-        _register_comparator(_lhs, str, _str_eq, _str_ne)
-    for _lhs, _rhs in product(_sym_lhs, _sym_rhs):
-        _register_comparator(_lhs, _rhs, _struct_eq, _struct_ne)
+    _register_sym()
 except ImportError:
     pass
 
