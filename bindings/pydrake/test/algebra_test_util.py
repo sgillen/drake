@@ -7,6 +7,7 @@ import operator
 import numpy as np
 
 import pydrake.math as drake_math
+import pydrake.common.test_utilities.numpy_compare as npc
 
 
 class BaseAlgebra(object):
@@ -16,38 +17,13 @@ class BaseAlgebra(object):
     # so care should be taken when defining it.
     def __init__(self, check_value_impl, scalar_to_float):
         # Derived classes should define extra math functions.
-        self._check_value_impl = check_value_impl
+        npc.assert_equal = check_value_impl
         self._scalar_to_float = scalar_to_float
         pass
 
     def to_algebra(self, scalar):
         # Morphs a scalar to the given algebra (e.g. a scalar or array).
         raise NotImplemented
-
-    def algebra_to_float(self, value):
-        # Casts from an algebra of `T` to the same algebra but of type `float`.
-        raise NotImplemented
-
-    def check_value(self, actual, expected_scalar):
-        # Checks if `actual` is equal to `expected_scalar`, which is
-        # broadcasting to match `actual`s shape.
-        expected = self.to_algebra(expected_scalar)
-        self._check_value_impl(actual, expected)
-
-    def check_logical(self, func, a, b, expected_scalar):
-        # Checks logical operations, morphing `expected_scalar` to match
-        # `actual`s algebra, and checking that `a` and `b` (of type `T`)
-        # have compatible logical operators when the left or right operatnds
-        # are `float`s. Specifically, tests:
-        # - f(T, T)
-        # - f(T, float)
-        # - f(float, T)
-        expected = self.to_algebra(expected_scalar)
-        self._check_value_impl(func(a, b), expected)
-        af = self.algebra_to_float(a)
-        bf = self.algebra_to_float(b)
-        self._check_value_impl(func(a, bf), expected)
-        self._check_value_impl(func(af, b), expected)
 
 
 class ScalarAlgebra(BaseAlgebra):
@@ -84,9 +60,6 @@ class ScalarAlgebra(BaseAlgebra):
     def to_algebra(self, scalar):
         return scalar
 
-    def algebra_to_float(self, value):
-        return self._scalar_to_float(value)
-
 
 class VectorizedAlgebra(BaseAlgebra):
     # Vectorized (array) algebra.
@@ -121,8 +94,3 @@ class VectorizedAlgebra(BaseAlgebra):
 
     def to_algebra(self, scalar):
         return np.array([scalar, scalar])
-
-    def algebra_to_float(self, value):
-        value_f = np.array([self._scalar_to_float(x) for x in value.flat])
-        value_f.reshape(value.shape)
-        return value_f
