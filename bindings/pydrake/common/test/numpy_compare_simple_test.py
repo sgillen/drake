@@ -17,7 +17,8 @@ class Custom(object):
         assert self._str == other._str, (self, other)
 
     def assert_ne(self, other):
-        assert self._str != other._str, (self, other)
+        if self._str == other._str:
+            raise npc._UnwantedEquality(str((self, other)))
 
 
 npc._to_float[Custom] = lambda x: float(str(x))
