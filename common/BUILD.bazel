@@ -33,6 +33,7 @@ drake_cc_package_library(
         ":extract_double",
         ":find_resource",
         ":find_runfiles",
+        ":function_or_method",
         ":hash",
         ":is_approx_equal_abstol",
         ":is_cloneable",
@@ -522,6 +523,14 @@ drake_cc_binary(
         ":essential",
         ":find_resource",
         ":text_logging_gflags",
+    ],
+)
+
+drake_cc_library(
+    name = "function_or_method",
+    hdrs = ["function_or_method.h"],
+    deps = [
+        ":essential",
     ],
 )
 
@@ -1276,6 +1285,11 @@ drake_cc_googletest(
         "//common:essential",
         "//systems/framework/test_utilities:my_vector",
     ],
+)
+
+drake_cc_googletest(
+    name = "function_or_method_test",
+    deps = [":function_or_method"],
 )
 
 # TODO(jwnimmer-tri) These tests are currently missing...

@@ -353,6 +353,7 @@ drake_cc_library(
         ":context_base",
         ":input_port_base",
         ":output_port_base",
+        "//common:function_or_method",
     ],
 )
 
