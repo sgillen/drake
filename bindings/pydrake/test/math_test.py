@@ -145,6 +145,7 @@ class TestMath(unittest.TestCase):
         with self.assertRaises(TypeError):
             self.assertTrue(mtest.TakeRigidTransform(Isometry3()))
         self.assertTrue(mtest.TakeIsometry3(mut.RigidTransform()))
+        self.assertTrue(mtest.TakeRotationMatrix(np.eye(3)))
 
     def test_rotation_matrix(self):
         # - Constructors.

@@ -241,6 +241,9 @@ PYBIND11_MODULE(math, m) {
         .def_static("Identity", &Class::Identity, cls_doc.Identity.doc);
     cls.attr("__matmul__") = cls.attr("multiply");
     DefCopyAndDeepCopy(&cls);
+
+    // Permit implicit conversion.
+    py::implicitly_convertible<Matrix3<T>, RotationMatrix<T>>();
   }
 
   // Quadratic Form.
@@ -311,6 +314,8 @@ PYBIND11_MODULE(math, m) {
     mtest.def("TakeIsometry3", [](const Isometry3<T>&) { return true; });
     mtest.def(
         "TakeRigidTransform", [](const RigidTransform<T>&) { return true; });
+    mtest.def(
+        "TakeRotationMatrix", [](const RotationMatrix<T>&) { return true; });
   }
 
   // See TODO in corresponding header file - these should be removed soon!
