@@ -7,9 +7,9 @@ def _xyz_rpy(xyz, rpy):
     return RigidTransform(RollPitchYaw(rpy), xyz)
 
 
-def CreateMITClassYcbObjectList():
+def CreateManipulationClassYcbObjectList():
     """Creates a list of (model_file, pose) pairs to add five YCB objects to a
-    ManipulationStation with the MITClass setup.
+    ManipulationStation with the ManipulationClass setup.
     """
     ycb_object_pairs = []
 

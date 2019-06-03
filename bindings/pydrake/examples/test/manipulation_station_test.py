@@ -5,7 +5,7 @@ import numpy as np
 from pydrake.common import FindResourceOrThrow
 from pydrake.examples.manipulation_station import (
     CreateClutterClearingYcbObjectList,
-    CreateMITClassYcbObjectList,
+    CreateManipulationClassYcbObjectList,
     IiwaCollisionModel,
     ManipulationStation,
     ManipulationStationHardwareInterface
@@ -142,5 +142,5 @@ class TestManipulationStation(unittest.TestCase):
         ycb_objects = CreateClutterClearingYcbObjectList()
         self.assertEqual(len(ycb_objects), 6)
 
-        ycb_objects = CreateMITClassYcbObjectList()
+        ycb_objects = CreateManipulationClassYcbObjectList()
         self.assertEqual(len(ycb_objects), 5)
