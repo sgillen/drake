@@ -1112,6 +1112,7 @@ class TestPlant(unittest.TestCase):
         plant_f.Finalize(scene_graph_f)
         diagram_f = builder_f.Build()
 
+        # Do conversion.
         diagram = to_type(diagram_f, T)
         plant = diagram.GetSubsystemByName(plant_f.get_name())
         scene_graph = diagram.GetSubsystemByName(scene_graph_f.get_name())
@@ -1125,17 +1126,17 @@ class TestPlant(unittest.TestCase):
         query_object = scene_graph.get_query_output_port().Eval(sg_context)
         # Implicitly require that this should be size 1.
         point_pair, = query_object.ComputePointPairPenetration()
-        self.assertIsInstance(point_pair, PenetrationAsPointPair)
+        self.assertIsInstance(point_pair, PenetrationAsPointPair_[float])
         signed_distance_pair, = query_object.\
             ComputeSignedDistancePairwiseClosestPoints()
-        self.assertIsInstance(signed_distance_pair, SignedDistancePair)
+        self.assertIsInstance(signed_distance_pair, SignedDistancePair_[T])
         signed_distance_to_point = query_object.\
             ComputeSignedDistanceToPoint(p_WQ=np.ones(3))
         self.assertEqual(len(signed_distance_to_point), 2)
         self.assertIsInstance(signed_distance_to_point[0],
-                              SignedDistanceToPoint)
+                              SignedDistanceToPoint_[T])
         self.assertIsInstance(signed_distance_to_point[1],
-                              SignedDistanceToPoint)
+                              SignedDistanceToPoint_[T])
         inspector = query_object.inspector()
 
         def get_body_from_frame_id(frame_id):
