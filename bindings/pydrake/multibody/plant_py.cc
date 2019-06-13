@@ -119,23 +119,6 @@ void DoDefinitions(py::module m, T) {
     AddValueInstantiation<Class>(m);
   }
 
-  // ContactResultsToLcmSystem
-  {
-    using Class = ContactResultsToLcmSystem<T>;
-    constexpr auto& cls_doc = doc.ContactResultsToLcmSystem;
-    auto cls = DefineTemplateClassWithDefault<Class>(
-        m, "ContactResultsToLcmSystem", param, cls_doc.doc);
-    cls  // BR
-        .def(py::init<const MultibodyPlant<T>&>(), py::arg("plant"),
-            // Keep alive, reference: `self` keeps `plant` alive.
-            py::keep_alive<1, 2>(), cls_doc.ctor.doc)
-        .def("get_contact_result_input_port",
-            &Class::get_contact_result_input_port, py_reference_internal,
-            cls_doc.get_contact_result_input_port.doc)
-        .def("get_lcm_message_output_port", &Class::get_lcm_message_output_port,
-            py_reference_internal, cls_doc.get_lcm_message_output_port.doc);
-  }
-
   // CoulombFriction
   {
     using Class = CoulombFriction<T>;
@@ -766,7 +749,7 @@ void DoDefinitions(py::module m, T) {
             py::arg("context"), py::arg("state"), cls_doc.SetDefaultState.doc);
   }
 
-  if (std::is_same<T, symbolic::Expression>::value == false) {
+  if (!std::is_same<T, symbolic::Expression>::value) {
     m.def("AddMultibodyPlantSceneGraph",
         [](systems::DiagramBuilder<T>* builder,
             std::unique_ptr<MultibodyPlant<T>> plant,
@@ -823,6 +806,22 @@ PYBIND11_MODULE(plant, m) {
     py::bind_vector<std::vector<Class>>(
         m, "VectorExternallyAppliedSpatialForced");
     AddValueInstantiation<std::vector<Class>>(m);
+  }
+
+  // ContactResultsToLcmSystem
+  {
+    using Class = ContactResultsToLcmSystem<T>;
+    constexpr auto& cls_doc = doc.ContactResultsToLcmSystem;
+    py::class_<Class, systems::LeafSystem<T>>(
+        m, "ContactResultsToLcmSystem", cls_doc.doc)
+        .def(py::init<const MultibodyPlant<T>&>(), py::arg("plant"),
+            // Keep alive, reference: `self` keeps `plant` alive.
+            py::keep_alive<1, 2>(), cls_doc.ctor.doc)
+        .def("get_contact_result_input_port",
+            &Class::get_contact_result_input_port, py_reference_internal,
+            cls_doc.get_contact_result_input_port.doc)
+        .def("get_lcm_message_output_port", &Class::get_lcm_message_output_port,
+            py_reference_internal, cls_doc.get_lcm_message_output_port.doc);
   }
 
   m.def("ConnectContactResultsToDrakeVisualizer",

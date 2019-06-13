@@ -39,7 +39,7 @@ from pydrake.multibody.plant import (
     AddMultibodyPlantSceneGraph,
     ConnectContactResultsToDrakeVisualizer,
     ContactResults_,
-    ContactResultsToLcmSystem_,
+    ContactResultsToLcmSystem,
     CoulombFriction_,
     ExternallyAppliedSpatialForce_,
     MultibodyPlant_,
@@ -1024,14 +1024,12 @@ class TestPlant(unittest.TestCase):
             2 * F_expected)
 
     def test_contact(self):
-        self.check_types(self.check_contact)
+        self.check_types_1(self.check_contact)
 
     def check_contact(self, T):
-        T = float
         PenetrationAsPointPair = PenetrationAsPointPair_[T]
         PointPairContactInfo = PointPairContactInfo_[T]
         ContactResults = ContactResults_[T]
-        ContactResultsToLcmSystem = ContactResultsToLcmSystem_[T]
 
         # PenetrationAsContactPair
         point_pair = PenetrationAsPointPair()
@@ -1039,7 +1037,7 @@ class TestPlant(unittest.TestCase):
         self.assertTrue(isinstance(point_pair.id_B, GeometryId))
         self.assertTrue(point_pair.p_WCa.shape == (3,))
         self.assertTrue(point_pair.p_WCb.shape == (3,))
-        self.assertTrue(isinstance(point_pair.depth, float))
+        self.assertTrue(isinstance(point_pair.depth, T))
 
         # PointPairContactInfo
         id_A = BodyIndex(0)
@@ -1054,7 +1052,7 @@ class TestPlant(unittest.TestCase):
             isinstance(contact_info.bodyB_index(), BodyIndex))
         self.assertTrue(contact_info.contact_force().shape == (3,))
         self.assertTrue(contact_info.contact_point().shape == (3,))
-        self.assertTrue(isinstance(contact_info.slip_speed(), float))
+        self.assertTrue(isinstance(contact_info.slip_speed(), T))
         self.assertIsInstance(
             contact_info.point_pair(), PenetrationAsPointPair)
 
@@ -1065,21 +1063,20 @@ class TestPlant(unittest.TestCase):
         self.assertTrue(
             isinstance(contact_results.contact_info(0), PointPairContactInfo))
 
+    def test_contact_results_to_lcm(self):
         # ContactResultsToLcmSystem
         file_name = FindResourceOrThrow(
             "drake/multibody/benchmarks/acrobot/acrobot.sdf")
-        plant_f = MultibodyPlant_[float]()
-        Parser(plant_f).AddModelFromFile(file_name)
-        plant_f.Finalize()
-        plant = to_type(plant_f, T)
+        plant = MultibodyPlant_[float]()
+        Parser(plant).AddModelFromFile(file_name)
+        plant.Finalize()
         contact_results_to_lcm = ContactResultsToLcmSystem(plant)
-        # FIXME(m-chaturvedi)
-        #    context = contact_results_to_lcm.CreateDefaultContext()
-        #    context.FixInputPort(0, AbstractValue.Make(contact_results))
-        #    output = contact_results_to_lcm.AllocateOutput()
-        #    contact_results_to_lcm.CalcOutput(context, output)
-        #    result = output.get_data(0)
-        #    self.assertIsInstance(result, AbstractValue)
+        context = contact_results_to_lcm.CreateDefaultContext()
+        context.FixInputPort(0, AbstractValue.Make(ContactResults_[float]()))
+        output = contact_results_to_lcm.AllocateOutput()
+        contact_results_to_lcm.CalcOutput(context, output)
+        result = output.get_data(0)
+        self.assertIsInstance(result, AbstractValue)
 
     def test_connect_contact_results(self):
         self.check_types(self.check_connect_contact_results)
@@ -1101,11 +1098,9 @@ class TestPlant(unittest.TestCase):
             self.assertIsInstance(publisher, LcmPublisherSystem)
 
     def test_scene_graph_queries(self):
-        self.check_types(self.check_scene_graph_queries)
+        self.check_types_1(self.check_scene_graph_queries)
 
     def check_scene_graph_queries(self, T):
-        T = float
-        DiagramBuilder = DiagramBuilder_[T]
         PenetrationAsPointPair = PenetrationAsPointPair_[T]
 
         builder_f = DiagramBuilder_[float]()
@@ -1118,8 +1113,8 @@ class TestPlant(unittest.TestCase):
         diagram_f = builder_f.Build()
 
         diagram = to_type(diagram_f, T)
-        plant = to_type(plant_f, T)
-        scene_graph = to_type(scene_graph_f, T)
+        plant = diagram.GetSubsystemByName(plant_f.get_name())
+        scene_graph = diagram.GetSubsystemByName(scene_graph_f.get_name())
 
         # The model `two_bodies` has two (implicitly) floating bodies that are
         # placed in the same position. The default state would be for these two
