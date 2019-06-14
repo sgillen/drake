@@ -85,8 +85,8 @@ void DoDefinitions(py::module m, T) {
   py::module::import("pydrake.systems.framework");
   // TODO(eric.cousineau): #8116 Simplify this.
   py::return_value_policy rvp_for_type =
-     (std::is_same<T, double>::value ? py::return_value_policy::reference
-                                     : py::return_value_policy::copy);
+      (std::is_same<T, double>::value ? py::return_value_policy::reference
+                                      : py::return_value_policy::copy);
 
   // PointPairContactInfo
   {
