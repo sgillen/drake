@@ -4,6 +4,7 @@ import unittest
 
 from six import text_type as unicode
 import numpy as np
+
 from pydrake.autodiffutils import AutoDiffXd
 from pydrake.symbolic import Expression
 from pydrake.multibody.tree import (
@@ -53,6 +54,7 @@ from pydrake.multibody.benchmarks.acrobot import (
 )
 
 from pydrake.common import FindResourceOrThrow
+from pydrake.common.deprecation import install_numpy_warning_filters
 from pydrake.common.test_utilities.deprecation import catch_drake_warnings
 from pydrake.common.test_utilities import numpy_compare
 
@@ -110,13 +112,21 @@ def to_type(system, T):
 
 
 class TestPlant(unittest.TestCase):
+    def setUp(self):
+        unittest.TestCase.setUp(self)
+        # For some reason, something in how `unittest` tries to scope warnings
+        # causes the previous filters to be lost. Re-install here.
+        # TODO(eric.cousineau): This used to be necessary for PY3-only, but
+        # with NumPy 1.16, it became PY2 too. Figure out why.
+        install_numpy_warning_filters(force=True)
+
     def test_type_safe_indices(self):
         self.assertEqual(world_index(), BodyIndex(0))
 
     def assert_sane(self, x, nonzero=True):
         self.assertTrue(np.all(np.isfinite(numpy_compare.to_float(x))))
         if nonzero:
-            self.assertTrue(not np.all(x == 0), str(x))
+            numpy_compare.assert_float_not_equal(x, 0.)
 
     def check_types(self, check_func):
         check_func(float)
@@ -426,10 +436,25 @@ class TestPlant(unittest.TestCase):
         x = plant.GetPositionsAndVelocities(context)
         numpy_compare.assert_float_equal(x, np.zeros(4))
 
+        # WARNING: The following oddities occur from the fact that
+        # `ndarray[object]` cannot be referenced (#8116). Be careful when
+        # writing scalar-generic code.
         if T == float:
+            # Can reference matrices. Use `x_ref`.
             # Write into a mutable reference to the state vector.
             x_ref = plant.GetMutablePositionsAndVelocities(context)
             x_ref[:] = x0
+
+            def set_zero():
+                x_ref.fill(0)
+
+        else:
+            # Cannot reference matrices. Use setters.
+            plant.SetPositionsAndVelocities(context, x0)
+
+            def set_zero():
+                plant.SetPositionsAndVelocities(
+                    context, np.zeros(nq + nv))
 
         # Verify that positions and velocities were set correctly.
         numpy_compare.assert_float_equal(plant.GetPositions(context), q0)
@@ -437,25 +462,25 @@ class TestPlant(unittest.TestCase):
 
         # Verify we did modify the state stored in context.
         x = plant.GetPositionsAndVelocities(context)
-        numpy_compare.assert_equal(x, x0)
+        numpy_compare.assert_float_equal(x, x0)
 
         # Now set positions and velocities independently and check them.
         zeros_2 = np.zeros([2, ])
-        x_ref.fill(0)
+        set_zero()
         plant.SetPositions(context, q0)
-        # problems here.
         numpy_compare.assert_float_equal(plant.GetPositions(context), q0)
         numpy_compare.assert_float_equal(plant.GetVelocities(context), zeros_2)
-        x_ref.fill(0)
+        set_zero()
         plant.SetVelocities(context, v0)
-        self.assertTrue(np.allclose(plant.GetPositions(context), zeros_2))
-        self.assertTrue(np.allclose(plant.GetVelocities(context), v0))
+        numpy_compare.assert_float_allclose(
+            plant.GetPositions(context), zeros_2)
+        numpy_compare.assert_float_allclose(plant.GetVelocities(context), v0)
 
         # Now test SetPositionsAndVelocities().
-        x_ref.fill(0)
+        set_zero()
         plant.SetPositionsAndVelocities(context, x0)
-        self.assertTrue(np.allclose(
-            plant.GetPositionsAndVelocities(context), x0))
+        numpy_compare.assert_float_allclose(
+            plant.GetPositionsAndVelocities(context), x0)
 
         # Test existence of context resetting methods.
         plant.SetDefaultState(context, state=context.get_mutable_state())

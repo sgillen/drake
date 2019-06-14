@@ -62,6 +62,16 @@ This API using Isometry3 is / will be deprecated soon with the resolution of
 #9865. We only offer it for backwards compatibility. DO NOT USE!.
 )""";
 
+template <typename T>
+VectorX<T> CopyIfNotPodType(Eigen::VectorBlock<const VectorX<T>> x) {
+  return x;
+}
+
+Eigen::VectorBlock<const VectorX<double>> CopyIfNotPodType(
+    Eigen::VectorBlock<const VectorX<double>> x) {
+  return x;
+}
+
 namespace {
 template <typename T>
 void DoDefinitions(py::module m, T) {
@@ -75,7 +85,7 @@ void DoDefinitions(py::module m, T) {
   py::module::import("pydrake.systems.framework");
   // TODO(eric.cousineau): #8116 Simplify this.
   py::return_value_policy rvp_for_type =
-     (std::is_same<T, double>::value ? py::return_value_policy::automatic
+     (std::is_same<T, double>::value ? py::return_value_policy::reference
                                      : py::return_value_policy::copy);
 
   // PointPairContactInfo
@@ -302,7 +312,7 @@ void DoDefinitions(py::module m, T) {
         .def("GetPositions",
             [](const Class* self, const Context<T>& context) {
               // Reference.
-              return self->GetPositions(context);
+              return CopyIfNotPodType(self->GetPositions(context));
             },
             py::arg("context"), rvp_for_type,
             // Keep alive, ownership: `return` keeps `context` alive.
@@ -318,7 +328,7 @@ void DoDefinitions(py::module m, T) {
         .def("GetVelocities",
             [](const Class* self, const Context<T>& context) {
               // Reference.
-              return self->GetVelocities(context);
+              return CopyIfNotPodType(self->GetVelocities(context));
             },
             py::arg("context"), rvp_for_type,
             // Keep alive, ownership: `return` keeps `context` alive.
