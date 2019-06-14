@@ -78,6 +78,21 @@ void DoDefinitions(py::module m, T) {
   //    (std::is_same<T, double>::value ? py::return_value_policy::automatic
   //                                    : py::return_value_policy::copy);
 
+  // Opaquely bind std::vector<ExternallyAppliedSpatialForce> to enable
+  // Python systems to construct AbstractValues of this type with the type
+  // being legible for port connections.
+  {
+    using Class = multibody::ExternallyAppliedSpatialForce<T>;
+    auto cls = py::bind_vector<std::vector<Class>>(
+        m, TemporaryClassName<Class>().c_str());
+    AddTemplateClass(
+        m, "VectorExternallyAppliedSpatialForced_", cls, param);
+    if (!py::hasattr(m, "VectorExternallyAppliedSpatialForced")) {
+      m.attr("VectorExternallyAppliedSpatialForced") = cls;
+    }
+    AddValueInstantiation<std::vector<Class>>(m);
+  }
+
   // PointPairContactInfo
   {
     using Class = PointPairContactInfo<T>;
@@ -797,16 +812,6 @@ PYBIND11_MODULE(plant, m) {
   constexpr auto& doc = pydrake_doc.drake.multibody;
 
   using T = double;
-
-  // Opaquely bind std::vector<ExternallyAppliedSpatialForce> to enable
-  // Python systems to construct AbstractValues of this type with the type
-  // being legible for port connections.
-  {
-    using Class = multibody::ExternallyAppliedSpatialForce<double>;
-    py::bind_vector<std::vector<Class>>(
-        m, "VectorExternallyAppliedSpatialForced");
-    AddValueInstantiation<std::vector<Class>>(m);
-  }
 
   // ContactResultsToLcmSystem
   {

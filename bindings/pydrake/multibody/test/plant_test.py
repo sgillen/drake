@@ -44,7 +44,7 @@ from pydrake.multibody.plant import (
     ExternallyAppliedSpatialForce_,
     MultibodyPlant_,
     PointPairContactInfo_,
-    VectorExternallyAppliedSpatialForced
+    VectorExternallyAppliedSpatialForced_,
 )
 from pydrake.multibody.parsing import Parser
 from pydrake.multibody.benchmarks.acrobot import (
@@ -61,8 +61,8 @@ from pydrake.geometry import (
     GeometryId,
     PenetrationAsPointPair_,
     SceneGraph_,
-    SignedDistancePair,
-    SignedDistanceToPoint,
+    SignedDistancePair_,
+    SignedDistanceToPoint_,
 )
 from pydrake.math import (
     RigidTransform_,
@@ -78,6 +78,7 @@ from pydrake.systems.framework import (
     InputPort_,
     OutputPort_,
 )
+from pydrake.systems.scalar_conversion import TemplateSystem
 from pydrake.systems.lcm import LcmPublisherSystem
 
 
@@ -97,8 +98,7 @@ def get_index_class(cls, T):
 
 
 def to_type(system, T):
-    assert isinstance(system, System_[float]) or \
-            isinstance(system, DiagramBuilder_[float])
+    assert isinstance(system, System_[float])
     if T == float:
         return system
     elif T == AutoDiffXd:
@@ -106,7 +106,7 @@ def to_type(system, T):
     elif T == Expression:
         return system.ToSymbolic()
     else:
-        assert False, True
+        assert False, "Invalid type, {}".format(T)
 
 
 class TestPlant(unittest.TestCase):
@@ -508,39 +508,16 @@ class TestPlant(unittest.TestCase):
             OutputPort)
 
     def test_applied_force_input_ports(self):
-        # Create a MultibodyPlant, and ensure that a secondary system can
-        # be connected to feed it vectors of ExternallyAppliedSpatialForce
-        # and applied generalized force vectors.
-        # FIXME (m-chaturvedi)
-        T = float
-        MultibodyPlant = MultibodyPlant_[T]
-        DiagramBuilder = DiagramBuilder_[T]
-        InputPort = InputPort_[T]
-        OutputPort = OutputPort_[T]
-        LeafSystem = LeafSystem_[T]
-        Simulator = Simulator_[T]
-        ExternallyAppliedSpatialForce = ExternallyAppliedSpatialForce_[T]
-        SpatialForce = SpatialForce_[T]
+        self.check_types_1(self.check_applied_force_input_ports)
 
-        builder = DiagramBuilder()
-        plant = builder.AddSystem(MultibodyPlant())
-        file_name = FindResourceOrThrow(
-            "drake/multibody/benchmarks/free_body/uniform_solid_cylinder.urdf")
-        Parser(plant).AddModelFromFile(file_name)
-        plant.Finalize()
+    @TemplateSystem.define("AppliedForceTestSystem_")
+    def AppliedForceTestSystem_(T):
 
-        # Test that we can get those ports.
-        self.assertIsInstance(
-            plant.get_applied_generalized_force_input_port(), InputPort)
-        self.assertIsInstance(
-            plant.get_applied_spatial_force_input_port(), InputPort)
-
-        class TestSystem(LeafSystem):
-            def __init__(self, plant):
-                LeafSystem.__init__(self)
-                self.nv = plant.num_velocities()
-                self.target_body_index = plant.GetBodyByName(
-                    "uniformSolidCylinder").index()
+        class Impl(LeafSystem_[T]):
+            def _construct(self, nv, target_body_index, converter=None):
+                LeafSystem_[T].__init__(self, converter=converter)
+                self.nv = nv
+                self.target_body_index = target_body_index
                 self.DeclareAbstractOutputPort(
                     "spatial_forces_vector",
                     lambda: AbstractValue.Make(
@@ -551,26 +528,64 @@ class TestPlant(unittest.TestCase):
                     BasicVector(self.nv),
                     self.DoCalcVectorOutput)
 
+            def _construct_copy(self, other, converter=None):
+                Impl._construct(
+                    self, other.nv, other.target_body_index,
+                    converter=converter)
+
             def DoCalcAbstractOutput(self, context, y_data):
-                test_force = ExternallyAppliedSpatialForce()
+                test_force = ExternallyAppliedSpatialForce_[T]()
                 test_force.body_index = self.target_body_index
                 test_force.p_BoBq_B = np.zeros(3)
-                test_force.F_Bq_W = SpatialForce(tau=[0., 0., 0.],
+                test_force.F_Bq_W = SpatialForce_[T](tau=[0., 0., 0.],
                                                  f=[0., 0., 1.])
-                y_data.set_value(VectorExternallyAppliedSpatialForced([
+                y_data.set_value(VectorExternallyAppliedSpatialForced_[T]([
                     test_force]))
 
             def DoCalcVectorOutput(self, context, y_data):
                 y_data.SetFromVector(np.zeros(self.nv))
 
+        return Impl
+
+    def check_applied_force_input_ports(self, T):
+        # Create a MultibodyPlant, and ensure that a secondary system can
+        # be connected to feed it vectors of ExternallyAppliedSpatialForce
+        # and applied generalized force vectors.
+        MultibodyPlant = MultibodyPlant_[T]
+        DiagramBuilder = DiagramBuilder_[T]
+        InputPort = InputPort_[T]
+        OutputPort = OutputPort_[T]
+        Simulator = Simulator_[T]
+        ExternallyAppliedSpatialForce = ExternallyAppliedSpatialForce_[T]
+        SpatialForce = SpatialForce_[T]
+
+        builder_f = DiagramBuilder()
+        plant_f = builder_f.AddSystem(MultibodyPlant())
+        file_name = FindResourceOrThrow(
+            "drake/multibody/benchmarks/free_body/uniform_solid_cylinder.urdf")
+        Parser(plant_f).AddModelFromFile(file_name)
+        plant_f.Finalize()
+
         # These connections will fail if the port output types
         # are not legible.
-        test_system = builder.AddSystem(TestSystem(plant))
-        builder.Connect(test_system.get_output_port(0),
-                        plant.get_applied_spatial_force_input_port())
-        builder.Connect(test_system.get_output_port(1),
-                        plant.get_applied_generalized_force_input_port())
-        diagram = builder.Build()
+
+        test_system_f = builder_f.AddSystem(
+            self.AppliedForceTestSystem_[float](
+                plant_f.num_velocities(),
+                plant_f.GetBodyByName("uniformSolidCylinder").index()))
+        builder_f.Connect(test_system_f.get_output_port(0),
+                        plant_f.get_applied_spatial_force_input_port())
+        builder_f.Connect(test_system_f.get_output_port(1),
+                        plant_f.get_applied_generalized_force_input_port())
+        diagram_f = builder_f.Build()
+        diagram = to_type(diagram_f, T)
+
+        plant = diagram.GetSubsystemByName(plant_f.get_name())
+        # Test that we can get those ports.
+        self.assertIsInstance(
+            plant.get_applied_generalized_force_input_port(), InputPort)
+        self.assertIsInstance(
+            plant.get_applied_spatial_force_input_port(), InputPort)
 
         # Ensure we can tick this system. If so, all type conversions
         # are working properly.
