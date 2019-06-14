@@ -74,9 +74,9 @@ void DoDefinitions(py::module m, T) {
   py::module::import("pydrake.multibody.tree");
   py::module::import("pydrake.systems.framework");
   // TODO(eric.cousineau): #8116 Simplify this.
-  // py::return_value_policy rvp_for_type =
-  //    (std::is_same<T, double>::value ? py::return_value_policy::automatic
-  //                                    : py::return_value_policy::copy);
+  py::return_value_policy rvp_for_type =
+     (std::is_same<T, double>::value ? py::return_value_policy::automatic
+                                     : py::return_value_policy::copy);
 
   // PointPairContactInfo
   {
@@ -304,7 +304,7 @@ void DoDefinitions(py::module m, T) {
               // Reference.
               return self->GetPositions(context);
             },
-            py::arg("context"), py::return_value_policy::copy,
+            py::arg("context"), rvp_for_type,
             // Keep alive, ownership: `return` keeps `context` alive.
             py::keep_alive<0, 2>(), cls_doc.GetPositions.doc_1args)
         .def("GetPositions",
@@ -320,7 +320,7 @@ void DoDefinitions(py::module m, T) {
               // Reference.
               return self->GetVelocities(context);
             },
-            py::arg("context"), py_reference_internal,
+            py::arg("context"), rvp_for_type,
             // Keep alive, ownership: `return` keeps `context` alive.
             py::keep_alive<0, 2>(), cls_doc.GetVelocities.doc_1args)
         .def("GetVelocities",

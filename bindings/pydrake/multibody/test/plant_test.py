@@ -402,11 +402,10 @@ class TestPlant(unittest.TestCase):
         self.check_types(self.check_multibody_state_access)
 
     def check_multibody_state_access(self, T):
-        T = float
         # FIXME (m-chaturvedi)
         MultibodyPlant = MultibodyPlant_[T]
-        plant_f = MultibodyPlant_[float]()
 
+        plant_f = MultibodyPlant_[float]()
         file_name = FindResourceOrThrow(
             "drake/multibody/benchmarks/acrobot/acrobot.sdf")
         Parser(plant_f).AddModelFromFile(file_name)
