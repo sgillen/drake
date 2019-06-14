@@ -78,21 +78,6 @@ void DoDefinitions(py::module m, T) {
   //    (std::is_same<T, double>::value ? py::return_value_policy::automatic
   //                                    : py::return_value_policy::copy);
 
-  // Opaquely bind std::vector<ExternallyAppliedSpatialForce> to enable
-  // Python systems to construct AbstractValues of this type with the type
-  // being legible for port connections.
-  {
-    using Class = multibody::ExternallyAppliedSpatialForce<T>;
-    auto cls = py::bind_vector<std::vector<Class>>(
-        m, TemporaryClassName<Class>().c_str());
-    AddTemplateClass(
-        m, "VectorExternallyAppliedSpatialForced_", cls, param);
-    if (!py::hasattr(m, "VectorExternallyAppliedSpatialForced")) {
-      m.attr("VectorExternallyAppliedSpatialForced") = cls;
-    }
-    AddValueInstantiation<std::vector<Class>>(m);
-  }
-
   // PointPairContactInfo
   {
     using Class = PointPairContactInfo<T>;
@@ -796,6 +781,24 @@ void DoDefinitions(py::module m, T) {
         .def_readwrite("body_index", &Class::body_index, cls_doc.body_index.doc)
         .def_readwrite("p_BoBq_B", &Class::p_BoBq_B, cls_doc.p_BoBq_B.doc)
         .def_readwrite("F_Bq_W", &Class::F_Bq_W, cls_doc.F_Bq_W.doc);
+    AddValueInstantiation<Class>(m);
+  }
+
+  // Opaquely bind std::vector<ExternallyAppliedSpatialForce> to enable
+  // Python systems to construct AbstractValues of this type with the type
+  // being legible for port connections.
+  {
+    using Class = std::vector<multibody::ExternallyAppliedSpatialForce<T>>;
+    // TODO(eric.cousineau): Try to make this specialization for
+    // `py::bind_vector` less boiler-platey, like
+    // `DefineTemplateClassWithDefault`.
+    const std::string default_name = "VectorExternallyAppliedSpatialForced";
+    const std::string template_name = default_name + "_";
+    auto cls = py::bind_vector<Class>(m, TemporaryClassName<Class>().c_str());
+    AddTemplateClass(m, template_name.c_str(), cls, param);
+    if (!py::hasattr(m, default_name.c_str())) {
+      m.attr(default_name.c_str()) = cls;
+    }
     AddValueInstantiation<Class>(m);
   }
   // NOLINTNEXTLINE(readability/fn_size)
