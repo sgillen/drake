@@ -71,7 +71,7 @@ from pydrake.math import (
 from pydrake.systems.analysis import Simulator_
 from pydrake.systems.framework import (
     AbstractValue,
-    BasicVector,
+    BasicVector_,
     DiagramBuilder_,
     System_,
     LeafSystem_,
@@ -516,16 +516,17 @@ class TestPlant(unittest.TestCase):
         class Impl(LeafSystem_[T]):
             def _construct(self, nv, target_body_index, converter=None):
                 LeafSystem_[T].__init__(self, converter=converter)
+                self.set_name("applied_force_test_system")
                 self.nv = nv
                 self.target_body_index = target_body_index
                 self.DeclareAbstractOutputPort(
                     "spatial_forces_vector",
                     lambda: AbstractValue.Make(
-                        VectorExternallyAppliedSpatialForced()),
+                        VectorExternallyAppliedSpatialForced_[T]()),
                     self.DoCalcAbstractOutput)
                 self.DeclareVectorOutputPort(
                     "generalized_forces",
-                    BasicVector(self.nv),
+                    BasicVector_[T](self.nv),
                     self.DoCalcVectorOutput)
 
             def _construct_copy(self, other, converter=None):
@@ -551,16 +552,14 @@ class TestPlant(unittest.TestCase):
         # Create a MultibodyPlant, and ensure that a secondary system can
         # be connected to feed it vectors of ExternallyAppliedSpatialForce
         # and applied generalized force vectors.
-        MultibodyPlant = MultibodyPlant_[T]
-        DiagramBuilder = DiagramBuilder_[T]
         InputPort = InputPort_[T]
         OutputPort = OutputPort_[T]
         Simulator = Simulator_[T]
         ExternallyAppliedSpatialForce = ExternallyAppliedSpatialForce_[T]
         SpatialForce = SpatialForce_[T]
 
-        builder_f = DiagramBuilder()
-        plant_f = builder_f.AddSystem(MultibodyPlant())
+        builder_f = DiagramBuilder_[float]()
+        plant_f = builder_f.AddSystem(MultibodyPlant_[float]())
         file_name = FindResourceOrThrow(
             "drake/multibody/benchmarks/free_body/uniform_solid_cylinder.urdf")
         Parser(plant_f).AddModelFromFile(file_name)
