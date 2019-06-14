@@ -805,9 +805,8 @@ Note: The above is for the C++ documentation. For Python, use
             py_reference,
             // Keep alive, ownership: `return` keeps `Context` alive.
             py::keep_alive<0, 3>(), doc.Diagram.GetMutableSubsystemContext.doc)
-        .def("GetSubsystemByName",
-            &Diagram<T>::GetSubsystemByName, py::arg("name"),
-            py_reference_internal,
+        .def("GetSubsystemByName", &Diagram<T>::GetSubsystemByName,
+            py::arg("name"), py_reference_internal,
             doc.Diagram.GetSubsystemByName.doc);
 
     // N.B. This will effectively allow derived classes of `VectorSystem` to

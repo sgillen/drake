@@ -620,6 +620,7 @@ class TestPlant(unittest.TestCase):
         self.check_all_types(self.check_model_instance_state_access)
 
     def check_model_instance_state_access(self, T):
+        # N.B. Please checking warning above in `check_multibody_state_access`.
         # Create a MultibodyPlant with a kuka arm and a schunk gripper.
         # the arm is welded to the world, the gripper is welded to the
         # arm's end effector.
@@ -767,7 +768,7 @@ class TestPlant(unittest.TestCase):
         self.check_all_types(self.check_model_instance_state_access_by_array)
 
     def check_model_instance_state_access_by_array(self, T):
-        T = float
+        # N.B. Please checking warning above in `check_multibody_state_access`.
         MultibodyPlant = MultibodyPlant_[T]
         # Create a MultibodyPlant with a kuka arm and a schunk gripper.
         # the arm is welded to the world, the gripper is welded to the
@@ -821,58 +822,65 @@ class TestPlant(unittest.TestCase):
         x_desired[nq:nq+7] = v_iiwa_desired
         x_desired[nq+7:nq+nv] = v_gripper_desired
 
-        x = plant.GetMutablePositionsAndVelocities(context=context)
-        x[:] = x_desired
+        if T == float:
+            x = plant.GetMutablePositionsAndVelocities(context=context)
+            x[:] = x_desired
+        else:
+            plant.SetPositionsAndVelocities(context, x_desired)
+
         q = plant.GetPositions(context=context)
         v = plant.GetVelocities(context=context)
 
         # Get state from context.
         x = plant.GetPositionsAndVelocities(context=context)
-        x_tmp = plant.GetMutablePositionsAndVelocities(context=context)
-        self.assertTrue(np.allclose(x_desired, x_tmp))
+        if T == float:
+            x_tmp = plant.GetMutablePositionsAndVelocities(context=context)
+            self.assertTrue(np.allclose(x_desired, x_tmp))
 
         # Get positions and velocities of specific model instances
         # from the position/velocity vector of the plant.
         q_iiwa = plant.GetPositions(context=context, model_instance=iiwa_model)
         q_iiwa_array = plant.GetPositionsFromArray(
             model_instance=iiwa_model, q=q)
-        self.assertTrue(np.allclose(q_iiwa, q_iiwa_array))
+        numpy_compare.assert_equal(q_iiwa, q_iiwa_array)
         q_gripper = plant.GetPositions(
             context=context, model_instance=gripper_model)
         v_iiwa = plant.GetVelocities(
             context=context, model_instance=iiwa_model)
         v_iiwa_array = plant.GetVelocitiesFromArray(
             model_instance=iiwa_model, v=v)
-        self.assertTrue(np.allclose(v_iiwa, v_iiwa_array))
+        numpy_compare.assert_equal(v_iiwa, v_iiwa_array)
         v_gripper = plant.GetVelocities(
             context=context, model_instance=gripper_model)
 
         # Assert that the `GetPositions` and `GetVelocities` return
         # the desired values set earlier.
-        numpy_compare.assert_float_equal(q_iiwa_desired, q_iiwa)
-        numpy_compare.assert_float_equal(v_iiwa_desired, v_iiwa)
-        numpy_compare.assert_float_equal(q_gripper_desired, q_gripper)
-        numpy_compare.assert_float_equal(v_gripper_desired, v_gripper)
+        numpy_compare.assert_float_equal(q_iiwa, q_iiwa_desired)
+        numpy_compare.assert_float_equal(v_iiwa, v_iiwa_desired)
+        numpy_compare.assert_float_equal(q_gripper, q_gripper_desired)
+        numpy_compare.assert_float_equal(v_gripper, v_gripper_desired)
 
-        # Verify that SetPositionsInArray() and SetVelocitiesInArray() works.
-        plant.SetPositionsInArray(
-            model_instance=iiwa_model, q_instance=np.zeros(nq_iiwa), q=q)
-        numpy_compare.assert_float_equal(
-            plant.GetPositionsFromArray(model_instance=iiwa_model, q=q),
-            np.zeros(nq_iiwa))
-        plant.SetVelocitiesInArray(
-            model_instance=iiwa_model, v_instance=np.zeros(nv_iiwa), v=v)
-        numpy_compare.assert_float_equal(
-            plant.GetVelocitiesFromArray(model_instance=iiwa_model, v=v),
-            np.zeros(nv_iiwa))
+        if T == float:
+            # Verify that SetPositionsInArray() and SetVelocitiesInArray()
+            # works.
+            plant.SetPositionsInArray(
+                model_instance=iiwa_model, q_instance=np.zeros(nq_iiwa), q=q)
+            numpy_compare.assert_float_equal(
+                plant.GetPositionsFromArray(model_instance=iiwa_model, q=q),
+                np.zeros(nq_iiwa))
+            plant.SetVelocitiesInArray(
+                model_instance=iiwa_model, v_instance=np.zeros(nv_iiwa), v=v)
+            numpy_compare.assert_float_equal(
+                plant.GetVelocitiesFromArray(model_instance=iiwa_model, v=v),
+                np.zeros(nv_iiwa))
 
-        # Check actuation.
-        nu = plant.num_actuated_dofs()
-        u = np.zeros(nu)
-        u_iiwa = np.arange(nv_iiwa)
-        plant.SetActuationInArray(
-            model_instance=iiwa_model, u_instance=u_iiwa, u=u)
-        self.assertTrue(np.allclose(u[:7], u_iiwa))
+            # Check actuation.
+            nu = plant.num_actuated_dofs()
+            u = np.zeros(nu)
+            u_iiwa = np.arange(nv_iiwa)
+            plant.SetActuationInArray(
+                model_instance=iiwa_model, u_instance=u_iiwa, u=u)
+            numpy_compare.assert_float_equal(u_iiwa, u[:7])
 
     def test_map_qdot_to_v_and_back(self):
         self.check_all_types(self.check_map_qdot_to_v_and_back)
@@ -980,10 +988,9 @@ class TestPlant(unittest.TestCase):
             name="frame", P=plant.world_frame(),
             X_PF=identity, model_instance=None))
         self.assertIsInstance(frame, Frame)
-        np.testing.assert_equal(
-            np.eye(4),
-            numpy_compare.to_float(
-                frame.GetFixedPoseInBodyFrame().GetAsMatrix4()))
+        numpy_compare.assert_float_equal(
+            frame.GetFixedPoseInBodyFrame().GetAsMatrix4(),
+            np.eye(4))
 
     def test_multibody_dynamics(self):
         self.check_all_types(self.check_multibody_dynamics)
@@ -1000,11 +1007,12 @@ class TestPlant(unittest.TestCase):
         # Getting ready for when we set foot on Mars :-).
         gravity_vector = np.array([0.0, 0.0, -3.71])
         plant_f.mutable_gravity_field().set_gravity_vector(gravity_vector)
-        np.testing.assert_equal(plant_f.gravity_field().gravity_vector(),
-                                gravity_vector)
         plant_f.Finalize()
         plant = to_type(plant_f, T)
         context = plant.CreateDefaultContext()
+
+        numpy_compare.assert_float_equal(
+            plant.gravity_field().gravity_vector(), gravity_vector)
 
         # Set an arbitrary configuration away from the model's fixed point.
         plant.SetPositions(context, [0.1, 0.2])
@@ -1043,6 +1051,7 @@ class TestPlant(unittest.TestCase):
             np.testing.assert_equal(forces.generalized_forces(), 1)
             forces.SetZero()
             np.testing.assert_equal(forces.generalized_forces(), 0)
+
         # Test body force accessors and mutators.
         link2 = plant.GetBodyByName("Link2")
         self.assertIsInstance(
@@ -1118,23 +1127,18 @@ class TestPlant(unittest.TestCase):
         self.assertIsInstance(result, AbstractValue)
 
     def test_connect_contact_results(self):
-        self.check_all_types(self.check_connect_contact_results)
+        DiagramBuilder = DiagramBuilder_[float]
+        MultibodyPlant = MultibodyPlant_[float]
 
-    def check_connect_contact_results(self, T):
-        DiagramBuilder = DiagramBuilder_[T]
         file_name = FindResourceOrThrow(
             "drake/multibody/benchmarks/acrobot/acrobot.sdf")
-        builder = DiagramBuilder_[float]()
-        plant_f = builder.AddSystem(MultibodyPlant_[float](0.001))
-        Parser(plant_f).AddModelFromFile(file_name)
-        plant_f.Finalize()
-        plant = to_type(plant_f, T)
+        builder = DiagramBuilder()
+        plant = builder.AddSystem(MultibodyPlant(0.001))
+        Parser(plant).AddModelFromFile(file_name)
+        plant.Finalize()
 
-        # ConnectContactResultsToDrakeVisualizer takes `builder` and `plant`
-        # of type `double`
-        if T == float:
-            publisher = ConnectContactResultsToDrakeVisualizer(builder, plant)
-            self.assertIsInstance(publisher, LcmPublisherSystem)
+        publisher = ConnectContactResultsToDrakeVisualizer(builder, plant)
+        self.assertIsInstance(publisher, LcmPublisherSystem)
 
     def test_scene_graph_queries(self):
         self.check_nonsymbolic_types(self.check_scene_graph_queries)
