@@ -37,7 +37,7 @@ class TestQP:
             # Bounding box
             prog.AddLinearConstraint(x[0] >= 1),
             # Bounding box
-            prog.AddLinearConstraint(sym.logical_and(x[1] >= 1, x[1] <= 2.)),
+            prog.AddLinearConstraint(sym.logical_and(x[1] <= 1, x[1] >= 2.)),
             # Linear inequality
             prog.AddLinearConstraint(3 * x[0] - x[1] <= 2),
             # Linear equality
@@ -91,6 +91,9 @@ class TestMathematicalProgram(unittest.TestCase):
         qp = TestQP()
         x_expected = np.array([1, 1])
         result = mp.Solve(qp.prog)
+        print(result.is_success())
+        print(result.GetSolution(qp.x[0]))  # segfault
+        print(result.GetSolution(qp.x[1]))
         self.assertTrue(result.is_success())
         self.assertTrue(np.allclose(result.get_x_val(), x_expected))
         self.assertEqual(result.get_solution_result(),

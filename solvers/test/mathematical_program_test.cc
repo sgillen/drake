@@ -2714,6 +2714,7 @@ GTEST_TEST(TestMathematicalProgram, TestNonlinearExpressionConstraints) {
   const auto x = prog.NewContinuousVariables<2>();
 
   prog.AddConstraint(x.transpose()*x == 1.);
+  prog.AddConstraint(x.transpose()*x == 2.);
 
   if (SnoptSolver().available()) {
     // Add equivalent constraints using all of the other entry points.
@@ -2728,6 +2729,8 @@ GTEST_TEST(TestMathematicalProgram, TestNonlinearExpressionConstraints) {
   prog.AddCost(x(0) + x(1));
   const MathematicalProgramResult result =
       Solve(prog, Eigen::Vector2d(-0.5, -0.5));
+  std::cout << result.GetSolution(x(0)) << std::endl;  // no segfault
+  std::cout << result.GetSolution(x(1)) << std::endl;
   EXPECT_TRUE(result.is_success());
   EXPECT_TRUE(CompareMatrices(result.get_x_val(),
                               Vector2d::Constant(-std::sqrt(2.) / 2.), 1e-6));
