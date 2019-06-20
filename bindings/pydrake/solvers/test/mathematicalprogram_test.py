@@ -34,18 +34,20 @@ class TestQP:
         self.prog = prog
         self.x = x
         self.constraints = [
-            # Bounding box
-            prog.AddLinearConstraint(x[0] >= 1),
-            # Bounding box
+            # # Bounding box
+            # prog.AddLinearConstraint(x[0] >= 1),
+            # # Bounding box
             prog.AddLinearConstraint(sym.logical_and(x[1] <= 1, x[1] >= 2.)),
-            # Linear inequality
-            prog.AddLinearConstraint(3 * x[0] - x[1] <= 2),
-            # Linear equality
-            prog.AddLinearConstraint(x[0] + 2 * x[1] == 3)]
+            # # Linear inequality
+            # prog.AddLinearConstraint(3 * x[0] - x[1] <= 2),
+            # # Linear equality
+            # prog.AddLinearConstraint(x[0] + 2 * x[1] == 3),
+        ]
 
         # TODO(eric.cousineau): Add constant terms
-        self.costs = [prog.AddLinearCost(x[0] + x[1]),
-                      prog.AddQuadraticCost(0.5 * (x[0]**2 + x[1]**2))]
+        self.costs = [#prog.AddLinearCost(x[0] + x[1]),
+                      prog.AddQuadraticCost(0.5 * (x[0]**2 + x[1]**2)),
+                      ]
 
 
 class TestMathematicalProgram(unittest.TestCase):

@@ -2712,21 +2712,9 @@ GTEST_TEST(TestMathematicalProgram, TestNonlinearExpressionConstraints) {
   // min ∑ x , subject to x'x = 1.
   MathematicalProgram prog;
   const auto x = prog.NewContinuousVariables<2>();
+  prog.AddConstraint(x[0] <= 1. && x[0] >= 2.),
+  prog.AddCost(0.5 * (x(0)*x(0) + x(1)*x(1)));
 
-  prog.AddConstraint(x.transpose()*x == 1.);
-  prog.AddConstraint(x.transpose()*x == 2.);
-
-  if (SnoptSolver().available()) {
-    // Add equivalent constraints using all of the other entry points.
-    // Note: restricted to SNOPT because IPOPT complains about the redundant
-    // constraints.
-    prog.AddConstraint(x.transpose()*x >= 1.);
-    prog.AddConstraint(x.transpose()*x <= 1.);
-    prog.AddConstraint((x.transpose()*x)(0), 1., 1.);
-    prog.AddConstraint(x.transpose()*x, Vector1d{1.}, Vector1d{1.});
-  }
-
-  prog.AddCost(x(0) + x(1));
   const MathematicalProgramResult result =
       Solve(prog, Eigen::Vector2d(-0.5, -0.5));
   std::cout << result.GetSolution(x(0)) << std::endl;  // no segfault
