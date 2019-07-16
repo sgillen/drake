@@ -19,51 +19,51 @@ Please note the following terms:
 - frame, pose: denotes an origin and a space-spanning basis in 2D/3D, as in
   @ref multibody_frames_and_bodies. Unless otherwise stated, any described
   frame implies this definition.
-- video frame: an image in a video sequence. This is *not* an extension of
-  "frame" as a general term.
 - sensor: a device used to take and report measurements.
-- image: an array of measurements. Coordinates are in pixels.
-- imager: a sensor that measures images.
-- camera: an image sensor.
+- image: an array of measurements. Coordinates are in typically in pixels.
+- imager: a sensor whose measurements are reported in images.
+- camera: an image sensor using lenses and photoreceptive surfaces.
 - aperature: a hole through which light travels through.
-- image plane: defines how the 3D world is projected to a 2D image. In
-  accordance with the OpenCV documentation below, the image plane will be
-  presented as though it were "in front" of the aperature, rather than behind
-  (which requires accounting for the camera obscura effect).
+- image plane: defined by the lens and aperature and captures how the 3D world
+  is projected to a 2D image.
 - pinhole camera: a physical camera with no lens and a tiny aperature.
-- pinhole model: modeling a camera as though it were a pinhole camera, with
-  parameters that account for the camera lens and image plane. In Drake, all
-  cameras are assumed to use the pinhole model unless otherwise stated. The
-  images captured by these cameras are 2D, and their pixel coordinates are
-  described as `(u, v)`.
-- viewing direction / optical axis: direction from aperature towards scene being
-  captured by the camera (orthogonal to the image plane for the pinhole model).
-- principal point, camera center: the intersection of the viewing ray with the
-  image plane, typically measured in pixels.
+- viewing raw: ray from aperature towards scene being captured by the camera
+  (orthogonal to the image plane for the pinhole model). In other words, it's
+  the way the camera is facing.
+- principal point: the intersection of the viewing ray with the image plane,
+  typically measured in pixels.
 
-The camera frame C is comprised of the basis [Cx Cy Cz] and origin point Co,
-which are described as follows:
+In Drake, all cameras are assumed to be modeled as a pinhole camera (using the
+"pinhole model") unless otherwise stated. As in the
+[OpenCV documentation](http://docs.opencv.org/2.4/modules/calib3d/doc/camera_calibration_and_3d_reconstruction.html),
+the model's image plane will be used rather than pinhole camera's; i.e. it is
+presented as in front of the aperature, rather than behind.
 
-- Co at camera aperature (per the pinhole model)
-- Cz aligned with the optical axis (orthogonal to the image plane).
+Any given camera measures a captured image, which is 2D with pixel coordinates
+defined as `(u, v)`. The camera frame is located at frame C which is comprised
+of the basis [Cx Cy Cz] and origin point Co, which are defined as follows:
+
+- Co at camera aperature.
+- Cz aligned with the viewing ray (orthogonal to the image plane).
 - Cx aligned with the `u` axis of the captured image.
 - Cy aligned with the `v` axis of the captured image.
 
 This can be summarized as `X-right`, `Y-down`, and `Z-forward` with respect to
 the image plane / captured image when visualized in 3D w.r.t. the camera frame.
 
-The projection from coordinates `(X, Y, Z)`, in meters `m`, in the camera frame
-C to image coordinates `(u, v)`, in pixels, can be described as:
+The projection from coordinates `(X, Y, Z)`, in meters, in the camera frame C
+to image coordinates `(u, v)`, in pixels, is defined as:
 <pre>
-  u = focal_x * (X/Z) + center_x
-  v = focal_y * (Y/Z) + center_y
+  u = focal_x * (X/Z) + ppx
+  v = focal_y * (Y/Z) + ppy
 </pre>
-where `focal_x, focal_y` are the focal lengths, in `pixels / (m / m)`, and
-`center_x, center_y`, in pixels, describe the camera center (or principal
-point).
+where `focal_x, focal_y`, in `pixels / (m / m)`, are the focal lengths and
+`ppx, ppy`, in pixels, describe the principal point.
 
-For more detail including an explanation of the focal lengths, refer to:
-- http://docs.opencv.org/2.4/modules/calib3d/doc/camera_calibration_and_3d_reconstruction.html
+Footnotes:
+
+-  A "video frame" should be considered an image in a video sequence, *not* an
+  extension of "frame" as a general term.
 */
 class CameraInfo final {
  public:
@@ -76,10 +76,8 @@ class CameraInfo final {
    @param height The image height in pixels, must be greater than zero.
    @param focal_x The focal length x in pixels.
    @param focal_y The focal length y in pixels.
-   @param center_x The x coordinate of the image center in the pixel
-   coordinate system in pixels.
-   @param center_y The y coordinate of the image center in the pixel
-   coordinate system in pixels.
+   @param center_x The x coordinate of the principal point in pixels.
+   @param center_y The y coordinate of the principal point in pixels.
   */
   CameraInfo(int width, int height, double focal_x, double focal_y,
              double center_x, double center_y);
@@ -119,10 +117,13 @@ class CameraInfo final {
   /** Returns the focal length y in pixels. */
   double focal_y() const { return intrinsic_matrix_(1, 1); }
 
-  /** Returns the image center x value in pixels. */
+  // TODO(eric.cousineau): Deprecate "center_{x,y}" and use
+  // "principal_point_{x,y}" or "pp{x,y}".
+
+  /** Returns the principal point's x coordinate in pixels. */
   double center_x() const { return intrinsic_matrix_(0, 2); }
 
-  /** Returns the image center y value in pixels. */
+  /** Returns the principal point's y coordinate in pixels. */
   double center_y() const { return intrinsic_matrix_(1, 2); }
 
   /** Returns the camera intrinsic matrix. */

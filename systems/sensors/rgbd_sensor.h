@@ -42,10 +42,14 @@ namespace sensors {
  This class uses the following frames:
 
    - W - world frame
-   - C - color camera frame, used for both color and label images
+   - C - color camera frame, used for both color and label cameras to guarantee
+     perfect registration between color and label images.
    - D - depth camera frame
-   - B - sensor body frame, used common frame for C and D which can capture the
-     physical container of the sensor.
+   - B - sensor body frame, approximately, the frame of the "physical" sensor
+     that contains the color, depth, and label cameras. The contained cameras
+     are rigidly fixed to B and X_WB is what is used to pose the sensor in the
+     world (or, alternatively, X_PB where P is some parent frame for which X_WP
+     is known).
 
  By default, frames B, C, and D are coincident and aligned. These can be
  changed after construction by modifying `X_BC` and `X_BD`. Frames C and D are
