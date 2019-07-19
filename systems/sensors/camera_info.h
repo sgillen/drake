@@ -107,8 +107,8 @@ namespace sensors {
  - __image frame__: the 2D frame embedded in 3D space spanning the image plane.
    The image frame's x- and y-axes are parallel with `Cx` and `Cy`,
    respectively. Coordinates are expressed as the pair `(u, v)` and the camera's
-   image lies on the plane spanned by the frame's basis, entirely in the first
-   quadrant (i.e, `u ≥ 0` and `v ≥ 0`).
+   image lies on the plane spanned by the frame's basis. The _center_ of the
+   pixel in the first row and first column is at `(u=0, v=0)`.
  - __image plane__: a plane in 3D which is perpendicular to the camera's viewing
    direction. Conceptually, the image lies on this plane.
      - In a physical pinhole camera, the aperture is between the image plane and
@@ -150,8 +150,8 @@ class CameraInfo final {
   /**
    Constructs this instance from image size and vertical field of view. We
    assume the principal point is in the center of the image;
-   `(center x, center_y)` is equal to `(width / 2 - 0.5, height / 2 - 0.5)`. We
-   also assume the focal lengths `focal_x` and `focal_y` are identical
+   `(center x, center_y)` is equal to `(width / 2.0 - 0.5, height / 2.0 - 0.5)`.
+   We also assume the focal lengths `focal_x` and `focal_y` are identical
    (modeling a radially symmetric lens). The value is derived from field of
    view and image size as:
 
