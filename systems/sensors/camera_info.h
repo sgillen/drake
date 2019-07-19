@@ -62,14 +62,14 @@ namespace sensors {
  - (f_x, f_y) defines the model focal length.
 
  In other words, for point Q in the world frame, its texture coordinates
- `(u_q, v_q)` are calculated as:
+ `(u_Q, v_Q)` are calculated as:
 
-      │ u_q │
-     s│ v_q │ = K ⋅ X_CW ⋅ p_WQ
+      │ u_Q │
+     s│ v_Q │ = K ⋅ X_CW ⋅ p_WQ
       │  1  │
 
  Note: The expression on the right will generally produce a homogeneous
- coordinate vector of the form `(s * u_q, s * v_q, s)`. The texture coordinate
+ coordinate vector of the form `(s * u_Q, s * v_Q, s)`. The texture coordinate
  is defined as the first two measures when the *third* measure is 1. The magic
  of homogeneous coordinates allows us to simply factor out `s`.
 
@@ -150,10 +150,10 @@ class CameraInfo final {
   /**
    Constructs this instance from image size and vertical field of view. We
    assume the principal point is in the center of the image;
-   `(center x, center_y)` is equal to `(width / 2, height / 2)`. We also assume
-   the focal lengths `focal_x` and `focal_y` are identical (modeling a radially
-   symmetric lens). The value is derived from field of view and image
-   size as:
+   `(center x, center_y)` is equal to `(width / 2 - 0.5, height / 2 - 0.5)`. We
+   also assume the focal lengths `focal_x` and `focal_y` are identical
+   (modeling a radially symmetric lens). The value is derived from field of
+   view and image size as:
 
         focal_x = focal_y = height * 0.5 / tan(0.5 * fov_y)
 
