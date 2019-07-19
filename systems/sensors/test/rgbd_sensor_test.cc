@@ -149,6 +149,9 @@ class RgbdSensorTest : public ::testing::Test {
              << "The sensor's parent id (" << sensor_->parent_frame_id()
              << ") does not match the expected id (" << parent_id << ")";
     }
+    // TODO(eric.cousineau): Remove the name tests, as they don't make sense
+    // since no part of RgbdSensor part really needs it, and it's the System
+    // framework's responsibility.
     if (sensor_->get_name() != name) {
       return ::testing::AssertionFailure()
           << "The sensor's name '" << sensor_->get_name()

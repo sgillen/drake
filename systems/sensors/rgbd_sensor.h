@@ -93,11 +93,6 @@ class RgbdSensor final : public LeafSystem<double> {
     math::RigidTransformd X_BD;
   };
 
-  // TODO(SeanCurtis-TRI): Seriously consider a OpenGL-style position-target-up
-  //  constructor for RgbdSensor -- it can work for either stationary or
-  //  generally affixed sensor as long as the position, target, and up vectors
-  //  are all defined w.r.t. the parent frame.
-
   /** Constructs an %RgbdSensor whose frame `B` is rigidly affixed to the frame
    P, indicated by `frame_id`, and with the given camera properties. The camera
    will move as frame P moves. For a stationary camera, use the frame id from
@@ -109,6 +104,10 @@ class RgbdSensor final : public LeafSystem<double> {
    @param X_PB           The pose of the camera `B` frame relative to the parent
                          frame `P`.
    @param properties     The properties which define this camera's intrinsics.
+                         Please note that this assumes that the color and depth
+                         cameras share the same intrinsics.
+   @param camera_poses   The pose the color and depth cameras with respect to
+                         the sensor base.
    @param show_window    A flag for showing a visible window. If this is false,
                          off-screen rendering is executed. The default is false.
    */
@@ -117,6 +116,9 @@ class RgbdSensor final : public LeafSystem<double> {
              const geometry::render::DepthCameraProperties& properties,
              const CameraPoses& camera_poses = {},
              bool show_window = false);
+
+  // TODO(eric.cousineau): Add a constructor that allows unique intrinsics for
+  // color and depth when the need arises.
 
   ~RgbdSensor() = default;
 
@@ -204,9 +206,8 @@ class RgbdSensor final : public LeafSystem<double> {
   const geometry::render::DepthCameraProperties properties_;
   // The position of the camera's B frame relative to its parent frame P.
   const math::RigidTransformd X_PB_;
-
+  // Camera poses.
   math::RigidTransformd X_BC_;
-
   math::RigidTransformd X_BD_;
 };
 
@@ -244,9 +245,6 @@ class RgbdSensorDiscrete final : public systems::Diagram<double> {
 
   /** Returns reference to RgbdSensor instance.  */
   const RgbdSensor& sensor() const { return *camera_; }
-
-  /** Returns mutable reference to RgbdSensor instance.  */
-  RgbdSensor& mutable_sensor() { return *camera_; }
 
   /** Returns update period for discrete camera.  */
   double period() const { return period_; }
