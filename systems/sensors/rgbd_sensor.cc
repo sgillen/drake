@@ -32,13 +32,16 @@ using std::move;
 RgbdSensor::RgbdSensor(FrameId parent_frame,
                        const RigidTransformd& X_PB,
                        const DepthCameraProperties& properties,
+                       const CameraPoses& camera_poses,
                        bool show_window)
     : parent_frame_(parent_frame),
       show_window_(show_window),
       color_camera_info_(properties.width, properties.height, properties.fov_y),
       depth_camera_info_(properties.width, properties.height, properties.fov_y),
       properties_(properties),
-      X_PB_(X_PB) {
+      X_PB_(X_PB),
+      X_BC_(camera_poses.X_BC),
+      X_BD_(camera_poses.X_BD) {
   query_object_input_port_ = &this->DeclareAbstractInputPort(
       "geometry_query", Value<geometry::QueryObject<double>>{});
 
@@ -62,7 +65,7 @@ RgbdSensor::RgbdSensor(FrameId parent_frame,
   label_image_port_ = &this->DeclareAbstractOutputPort(
       "label_image", label_image, &RgbdSensor::CalcLabelImage);
 
-  sensor_base_pose_port_ = &this->DeclareVectorOutputPort(
+  X_WB_pose_port_ = &this->DeclareVectorOutputPort(
       "X_WB", rendering::PoseVector<double>(), &RgbdSensor::CalcX_WB);
 
   const float kMaxValidDepth16UInMM =
@@ -95,8 +98,8 @@ const OutputPort<double>& RgbdSensor::label_image_output_port() const {
   return *label_image_port_;
 }
 
-const OutputPort<double>& RgbdSensor::sensor_base_pose_output_port() const {
-  return *sensor_base_pose_port_;
+const OutputPort<double>& RgbdSensor::X_WB_output_port() const {
+  return *X_WB_pose_port_;
 }
 
 void RgbdSensor::CalcColorImage(const Context<double>& context,
@@ -222,8 +225,8 @@ RgbdSensorDiscrete::RgbdSensorDiscrete(std::unique_ptr<RgbdSensor> camera,
   }
 
   // No need to place a ZOH on pose output.
-  output_port_pose_ =
-      builder.ExportOutput(camera_->sensor_base_pose_output_port(), "X_WB");
+  X_WB_output_port_ =
+      builder.ExportOutput(camera_->X_WB_output_port(), "X_WB");
 
   builder.BuildInto(this);
 }

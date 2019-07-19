@@ -162,20 +162,11 @@ class RgbdSensorTest : public ::testing::Test {
     result = CompareCameraInfo(sensor_->depth_camera_info(), expected_info);
     if (!result) return result;
 
-    // The documented orientation and position of the color sensor frame w.r.t.
-    // the sensor frame.
-    math::RigidTransformd X_BC_expected{
-        math::RotationMatrixd::MakeFromOrthonormalRows(
-            Eigen::Vector3d(0, 0, 1),
-            Eigen::Vector3d(-1, 0, 0),
-            Eigen::Vector3d(0, -1, 0)),
-        Eigen::Vector3d(0, 0.02, 0)};
-
-    EXPECT_TRUE(CompareMatrices(sensor_->color_camera_optical_pose().matrix(),
-                                X_BC_expected.matrix()));
-    // By default, frames C and D are aligned and coincident.
-    EXPECT_TRUE(CompareMatrices(sensor_->depth_camera_optical_pose().matrix(),
-                                X_BC_expected.matrix()));
+    // By default, frames B, C, and D are aligned and coincident.
+    EXPECT_TRUE(CompareMatrices(sensor_->X_BC().matrix(),
+                                RigidTransformd().matrix()));
+    EXPECT_TRUE(CompareMatrices(sensor_->X_BD().matrix(),
+                                RigidTransformd().matrix()));
 
     // Confirm the pose used by the renderer is the expected X_WC pose. We do
     // this by invoking a render (the dummy render engine will cache the last
@@ -209,32 +200,34 @@ const char RgbdSensorTest::kRendererName[] = "renderer";
 // anchored constructor and assumes that the ports are the same for the
 // frame-fixed port.
 TEST_F(RgbdSensorTest, PortNames) {
-  RgbdSensor sensor("sensor", SceneGraph<double>::world_frame_id(),
+  RgbdSensor sensor(SceneGraph<double>::world_frame_id(),
                     RigidTransformd::Identity(), properties_);
   EXPECT_EQ(sensor.query_object_input_port().get_name(), "geometry_query");
   EXPECT_EQ(sensor.color_image_output_port().get_name(), "color_image");
   EXPECT_EQ(sensor.depth_image_32F_output_port().get_name(), "depth_image_32f");
   EXPECT_EQ(sensor.depth_image_16U_output_port().get_name(), "depth_image_16u");
   EXPECT_EQ(sensor.label_image_output_port().get_name(), "label_image");
-  EXPECT_EQ(sensor.sensor_base_pose_output_port().get_name(), "X_WB");
+  EXPECT_EQ(sensor.X_WB_output_port().get_name(), "X_WB");
 }
 
 // Tests that the anchored camera reports the correct parent frame and has the
 // right pose passed to the renderer.
 TEST_F(RgbdSensorTest, ConstructAnchoredCamera) {
-  const Vector3d p_WB_W(1, 2, 3);
-  const RollPitchYawd rpy_WB_W(M_PI / 2, 0, 0);
-  const RigidTransformd X_WB_W(rpy_WB_W, p_WB_W);
+  const Vector3d p_WB(1, 2, 3);
+  const RollPitchYawd rpy_WB(M_PI / 2, 0, 0);
+  const RigidTransformd X_WB(rpy_WB, p_WB);
   const std::string name = "anchored";
 
-  auto make_sensor = [this, &X_WB_W, &name](SceneGraph<double>*) {
-    return make_unique<RgbdSensor>(name, SceneGraph<double>::world_frame_id(),
-                                   X_WB_W, properties_);
+  auto make_sensor = [this, &X_WB, &name](SceneGraph<double>*) {
+    auto sensor = make_unique<RgbdSensor>(
+        SceneGraph<double>::world_frame_id(),
+        X_WB, properties_);
+    sensor->set_name(name);
+    return sensor;
   };
   MakeCameraDiagram(make_sensor);
 
-  const RigidTransformd X_WB(rpy_WB_W, p_WB_W);
-  const RigidTransformd& X_BC = sensor_->color_camera_optical_pose();
+  const RigidTransformd& X_BC = sensor_->X_BC();
   const RigidTransformd X_WC_expected = X_WB * X_BC;
   EXPECT_TRUE(ValidateConstruction(scene_graph_->world_frame_id(), name,
                                    X_WC_expected));
@@ -258,12 +251,14 @@ TEST_F(RgbdSensorTest, ConstructFrameFixedCamera) {
                       &X_PB](SceneGraph<double>* graph) {
     source_id = graph->RegisterSource("source");
     graph->RegisterFrame(source_id, frame);
-    return make_unique<RgbdSensor>(name, frame.id(), X_PB, properties_);
+    auto sensor = make_unique<RgbdSensor>(frame.id(), X_PB, properties_);
+    sensor->set_name(name);
+    return sensor;
   };
   MakeCameraDiagram(make_sensor);
 
 
-  const RigidTransformd& X_BC = sensor_->color_camera_optical_pose();
+  const RigidTransformd& X_BC = sensor_->X_BC();
   // NOTE: This *particular* factorization eliminates the need for a tolerance
   // in the matrix comparison -- it is the factorization that is implicit in
   // the code path for rendering.
@@ -274,6 +269,23 @@ TEST_F(RgbdSensorTest, ConstructFrameFixedCamera) {
   };
   EXPECT_TRUE(ValidateConstruction(frame.id(), name, X_WC_expected,
                                    pre_render_callback));
+}
+
+TEST_F(RgbdSensorTest, ConstructCameraWithNonTrivialOffsets) {
+  const RigidTransformd X_BC{
+        math::RotationMatrixd::MakeFromOrthonormalRows(
+            Eigen::Vector3d(0, 0, 1),
+            Eigen::Vector3d(-1, 0, 0),
+            Eigen::Vector3d(0, -1, 0)),
+        Eigen::Vector3d(0, 0.02, 0)};
+  // For uniqueness, simply invert X_BC.
+  const RigidTransformd X_BD{X_BC.inverse()};
+  const RigidTransformd X_WB;
+  const RgbdSensor sensor(
+      scene_graph_->world_frame_id(), X_WB, properties_,
+      RgbdSensor::CameraPoses{X_BC, X_BD});
+  EXPECT_TRUE(CompareMatrices(sensor.X_BC().matrix(), X_BC.matrix()));
+  EXPECT_TRUE(CompareMatrices(sensor.X_BD().matrix(), X_BD.matrix()));
 }
 
 // We don't explicitly test any of the image outputs. Most of the image outputs
@@ -320,7 +332,7 @@ GTEST_TEST(RgbdSensorDiscrete, Construction) {
 
   const bool include_render_port = true;
   RgbdSensorDiscrete sensor(
-      make_unique<RgbdSensor>("sensor", SceneGraph<double>::world_frame_id(),
+      make_unique<RgbdSensor>(SceneGraph<double>::world_frame_id(),
                               RigidTransformd::Identity(), properties),
       kPeriod, include_render_port);
   EXPECT_EQ(sensor.query_object_input_port().get_name(), "geometry_query");
@@ -328,7 +340,7 @@ GTEST_TEST(RgbdSensorDiscrete, Construction) {
   EXPECT_EQ(sensor.depth_image_32F_output_port().get_name(), "depth_image_32f");
   EXPECT_EQ(sensor.depth_image_16U_output_port().get_name(), "depth_image_16u");
   EXPECT_EQ(sensor.label_image_output_port().get_name(), "label_image");
-  EXPECT_EQ(sensor.sensor_base_pose_output_port().get_name(), "X_WB");
+  EXPECT_EQ(sensor.X_WB_output_port().get_name(), "X_WB");
 
   EXPECT_EQ(sensor.period(), kPeriod);
 
@@ -341,7 +353,7 @@ GTEST_TEST(RgbdSensorDiscrete, Construction) {
 GTEST_TEST(RgbdSensorDiscrete, ImageHold) {
   DepthCameraProperties properties(640, 480, M_PI / 4, "render", 0.1, 10);
   auto sensor =
-      make_unique<RgbdSensor>("sensor", SceneGraph<double>::world_frame_id(),
+      make_unique<RgbdSensor>(SceneGraph<double>::world_frame_id(),
                               RigidTransformd::Identity(), properties);
   RgbdSensor* sensor_raw = sensor.get();
   const double kPeriod = 0.1;

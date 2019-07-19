@@ -52,14 +52,8 @@ namespace sensors {
      is known).
 
  By default, frames B, C, and D are coincident and aligned. These can be
- changed after construction by modifying `X_BC` and `X_BD`. Frames C and D are
+ changed using the `camera_poses` constructor parameter. Frames C and D are
  always rigidly affixed to the sensor body frame B.
-
- <!-- TODO(gizatt): The setters for modifying the sensor poses create a
- vulnerability that allows users to modify internal system state during
- simulation via a non-intended path. See PR#10491 for discussion;
- solutions could include enshrining these poses as proper parameters
- or accepting these poses during construction.-->
 
  Output port image formats:
 
@@ -91,6 +85,14 @@ class RgbdSensor final : public LeafSystem<double> {
  public:
   DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(RgbdSensor)
 
+  /// Specifies poses of cameras with respect ot the sensor base `B`.
+  struct CameraPoses {
+    /// Pose of color camera `C` with respect to sensor base `B`.
+    math::RigidTransformd X_BC;
+    /// Pose of depth camera `D` with respect to sensor base `B`.
+    math::RigidTransformd X_BD;
+  };
+
   // TODO(SeanCurtis-TRI): Seriously consider a OpenGL-style position-target-up
   //  constructor for RgbdSensor -- it can work for either stationary or
   //  generally affixed sensor as long as the position, target, and up vectors
@@ -101,8 +103,6 @@ class RgbdSensor final : public LeafSystem<double> {
    will move as frame P moves. For a stationary camera, use the frame id from
    SceneGraph::world_frame_id().
 
-   @param name           The name of the %RgbdSensor. This can be any value, but
-                         typically should be unique.
    @param frame_id       The identifier of a parent frame `P` in
                          geometry::SceneGraph to which this camera is rigidly
                          affixed with pose `X_PB`.
@@ -112,9 +112,10 @@ class RgbdSensor final : public LeafSystem<double> {
    @param show_window    A flag for showing a visible window. If this is false,
                          off-screen rendering is executed. The default is false.
    */
-  RgbdSensor(std::string name, geometry::FrameId parent_frame,
+  RgbdSensor(geometry::FrameId parent_frame,
              const math::RigidTransformd& X_PB,
              const geometry::render::DepthCameraProperties& properties,
+             const CameraPoses& camera_poses = {},
              bool show_window = false);
 
   ~RgbdSensor() = default;
@@ -130,19 +131,9 @@ class RgbdSensor final : public LeafSystem<double> {
     return X_BC_;
   }
 
-  /** Sets `X_BC`.  */
-  void set_X_BC(const math::RigidTransformd& X_BC) {
-    X_BC_ = X_BC;
-  }
-
   /** Returns `X_BD`.  */
   const math::RigidTransformd& X_BD() const {
     return X_BD_;
-  }
-
-  /** Sets `X_BD`.  */
-  void set_X_BD(const math::RigidTransformd& X_BD) {
-    X_BD_ = X_BD;
   }
 
   /** Returns the id of the frame to which the base is affixed.  */
@@ -201,7 +192,7 @@ class RgbdSensor final : public LeafSystem<double> {
   const OutputPort<double>* depth_image_32F_port_{};
   const OutputPort<double>* depth_image_16U_port_{};
   const OutputPort<double>* label_image_port_{};
-  const OutputPort<double>* sensor_base_pose_port_{};
+  const OutputPort<double>* X_WB_pose_port_{};
 
   // The identifier for the parent frame `P`.
   const geometry::FrameId parent_frame_;
@@ -216,7 +207,7 @@ class RgbdSensor final : public LeafSystem<double> {
 
   math::RigidTransformd X_BC_;
 
-  math::RigidTransformd X_BD_{X_BC_};
+  math::RigidTransformd X_BD_;
 };
 
 /**
@@ -286,8 +277,8 @@ class RgbdSensorDiscrete final : public systems::Diagram<double> {
   }
 
   /** @see RgbdSensor::base_pose_output_port().  */
-  const systems::OutputPort<double>& base_pose_output_port() const {
-    return get_output_port(output_port_pose_);
+  const systems::OutputPort<double>& X_WB_output_port() const {
+    return get_output_port(X_WB_output_port_);
   }
 
  private:
@@ -299,7 +290,7 @@ class RgbdSensorDiscrete final : public systems::Diagram<double> {
   int output_port_depth_image_32F_{-1};
   int output_port_depth_image_16U_{-1};
   int output_port_label_image_{-1};
-  int output_port_pose_{-1};
+  int X_WB_output_port_{-1};
 };
 
 }  // namespace sensors
