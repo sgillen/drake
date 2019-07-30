@@ -332,6 +332,17 @@ drake_cc_googletest(
     ],
 )
 
+drake_pybind_cc_googletest(
+    name = "pydrake_pybind_test",
+    cc_deps = [
+        ":pydrake_pybind",  # Redundant but make explicit for simplicity.
+        "//bindings/pydrake:test_util_pybind",
+    ],
+    # N.B. Due to weird dependency on `common` (#7912), this is not a fully
+    # isolated / decoupled test.
+    py_deps = [":module_py"],
+)
+
 drake_py_unittest(
     name = "all_test",
     timeout = "moderate",
