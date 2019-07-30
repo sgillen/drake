@@ -17,8 +17,8 @@ PYBIND11_MODULE(framework, m) {
 
   // Incorporate definitions as pieces (to speed up compilation).
   DefineFrameworkPyValues(m);
-  DefineFrameworkPySemantics(m);
-  DefineFrameworkPySystems(m);
+  // DefineFrameworkPySemantics(m);
+  // DefineFrameworkPySystems(m);
 }
 
 }  // namespace pydrake
