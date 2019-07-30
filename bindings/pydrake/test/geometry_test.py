@@ -171,6 +171,11 @@ class TestGeometry(unittest.TestCase):
         self.assertEqual(params.default_label, label)
         self.assertTrue((params.default_diffuse == diffuse).all())
 
+        params = mut.render.RenderEngineVtkParams(
+            default_label=label, default_diffuse=diffuse)
+        self.assertEqual(params.default_label, label)
+        self.assertTrue((params.default_diffuse == diffuse).all())
+
     def test_render_depth_camera_properties(self):
         obj = mut.render.DepthCameraProperties(width=320, height=240,
                                                fov_y=pi/6,

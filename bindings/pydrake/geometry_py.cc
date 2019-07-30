@@ -24,6 +24,26 @@ namespace pydrake {
 namespace {
 using systems::LeafSystem;
 
+/// Returns a constructor for initializing parameters directly, namely for
+/// parameter structs.
+template <typename Class>
+auto ParamInit() {
+  return py::init([](py::kwargs kwargs) {
+    // N.B. We use `Class` here because `pybind11` strongly requires that we
+    // return the instance itself, not just `py::object`.
+    Class obj{};
+    // TODO(eric.cousineau): This may hurt `keep_alive` behavior, as this
+    // reference may evaporate by the time the true holding pybind11 record is
+    // constructed. Would be alleviated using old-style pybind11 init :(
+    py::object py_obj = py::cast(&obj, py_reference);
+    for (py::handle h : kwargs.attr("items")()) {
+      auto item = py::reinterpret_borrow<py::tuple>(h);
+      py::setattr(py_obj, item[0].cast<std::string>().c_str(), item[1]);
+    }
+    return obj;
+  });
+}
+
 template <typename Class>
 void BindIdentifier(py::module m, const std::string& name, const char* id_doc) {
   auto& cls_doc = pydrake_doc.drake.geometry.Identifier;
@@ -91,13 +111,18 @@ void def_geometry_render(py::module m) {
     py::class_<Class>(m, "RenderEngine");
   }
 
-  py::class_<RenderEngineVtkParams>(
-      m, "RenderEngineVtkParams", doc.RenderEngineVtkParams.doc)
-      .def(py::init<>())
-      .def_readwrite("default_label", &RenderEngineVtkParams::default_label,
-          doc.RenderEngineVtkParams.default_label.doc)
-      .def_readwrite("default_diffuse", &RenderEngineVtkParams::default_diffuse,
-          doc.RenderEngineVtkParams.default_diffuse.doc);
+  {
+    py::class_<RenderEngineVtkParams> cls(
+        m, "RenderEngineVtkParams", doc.RenderEngineVtkParams.doc);
+    cls  // BR
+        .def(py::init<>())
+        .def(ParamInit<RenderEngineVtkParams>())
+        .def_readwrite("default_label", &RenderEngineVtkParams::default_label,
+            doc.RenderEngineVtkParams.default_label.doc)
+        .def_readwrite(
+            "default_diffuse", &RenderEngineVtkParams::default_diffuse,
+            doc.RenderEngineVtkParams.default_diffuse.doc);
+  }
 
   m.def("MakeRenderEngineVtk", &MakeRenderEngineVtk, py::arg("params"),
       doc.MakeRenderEngineVtk.doc);
