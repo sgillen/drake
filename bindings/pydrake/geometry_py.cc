@@ -24,23 +24,6 @@ namespace pydrake {
 namespace {
 using systems::LeafSystem;
 
-/// Returns a constructor for initializing parameters directly, namely for
-/// parameter structs.
-template <typename Class>
-auto ParamInit() {
-  return py::init([](py::kwargs kwargs) {
-    // N.B. We use `Class` here because `pybind11` strongly requires that we
-    // return the instance itself, not just `py::object`.
-    // TODO(eric.cousineau): This may hurt `keep_alive` behavior, as this
-    // reference may evaporate by the time the true holding pybind11 record is
-    // constructed. Would be alleviated using old-style pybind11 init :(
-    Class obj{};
-    py::object py_obj = py::cast(&obj, py_reference);
-    py::module::import("pydrake").attr("_setattr_kwargs")(py_obj, kwargs);
-    return obj;
-  });
-}
-
 template <typename Class>
 void BindIdentifier(py::module m, const std::string& name, const char* id_doc) {
   auto& cls_doc = pydrake_doc.drake.geometry.Identifier;
@@ -281,7 +264,7 @@ void DoScalarDependentDefinitions(py::module m, T) {
     auto cls = DefineTemplateClassWithDefault<Class>(
         m, "SignedDistancePair", param, doc.SignedDistancePair.doc);
     cls  // BR
-        .def(py::init<>(), doc.SignedDistancePair.ctor.doc_7args)
+        .def(ParamInit<Class>(), doc.SignedDistancePair.ctor.doc_7args)
         .def_readwrite("id_A", &SignedDistancePair<T>::id_A,
             doc.SignedDistancePair.id_A.doc)
         .def_readwrite("id_B", &SignedDistancePair<T>::id_B,
@@ -308,7 +291,7 @@ void DoScalarDependentDefinitions(py::module m, T) {
     auto cls = DefineTemplateClassWithDefault<Class>(
         m, "SignedDistanceToPoint", param, doc.SignedDistanceToPoint.doc);
     cls  // BR
-        .def(py::init<>(), doc.SignedDistanceToPoint.ctor.doc)
+        .def(ParamInit<Class>(), doc.SignedDistanceToPoint.ctor.doc)
         .def_readwrite("id_G", &SignedDistanceToPoint<T>::id_G,
             doc.SignedDistanceToPoint.id_G.doc)
         .def_readwrite("p_GN", &SignedDistanceToPoint<T>::p_GN,
@@ -327,7 +310,7 @@ void DoScalarDependentDefinitions(py::module m, T) {
     auto cls = DefineTemplateClassWithDefault<Class>(
         m, "PenetrationAsPointPair", param, doc.PenetrationAsPointPair.doc);
     cls  // BR
-        .def(py::init<>(), doc.PenetrationAsPointPair.ctor.doc)
+        .def(ParamInit<Class>(), doc.PenetrationAsPointPair.ctor.doc)
         .def_readwrite("id_A", &PenetrationAsPointPair<T>::id_A,
             doc.PenetrationAsPointPair.id_A.doc)
         .def_readwrite("id_B", &PenetrationAsPointPair<T>::id_B,
