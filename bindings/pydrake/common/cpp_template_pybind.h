@@ -62,9 +62,13 @@ std::string TemporaryClassName(const std::string& name = "TemporaryName") {
 inline py::object AddTemplateClass(  // BR
     py::handle scope, const std::string& name, py::handle py_class,
     py::tuple param) {
-  py::object py_template =
-      internal::GetOrInitTemplate(scope, name, "TemplateClass");
-  internal::AddInstantiation(py_template, py_class, param);
+  (void)py_class;
+  (void)param;
+  (void)scope;
+  (void)name;
+  py::object py_template = py::none();// =
+      // internal::GetOrInitTemplate(scope, name, "TemplateClass");
+  // internal::AddInstantiation(py_template, py_class, param);
   return py_template;
 }
 
