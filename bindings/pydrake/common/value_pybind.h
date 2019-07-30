@@ -28,7 +28,8 @@ py::class_<Class, drake::AbstractValue> AddValueInstantiation(
       scope, TemporaryClassName<Class>().c_str());
   // Register instantiation.
   py::module py_framework = py::module::import("pydrake.systems.framework");
-  AddTemplateClass(py_framework, "Value", py_class, GetPyParam<T>());
+  py::print(py_framework);
+  // AddTemplateClass(py_framework, "Value", py_class, GetPyParam<T>());
   // Only use copy (clone) construction.
   // Ownership with `unique_ptr<T>` has some annoying caveats, and some are
   // simplified by always copying.
