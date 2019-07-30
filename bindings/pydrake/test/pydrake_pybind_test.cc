@@ -1,5 +1,5 @@
 /// @file
-/// Test helper macros in `pydrake_pybind_test`.
+/// Test binding helper methods in `pydrake_pybind_test`.
 #include "drake/bindings/pydrake/pydrake_pybind.h"
 
 #include <string>
@@ -7,45 +7,55 @@
 #include <gtest/gtest.h>
 #include "pybind11/embed.h"
 #include "pybind11/eval.h"
+#include "pybind11/operators.h"
 #include "pybind11/pybind11.h"
+
+#include "drake/bindings/pydrake/test/test_util_pybind.h"
 
 namespace drake {
 namespace pydrake {
 namespace {
 
-void PyExpectTrue(py::handle scope, const char* expr) {
-  py::globals().attr("update")(scope);
-  const bool value = py::eval(expr, scope).cast<bool>();
+void PyExpectTrue(py::module m, const char* expr) {
+  const bool value =
+      py::eval(expr, py::globals(), m.attr("__dict__")).cast<bool>();
   EXPECT_TRUE(value) << expr;
 }
 
 struct TestCopyAndDeepCopy {
   TestCopyAndDeepCopy(const TestCopyAndDeepCopy&) = default;
   int value{};
-  bool operator==(const TestCopyAndDeepCop& other) const {
+  bool operator==(const TestCopyAndDeepCopy& other) const {
     return value == other.value;
   }
 };
 
-GTEST_TEST(PydrakePybindTest, DefCopyAndDeepCopy) {  
-  py::dict locals;
-  py::class_<TestCopyAndDeepCopy> cls(locals, "TestCopyAndDeepCopy");
-  cls  // BR
-      .def(py::init([](int value) { return TestCopyAndDeepCopy{value}; }));
-      .def(py::self == py::self);
-  DefCopyAndDeepCopy(&cls);
+GTEST_TEST(PydrakePybindTest, DefCopyAndDeepCopy) {
+  py::module m("test");
+  {
+    using Class = TestCopyAndDeepCopy;
+    py::class_<Class> cls(m, "TestCopyAndDeepCopy");
+    cls  // BR
+        .def(py::init([](int value) { return Class{value}; }))
+        .def(py::self == py::self);
+    DefCopyAndDeepCopy(&cls);
+  }
 
-  PyExpectTrue(locals, "check_copy(copy.copy, TestCopyAndDeepCopy(10))");
-  PyExpectTrue(locals, "check_copy(copy.deepcopy, TestCopyAndDeepCopy(20))");
+  PyExpectTrue(m, "check_copy(copy.copy, TestCopyAndDeepCopy(10))");
+  PyExpectTrue(m, "check_copy(copy.deepcopy, TestCopyAndDeepCopy(20))");
 }
 
 class TestClone {
  public:
-  TestClone(int value) : value_(value) {}
+  explicit TestClone(int value) : value_(value) {}
   TestClone(TestClone&&) = delete;
 
-  std::unique_ptr<TestClone> Clone() {
+  std::unique_ptr<TestClone> Clone() const {
     return std::unique_ptr<TestClone>(new TestClone(*this));
+  }
+
+  bool operator==(const TestClone& other) const {
+    return value_ == other.value_;
   }
 
  private:
@@ -54,37 +64,42 @@ class TestClone {
 };
 
 GTEST_TEST(PydrakePybindTest, DefClone) {
-  py::dict locals;
-  py::class_<TestClone> cls(locals, "TestClone");
-  cls  // BR
-      .def(py::init<double>())
-      .def(py::self == py::self);
-  DefClone(&cls);
+  py::module m("test");
+  {
+    using Class = TestClone;
+    py::class_<Class> cls(m, "TestClone");
+    cls  // BR
+        .def(py::init<double>())
+        .def(py::self == py::self);
+    DefClone(&cls);
+  }
 
-  PyExpectTrue(locals, "check_copy(TestClone.Clone, TestClone(5))");
-  PyExpectTrue(locals, "check_copy(copy.copy, TestClone(10))");
-  PyExpectTrue(locals, "check_copy(copy.deepcopy, TestClone(20))");
+  PyExpectTrue(m, "check_copy(TestClone.Clone, TestClone(5))");
+  PyExpectTrue(m, "check_copy(copy.copy, TestClone(10))");
+  PyExpectTrue(m, "check_copy(copy.deepcopy, TestClone(20))");
 }
 
+struct TestParamInit {
+  int a{0};
+  int b{1};
+};
+
 GTEST_TEST(PydrakePybindTest, ParamInit) {
-  struct Param {
-    int a{0};
-    int b{1};
-  };
+  py::module m("test");
+  {
+    using Class = TestParamInit;
+    py::class_<Class>(m, "TestParamInit")
+        .def(ParamInit<Class>())
+        .def_readwrite("a", &Class::a)
+        .def_readwrite("b", &Class::b)
+        .def("as_tuple",
+            [](const Class& self) { return py::make_tuple(self.a, self.b); });
+  }
 
-  py::dict locals;
-  py::class_<Param>(locals, "Param")
-      .def(ParamInit<Param>())
-      .def_readwrite("a", &Param::a)
-      .def_readwrite("b", &Param::b);
-      .def("as_tuple", [](const Param& self) {
-        return py::make_tuple(self.a, self.b);
-      });
-
-  PyExpectTrue(locals, "Param().as_tuple() == (0, 1)");
-  PyExpectTrue(locals, "Param(a=10).as_tuple() == (10, 1)");
-  PyExpectTrue(locals, "Param(b=20).as_tuple() == (10, 20)");
-  PyExpectTrue(locals, "Param(a=10, b=20).as_tuple() == (10, 20)");
+  PyExpectTrue(m, "TestParamInit().as_tuple() == (0, 1)");
+  PyExpectTrue(m, "TestParamInit(a=10).as_tuple() == (10, 1)");
+  PyExpectTrue(m, "TestParamInit(b=20).as_tuple() == (0, 20)");
+  PyExpectTrue(m, "TestParamInit(a=10, b=20).as_tuple() == (10, 20)");
 }
 
 int DoMain(int argc, char** argv) {
@@ -97,6 +112,7 @@ int DoMain(int argc, char** argv) {
   py::module m("pydrake.test.pydrake_pybind_test");
   // Test coverage and use this method.
   ExecuteExtraPythonCode(m);
+  test::SynchronizeGlobalsForPython3(m);
   return RUN_ALL_TESTS();
 }
 

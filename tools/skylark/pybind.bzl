@@ -243,7 +243,8 @@ def drake_pybind_cc_googletest(
         cc_deps = [],
         args = [],
         visibility = None,
-        tags = []):
+        tags = [],
+        data = []):
     """Defines a C++ test (using `pybind`) which has access to Python
     libraries. """
     cc_name = name + "_cc"
@@ -252,6 +253,7 @@ def drake_pybind_cc_googletest(
     drake_cc_googletest(
         name = cc_name,
         srcs = cc_srcs,
+        data = data,
         deps = cc_deps + [
             "//:drake_shared_library",
             "//bindings/pydrake:pydrake_pybind",
