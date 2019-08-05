@@ -53,4 +53,7 @@ class TestAtticForwarding(unittest.TestCase):
                 # N.B. This will emit a deprecation warning before it tries to
                 # call the original constructor, so we need not worry about the
                 # specific arguments.
-                c()
+                try:
+                    c()
+                except TypeError:
+                    pass

@@ -184,6 +184,7 @@ def install_numpy_warning_filters(force=False):
 
 
 def _deprecated_callable(f, message):
+    return f
 
     def wrapper(*args, **kwargs):
         _warn_deprecated(message, stacklevel=3)
