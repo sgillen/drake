@@ -141,8 +141,7 @@ from {module} import *
 
 _warn_deprecated(
     "This module is deprecated and will be removed on or around "
-    "{deprecation_removal_date}. Please use '{module}' instead.",
-    stacklevel=3)
+    "{deprecation_removal_date}. Please use '{module}' instead.")
 '''
 
 def _strip_py_suffix(label):
