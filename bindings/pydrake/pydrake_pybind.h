@@ -98,6 +98,7 @@ inline void ExecuteExtraPythonCode(py::module m) {
   {                                                                       \
     static py::handle variable##_original;                                \
     if (variable##_original) {                                            \
+      variable##_original.inc_ref(); \
       variable = py::reinterpret_borrow<py::module>(variable##_original); \
       return;                                                             \
     } else {                                                              \
