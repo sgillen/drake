@@ -1,0 +1,3 @@
+# DNM: Use Debug.
+build --python_path=/usr/bin/python3-dbg
+build --action_env=DRAKE_PYTHON_BIN_PATH=/usr/bin/python3-dbg
