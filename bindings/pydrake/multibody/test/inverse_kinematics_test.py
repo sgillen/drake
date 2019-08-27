@@ -302,12 +302,12 @@ class TestInverseKinematics(unittest.TestCase):
 
             # ERIC: PTAL: I need to create a geometry_pair.
             # DistanceConstraint
-            #  p_BQ = np.array([0.2, 0.3, 0.5])
-            #  distance_constraint = ik.DistanceConstraint(
-            #          plant=d["plant"],
-            #          geometry_pair=p_BQ,
-            #          plant_context=d["context"], distance_lower=0.1,
-            #          distance_upper=2)
+            p_BQ = np.array([0.2, 0.3, 0.5])
+            distance_constraint = ik.DistanceConstraint(
+                     plant=d["plant"],
+                     geometry_pair=p_BQ,
+                     plant_context=d["context"], distance_lower=0.1,
+                     distance_upper=2)
 
             # GazeTargetConstraint
             p_AS = np.array([0.1, 0.2, 0.3])
