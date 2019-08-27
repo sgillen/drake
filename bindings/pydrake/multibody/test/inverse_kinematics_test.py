@@ -300,12 +300,14 @@ class TestInverseKinematics(unittest.TestCase):
                     angle_between_vectors_constraint,
                     ik.AngleBetweenVectorsConstraint)
 
+            # ERIC: PTAL: I need to create a geometry_pair.
             # DistanceConstraint
-            #  distance_constraint = \
-            #          ik.DistanceConstraint(plant=d["plant"],
-            # geometry_pair=p_BQ,
-            #                  plant_context=d["context"], distance_lower=0.1,
-            #                  distance_upper=2)
+            #  p_BQ = np.array([0.2, 0.3, 0.5])
+            #  distance_constraint = ik.DistanceConstraint(
+            #          plant=d["plant"],
+            #          geometry_pair=p_BQ,
+            #          plant_context=d["context"], distance_lower=0.1,
+            #          distance_upper=2)
 
             # GazeTargetConstraint
             p_AS = np.array([0.1, 0.2, 0.3])
@@ -321,11 +323,41 @@ class TestInverseKinematics(unittest.TestCase):
                         context=d["context"])
             isinstance(gaze_target_constraint, ik.GazeTargetConstraint)
 
+            # ERIC: PTAL: This is failing for AutoDiffXd with the following
+            # message:
+            # https://gist.github.com/m-chaturvedi/b9545a6e7bbaf7050932415c42d3c525
             # MinimumDistanceConstraint
             #  min_distance = 0.1
             #  minimum_distance_constraint = ik.MinimumDistanceConstraint(
-            #          plant=d["plant"],
-            #          minimum_distance=min_distance,
-            #          plant_context=d["context"])
+            #      plant=d["plant"],
+            #      minimum_distance=min_distance,
+            #      plant_context=d["context"])
             #  isinstance(minimum_distance_constraint,
-            # ik.MinimumDistanceConstraint)
+            #  ik.MinimumDistanceConstraint)
+
+            # PositionConstraint
+            p_BQ = np.array([0.2, 0.3, 0.5])
+            p_AQ_lower = np.array([-0.1, -0.2, -0.3])
+            p_AQ_upper = np.array([-0.05, -0.12, -0.28])
+
+            position_constraint = ik.PositionConstraint(
+                    plant=d["plant"],
+                    frameA=d["frameA"], p_AQ_lower=p_AQ_lower,
+                    p_AQ_upper=p_AQ_upper, frameB=d["frameB"],
+                    p_BQ=p_BQ, context=d["context"])
+            isinstance(position_constraint, ik.GazeTargetConstraint)
+
+            # OrientationConstraint
+            theta_bound = 0.2 * math.pi
+            R_AbarA = RotationMatrix(quaternion=Quaternion(
+                0.5, -0.5, 0.5, 0.5))
+            R_BbarB = RotationMatrix(
+                    quaternion=Quaternion(1.0 / 3, 2.0 / 3, 0, 2.0 / 3))
+
+            orientation_constraint = ik.OrientationConstraint(
+                    plant=d["plant"],
+                    frameAbar=d["frameA"], R_AbarA=R_AbarA,
+                    frameBbar=d["frameB"], R_BbarB=R_BbarB,
+                    theta_bound=theta_bound, context=d["context"])
+
+            isinstance(orientation_constraint, ik.OrientationConstraint)

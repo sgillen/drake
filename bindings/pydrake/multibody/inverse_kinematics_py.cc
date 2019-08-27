@@ -173,7 +173,8 @@ void DoScalarIndependentDefinitions(py::module m) {
               penalty_function, influence_distance_offset);
         }),
             py::arg("plant"), py::arg("minimum_distance"),
-            py::arg("plant_context"), py::arg("penalty_function") = {},
+            py::arg("plant_context"),
+            py::arg("penalty_function") = MinimumDistancePenaltyFunction{},
             py::arg("influence_distance_offset") = 1,
             // Keep alive, reference: `this` keeps `plant` alive.
             py::keep_alive<1, 2>(),
@@ -186,15 +187,16 @@ void DoScalarIndependentDefinitions(py::module m) {
                  [](const multibody::MultibodyPlant<AutoDiffXd>* const plant,
                      double minimum_distance,
                      systems::Context<AutoDiffXd>* plant_context,
-                     MinimumDistancePenaltyFunction penalty_function = {},
-                     double influence_distance_offset = 1) {
+                     MinimumDistancePenaltyFunction penalty_function,
+                     double influence_distance_offset) {
                    return std::make_unique<Class>(plant, minimum_distance,
                        plant_context, penalty_function,
                        influence_distance_offset);
                  }),
             py::arg("plant"), py::arg("minimum_distance"),
-            py::arg("plant_context"), py::arg("penalty_function"),
-            py::arg("influence_distance_offset"),
+            py::arg("plant_context"),
+            py::arg("penalty_function") = MinimumDistancePenaltyFunction{},
+            py::arg("influence_distance_offset") = 1,
             // Keep alive, reference: `this` keeps `plant` alive.
             py::keep_alive<1, 2>(),
             // Keep alive, reference: `this` keeps `context` alive.
