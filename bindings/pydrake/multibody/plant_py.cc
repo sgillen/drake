@@ -619,10 +619,8 @@ void DoScalarDependentDefinitions(py::module m, T) {
             py::arg("body_index"), py_reference_internal,
             cls_doc.GetBodyFrameIdIfExists.doc)
         .def("GetCollisionGeometriesForBody",
-            &Class::GetCollisionGeometriesForBody,
-            py::arg("body"),
+            &Class::GetCollisionGeometriesForBody, py::arg("body"),
             cls_doc.GetCollisionGeometriesForBody.doc);
-        ;
     // Port accessors.
     cls  // BR
         .def("get_actuation_input_port",

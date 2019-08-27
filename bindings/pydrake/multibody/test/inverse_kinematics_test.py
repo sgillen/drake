@@ -6,22 +6,15 @@ import math
 import unittest
 
 import numpy as np
-from numpy.linalg import norm
 
 from pydrake.common import FindResourceOrThrow
 from pydrake.common.eigen_geometry import Quaternion
 from pydrake.math import RigidTransform, RotationMatrix
+from pydrake.multibody.parsing import Parser
 from pydrake.multibody.plant import (
     MultibodyPlant, AddMultibodyPlantSceneGraph)
-from pydrake.multibody.plant import MultibodyPlant_
-
-from pydrake.multibody.plant import MultibodyPlant_ as mbp
-from pydrake.multibody.parsing import Parser
 import pydrake.solvers.mathematicalprogram as mp
 from pydrake.systems.framework import DiagramBuilder
-from pydrake.systems.framework import DiagramBuilder_
-import pydrake.common.test_utilities.numpy_compare as numpy_compare
-from pydrake.autodiffutils import AutoDiffXd
 
 # TODO(eric.cousineau): Replace manual coordinate indexing with more semantic
 # operations (`CalcRelativeTransform`, `SetFreeBodyPose`).
@@ -244,7 +237,8 @@ class TestInverseKinematics(unittest.TestCase):
 
         def get_min_distance_actual():
             X = partial(self.plant.CalcRelativeTransform, context)
-            distance = norm(X(W, B1).translation() - X(W, B2).translation())
+            distance = np.linalg.norm(
+                X(W, B1).translation() - X(W, B2).translation())
             return distance - radius1 - radius2
 
         self.assertLess(get_min_distance_actual(), min_distance - tol)

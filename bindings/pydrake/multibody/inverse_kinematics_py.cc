@@ -17,7 +17,6 @@ namespace drake {
 namespace pydrake {
 namespace {
 
-using std::shared_ptr;
 using solvers::Constraint;
 
 PYBIND11_MODULE(inverse_kinematics, m) {
@@ -27,7 +26,7 @@ PYBIND11_MODULE(inverse_kinematics, m) {
 
   m.doc() = "InverseKinematics module";
 
-  py::module::import("pydrake.math");  
+  py::module::import("pydrake.math");
   py::module::import("pydrake.multibody.plant");
   py::module::import("pydrake.solvers.mathematicalprogram");
 
