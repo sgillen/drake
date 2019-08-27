@@ -12,11 +12,13 @@ from pydrake.common.eigen_geometry import Quaternion
 from pydrake.math import RigidTransform, RotationMatrix
 from pydrake.multibody.plant import (
     MultibodyPlant, AddMultibodyPlantSceneGraph)
+from pydrake.multibody.plant import MultibodyPlant_
 
 from pydrake.multibody.plant import MultibodyPlant_ as mbp
 from pydrake.multibody.parsing import Parser
 import pydrake.solvers.mathematicalprogram as mp
 from pydrake.systems.framework import DiagramBuilder
+from pydrake.systems.framework import DiagramBuilder_
 import pydrake.common.test_utilities.numpy_compare as numpy_compare
 from pydrake.autodiffutils import AutoDiffXd
 
@@ -29,12 +31,12 @@ class TestInverseKinematics(unittest.TestCase):
     This test reflects inverse_kinematics_test.cc
     """
     def setUp(self):
-        file_name = FindResourceOrThrow(
-            "drake/bindings/pydrake/multibody/test/two_bodies.sdf")
+        self.file_name = FindResourceOrThrow(
+                "drake/bindings/pydrake/multibody/test/two_bodies.sdf")
         builder = DiagramBuilder()
         self.plant, _ = AddMultibodyPlantSceneGraph(
             builder, MultibodyPlant(time_step=0.01))
-        _ = Parser(self.plant).AddModelFromFile(file_name)
+        _ = Parser(self.plant).AddModelFromFile(self.file_name)
         self.plant.Finalize()
         self.diagram = builder.Build()
         self.diagram_context = self.diagram.CreateDefaultContext()
@@ -256,3 +258,74 @@ class TestInverseKinematics(unittest.TestCase):
         result = mp.Solve(self.prog)
         self.assertTrue(result.is_success())
         self.assertTrue(np.allclose(result.GetSolution(ik.q()), q_val))
+
+    def get_variables_by_type(self, T):
+        ret = {}
+        plant_ad = self.plant.ToAutoDiffXd()
+        context_ad = plant_ad.CreateDefaultContext()
+        body1_frame_ad = plant_ad.GetBodyByName("body1").body_frame()
+        body2_frame_ad = plant_ad.GetBodyByName("body2").body_frame()
+
+        assert(T == float or T == AutoDiffXd)
+        if T == float:
+            ret["plant"] = self.plant
+            ret["frameA"] = self.body1_frame
+            ret["frameB"] = self.body2_frame
+            ret["context"] = self.plant_context
+        elif T == AutoDiffXd:
+            ret["plant"] = plant_ad
+            ret["frameA"] = body1_frame_ad
+            ret["frameB"] = body2_frame_ad
+            ret["context"] = context_ad
+        return ret
+
+    def test_constraints(self):
+        dict_float = self.get_variables_by_type(float)
+        dict_ad = self.get_variables_by_type(AutoDiffXd)
+
+        for d in [dict_float, dict_ad]:
+            # AngleBetweenVectorsConstraint
+            na_A = np.array([0.2, -0.4, 0.9])
+            nb_B = np.array([1.4, -0.1, 1.8])
+            angle_lower = 0.2 * math.pi
+            angle_upper = 0.2 * math.pi
+
+            angle_between_vectors_constraint = \
+                ik.AngleBetweenVectorsConstraint(
+                            plant=d["plant"], frameA=d["frameA"],
+                            a_A=na_A, frameB=d["frameB"], b_B=nb_B,
+                            angle_lower=angle_lower, angle_upper=angle_upper,
+                            context=d["context"])
+            isinstance(
+                    angle_between_vectors_constraint,
+                    ik.AngleBetweenVectorsConstraint)
+
+            # DistanceConstraint
+            #  distance_constraint = \
+            #          ik.DistanceConstraint(plant=d["plant"],
+            # geometry_pair=p_BQ,
+            #                  plant_context=d["context"], distance_lower=0.1,
+            #                  distance_upper=2)
+
+            # GazeTargetConstraint
+            p_AS = np.array([0.1, 0.2, 0.3])
+            n_A = np.array([0.3, 0.5, 1.2])
+            p_BT = np.array([1.1, 0.2, 1.5])
+            cone_half_angle = 0.2 * math.pi
+            gaze_target_constraint = \
+                ik.GazeTargetConstraint(
+                        plant=d["plant"],
+                        frameA=d["frameA"], p_AS=p_AS, n_A=n_A,
+                        frameB=d["frameB"], p_BT=p_BT,
+                        cone_half_angle=cone_half_angle,
+                        context=d["context"])
+            isinstance(gaze_target_constraint, ik.GazeTargetConstraint)
+
+            # MinimumDistanceConstraint
+            #  min_distance = 0.1
+            #  minimum_distance_constraint = ik.MinimumDistanceConstraint(
+            #          plant=d["plant"],
+            #          minimum_distance=min_distance,
+            #          plant_context=d["context"])
+            #  isinstance(minimum_distance_constraint,
+            # ik.MinimumDistanceConstraint)
