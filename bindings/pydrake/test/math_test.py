@@ -111,6 +111,11 @@ class TestMath(unittest.TestCase):
             self.assertIsInstance(value.cast[U](), template[U], U)
 
     def check_pickle(self, T, input, value_to_compare):
+        if six.PY2:
+            # Pickling explicitly disabled in Python 2.
+            with self.assertRaises(RuntimeError) as cm:
+                pickle.dump(input, BytesIO())
+            return
         if T == Expression:
             # Pickling not enabled for Expression.
             return

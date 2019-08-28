@@ -140,5 +140,29 @@ inline void ExecuteExtraPythonCode(py::module m) {
   { (void)variable; }
 #endif  // PY_MAJOR_VERSION >= 3
 
+// TODO(eric.cousineau): Remove this once Python 2 is gone, and inline
+// `.def(py::pickle(...))` calls.
+/// Define pickling routines, disabling pickling in Python 2.
+template <typename PyClass, typename... Args>
+void DefPickle(PyClass* ppy_class, Args&&... args) {
+  using Class = typename PyClass::type;
+#if PY_MAJOR_VERSION >= 3
+  ppy_class->def(py::pickle(std::forward<Args>(args)...));
+#else
+  (void)(sizeof...(args));
+  // In Python 2, copy_reg._reduce_ex (used for `get_state`) uses
+  // `s = getstate(); if s: ...`, which tries to call `__bool__` which
+  // does not work with NumPy arrays. This could be wrapped with a tuple, but
+  // still causes segfaults in Python 2. Since Python 2 support will soon be
+  // removed, we simply disable pickling.
+  constexpr char msg[] =
+      "Pickling in pydrake is disabled in Python 2. See the documentation of "
+      "`DefPickle` in `pydrake_pybind.h` for more information.";
+  ppy_class->def(py::pickle(
+    [](const Class&) -> py::object { throw std::runtime_error(msg); },
+    [](py::object) -> Class { throw std::runtime_error(msg); }));
+#endif
+}
+
 }  // namespace pydrake
 }  // namespace drake

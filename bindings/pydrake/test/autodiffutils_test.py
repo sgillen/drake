@@ -12,6 +12,8 @@ from pydrake.autodiffutils import (
 )
 
 import copy
+from io import BytesIO
+import pickle
 import unittest
 
 import numpy as np
