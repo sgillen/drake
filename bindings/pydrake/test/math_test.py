@@ -115,7 +115,7 @@ class TestMath(unittest.TestCase):
             return
 
         # HACK: numpy array?
-        x = np.array([1, 2, 3])
+        x = np.array([1, 2, 3], dtype=float)
         g = BytesIO()
         pickle.dump(x, g)
         g.seek(0)

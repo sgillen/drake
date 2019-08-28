@@ -139,9 +139,15 @@ void DoScalarDependentDefinitions(py::module m, T) {
         .def("linear", &RigidTransform<T>::linear, py_reference_internal,
             doc_rigid_transform_linear_matrix_deprecation)
         .def(py::pickle(
-            [](const Class& self) { return self.GetAsMatrix34(); },
-            [](const Eigen::Matrix<T, 3, 4>& matrix) {
-              return Class(matrix);
+            [](const Class& self) {
+              // N.B. Due to Python 2's pickle using `if dict:`, we must wrap
+              // this in a tuple so that we do not get the error "The truth
+              // "value of an array with more than one element is ambiguous".
+              return py::make_tuple(self.GetAsMatrix34());
+            },
+            [](py::tuple t) {
+              DRAKE_THROW_UNLESS(t.size() == 1);
+              return Class(t[0].cast<Eigen::Matrix<T, 3, 4>>());
             }));
     cls.attr("__matmul__") = cls.attr("multiply");
     DefCopyAndDeepCopy(&cls);
@@ -208,8 +214,14 @@ void DoScalarDependentDefinitions(py::module m, T) {
             overload_cast_explicit<Eigen::Quaternion<T>>(&Class::ToQuaternion),
             cls_doc.ToQuaternion.doc_0args)
         .def(py::pickle(
-            [](const Class& self) { return self.matrix(); },
-            [](const Matrix3<T>& matrix) { return Class(matrix); }));
+            [](const Class& self) {
+              // See note in RigidTransform pickling.
+              return py::make_tuple(self.matrix());
+            },
+            [](py::tuple t) {
+              DRAKE_THROW_UNLESS(t.size() == 1);
+              return Class(t[0].cast<Matrix3<T>>());
+            }));
     cls.attr("__matmul__") = cls.attr("multiply");
     DefCopyAndDeepCopy(&cls);
     DefCast<T>(&cls, cls_doc.cast.doc);
@@ -264,8 +276,14 @@ void DoScalarDependentDefinitions(py::module m, T) {
             py::arg("alpha_AD_D"),
             cls_doc.CalcRpyDDtFromAngularAccelInChild.doc)
         .def(py::pickle(
-            [](const Class& self) { return self.vector(); },
-            [](const Vector3<T>& rpy) { return Class(rpy); }));
+            [](const Class& self) {
+              // See note in RigidTransform pickling.
+              return py::make_tuple(self.vector());
+            },
+            [](py::tuple t) {
+              DRAKE_THROW_UNLESS(t.size() == 1);
+              return Class(t[0].cast<Vector3<T>>());
+            }));
     DefCopyAndDeepCopy(&cls);
     // N.B. `RollPitchYaw::cast` is not defined in C++.
   }
