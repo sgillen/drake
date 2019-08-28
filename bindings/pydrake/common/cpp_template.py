@@ -318,8 +318,8 @@ class TemplateClass(TemplateBase):
             cls.__qualname__ = cls.__name__
             cls.__module__ = self._module_name
             # m = sys.modules[self._module_name]
-            import pydrake.math as m
-            setattr(m, cls.__name__, cls)
+            # import pydrake.math as m
+            # setattr(m, cls.__name__, cls)
         return cls
 
     def is_subclass_of_instantiation(self, obj):
@@ -422,3 +422,38 @@ class TemplateMethod(TemplateBase):
         def __str__(self):
             return '<bound TemplateMethod {} of {}>'.format(
                 self._tpl._full_name(), self._obj)
+
+
+import pickle
+
+def _find_template(original, module_name, name):
+    if "[" not in name:
+        return original(module, name)
+    import imp
+    module = imp.find_module(module_name)
+    index = name.index("[")
+    template_name = name[:index]
+    template = getattr(module, template_name)
+    for param in template.param_list:
+        inst = template[param]
+        if inst.__name__ == name:
+            return inst
+    assert False
+
+
+class _Unpickler(pickle.Unpickler):
+    def find_class(self, module, name):
+        return _find_template(super().find_class, module, name)
+
+
+def _patch_pickle_load():
+    original = getattr(pickle, "_load_original", None)
+    if original is None:
+        print("PATCHED")
+        original = pickle.load
+
+        def new_load(*args, **kwargs):
+            return _Unpickler(*args, **kwargs).load()
+
+        pickle.load = new_load
+        pickle._load_orignial = original

@@ -113,6 +113,8 @@ class TestMath(unittest.TestCase):
         if T == Expression:
             # Pickling not enabled for Expression.
             return
+        import pydrake.common.cpp_template as hack
+        hack._patch_pickle_load()
         f = BytesIO()
         pickle.dump(input, f)
         f.seek(0)
