@@ -139,16 +139,16 @@ void DoScalarDependentDefinitions(py::module m, T) {
         .def("linear", &RigidTransform<T>::linear, py_reference_internal,
             doc_rigid_transform_linear_matrix_deprecation)
         .def(py::pickle(
-            [](const Class& self) {
+            [](const Class&) {
               // N.B. Due to Python 2's pickle using `if dict:`, we must wrap
               // this in a tuple so that we do not get the error "The truth
               // "value of an array with more than one element is ambiguous".
-              return py::make_tuple(self.GetAsMatrix34());
+              return py::make_tuple(); //self.GetAsMatrix34());
             },
             [](py::tuple t) {
-              DRAKE_THROW_UNLESS(t.size() == 1);
+              // DRAKE_THROW_UNLESS(t.size() == 1);
               py::print(t);
-              return Class(t[0].cast<Eigen::Matrix<T, 3, 4>>());
+              return Class(); //t[0].cast<Eigen::Matrix<T, 3, 4>>());
             }));
     cls.attr("__matmul__") = cls.attr("multiply");
     DefCopyAndDeepCopy(&cls);
