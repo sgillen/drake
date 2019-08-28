@@ -145,10 +145,10 @@ inline void ExecuteExtraPythonCode(py::module m) {
 /// Define pickling routines, disabling pickling in Python 2.
 template <typename PyClass, typename... Args>
 void DefPickle(PyClass* ppy_class, Args&&... args) {
-  using Class = typename PyClass::type;
 #if PY_MAJOR_VERSION >= 3
   ppy_class->def(py::pickle(std::forward<Args>(args)...));
 #else
+  using Class = typename PyClass::type;
   (void)(sizeof...(args));
   // In Python 2, copy_reg._reduce_ex (used for `get_state`) uses
   // `s = getstate(); if s: ...`, which tries to call `__bool__` which
