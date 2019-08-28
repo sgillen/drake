@@ -8,9 +8,9 @@ import types
 from pydrake.common.cpp_param import get_param_names, get_param_canonical
 
 
-def _get_module_name_from_stack(frame=2):
+def _get_module_from_stack(frame=2):
     # Infers module name from call stack.
-    return inspect.getmodule(inspect.stack()[frame][0]).__name__
+    return inspect.getmodule(inspect.stack()[frame][0])
 
 
 def _is_pybind11_type_error(e):
@@ -38,11 +38,7 @@ def get_or_init(scope, name, template_cls, *args, **kwargs):
     """
     template = getattr(scope, name, None)
     if template is None:
-        if isinstance(scope, type):
-            module_name = scope.__module__
-        else:
-            module_name = scope.__name__
-        template = template_cls(name, *args, module_name=module_name, **kwargs)
+        template = template_cls(name, *args, scope=scope, **kwargs)
         setattr(scope, name, template)
     return template
 
@@ -51,22 +47,22 @@ class TemplateBase(object):
     """Provides a mechanism to map parameters (types or literals) to
     instantiations, following C++ mechanics.
     """
-    def __init__(self, name, allow_default=True, module_name=None):
+    def __init__(self, name, allow_default=True, scope=None):
         """
         Args:
             name: Name of the template object.
             allow_default: Allow a default value (None) to resolve to the
                 parameters of the instantiation that was first added.
-            module_name: Parent module for the template object.
+            scope: Parent scope for the template object.
         """
         self.name = name
         self.param_list = []
         self._allow_default = allow_default
         self._instantiation_map = {}
         self._instantiation_alias_map = {}
-        if module_name is None:
-            module_name = _get_module_name_from_stack()
-        self._module_name = module_name
+        if scope is None:
+            scope = _get_module_from_stack()
+        self._scope = scope
         self._instantiation_func = None
         self.__doc__ = ""
 
@@ -246,7 +242,7 @@ class TemplateBase(object):
         return '{}[{}]'.format(self.name, ', '.join(names))
 
     def _full_name(self):
-        return "{}.{}".format(self._module_name, self.name)
+        return "{}.{}".format(self._scope.__name__, self.name)
 
     def __str__(self):
         cls_name = type(self).__name__
@@ -298,10 +294,10 @@ class TemplateBase(object):
 
 class TemplateClass(TemplateBase):
     """Extension of `TemplateBase` for classes."""
-    def __init__(self, name, override_meta=True, module_name=None, **kwargs):
-        if module_name is None:
-            module_name = _get_module_name_from_stack()
-        TemplateBase.__init__(self, name, module_name=module_name, **kwargs)
+    def __init__(self, name, override_meta=True, scope=None, **kwargs):
+        if scope is None:
+            scope = _get_module_from_stack()
+        TemplateBase.__init__(self, name, scope=scope, **kwargs)
         self._override_meta = override_meta
 
     def _on_add(self, param, cls):
@@ -316,10 +312,9 @@ class TemplateClass(TemplateBase):
             # TODO(eric.cousineau): When porting to Python3 / six, try to
             # ensure this handles nesting.
             cls.__qualname__ = cls.__name__
-            cls.__module__ = self._module_name
-            # m = sys.modules[self._module_name]
-            # import pydrake.math as m
-            # setattr(m, cls.__name__, cls)
+            cls.__module__ = self._scope.__name__
+            # Ensure instantiation is available for pickling... magically...
+            setattr(self._scope, cls.__name__, cls)
         return cls
 
     def is_subclass_of_instantiation(self, obj):
@@ -335,7 +330,11 @@ class TemplateClass(TemplateBase):
         return None
 
 
-def _rename_callable(f, module, name, cls=None):
+def _rename_callable(f, scope, name, cls=None):
+    if isinstance(scope, type):
+        module = scope.__module__
+    else:
+        module = scope.__name__
     # Renames a function.
     if (f.__module__, f.__name__) == (module, name):
         # Short circuit.
@@ -357,11 +356,9 @@ def _rename_callable(f, module, name, cls=None):
         f.__name__ = name
         f.__qualname__ = qualname
         f.__doc__ = orig.__doc__
-        f._original_name = orig.__name__
         if cls and six.PY2:
             f = types.MethodType(f, None, cls)
     else:
-        f._original_name = f.__name__
         f.__module__ = module
         f.__name__ = name
         f.__qualname__ = qualname
@@ -372,21 +369,21 @@ class TemplateFunction(TemplateBase):
     """Extension of `TemplateBase` for functions."""
     def _on_add(self, param, func):
         func = _rename_callable(
-            func, self._module_name, self._instantiation_name(param))
+            func, self._scope, self._instantiation_name(param))
         return func
 
 
 class TemplateMethod(TemplateBase):
     """Extension of `TemplateBase` for class methods."""
-    def __init__(self, name, cls, module_name=None, **kwargs):
-        if module_name is None:
-            module_name = _get_module_name_from_stack()
-        TemplateBase.__init__(self, name, module_name=module_name, **kwargs)
+    def __init__(self, name, cls, scope=None, **kwargs):
+        if scope is None:
+            scope = _get_module_from_stack()
+        TemplateBase.__init__(self, name, scope=scope, **kwargs)
         self._cls = cls
 
     def _on_add(self, param, func):
         func = _rename_callable(
-            func, self._module_name, self._instantiation_name(param),
+            func, self._scope, self._instantiation_name(param),
             self._cls)
         return func
 
@@ -422,38 +419,3 @@ class TemplateMethod(TemplateBase):
         def __str__(self):
             return '<bound TemplateMethod {} of {}>'.format(
                 self._tpl._full_name(), self._obj)
-
-
-import pickle
-
-def _find_template(original, module_name, name):
-    if "[" not in name:
-        return original(module, name)
-    import imp
-    module = imp.find_module(module_name)
-    index = name.index("[")
-    template_name = name[:index]
-    template = getattr(module, template_name)
-    for param in template.param_list:
-        inst = template[param]
-        if inst.__name__ == name:
-            return inst
-    assert False
-
-
-class _Unpickler(pickle.Unpickler):
-    def find_class(self, module, name):
-        return _find_template(super().find_class, module, name)
-
-
-def _patch_pickle_load():
-    original = getattr(pickle, "_load_original", None)
-    if original is None:
-        print("PATCHED")
-        original = pickle.load
-
-        def new_load(*args, **kwargs):
-            return _Unpickler(*args, **kwargs).load()
-
-        pickle.load = new_load
-        pickle._load_orignial = original
