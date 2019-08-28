@@ -8,9 +8,6 @@ For guidance, see:
 
 # TODO(eric.cousineau): Fix for Sphinx >= 2.0.0 per comment in
 # `mac/.../requirements.txt`, most likely due to `IrregularExpression` hack.
-# TODO(eric.cousineau): How to document only protected methods?
-# e.g. `LeafSystem` only consists of private things to overload, but it's
-# important to be user-visible.
 
 from __future__ import print_function
 
@@ -26,11 +23,6 @@ from pydrake.common.cpp_template import TemplateBase
 from pydrake.common.deprecation import DrakeDeprecationWarning
 
 
-def rindex(s, sub):
-    """Reverse index of a substring."""
-    return len(s) - s[::-1].index(sub) - len(sub)
-
-
 def patch(obj, name, f):
     """Patch the method of a class."""
     original = getattr(obj, name)
@@ -39,87 +31,6 @@ def patch(obj, name, f):
         return f(original, *args, **kwargs)
 
     setattr(obj, name, method)
-
-
-def repair_naive_name_split(objpath):
-    """Rejoins any strings with braces that were naively split across '.'.
-    """
-    num_open = 0
-    out = []
-    cur = ''
-    for p in objpath:
-        num_open += p.count('[') - p.count(']')
-        assert num_open >= 0
-        if cur:
-            cur += '.'
-        cur += p
-        if num_open == 0:
-            out.append(cur)
-            cur = ''
-    assert len(cur) == 0, (objpath, cur, out)
-    return out
-
-
-class IrregularExpression(object):
-    """Provides analogous parsing to `autodoc.py_ext_sig_re` and
-    `pydoc.py_sig_re`, but permits nested parsing for class-like directives to
-    work with the munged names.
-
-    These are meant to be used to monkey-patch existing compiled regular
-    expressions.
-    """
-
-    FakeMatch = namedtuple('FakeMatch', 'groups')
-
-    py_sig_old = autodoc.py_ext_sig_re
-    py_sig = re.compile(
-        r'''^     (\w.*?) \s*               # symbol
-                  (?:
-                      \((.*)\)              # optional: arguments
-                      (?:\s* -> \s* (.*))?  # return annotation
-                  )? $
-              ''', re.VERBOSE)
-
-    def __init__(self, extended):
-        """
-        Args:
-            extended: For use in `autodoc` (returns explicit reST module name
-                scope).
-        """
-        self.extended = extended
-
-    def match(self, full):
-        """Tests if a string matches `full`. If not, returns None."""
-        m = self.py_sig.match(full)
-        if not m:
-            return None
-        symbol, arg, retann = m.groups()
-        # Heuristic to not try and match for docstring phrases. Any space
-        # should be balanced with a comma for the symbol.
-        if symbol.count(' ') > symbol.count(','):
-            return None
-        # Extract module name using a greedy match.
-        explicit_modname = None
-        if "::" in symbol:
-            pos = rindex(symbol, "::") + 2
-            explicit_modname = symbol[:pos]
-            symbol = symbol[pos:].strip()
-        # Extract {path...}.{base}, accounting for brackets.
-        if not symbol:
-            return
-        pieces = repair_naive_name_split(symbol.split('.'))
-        assert len(pieces) > 0, (symbol, pieces)
-        base = pieces[-1]
-        if len(pieces) > 1:
-            path = '.'.join(pieces[:-1]) + '.'
-        else:
-            path = None
-        if self.extended:
-            groups = (explicit_modname, path, base, arg, retann)
-        else:
-            assert explicit_modname is None
-            groups = (path, base, arg, retann)
-        return self.FakeMatch(lambda: groups)
 
 
 class TemplateDocumenter(autodoc.ModuleLevelDocumenter):
@@ -189,8 +100,7 @@ def tpl_attrgetter(obj, name, *defargs):
     """
     # N.B. Rather than try to evaluate parameters from the string, we instead
     # match based on instantiation name.
-    if "[" in name:
-        assert name.endswith(']'), name
+    if "__" in name and not name.endswith("__"):
         for param in obj.param_list:
             inst = obj[param]
             if inst.__name__ == name:
@@ -200,13 +110,6 @@ def tpl_attrgetter(obj, name, *defargs):
             param, obj.param_list,
             inst.__name__, name)
     return autodoc.safe_getattr(obj, name, *defargs)
-
-
-def patch_resolve_name(original, self, *args, **kwargs):
-    """Patches implementations of `resolve_name` to handle split across braces.
-    """
-    modname, objpath = original(self, *args, **kwargs)
-    return modname, repair_naive_name_split(objpath)
 
 
 def patch_class_add_directive_header(original, self, sig):
@@ -263,9 +166,4 @@ def setup(app):
     # Register autodocumentation for templates.
     app.add_autodoc_attrgetter(TemplateBase, tpl_attrgetter)
     app.add_autodocumenter(TemplateDocumenter)
-    # Hack regular expressions to make them irregular (nested).
-    autodoc.py_ext_sig_re = IrregularExpression(extended=True)
-    pydoc.py_sig_re = IrregularExpression(extended=False)
-    patch(autodoc.ClassLevelDocumenter, 'resolve_name', patch_resolve_name)
-    patch(autodoc.ModuleLevelDocumenter, 'resolve_name', patch_resolve_name)
     return dict(parallel_read_safe=True)
