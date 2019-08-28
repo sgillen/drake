@@ -109,6 +109,18 @@ class TestMath(unittest.TestCase):
         for U in U_list:
             self.assertIsInstance(value.cast[U](), template[U], U)
 
+    def check_pickle(self, T, input, value_to_compare):
+        if T == Expression:
+            # Pickling not enabled for Expression.
+            return
+        f = BytesIO()
+        pickle.dump(input, f)
+        f.seek(0)
+        output = pickle.load(f)
+        input_value = value_to_compare(input)
+        output_value = value_to_compare(output)
+        numpy_compare.assert_equal(input_value, output_value)
+
     @numpy_compare.check_all_types
     def test_rigid_transform(self, T):
         RigidTransform = mut.RigidTransform_[T]
@@ -187,13 +199,7 @@ class TestMath(unittest.TestCase):
         numpy_compare.assert_float_equal(
             X_AB.multiply(p_BoQ_B=p_BQlist), p_AQlist)
         # Test pickling.
-        if T != Expression:
-            f = BytesIO()
-            pickle.dump(X_AB, f)
-            f.seek(0)
-            X_AB_2 = pickle.load(f)
-            numpy_compare.assert_equal(
-                X_AB.GetAsMatrix4(), X_AB_2.GetAsMatrix4())
+        self.check_pickle(T, X_AB, RigidTransform.GetAsMatrix4)
 
     @numpy_compare.check_all_types
     def test_isometry_implicit(self, T):
