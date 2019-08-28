@@ -113,6 +113,16 @@ class TestMath(unittest.TestCase):
         if T == Expression:
             # Pickling not enabled for Expression.
             return
+
+        # HACK: numpy array?
+        x = np.array([1, 2, 3])
+        g = BytesIO()
+        pickle.dump(x, g)
+        g.seek(0)
+        y = pickle.load(g)
+        print(y)
+        numpy_compare.assert_equal(x, y)
+
         f = BytesIO()
         pickle.dump(input, f)
         f.seek(0)
