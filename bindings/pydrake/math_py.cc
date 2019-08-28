@@ -435,7 +435,7 @@ PYBIND11_MODULE(math, m) {
   py::module::import("pydrake.symbolic");
 
   type_visit([m](auto dummy) { DoScalarDependentDefinitions(m, dummy); },
-      CommonScalarPack{});
+      type_pack<double>{}); //CommonScalarPack{});
   DoScalarIndependentDefinitions(m);
 
   ExecuteExtraPythonCode(m);
