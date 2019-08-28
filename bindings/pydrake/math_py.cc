@@ -137,12 +137,7 @@ void DoScalarDependentDefinitions(py::module m, T) {
         .def("matrix", &RigidTransform<T>::matrix,
             doc_rigid_transform_linear_matrix_deprecation)
         .def("linear", &RigidTransform<T>::linear, py_reference_internal,
-            doc_rigid_transform_linear_matrix_deprecation)
-        .def(py::pickle(
-            [](const Class& self) { return self.GetAsMatrix34(); },
-            [](const Eigen::Matrix<T, 3, 4>& matrix) {
-              return Class(matrix);
-            }));
+            doc_rigid_transform_linear_matrix_deprecation);
     cls.attr("__matmul__") = cls.attr("multiply");
     DefCopyAndDeepCopy(&cls);
     DefCast<T>(&cls, cls_doc.cast.doc);
@@ -206,10 +201,7 @@ void DoScalarDependentDefinitions(py::module m, T) {
             py::arg("M"), cls_doc.ProjectToRotationMatrix.doc)
         .def("ToQuaternion",
             overload_cast_explicit<Eigen::Quaternion<T>>(&Class::ToQuaternion),
-            cls_doc.ToQuaternion.doc_0args)
-        .def(py::pickle(
-            [](const Class& self) { return self.matrix(); },
-            [](const Matrix3<T>& matrix) { return Class(matrix); }));
+            cls_doc.ToQuaternion.doc_0args);
     cls.attr("__matmul__") = cls.attr("multiply");
     DefCopyAndDeepCopy(&cls);
     DefCast<T>(&cls, cls_doc.cast.doc);
@@ -262,10 +254,7 @@ void DoScalarDependentDefinitions(py::module m, T) {
         .def("CalcRpyDDtFromAngularAccelInChild",
             &Class::CalcRpyDDtFromAngularAccelInChild, py::arg("rpyDt"),
             py::arg("alpha_AD_D"),
-            cls_doc.CalcRpyDDtFromAngularAccelInChild.doc)
-        .def(py::pickle(
-            [](const Class& self) { return self.vector(); },
-            [](const Vector3<T>& rpy) { return Class(rpy); }));
+            cls_doc.CalcRpyDDtFromAngularAccelInChild.doc);
     DefCopyAndDeepCopy(&cls);
     // N.B. `RollPitchYaw::cast` is not defined in C++.
   }
