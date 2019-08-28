@@ -216,7 +216,9 @@ class TestCppTemplate(unittest.TestCase):
         self.assertEqual(obj.method[float](), (obj, 4))
         self.assertEqual(DummyC.method[float](obj), (obj, 4))
 
-        check_pickle(self, DummyC.method[int])
+        # Cannot pickle instancemethod's in Python 2.
+        if not six.PY2:
+            check_pickle(self, DummyC.method[int])
 
     def test_get_or_init(self):
         m_test = ModuleType("test_module")
