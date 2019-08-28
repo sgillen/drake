@@ -407,14 +407,13 @@ void DoScalarIndependentDefinitions(py::module m) {
 }  // namespace
 
 PYBIND11_MODULE(math, m) {
-  PYDRAKE_PREVENT_PYTHON3_MODULE_REIMPORT(m);
   // N.B. Docstring contained in `_math_extra.py`.
 
   py::module::import("pydrake.autodiffutils");
   py::module::import("pydrake.symbolic");
 
   type_visit([m](auto dummy) { DoScalarDependentDefinitions(m, dummy); },
-      type_pack<double>{}); //CommonScalarPack{});
+      CommonScalarPack{});
   DoScalarIndependentDefinitions(m);
 
   ExecuteExtraPythonCode(m);
