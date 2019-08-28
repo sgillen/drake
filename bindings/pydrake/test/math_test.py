@@ -285,6 +285,8 @@ class TestMath(unittest.TestCase):
         R = RotationMatrix()
         numpy_compare.assert_equal(R.IsExactlyIdentity(), True)
         numpy_compare.assert_equal(R.IsIdentityToInternalTolerance(), True)
+        # Test pickling.
+        self.check_pickle(T, R_AB, RotationMatrix.matrix)
 
     @numpy_compare.check_all_types
     def test_roll_pitch_yaw(self, T):
@@ -330,6 +332,8 @@ class TestMath(unittest.TestCase):
                 rpyDt=[0, 0, 0], alpha_AD_A=[0, 0, 0]), [0., 0., 0.])
         numpy_compare.assert_float_equal(rpy.CalcRpyDDtFromAngularAccelInChild(
             rpyDt=[0, 0, 0], alpha_AD_D=[0, 0, 0]), [0., 0., 0.])
+        # Test pickling.
+        self.check_pickle(T, rpy, RollPitchYaw.vector)
 
     def test_orthonormal_basis(self):
         R = mut.ComputeBasisFromAxis(axis_index=0, axis_W=[1, 0, 0])
