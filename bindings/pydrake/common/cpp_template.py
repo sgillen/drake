@@ -1,9 +1,10 @@
 """Provides containers for tracking instantiations of C++ templates. """
 
 import inspect
-import six
 import sys
 import types
+
+import six
 
 from pydrake.common.cpp_param import get_param_names, get_param_canonical
 
@@ -370,6 +371,7 @@ class TemplateFunction(TemplateBase):
     def _on_add(self, param, func):
         func = _rename_callable(
             func, self._scope, self._instantiation_name(param))
+        setattr(self._scope, func.__name__, func)
         return func
 
 
@@ -379,12 +381,15 @@ class TemplateMethod(TemplateBase):
         if scope is None:
             scope = _get_module_from_stack()
         TemplateBase.__init__(self, name, scope=scope, **kwargs)
+        # TODO(eric.cousineau): Merge `cls` into `scope` once we are Python 3
+        # only.
         self._cls = cls
 
     def _on_add(self, param, func):
         func = _rename_callable(
             func, self._scope, self._instantiation_name(param),
             self._cls)
+        setattr(self._cls, func.__name__, func)
         return func
 
     def __get__(self, obj, objtype):
