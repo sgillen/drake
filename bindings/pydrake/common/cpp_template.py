@@ -240,9 +240,14 @@ class TemplateBase(object):
                 param = tuple(param)
         return get_param_canonical(param)
 
-    def _instantiation_name(self, param):
+    def _instantiation_name(self, param, human_friendly=False):
         names = get_param_names(self._param_resolve(param))
-        return '{}[{}]'.format(self.name, ', '.join(names))
+        if human_friendly:
+            return '{}[{}]'.format(self.name, ', '.join(names))
+        else:
+            # WARNING: Nesting may yield ambiguity, e.g. `X[Y[int]]` vs
+            # `X[Y, int]`. We won't handle it for now, as it is unlikely.
+            return '{}__{}'.format(self.name, '__'.join(names))
 
     def _full_name(self):
         return "{}.{}".format(self._module_name, self.name)

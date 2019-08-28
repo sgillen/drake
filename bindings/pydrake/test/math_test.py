@@ -10,6 +10,8 @@ from pydrake.common.test_utilities.deprecation import catch_drake_warnings
 import pydrake.common.test_utilities.numpy_compare as numpy_compare
 
 import copy
+import pickle
+from io import BytesIO
 import math
 import unittest
 
@@ -184,6 +186,14 @@ class TestMath(unittest.TestCase):
         p_AQlist = np.array([p_AQ, p_AQ]).T
         numpy_compare.assert_float_equal(
             X_AB.multiply(p_BoQ_B=p_BQlist), p_AQlist)
+        # Test pickling.
+        if T != Expression:
+            f = BytesIO()
+            pickle.dump(X_AB, f)
+            f.seek(0)
+            X_AB_2 = pickle.load(f)
+            numpy_compare.assert_equal(
+                X_AB.GetAsMatrix4(), X_AB_2.GetAsMatrix4())
 
     @numpy_compare.check_all_types
     def test_isometry_implicit(self, T):

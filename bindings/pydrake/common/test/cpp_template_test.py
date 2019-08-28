@@ -97,10 +97,10 @@ class TestCppTemplate(unittest.TestCase):
         template.add_instantiation(float, DummyB)
 
         self.assertEqual(template[int], DummyA)
-        self.assertEqual(str(DummyA), "<class '{}.ClassTpl[int]'>".format(
+        self.assertEqual(str(DummyA), "<class '{}.ClassTpl__int'>".format(
             _TEST_MODULE))
         self.assertEqual(template[float], DummyB)
-        self.assertEqual(str(DummyB), "<class '{}.ClassTpl[float]'>".format(
+        self.assertEqual(str(DummyB), "<class '{}.ClassTpl__float'>".format(
             _TEST_MODULE))
 
     def test_user_class(self):
@@ -159,7 +159,7 @@ class TestCppTemplate(unittest.TestCase):
         template.add_instantiation(float, dummy_b)
 
         self.assertEqual(template[int](), 1)
-        self.assertIn("<function func[int] ", str(template[int]))
+        self.assertIn("<function func__int ", str(template[int]))
         self.assertEqual(template[float](), 2)
         self.assertEqual(str(template), "<TemplateFunction {}.func>".format(
             _TEST_MODULE))
@@ -174,11 +174,11 @@ class TestCppTemplate(unittest.TestCase):
         self.assertTrue(DummyC.method.is_instantiation(DummyC.dummy_c))
         if six.PY2:
             self.assertEqual(
-                str(DummyC.method[int]), "<unbound method DummyC.method[int]>")
+                str(DummyC.method[int]), "<unbound method DummyC.method__int>")
         else:
             self.assertTrue(
                 str(DummyC.method[int]).startswith(
-                    "<function DummyC.method[int] at "),
+                    "<function DummyC.method__int at "),
                 str(DummyC.method[int]))
 
         obj = DummyC()
@@ -186,7 +186,7 @@ class TestCppTemplate(unittest.TestCase):
             str(obj.method).startswith(
                 "<bound TemplateMethod DummyC.method of "))
         self.assertIn(
-            "<bound method DummyC.method[int] of ",
+            "<bound method DummyC.method__int of ",
             str(obj.method[int]))
         self.assertEqual(obj.method[int](), (obj, 3))
         self.assertEqual(DummyC.method[int](obj), (obj, 3))
