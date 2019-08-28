@@ -147,6 +147,7 @@ void DoScalarDependentDefinitions(py::module m, T) {
             },
             [](py::tuple t) {
               DRAKE_THROW_UNLESS(t.size() == 1);
+              py::print(t);
               return Class(t[0].cast<Eigen::Matrix<T, 3, 4>>());
             }));
     cls.attr("__matmul__") = cls.attr("multiply");
