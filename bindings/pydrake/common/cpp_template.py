@@ -2,6 +2,7 @@
 
 import inspect
 import six
+import sys
 import types
 
 from pydrake.common.cpp_param import get_param_names, get_param_canonical
@@ -316,6 +317,9 @@ class TemplateClass(TemplateBase):
             # ensure this handles nesting.
             cls.__qualname__ = cls.__name__
             cls.__module__ = self._module_name
+            # m = sys.modules[self._module_name]
+            import pydrake.math as m
+            setattr(m, cls.__name__, cls)
         return cls
 
     def is_subclass_of_instantiation(self, obj):
