@@ -180,4 +180,11 @@ a library from the host.
 
 ## When downloading a library or tool as source code
 
+For use in Drake `master`, prefer tagged releases for mature upstream projects.
+When writing the corresponding `repository.bzl`, indicate the tag / release
+used, either in code or via a comment. If tagged releases are not available or
+bleeding edge features are necessary, prefer using the mainstream branch (e.g.
+`master` for Git or `default` for Mercurial). If using another branch, please
+ensure it is not ephemoral and explicitly denote the branch name in a comment.
+
 TODO(jwnimmer-tri) Write this section.
