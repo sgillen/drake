@@ -224,6 +224,9 @@ void OsqpSolver::DoSolve(
     const Eigen::VectorXd& initial_guess,
     const SolverOptions& merged_options,
     MathematicalProgramResult* result) const {
+  OsqpSolverDetails& solver_details =
+      result->SetSolverDetailsType<OsqpSolverDetails>();
+
   // TODO(hongkai.dai): OSQP uses initial guess to warm start.
   unused(initial_guess);
 
@@ -246,7 +249,7 @@ void OsqpSolver::DoSolve(
   ParseAllLinearConstraints(prog, &A_sparse, &l, &u);
 
   // Now pass the constraint and cost to osqp data.
-  OSQPData* data;  // OSQPData
+  OSQPData* data = nullptr;
 
   // Populate data.
   data = static_cast<OSQPData*>(c_malloc(sizeof(OSQPData)));
@@ -267,28 +270,40 @@ void OsqpSolver::DoSolve(
 
   SetOsqpSolverSettings(merged_options, settings);
 
+  // If any step fails, it will set the solution_result and skip other steps.
+  optional<SolutionResult> solution_result;
+
   // Setup workspace.
-  // OSQP structures.
-  OSQPWorkspace* work;  // Workspace
-  work = osqp_setup(data, settings);
+  OSQPWorkspace* work = nullptr;
+  if (!solution_result) {
+    const c_int osqp_setup_err = osqp_setup(&work, data, settings);
+    if (osqp_setup_err != 0) {
+      solution_result = SolutionResult::kInvalidInput;
+    }
+  }
 
-  // Solve Problem.
-  c_int osqp_exitflag = osqp_solve(work);
+  // Solve problem.
+  if (!solution_result) {
+    DRAKE_THROW_UNLESS(work != nullptr);
+    const c_int osqp_solve_err = osqp_solve(work);
+    if (osqp_solve_err != 0) {
+      solution_result = SolutionResult::kInvalidInput;
+    }
+  }
 
-  SolutionResult solution_result;
-  OsqpSolverDetails& solver_details =
-      result->SetSolverDetailsType<OsqpSolverDetails>();
-  solver_details.iter = work->info->iter;
-  solver_details.status_val = work->info->status_val;
-  solver_details.primal_res = work->info->pri_res;
-  solver_details.dual_res = work->info->dua_res;
-  solver_details.setup_time = work->info->setup_time;
-  solver_details.solve_time = work->info->solve_time;
-  solver_details.polish_time = work->info->polish_time;
-  solver_details.run_time = work->info->run_time;
-  if (osqp_exitflag) {
-    solution_result = SolutionResult::kInvalidInput;
-  } else {
+  // Extract results.
+  if (!solution_result) {
+    DRAKE_THROW_UNLESS(work->info != nullptr);
+
+    solver_details.iter = work->info->iter;
+    solver_details.status_val = work->info->status_val;
+    solver_details.primal_res = work->info->pri_res;
+    solver_details.dual_res = work->info->dua_res;
+    solver_details.setup_time = work->info->setup_time;
+    solver_details.solve_time = work->info->solve_time;
+    solver_details.polish_time = work->info->polish_time;
+    solver_details.run_time = work->info->run_time;
+
     switch (work->info->status_val) {
       case OSQP_SOLVED:
       case OSQP_SOLVED_INACCURATE: {
@@ -314,10 +329,13 @@ void OsqpSolver::DoSolve(
         solution_result = SolutionResult::kIterationLimit;
         break;
       }
-      default: { solution_result = SolutionResult::kUnknownError; }
+      default: {
+        solution_result = SolutionResult::kUnknownError;
+        break;
+      }
     }
   }
-  result->set_solution_result(solution_result);
+  result->set_solution_result(solution_result.value());
 
   // Clean workspace.
   osqp_cleanup(work);
