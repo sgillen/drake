@@ -6,7 +6,8 @@ from pydrake.solvers.snopt import SnoptSolver
 from pydrake.solvers.mathematicalprogram import (
     SolverOptions,
     SolverType,
-    SolverId
+    SolverId,
+    SolverInterface,
     )
 
 from functools import partial
@@ -611,3 +612,26 @@ class TestMathematicalProgram(unittest.TestCase):
         numpy_compare.assert_equal(prog.decision_variables()[1], a1)
         numpy_compare.assert_equal(prog.indeterminates()[0], x0)
         numpy_compare.assert_equal(prog.indeterminate(1), x1)
+
+
+class DummySolverInterface(SolverInterface):
+    def __init__(self):
+        pass
+
+    def available(self):
+        return True
+
+    def solver_id(self):
+        return 0
+
+    def Solve(prog, initial_guess, solver_options):
+        pass
+
+    def AreProgramAttributesSatisfied(self, prog):
+        return True
+
+
+class DummySolverInterfaceTest(unittest.TestCase):
+    def test_dummy_solver_interface(self):
+        solver = DummySolverInterface()
+        self.assertTrue(solver.available())

@@ -64,23 +64,6 @@ drake_pybind_library(
     ],
 )
 
-drake_pybind_library(
-    name = "solver_interface_py",
-    cc_deps = [
-        "//solvers:mathematical_program_lite",
-        "//bindings/pydrake:documentation_pybind",
-        "//bindings/pydrake/common:deprecation_pybind",
-    ],
-    cc_srcs = [
-        "solver_interface_py.cc",
-    ],
-    package_info = PACKAGE_INFO,
-    py_deps = [
-        ":mathematicalprogram_py",
-        ":module_py",
-    ],
-)
-
 drake_cc_library(
     name = "solvers_pybind",
     hdrs = ["solvers_pybind.h"],
