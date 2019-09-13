@@ -47,5 +47,44 @@ class PySolverInterface : public py::wrapper<solvers::SolverInterface> {
   }
 };
 }  // namespace
+
+PYBIND11_MODULE(solver_interface, m) {
+  PYDRAKE_PREVENT_PYTHON3_MODULE_REIMPORT(m);
+  // NOLINTNEXTLINE(build/namespaces): Emulate placement in namespace.
+  using namespace drake::solvers;
+
+  {
+    using Class = SolverInterface;
+    constexpr auto& cls_doc = pydrake_doc.drake.solvers.SolverInterface;
+    py::class_<Class, PySolverInterface> cls(m, "SolverInterface");
+    cls  // BR
+         // Adding a constructor permits implementing this interface in Python.
+        .def(py::init([]() { return std::make_unique<PySolverInterface>(); }),
+            cls_doc.ctor.doc);
+    // The following bindings are present to allow Python to call C++
+    // implementations of this interface. Python implementations of the
+    // interface will call the trampoline implementation methods above.
+    cls  // BR
+        .def("available", &Class::available, cls_doc.available.doc)
+        .def("Solve",
+            [](const Class& self, const solvers::MathematicalProgram& prog,
+                const optional<Eigen::VectorXd>& initial_guess,
+                const optional<solvers::SolverOptions>& solver_options) {
+              solvers::MathematicalProgramResult result;
+              self.Solve(prog, initial_guess, solver_options, &result);
+              return result;
+            },
+            py::arg("prog"), py::arg("initial_guess"),
+            py::arg("solver_options"), cls_doc.Solve.doc)
+        .def("solver_id", &Class::solver_id, cls_doc.solver_id.doc)
+        .def("AreProgramAttributesSatisfied",
+            [](const Class& self, const solvers::MathematicalProgram& prog) {
+              return self.AreProgramAttributesSatisfied(prog);
+            },
+            py::arg("prog"), cls_doc.AreProgramAttributesSatisfied.doc);
+  }
+
+  ExecuteExtraPythonCode(m);
+}
 }  // namespace pydrake
 }  // namespace drake
