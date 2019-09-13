@@ -1,9 +1,9 @@
-from pydrake.solvers import SolverInterface
+from pydrake.solvers.solver_interface import SolverInterface
 
 import unittest
 
 class DummySolverInterface(SolverInterface):
-    def __init__(self, lcm_type):
+    def __init__(self):
         pass
 
     def available(self):
@@ -17,6 +17,7 @@ class DummySolverInterface(SolverInterface):
 
     def AreProgramAttributesSatisfied(self, prog):
         return True
+
 
 class DummySolverInterfaceTest(unittest.TestCase):
     def test_dummy_solver_interface(self):

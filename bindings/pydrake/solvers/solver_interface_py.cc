@@ -83,8 +83,6 @@ PYBIND11_MODULE(solver_interface, m) {
             },
             py::arg("prog"), cls_doc.AreProgramAttributesSatisfied.doc);
   }
-
-  ExecuteExtraPythonCode(m);
 }
 }  // namespace pydrake
 }  // namespace drake
