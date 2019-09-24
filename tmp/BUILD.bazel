@@ -1,4 +1,32 @@
 load("//tools/skylark:pybind.bzl", "pybind_py_library")
+load(
+    "@drake//tools/skylark:drake_cc.bzl",
+    "drake_cc_binary",
+    "drake_transitive_installed_hdrs_filegroup",
+)
+
+drake_deps = ["//common:nice_type_name"]
+
+drake_transitive_installed_hdrs_filegroup(
+    name = "libdrake_deps_hdrs",
+    deps = drake_deps,
+)
+
+drake_cc_binary(
+    name = "libdrake_deps.so",
+    linkshared = 1,
+    linkstatic = 1,
+    deps = drake_deps,
+)
+
+cc_library(
+    name = "drake_deps",
+    srcs  = ["libdrake_deps.so"],
+    hdrs = [":libdrake_deps_hdrs"],
+    data = ["libdrake_deps.so"],
+    include_prefix = "drake",
+    strip_include_prefix = "/",
+)
 
 # To exacerbate the issue.
 pybind_py_library(
@@ -6,8 +34,12 @@ pybind_py_library(
     cc_so_name = "nice_type_name",
     cc_srcs = ["nice_type_name_py.cc"],
     cc_deps = [
+        # # Option A: No segfault
         # "//common:nice_type_name",
-        "//:drake_shared_library",
+        # # Option B: Segfault
+        # "//:drake_shared_library",
+        # Option C: Segfault
+        ":drake_deps",
     ],
     py_imports = ["."],
 )
