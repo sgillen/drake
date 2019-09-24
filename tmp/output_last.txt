@@ -1,5 +1,4 @@
 + strace -o /tmp/strace.txt ../bazel-bin/tmp/repro_issue12073
-<address>
  --- modulename: repro_issue12073, funcname: repro
 repro_issue12073.py(8):     if torch_first:
 repro_issue12073.py(13):         print("Torch last")
@@ -7,6 +6,7 @@ Torch last
 repro_issue12073.py(14):         import cc_regex
 repro_issue12073.py(15):         import torch
 repro_issue12073.py(16):     print(cc_regex.get_name())
+<address>
 nothing
 repro_issue12073.py(17):     print("[ Done ]")
 [ Done ]

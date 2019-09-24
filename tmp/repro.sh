@@ -29,6 +29,7 @@ EOF
 
 bazel build --announce_rc //tmp:repro_issue12073
 bin=../bazel-bin/tmp/repro_issue12073
+export PYTHONUNBUFFERED=1
 
 run() {
     label=$1
