@@ -33,8 +33,9 @@ bin=../bazel-bin/tmp/repro_issue12073
 run() {
     label=$1
     shift
-    { strace -o /tmp/strace.txt "$@" || :; } 2>&1 | tee ./output_${label}.txt
-    ./strace_filt.py /tmp/strace.txt ./strace_${label}.{raw,sorted}.txt
+    { strace -o /tmp/strace.txt "$@" || :; } 2>&1 | tee /tmp/output.txt
+    ./filt.py /tmp/output.txt ./output_${label}
+    ./filt.py --for_strace /tmp/strace.txt ./strace_${label}
 }
 
 run last ${bin}  # This should work

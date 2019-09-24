@@ -1,5 +1,5 @@
 + strace -o /tmp/strace.txt ../bazel-bin/tmp/repro_issue12073
-0x7ffd59bbf080
+<address>
  --- modulename: repro_issue12073, funcname: repro
 repro_issue12073.py(8):     if torch_first:
 repro_issue12073.py(13):         print("Torch last")

@@ -7,8 +7,8 @@ import sys
 assert __name__ == "__main__"
 parser = argparse.ArgumentParser()
 parser.add_argument("input", type=argparse.FileType("r"))
-parser.add_argument("output_raw", type=argparse.FileType("w"))
-parser.add_argument("output_sorted", type=argparse.FileType("w"))
+parser.add_argument("output_name", type=str)
+parser.add_argument("--for_strace", action="store_true")
 args = parser.parse_args()
 
 os.chdir(os.path.dirname(__file__))
@@ -22,7 +22,18 @@ def re_rep(pattern, fake):
     pattern = re.compile(pattern)
     return lambda x: re.sub(pattern, fake, x)
 
+def strace_filt(line):
+    prefix = "openat("
+    if not line.startswith(prefix):
+        return
+    if ".so" not in line:
+        return
+    if not line.endswith(" = 3"):
+        return
+    return line
+
 reps = [
+    str.rstrip,
     path_rep("../bazel-bin", "${bazel_bin}"),
     path_rep("../bazel-out", "${bazel_out}"),
     path_rep("./venv", "${venv}"),
@@ -31,22 +42,25 @@ reps = [
     re_rep(r"\b[0-9]{4,}\b", "<num>"),
 ]
 
+if args.for_strace:
+    reps.insert(1, strace_filt)
+
 out = []
 with args.input:
     for line in args.input.readlines():
-        line = line.rstrip()
-        prefix = "openat("
-        if not line.startswith(prefix):
-            continue
-        if ".so" not in line:
-            continue
-        if not line.endswith(" = 3"):
-            continue
         for rep in reps:
             line = rep(line)
-        out.append(line)
+            if line is None:
+                break
+        else:
+            out.append(line)
 
-for f, lines in ((args.output_raw, out), (args.output_sorted, sorted(out))):
-    with f:
-        for line in lines:
-            print(line, file=f)
+if args.for_strace:
+    for mode, lines in (("raw", out), ("sorted", sorted(out))):
+        with open(f"{args.output_name}.{mode}.txt", "w") as f:
+            for line in lines:
+                print(line, file=f)
+else:
+    with open(f"{args.output_name}.txt", "w") as f:
+        for line in out:
+            print(line, file=f)   
