@@ -34,6 +34,7 @@ install_cmake_config(
 # LIBDRAKE_COMPONENTS and all the Drake externals. We use linkstatic=1 so
 # that the binary package will not contain any references to shared libraries
 # inside the build tree.
+print(LIBDRAKE_COMPONENTS)
 drake_cc_binary(
     name = "libdrake.so",
     linkshared = 1,
@@ -172,33 +173,33 @@ cc_library(
     include_prefix = "drake",
     strip_include_prefix = "/",
     visibility = ["//:__pkg__"],
-    deps = [
-        ":libdrake_headers_only_attic_cc_library",
-        # The list of depended-on *.so files. These should ONLY be shared
-        # libraries; do not add static dependencies here.
-        ":dreal_deps",
-        ":gurobi_deps",
-        ":mosek_deps",
-        ":scs_deps",
-        ":vtk_deps",
-        "//common:drake_marker_shared_library",
-        "@ignition_math",
-        "@lcm",
-        "@libprotobuf",
-        "@tinyxml2",
-        "@yaml_cpp",
-    ] + [
-        # The list of depended-on header-only libraries that libdrake's header
-        # files depend on.
-        "//lcmtypes:lcmtypes_drake_cc",
-        "@eigen",
-        "@fmt",
-        "@lcmtypes_bot2_core//:lcmtypes_bot2_core",
-        "@lcmtypes_robotlocomotion//:lcmtypes_robotlocomotion",
-        "@optitrack_driver//lcmtypes:optitrack_lcmtypes",
-        "@spdlog",
-        "@stx",
-    ],
+    # deps = [
+    #     ":libdrake_headers_only_attic_cc_library",
+    #     # The list of depended-on *.so files. These should ONLY be shared
+    #     # libraries; do not add static dependencies here.
+    #     ":dreal_deps",
+    #     ":gurobi_deps",
+    #     ":mosek_deps",
+    #     ":scs_deps",
+    #     ":vtk_deps",
+    #     "//common:drake_marker_shared_library",
+    #     "@ignition_math",
+    #     "@lcm",
+    #     "@libprotobuf",
+    #     "@tinyxml2",
+    #     "@yaml_cpp",
+    # ] + [
+    #     # The list of depended-on header-only libraries that libdrake's header
+    #     # files depend on.
+    #     "//lcmtypes:lcmtypes_drake_cc",
+    #     "@eigen",
+    #     "@fmt",
+    #     "@lcmtypes_bot2_core//:lcmtypes_bot2_core",
+    #     "@lcmtypes_robotlocomotion//:lcmtypes_robotlocomotion",
+    #     "@optitrack_driver//lcmtypes:optitrack_lcmtypes",
+    #     "@spdlog",
+    #     "@stx",
+    # ],
 )
 
 # Include headers that are stored in the attic by stripping off the "attic/"
