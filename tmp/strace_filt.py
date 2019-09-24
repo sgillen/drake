@@ -6,7 +6,8 @@ import sys
 assert __name__ == "__main__"
 parser = argparse.ArgumentParser()
 parser.add_argument("input", type=argparse.FileType("r"))
-parser.add_argument("output", type=argparse.FileType("w"))
+parser.add_argument("output_raw", type=argparse.FileType("w"))
+parser.add_argument("output_sorted", type=argparse.FileType("w"))
 args = parser.parse_args()
 
 os.chdir(os.path.dirname(__file__))
@@ -33,6 +34,7 @@ with args.input:
             line = line.replace(real, fake)
         out.append(line)
 
-with args.output:
-    for line in out:
-        print(line, file=args.output)
+for f, lines in ((args.output_raw, out), (args.output_sorted, sorted(out))):
+    with f:
+        for line in lines:
+            print(line, file=f)
