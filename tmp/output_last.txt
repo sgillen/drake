@@ -6,6 +6,8 @@ Torch last
 repro_issue12073.py(14):         import cc_regex
 repro_issue12073.py(15):         import torch
 Using hacked torch.__init__
+setdlopenflags: (RTLD_NOW) -> (RTLD_LAZY | RTLD_GLOBAL)
+setdlopenflags: (RTLD_LAZY | RTLD_GLOBAL) -> (RTLD_NOW)
 repro_issue12073.py(16):     print(cc_regex.get_name())
 _GLIBCXX_USE_CXX11_ABI: 0
 &sub: <address>

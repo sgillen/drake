@@ -24,19 +24,42 @@ venv=${PWD}/venv
 
 # Hack `torch.__init__` to only import `torch._C`.
 cat > ${venv}/lib/python3.6/site-packages/torch/__init__.py <<EOF
+def _flags(f):
+    m = os
+    vs = [
+        'RTLD_LAZY',
+        'RTLD_NOW',
+        'RTLD_GLOBAL',
+        'RTLD_LOCAL',
+        'RTLD_NODELETE',
+        'RTLD_NOLOAD',
+        'RTLD_DEEPBIND',
+    ]
+    out = []
+    for v in vs:
+        value = getattr(m, v)
+        if f & value:
+            out.append(v)
+    return "(" + " | ".join(out) + ")"
+
+def setdlopenflags(f):
+    old = sys.getdlopenflags()
+    print(f"setdlopenflags: {_flags(old)} -> {_flags(f)}")
+    sys.setdlopenflags(f)
+    return old
+
 # HACKED
 print("Using hacked torch.__init__")
 # Copied + simplified from original
 import os
 import sys
 import numpy as _np
-_old_flags = sys.getdlopenflags()
-sys.setdlopenflags(os.RTLD_GLOBAL | os.RTLD_LAZY)
+old_flags = setdlopenflags(os.RTLD_GLOBAL | os.RTLD_LAZY)
 # Skipping: 'import torch._nvrtc'
 
 import torch._C
 
-sys.setdlopenflags(_old_flags)
+setdlopenflags(old_flags)
 EOF
 
 cat > ../hack.bazelrc <<EOF
