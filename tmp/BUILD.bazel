@@ -5,7 +5,10 @@ pybind_py_library(
     name = "nice_type_name_py",
     cc_so_name = "nice_type_name",
     cc_srcs = ["nice_type_name_py.cc"],
-    cc_deps = ["//common:nice_type_name"],
+    cc_deps = [
+        # "//common:nice_type_name",
+        "//:drake_shared_library",
+    ],
     py_imports = ["."],
 )
 

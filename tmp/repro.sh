@@ -10,8 +10,13 @@ fi
 
 python=${PWD}/venv/bin/python
 
-bazel build --python_path=${python} --action_env=DRAKE_PYTHON_BIN_PATH=${python} \
-    //tmp:repro_issue12073
+cat > ../user.bazelrc <<EOF
+build --python_path=${python}
+build --action_env=DRAKE_PYTHON_BIN_PATH=${python}
+EOF
+
+
+bazel build //tmp:repro_issue12073
 bin=../bazel-bin/tmp/repro_issue12073
 
 ${bin}
