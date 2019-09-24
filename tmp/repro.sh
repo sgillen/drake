@@ -20,18 +20,23 @@ if [[ ! -d ./venv ]]; then
 fi
 
 python=${PWD}/venv/bin/python
+venv=${PWD}/venv
 
 # Hack `torch.__init__` to only import `torch._C`.
-cat > ./venv/lib/python3.6/site-packages/torch/__init__.py <<'EOF'
+cat > ${venv}/lib/python3.6/site-packages/torch/__init__.py <<EOF
 # HACKED
 print("Using hacked torch.__init__")
 # Copied + simplified from original
 import os
 import sys
 import numpy as _np
+_old_flags = sys.getdlopenflags()
 sys.setdlopenflags(os.RTLD_GLOBAL | os.RTLD_LAZY)
-# Skipping: `import torch._nvrtc`
+# Skipping: 'import torch._nvrtc'
+
 import torch._C
+
+sys.setdlopenflags(_old_flags)
 EOF
 
 cat > ../hack.bazelrc <<EOF

@@ -8,5 +8,5 @@ Using hacked torch.__init__
 repro_issue12073.py(11):         import cc_regex
 repro_issue12073.py(16):     print(cc_regex.get_name())
 _GLIBCXX_USE_CXX11_ABI: 0
-./repro.sh: line 48: <num> Segmentation fault      (core dumped) strace -o /tmp/strace.txt "$@"
+./repro.sh: line 53:  <num> Segmentation fault      (core dumped) strace -o /tmp/strace.txt "$@"
 + :
