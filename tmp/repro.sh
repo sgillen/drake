@@ -54,7 +54,7 @@ print("Using hacked torch.__init__")
 import os
 import sys
 import numpy as _np
-old_flags = setdlopenflags(os.RTLD_GLOBAL | os.RTLD_LAZY)
+old_flags = setdlopenflags(os.RTLD_LAZY)  # os.RTLD_GLOBAL |
 # Skipping: 'import torch._nvrtc'
 
 import torch._C

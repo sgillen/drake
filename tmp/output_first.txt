@@ -5,10 +5,12 @@ repro_issue12073.py(9):         print("Torch first")
 Torch first
 repro_issue12073.py(10):         import torch
 Using hacked torch.__init__
-setdlopenflags: (RTLD_NOW) -> (RTLD_LAZY | RTLD_GLOBAL)
-setdlopenflags: (RTLD_LAZY | RTLD_GLOBAL) -> (RTLD_NOW)
+setdlopenflags: (RTLD_NOW) -> (RTLD_LAZY)
+setdlopenflags: (RTLD_LAZY) -> (RTLD_NOW)
 repro_issue12073.py(11):         import cc_regex
 repro_issue12073.py(16):     print(cc_regex.get_name())
 _GLIBCXX_USE_CXX11_ABI: 0
-./repro.sh: line 76:  <num> Segmentation fault      (core dumped) strace -o /tmp/strace.txt "$@"
-+ :
+&sub: <address>
+nothing
+repro_issue12073.py(17):     print("[ Done ]")
+[ Done ]
