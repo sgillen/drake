@@ -1,0 +1,640 @@
+Name: "" (11 segments)
+     0: [0x56475cfa0040; memsz:    268] flags: 0x4; PT_PHDR
+     1: [0x56475cfa02a8; memsz:     1c] flags: 0x4; PT_INTERP
+     2: [0x56475cfa0000; memsz:  56930] flags: 0x4; PT_LOAD
+     3: [0x56475cff7000; memsz: 1c64a6] flags: 0x5; PT_LOAD
+     4: [0x56475d1be000; memsz:  9cfc8] flags: 0x4; PT_LOAD
+     5: [0x56475d25c6a0; memsz:  95c08] flags: 0x6; PT_LOAD
+     6: [0x56475d25e2f0; memsz:    220] flags: 0x6; PT_DYNAMIC
+     7: [0x56475cfa02c4; memsz:     20] flags: 0x4; PT_NOTE
+     8: [0x56475d21133c; memsz:   d3f4] flags: 0x4; PT_GNU_EH_FRAME
+     9: [0x56475cfa0000; memsz:      0] flags: 0x6; PT_GNU_STACK
+    10: [0x56475d25c6a0; memsz:   2960] flags: 0x4; PT_GNU_RELRO
+Name: "linux-vdso.so.1" (4 segments)
+     0: [0x7ffc74391000; memsz:   100b] flags: 0x5; PT_LOAD
+     1: [0x7ffc74391348; memsz:    120] flags: 0x4; PT_DYNAMIC
+     2: [0x7ffc743917a8; memsz:     3c] flags: 0x4; PT_NOTE
+     3: [0x7ffc743917e4; memsz:     3c] flags: 0x4; PT_GNU_EH_FRAME
+Name: "/usr/lib/x86_64-linux-gnu/libGLEW.so" (7 segments)
+     0: [0x7f1d81cc6000; memsz:  85844] flags: 0x5; PT_LOAD
+     1: [0x7f1d81f4c370; memsz:   e110] flags: 0x6; PT_LOAD
+     2: [0x7f1d81f4e9c0; memsz:    1e0] flags: 0x6; PT_DYNAMIC
+     3: [0x7f1d81cc61c8; memsz:     24] flags: 0x4; PT_NOTE
+     4: [0x7f1d81d4a408; memsz:    2b4] flags: 0x4; PT_GNU_EH_FRAME
+     5: [0x7f1d81cc6000; memsz:      0] flags: 0x6; PT_GNU_STACK
+     6: [0x7f1d81f4c370; memsz:   8c90] flags: 0x4; PT_GNU_RELRO
+Name: "/usr/lib/x86_64-linux-gnu/libGL.so.1" (7 segments)
+     0: [0x7f1d81a3a000; memsz:  70770] flags: 0x5; PT_LOAD
+     1: [0x7f1d81caadc0; memsz:  1ab30] flags: 0x6; PT_LOAD
+     2: [0x7f1d81cc3da0; memsz:    210] flags: 0x6; PT_DYNAMIC
+     3: [0x7f1d81a3a1c8; memsz:     24] flags: 0x4; PT_NOTE
+     4: [0x7f1d81aa8304; memsz:    544] flags: 0x4; PT_GNU_EH_FRAME
+     5: [0x7f1d81a3a000; memsz:      0] flags: 0x6; PT_GNU_STACK
+     6: [0x7f1d81caadc0; memsz:  19240] flags: 0x4; PT_GNU_RELRO
+Name: "/usr/lib/x86_64-linux-gnu/libgtk3-nocsd.so.0" (7 segments)
+     0: [0x7f1d81833000; memsz:   5bc4] flags: 0x5; PT_LOAD
+     1: [0x7f1d81a38ca8; memsz:    788] flags: 0x6; PT_LOAD
+     2: [0x7f1d81a38d28; memsz:    210] flags: 0x6; PT_DYNAMIC
+     3: [0x7f1d818331c8; memsz:     24] flags: 0x4; PT_NOTE
+     4: [0x7f1d81837dc8; memsz:    214] flags: 0x4; PT_GNU_EH_FRAME
+     5: [0x7f1d81833000; memsz:      0] flags: 0x6; PT_GNU_STACK
+     6: [0x7f1d81a38ca8; memsz:    358] flags: 0x4; PT_GNU_RELRO
+Name: "/lib/x86_64-linux-gnu/libpthread.so.0" (9 segments)
+     0: [0x7f1d81614040; memsz:    1f8] flags: 0x4; PT_PHDR
+     1: [0x7f1d81628d50; memsz:     1c] flags: 0x4; PT_INTERP
+     2: [0x7f1d81614000; memsz:  19310] flags: 0x5; PT_LOAD
+     3: [0x7f1d8182dba0; memsz:   48e0] flags: 0x6; PT_LOAD
+     4: [0x7f1d8182dd68; memsz:    230] flags: 0x6; PT_DYNAMIC
+     5: [0x7f1d81614238; memsz:     44] flags: 0x4; PT_NOTE
+     6: [0x7f1d81628d70; memsz:    8e4] flags: 0x4; PT_GNU_EH_FRAME
+     7: [0x7f1d81614000; memsz:      0] flags: 0x6; PT_GNU_STACK
+     8: [0x7f1d8182dba0; memsz:    460] flags: 0x4; PT_GNU_RELRO
+Name: "/lib/x86_64-linux-gnu/libc.so.6" (10 segments)
+     0: [0x7f1d81223040; memsz:    230] flags: 0x4; PT_PHDR
+     1: [0x7f1d813e0d50; memsz:     1c] flags: 0x4; PT_INTERP
+     2: [0x7f1d81223000; memsz: 1e6aa0] flags: 0x5; PT_LOAD
+     3: [0x7f1d8160a620; memsz:   94c0] flags: 0x6; PT_LOAD
+     4: [0x7f1d8160db80; memsz:    1e0] flags: 0x6; PT_DYNAMIC
+     5: [0x7f1d81223270; memsz:     44] flags: 0x4; PT_NOTE
+     6: [0x7f1d8160a620; memsz:     90] flags: 0x4; PT_TLS
+     7: [0x7f1d813e0d6c; memsz:   59dc] flags: 0x4; PT_GNU_EH_FRAME
+     8: [0x7f1d81223000; memsz:      0] flags: 0x6; PT_GNU_STACK
+     9: [0x7f1d8160a620; memsz:   39e0] flags: 0x4; PT_GNU_RELRO
+Name: "/lib/x86_64-linux-gnu/libdl.so.2" (7 segments)
+     0: [0x7f1d8101f000; memsz:   224c] flags: 0x5; PT_LOAD
+     1: [0x7f1d81221d70; memsz:    3a0] flags: 0x6; PT_LOAD
+     2: [0x7f1d81221d90; memsz:    210] flags: 0x6; PT_DYNAMIC
+     3: [0x7f1d8101f1c8; memsz:     44] flags: 0x4; PT_NOTE
+     4: [0x7f1d81020c90; memsz:     c4] flags: 0x4; PT_GNU_EH_FRAME
+     5: [0x7f1d8101f000; memsz:      0] flags: 0x6; PT_GNU_STACK
+     6: [0x7f1d81221d70; memsz:    290] flags: 0x4; PT_GNU_RELRO
+Name: "/lib/x86_64-linux-gnu/libutil.so.1" (7 segments)
+     0: [0x7f1d80e1c000; memsz:   1d54] flags: 0x5; PT_LOAD
+     1: [0x7f1d8101ddb8; memsz:    358] flags: 0x6; PT_LOAD
+     2: [0x7f1d8101ddc8; memsz:    210] flags: 0x6; PT_DYNAMIC
+     3: [0x7f1d80e1c1c8; memsz:     44] flags: 0x4; PT_NOTE
+     4: [0x7f1d80e1d968; memsz:     4c] flags: 0x4; PT_GNU_EH_FRAME
+     5: [0x7f1d80e1c000; memsz:      0] flags: 0x6; PT_GNU_STACK
+     6: [0x7f1d8101ddb8; memsz:    248] flags: 0x4; PT_GNU_RELRO
+Name: "/lib/x86_64-linux-gnu/librt.so.1" (7 segments)
+     0: [0x7f1d80c14000; memsz:   6c34] flags: 0x5; PT_LOAD
+     1: [0x7f1d80e1ad68; memsz:    e78] flags: 0x6; PT_LOAD
+     2: [0x7f1d80e1ad80; memsz:    230] flags: 0x6; PT_DYNAMIC
+     3: [0x7f1d80c141c8; memsz:     44] flags: 0x4; PT_NOTE
+     4: [0x7f1d80c19ad0; memsz:    22c] flags: 0x4; PT_GNU_EH_FRAME
+     5: [0x7f1d80c14000; memsz:      0] flags: 0x6; PT_GNU_STACK
+     6: [0x7f1d80e1ad68; memsz:    298] flags: 0x4; PT_GNU_RELRO
+Name: "/lib/x86_64-linux-gnu/libm.so.6" (7 segments)
+     0: [0x7f1d80876000; memsz: 19c600] flags: 0x5; PT_LOAD
+     1: [0x7f1d80c12d80; memsz:    3d8] flags: 0x6; PT_LOAD
+     2: [0x7f1d80c12d90; memsz:    220] flags: 0x6; PT_DYNAMIC
+     3: [0x7f1d808761c8; memsz:     44] flags: 0x4; PT_NOTE
+     4: [0x7f1d80a05548; memsz:   1b64] flags: 0x4; PT_GNU_EH_FRAME
+     5: [0x7f1d80876000; memsz:      0] flags: 0x6; PT_GNU_STACK
+     6: [0x7f1d80c12d80; memsz:    280] flags: 0x4; PT_GNU_RELRO
+Name: "/usr/lib/x86_64-linux-gnu/libGLX.so.0" (7 segments)
+     0: [0x7f1d80645000; memsz:   f7c4] flags: 0x5; PT_LOAD
+     1: [0x7f1d80854920; memsz:  20d40] flags: 0x6; PT_LOAD
+     2: [0x7f1d80854da8; memsz:    210] flags: 0x6; PT_DYNAMIC
+     3: [0x7f1d806451c8; memsz:     24] flags: 0x4; PT_NOTE
+     4: [0x7f1d80652348; memsz:    584] flags: 0x4; PT_GNU_EH_FRAME
+     5: [0x7f1d80645000; memsz:      0] flags: 0x6; PT_GNU_STACK
+     6: [0x7f1d80854920; memsz:    6e0] flags: 0x4; PT_GNU_RELRO
+Name: "/usr/lib/x86_64-linux-gnu/libGLdispatch.so.0" (8 segments)
+     0: [0x7f1d8038f000; memsz:  6d180] flags: 0x5; PT_LOAD
+     1: [0x7f1d805fca00; memsz:  47a50] flags: 0x6; PT_LOAD
+     2: [0x7f1d80623dc0; memsz:    1f0] flags: 0x6; PT_DYNAMIC
+     3: [0x7f1d8038f200; memsz:     24] flags: 0x4; PT_NOTE
+     4: [0x7f1d805fca00; memsz:      8] flags: 0x4; PT_TLS
+     5: [0x7f1d803facd8; memsz:    42c] flags: 0x4; PT_GNU_EH_FRAME
+     6: [0x7f1d8038f000; memsz:      0] flags: 0x6; PT_GNU_STACK
+     7: [0x7f1d805fca00; memsz:  27600] flags: 0x4; PT_GNU_RELRO
+Name: "/lib64/ld-linux-x86-64.so.2" (7 segments)
+     0: [0x7f1d81f5b000; memsz:  26c24] flags: 0x5; PT_LOAD
+     1: [0x7f1d82182680; memsz:   1af0] flags: 0x6; PT_LOAD
+     2: [0x7f1d82182e68; memsz:    170] flags: 0x6; PT_DYNAMIC
+     3: [0x7f1d81f5b1c8; memsz:     24] flags: 0x4; PT_NOTE
+     4: [0x7f1d81f7f144; memsz:    66c] flags: 0x4; PT_GNU_EH_FRAME
+     5: [0x7f1d81f5b000; memsz:      0] flags: 0x6; PT_GNU_STACK
+     6: [0x7f1d82182680; memsz:    980] flags: 0x4; PT_GNU_RELRO
+Name: "/usr/lib/x86_64-linux-gnu/libX11.so.6" (7 segments)
+     0: [0x7f1d80057000; memsz: 1326a4] flags: 0x5; PT_LOAD
+     1: [0x7f1d8038a1b0; memsz:   4b88] flags: 0x6; PT_LOAD
+     2: [0x7f1d8038ac90; memsz:    1f0] flags: 0x6; PT_DYNAMIC
+     3: [0x7f1d800571c8; memsz:     24] flags: 0x4; PT_NOTE
+     4: [0x7f1d8016da18; memsz:   3c7c] flags: 0x4; PT_GNU_EH_FRAME
+     5: [0x7f1d80057000; memsz:      0] flags: 0x6; PT_GNU_STACK
+     6: [0x7f1d8038a1b0; memsz:    e50] flags: 0x4; PT_GNU_RELRO
+Name: "/home/sgillen/miniconda3/envs/drake/bin/../lib/libxcb.so.1" (6 segments)
+     0: [0x7f1d7fe2e000; memsz:  26df4] flags: 0x5; PT_LOAD
+     1: [0x7f1d800559a0; memsz:    708] flags: 0x6; PT_LOAD
+     2: [0x7f1d80055ab8; memsz:    1a0] flags: 0x6; PT_DYNAMIC
+     3: [0x7f1d7fe4df40; memsz:   166c] flags: 0x4; PT_GNU_EH_FRAME
+     4: [0x7f1d7fe2e000; memsz:      0] flags: 0x6; PT_GNU_STACK
+     5: [0x7f1d800559a0; memsz:    660] flags: 0x4; PT_GNU_RELRO
+Name: "/usr/lib/x86_64-linux-gnu/libXau.so.6" (7 segments)
+     0: [0x7f1d7fc2a000; memsz:   1eb4] flags: 0x5; PT_LOAD
+     1: [0x7f1d7fe2cdf0; memsz:    328] flags: 0x6; PT_LOAD
+     2: [0x7f1d7fe2ce08; memsz:    1d0] flags: 0x6; PT_DYNAMIC
+     3: [0x7f1d7fc2a1c8; memsz:     24] flags: 0x4; PT_NOTE
+     4: [0x7f1d7fc2bb04; memsz:     7c] flags: 0x4; PT_GNU_EH_FRAME
+     5: [0x7f1d7fc2a000; memsz:      0] flags: 0x6; PT_GNU_STACK
+     6: [0x7f1d7fe2cdf0; memsz:    210] flags: 0x4; PT_GNU_RELRO
+Name: "/home/sgillen/miniconda3/envs/drake/lib/python3.6/lib-dynload/_heapq.cpython-36m-x86_64-linux-gnu.so" (8 segments)
+     0: [0x7f1d82172000; memsz:    c68] flags: 0x4; PT_LOAD
+     1: [0x7f1d82173000; memsz:   19aa] flags: 0x5; PT_LOAD
+     2: [0x7f1d82175000; memsz:    5a4] flags: 0x4; PT_LOAD
+     3: [0x7f1d82176da0; memsz:   1f98] flags: 0x6; PT_LOAD
+     4: [0x7f1d82176dc0; memsz:    1a0] flags: 0x6; PT_DYNAMIC
+     5: [0x7f1d821750c8; memsz:     bc] flags: 0x4; PT_GNU_EH_FRAME
+     6: [0x7f1d82172000; memsz:      0] flags: 0x6; PT_GNU_STACK
+     7: [0x7f1d82176da0; memsz:    260] flags: 0x4; PT_GNU_RELRO
+Name: "/home/sgillen/miniconda3/envs/drake/lib/python3.6/lib-dynload/_posixsubprocess.cpython-36m-x86_64-linux-gnu.so" (8 segments)
+     0: [0x7f1d8216b000; memsz:   1440] flags: 0x4; PT_LOAD
+     1: [0x7f1d8216d000; memsz:   1456] flags: 0x5; PT_LOAD
+     2: [0x7f1d8216f000; memsz:    300] flags: 0x4; PT_LOAD
+     3: [0x7f1d82170ca0; memsz:    7f8] flags: 0x6; PT_LOAD
+     4: [0x7f1d82170cc0; memsz:    1a0] flags: 0x6; PT_DYNAMIC
+     5: [0x7f1d8216f130; memsz:     44] flags: 0x4; PT_GNU_EH_FRAME
+     6: [0x7f1d8216b000; memsz:      0] flags: 0x6; PT_GNU_STACK
+     7: [0x7f1d82170ca0; memsz:    360] flags: 0x4; PT_GNU_RELRO
+Name: "/home/sgillen/miniconda3/envs/drake/lib/python3.6/lib-dynload/select.cpython-36m-x86_64-linux-gnu.so" (8 segments)
+     0: [0x7f1d82161000; memsz:   1f88] flags: 0x4; PT_LOAD
+     1: [0x7f1d82163000; memsz:   3906] flags: 0x5; PT_LOAD
+     2: [0x7f1d82167000; memsz:    b00] flags: 0x4; PT_LOAD
+     3: [0x7f1d82168c20; memsz:   18c0] flags: 0x6; PT_LOAD
+     4: [0x7f1d82168c40; memsz:    1a0] flags: 0x6; PT_DYNAMIC
+     5: [0x7f1d82167358; memsz:    134] flags: 0x4; PT_GNU_EH_FRAME
+     6: [0x7f1d82161000; memsz:      0] flags: 0x6; PT_GNU_STACK
+     7: [0x7f1d82168c20; memsz:    3e0] flags: 0x4; PT_GNU_RELRO
+Name: "/home/sgillen/miniconda3/envs/drake/lib/python3.6/lib-dynload/math.cpython-36m-x86_64-linux-gnu.so" (8 segments)
+     0: [0x7f1d81fa0000; memsz:   2a80] flags: 0x4; PT_LOAD
+     1: [0x7f1d81fa3000; memsz:   59be] flags: 0x5; PT_LOAD
+     2: [0x7f1d81fa9000; memsz:   19d4] flags: 0x4; PT_LOAD
+     3: [0x7f1d81fabb78; memsz:   1d20] flags: 0x6; PT_LOAD
+     4: [0x7f1d81fabb98; memsz:    1b0] flags: 0x6; PT_DYNAMIC
+     5: [0x7f1d81fa96f0; memsz:    344] flags: 0x4; PT_GNU_EH_FRAME
+     6: [0x7f1d81fa0000; memsz:      0] flags: 0x6; PT_GNU_STACK
+     7: [0x7f1d81fabb78; memsz:    488] flags: 0x4; PT_GNU_RELRO
+Name: "/home/sgillen/.local/lib/python3.6/site-packages/numpy/core/_multiarray_umath.cpython-36m-x86_64-linux-gnu.so" (9 segments)
+     0: [0x7f1d7f151000; memsz: 3ab2d4] flags: 0x5; PT_LOAD
+     1: [0x7f1d7f151000; memsz:      0] flags: 0x6; PT_GNU_STACK
+     2: [0x7f1d7f1511c8; memsz:     24] flags: 0x4; PT_NOTE
+     3: [0x7f1d7f4aa220; memsz:   c19c] flags: 0x4; PT_GNU_EH_FRAME
+     4: [0x7f1d7f6fc2e0; memsz:  3f2a0] flags: 0x6; PT_LOAD
+     5: [0x7f1d7f6fc2e0; memsz:     d4] flags: 0x4; PT_TLS
+     6: [0x7f1d7f73c000; memsz:   3890] flags: 0x6; PT_LOAD
+     7: [0x7f1d7f740000; memsz:    210] flags: 0x6; PT_DYNAMIC
+     8: [0x7f1d7f740000; memsz:   2d58] flags: 0x6; PT_LOAD
+Name: "/home/sgillen/.local/lib/python3.6/site-packages/numpy/core/../.libs/libopenblasp-r0-2ecf47d5.3.7.dev.so" (9 segments)
+     0: [0x7f1d7d3ba000; memsz:1afa424] flags: 0x5; PT_LOAD
+     1: [0x7f1d7d3ba000; memsz:      0] flags: 0x6; PT_GNU_STACK
+     2: [0x7f1d7d3ba1c8; memsz:     24] flags: 0x4; PT_NOTE
+     3: [0x7f1d7edc296c; memsz:  1728c] flags: 0x4; PT_GNU_EH_FRAME
+     4: [0x7f1d7f0b5000; memsz:  23d98] flags: 0x6; PT_LOAD
+     5: [0x7f1d7f0b5000; memsz:   f000] flags: 0x4; PT_TLS
+     6: [0x7f1d7f0ba080; memsz:    210] flags: 0x6; PT_DYNAMIC
+     7: [0x7f1d7f0d9000; memsz:  46538] flags: 0x6; PT_LOAD
+     8: [0x7f1d7f120000; memsz:  30fe8] flags: 0x6; PT_LOAD
+Name: "/home/sgillen/.local/lib/python3.6/site-packages/numpy/core/../.libs/libgfortran-ed201abd.so.3.0.0" (6 segments)
+     0: [0x7f1d7d0c0000; memsz:  ef524] flags: 0x5; PT_LOAD
+     1: [0x7f1d7d0c0000; memsz:      0] flags: 0x6; PT_GNU_STACK
+     2: [0x7f1d7d19b304; memsz:   2b1c] flags: 0x4; PT_GNU_EH_FRAME
+     3: [0x7f1d7d3af528; memsz:   2068] flags: 0x6; PT_LOAD
+     4: [0x7f1d7d3afb38; memsz:    1c0] flags: 0x6; PT_DYNAMIC
+     5: [0x7f1d7d3b2000; memsz:   7fd8] flags: 0x6; PT_LOAD
+Name: "/home/sgillen/miniconda3/envs/drake/lib/python3.6/lib-dynload/_datetime.cpython-36m-x86_64-linux-gnu.so" (8 segments)
+     0: [0x7f1d81ff5000; memsz:   4540] flags: 0x4; PT_LOAD
+     1: [0x7f1d81ffa000; memsz:   f292] flags: 0x5; PT_LOAD
+     2: [0x7f1d8200a000; memsz:   4dec] flags: 0x4; PT_LOAD
+     3: [0x7f1d820109e0; memsz:   2498] flags: 0x6; PT_LOAD
+     4: [0x7f1d82010b70; memsz:    1b0] flags: 0x6; PT_DYNAMIC
+     5: [0x7f1d8200bdd0; memsz:    7b4] flags: 0x4; PT_GNU_EH_FRAME
+     6: [0x7f1d81ff5000; memsz:      0] flags: 0x6; PT_GNU_STACK
+     7: [0x7f1d820109e0; memsz:    620] flags: 0x4; PT_GNU_RELRO
+Name: "/home/sgillen/miniconda3/envs/drake/lib/python3.6/lib-dynload/_struct.cpython-36m-x86_64-linux-gnu.so" (8 segments)
+     0: [0x7f1d81f91000; memsz:   2c28] flags: 0x4; PT_LOAD
+     1: [0x7f1d81f94000; memsz:   525a] flags: 0x5; PT_LOAD
+     2: [0x7f1d81f9a000; memsz:   1e80] flags: 0x4; PT_LOAD
+     3: [0x7f1d81f9d860; memsz:   24b0] flags: 0x6; PT_LOAD
+     4: [0x7f1d81f9dbf0; memsz:    1a0] flags: 0x6; PT_DYNAMIC
+     5: [0x7f1d81f9a684; memsz:    4a4] flags: 0x4; PT_GNU_EH_FRAME
+     6: [0x7f1d81f91000; memsz:      0] flags: 0x6; PT_GNU_STACK
+     7: [0x7f1d81f9d860; memsz:    7a0] flags: 0x4; PT_GNU_RELRO
+Name: "/home/sgillen/miniconda3/envs/drake/lib/python3.6/lib-dynload/_pickle.cpython-36m-x86_64-linux-gnu.so" (8 segments)
+     0: [0x7f1d577d1000; memsz:   4750] flags: 0x4; PT_LOAD
+     1: [0x7f1d577d6000; memsz:  12ba6] flags: 0x5; PT_LOAD
+     2: [0x7f1d577e9000; memsz:   36e4] flags: 0x4; PT_LOAD
+     3: [0x7f1d577ed800; memsz:   3760] flags: 0x6; PT_LOAD
+     4: [0x7f1d577ed948; memsz:    1a0] flags: 0x6; PT_DYNAMIC
+     5: [0x7f1d577ea618; memsz:    4fc] flags: 0x4; PT_GNU_EH_FRAME
+     6: [0x7f1d577d1000; memsz:      0] flags: 0x6; PT_GNU_STACK
+     7: [0x7f1d577ed800; memsz:    800] flags: 0x4; PT_GNU_RELRO
+Name: "/home/sgillen/.local/lib/python3.6/site-packages/numpy/core/_multiarray_tests.cpython-36m-x86_64-linux-gnu.so" (6 segments)
+     0: [0x7f1d574b1000; memsz:  1e334] flags: 0x5; PT_LOAD
+     1: [0x7f1d576cf338; memsz:   14f0] flags: 0x6; PT_LOAD
+     2: [0x7f1d576cf358; memsz:    1d0] flags: 0x6; PT_DYNAMIC
+     3: [0x7f1d574b1190; memsz:     24] flags: 0x4; PT_NOTE
+     4: [0x7f1d574cbcec; memsz:    9ac] flags: 0x4; PT_GNU_EH_FRAME
+     5: [0x7f1d574b1000; memsz:      0] flags: 0x6; PT_GNU_STACK
+Name: "/home/sgillen/miniconda3/envs/drake/lib/python3.6/lib-dynload/_ctypes.cpython-36m-x86_64-linux-gnu.so" (8 segments)
+     0: [0x7f1d5748c000; memsz:   7250] flags: 0x4; PT_LOAD
+     1: [0x7f1d57494000; memsz:  10bb6] flags: 0x5; PT_LOAD
+     2: [0x7f1d574a5000; memsz:   60fc] flags: 0x4; PT_LOAD
+     3: [0x7f1d574ac738; memsz:   3bb8] flags: 0x6; PT_LOAD
+     4: [0x7f1d574ac758; memsz:    1c0] flags: 0x6; PT_DYNAMIC
+     5: [0x7f1d574a72a8; memsz:    b04] flags: 0x4; PT_GNU_EH_FRAME
+     6: [0x7f1d5748c000; memsz:      0] flags: 0x6; PT_GNU_STACK
+     7: [0x7f1d574ac738; memsz:    8c8] flags: 0x4; PT_GNU_RELRO
+Name: "/home/sgillen/miniconda3/envs/drake/lib/python3.6/lib-dynload/../../libffi.so.6" (6 segments)
+     0: [0x7f1d57283000; memsz:   6d34] flags: 0x5; PT_LOAD
+     1: [0x7f1d5748abc0; memsz:    948] flags: 0x6; PT_LOAD
+     2: [0x7f1d5748ace8; memsz:    190] flags: 0x6; PT_DYNAMIC
+     3: [0x7f1d5728949c; memsz:    144] flags: 0x4; PT_GNU_EH_FRAME
+     4: [0x7f1d57283000; memsz:      0] flags: 0x6; PT_GNU_STACK
+     5: [0x7f1d5748abc0; memsz:    440] flags: 0x4; PT_GNU_RELRO
+Name: "/home/sgillen/.local/lib/python3.6/site-packages/numpy/linalg/lapack_lite.cpython-36m-x86_64-linux-gnu.so" (8 segments)
+     0: [0x7f1d56ffc000; memsz:   3f44] flags: 0x5; PT_LOAD
+     1: [0x7f1d56ffc000; memsz:      0] flags: 0x6; PT_GNU_STACK
+     2: [0x7f1d56ffc190; memsz:     24] flags: 0x4; PT_NOTE
+     3: [0x7f1d56fffc1c; memsz:     5c] flags: 0x4; PT_GNU_EH_FRAME
+     4: [0x7f1d57200000; memsz:    508] flags: 0x6; PT_LOAD
+     5: [0x7f1d57201000; memsz:    358] flags: 0x6; PT_LOAD
+     6: [0x7f1d57202000; memsz:    1f0] flags: 0x6; PT_DYNAMIC
+     7: [0x7f1d57202000; memsz:    928] flags: 0x6; PT_LOAD
+Name: "/home/sgillen/.local/lib/python3.6/site-packages/numpy/linalg/_umath_linalg.cpython-36m-x86_64-linux-gnu.so" (8 segments)
+     0: [0x7f1d56dcd000; memsz:  2a6b4] flags: 0x5; PT_LOAD
+     1: [0x7f1d56dcd000; memsz:      0] flags: 0x6; PT_GNU_STACK
+     2: [0x7f1d56dcd190; memsz:     24] flags: 0x4; PT_NOTE
+     3: [0x7f1d56df41b0; memsz:    93c] flags: 0x4; PT_GNU_EH_FRAME
+     4: [0x7f1d56ff76b8; memsz:   1420] flags: 0x6; PT_LOAD
+     5: [0x7f1d56ff9000; memsz:   1458] flags: 0x6; PT_LOAD
+     6: [0x7f1d56ffb000; memsz:    1f0] flags: 0x6; PT_DYNAMIC
+     7: [0x7f1d56ffb000; memsz:    eb8] flags: 0x6; PT_LOAD
+Name: "/home/sgillen/miniconda3/envs/drake/lib/python3.6/lib-dynload/zlib.cpython-36m-x86_64-linux-gnu.so" (8 segments)
+     0: [0x7f1d81f86000; memsz:   1ca0] flags: 0x4; PT_LOAD
+     1: [0x7f1d81f88000; memsz:   3822] flags: 0x5; PT_LOAD
+     2: [0x7f1d81f8c000; memsz:    f78] flags: 0x4; PT_LOAD
+     3: [0x7f1d81f8eba0; memsz:   1d58] flags: 0x6; PT_LOAD
+     4: [0x7f1d81f8ec78; memsz:    1b0] flags: 0x6; PT_DYNAMIC
+     5: [0x7f1d81f8c630; memsz:    144] flags: 0x4; PT_GNU_EH_FRAME
+     6: [0x7f1d81f86000; memsz:      0] flags: 0x6; PT_GNU_STACK
+     7: [0x7f1d81f8eba0; memsz:    460] flags: 0x4; PT_GNU_RELRO
+Name: "/home/sgillen/miniconda3/envs/drake/lib/python3.6/lib-dynload/../../libz.so.1" (8 segments)
+     0: [0x7f1d56ced000; memsz:   2848] flags: 0x4; PT_LOAD
+     1: [0x7f1d56cf0000; memsz:  13806] flags: 0x5; PT_LOAD
+     2: [0x7f1d56d04000; memsz:   618c] flags: 0x4; PT_LOAD
+     3: [0x7f1d56d0bb20; memsz:    4f8] flags: 0x6; PT_LOAD
+     4: [0x7f1d56d0bc90; memsz:    1c0] flags: 0x6; PT_DYNAMIC
+     5: [0x7f1d56d08580; memsz:    3ac] flags: 0x4; PT_GNU_EH_FRAME
+     6: [0x7f1d56ced000; memsz:      0] flags: 0x6; PT_GNU_STACK
+     7: [0x7f1d56d0bb20; memsz:    4e0] flags: 0x4; PT_GNU_RELRO
+Name: "/home/sgillen/miniconda3/envs/drake/lib/python3.6/lib-dynload/_bz2.cpython-36m-x86_64-linux-gnu.so" (8 segments)
+     0: [0x7f1d56cd5000; memsz:   2690] flags: 0x4; PT_LOAD
+     1: [0x7f1d56cd8000; memsz:   ef72] flags: 0x5; PT_LOAD
+     2: [0x7f1d56ce7000; memsz:   1e6c] flags: 0x4; PT_LOAD
+     3: [0x7f1d56ceaae0; memsz:   1e30] flags: 0x6; PT_LOAD
+     4: [0x7f1d56ceaba0; memsz:    1a0] flags: 0x6; PT_DYNAMIC
+     5: [0x7f1d56ce7fc0; memsz:    214] flags: 0x4; PT_GNU_EH_FRAME
+     6: [0x7f1d56cd5000; memsz:      0] flags: 0x6; PT_GNU_STACK
+     7: [0x7f1d56ceaae0; memsz:    520] flags: 0x4; PT_GNU_RELRO
+Name: "/home/sgillen/miniconda3/envs/drake/lib/python3.6/lib-dynload/_lzma.cpython-36m-x86_64-linux-gnu.so" (8 segments)
+     0: [0x7f1d56cc9000; memsz:   2318] flags: 0x4; PT_LOAD
+     1: [0x7f1d56ccc000; memsz:   3892] flags: 0x5; PT_LOAD
+     2: [0x7f1d56cd0000; memsz:   1354] flags: 0x4; PT_LOAD
+     3: [0x7f1d56cd2b80; memsz:   1df0] flags: 0x6; PT_LOAD
+     4: [0x7f1d56cd2bd8; memsz:    1b0] flags: 0x6; PT_DYNAMIC
+     5: [0x7f1d56cd0950; memsz:    164] flags: 0x4; PT_GNU_EH_FRAME
+     6: [0x7f1d56cc9000; memsz:      0] flags: 0x6; PT_GNU_STACK
+     7: [0x7f1d56cd2b80; memsz:    480] flags: 0x4; PT_GNU_RELRO
+Name: "/home/sgillen/miniconda3/envs/drake/lib/python3.6/lib-dynload/../../liblzma.so.5" (6 segments)
+     0: [0x7f1d56aa3000; memsz:  24264] flags: 0x5; PT_LOAD
+     1: [0x7f1d56cc7840; memsz:    7d8] flags: 0x6; PT_LOAD
+     2: [0x7f1d56cc7b80; memsz:    1d0] flags: 0x6; PT_DYNAMIC
+     3: [0x7f1d56ac2ea0; memsz:    944] flags: 0x4; PT_GNU_EH_FRAME
+     4: [0x7f1d56aa3000; memsz:      0] flags: 0x6; PT_GNU_STACK
+     5: [0x7f1d56cc7840; memsz:    7c0] flags: 0x4; PT_GNU_RELRO
+Name: "/home/sgillen/miniconda3/envs/drake/lib/python3.6/lib-dynload/grp.cpython-36m-x86_64-linux-gnu.so" (8 segments)
+     0: [0x7f1d8215a000; memsz:   1168] flags: 0x4; PT_LOAD
+     1: [0x7f1d8215c000; memsz:    8fa] flags: 0x5; PT_LOAD
+     2: [0x7f1d8215d000; memsz:    398] flags: 0x4; PT_LOAD
+     3: [0x7f1d8215ed00; memsz:    c10] flags: 0x6; PT_LOAD
+     4: [0x7f1d8215ed40; memsz:    1a0] flags: 0x6; PT_DYNAMIC
+     5: [0x7f1d8215d0e0; memsz:     6c] flags: 0x4; PT_GNU_EH_FRAME
+     6: [0x7f1d8215a000; memsz:      0] flags: 0x6; PT_GNU_STACK
+     7: [0x7f1d8215ed00; memsz:    300] flags: 0x4; PT_GNU_RELRO
+Name: "/home/sgillen/miniconda3/envs/drake/lib/python3.6/lib-dynload/_decimal.cpython-36m-x86_64-linux-gnu.so" (8 segments)
+     0: [0x7f1d56a15000; memsz:   6420] flags: 0x4; PT_LOAD
+     1: [0x7f1d56a1c000; memsz:  3362a] flags: 0x5; PT_LOAD
+     2: [0x7f1d56a50000; memsz:   98d8] flags: 0x4; PT_LOAD
+     3: [0x7f1d56a5a920; memsz:   8658] flags: 0x6; PT_LOAD
+     4: [0x7f1d56a5aa88; memsz:    1b0] flags: 0x6; PT_DYNAMIC
+     5: [0x7f1d56a522d0; memsz:   12d4] flags: 0x4; PT_GNU_EH_FRAME
+     6: [0x7f1d56a15000; memsz:      0] flags: 0x6; PT_GNU_STACK
+     7: [0x7f1d56a5a920; memsz:    6e0] flags: 0x4; PT_GNU_RELRO
+Name: "/home/sgillen/.local/lib/python3.6/site-packages/numpy/fft/pocketfft_internal.cpython-36m-x86_64-linux-gnu.so" (6 segments)
+     0: [0x7f1d567ff000; memsz:  150f4] flags: 0x5; PT_LOAD
+     1: [0x7f1d56a140f8; memsz:    3e0] flags: 0x6; PT_LOAD
+     2: [0x7f1d56a14118; memsz:    1d0] flags: 0x6; PT_DYNAMIC
+     3: [0x7f1d567ff190; memsz:     24] flags: 0x4; PT_NOTE
+     4: [0x7f1d56812fa0; memsz:    1dc] flags: 0x4; PT_GNU_EH_FRAME
+     5: [0x7f1d567ff000; memsz:      0] flags: 0x6; PT_GNU_STACK
+Name: "/home/sgillen/.local/lib/python3.6/site-packages/numpy/random/mtrand.cpython-36m-x86_64-linux-gnu.so" (6 segments)
+     0: [0x7f1d564d6000; memsz:  823cc] flags: 0x5; PT_LOAD
+     1: [0x7f1d56759000; memsz:  25f08] flags: 0x6; PT_LOAD
+     2: [0x7f1d56759020; memsz:    1e0] flags: 0x6; PT_DYNAMIC
+     3: [0x7f1d564d6190; memsz:     24] flags: 0x4; PT_NOTE
+     4: [0x7f1d56554994; memsz:    69c] flags: 0x4; PT_GNU_EH_FRAME
+     5: [0x7f1d564d6000; memsz:      0] flags: 0x6; PT_GNU_STACK
+Name: "/home/sgillen/.local/lib/python3.6/site-packages/numpy/random/common.cpython-36m-x86_64-linux-gnu.so" (6 segments)
+     0: [0x7f1d56297000; memsz:  3b3ec] flags: 0x5; PT_LOAD
+     1: [0x7f1d564d3000; memsz:   2cd8] flags: 0x6; PT_LOAD
+     2: [0x7f1d564d3020; memsz:    1e0] flags: 0x6; PT_DYNAMIC
+     3: [0x7f1d56297190; memsz:     24] flags: 0x4; PT_NOTE
+     4: [0x7f1d562d1288; memsz:    1ec] flags: 0x4; PT_GNU_EH_FRAME
+     5: [0x7f1d56297000; memsz:      0] flags: 0x6; PT_GNU_STACK
+Name: "/home/sgillen/.local/lib/python3.6/site-packages/numpy/random/bounded_integers.cpython-36m-x86_64-linux-gnu.so" (6 segments)
+     0: [0x7f1d56036000; memsz:  5c9c4] flags: 0x5; PT_LOAD
+     1: [0x7f1d56293000; memsz:   3688] flags: 0x6; PT_LOAD
+     2: [0x7f1d56293020; memsz:    1e0] flags: 0x6; PT_DYNAMIC
+     3: [0x7f1d56036190; memsz:     24] flags: 0x4; PT_NOTE
+     4: [0x7f1d56090920; memsz:    404] flags: 0x4; PT_GNU_EH_FRAME
+     5: [0x7f1d56036000; memsz:      0] flags: 0x6; PT_GNU_STACK
+Name: "/home/sgillen/.local/lib/python3.6/site-packages/numpy/random/mt19937.cpython-36m-x86_64-linux-gnu.so" (6 segments)
+     0: [0x7f1d55e1b000; memsz:  189fc] flags: 0x5; PT_LOAD
+     1: [0x7f1d56033a00; memsz:   2208] flags: 0x6; PT_LOAD
+     2: [0x7f1d56033a20; memsz:    1e0] flags: 0x6; PT_DYNAMIC
+     3: [0x7f1d55e1b190; memsz:     24] flags: 0x4; PT_NOTE
+     4: [0x7f1d55e32ab0; memsz:    204] flags: 0x4; PT_GNU_EH_FRAME
+     5: [0x7f1d55e1b000; memsz:      0] flags: 0x6; PT_GNU_STACK
+Name: "/home/sgillen/.local/lib/python3.6/site-packages/numpy/random/bit_generator.cpython-36m-x86_64-linux-gnu.so" (6 segments)
+     0: [0x7f1d55bec000; memsz:  28b94] flags: 0x5; PT_LOAD
+     1: [0x7f1d55e15000; memsz:   5ac8] flags: 0x6; PT_LOAD
+     2: [0x7f1d55e15020; memsz:    1e0] flags: 0x6; PT_DYNAMIC
+     3: [0x7f1d55bec190; memsz:     24] flags: 0x4; PT_NOTE
+     4: [0x7f1d55c12c20; memsz:    414] flags: 0x4; PT_GNU_EH_FRAME
+     5: [0x7f1d55bec000; memsz:      0] flags: 0x6; PT_GNU_STACK
+Name: "/home/sgillen/miniconda3/envs/drake/lib/python3.6/lib-dynload/binascii.cpython-36m-x86_64-linux-gnu.so" (8 segments)
+     0: [0x7f1d7f803000; memsz:   1630] flags: 0x4; PT_LOAD
+     1: [0x7f1d7f805000; memsz:   2eca] flags: 0x5; PT_LOAD
+     2: [0x7f1d7f808000; memsz:   1294] flags: 0x4; PT_LOAD
+     3: [0x7f1d7f80ac80; memsz:    ec0] flags: 0x6; PT_LOAD
+     4: [0x7f1d7f80ad08; memsz:    1b0] flags: 0x6; PT_DYNAMIC
+     5: [0x7f1d7f808900; memsz:    13c] flags: 0x4; PT_GNU_EH_FRAME
+     6: [0x7f1d7f803000; memsz:      0] flags: 0x6; PT_GNU_STACK
+     7: [0x7f1d7f80ac80; memsz:    380] flags: 0x4; PT_GNU_RELRO
+Name: "/home/sgillen/miniconda3/envs/drake/lib/python3.6/lib-dynload/_hashlib.cpython-36m-x86_64-linux-gnu.so" (8 segments)
+     0: [0x7f1d7f7fa000; memsz:   1e50] flags: 0x4; PT_LOAD
+     1: [0x7f1d7f7fc000; memsz:   2cd6] flags: 0x5; PT_LOAD
+     2: [0x7f1d7f7ff000; memsz:    f34] flags: 0x4; PT_LOAD
+     3: [0x7f1d7f801be0; memsz:    f20] flags: 0x6; PT_LOAD
+     4: [0x7f1d7f801c40; memsz:    1b0] flags: 0x6; PT_DYNAMIC
+     5: [0x7f1d7f7ff5f8; memsz:    13c] flags: 0x4; PT_GNU_EH_FRAME
+     6: [0x7f1d7f7fa000; memsz:      0] flags: 0x6; PT_GNU_STACK
+     7: [0x7f1d7f801be0; memsz:    420] flags: 0x4; PT_GNU_RELRO
+Name: "/home/sgillen/miniconda3/envs/drake/lib/python3.6/lib-dynload/../../libcrypto.so.1.1" (8 segments)
+     0: [0x7f1d558ad000; memsz:  7a2e0] flags: 0x4; PT_LOAD
+     1: [0x7f1d55928000; memsz: 175dbe] flags: 0x5; PT_LOAD
+     2: [0x7f1d55a9e000; memsz:  8aee8] flags: 0x4; PT_LOAD
+     3: [0x7f1d55b2a720; memsz:  30740] flags: 0x6; PT_LOAD
+     4: [0x7f1d55b548e8; memsz:    220] flags: 0x6; PT_DYNAMIC
+     5: [0x7f1d55adfe68; memsz:   c164] flags: 0x4; PT_GNU_EH_FRAME
+     6: [0x7f1d558ad000; memsz:      0] flags: 0x6; PT_GNU_STACK
+     7: [0x7f1d55b2a720; memsz:  2a8e0] flags: 0x4; PT_GNU_RELRO
+Name: "/home/sgillen/miniconda3/envs/drake/lib/python3.6/lib-dynload/_blake2.cpython-36m-x86_64-linux-gnu.so" (8 segments)
+     0: [0x7f1d7f7ea000; memsz:   1d30] flags: 0x4; PT_LOAD
+     1: [0x7f1d7f7ec000; memsz:   939e] flags: 0x5; PT_LOAD
+     2: [0x7f1d7f7f6000; memsz:    f18] flags: 0x4; PT_LOAD
+     3: [0x7f1d7f7f8ba0; memsz:   1040] flags: 0x6; PT_LOAD
+     4: [0x7f1d7f7f8ca8; memsz:    1a0] flags: 0x6; PT_DYNAMIC
+     5: [0x7f1d7f7f63a0; memsz:    1ac] flags: 0x4; PT_GNU_EH_FRAME
+     6: [0x7f1d7f7ea000; memsz:      0] flags: 0x6; PT_GNU_STACK
+     7: [0x7f1d7f7f8ba0; memsz:    460] flags: 0x4; PT_GNU_RELRO
+Name: "/home/sgillen/miniconda3/envs/drake/lib/python3.6/lib-dynload/_sha3.cpython-36m-x86_64-linux-gnu.so" (8 segments)
+     0: [0x7f1d7f7cf000; memsz:   2260] flags: 0x4; PT_LOAD
+     1: [0x7f1d7f7d2000; memsz:  122f6] flags: 0x5; PT_LOAD
+     2: [0x7f1d7f7e5000; memsz:    fd8] flags: 0x4; PT_LOAD
+     3: [0x7f1d7f7e7c48; memsz:   1538] flags: 0x6; PT_LOAD
+     4: [0x7f1d7f7e7c68; memsz:    1a0] flags: 0x6; PT_DYNAMIC
+     5: [0x7f1d7f7e5298; memsz:    224] flags: 0x4; PT_GNU_EH_FRAME
+     6: [0x7f1d7f7cf000; memsz:      0] flags: 0x6; PT_GNU_STACK
+     7: [0x7f1d7f7e7c48; memsz:    3b8] flags: 0x4; PT_GNU_RELRO
+Name: "/home/sgillen/miniconda3/envs/drake/lib/python3.6/lib-dynload/_bisect.cpython-36m-x86_64-linux-gnu.so" (8 segments)
+     0: [0x7f1d81ff0000; memsz:    d90] flags: 0x4; PT_LOAD
+     1: [0x7f1d81ff1000; memsz:    896] flags: 0x5; PT_LOAD
+     2: [0x7f1d81ff2000; memsz:    348] flags: 0x4; PT_LOAD
+     3: [0x7f1d81ff3da0; memsz:    b98] flags: 0x6; PT_LOAD
+     4: [0x7f1d81ff3dc0; memsz:    1a0] flags: 0x6; PT_DYNAMIC
+     5: [0x7f1d81ff2088; memsz:     64] flags: 0x4; PT_GNU_EH_FRAME
+     6: [0x7f1d81ff0000; memsz:      0] flags: 0x6; PT_GNU_STACK
+     7: [0x7f1d81ff3da0; memsz:    260] flags: 0x4; PT_GNU_RELRO
+Name: "/home/sgillen/miniconda3/envs/drake/lib/python3.6/lib-dynload/_random.cpython-36m-x86_64-linux-gnu.so" (8 segments)
+     0: [0x7f1d7f7c8000; memsz:   1288] flags: 0x4; PT_LOAD
+     1: [0x7f1d7f7ca000; memsz:   1ca6] flags: 0x5; PT_LOAD
+     2: [0x7f1d7f7cc000; memsz:    5e4] flags: 0x4; PT_LOAD
+     3: [0x7f1d7f7cdd00; memsz:    6a0] flags: 0x6; PT_LOAD
+     4: [0x7f1d7f7cdd20; memsz:    1a0] flags: 0x6; PT_DYNAMIC
+     5: [0x7f1d7f7cc1e0; memsz:     94] flags: 0x4; PT_GNU_EH_FRAME
+     6: [0x7f1d7f7c8000; memsz:      0] flags: 0x6; PT_GNU_STACK
+     7: [0x7f1d7f7cdd00; memsz:    300] flags: 0x4; PT_GNU_RELRO
+Name: "/home/sgillen/.local/lib/python3.6/site-packages/numpy/random/entropy.cpython-36m-x86_64-linux-gnu.so" (6 segments)
+     0: [0x7f1d55679000; memsz:  2fb5c] flags: 0x5; PT_LOAD
+     1: [0x7f1d558a8b60; memsz:   4478] flags: 0x6; PT_LOAD
+     2: [0x7f1d558a8b80; memsz:    1e0] flags: 0x6; PT_DYNAMIC
+     3: [0x7f1d55679190; memsz:     24] flags: 0x4; PT_NOTE
+     4: [0x7f1d556a6450; memsz:    4bc] flags: 0x4; PT_GNU_EH_FRAME
+     5: [0x7f1d55679000; memsz:      0] flags: 0x6; PT_GNU_STACK
+Name: "/home/sgillen/.local/lib/python3.6/site-packages/numpy/random/philox.cpython-36m-x86_64-linux-gnu.so" (6 segments)
+     0: [0x7f1d55425000; memsz:  1166c] flags: 0x5; PT_LOAD
+     1: [0x7f1d55636670; memsz:   2238] flags: 0x6; PT_LOAD
+     2: [0x7f1d55636690; memsz:    1e0] flags: 0x6; PT_DYNAMIC
+     3: [0x7f1d55425190; memsz:     24] flags: 0x4; PT_NOTE
+     4: [0x7f1d55435820; memsz:    1c4] flags: 0x4; PT_GNU_EH_FRAME
+     5: [0x7f1d55425000; memsz:      0] flags: 0x6; PT_GNU_STACK
+Name: "/home/sgillen/.local/lib/python3.6/site-packages/numpy/random/pcg64.cpython-36m-x86_64-linux-gnu.so" (6 segments)
+     0: [0x7f1d55213000; memsz:   ec6c] flags: 0x5; PT_LOAD
+     1: [0x7f1d55422000; memsz:   2008] flags: 0x6; PT_LOAD
+     2: [0x7f1d55422020; memsz:    1e0] flags: 0x6; PT_DYNAMIC
+     3: [0x7f1d55213190; memsz:     24] flags: 0x4; PT_NOTE
+     4: [0x7f1d55221080; memsz:    18c] flags: 0x4; PT_GNU_EH_FRAME
+     5: [0x7f1d55213000; memsz:      0] flags: 0x6; PT_GNU_STACK
+Name: "/home/sgillen/.local/lib/python3.6/site-packages/numpy/random/sfc64.cpython-36m-x86_64-linux-gnu.so" (6 segments)
+     0: [0x7f1d55006000; memsz:   b44c] flags: 0x5; PT_LOAD
+     1: [0x7f1d55211450; memsz:   1648] flags: 0x6; PT_LOAD
+     2: [0x7f1d55211470; memsz:    1e0] flags: 0x6; PT_DYNAMIC
+     3: [0x7f1d55006190; memsz:     24] flags: 0x4; PT_NOTE
+     4: [0x7f1d55010b70; memsz:    134] flags: 0x4; PT_GNU_EH_FRAME
+     5: [0x7f1d55006000; memsz:      0] flags: 0x6; PT_GNU_STACK
+Name: "/home/sgillen/.local/lib/python3.6/site-packages/numpy/random/generator.cpython-36m-x86_64-linux-gnu.so" (6 segments)
+     0: [0x7f1d54d48000; memsz:  97b04] flags: 0x5; PT_LOAD
+     1: [0x7f1d54fe0000; memsz:  25648] flags: 0x6; PT_LOAD
+     2: [0x7f1d54fe0020; memsz:    1e0] flags: 0x6; PT_DYNAMIC
+     3: [0x7f1d54d48190; memsz:     24] flags: 0x4; PT_NOTE
+     4: [0x7f1d54ddaf70; memsz:    8a4] flags: 0x4; PT_GNU_EH_FRAME
+     5: [0x7f1d54d48000; memsz:      0] flags: 0x6; PT_GNU_STACK
+Name: "/home/sgillen/.local/lib/python3.6/site-packages/torch/_C.cpython-36m-x86_64-linux-gnu.so" (8 segments)
+     0: [0x7f1d7cea5000; memsz:  12d6f] flags: 0x5; PT_LOAD
+     1: [0x7f1d7cea5000; memsz:      0] flags: 0x6; PT_GNU_STACK
+     2: [0x7f1d7cea51c8; memsz:     24] flags: 0x4; PT_NOTE
+     3: [0x7f1d7ceb4860; memsz:    96c] flags: 0x4; PT_GNU_EH_FRAME
+     4: [0x7f1d7d0b8b40; memsz:    800] flags: 0x6; PT_LOAD
+     5: [0x7f1d7d0b8b40; memsz:    4c0] flags: 0x4; PT_GNU_RELRO
+     6: [0x7f1d7d0b8d08; memsz:    230] flags: 0x6; PT_DYNAMIC
+     7: [0x7f1d7d0ba000; memsz:   5f98] flags: 0x6; PT_LOAD
+Name: "/home/sgillen/.local/lib/python3.6/site-packages/torch/lib/libshm.so" (10 segments)
+     0: [0x7f1d7cc96000; memsz:   7772] flags: 0x5; PT_LOAD
+     1: [0x7f1d7cc96000; memsz:      0] flags: 0x6; PT_GNU_STACK
+     2: [0x7f1d7cc961c8; memsz:     24] flags: 0x4; PT_NOTE
+     3: [0x7f1d7cc9cbe8; memsz:    114] flags: 0x4; PT_GNU_EH_FRAME
+     4: [0x7f1d7ce9db30; memsz:    7d0] flags: 0x6; PT_LOAD
+     5: [0x7f1d7ce9db30; memsz:    4d0] flags: 0x4; PT_GNU_RELRO
+     6: [0x7f1d7ce9dc70; memsz:    2a0] flags: 0x6; PT_DYNAMIC
+     7: [0x7f1d7ce9f000; memsz:   1270] flags: 0x6; PT_LOAD
+     8: [0x7f1d7cea1000; memsz:   1110] flags: 0x6; PT_LOAD
+     9: [0x7f1d7cea3000; memsz:   1128] flags: 0x6; PT_LOAD
+Name: "/home/sgillen/.local/lib/python3.6/site-packages/torch/lib/libtorch_python.so" (8 segments)
+     0: [0x7f1d7c094000; memsz: 91df26] flags: 0x5; PT_LOAD
+     1: [0x7f1d7c094000; memsz:      0] flags: 0x6; PT_GNU_STACK
+     2: [0x7f1d7c0941c8; memsz:     24] flags: 0x4; PT_NOTE
+     3: [0x7f1d7c874610; memsz:  12afc] flags: 0x4; PT_GNU_EH_FRAME
+     4: [0x7f1d7cbb2d90; memsz:  7f118] flags: 0x6; PT_LOAD
+     5: [0x7f1d7cbb2d90; memsz:  11270] flags: 0x4; PT_GNU_RELRO
+     6: [0x7f1d7cbbf250; memsz:    290] flags: 0x6; PT_DYNAMIC
+     7: [0x7f1d7cc32000; memsz:  638a0] flags: 0x6; PT_LOAD
+Name: "/usr/lib/x86_64-linux-gnu/libstdc++.so.6" (8 segments)
+     0: [0x7f1d7bce4000; memsz: 178ab0] flags: 0x5; PT_LOAD
+     1: [0x7f1d7c05d260; memsz:   ede0] flags: 0x6; PT_LOAD
+     2: [0x7f1d7c065d28; memsz:    220] flags: 0x6; PT_DYNAMIC
+     3: [0x7f1d7bce4200; memsz:     24] flags: 0x4; PT_NOTE
+     4: [0x7f1d7c05d260; memsz:     20] flags: 0x4; PT_TLS
+     5: [0x7f1d7be280dc; memsz:   7f14] flags: 0x4; PT_GNU_EH_FRAME
+     6: [0x7f1d7bce4000; memsz:      0] flags: 0x6; PT_GNU_STACK
+     7: [0x7f1d7c05d260; memsz:   9da0] flags: 0x4; PT_GNU_RELRO
+Name: "/lib/x86_64-linux-gnu/libgcc_s.so.1" (7 segments)
+     0: [0x7f1d7bacc000; memsz:  16348] flags: 0x5; PT_LOAD
+     1: [0x7f1d7bce2dc8; memsz:    668] flags: 0x6; PT_LOAD
+     2: [0x7f1d7bce2de0; memsz:    1f0] flags: 0x6; PT_DYNAMIC
+     3: [0x7f1d7bacc1c8; memsz:     24] flags: 0x4; PT_NOTE
+     4: [0x7f1d7badffd4; memsz:    63c] flags: 0x4; PT_GNU_EH_FRAME
+     5: [0x7f1d7bacc000; memsz:      0] flags: 0x6; PT_GNU_STACK
+     6: [0x7f1d7bce2dc8; memsz:    238] flags: 0x4; PT_GNU_RELRO
+Name: "/home/sgillen/.local/lib/python3.6/site-packages/torch/lib/libtorch.so" (12 segments)
+     0: [0x7f1d0b17f000; memsz:457df430] flags: 0x5; PT_LOAD
+     1: [0x7f1d0b17f000; memsz:      0] flags: 0x6; PT_GNU_STACK
+     2: [0x7f1d0b17f238; memsz:     24] flags: 0x4; PT_NOTE
+     3: [0x7f1d4f5a1da0; memsz: 1fce3c] flags: 0x4; PT_GNU_EH_FRAME
+     4: [0x7f1d5095e410; memsz:     20] flags: 0x4; PT_NOTE
+     5: [0x7f1d50b5e480; memsz:1dcd078] flags: 0x6; PT_LOAD
+     6: [0x7f1d50b5e480; memsz:   8000] flags: 0x4; PT_TLS
+     7: [0x7f1d50b5e480; memsz: 1b5b80] flags: 0x4; PT_GNU_RELRO
+     8: [0x7f1d50ca1ab0; memsz:    2a0] flags: 0x6; PT_DYNAMIC
+     9: [0x7f1d5292c000; memsz: bffff0] flags: 0x6; PT_LOAD
+    10: [0x7f1d5352c000; memsz: b4d930] flags: 0x6; PT_LOAD
+    11: [0x7f1d5407a000; memsz: b4d948] flags: 0x6; PT_LOAD
+Name: "/home/sgillen/.local/lib/python3.6/site-packages/torch/lib/libc10_cuda.so" (10 segments)
+     0: [0x7f1d77693000; memsz:  1f759] flags: 0x5; PT_LOAD
+     1: [0x7f1d77693000; memsz:      0] flags: 0x6; PT_GNU_STACK
+     2: [0x7f1d77693200; memsz:     24] flags: 0x4; PT_NOTE
+     3: [0x7f1d776af8f0; memsz:    394] flags: 0x4; PT_GNU_EH_FRAME
+     4: [0x7f1d778b2b20; memsz:   4c20] flags: 0x6; PT_LOAD
+     5: [0x7f1d778b2b20; memsz:      8] flags: 0x4; PT_TLS
+     6: [0x7f1d778b2b20; memsz:    4e0] flags: 0x4; PT_GNU_RELRO
+     7: [0x7f1d778b2ce8; memsz:    260] flags: 0x6; PT_DYNAMIC
+     8: [0x7f1d778b8000; memsz:   2020] flags: 0x6; PT_LOAD
+     9: [0x7f1d778bb000; memsz:   1e48] flags: 0x6; PT_LOAD
+Name: "/home/sgillen/.local/lib/python3.6/site-packages/torch/lib/libc10.so" (9 segments)
+     0: [0x7f1d7743c000; memsz:  475c6] flags: 0x5; PT_LOAD
+     1: [0x7f1d7743c000; memsz:      0] flags: 0x6; PT_GNU_STACK
+     2: [0x7f1d7743c200; memsz:     24] flags: 0x4; PT_NOTE
+     3: [0x7f1d77479480; memsz:   1554] flags: 0x4; PT_GNU_EH_FRAME
+     4: [0x7f1d77684370; memsz:   2cb0] flags: 0x6; PT_LOAD
+     5: [0x7f1d77684370; memsz:      1] flags: 0x4; PT_TLS
+     6: [0x7f1d77684370; memsz:    c90] flags: 0x4; PT_GNU_RELRO
+     7: [0x7f1d77684978; memsz:    240] flags: 0x6; PT_DYNAMIC
+     8: [0x7f1d77688000; memsz:   a348] flags: 0x6; PT_LOAD
+Name: "/home/sgillen/.local/lib/python3.6/site-packages/torch/lib/libnvToolsExt-3965bdd0.so.1" (6 segments)
+     0: [0x7f1d7b8c2000; memsz:   7a94] flags: 0x5; PT_LOAD
+     1: [0x7f1d7b8c2000; memsz:      0] flags: 0x6; PT_GNU_STACK
+     2: [0x7f1d7b8c80e4; memsz:    664] flags: 0x4; PT_GNU_EH_FRAME
+     3: [0x7f1d7baca000; memsz:    a68] flags: 0x6; PT_LOAD
+     4: [0x7f1d7bacb000; memsz:    230] flags: 0x6; PT_DYNAMIC
+     5: [0x7f1d7bacb000; memsz:    a00] flags: 0x6; PT_LOAD
+Name: "/home/sgillen/.local/lib/python3.6/site-packages/torch/lib/libcudart-1581fefa.so.10.0" (6 segments)
+     0: [0x7f1d771bf000; memsz:  74ddc] flags: 0x5; PT_LOAD
+     1: [0x7f1d771bf000; memsz:      0] flags: 0x6; PT_GNU_STACK
+     2: [0x7f1d772273bc; memsz:   29cc] flags: 0x4; PT_GNU_EH_FRAME
+     3: [0x7f1d77434000; memsz:   4ce0] flags: 0x6; PT_LOAD
+     4: [0x7f1d77439000; memsz:    200] flags: 0x6; PT_DYNAMIC
+     5: [0x7f1d77439000; memsz:   2d10] flags: 0x6; PT_LOAD
+Name: "/home/sgillen/.local/lib/python3.6/site-packages/torch/lib/libgomp-4f651535.so.1" (9 segments)
+     0: [0x7f1d74e92000; memsz:  2404c] flags: 0x5; PT_LOAD
+     1: [0x7f1d74e92000; memsz:      0] flags: 0x6; PT_GNU_STACK
+     2: [0x7f1d74e92200; memsz:     24] flags: 0x4; PT_NOTE
+     3: [0x7f1d74eb0b6c; memsz:    f5c] flags: 0x4; PT_GNU_EH_FRAME
+     4: [0x7f1d750b6d70; memsz:    820] flags: 0x6; PT_LOAD
+     5: [0x7f1d750b6d70; memsz:     78] flags: 0x4; PT_TLS
+     6: [0x7f1d750b6d70; memsz:    290] flags: 0x4; PT_GNU_RELRO
+     7: [0x7f1d750b8000; memsz:    220] flags: 0x6; PT_DYNAMIC
+     8: [0x7f1d750b8000; memsz:   3310] flags: 0x6; PT_LOAD
+Name: "/home/sgillen/miniconda3/envs/drake/lib/python3.6/lib-dynload/_opcode.cpython-36m-x86_64-linux-gnu.so" (8 segments)
+     0: [0x7f1d7f7c3000; memsz:    990] flags: 0x4; PT_LOAD
+     1: [0x7f1d7f7c4000; memsz:    2c6] flags: 0x5; PT_LOAD
+     2: [0x7f1d7f7c5000; memsz:    1d0] flags: 0x4; PT_LOAD
+     3: [0x7f1d7f7c6db8; memsz:    380] flags: 0x6; PT_LOAD
+     4: [0x7f1d7f7c6dd8; memsz:    1a0] flags: 0x6; PT_DYNAMIC
+     5: [0x7f1d7f7c50d0; memsz:     34] flags: 0x4; PT_GNU_EH_FRAME
+     6: [0x7f1d7f7c3000; memsz:      0] flags: 0x6; PT_GNU_STACK
+     7: [0x7f1d7f7c6db8; memsz:    248] flags: 0x4; PT_GNU_RELRO
+Name: "/home/sgillen/miniconda3/envs/drake/lib/python3.6/lib-dynload/_socket.cpython-36m-x86_64-linux-gnu.so" (8 segments)
+     0: [0x7f1d7c076000; memsz:   4010] flags: 0x4; PT_LOAD
+     1: [0x7f1d7c07b000; memsz:   d772] flags: 0x5; PT_LOAD
+     2: [0x7f1d7c089000; memsz:   4324] flags: 0x4; PT_LOAD
+     3: [0x7f1d7c08ea08; memsz:   5030] flags: 0x6; PT_LOAD
+     4: [0x7f1d7c08ea28; memsz:    1a0] flags: 0x6; PT_DYNAMIC
+     5: [0x7f1d7c08b430; memsz:    444] flags: 0x4; PT_GNU_EH_FRAME
+     6: [0x7f1d7c076000; memsz:      0] flags: 0x6; PT_GNU_STACK
+     7: [0x7f1d7c08ea08; memsz:    5f8] flags: 0x4; PT_GNU_RELRO
+Name: "/home/sgillen/miniconda3/envs/drake/lib/python3.6/lib-dynload/array.cpython-36m-x86_64-linux-gnu.so" (8 segments)
+     0: [0x7f1d74dff000; memsz:   3090] flags: 0x4; PT_LOAD
+     1: [0x7f1d74e03000; memsz:   79d2] flags: 0x5; PT_LOAD
+     2: [0x7f1d74e0b000; memsz:   2858] flags: 0x4; PT_LOAD
+     3: [0x7f1d74e0e940; memsz:   2848] flags: 0x6; PT_LOAD
+     4: [0x7f1d74e0eb90; memsz:    1a0] flags: 0x6; PT_DYNAMIC
+     5: [0x7f1d74e0bef8; memsz:    43c] flags: 0x4; PT_GNU_EH_FRAME
+     6: [0x7f1d74dff000; memsz:      0] flags: 0x6; PT_GNU_STACK
+     7: [0x7f1d74e0e940; memsz:    6c0] flags: 0x4; PT_GNU_RELRO
+Name: "/home/sgillen/miniconda3/envs/drake/lib/python3.6/lib-dynload/_multiprocessing.cpython-36m-x86_64-linux-gnu.so" (8 segments)
+     0: [0x7f1d7c070000; memsz:   1938] flags: 0x4; PT_LOAD
+     1: [0x7f1d7c072000; memsz:    e12] flags: 0x5; PT_LOAD
+     2: [0x7f1d7c073000; memsz:    730] flags: 0x4; PT_LOAD
+     3: [0x7f1d7c074ca0; memsz:    890] flags: 0x6; PT_LOAD
+     4: [0x7f1d7c074cc0; memsz:    1a0] flags: 0x6; PT_DYNAMIC
+     5: [0x7f1d7c073308; memsz:     b4] flags: 0x4; PT_GNU_EH_FRAME
+     6: [0x7f1d7c070000; memsz:      0] flags: 0x6; PT_GNU_STACK
+     7: [0x7f1d7c074ca0; memsz:    360] flags: 0x4; PT_GNU_RELRO
+Name: "/home/sgillen/miniconda3/envs/drake/lib/python3.6/lib-dynload/_ssl.cpython-36m-x86_64-linux-gnu.so" (8 segments)
+     0: [0x7f1d7491d000; memsz:   9748] flags: 0x4; PT_LOAD
+     1: [0x7f1d74927000; memsz:   a2aa] flags: 0x5; PT_LOAD
+     2: [0x7f1d74932000; memsz:   5a30] flags: 0x4; PT_LOAD
+     3: [0x7f1d74939460; memsz:   5130] flags: 0x6; PT_LOAD
+     4: [0x7f1d74939560; memsz:    1c0] flags: 0x6; PT_DYNAMIC
+     5: [0x7f1d74935ae8; memsz:    4dc] flags: 0x4; PT_GNU_EH_FRAME
+     6: [0x7f1d7491d000; memsz:      0] flags: 0x6; PT_GNU_STACK
+     7: [0x7f1d74939460; memsz:    ba0] flags: 0x4; PT_GNU_RELRO
+Name: "/home/sgillen/miniconda3/envs/drake/lib/python3.6/lib-dynload/../../libssl.so.1.1" (8 segments)
+     0: [0x7f1d7488d000; memsz:  1e3a8] flags: 0x4; PT_LOAD
+     1: [0x7f1d748ac000; memsz:  4982a] flags: 0x5; PT_LOAD
+     2: [0x7f1d748f6000; memsz:  18ce4] flags: 0x4; PT_LOAD
+     3: [0x7f1d749107a0; memsz:   c1a0] flags: 0x6; PT_LOAD
+     4: [0x7f1d74917fe0; memsz:    1f0] flags: 0x6; PT_DYNAMIC
+     5: [0x7f1d74900860; memsz:   24b4] flags: 0x4; PT_GNU_EH_FRAME
+     6: [0x7f1d7488d000; memsz:      0] flags: 0x6; PT_GNU_STACK
+     7: [0x7f1d749107a0; memsz:   8860] flags: 0x4; PT_GNU_RELRO
+Name: "/home/sgillen/work/third_party/drake/tmp/cc_regex.cpython-36m-x86_64-linux-gnu.so" (7 segments)
+     0: [0x7f1d743d7000; memsz:  33345] flags: 0x5; PT_LOAD
+     1: [0x7f1d7460a668; memsz:   1738] flags: 0x6; PT_LOAD
+     2: [0x7f1d7460aa80; memsz:    1e0] flags: 0x6; PT_DYNAMIC
+     3: [0x7f1d743d71c8; memsz:     24] flags: 0x4; PT_NOTE
+     4: [0x7f1d74404e98; memsz:    804] flags: 0x4; PT_GNU_EH_FRAME
+     5: [0x7f1d743d7000; memsz:      0] flags: 0x6; PT_GNU_STACK
+     6: [0x7f1d7460a668; memsz:    998] flags: 0x4; PT_GNU_RELRO

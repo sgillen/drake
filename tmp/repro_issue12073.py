@@ -13,12 +13,13 @@ def repro():
         print("Torch last")
         import cc_regex
         import torch
+    print(cc_regex.dl_iterate())
     print(cc_regex.get_name())
     print("[ Done ]")
 
-import sys, trace
-sys.stdout = sys.stderr
-tracer = trace.Trace(trace=1, count=0, ignoredirs=["/usr", sys.prefix])
-tracer.runfunc(repro)
-# repro()
+#import sys, trace
+#sys.stdout = sys.stderr
+#tracer = trace.Trace(trace=1, count=0, ignoredirs=["/usr", sys.prefix])
+#tracer.runfunc(repro)
+repro()
 exit(0)

@@ -2,6 +2,8 @@
 
 namespace drake {
 
-std::string GetName();
+  void DlIterate();
+  std::string GetName();
 
 }
+
