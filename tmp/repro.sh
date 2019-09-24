@@ -21,7 +21,7 @@ fi
 
 python=${PWD}/venv/bin/python
 
-cat > ../user.bazelrc <<EOF
+cat > ../hack.bazelrc <<EOF
 build --python_path=${python}
 build --action_env=DRAKE_PYTHON_BIN_PATH=${python}
 EOF
