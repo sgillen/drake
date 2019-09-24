@@ -13,16 +13,15 @@ _SHA256 = "b37cc8ae8a60b8e92b7e88ffabebf7783c31b704d6c0860a7cb97c98dc17aebb"
 def pybind11_repository(
         name,
         mirrors = None):
-    print("pybind11")
-    # github_archive(
-    native.new_local_repository(
+    github_archive(
+    # native.new_local_repository(
         name = name,
-        path = "/home/eacousineau/proj/tri/repo/externals/pybind11",
-        # repository = _REPOSITORY,
-        # commit = _COMMIT,
-        # sha256 = _SHA256,
+        # path = "/home/eacousineau/proj/tri/repo/externals/pybind11",
+        repository = _REPOSITORY,
+        commit = _COMMIT,
+        sha256 = _SHA256,
         build_file = "@drake//tools/workspace/pybind11:package.BUILD.bazel",
-        # mirrors = mirrors,
+        mirrors = mirrors,
     )
 
 def generate_pybind11_version_py_file(name):

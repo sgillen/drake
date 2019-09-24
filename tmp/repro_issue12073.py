@@ -13,12 +13,12 @@ def repro():
         print("Torch last")
         import nice_type_name
         import torch
-    print(nice_type_name.get_arbitrary_type_name())
+    print(nice_type_name.ArbitraryName().name())
     print("[ Done ]")
 
 import sys, trace
 sys.stdout = sys.stderr
 tracer = trace.Trace(trace=1, count=0, ignoredirs=["/usr", sys.prefix])
-# tracer.runfunc(repro)
-repro()
+tracer.runfunc(repro)
+# repro()
 exit(0)
