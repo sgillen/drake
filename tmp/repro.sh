@@ -16,7 +16,7 @@ build --action_env=DRAKE_PYTHON_BIN_PATH=${python}
 EOF
 
 
-bazel build -c dbg //tmp:repro_issue12073
+bazel build --announce_rc -c dbg //tmp:repro_issue12073
 bin=../bazel-bin/tmp/repro_issue12073
 
 ${bin}
