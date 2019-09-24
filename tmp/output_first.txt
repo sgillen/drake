@@ -6,7 +6,6 @@ Torch first
 repro_issue12073.py(10):         import torch
 repro_issue12073.py(11):         import cc_regex
 repro_issue12073.py(16):     print(cc_regex.get_name())
-_GLIBCXX_USE_CXX11_ABI: 1
-free(): invalid pointer
-./repro.sh: line 35: <num> Aborted                 (core dumped) strace -o /tmp/strace.txt "$@"
+_GLIBCXX_USE_CXX11_ABI: 0
+./repro.sh: line 35: <num> Segmentation fault      (core dumped) strace -o /tmp/strace.txt "$@"
 + :
