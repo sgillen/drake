@@ -57,6 +57,15 @@ drake_cc_package_library(
     ],
 )
 
+# Things that don't require any upstream deps...
+drake_cc_library(
+    name = "bare",
+    hdrs = [
+        "drake_copyable.h",
+        "never_destroyed.h",
+    ],
+)
+
 # A library of things that EVERYONE should want and MUST EAT.
 # Be appropriately hesitant when adding new things here.
 drake_cc_library(
@@ -69,7 +78,6 @@ drake_cc_library(
         "constants.h",
         "drake_assert.h",
         "drake_assertion_error.h",
-        "drake_copyable.h",
         "drake_deprecated.h",
         "drake_nodiscard.h",
         "drake_optional.h",
@@ -77,10 +85,10 @@ drake_cc_library(
         "drake_variant.h",
         "eigen_stl_types.h",
         "eigen_types.h",
-        "never_destroyed.h",
         "text_logging.h",
     ],
     deps = [
+        ":bare",
         "@eigen",
         "@fmt",
         "@spdlog",
@@ -383,7 +391,7 @@ drake_cc_library(
     srcs = ["nice_type_name.cc"],
     hdrs = ["nice_type_name.h"],
     deps = [
-        ":essential",
+        ":bare",
     ],
 )
 
