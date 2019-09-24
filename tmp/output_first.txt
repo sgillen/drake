@@ -1,0 +1,4 @@
++ strace -o /tmp/strace.txt ../bazel-bin/tmp/repro_issue12073 --torch_first
+free(): invalid pointer
+./repro.sh: line 33: 30267 Aborted                 (core dumped) strace -o /tmp/strace.txt "$@"
++ :

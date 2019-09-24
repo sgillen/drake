@@ -30,5 +30,12 @@ EOF
 bazel build --announce_rc //tmp:repro_issue12073
 bin=../bazel-bin/tmp/repro_issue12073
 
-strace -o /tmp/strace.txt ${bin}; ./strace_filt.py /tmp/strace.txt ./strace_last.{raw,sorted}.txt
-strace -o /tmp/strace.txt ${bin} --torch_first || :; ./strace_filt.py /tmp/strace.txt ./strace_first.{raw,sorted}.txt
+run() {
+    label=$1
+    shift
+    { strace -o /tmp/strace.txt "$@" || :; } 2>&1 | tee ./output_${label}.txt
+    ./strace_filt.py /tmp/strace.txt ./strace_${label}.{raw,sorted}.txt
+}
+
+run last ${bin}  # This should work
+run first ${bin} --torch_first

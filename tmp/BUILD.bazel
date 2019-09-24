@@ -1,13 +1,9 @@
 load("//tools/skylark:pybind.bzl", "pybind_py_library")
 load(":cc.bzl", "cc_shared_library")
 
-cc_shared_library(
-    name = "cc_regex_shared",
-    srcs = ["cc_regex.cc"],
-    hdrs = ["cc_regex.h"],
-)
-cc_library(
-    name = "cc_regex_static",
+# cc_library(  # This will NOT segfault
+cc_shared_library(  # This will segfault
+    name = "cc_regex",
     srcs = ["cc_regex.cc"],
     hdrs = ["cc_regex.h"],
 )
@@ -17,12 +13,7 @@ pybind_py_library(
     name = "cc_regex_py",
     cc_so_name = "cc_regex",
     cc_srcs = ["cc_regex_py.cc"],
-    cc_deps = [
-        # # Static: No segfault
-        # ":cc_regex_static",
-        # Shared: Segfault
-        ":cc_regex_shared",
-    ],
+    cc_deps = [":cc_regex"],
     py_imports = ["."],
 )
 

@@ -62,6 +62,6 @@ openat(AT_FDCWD, "${venv}/lib/python3.6/site-packages/torch/lib/libcudart-f7fdd8
 openat(AT_FDCWD, "${venv}/lib/python3.6/site-packages/torch/lib/libc10_cuda.so", O_RDONLY|O_CLOEXEC) = 3
 openat(AT_FDCWD, "${venv}/lib/python3.6/lib-dynload/_multiprocessing.cpython-36m-x86_64-linux-gnu.so", O_RDONLY|O_CLOEXEC) = 3
 openat(AT_FDCWD, "${bazel_bin}/tmp/repro_issue12073.runfiles/drake/tmp/cc_regex.so", O_RDONLY|O_CLOEXEC) = 3
-openat(AT_FDCWD, "${bazel_bin}/tmp/repro_issue12073.runfiles/drake/tmp/../_solib_k8/_U_S_Stmp_Ccc_Uregex_Ushared___Utmp/libcc_regex_shared.so", O_RDONLY|O_CLOEXEC) = 3
+openat(AT_FDCWD, "${bazel_bin}/tmp/repro_issue12073.runfiles/drake/tmp/../_solib_k8/_U_S_Stmp_Ccc_Uregex___Utmp/libcc_regex.so", O_RDONLY|O_CLOEXEC) = 3
 openat(AT_FDCWD, "/etc/ld.so.cache", O_RDONLY|O_CLOEXEC) = 3
 openat(AT_FDCWD, "/usr/lib/x86_64-linux-gnu/libpython3.6m.so.1.0", O_RDONLY|O_CLOEXEC) = 3
