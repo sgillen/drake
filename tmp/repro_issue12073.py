@@ -8,12 +8,12 @@ def repro():
     if torch_first:
         print("Torch first")
         import torch
-        import nice_type_name
+        import cc_regex
     else:
         print("Torch last")
-        import nice_type_name
+        import cc_regex
         import torch
-    print(nice_type_name.ArbitraryName().name())
+    print(cc_regex.get_name())
     print("[ Done ]")
 
 import sys, trace

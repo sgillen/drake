@@ -1,45 +1,27 @@
 load("//tools/skylark:pybind.bzl", "pybind_py_library")
-load(
-    "@drake//tools/skylark:drake_cc.bzl",
-    "drake_cc_binary",
-    "drake_transitive_installed_hdrs_filegroup",
+load(":cc.bzl", "cc_shared_library")
+
+cc_shared_library(
+    name = "cc_regex_shared",
+    srcs = ["cc_regex.cc"],
+    hdrs = ["cc_regex.h"],
 )
-
-drake_deps = ["//common:nice_type_name"]
-
-drake_transitive_installed_hdrs_filegroup(
-    name = "libdrake_deps_hdrs",
-    deps = drake_deps,
-)
-
-drake_cc_binary(
-    name = "libdrake_deps.so",
-    linkshared = 1,
-    linkstatic = 1,
-    deps = drake_deps,
-)
-
 cc_library(
-    name = "drake_deps",
-    srcs  = ["libdrake_deps.so"],
-    hdrs = [":libdrake_deps_hdrs"],
-    data = ["libdrake_deps.so"],
-    include_prefix = "drake",
-    strip_include_prefix = "/",
+    name = "cc_regex_static",
+    srcs = ["cc_regex.cc"],
+    hdrs = ["cc_regex.h"],
 )
 
 # To exacerbate the issue.
 pybind_py_library(
-    name = "nice_type_name_py",
-    cc_so_name = "nice_type_name",
-    cc_srcs = ["nice_type_name_py.cc"],
+    name = "cc_regex_py",
+    cc_so_name = "cc_regex",
+    cc_srcs = ["cc_regex_py.cc"],
     cc_deps = [
-        # # Option A: No segfault
-        # "//common:nice_type_name",
-        # # Option B: Segfault
-        # "//:drake_shared_library",
-        # Option C: Segfault
-        ":drake_deps",
+        # # Static: No segfault
+        # ":cc_regex_static",
+        # Shared: Segfault
+        ":cc_regex_shared",
     ],
     py_imports = ["."],
 )
@@ -48,5 +30,5 @@ py_binary(
     name = "repro_issue12073",
     srcs = ["repro_issue12073.py"],
     # N.B. `torch` must come from an external virtualenv.
-    deps = [":nice_type_name_py"],
+    deps = [":cc_regex_py"],
 )
