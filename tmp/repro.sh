@@ -1,6 +1,17 @@
 #!/bin/bash
 set -eux -o pipefail
 
+bash-isolate() {
+     "$@";
+}
+# Ensure we have no external environment.
+if [[ -z ${_isolate:+D} ]]; then
+    exec env -i \
+        _isolate=1 \
+        HOME=$HOME DISPLAY=$DISPLAY SHELL=$SHELL TERM=$TERM USER=$USER PATH=/usr/local/bin:/usr/bin:/bin \
+        bash --norc $0 "$@"
+fi
+
 cd $(dirname $0)
 
 if [[ ! -d ./venv ]]; then

@@ -15,7 +15,8 @@ os.chdir(os.path.dirname(__file__))
 reps = [
     ("../bazel-bin", "${bazel_bin}"),
     ("../bazel-out", "${bazel_out}"),
-    ("..", "${PWD}"),
+    ("./venv", "${venv}"),
+    ("..", "${workspace}"),
 ]
 
 out = []
@@ -30,7 +31,7 @@ with args.input:
         if not line.endswith(" = 3"):
             continue
         for real, fake in reps:
-            real = os.path.realpath(real)
+            real = os.path.abspath(real)
             line = line.replace(real, fake)
         out.append(line)
 
