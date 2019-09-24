@@ -24,6 +24,7 @@ python=${PWD}/venv/bin/python
 cat > ../hack.bazelrc <<EOF
 build --python_path=${python}
 build --action_env=DRAKE_PYTHON_BIN_PATH=${python}
+build --cxxopt=-D_GLIBCXX_USE_CXX11_ABI=1
 EOF
 
 

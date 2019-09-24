@@ -8,5 +8,5 @@ repro_issue12073.py(11):         import cc_regex
 repro_issue12073.py(16):     print(cc_regex.get_name())
 _GLIBCXX_USE_CXX11_ABI: 1
 free(): invalid pointer
-./repro.sh: line 34: <num> Aborted                 (core dumped) strace -o /tmp/strace.txt "$@"
+./repro.sh: line 35: <num> Aborted                 (core dumped) strace -o /tmp/strace.txt "$@"
 + :
