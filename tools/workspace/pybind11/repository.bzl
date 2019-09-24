@@ -5,11 +5,15 @@ load("@drake//tools/workspace:github.bzl", "github_archive")
 
 # # Using the `drake` branch of this repository.
 # _REPOSITORY = "RobotLocomotion/pybind11"
+
+# Using `master` from upstream.
 _REPOSITORY = "pybind/pybind11"
 
-_COMMIT = "12e8774bc9aa4603136f2979088619b495850ca2"  # upstream/master
+# This is the commit used in pytorch@v1.0.0:
+# https://github.com/pytorch/pytorch/tree/v1.0.0/third_party
+_COMMIT = "5c8746ff135abb390bf95944be593e895a586a50"
 
-_SHA256 = "fbfda54cc97c2d1468ff83142b143d9bba901444e746218add812283f41ea863"
+_SHA256 = "ffe077d0fccc34aa95c2aba7a3abadbdc2a480c44a238879381733d38322e921"
 
 def pybind11_repository(
         name,
