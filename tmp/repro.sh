@@ -21,6 +21,19 @@ fi
 
 python=${PWD}/venv/bin/python
 
+# Hack `torch.__init__` to only import `torch._C`.
+cat > ./venv/lib/python3.6/site-packages/torch/__init__.py <<'EOF'
+# HACKED
+print("Using hacked torch.__init__")
+# Copied + simplified from original
+import os
+import sys
+import numpy as _np
+sys.setdlopenflags(os.RTLD_GLOBAL | os.RTLD_LAZY)
+# Skipping: `import torch._nvrtc`
+import torch._C
+EOF
+
 cat > ../hack.bazelrc <<EOF
 build --python_path=${python}
 build --action_env=DRAKE_PYTHON_BIN_PATH=${python}
